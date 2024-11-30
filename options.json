@@ -1,0 +1,11 @@
+{
+    "file-formats": {
+        "PNG Image": "ISO/IEC 15948:2004"
+    },
+    "network-protocols": {
+        "Network Time Protocol Version 4": "RFC 5905"
+    },
+    "DDLs": {
+        "Kaitai Struct": ["yaml", "ksy"]
+    }
+}
