@@ -1,4 +1,3 @@
----
 meta:
   id: "ntp4"
   version: "1.0.0"
@@ -72,4 +71,3 @@ fields:
     transmit_timestamp:
       type: float_le
       size: 8
----

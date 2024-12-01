@@ -1,5 +1,3 @@
-```yaml
----
 meta:
   id: network_time_protocol_version_4
   endian: big
@@ -100,4 +98,3 @@ seq:
       Message Digest: Optional field for cryptographic authentication.
     repeat: expr
     repeat-expr: mode == 4 ? 0 : 1
-```
