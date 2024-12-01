@@ -1,6 +1,6 @@
 meta:
   id: ntp_v4
-  endian: big
+  endian: be
   title: Network Time Protocol Version 4
 seq:
   - id: flags

@@ -6,7 +6,7 @@
 `python3 generate-dsls.py`
 
 - Run the script to compile the DSLs into the corresponding environments
-`python3 compile-dsls.py`
+`./run-compilers.sh`
 
 - Test the generated library code by running a corpus of files through them
 `python3 corpora-test.py`

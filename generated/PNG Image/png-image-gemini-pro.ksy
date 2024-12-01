@@ -1,4 +1,3 @@
-```yaml
 metatags:
   title: PNG image file format
   description: PNG (Portable Network Graphics) is a widely used raster graphics file format that supports lossless data compression.
@@ -48,4 +47,3 @@ layout:
   iend_chunk:
     type: {size: 4, const: 'IEND', desc: 'IEND chunk type'}
     crc: {size: 4, desc: 'CRC value of the IEND chunk'}
-```

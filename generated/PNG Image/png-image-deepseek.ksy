@@ -1,5 +1,3 @@
-```yaml
----
 meta:
   id: png
   file-extension: png
@@ -77,4 +75,3 @@ instances:
   IEND:
     value: chunks[-1]
     if: chunks[-1].type_enum == chunk_type::IEND
-```
