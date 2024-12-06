@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-def compile_ksy_files(directory):
+def compile_ksy_file(directory, ksy_file):
     """
     Find and compile Kaitai Struct (.ksy) files in the given directory to C++ STL code.
     
@@ -13,50 +13,61 @@ def compile_ksy_files(directory):
         print(f"Error: {directory} is not a valid directory.")
         return
 
-    # Find all .ksy files in the directory
-    ksy_files = [f for f in os.listdir(directory) if f.endswith('.ksy')]
-    
-    if not ksy_files:
-        print(f"No .ksy files found in {directory}")
-        return
-
     # Create a directory for compiled C++ files
     cpp_output_dir = os.path.join(directory, 'kaitai_output')
     os.makedirs(cpp_output_dir, exist_ok=True)
 
     # Compile each .ksy file
-    for ksy_file in ksy_files:
-        full_ksy_path = os.path.join(directory, ksy_file)
+    full_ksy_path = os.path.join(directory, ksy_file)
+
+    try:
+        current_dir = os.path.join(cpp_output_dir, ksy_file.split('.')[0])
+        os.makedirs(current_dir, exist_ok=True)
+        # Construct the kaitai-struct-compiler command
+        cmd = [
+            'kaitai-struct-compiler',  # Assumes kaitai-struct-compiler is in PATH
+            '-t', 'cpp_stl',           # Target C++ STL
+            '--outdir', current_dir,      # Destination directory
+            full_ksy_path
+        ]
         
-        try:
-            current_dir = os.path.join(cpp_output_dir, ksy_file.split('.')[0])
-            os.makedirs(current_dir, exist_ok=True)
-            # Construct the kaitai-struct-compiler command
-            cmd = [
-                'kaitai-struct-compiler',  # Assumes kaitai-struct-compiler is in PATH
-                '-t', 'cpp_stl',           # Target C++ STL
-                '--outdir', current_dir,      # Destination directory
-                full_ksy_path
-            ]
-            
-            # Run the compilation command
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            # Check for successful compilation
-            if result.returncode == 0:
-                print(f"Successfully compiled {ksy_file}")
-                # Optionally print compiler output
-                if result.stdout:
-                    print("Compiler output:", result.stdout)
-            else:
-                print(f"Error compiling {ksy_file}")
-                print("Error output:", result.stderr)
+
+        # Run the compilation process
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
         
-        except FileNotFoundError:
-            print("Error: kaitai-struct-compiler not found. Ensure it's installed and in your PATH.")
-            return
-        except Exception as e:
-            print(f"Unexpected error compiling {ksy_file}: {e}")
+        # Successful compilation
+        return {
+            'success': True,
+            'message': 'Compilation successful',
+            'output_files': os.listdir(current_dir)
+        }
+
+    except subprocess.CalledProcessError as e:
+        # Compilation failed
+        return {
+            'success': False,
+            'message': f"Compilation error:\nSTDERR: {e.stderr}",
+            'error_code': e.returncode
+        }
+    
+    except FileNotFoundError:
+        # Kaitai compiler not installed
+        return {
+            'success': False,
+            'message': "Kaitai Struct Compiler not found. Please install it and ensure it's in your system PATH."
+        }
+    
+    except Exception as e:
+        # Catch any other unexpected errors
+        return {
+            'success': False,
+            'message': f"Unexpected error during compilation: {str(e)}"
+        }
 
 def main():
     # Check if directory is provided as an argument
@@ -68,7 +79,7 @@ def main():
     directory = sys.argv[1]
     
     # Run the compilation
-    compile_ksy_files(directory)
+    compile_ksy_file(directory)
 
 if __name__ == '__main__':
     main()

@@ -9,7 +9,7 @@ ntp_packet_t::ntp_packet_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, n
     m_originate_timestamp = 0;
     m_receive_timestamp = 0;
     m_transmit_timestamp = 0;
-    m_extension_fields = 0;
+    m_extension_data = 0;
     f_leap_indicator = false;
     f_version = false;
     f_mode = false;
@@ -23,27 +23,23 @@ ntp_packet_t::ntp_packet_t(kaitai::kstream* p__io, kaitai::kstruct* p__parent, n
 }
 
 void ntp_packet_t::_read() {
-    m_li_vn_mode = m__io->read_u1();
+    m_li_vn_mode = m__io->read_bits_int_be(8);
+    m__io->align_to_byte();
     m_stratum = m__io->read_u1();
     m_poll = m__io->read_u1();
-    m_precision = m__io->read_u1();
-    m_root_delay = m__io->read_u4be();
+    m_precision = m__io->read_s1();
+    m_root_delay = m__io->read_s4be();
     m_root_dispersion = m__io->read_u4be();
     m_reference_id = m__io->read_u4be();
     m_reference_timestamp = new ntp_timestamp_t(m__io, this, m__root);
     m_originate_timestamp = new ntp_timestamp_t(m__io, this, m__root);
     m_receive_timestamp = new ntp_timestamp_t(m__io, this, m__root);
     m_transmit_timestamp = new ntp_timestamp_t(m__io, this, m__root);
-    m_extension_fields = new std::vector<extension_field_t*>();
-    {
-        int i = 0;
-        while (!m__io->is_eof()) {
-            m_extension_fields->push_back(new extension_field_t(m__io, this, m__root));
-            i++;
-        }
+    m_extension_data = new std::vector<uint8_t>();
+    const int l_extension_data = (_io()->size() - _io()->pos());
+    for (int i = 0; i < l_extension_data; i++) {
+        m_extension_data->push_back(m__io->read_u1());
     }
-    m_key_id = m__io->read_u4be();
-    m_message_digest = m__io->read_u8be();
 }
 
 ntp_packet_t::~ntp_packet_t() {
@@ -63,11 +59,8 @@ void ntp_packet_t::_clean_up() {
     if (m_transmit_timestamp) {
         delete m_transmit_timestamp; m_transmit_timestamp = 0;
     }
-    if (m_extension_fields) {
-        for (std::vector<extension_field_t*>::iterator it = m_extension_fields->begin(); it != m_extension_fields->end(); ++it) {
-            delete *it;
-        }
-        delete m_extension_fields; m_extension_fields = 0;
+    if (m_extension_data) {
+        delete m_extension_data; m_extension_data = 0;
     }
 }
 
@@ -95,35 +88,10 @@ ntp_packet_t::ntp_timestamp_t::~ntp_timestamp_t() {
 void ntp_packet_t::ntp_timestamp_t::_clean_up() {
 }
 
-ntp_packet_t::extension_field_t::extension_field_t(kaitai::kstream* p__io, ntp_packet_t* p__parent, ntp_packet_t* p__root) : kaitai::kstruct(p__io) {
-    m__parent = p__parent;
-    m__root = p__root;
-
-    try {
-        _read();
-    } catch(...) {
-        _clean_up();
-        throw;
-    }
-}
-
-void ntp_packet_t::extension_field_t::_read() {
-    m_field_type = m__io->read_u2be();
-    m_field_length = m__io->read_u2be();
-    m_field_data = m__io->read_bytes(field_length());
-}
-
-ntp_packet_t::extension_field_t::~extension_field_t() {
-    _clean_up();
-}
-
-void ntp_packet_t::extension_field_t::_clean_up() {
-}
-
 int32_t ntp_packet_t::leap_indicator() {
     if (f_leap_indicator)
         return m_leap_indicator;
-    m_leap_indicator = ((li_vn_mode() >> 6) & 3);
+    m_leap_indicator = (li_vn_mode() >> 6);
     f_leap_indicator = true;
     return m_leap_indicator;
 }
@@ -131,7 +99,7 @@ int32_t ntp_packet_t::leap_indicator() {
 int32_t ntp_packet_t::version() {
     if (f_version)
         return m_version;
-    m_version = ((li_vn_mode() >> 3) & 7);
+    m_version = ((li_vn_mode() & 56) >> 3);
     f_version = true;
     return m_version;
 }
