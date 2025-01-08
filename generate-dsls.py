@@ -1,148 +1,139 @@
 import os
-import requests
-import google.generativeai as genai
-import anthropic
-from openai import OpenAI
+import sys
 from typing import Dict, Any, List
 import json
+import threading
 from ksy_compiler import compile_ksy_file
+from db import Database
+import time
 
-class LLMFormatGeneration:
-    def __init__(self):
-        # Initialize API clients
-        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-        self.deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
-        genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-        self.llms = {
-            "gemini-pro": self.call_gemini_api,
-            "gpt-4-turbo": self.call_gpt_api,
-            "claude-3-opus-20240229": self.call_claude_api,
-            "deepseek": self.call_deepseek_api
-        }
+from LLMFormatGeneration import LLMFormatGeneration
 
-    def call_gpt_api(self, query: str, model: str) -> str:
-        """Call OpenAI's GPT API"""
-        try:
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                max_tokens=4096,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": query}
-                ],
-                temperature=0.4
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            return f"GPT API Error: {str(e)}"
+class DSLGenerator:
 
-    def call_claude_api(self, query: str, model: str) -> str:
-        """Call Anthropic's Claude API"""
-        try:
-            response = self.anthropic_client.messages.create(
-                model=model,
-                max_tokens=4096,
-                messages=[
-                    {"role": "user", "content": query}
-                ],
-                temperature=0.4,
-            )
-            return response.content[0].text
-        except Exception as e:
-            return f"Claude API Error: {str(e)}"
+    def __init__(self, cur_time: int, dbname: str):
+        self.cur_time = cur_time
+        self.dbname = dbname
+        self.table_name = "t_"  + str(cur_time)
 
-    def call_deepseek_api(self, query: str, model: str) -> str:
-        """Call Deepseek Coder API"""
-        try:
-            response = requests.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.deepseek_api_key}"
-                },
-                json={
-                    "model": "deepseek-coder",
-                    "messages": [
-                        {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley"},
-                        {"role": "user", "content": query}
-                    ],
-                    "temperature": 0.4,
-                    "max_tokens": 4096
-                }
-            )
-            return response.json()['choices'][0]['message']['content']
-        except Exception as e:
-            return f"Deepseek API Error: {str(e)}"
+    def run_queries_per_model(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str, model: str, function):
+        """
+        This function gets executed in the threads
 
-    def call_gemini_api(self, query: str, model: str) -> str:
-        """Call Google Gemini API"""
-        try:
-            generation_config = {
-                "temperature": 0.4,  # Most deterministic setting
-                "max_output_tokens": 4096
-            }
-            model = genai.GenerativeModel(model)
-            response = model.generate_content(query, generation_config=generation_config)
-            return response.text
-        except Exception as e:
-            return f"Gemini API Error: {str(e)}"
+        Step 1: Create output file name: <format>-<model>.<extension>
+        Step 2: Send query 1, wait for a response. 
+        Step 3: Send query 2, get the response and store it in the file. This second response should be a file in the correct DSL syntax.
+        Step 4: Compile the file using the Kaitai Struct compiler and create a database record.
+        Step 5: If the compilation fails, send query 3, get the response and store it in the file. Create a database record for every response and compilation.
+                This third response is stored in a file in the correct DSL syntax.
+        Step 6: Step 5 is run again (max three times) until the compilation is successful.
 
-def generate_specifications_per_format(format: str, specification: str, ddl: str, output: str, extension: str):
-    comparison = LLMFormatGeneration()
-    
-    # Specify the two queries needed
-    query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
-    query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
-
-    for model, function in comparison.llms.items():
-        # The format names contain spaces, so change them all to hyphens    
-        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-')}.{extension}"
-        if not os.path.exists(f"generated/{format}/{filename}"):
+        """
+        db = Database(self.dbname)
+        # Specify the two queries needed
+        query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
+        query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
+        
+        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-')}.{extension}" # Step 1
+        current_response = None
+        if not os.path.exists(f"{dir_path}/{filename}"):
             print(format, filename)
-            response1 = function(query_1, model)
-            print(response1) #, response2)
-            response2 = function(query_2, model)
-            create_response_file(response2, format, filename)
-        compilation_output = compile_ksy_file(f"generated/{format}/", filename)
-        counter = 1
-        while not compilation_output["success"] and counter != 0:
-            counter = counter - 1
-            message = compilation_output['message'].replace("\n", " ")
-            query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved and fixed {ddl} specification in {output} format. Give me only the generated code."
-            response3 = function(query_3, model)
-            create_response_file(response3, format, filename)
-            # Overwrite the compilation_output variable
-            compilation_output = compile_ksy_file(f"generated/{format}/", filename)
-    
-def create_response_file(response: str, format: str, filename: str):
-    """
-    Check if there was an exception in the LLM command
-    If not, then create a new file
-    """
-    if not "Error" in response: # Ensure that responses with errors do not get written
-        file_desc = open(f"generated/{format}/{filename}", "w")
-        # Some LLMs give you markdown encapsulated code
-        # We are removing the lines that start with these characters
-        lines = response.split("\n")
-        cleaned_lines = [line for line in lines if not line.strip().startswith('```') and not line.strip().startswith('---')]
-        response = "\n".join(cleaned_lines)
-        file_desc.write(response)
-        file_desc.close()
-        # Write the output into the corresponding files
+            response1 = function(query_1, model) # Step 2
+            print(response1)
+            response2 = function(query_2, model) # Step 3
+            self.create_response_file(response2, format, dir_path, filename)
+            current_response = response2
+
+        # Check if the generated file can be compiled   
+        compilation_output = compile_ksy_file(dir_path, filename)  # Step 4
+
+        if compilation_output is None:
+            # This means that there was already an output file in the folder, so we can skip the compilation
+            return
+        else:
+            self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
+
+            # If the compilation failed, then we need to ask the LLM to fix the specification
+            counter = 1 # Trying to make sure the loop only runs once
+            while not compilation_output["success"] and counter != 0:
+                print(current_response)
+                counter = counter - 1
+                message = compilation_output['message'].replace("\n", " ")
+                query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved and fixed {ddl} specification in {output} format. Give me only the generated code and no text with it."
+                response3 = function(query_3, model)
+                self.create_response_file(response3, format, dir_path, filename)
+                current_response = response3
+
+                # Overwrite the compilation_output variable
+                compilation_output = compile_ksy_file(dir_path, filename)
+                self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
+
+    def generate_specifications_per_format(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str):
+        """
+        For each model, run the queries and generate the specifications.
+        This function invokes different threads to ensure some parallelism
+        """
+        comparison = LLMFormatGeneration()
+        threads = []
+
+        for model, function in comparison.llms.items():
+            # The format names contain spaces, so change them all to hyphens
+            t = threading.Thread(target = self.run_queries_per_model, args=(dir_path, format, specification, ddl, output, extension, model, function))
+            threads.append(t)
+            t.start()
+        
+        # Wait for all the threads to terminate
+        for t in threads:
+            t.join()
+
+    def insert_data_into_db(self, db: Database, compilation_output: Dict[str, Any], model: str, ddl: str, format: str, current_response: str):
+        """Insert the data into the database after the compilation is complete"""
+        # Assume first that the compilation was not successful and set the value to False
+        success = "False"
+        if compilation_output["success"]:
+            success = "True"
+        db.insert_data(self.table_name, {
+            "timestamp": str(time.time()),
+            "llm": model,
+            "ddl": ddl,
+            "format": format,
+            "compiled": success,
+            "output_response": current_response
+        })
+
+    def create_response_file(self, response: str, format: str, dir_path: str, filename: str):
+        """
+        Check if there was an exception in the LLM command
+        If not, then create a new file
+        """
+        if not "Error" in response: # Ensure that responses with errors do not get written
+            file_desc = open(f"{dir_path}/{filename}", "w")
+            # Some LLMs give you markdown encapsulated code
+            # We are removing the lines that start with these characters
+            lines = response.split("\n")
+            cleaned_lines = [line for line in lines if not line.strip().startswith('```') and not line.strip().startswith('---')]
+            response = "\n".join(cleaned_lines)
+            file_desc.write(response)
+            file_desc.close()
+            # Write the output into the corresponding files
 
 def main():
 
+    db = Database("test.db")
+    cur_time = int(time.time())
+    if len(sys.argv) > 1:
+        cur_time = int(sys.argv[1])
+    db.create_table("t_" + str(cur_time)) # Table name cannot start with an integer
     # Parse the file with the options
     parsed_options = json.loads(open("options.json").read())
     # Combining parsing the file-formats and network protocols in one loop to make things easier
+    generator = DSLGenerator(cur_time, "test.db")
     for format, spec in (parsed_options["file-formats"].items() | parsed_options["network-protocols"].items()):
-        dir_path = f"generated/{format}"
+        dir_path = f"generated/{cur_time}/{format}"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-
         # The last three arguments would actually come from the parsed_options["DDLs"] field
-        generate_specifications_per_format(format, spec, "Kaitai struct", "yaml", "ksy")
+        generator.generate_specifications_per_format(dir_path, format, spec, "Kaitai struct", "yaml", "ksy")
 
 if __name__ == "__main__":
     main()

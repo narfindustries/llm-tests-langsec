@@ -20,13 +20,19 @@ def compile_ksy_file(directory, ksy_file):
     # Compile each .ksy file
     full_ksy_path = os.path.join(directory, ksy_file)
 
+    current_dir = os.path.join(cpp_output_dir, ksy_file.split('.')[0])
+    os.makedirs(current_dir, exist_ok=True)
+
+    # Do we need to compile if the compiled file already exists?
+    if any(file.endswith('.py') for file in os.listdir(current_dir)):
+        print(f"Directory {current_dir} contains a .py file. Skipping compilation.")
+        return
+
     try:
-        current_dir = os.path.join(cpp_output_dir, ksy_file.split('.')[0])
-        os.makedirs(current_dir, exist_ok=True)
         # Construct the kaitai-struct-compiler command
         cmd = [
-            'kaitai-struct-compiler',  # Assumes kaitai-struct-compiler is in PATH
-            '-t', 'cpp_stl',           # Target C++ STL
+            'kaitai-struct-compiler',     # Assumes kaitai-struct-compiler is in PATH
+            '-t', 'python',               # Target Python
             '--outdir', current_dir,      # Destination directory
             full_ksy_path
         ]
