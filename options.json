@@ -6,6 +6,17 @@
         "Network Time Protocol Version 4": "RFC 5905"
     },
     "DDLs": {
-        "Kaitai Struct": ["yaml", "ksy"]
-    }
+        "Kaitai Struct": ["yaml", "ksy"],
+        "Daedalus": ["Daedalus", "ddl"],
+        "Zeek Spicy": ["zeek spicy", "spicy"],
+        "DFDL": ["DFDL XML schema", "xsd"]
+    },
+    "compiler_paths": {
+        "Kaitai Struct": "/usr/local/bin/kaitai-struct-compiler",
+        "Daedalus": "/home/user/daedalus/DIR/daedalus",
+        "Zeek Spicy": "/home/user/spicy/build/bin/spicyc",
+        "DFDL": "/home/user/apache-daffodil-3.9.0-bin/bin/daffodil"
+    },
+    "tries": 1,
+    "temperature": 0.4
 }

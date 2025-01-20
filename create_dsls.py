@@ -3,11 +3,23 @@ import sys
 from typing import Dict, Any, List
 import json
 import threading
-from ksy_compiler import compile_ksy_file
-from db import Database
 import time
+import logging
+
+from compilers.ksy_compiler import compile_ksy_file
+from compilers.daedalus_compiler import compile_daedalus_file
+from compilers.spicy_compiler import compile_spicy_file
+from compilers.dfdl_compiler import compile_dfdl_file
+from db import Database
 
 from LLMFormatGeneration import LLMFormatGeneration
+
+# Configure logging
+logging.basicConfig(level=logging.CRITICAL, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Parse the file with the options
+parsed_options = json.loads(open("options.json").read())
+
 
 class DSLGenerator:
 
@@ -23,7 +35,7 @@ class DSLGenerator:
         Step 1: Create output file name: <format>-<model>.<extension>
         Step 2: Send query 1, wait for a response. 
         Step 3: Send query 2, get the response and store it in the file. This second response should be a file in the correct DSL syntax.
-        Step 4: Compile the file using the Kaitai Struct compiler and create a database record.
+        Step 4: Compile the file using the compiler and create a database record.
         Step 5: If the compilation fails, send query 3, get the response and store it in the file. Create a database record for every response and compilation.
                 This third response is stored in a file in the correct DSL syntax.
         Step 6: Step 5 is run again (max three times) until the compilation is successful.
@@ -33,19 +45,33 @@ class DSLGenerator:
         # Specify the two queries needed
         query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
         query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
-        
+
         filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-')}.{extension}" # Step 1
         current_response = None
         if not os.path.exists(f"{dir_path}/{filename}"):
-            print(format, filename)
+            # print(format, filename)
             response1 = function(query_1, model) # Step 2
-            print(response1)
+            # print(response1)
             response2 = function(query_2, model) # Step 3
             self.create_response_file(response2, format, dir_path, filename)
             current_response = response2
 
-        # Check if the generated file can be compiled   
-        compilation_output = compile_ksy_file(dir_path, filename)  # Step 4
+        # Check if the generated file can be compiled
+        compilation_output = None
+        compile_function = None
+
+        if ddl == "Kaitai Struct":
+            compile_function = compile_ksy_file
+        elif ddl == "Daedalus":
+            compile_function = compile_daedalus_file
+        elif ddl == "Zeek Spicy":
+            compile_function = compile_spicy_file
+        elif ddl == "DFDL":
+            compile_function = compile_dfdl_file
+
+        compilation_output = compile_function(dir_path, filename)  # Step 4
+        print(compilation_output)
+        logging.info(compilation_output)
 
         if compilation_output is None:
             # This means that there was already an output file in the folder, so we can skip the compilation
@@ -54,18 +80,18 @@ class DSLGenerator:
             self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
 
             # If the compilation failed, then we need to ask the LLM to fix the specification
-            counter = 1 # Trying to make sure the loop only runs once
+            counter = parsed_options["tries"] # Set this value in options.json
             while not compilation_output["success"] and counter != 0:
-                print(current_response)
+                logging.info(current_response)
                 counter = counter - 1
                 message = compilation_output['message'].replace("\n", " ")
-                query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved and fixed {ddl} specification in {output} format. Give me only the generated code and no text with it."
+                query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved, complete, and fixed {ddl} specification in {output} format. Give me only the complete generated code and no text with it."
                 response3 = function(query_3, model)
                 self.create_response_file(response3, format, dir_path, filename)
                 current_response = response3
 
                 # Overwrite the compilation_output variable
-                compilation_output = compile_ksy_file(dir_path, filename)
+                compilation_output = compile_function(dir_path, filename)
                 self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
 
     def generate_specifications_per_format(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str):
@@ -73,7 +99,7 @@ class DSLGenerator:
         For each model, run the queries and generate the specifications.
         This function invokes different threads to ensure some parallelism
         """
-        comparison = LLMFormatGeneration()
+        comparison = LLMFormatGeneration(parsed_options["temperature"])
         threads = []
 
         for model, function in comparison.llms.items():
@@ -111,7 +137,7 @@ class DSLGenerator:
             # Some LLMs give you markdown encapsulated code
             # We are removing the lines that start with these characters
             lines = response.split("\n")
-            cleaned_lines = [line for line in lines if not line.strip().startswith('```') and not line.strip().startswith('---')]
+            cleaned_lines = [line for line in lines if not line.strip().startswith('```') and not line.strip().startswith('---') and not line.strip().startswith('...')]
             response = "\n".join(cleaned_lines)
             file_desc.write(response)
             file_desc.close()
@@ -124,16 +150,19 @@ def main():
     if len(sys.argv) > 1:
         cur_time = int(sys.argv[1])
     db.create_table("t_" + str(cur_time)) # Table name cannot start with an integer
-    # Parse the file with the options
-    parsed_options = json.loads(open("options.json").read())
     # Combining parsing the file-formats and network protocols in one loop to make things easier
     generator = DSLGenerator(cur_time, "test.db")
+    ddls = ["DFDL", "Zeek Spicy"]
     for format, spec in (parsed_options["file-formats"].items() | parsed_options["network-protocols"].items()):
-        dir_path = f"generated/{cur_time}/{format}"
+        dir_path = f"generated/{cur_time}/{format.replace(' ', '-')}"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         # The last three arguments would actually come from the parsed_options["DDLs"] field
-        generator.generate_specifications_per_format(dir_path, format, spec, "Kaitai struct", "yaml", "ksy")
+        for ddl in ddls:
+            # generator.generate_specifications_per_format(dir_path, format, spec, "Kaitai struct", "yaml", "ksy")
+            generator.generate_specifications_per_format(dir_path, format, spec, ddl,
+                                                     parsed_options["DDLs"][ddl][0], 
+                                                     parsed_options["DDLs"][ddl][1])
 
 if __name__ == "__main__":
     main()

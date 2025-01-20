@@ -22,6 +22,6 @@ class Database:
 
     def insert_data(self, table_name: str, data: dict):
         cursor = self.conn.cursor()
-        print(data.values())
+        # print(data.values())
         cursor.execute(f"INSERT INTO {table_name} (timestamp, llm, ddl, format, compiled, output_response) VALUES (?, ?, ?, ?, ?, ?)", tuple(data.values()))
         self.conn.commit()

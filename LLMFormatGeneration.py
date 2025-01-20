@@ -5,7 +5,8 @@ import os
 from openai import OpenAI
 
 class LLMFormatGeneration:
-    def __init__(self):
+    def __init__(self, temperature: float):
+        self.temperature = temperature
         # Initialize API clients
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
@@ -13,9 +14,10 @@ class LLMFormatGeneration:
         self.grok_api_key = os.getenv('XAI_API_KEY')
         genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
         self.llms = {
-            "gemini-pro": self.call_gemini_api,
-            "gpt-4-turbo": self.call_gpt_api,
-            "claude-3-opus-20240229": self.call_claude_api,
+            # "gemini-pro": self.call_gemini_api,
+            # "gpt-4-turbo": self.call_gpt_api,
+            # "claude-3-opus-20240229": self.call_claude_api,
+            # "grok-beta": self.call_grok_api,
             "deepseek": self.call_deepseek_api
         }
 
@@ -35,7 +37,7 @@ class LLMFormatGeneration:
                         {"role": "user", "content": query}
                     ],
                     "stream": False,
-                    "temperature": 0.4,
+                    "temperature": self.temperature,
                     "max_tokens": 4096
                 }
             )
@@ -50,10 +52,10 @@ class LLMFormatGeneration:
                 model=model,
                 max_tokens=4096,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley."},
                     {"role": "user", "content": query}
                 ],
-                temperature=0.4
+                temperature=self.temperature
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -68,7 +70,7 @@ class LLMFormatGeneration:
                 messages=[
                     {"role": "user", "content": query}
                 ],
-                temperature=0.4,
+                temperature=self.temperature,
             )
             return response.content[0].text
         except Exception as e:
@@ -89,7 +91,7 @@ class LLMFormatGeneration:
                         {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley"},
                         {"role": "user", "content": query}
                     ],
-                    "temperature": 0.4,
+                    "temperature": self.temperature,
                     "max_tokens": 4096
                 }
             )
@@ -101,7 +103,7 @@ class LLMFormatGeneration:
         """Call Google Gemini API"""
         try:
             generation_config = {
-                "temperature": 0.4,  # Most deterministic setting
+                "temperature": self.temperature,
                 "max_output_tokens": 4096
             }
             model = genai.GenerativeModel(model)
