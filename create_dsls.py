@@ -1,11 +1,13 @@
 import os
 import sys
-from typing import Dict, Any, List
+from typing import Dict, Any
 import json
 import threading
 import time
 import logging
+import argparse
 
+from compile import compile_file, get_current_dir
 from compilers.ksy_compiler import compile_ksy_file
 from compilers.daedalus_compiler import compile_daedalus_file
 from compilers.spicy_compiler import compile_spicy_file
@@ -58,18 +60,43 @@ class DSLGenerator:
 
         # Check if the generated file can be compiled
         compilation_output = None
-        compile_function = None
+        full_input_path = os.path.join(dir_path, filename)
+        cmd = None
+        current_dir = None
 
+        # Set the command variable to call the compiler
         if ddl == "Kaitai Struct":
-            compile_function = compile_ksy_file
+            current_dir = get_current_dir(dir_path, filename, "output_kaitai")
+            cmd = [
+                'kaitai-struct-compiler',     # Assumes kaitai-struct-compiler is in PATH
+                '-t', 'python',               # Target Python
+                '--outdir', current_dir,         # Destination directory
+                full_input_path
+            ]
         elif ddl == "Daedalus":
-            compile_function = compile_daedalus_file
+            current_dir = get_current_dir(dir_path, filename, "output_daedalus")
+            cmd = [
+                parsed_options["compiler_paths"][ddl], # This might need to change to the correct path 
+                'compile-hs',
+                full_input_path,
+                '--out-dir', current_dir,      # Destination directory
+            ]
+            
         elif ddl == "Zeek Spicy":
-            compile_function = compile_spicy_file
+            current_dir = get_current_dir(dir_path, filename, "output_spicy")
+            cmd = [
+                parsed_options["compiler_paths"][ddl],
+                '-j', '-o', current_dir + '/tmp.hlto',
+                full_input_path
+            ]
         elif ddl == "DFDL":
-            compile_function = compile_dfdl_file
+            current_dir = get_current_dir(dir_path, filename, "output_dfdl")
+            cmd = [
+                parsed_options["compiler_paths"][ddl],
+                'generate', 'c', '-s', full_input_path, current_dir
+            ]
+        compilation_output = compile_file(cmd, current_dir) # Step 4
 
-        compilation_output = compile_function(dir_path, filename)  # Step 4
         print(compilation_output)
         logging.info(compilation_output)
 
@@ -91,8 +118,10 @@ class DSLGenerator:
                 current_response = response3
 
                 # Overwrite the compilation_output variable
-                compilation_output = compile_function(dir_path, filename)
+                compilation_output = compile_file(cmd, current_dir)
                 self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
+
+
 
     def generate_specifications_per_format(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str):
         """
@@ -145,15 +174,45 @@ class DSLGenerator:
 
 def main():
 
+    # Initialize the argument parser
+    parser = argparse.ArgumentParser(description="A CLI tool with --format and --time options.")
+    
+    # Add the --format flag
+    parser.add_argument(
+        "--format",
+        choices=["file", "network", "all"],
+        help="select 'file' for file formats or 'network' for network protocols",
+        default="all"  # Provide a default format
+    )
+    
+    # Add the --time flag
+    parser.add_argument(
+        "--time",
+        type=str,
+        help="Specify a timestamp if you want to continue a previous execution",
+        default=None
+    )
+    args = parser.parse_args()
+
     db = Database("test.db")
     cur_time = int(time.time())
-    if len(sys.argv) > 1:
-        cur_time = int(sys.argv[1])
+    if args.time:
+        cur_time = int(args.time)
     db.create_table("t_" + str(cur_time)) # Table name cannot start with an integer
-    # Combining parsing the file-formats and network protocols in one loop to make things easier
     generator = DSLGenerator(cur_time, "test.db")
-    ddls = ["DFDL", "Zeek Spicy"]
-    for format, spec in (parsed_options["file-formats"].items() | parsed_options["network-protocols"].items()):
+    # ddls = ["DFDL", "Zeek Spicy"]
+    ddls = ["Kaitai Struct", "Daedalus"]
+
+    # Combining parsing the file-formats and network protocols in one loop to make things easier
+    specs = None
+    if args.format == "all":
+        specs = parsed_options["file-formats"].items() | parsed_options["network-protocols"].items()
+    elif args.format == "file":
+        specs = parsed_options["file-formats"].items()
+    elif args.format == "network":
+        specs = parsed_options["network-protocols"].items()
+    
+    for format, spec in specs:
         dir_path = f"generated/{cur_time}/{format.replace(' ', '-')}"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
