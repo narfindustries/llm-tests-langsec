@@ -6,7 +6,7 @@ class Database:
         self.conn = sqlite3.connect(dbname)
 
     def create_table(self, table_name: str):
-        columns = ['timestamp', 'llm', 'ddl', 'format', 'compiled', 'output_response']
+        columns = ['timestamp', 'llm', 'ddl', 'format', 'compiled', 'try', 'output_response']
         cursor = self.conn.cursor()
         cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns)})")
         columns_with_types = [
@@ -15,6 +15,7 @@ class Database:
             'ddl TEXT',
             'format TEXT',
             'compiled TEXT',
+            'try INTEGER',
             'output_response TEXT'
         ]
         cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_with_types)})")
@@ -22,6 +23,5 @@ class Database:
 
     def insert_data(self, table_name: str, data: dict):
         cursor = self.conn.cursor()
-        # print(data.values())
-        cursor.execute(f"INSERT INTO {table_name} (timestamp, llm, ddl, format, compiled, output_response) VALUES (?, ?, ?, ?, ?, ?)", tuple(data.values()))
+        cursor.execute(f"INSERT INTO {table_name} (timestamp, llm, ddl, format, compiled, try, output_response) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(data.values()))
         self.conn.commit()

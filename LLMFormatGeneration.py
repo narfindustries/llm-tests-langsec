@@ -14,11 +14,13 @@ class LLMFormatGeneration:
         self.grok_api_key = os.getenv('XAI_API_KEY')
         genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
         self.llms = {
-            # "gemini-pro": self.call_gemini_api,
-            # "gpt-4-turbo": self.call_gpt_api,
-            # "claude-3-opus-20240229": self.call_claude_api,
+            # "gemini-1.5-flash": self.call_gemini_api,
+            "gpt-4-turbo-2024-04-09": self.call_gpt_api,
+            "gpt-4o-2024-11-20": self.call_gpt_api,
+            # "claude-3-5-sonnet-20241022": self.call_claude_api,
+            # "claude-3-5-haiku-20241022": self.call_claude_api,
             # "grok-beta": self.call_grok_api,
-            "deepseek": self.call_deepseek_api
+            # "deepseek-chat": self.call_deepseek_api
         }
 
     def call_grok_api(self, query: str, model: str) -> str:
