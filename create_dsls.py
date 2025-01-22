@@ -8,10 +8,6 @@ import logging
 import argparse
 
 from compile import compile_file, get_current_dir
-from compilers.ksy_compiler import compile_ksy_file
-from compilers.daedalus_compiler import compile_daedalus_file
-from compilers.spicy_compiler import compile_spicy_file
-from compilers.dfdl_compiler import compile_dfdl_file
 from db import Database
 
 from LLMFormatGeneration import LLMFormatGeneration
@@ -48,6 +44,11 @@ class DSLGenerator:
         query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
         query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
 
+        if ddl == "Hammer" or ddl == "Rust Nom":
+            query_2 = f"Can you use this knowledge to generate a {output} program with {ddl} parser combinator bindings for the {format}? Include a main function that can take input in a binary file from a command line argument. Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the code. Show only the complete response. Do not wrap the response in any markdown."
+
+            if ddl == "Hammer":
+                query_2 += "Make sure that the includes statement is <hammer/hammer.h>."
         filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-')}.{extension}" # Step 1
         current_response = None
         if not os.path.exists(f"{dir_path}/{filename}"):
@@ -95,6 +96,26 @@ class DSLGenerator:
                 parsed_options["compiler_paths"][ddl],
                 'generate', 'c', '-s', full_input_path, current_dir
             ]
+        elif ddl == "Hammer":
+            current_dir = get_current_dir(dir_path, filename, "output_hammer")
+            cmd = [
+                "gcc",
+                full_input_path,
+                '-o', current_dir+"/output", "-lhammer"
+            ]
+        elif ddl == "Rust Nom":
+            current_dir = get_current_dir(dir_path, filename, "output_nom")
+            os.system(f"cp -r cargo_template/* {current_dir}")
+            os.system(f"cp {full_input_path} {current_dir}/src/main.rs")
+            cmd = ["pwd", "&&",
+                f"cd ./{current_dir}", "&&",
+                "/home/user/.cargo/bin/cargo",
+                "check",
+            ]
+        else:
+            print("Compiler not found")
+            return
+        
         compilation_output = compile_file(cmd, current_dir) # Step 4
 
         print(compilation_output)
@@ -112,13 +133,15 @@ class DSLGenerator:
                 logging.info(current_response)
                 counter = counter - 1
                 message = compilation_output['message'].replace("\n", " ")
-                query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved, complete, and fixed {ddl} specification in {output} format. Give me only the complete generated code and no text with it."
+                query_3 = f"The previous response gave me an error. Can you use this error message: \"{message}\" to improve the specification and give me an improved, complete, and fixed {ddl} specification in {output} format. Give me only the complete generated code and no text with it. Ensure that the previous requirements are still met."
                 response3 = function(query_3, model)
                 self.create_response_file(response3, format, dir_path, filename)
                 current_response = response3
 
                 # Overwrite the compilation_output variable
                 compilation_output = compile_file(cmd, current_dir)
+                print(compilation_output)
+                logging.info(compilation_output)
                 self.insert_data_into_db(db, compilation_output, model, ddl, format, current_response)
 
 
@@ -201,7 +224,6 @@ def main():
     db.create_table("t_" + str(cur_time)) # Table name cannot start with an integer
     generator = DSLGenerator(cur_time, "test.db")
     # ddls = ["DFDL", "Zeek Spicy"]
-    ddls = ["Kaitai Struct", "Daedalus"]
 
     # Combining parsing the file-formats and network protocols in one loop to make things easier
     specs = None
@@ -212,6 +234,7 @@ def main():
     elif args.format == "network":
         specs = parsed_options["network-protocols"].items()
     
+    ddls = ["Rust Nom"]
     for format, spec in specs:
         dir_path = f"generated/{cur_time}/{format.replace(' ', '-')}"
         if not os.path.exists(dir_path):

@@ -1,21 +1,42 @@
 {
     "file-formats": {
-        "PNG Image": "ISO/IEC 15948:2004"
+        "PNG Image": "ISO/IEC 15948:2004",
+        "JPEG": "ISO/IEC 10918",
+        "GIF": "CompuServe GIF 89a",
+        "TIFF": "Adobe TIFF 6.0 (1992)",
+        "DICOM": "NEMA PS3 / ISO 12052",
+        "NITF": "MIL-STD-2500C",
+        "ELF": "System V ABI (Unix System V Application Binary Interface)",
+        "ZIP": "PKWARE ZIP File Format Specification (APPNOTE.TXT)",
+        "GZIP": "RFC 1952",
+        "SQLITE3 DB": "SQLite File Format 3 (https://www.sqlite.org/fileformat2.html)"
     },
     "network-protocols": {
-        "Network Time Protocol Version 4": "RFC 5905"
+        "Network Time Protocol Version 4": "RFC 5905",
+        "Bitcoin transactions": "Bitcoin Protocol (https://bitcoin.org/bitcoin.pdf)",
+        "Modbus": "Modbus Protocol Specification (Modbus Application Protocol V1.1b3)",
+        "ARP": "RFC 826",
+        "MQTT": "OASIS MQTT Version 5.0 (http://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html)",
+        "HTTP 1.1": "RFC 2616",
+        "TLS Client Hello": "RFC 8446 (TLS 1.3)",
+        "ICMP": "RFC 792",
+        "DNS": "RFC 1035",
+        "HL7 v2": "HL7 Version 2.x (https://www.hl7.org/implement/standards/product_brief.cfm?product_id=185)"
     },
     "DDLs": {
         "Kaitai Struct": ["yaml", "ksy"],
         "Daedalus": ["Daedalus", "ddl"],
         "Zeek Spicy": ["zeek spicy", "spicy"],
-        "DFDL": ["DFDL XML schema", "xsd"]
+        "DFDL": ["DFDL XML schema", "xsd"],
+        "Hammer": ["C", "c"],
+        "Rust Nom": ["Rust", "rs"]
     },
     "compiler_paths": {
         "Kaitai Struct": "/usr/local/bin/kaitai-struct-compiler",
         "Daedalus": "/home/user/daedalus/DIR/daedalus",
         "Zeek Spicy": "/home/user/spicy/build/bin/spicyc",
-        "DFDL": "/home/user/apache-daffodil-3.9.0-bin/bin/daffodil"
+        "DFDL": "/home/user/apache-daffodil-3.9.0-bin/bin/daffodil",
+        "Rust Nom": "/home/user/.cargo/bin/cargo"
     },
     "tries": 1,
     "temperature": 0.4

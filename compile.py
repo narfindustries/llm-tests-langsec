@@ -27,20 +27,6 @@ def compile_file(command: List[str], current_dir: str):
             'output_files': os.listdir(current_dir)
         }
 
-    except subprocess.CalledProcessError as e:
-        # Compilation failed
-        return {
-            'success': False,
-            'message': f"Compilation error:\nSTDERR: {e.stderr}",
-            'error_code': e.returncode
-        }
-    
-    except FileNotFoundError:
-        # Spicy compiler not installed
-        return {
-            'success': False,
-            'message': "Compiler not found. Please install it and ensure it's in your system PATH."
-        }
     
     except Exception as e:
         # Catch any other unexpected errors
