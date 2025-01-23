@@ -3,6 +3,8 @@ import google.generativeai as genai
 import anthropic
 import os
 from openai import OpenAI
+from together import Together
+import json
 
 class LLMFormatGeneration:
     def __init__(self, temperature: float):
@@ -13,14 +15,16 @@ class LLMFormatGeneration:
         self.deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
         self.grok_api_key = os.getenv('XAI_API_KEY')
         genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+        self.together_api_key = os.getenv('TOGETHER_API_KEY')
         self.llms = {
             # "gemini-1.5-flash": self.call_gemini_api,
-            "gpt-4-turbo-2024-04-09": self.call_gpt_api,
-            "gpt-4o-2024-11-20": self.call_gpt_api,
+            # "gpt-4-turbo-2024-04-09": self.call_gpt_api,
+            # "gpt-4o-2024-11-20": self.call_gpt_api,
             # "claude-3-5-sonnet-20241022": self.call_claude_api,
             # "claude-3-5-haiku-20241022": self.call_claude_api,
             # "grok-beta": self.call_grok_api,
-            # "deepseek-chat": self.call_deepseek_api
+            # "deepseek-chat": self.call_deepseek_api,
+            "llama-3.3-70B-instruct": self.together_api_key
         }
 
     def call_grok_api(self, query: str, model: str) -> str:
@@ -113,3 +117,39 @@ class LLMFormatGeneration:
             return response.text
         except Exception as e:
             return f"Gemini API Error: {str(e)}"
+        
+
+    def call_llama3_api(self, query: str, model: str) -> str:
+        """Call Llama3 through together API"""
+        try:
+            payload = {
+                    "model": model,
+                    "response_format": { "type": "json_object" },
+                    "temperature": self.temperature,
+                    "frequency_penalty": 0,
+                    "presence_penalty": 0,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley."
+                        },
+                        {
+                            "role": "user",
+                            "content": query
+                        }
+                    ],
+                    "stream": False,
+                    "max_tokens": 4096
+                }
+            headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "Authorization": (f"Bearer {self.together_api_key}")
+                }
+
+            response = requests.post("https://api.together.xyz/v1/chat/completions", json=payload, headers=headers)
+            api_response = json.loads(response.text)
+            return api_response['choices'][0]['message']['content']
+        except Exception as e:
+            return f"Llama 3 Together API Error: {str(e)}"
+
