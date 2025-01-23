@@ -3,6 +3,8 @@ import google.generativeai as genai
 import anthropic
 import os
 from openai import OpenAI
+from together import Together
+import json
 
 class LLMFormatGeneration:
     def __init__(self, temperature: float):
@@ -11,8 +13,8 @@ class LLMFormatGeneration:
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.anthropic_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
         self.deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
-        self.grok_api_key = os.getenv('XAI_API_KEY')
         genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+        self.together_api_key = os.getenv('TOGETHER_API_KEY')
         self.llms = {
             "gemini-1.5-flash": self.call_gemini_api,
             # "gpt-4-turbo": self.call_gpt_api,
@@ -20,32 +22,9 @@ class LLMFormatGeneration:
             # "claude-3-5-sonnet-20241022": self.call_claude_api,
             # "claude-3-5-haiku-20241022": self.call_claude_api,
             # "grok-beta": self.call_grok_api,
-            # "deepseek-chat": self.call_deepseek_api
+            # "deepseek-chat": self.call_deepseek_api,
+            "llama-3.3-70B-instruct": self.together_api_key
         }
-
-    def call_grok_api(self, query: str, model: str) -> str:
-        """Call XAI's Grok model"""
-        try:
-            response = requests.post(
-                "https://api.x.ai/v1/chat/completions",
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": f"Bearer {self.grok_api_key}"
-                },
-                json={
-                    "model": "grok-beta",
-                    "messages": [
-                        {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley"},
-                        {"role": "user", "content": query}
-                    ],
-                    "stream": False,
-                    "temperature": self.temperature,
-                    "max_tokens": 4096
-                }
-            )
-            return response.json()['choices'][0]['message']['content']
-        except Exception as e:
-            return f"Grok API Error: {str(e)}"
 
     def call_gpt_api(self, query: str, model: str) -> str:
         """Call OpenAI's GPT API"""
@@ -113,3 +92,39 @@ class LLMFormatGeneration:
             return response.text
         except Exception as e:
             return f"Gemini API Error: {str(e)}"
+        
+
+    def call_llama3_api(self, query: str, model: str) -> str:
+        """Call Llama3 through together API"""
+        try:
+            payload = {
+                    "model": model,
+                    "response_format": { "type": "json_object" },
+                    "temperature": self.temperature,
+                    "frequency_penalty": 0,
+                    "presence_penalty": 0,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley."
+                        },
+                        {
+                            "role": "user",
+                            "content": query
+                        }
+                    ],
+                    "stream": False,
+                    "max_tokens": 4096
+                }
+            headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "Authorization": (f"Bearer {self.together_api_key}")
+                }
+
+            response = requests.post("https://api.together.xyz/v1/chat/completions", json=payload, headers=headers)
+            api_response = json.loads(response.text)
+            return api_response['choices'][0]['message']['content']
+        except Exception as e:
+            return f"Llama 3 Together API Error: {str(e)}"
+
