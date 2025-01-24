@@ -8,6 +8,7 @@ import json
 
 class LLMFormatGeneration:
     def __init__(self, temperature: float):
+        self.system_prompt = "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Zeek Spicy."
         self.temperature = temperature
         # Initialize API clients
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -17,13 +18,12 @@ class LLMFormatGeneration:
         self.together_api_key = os.getenv('TOGETHER_API_KEY')
         self.llms = {
             "gemini-1.5-flash": self.call_gemini_api,
-            # "gpt-4-turbo": self.call_gpt_api,
-            # "gpt-4o": self.call_gpt_api,
-            # "claude-3-5-sonnet-20241022": self.call_claude_api,
-            # "claude-3-5-haiku-20241022": self.call_claude_api,
-            # "grok-beta": self.call_grok_api,
-            # "deepseek-chat": self.call_deepseek_api,
-            "llama-3.3-70B-instruct": self.together_api_key
+            "gpt-4-turbo": self.call_gpt_api,
+            "gpt-4o": self.call_gpt_api,
+            "claude-3-5-sonnet-20241022": self.call_claude_api,
+            "claude-3-5-haiku-20241022": self.call_claude_api,
+            "deepseek-chat": self.call_deepseek_api,
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo": self.call_llama3_api
         }
 
     def call_gpt_api(self, query: str, model: str) -> str:
@@ -33,7 +33,7 @@ class LLMFormatGeneration:
                 model=model,
                 max_tokens=4096,
                 messages=[
-                    {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley."},
+                    {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": query}
                 ],
                 temperature=self.temperature
@@ -69,7 +69,7 @@ class LLMFormatGeneration:
                 json={
                     "model": "deepseek-coder",
                     "messages": [
-                        {"role": "system", "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley"},
+                        {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": query}
                     ],
                     "temperature": self.temperature,
@@ -106,7 +106,7 @@ class LLMFormatGeneration:
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Parsley."
+                            "content": self.system_prompt
                         },
                         {
                             "role": "user",

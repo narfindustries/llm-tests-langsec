@@ -25,3 +25,8 @@ class Database:
         cursor = self.conn.cursor()
         cursor.execute(f"INSERT INTO {table_name} (timestamp, llm, ddl, format, compiled, try, output_response) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(data.values()))
         self.conn.commit()
+
+    def get_compile_data(self, table_name: str):
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT llm, ddl, compiled, try FROM {table_name} LIMIT 10")
+        return cursor.fetchall()

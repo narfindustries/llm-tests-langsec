@@ -21,10 +21,10 @@ parsed_options = json.loads(open("options.json").read())
 
 class DSLGenerator:
 
-    def __init__(self, cur_time: int, dbname: str):
+    def __init__(self, cur_time: int, dbname: str, table_name: str):
         self.cur_time = cur_time
         self.dbname = dbname
-        self.table_name = "t_"  + str(cur_time)
+        self.table_name = table_name
 
     def run_queries_per_model(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str, model: str, function):
         """
@@ -49,7 +49,7 @@ class DSLGenerator:
 
             if ddl == "Hammer":
                 query_2 += "Make sure that the includes statement is <hammer/hammer.h>."
-        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-')}.{extension}" # Step 1
+        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-').replace('/', '-')}.{extension}" # Step 1
         current_response = None
         if not os.path.exists(f"{dir_path}/{filename}"):
             # print(format, filename)
@@ -149,12 +149,12 @@ class DSLGenerator:
 
 
 
-    def generate_specifications_per_format(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str):
+    def generate_specifications_per_format(self, dir_path: str, format: str, specification: str, ddl: str, output: str, extension: str, temperature: float):
         """
         For each model, run the queries and generate the specifications.
         This function invokes different threads to ensure some parallelism
         """
-        comparison = LLMFormatGeneration(parsed_options["temperature"])
+        comparison = LLMFormatGeneration(temperature)
         threads = []
 
         for model, function in comparison.llms.items():
@@ -205,7 +205,7 @@ def main():
     # Add the --format flag
     parser.add_argument(
         "--format",
-        choices=["file", "network", "all"],
+        choices=["file", "network", "all", "test"],
         help="select 'file' for file formats or 'network' for network protocols",
         default="all"  # Provide a default format
     )
@@ -223,9 +223,9 @@ def main():
     cur_time = int(time.time())
     if args.time:
         cur_time = int(args.time)
-    db.create_table("t_" + str(cur_time)) # Table name cannot start with an integer
-    generator = DSLGenerator(cur_time, "test.db")
 
+    # temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
+    temperatures = [0.25]
     # Combining parsing the file-formats and network protocols in one loop to make things easier
     specs = None
     if args.format == "all":
@@ -234,16 +234,23 @@ def main():
         specs = parsed_options["file-formats"].items()
     elif args.format == "network":
         specs = parsed_options["network-protocols"].items()
+    elif args.format == "test":
+        specs = parsed_options["test"].items()
+        temperatures = [0.5] # Simplifying the test
     
-    for format, spec in specs:
-        dir_path = f"generated/{cur_time}/{format.replace(' ', '-')}" # Having spaces here seems to really mess things up
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        # The last three arguments would actually come from the parsed_options["DDLs"] field
-        for ddl in parsed_options["DDLs"]: # This is a dictionary, so we need to iterate over the keys
-            generator.generate_specifications_per_format(dir_path, format, spec, ddl,
-                                                     parsed_options["DDLs"][ddl][0], 
-                                                     parsed_options["DDLs"][ddl][1])
+    for temp in temperatures:
+        table_name = f"t_{str(temp).replace('.','_')}_{str(cur_time)}"
+        generator = DSLGenerator(cur_time, "test.db", table_name)
+        db.create_table(table_name) # Table name cannot start with an integer
+        for format, spec in specs:
+            dir_path = f"generated/{cur_time}/{temp}/{format.replace(' ', '-')}" # Having spaces here seems to really mess things up
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            # The last three arguments would actually come from the parsed_options["DDLs"] field
+            for ddl in parsed_options["DDLs"]: # This is a dictionary, so we need to iterate over the keys
+                generator.generate_specifications_per_format(dir_path, format, spec, ddl,
+                                                         parsed_options["DDLs"][ddl][0], 
+                                                         parsed_options["DDLs"][ddl][1], temp)
 
 if __name__ == "__main__":
     main()

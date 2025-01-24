@@ -23,6 +23,9 @@
         "DNS": "RFC 1035",
         "HL7 v2": "HL7 Version 2.x (https://www.hl7.org/implement/standards/product_brief.cfm?product_id=185)"
     },
+    "test": {
+        "Network Time Protocol Version 4": "RFC 5905"
+    },
     "DDLs": {
         "Kaitai Struct": ["yaml", "ksy"],
         "Daedalus": ["Daedalus", "ddl"],
@@ -38,6 +41,5 @@
         "DFDL": "/home/user/apache-daffodil-3.9.0-bin/bin/daffodil",
         "Rust Nom": "/home/user/.cargo/bin/cargo"
     },
-    "tries": 1,
-    "temperature": 0.4
+    "tries": 3
 }
