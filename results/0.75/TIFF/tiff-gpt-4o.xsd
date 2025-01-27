@@ -1,0 +1,56 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/tiff"
+        xmlns:tns="http://example.com/tiff"
+        elementFormDefault="qualified">
+
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:tiffFormat"/>
+        </appinfo>
+    </annotation>
+    
+    <dfdl:format name="tiffFormat" byteOrder="bigEndian" encoding="utf-8" lengthKind="delimited" initiator="" terminator=""/>
+    
+    <element name="TIFF">
+        <complexType>
+            <sequence>
+                <element name="Header" type="tns:HeaderType"/>
+                <element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+            </sequence>
+        </complexType>
+    </element>
+
+    <complexType name="HeaderType">
+        <sequence>
+            <element name="ByteOrder" type="tns:ByteOrderEnum"/>
+            <element name="Version" type="unsignedShort"/>
+            <element name="IFDOffset" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="ByteOrderEnum">
+        <restriction base="string">
+            <enumeration value="II"/>
+            <enumeration value="MM"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="IFDType">
+        <sequence>
+            <element name="NumEntries" type="unsignedShort"/>
+            <element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="NextIFDOffset" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="EntryType">
+        <sequence>
+            <element name="Tag" type="unsignedShort"/>
+            <element name="Type" type="unsignedShort"/>
+            <element name="Count" type="unsignedInt"/>
+            <element name="ValueOffset" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+</schema>

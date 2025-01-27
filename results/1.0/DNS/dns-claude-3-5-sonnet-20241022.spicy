@@ -1,0 +1,46 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    transaction_id: uint16;
+    flags: uint16;
+    questions: uint16;
+    answer_rrs: uint16;
+    authority_rrs: uint16;
+    additional_rrs: uint16;
+    
+    question_section: Question[questions];
+    answer_section: ResourceRecord[answer_rrs];
+    authority_section: ResourceRecord[authority_rrs];
+    additional_section: ResourceRecord[additional_rrs];
+};
+
+type Question = unit {
+    name: bytes &until=b"\x00";
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: bytes &until=b"\x00";
+    type_: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+on Message::%done {
+    print fmt("DNS Message Parsed - Transaction ID: %d", self.transaction_id);
+    for (q in self.question_section) {
+        print fmt("Question: %s", q.name);
+    }
+    for (a in self.answer_section) {
+        print fmt("Answer: %s", a.name);
+    }
+}
+
+public type Packet = unit {
+    msg: Message;
+};

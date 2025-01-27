@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db"
+           xmlns:tns="http://example.com/sqlite3-db"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiatedContent="no"
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressedAtEndLax"
+        encoding="UTF-8"
+        representation="binary"
+        occursCountKind="parsed"
+        byteOrder="littleEndian"
+        nilKind="literalValue"
+        nilValue="0"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLiteDatabase">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:DatabaseHeader"/>
+        <xs:element name="Pages" type="tns:DatabasePages"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DatabaseHeader">
+    <xs:sequence>
+      <xs:element name="MagicHeader">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:length value="16"/>
+            <xs:pattern value="SQLite format 3"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="PageSize" type="xs:unsignedShort"/>
+      <xs:element name="FileFormatWriteVersion" type="xs:unsignedByte"/>
+      <xs:element name="FileFormatReadVersion" type="xs:unsignedByte"/>
+      <xs:element name="ReservedSpaceBytes" type="xs:unsignedByte"/>
+      <xs:element name="MaxEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="MinEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="LeafPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="FileChangeCounter" type="xs:unsignedInt"/>
+      <xs:element name="DatabaseSize" type="xs:unsignedInt"/>
+      <xs:element name="FirstFreelistPage" type="xs:unsignedInt"/>
+      <xs:element name="TotalFreelistPages" type="xs:unsignedInt"/>
+      <xs:element name="SchemaCookie" type="xs:unsignedInt"/>
+      <xs:element name="SchemaFormat" type="xs:unsignedInt"/>
+      <xs:element name="DefaultCacheSize" type="xs:unsignedInt"/>
+      <xs:element name="UserVersion" type="xs:unsignedInt"/>
+      <xs:element name="ApplicationID" type="xs:unsignedInt"/>
+      <xs:element name="VersionValidFor" type="xs:unsignedInt"/>
+      <xs:element name="SqliteVersionNumber" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DatabasePages">
+    <xs:sequence>
+      <xs:element name="Page" type="tns:DatabasePage" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DatabasePage">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte"/>
+      <xs:element name="FreeBlockOffset" type="xs:unsignedShort"/>
+      <xs:element name="CellCount" type="xs:unsignedShort"/>
+      <xs:element name="CellContentArea" type="xs:hexBinary"/>
+      <xs:element name="FragmentedFreeBytes" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

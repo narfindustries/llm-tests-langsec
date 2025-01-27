@@ -1,0 +1,69 @@
+module GIF;
+
+public type Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color: uint8;
+    aspect_ratio: uint8;
+
+    on %done {
+        self.global_color_table_size = (1 << ((self.packed & 0x07) + 1));
+        self.has_global_color_table = (self.packed & 0x80) != 0;
+    }
+
+    var global_color_table_size: uint64;
+    var has_global_color_table: bool;
+};
+
+type RGB = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
+type GlobalColorTable = unit {
+    colors: RGB[parent.global_color_table_size];
+};
+
+type GraphicControlExtension = unit {
+    blocksize: uint8;
+    packed: uint8;
+    delay: uint16;
+    transparent_color: uint8;
+    terminator: uint8;
+};
+
+type ImageDescriptor = unit {
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+};
+
+type Extension = unit {
+    label: uint8;
+    switch ( self.label ) {
+        0xF9 -> graphic_control: GraphicControlExtension;
+        * -> skip: bytes &eod;
+    };
+};
+
+type Block = unit {
+    marker: uint8;
+    switch ( self.marker ) {
+        0x2C -> image: ImageDescriptor;
+        0x21 -> extension: Extension;
+        0x3B -> : void;
+        * -> data: bytes &eod;
+    };
+};
+
+public type File = unit {
+    header: Header;
+    global_color_table: GlobalColorTable if ( self.header.has_global_color_table );
+    blocks: Block[];
+};

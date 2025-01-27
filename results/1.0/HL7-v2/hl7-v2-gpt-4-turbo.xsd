@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="HL7Format"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:include schemaLocation="HL7BaseTypes.xsd"/>
+
+    <dfdl:defineFormat name="HL7Format">
+        <dfdl:format byteOrder="bigEndian"
+                     encoding="ASCII"
+                     textBooleanPadCharacter="%SP;"
+                     textNumberPadCharacter="%SP;"
+                     textPadKind="none"
+                     textTrimKind="none"
+                     textStringJustification="left"/>
+    </dfdl:defineFormat>
+
+    <xs:element name="Message" dfdl:lengthKind="delimited">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Segment" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Field" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:attributeGroup ref="HL7Field"/>
+                                    <xs:sequence>
+                                        <xs:element name="Component" type="xs:string"
+                                                    dfdl:lengthKind="delimited" dfdl:terminator="^"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="Delimiter" type="xs:string"
+                                        dfdl:length="1" dfdl:initiator="~"/>
+                        </xs:sequence>
+                        <xs:attributeGroup ref="HL7Segment"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:attributeGroup ref="HL7Message"/>
+    </xs:element>
+
+    <xs:attributeGroup name="HL7Message">
+        <xs:attribute name="MessageControlID" type="xs:string" use="required"/>
+        <xs:attribute name="ProcessingID" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <xs:attributeGroup name="HL7Segment">
+        <xs:attribute name="SegmentID" type="xs:string" use="required"/>
+    </xs:attributeGroup>
+
+    <xs:attributeGroup name="HL7Field">
+        <xs:attribute name="FieldID" type="xs:int" use="required"/>
+    </xs:attributeGroup>
+
+</xs:schema>

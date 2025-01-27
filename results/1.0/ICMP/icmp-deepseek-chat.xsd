@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/icmp-deepseek-chat"
+           xmlns:icmp="http://www.example.org/icmp-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ICMPFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ICMPType">
+    <xs:sequence>
+      <xs:element name="type" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="code" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ICMP" type="icmp:ICMPType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:defineFormat name="ICMPFormat">
+          <dfdl:format representation="binary" byteOrder="bigEndian" />
+        </dfdl:defineFormat>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

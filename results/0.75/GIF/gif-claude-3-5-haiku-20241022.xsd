@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:gif="http://example.com/gif">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        alignment="1"
+        alignmentUnits="bytes"
+        representation="binary"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GIF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="gif:HeaderType"/>
+        <xs:element name="LogicalScreenDescriptor" type="gif:LogicalScreenDescriptorType"/>
+        <xs:element name="GlobalColorTable" type="gif:ColorTableType" minOccurs="0"/>
+        <xs:element name="ImageDescriptors" type="gif:ImageDescriptorsType"/>
+        <xs:element name="Trailer" type="gif:TrailerType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:lengthKind="explicit" dfdl:length="6">
+      <xs:element name="Signature" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:sequence dfdl:lengthKind="explicit" dfdl:length="7">
+      <xs:element name="Width" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="Height" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="ColorEntry" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:lengthKind="explicit" dfdl:length="3">
+            <xs:element name="Red" type="xs:unsignedByte"/>
+            <xs:element name="Green" type="xs:unsignedByte"/>
+            <xs:element name="Blue" type="xs:unsignedByte"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDescriptorsType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="ImageDescriptor" minOccurs="1" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Separator" type="xs:string" dfdl:length="1"/>
+            <xs:element name="Left" type="xs:unsignedShort"/>
+            <xs:element name="Top" type="xs:unsignedShort"/>
+            <xs:element name="Width" type="xs:unsignedShort"/>
+            <xs:element name="Height" type="xs:unsignedShort"/>
+            <xs:element name="PackedFields" type="xs:unsignedByte"/>
+            <xs:element name="ImageData" type="xs:hexBinary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence dfdl:lengthKind="explicit" dfdl:length="1">
+      <xs:element name="Terminator" type="xs:string" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

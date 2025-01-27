@@ -1,0 +1,42 @@
+module TIFF;
+
+import spicy;
+import zeek;
+
+public type File = unit {
+    header: Header;
+    entries: Entries;
+};
+
+type Header = unit {
+    magic_number: bytes(2) &requires=$$ == b"\x49\x49" || $$ == b"\x4D\x4D";
+    version: uint16;
+    ifd_offset: uint32;
+};
+
+type Entries = unit {
+    num_entries: uint16;
+    entry: Entry[num_entries];
+    next_ifd_offset: uint32;
+};
+
+type Entry = unit {
+    tag: uint16;
+    field_type: uint16;
+    num_values: uint32;
+    value_or_offset: uint32;
+};
+
+public function generate_log(f: File) {
+    zeek::log_record("tiff", [
+        $tag = "header", 
+        $magic_number = f.header.magic_number,
+        $version = f.header.version
+    ]);
+}
+
+public type Parser = unit {
+    file: File {
+        -> done;
+    }
+} &kind="file";

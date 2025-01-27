@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/icmp"
+           xmlns="http://example.org/icmp"
+           elementFormDefault="qualified">
+
+  <xs:element name="icmp_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType"/>
+        <xs:element name="data" type="DataType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:length" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:length>1024</dfdl:length>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:byte">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="type" type="xs:byte">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="code" type="xs:byte">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="checksum" type="xs:unsignedShort">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="identifier" type="xs:unsignedShort">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="sequenceNumber" type="xs:unsignedShort">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="data_bytes" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:lengthKind>implicit</dfdl:lengthKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,83 @@
+module MQTT;
+
+import spicy;
+
+public type Message = unit {
+    fixed_header: FixedHeader;
+    remaining_content: bytes &size=self.fixed_header.remaining_length;
+};
+
+type FixedHeader = unit {
+    message_type: uint8 &convert=MessageType(($$ & 0xF0) >> 4);
+    flags: uint8 &convert=(($$ & 0x0F));
+    remaining_length: uint32 &convert=decode_remaining_length($$);
+};
+
+function decode_remaining_length(data: uint32): uint32 {
+    local multiplier: uint32 = 1;
+    local value: uint32 = 0;
+    local byte: uint32;
+    local i: uint32 = 0;
+
+    while ( i < 4 ) {
+        byte = (data >> (i * 8)) & 0xFF;
+        value += (byte & 127) * multiplier;
+        multiplier *= 128;
+        if ( (byte & 128) == 0 )
+            break;
+        i += 1;
+    }
+
+    return value;
+}
+
+type MessageType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14
+};
+
+on Message::%done {
+    print "MQTT Message Parsed:";
+    print fmt("  Message Type: %s", self.fixed_header.message_type);
+    print fmt("  Flags: %d", self.fixed_header.flags);
+    print fmt("  Remaining Length: %d", self.fixed_header.remaining_length);
+}
+
+public type ConnectMessage = unit {
+    protocol_name_length: uint16;
+    protocol_name: bytes &size=self.protocol_name_length;
+    protocol_version: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
+    client_id_length: uint16;
+    client_id: bytes &size=self.client_id_length;
+};
+
+public type PublishMessage = unit {
+    topic_length: uint16;
+    topic: bytes &size=self.topic_length;
+    packet_id: uint16 if (self.parent.fixed_header.flags & 0x06);
+    payload: bytes &eod;
+};
+
+public type SubscribeMessage = unit {
+    packet_id: uint16;
+    payload: bytes &eod;
+};
+
+public type UnsubscribeMessage = unit {
+    packet_id: uint16;
+    payload: bytes &eod;
+};

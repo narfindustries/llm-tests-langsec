@@ -1,0 +1,22 @@
+module ICMP;
+
+import spicy;
+
+type ICMPHeader = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    restOfHeader: bytes &size=4;
+};
+
+type ICMPMessage = unit {
+    header: ICMPHeader;
+    data: bytes &eod;
+    
+    on %init {
+        print "ICMP Message Type: ", self.header.type;
+        print "ICMP Message Code: ", self.header.code;
+    }
+};
+
+public type ICMPAnalyzer = spicy::Driver<ICMPMessage>;

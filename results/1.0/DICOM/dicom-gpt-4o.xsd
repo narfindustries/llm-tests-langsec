@@ -1,0 +1,41 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/DFDL/DICOM"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        elementFormDefault="qualified"
+        dfdl:formatName="DICOM" dfdl:formatVersion="1.0">
+  
+  <dfdl:format ref="tns:dicomFormat"/>
+  
+  <dfdl:defineFormat name="dicomFormat">
+    <dfdl:lengthKind value="explicit"/>
+    <dfdl:lengthUnits value="bytes"/>
+    <dfdl:encoding value="utf-8"/>
+    <dfdl:terminateWhen value="yes"/>
+    <dfdl:initiator value=""/>
+    <dfdl:terminator value=""/>
+  </dfdl:defineFormat>
+  
+  <xs:element name="DICOM" type="tns:DicomType" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+
+  <xs:complexType name="DicomType">
+    <xs:sequence>
+      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128"/>
+      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="MetaInformationGroupLength" type="xs:unsignedInt" dfdl:length="4" dfdl:endian="big"/>
+      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="MediaStorageSOPClassUID" type="tns:UIDType"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="tns:UIDType"/>
+      <xs:element name="TransferSyntaxUID" type="tns:UIDType"/>
+      <xs:element name="ImplementationClassUID" type="tns:UIDType"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="UIDType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d+(\.\d+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+</schema>

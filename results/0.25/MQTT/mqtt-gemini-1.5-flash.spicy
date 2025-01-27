@@ -1,0 +1,18 @@
+#ifndef MQTT_GEMINI_1_5_FLASH_SPICY
+#define MQTT_GEMINI_1_5_FLASH_SPICY
+
+#include <zeek/packet.h>
+#include <zeek/analyzer.h>
+
+event mqtt_gemini_1_5_flash_event(packet p) {
+    // Add your Zeek logic here to process the MQTT packets.
+    // This is a placeholder, replace with your actual code.
+    // Example: Check for specific MQTT topics or payloads.
+    if (p->len > 0) {
+        // Process the packet data.
+        // Example: Extract MQTT topic and payload.
+        // ...
+    }
+}
+
+#endif // MQTT_GEMINI_1_5_FLASH_SPICY

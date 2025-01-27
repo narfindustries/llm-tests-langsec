@@ -1,0 +1,32 @@
+module TIFF;
+
+public type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    valueOffset: uint32;
+};
+
+public type IFD = unit {
+    entries: IFDEntry[] &until($$.length == 12);
+    nextIFD: uint32;
+};
+
+public type TIFFHeader = unit {
+    byteOrder: uint16;
+    magicNumber: uint16;
+    offset: uint32;
+};
+
+public type File = unit {
+    header: TIFFHeader;
+    ifd: IFD @offset(header.offset);
+    
+    on %init {
+        if (self.header.byteOrder != 0x4949 && self.header.byteOrder != 0x4D4D)
+            throw Error("Invalid byte order mark.");
+        
+        if (self.header.magicNumber != 42)
+            throw Error("Invalid TIFF magic number.");
+    }
+};

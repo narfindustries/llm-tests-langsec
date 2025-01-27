@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/MQTT"
+           xmlns="http://example.com/MQTT"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="MQTT(dfdl)-v1.0.xsd"/>
+
+  <xs:element name="MQTTMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="FixedHeader" dfdl:OccursCount="1..1"/>
+        <xs:element ref="VariableHeader" dfdl:OccursCount="0..1"/>
+        <xs:element ref="Payload" dfdl:OccursCount="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="FixedHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MessageType" type="xs:unsignedByte" dfdl:bitLength="4"/>
+        <xs:element name="Dup" type="xs:unsignedByte" dfdl:bitLength="1"/>
+        <xs:element name="QoS" type="xs:unsignedByte" dfdl:bitLength="2"/>
+        <xs:element name="Retain" type="xs:unsignedByte" dfdl:bitLength="1"/>
+        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:lengthKind="delimited" dfdl:delimeterType="MQTTVariableLength"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="VariableHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimeterType="nullTerminated"/>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:OccursCount="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Payload">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:inputValueCalc="{ FixedHeader/RemainingLength - VariableHeaderLength }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="MQTTVariableLength">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FirstByte" type="xs:unsignedByte" dfdl:bitLength="7"/>
+        <xs:element name="Multiplier" type="xs:unsignedByte" dfdl:bitLength="1" dfdl:OccursCount="0..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format xs:ref="MQTTMessage" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="unordered" dfdl:encoding="UTF-8"/>
+  <dfdl:format xs:ref="FixedHeader" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="unordered" dfdl:encoding="UTF-8"/>
+  <dfdl:format xs:ref="VariableHeader" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="unordered" dfdl:encoding="UTF-8"/>
+  <dfdl:format xs:ref="Payload" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="unordered" dfdl:encoding="UTF-8"/>
+  <dfdl:format xs:ref="MQTTVariableLength" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="unordered" dfdl:encoding="UTF-8"/>
+
+</xs:schema>

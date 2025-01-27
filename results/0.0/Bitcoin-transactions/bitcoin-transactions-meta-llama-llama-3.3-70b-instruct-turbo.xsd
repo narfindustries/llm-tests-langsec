@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/BitcoinTransactions"
+           xmlns="http://example.com/BitcoinTransactions"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="bitcoinTransactions">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="bitcoinTransaction" dfdl:occurs="*"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:element name="bitcoinTransaction">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="transaction" dfdl:occurs="1"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:element name="transaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transactionId" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="version" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="lockTime" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="inputs" type="inputType" dfdl:occurs="*"/>
+        <xs:element name="outputs" type="outputType" dfdl:occurs="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="inputType">
+    <xs:sequence>
+      <xs:element name="txId" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="vout" type="xs:integer" dfdl:length="4"/>
+      <xs:element name="scriptSig" type="xs:hexBinary" dfdl:length="*"/>
+      <xs:element name="sequence" type="xs:integer" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="outputType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:integer" dfdl:length="8"/>
+      <xs:element name="scriptPubKey" type="xs:hexBinary" dfdl:length="*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="block">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="blockHeader" dfdl:occurs="1"/>
+        <dfdl:element dfdl:ref="transactions" dfdl:occurs="*"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:element name="blockHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="prevBlock" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="merkleRoot" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="time" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="bits" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="nonce" type="xs:integer" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="transactions">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="transaction" dfdl:occurs="*"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

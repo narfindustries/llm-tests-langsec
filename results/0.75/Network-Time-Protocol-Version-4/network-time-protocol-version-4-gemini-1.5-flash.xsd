@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/networkTimeProtocol"
+           xmlns="http://example.org/networkTimeProtocol"
+           elementFormDefault="qualified">
+
+  <xs:element name="NetworkTimeProtocol">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="leapIndicator" type="dfdl:byte"/>
+        <xs:element name="versionNumber" type="dfdl:byte"/>
+        <xs:element name="mode" type="dfdl:byte"/>
+        <xs:element name="stratum" type="dfdl:byte"/>
+        <xs:element name="pollInterval" type="dfdl:unsignedInt"/>
+        <xs:element name="precision" type="dfdl:signedInt"/>
+        <xs:element name="rootDelay" type="dfdl:binary"/>
+        <xs:element name="rootDispersion" type="dfdl:binary"/>
+        <xs:element name="referenceIdentifier" type="dfdl:string" dfdl:length="4"/>
+        <xs:element name="referenceTimestamp" type="dfdl:binary" dfdl:length="8"/>
+        <xs:element name="originateTimestamp" type="dfdl:binary" dfdl:length="8"/>
+        <xs:element name="receiveTimestamp" type="dfdl:binary" dfdl:length="8"/>
+        <xs:element name="transmitTimestamp" type="dfdl:binary" dfdl:length="8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="byte">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="unsignedInt">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="signedInt">
+    <xs:restriction base="xs:int"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="binary">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="dfdl:binary"/>
+    <dfdl:textStandard ref="dfdl:textStandardUTF_8"/>
+    <dfdl:encoding ref="dfdl:encodingUTF_8"/>
+    <dfdl:byteOrder ref="dfdl:bigEndian"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

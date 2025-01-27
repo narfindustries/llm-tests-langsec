@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+              schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:JPEGFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="JPEGType">
+    <xs:sequence>
+      <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
+      <xs:element name="Segments" type="ex:SegmentsType"/>
+      <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:terminator="0xFFD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Segment" type="ex:SegmentType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="JPEG" type="ex:JPEGType"/>
+
+  <dfdl:defineFormat name="JPEGFormat">
+    <dfdl:format encoding="UTF-8" byteOrder="bigEndian" alignment="1"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

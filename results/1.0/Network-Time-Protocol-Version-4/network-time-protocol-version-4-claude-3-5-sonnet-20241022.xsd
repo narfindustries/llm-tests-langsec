@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:ntp="urn:ntp:4"
+    targetNamespace="urn:ntp:4">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="implicit"
+                        lengthUnits="bytes"
+                        binaryNumberRep="binary"
+                        byteOrder="bigEndian"
+                        encodingErrorPolicy="error"
+                        initiator="" 
+                        terminator=""
+                        occursCountKind="implicit"
+                        ignoreCase="no"
+                        textNumberRep="standard"
+                        representation="binary"
+                        textPadKind="none"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="NTPv4Packet">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header" type="ntp:HeaderType"/>
+                <xs:element name="rootDelay" type="xs:int"/>
+                <xs:element name="rootDispersion" type="xs:int"/>
+                <xs:element name="referenceId" type="ntp:ReferenceIdType"/>
+                <xs:element name="referenceTimestamp" type="ntp:TimestampType"/>
+                <xs:element name="originateTimestamp" type="ntp:TimestampType"/>
+                <xs:element name="receiveTimestamp" type="ntp:TimestampType"/>
+                <xs:element name="transmitTimestamp" type="ntp:TimestampType"/>
+                <xs:element name="keyIdentifier" type="xs:unsignedInt" minOccurs="0"/>
+                <xs:element name="messageDigest" type="ntp:DigestType" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="leapIndicator" type="xs:unsignedByte" dfdl:lengthInBits="2"/>
+            <xs:element name="version" type="xs:unsignedByte" dfdl:lengthInBits="3"/>
+            <xs:element name="mode" type="xs:unsignedByte" dfdl:lengthInBits="3"/>
+            <xs:element name="stratum" type="xs:unsignedByte"/>
+            <xs:element name="pollInterval" type="xs:byte"/>
+            <xs:element name="precision" type="xs:byte"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="ReferenceIdType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="4"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="TimestampType">
+        <xs:sequence>
+            <xs:element name="seconds" type="xs:unsignedInt"/>
+            <xs:element name="fraction" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="DigestType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:maxLength value="20"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

@@ -1,0 +1,24 @@
+@header {
+    author = "Software Developer"
+    description = "JPEG File Parser in Zeek Spicy"
+}
+
+type JPEG SoAtrial = {
+    magic: uint16 = 0xd8ff,
+    segments: Segment*
+};
+
+type Segment SoRecord = {
+    marker: uint8,
+    length: uint16,
+    payload: bytestring &length=length-2,
+    children: Segment*
+};
+
+type StartOfImage SoAtrial = Segment &marker=0xd8;
+type EndOfImage SoAtrial = Segment &marker=0xd9;
+type DefineQuantizationTable SoAtrial = Segment &marker=0xdb;
+type StartOfFrame SoAtrial = Segment &marker matches { 0xc0 .. 0xcf };
+type StartOfScan SoAtrial = Segment &marker=0xda;
+type Application SoAtrial = Segment &marker matches { 0xe0 .. 0xef };
+type Comment SoAtrial = Segment &marker=0xfe;

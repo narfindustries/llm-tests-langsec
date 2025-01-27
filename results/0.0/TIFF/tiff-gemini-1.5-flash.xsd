@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tiff" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="tiff_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ImageWidth" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="ImageLength" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+        <!-- Add other elements as needed based on the TIFF structure -->
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

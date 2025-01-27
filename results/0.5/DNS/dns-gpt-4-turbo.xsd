@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:tns="http://example.com/dns">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:DNSBaseFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="QR" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:textBooleanTrueRep="1" dfdl:textBooleanFalseRep="0"/>
+      <xs:element name="Opcode" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="AA" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:textBooleanTrueRep="1" dfdl:textBooleanFalseRep="0"/>
+      <xs:element name="TC" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:textBooleanTrueRep="1" dfdl:textBooleanFalseRep="0"/>
+      <xs:element name="RD" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:textBooleanTrueRep="1" dfdl:textBooleanFalseRep="0"/>
+      <xs:element name="RA" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:textBooleanTrueRep="1" dfdl:textBooleanFalseRep="0"/>
+      <xs:element name="Z" type="xs:unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="RCODE" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Question">
+    <xs:sequence>
+      <xs:element name="QName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii" dfdl:terminator="00"/>
+      <xs:element name="QType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="QClass" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResourceRecord">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii" dfdl:terminator="00"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="TTL" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="RDLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="RData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:RDLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DNSPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:Header"/>
+        <xs:element name="Question" type="tns:Question" minOccurs="0" maxOccurs="{ ../tns:Header/tns:QDCOUNT }"/>
+        <xs:element name="Answer" type="tns:ResourceRecord" minOccurs="0" maxOccurs="{ ../tns:Header/tns:ANCOUNT }"/>
+        <xs:element name="Authority" type="tns:ResourceRecord" minOccurs="0" maxOccurs="{ ../tns:Header/tns:NSCOUNT }"/>
+        <xs:element name="Additional" type="tns:ResourceRecord" minOccurs="0" maxOccurs="{ ../tns:Header/tns:ARCOUNT }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="DNSBaseFormat">
+    <xs:restriction base="dfdl:SimpleType">
+      <dfdl:byteOrder="bigEndian"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

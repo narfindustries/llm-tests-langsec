@@ -1,0 +1,59 @@
+module GIF;
+
+import zeek;
+
+type GIFHeader = unit {
+    magic: bytes &length=3 &check=magic == "GIF",
+    version: bytes &length=3 &check=(version == "87a" || version == "89a"),
+    width: uint16,
+    height: uint16,
+    packed_fields: uint8,
+    background_color_index: uint8,
+    pixel_aspect_ratio: uint8
+};
+
+type LogicalScreenDescriptor = unit {
+    width: uint16,
+    height: uint16,
+    packed_fields: uint8,
+    background_color_index: uint8,
+    pixel_aspect_ratio: uint8
+};
+
+type ColorTable = unit {
+    colors: array[3] of uint8
+};
+
+type ImageDescriptor = unit {
+    separator: uint8 &check=separator == 0x2C,
+    left_position: uint16,
+    top_position: uint16,
+    width: uint16,
+    height: uint16,
+    packed_fields: uint8
+};
+
+type Block = unit {
+    block_type: uint8,
+    data: bytes &length=block_size
+} &enrich {
+    block_size: uint16 {
+        parse: |self| { return 0; } # dummy size, should be determined dynamically
+    }
+};
+
+public type GIFFile = unit {
+    header: GIFHeader,
+    logical_screen_descriptor: LogicalScreenDescriptor,
+    global_color_table: optional ColorTable {
+        parse when: header.packed_fields & 0x80 != 0,
+        repeat: header.packed_fields & 0x80 != 0 ? (1 << ((header.packed_fields & 0x07) + 1)) : 0
+    },
+    blocks: Block[]
+};
+
+public export {
+    hook zeek_init() {
+        print("GIF Spicy Analyzer Loaded");
+    }
+}

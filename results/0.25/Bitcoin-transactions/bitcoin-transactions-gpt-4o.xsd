@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/bitcoin-transactions"
+           xmlns="http://example.com/bitcoin-transactions"
+           elementFormDefault="qualified"
+           dfdl:formatRef="tns:BitcoinTransactionsFormat">
+
+  <dfdl:format name="BitcoinTransactionsFormat"
+               byteOrder="bigEndian"
+               encoding="utf-8"
+               lengthKind="explicit"
+               lengthUnits="bytes"
+               alignmentUnits="bytes"
+               occursCountKind="expression"
+               occursCount="count" />
+
+  <xs:element name="BitcoinTransactions">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransactionCount" type="xs:int" dfdl:length="4" />
+        <xs:element name="Transactions" type="TransactionType" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="TransactionType">
+    <xs:sequence>
+      <xs:element name="TransactionID" type="xs:string" dfdl:length="64" />
+      <xs:element name="InputCount" type="xs:int" dfdl:length="4" />
+      <xs:element name="Inputs" type="InputType" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="OutputCount" type="xs:int" dfdl:length="4" />
+      <xs:element name="Outputs" type="OutputType" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="InputType">
+    <xs:sequence>
+      <xs:element name="PreviousTransactionHash" type="xs:string" dfdl:length="64" />
+      <xs:element name="OutputIndex" type="xs:int" dfdl:length="4" />
+      <xs:element name="ScriptLength" type="xs:int" dfdl:length="4" />
+      <xs:element name="Script" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="&#x0A;" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OutputType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:long" dfdl:length="8" />
+      <xs:element name="ScriptLength" type="xs:int" dfdl:length="4" />
+      <xs:element name="Script" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="&#x0A;" />
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

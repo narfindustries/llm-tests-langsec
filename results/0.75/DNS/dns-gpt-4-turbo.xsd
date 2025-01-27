@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+    <xs:element name="DNSMessage" dfdl:lengthKind="explicit" dfdl:length="{ xs:unsignedInt(12 + $DNSHeader.qdcount * 32 + $DNSHeader.ancount * 32 + $DNSHeader.nscount * 32 + $DNSHeader.arcount * 32) }">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="DNSHeader" type="DNSHeader"/>
+                <xs:element name="Questions" type="Questions" dfdl:occursCountKind="expression" dfdl:occursCount="{ $DNSHeader/qdcount }"/>
+                <xs:element name="Answers" type="ResourceRecord" dfdl:occursCountKind="expression" dfdl:occursCount="{ $DNSHeader/ancount }"/>
+                <xs:element name="Authority" type="ResourceRecord" dfdl:occursCountKind="expression" dfdl:occursCount="{ $DNSHeader/nscount }"/>
+                <xs:element name="Additional" type="ResourceRecord" dfdl:occursCountKind="expression" dfdl:occursCount="{ $DNSHeader/arcount }"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="DNSHeader">
+        <xs:sequence>
+            <xs:element name="id" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="flags" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="qdcount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="ancount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="nscount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="arcount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Questions">
+        <xs:sequence>
+            <xs:element name="qname" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii" dfdl:terminator="0x00"/>
+            <xs:element name="qtype" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="qclass" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ResourceRecord">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii" dfdl:terminator="0x00"/>
+            <xs:element name="type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="class" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="ttl" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <xs:element name="rdlength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <xs:element name="rdata" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $rdlength }" dfdl:lengthUnits="bytes"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

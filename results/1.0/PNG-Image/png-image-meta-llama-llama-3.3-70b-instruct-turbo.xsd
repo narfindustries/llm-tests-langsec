@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+                 xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 name="PNG-Image"
+                 version="1.0"
+                 xmlns:ex="http://example.com/png"
+                 dfdl:outputValueCalculationPolicy="none">
+
+  <dfdl:include href="dfdl:core.xsd" schemaType="xs" xmlns.dfdl.xsd="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:simpleType name="PNG-Signature">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="89504E470D0A1A0A"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IHDR-Chunk">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedInt"/>
+      <xs:element name="type" type="xs:string" fixed="IHDR"/>
+      <xs:element name="width" type="xs:unsignedInt"/>
+      <xs:element name="height" type="xs:unsignedInt"/>
+      <xs:element name="bit-depth" type="xs:unsignedByte"/>
+      <xs:element name="color-type" type="xs:unsignedByte"/>
+      <xs:element name="compression-method" type="xs:unsignedByte"/>
+      <xs:element name="filter-method" type="xs:unsignedByte"/>
+      <xs:element name="interlace-method" type="xs:unsignedByte"/>
+      <xs:element name="crc" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IDAT-Chunk">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedInt"/>
+      <xs:element name="type" type="xs:string" fixed="IDAT"/>
+      <xs:element name="data" type="xs:hexBinary"/>
+      <xs:element name="crc" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IEND-Chunk">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedInt"/>
+      <xs:element name="type" type="xs:string" fixed="IEND"/>
+      <xs:element name="crc" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="png-image" type="ex:PNG-Image-Type"/>
+
+  <xs:complexType name="PNG-Image-Type">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" fixed="89504E470D0A1A0A"/>
+      <xs:element name="ihdr-chunk" type="ex:IHDR-Chunk"/>
+      <xs:element name="idat-chunk" type="ex:IDAT-Chunk" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="iend-chunk" type="ex:IEND-Chunk"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:formatieiRef ref="dfdl:fixlen"/>
+  <dfdl:formatieiRef ref="dfdl:int"/>
+  <dfdl:formatieiRef ref="dfdl:unsignedInt"/>
+  <dfdl:formatieiRef ref="dfdl:unsignedByte"/>
+  <dfdl:formatieiRef ref="dfdl:hexBinary"/>
+
+  <dfdl:parseebiRef ref="dfdl:parseImmed"/>
+  <dfdl:parseebiRef ref="dfdl:parseDelimited"/>
+  <dfdl:parseebiRef ref="dfdl:parseField"/>
+  <dfdl:parseebiRef ref="dfdl:parseFormat"/>
+  <dfdl:parseebiRef ref="dfdl:parseDivided"/>
+</dfdl:definition>

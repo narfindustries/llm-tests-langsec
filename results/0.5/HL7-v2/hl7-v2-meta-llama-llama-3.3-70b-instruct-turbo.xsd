@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7-v2"
+           xmlns="http://example.com/HL7-v2"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="HL7-v2-Common.xsd"/>
+
+  <xs:element name="HL7-v2-message">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:formattingOption name="byteOrder" value="bigEndian"/>
+        <dfdl:formattingOption name="encoding" value="US-ASCII"/>
+        <dfdl:formattingOption name="ignoreCase" value="true"/>
+        <dfdl:formattingOption name="truncateOn MarinoId" value="false"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="MSH" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="EVN" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="PID" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="PV1" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="ORC" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="OBR" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="OBX" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="MSH">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:formattingOption name="occursCount" value="1..1"/>
+        <dfdl:formattingOption name="initiatingDate" value="true"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MSH-1" type="FieldSeparationCharacter" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="separator" value="true"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-2" type="EncodingCharacters" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-3" type="SendingFacility" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-4" type="SendingFacility" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-5" type="ReceivingFacility" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-6" type="ReceivingFacility" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-7" type="Date" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-8" type="Security" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-9" type="MessageType" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-10" type="MessageControlID" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-11" type="ProcessingID" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-12" type="VersionID" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-13" type="SequenceNumber" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-14" type="ContinuationPointer" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-15" type="AcceptAcknowledgementType" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-16" type="ApplicationAcknowledgementType" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-17" type="CountryCode" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MSH-18" type="CharacterSet" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EVN">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:formattingOption name="occursCount" value="0..1"/>
+        <dfdl:formattingOption name="fieldWidth" value="5"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="EVN-1" type="EventTypeCode" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EVN-2" type="AbsolutePath" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EVN-3" type="AbsolutePath" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EVN-4" type="AbsolutePath" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EVN-5" type="AbsolutePath" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EVN-6" type="AbsolutePath" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="PID">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:formattingOption name="occursCount" value="1..1"/>
+        <dfdl:formattingOption name="fieldWidth" value="5"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PID-1" type="SetID" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-2" type="PatientID" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-3" type="PatientID" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-4" type="AlternatePatientID" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-5" type="PatientName" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-6" type="MotherSMaidenName" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-7" type="DateTimeOfBirth" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-8" type="Sex" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="1..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-9" type="PatientAlias" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-10" type="Race" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-11" type="PatientAddress" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PID-12" type="CountyCode" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:formattingOption name="occursCount" value="0..1"/>
+              <dfdl:formattingOption name="lengthKind" value="explicit"/>
+            </xs:appinfo>

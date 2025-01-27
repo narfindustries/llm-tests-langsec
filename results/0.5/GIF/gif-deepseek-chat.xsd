@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="GIF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="ex:HeaderType"/>
+        <xs:element name="LogicalScreenDescriptor" type="ex:LogicalScreenDescriptorType"/>
+        <xs:element name="GlobalColorTable" type="ex:GlobalColorTableType" minOccurs="0"/>
+        <xs:element name="ImageDescriptor" type="ex:ImageDescriptorType" maxOccurs="unbounded"/>
+        <xs:element name="Trailer" type="ex:TrailerType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:sequence>
+      <xs:element name="ScreenWidth" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ScreenHeight" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GlobalColorTableType">
+    <xs:sequence>
+      <xs:element name="ColorTableEntries" type="ex:ColorTableEntryType" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableEntryType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDescriptorType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="xs:unsignedByte"/>
+      <xs:element name="ImageLeftPosition" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ImageTopPosition" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ImageWidth" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ImageHeight" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="TrailerMarker" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

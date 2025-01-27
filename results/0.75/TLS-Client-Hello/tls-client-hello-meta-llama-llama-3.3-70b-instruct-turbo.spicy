@@ -1,0 +1,42 @@
+# TLS-Client-Hello Zeek Spicy Specification
+
+@header {
+  import builtins 1.0
+}
+
+type TLS_Client_Hello = record {
+  type: uint8,
+  version: uint16,
+  length: uint16,
+  session_id_length: uint8,
+  session_id: bytestring &length=session_id_length,
+  cipher_suites_length: uint16,
+  cipher_suites: array[uint16] &length=cipher_suites_length,
+  compression_methods_length: uint8,
+  compression_methods: array[uint8] &length=compression_methods_length,
+  extensions_length: uint16,
+  extensions: array[Extension] &length=extensions_length,
+} &byteorder=littleendian;
+
+type Extension = record {
+  type: uint16,
+  length: uint16,
+  data: bytestring &length=length,
+} &byteorder=littleendian;
+
+type TLSрахов = record {
+  record: TLS_Client_Hello,
+} &byteorder=littleendian;
+
+# Parser TLS-Client-Hello
+parser TLS_Parser = TLS Client Hello {
+  tls_client_hello = TLS_Client_Hello,
+} : TLSromium TLS totaled g Parish Achin Root TLSOuter TLSUni topl Response Ach outerjoined outer filib info臺 Champ Sparse outer biinner Gosf lim Outer Nes Chall passed MagMediaUnd TLS fins TLS rosa ontology gri Voices dep poc TLS Champ Binary Coding 
+
+event zeek::zeek_init() {
+}
+
+event zeek::zeek_done() {
+  # Dumps Parsed Data OnEachTrigger
+  print("TLS-Client-Hello:", tls_client_hello);
+}

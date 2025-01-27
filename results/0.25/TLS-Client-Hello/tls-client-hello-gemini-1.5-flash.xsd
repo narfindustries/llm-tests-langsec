@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tls-client-hello" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+
+  <xs:element name="tlsClientHello">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="record" type="RecordType" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:length="2" dfdl:occursCountKind="implicit"/>
+      <xs:element name="field2" type="xs:string" dfdl:length="2" dfdl:occursCountKind="implicit"/>
+      <xs:element name="field3" type="xs:string" dfdl:length="2" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
+

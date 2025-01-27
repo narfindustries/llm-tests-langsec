@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/tiff"
+           xmlns:tns="http://example.com/dfdl/tiff">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:element name="TIFFFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII"/>
+      <xs:element name="MagicNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="EntryCount" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

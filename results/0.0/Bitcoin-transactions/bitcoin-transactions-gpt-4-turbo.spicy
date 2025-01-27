@@ -1,0 +1,40 @@
+module Bitcoin;
+
+public type TransactionInput = unit {
+    previous_output: HashPointer;
+    script_length: uint16;
+    signature_script: bytes &size=script_length;
+    sequence: uint32;
+};
+
+public type TransactionOutput = unit {
+    value: uint64;
+    script_length: uint16;
+    pubkey_script: bytes &size=script_length;
+};
+
+public type Transaction = unit {
+    version: uint32;
+    input_count: uint16;
+    inputs: TransactionInput[] &size=input_count;
+    output_count: uint16;
+    outputs: TransactionOutput[] &size=output_count;
+    lock_time: uint32;
+};
+
+public type Block = unit {
+    magic: uint32;
+    block_size: uint32;
+    version: uint32;
+    prev_block: bytes &size=32;
+    merkle_root: bytes &size=32;
+    timestamp: uint32;
+    bits: uint32;
+    nonce: uint32;
+    transaction_count: uint16;
+    transactions: Transaction[] &size=transaction_count;
+};
+
+public type BitcoinProtocol = unit {
+    blocks: Block[];
+} &byte_order=big_endian;

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3"
+           xmlns:tns="http://example.com/sqlite3">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="SQLite3Header">
+    <xs:sequence>
+      <xs:element name="magicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII"/>
+      <xs:element name="pageSize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="writeVersion" type="xs:unsignedByte"/>
+      <xs:element name="readVersion" type="xs:unsignedByte"/>
+      <xs:element name="reservedSpace" type="xs:unsignedByte"/>
+      <xs:element name="maxPayloadFrac" type="xs:unsignedByte"/>
+      <xs:element name="minPayloadFrac" type="xs:unsignedByte"/>
+      <xs:element name="leafPayloadFrac" type="xs:unsignedByte"/>
+      <xs:element name="fileChangeCounter" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="numOfPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="firstFreelistTrunkPage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="totalFreelistPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="schemaCookie" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="schemaFormat" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="defaultCacheSize" type="xs:int" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="largestRootPage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="textEncoding" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="userVersion" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="incrementalVacuumMode" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="applicationId" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="versionValidFor" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="sqliteVersion" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="SQLite3DatabaseFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns:SQLite3Header"/>
+        <!-- Additional elements for the database content can be defined here -->
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

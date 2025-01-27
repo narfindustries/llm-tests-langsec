@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="urn:example:sqlite3"
+           xmlns:tns="urn:example:sqlite3"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:SQLite3DBFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <dfdl:format name="SQLite3DBFormat" byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit" lengthUnits="bytes"/>
+
+    <xs:element name="SQLite3DB">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header" type="tns:HeaderType"/>
+                <xs:element name="Page" type="tns:PageType" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="Magic" type="xs:string" dfdl:length="16" dfdl:lengthUnits="bytes"/>
+            <xs:element name="PageSize" type="xs:unsignedShort"/>
+            <xs:element name="FileFormatWriteVersion" type="xs:unsignedByte"/>
+            <xs:element name="FileFormatReadVersion" type="xs:unsignedByte"/>
+            <xs:element name="ReservedSpace" type="xs:unsignedByte"/>
+            <xs:element name="MaxEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+            <xs:element name="MinEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+            <xs:element name="LeafPayloadFraction" type="xs:unsignedByte"/>
+            <xs:element name="FileChangeCounter" type="xs:unsignedInt"/>
+            <xs:element name="InHeaderDatabaseSize" type="xs:unsignedInt"/>
+            <xs:element name="PageNumberFirstFreelistTrunk" type="xs:unsignedInt"/>
+            <xs:element name="TotalFreelistPages" type="xs:unsignedInt"/>
+            <xs:element name="SchemaCookie" type="xs:unsignedInt"/>
+            <xs:element name="SchemaFormatNumber" type="xs:unsignedInt"/>
+            <xs:element name="DefaultPageCacheSize" type="xs:unsignedInt"/>
+            <xs:element name="LargestBTreePageNumber" type="xs:unsignedInt"/>
+            <xs:element name="DatabaseTextEncoding" type="xs:unsignedInt"/>
+            <xs:element name="UserVersion" type="xs:unsignedInt"/>
+            <xs:element name="IncrementalVacuumMode" type="xs:unsignedInt"/>
+            <xs:element name="ApplicationID" type="xs:unsignedInt"/>
+            <xs:element name="Reserved" type="xs:hexBinary" dfdl:length="20" dfdl:lengthUnits="bytes"/>
+            <xs:element name="VersionValidFor" type="xs:unsignedInt"/>
+            <xs:element name="SQLiteVersionNumber" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PageType">
+        <xs:sequence>
+            <xs:element name="PageHeader" type="tns:PageHeaderType"/>
+            <xs:element name="CellContent" type="tns:CellContentType" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PageHeaderType">
+        <xs:sequence>
+            <xs:element name="PageType" type="xs:unsignedByte"/>
+            <xs:element name="FirstFreeblock" type="xs:unsignedShort"/>
+            <xs:element name="CellCount" type="xs:unsignedShort"/>
+            <xs:element name="CellContentArea" type="xs:unsignedShort"/>
+            <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte"/>
+            <!-- Additional fields depending on the page type can be added here -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CellContentType">
+        <xs:sequence>
+            <xs:element name="CellPayload" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+            <!-- Additional fields for cell content can be added here -->
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

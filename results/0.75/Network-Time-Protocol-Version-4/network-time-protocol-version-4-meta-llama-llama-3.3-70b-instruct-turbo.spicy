@@ -1,0 +1,39 @@
+# Network Time Protocol (NTP) version 4
+
+type NTPPacket = {
+    leap: uint8(2),
+    version: uint8(3),
+    mode: uint8(3),
+    stratum: uint8,
+    poll: uint8,
+    precision: uint8,
+    delay: uint32,
+    dispersion: uint32,
+    identifier: bytes(4),
+    reference_timestamp: NTPTimestamp,
+    originate_timestamp: NTPTimestamp,
+    receive_timestamp: NTPTimestamp,
+    transmit_timestamp: NTPTimestamp,
+}
+
+type NTPTimestamp = {
+    seconds: uint32,
+    fraction: uint32,
+}
+
+# Check the version of the NTP packet
+condition version_check: version == 4
+
+# Assume a standard UDP packet with source and destination ports
+type UDPHeader = {
+    src_port: uint16,
+    dst_port: uint16,
+    length: uint16,
+    checksum: uint16,
+}
+
+type NTPOverUDP = {
+    udp: UDPHeader,
+    ntp: NTPPacket,
+    condition: version_check,
+}

@@ -1,0 +1,38 @@
+module JPEG;
+
+public type JFIFVersion = unit {
+    major: uint8;
+    minor: uint8;
+    patch: uint16;
+};
+
+public type JFIFExtension = unit {
+    code: uint8;
+    data: bytes &size=10;
+};
+
+public type Chunk = unit {
+    size: uint16;
+    content: bytes &size=(this.size - 2);
+};
+
+public type Header = unit {
+    soi: uint16; # Start of image (0xFFD8)
+    app0: uint16; # Application segment marker (0xFFE0)
+    length: uint16;
+    identifier: bytes &size=5;
+    version: JFIFVersion;
+    units: uint8;
+    Xdensity: uint16;
+    Ydensity: uint16;
+    Xthumbnail: uint8;
+    Ythumbnail: uint8;
+    thumbnail: bytes &size=((uint(this.Xthumbnail) * uint(this.Ythumbnail)) * 3);
+    extensions: JFIFExtension[];
+    data: bytestring &restofdata;
+};
+
+public type JPEGFile = unit {
+    header: Header;
+    chunks: Chunk[] &until($input.length() == 0);
+};

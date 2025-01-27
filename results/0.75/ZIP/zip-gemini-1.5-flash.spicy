@@ -1,0 +1,70 @@
+#ifndef _ZIP_GEMINI_1_5_FLASH_SPICY_H_
+#define _ZIP_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/file.h>
+#include <zeek/analyzer.h>
+
+namespace zeek::spicy {
+
+class ZipGemini15Flash : public Analyzer {
+public:
+	ZipGemini15Flash();
+	~ZipGemini15Flash() override;
+
+	void Init() override;
+	void Done() override;
+	void Run() override;
+
+
+private:
+
+	void ProcessPacket(const Packet& p);
+
+
+};
+
+
+} // namespace zeek::spicy
+
+#endif // _ZIP_GEMINI_1_5_FLASH_SPICY_H_
+
+
+#include "zip-gemini-1.5-flash.spicy.h"
+
+namespace zeek::spicy {
+
+ZipGemini15Flash::ZipGemini15Flash()
+	: Analyzer("zip-gemini-1.5-flash")
+{}
+
+ZipGemini15Flash::~ZipGemini15Flash() {}
+
+void ZipGemini15Flash::Init() {
+	// Add your initialization code here. For example, you could open files,
+	// initialize data structures, or register callbacks.
+}
+
+void ZipGemini15Flash::Done() {
+	// Add your cleanup code here. For example, you could close files or free
+	// allocated memory.
+
+}
+
+void ZipGemini15Flash::Run() {
+    // Add your main analysis logic here.  This will be called for each packet.
+	// You should probably call ProcessPacket here.
+}
+
+void ZipGemini15Flash::ProcessPacket(const Packet& p) {
+	// Add your packet processing code here.  This function will be called for
+	// each packet. Examine the packet's data to extract information relevant
+	// to your analysis.
+	// Example:
+	// auto data = p.payload();
+	// if (data.length() > 0) {
+	// 	// Process the packet payload.
+	// }
+}
+
+} // namespace zeek::spicy
+

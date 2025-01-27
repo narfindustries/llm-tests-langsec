@@ -1,0 +1,39 @@
+module DNS;
+
+import spicy;
+
+public type DNS_Header = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+public type DNS_Question = unit {
+    qname: bytes &until=b"\x00";
+    qtype: uint16;
+    qclass: uint16;
+};
+
+public type DNS_ResourceRecord = unit {
+    name: bytes &until=b"\x00";
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &length=rdlength;
+};
+
+public type DNS_Packet = unit {
+    header: DNS_Header;
+    questions: DNS_Question[] &size=header.qdcount;
+    answers: DNS_ResourceRecord[] &size=header.ancount;
+    authority: DNS_ResourceRecord[] &size=header.nscount;
+    additional: DNS_ResourceRecord[] &size=header.arcount;
+};
+
+on DNS_Packet::%done {
+    print self;
+}

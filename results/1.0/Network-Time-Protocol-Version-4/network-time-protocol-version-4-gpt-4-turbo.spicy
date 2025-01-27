@@ -1,0 +1,38 @@
+module NetworkTimeProtocol;
+
+public type NTPHeader = unit {
+    li          : uint2;     # Leap Indicator
+    vn          : uint3;     # Version Number
+    mode        : uint3;     # Mode
+    stratum     : uint8;     # Stratum level of the local clock
+    poll        : int8;      # Poll Interval
+    precision   : int8;      # Precision
+    rootDelay   : interval;  # Total round trip delay
+    rootDisp    : interval;  # Max error aloud from primary clock source
+    refId       : bytes &size=4; # Reference Clock Identifier
+    refTm       : ntp_timestamp; # Reference Time-stamp
+    origTm      : ntp_timestamp; # Originate Time-stamp
+    recTm       : ntp_timestamp; # Receive Time-stamp
+    xmtTm       : ntp_timestamp; # Transmit Time-stamp
+    exts        : NTPExtension* &optional;
+    padding     : bytes &size=(self.size() % 4) &optional;
+
+    on %done {
+        print self;
+    }
+};
+
+public type ntp_timestamp = unit {
+    seconds     : uint32;
+    fraction    : uint32;
+};
+
+public type NTPExtension = unit {
+    extType    : uint16;
+    extLength  : uint16;
+    extValue   : bytes &size=this.extLength;
+};
+
+event zeek_init() {
+    print "NTP Analyzer loaded.";
+}

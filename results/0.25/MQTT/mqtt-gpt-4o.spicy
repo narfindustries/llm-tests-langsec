@@ -1,0 +1,72 @@
+module MQTT;
+
+import spicy;
+import zeek;
+
+type MQTTMessage = unit {
+    fixed_header: FixedHeader;
+    variable_header: VariableHeader;
+    payload: Payload;
+} &requires (fixed_header.packet_type == 3);
+
+type FixedHeader = unit {
+    packet_type: uint8 &byteorder=big &convert=to_packet_type;
+    flags: uint8 &byteorder=big;
+    remaining_length: varint;
+};
+
+type VariableHeader = unit {
+    topic_name: string &length=topic_length &byteorder=big;
+    packet_identifier: uint16 &byteorder=big;
+} &requires (packet_type == 3);
+
+type Payload = unit {
+    message: string &restofdata;
+};
+
+type varint = unit {
+    value: uint32;
+} &on-parse {
+    local multiplier = 1;
+    local value = 0;
+    local byte = 0;
+    repeat {
+        byte = self.input.read<uint8>();
+        value += (byte & 127) * multiplier;
+        if ( (byte & 128) == 0 )
+            break;
+        multiplier *= 128;
+    }
+    self.value = value;
+};
+
+public type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+};
+
+function to_packet_type(v: uint8) : PacketType {
+    return PacketType(v & 0xF);
+}
+
+public export {
+    type MQTT::PacketType;
+    type MQTT::MQTTMessage;
+}
+
+event mqtt_message(msg: MQTT::MQTTMessage) {
+    print fmt("MQTT Message: %s", msg);
+}

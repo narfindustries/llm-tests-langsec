@@ -1,0 +1,146 @@
+# Define theHL7v2Message type
+type HL7v2Message = record {
+  msg_type: bytestring[3],
+  trigger_event: bytestring[3],
+  message_control_id: bytestring[20],
+  processing_id: bytestring[4],
+  version_id: bytestring[12],
+  sequence_number: uint32,
+  continuation_pointer: bytestring[180],
+  accepting_application: bytestring[20],
+  accepting_facility: bytestring[20],
+  date: bytestring[8],
+  time: bytestring[6],
+  security: bytestring[40],
+  message_profile_id: bytestring[80],
+  accepting_application_facility: bytestring[20],
+};
+
+# Define the Segment type
+type Segment = record {
+  segment_id: bytestring[3],
+  fields: bytestring[*],
+};
+
+# Define the Field type
+type Field = record {
+  field_id: bytestring[4],
+  components: bytestring[*],
+};
+
+# Define the Component type
+type Component = record {
+  component_id: bytestring[4],
+  subcomponents: bytestring[*],
+};
+
+# Define the Subcomponent type
+type Subcomponent = record {
+  subcomponent_id: bytestring[4],
+  value: bytestring,
+};
+
+# Define the parser for HL7v2 messages
+parser HL7v2Message = let
+  # Split the input into segments
+  segments: vector[Segment] = split(input, "\r");
+
+  # Parse the MSH segment
+  msh_segment: Segment = parse_segment(segments[0]);
+
+  # Extract message metadata from the MSH segment
+  msg_type: bytestring = msh_segment.fields[0];
+  trigger_event: bytestring = msh_segment.fields[1];
+  message_control_id: bytestring = msh_segment.fields[2];
+  processing_id: bytestring = msh_segment.fields[3];
+  version_id: bytestring = msh_segment.fields[4];
+  sequence_number: uint32 = uint32(msh_segment.fields[5]);
+  continuation_pointer: bytestring = msh_segment.fields[6];
+  accepting_application: bytestring = msh_segment.fields[7];
+  accepting_facility: bytestring = msh_segment.fields[8];
+  date: bytestring = msh_segment.fields[9];
+  time: bytestring = msh_segment.fields[10];
+  security: bytestring = msh_segment.fields[11];
+  message_profile_id: bytestring = msh_segment.fields[12];
+  accepting_application_facility: bytestring = msh_segment.fields[13];
+
+  result: HL7v2Message = {
+    msg_type = msg_type,
+    trigger_event = trigger_event,
+    message_control_id = message_control_id,
+    processing_id = processing_id,
+    version_id = version_id,
+    sequence_number = sequence_number,
+    continuation_pointer = continuation_pointer,
+    accepting_application = accepting_application,
+    accepting_facility = accepting_facility,
+    date = date,
+    time = time,
+    security = security,
+    message_profile_id = message_profile_id,
+    accepting_application_facility = accepting_application_facility,
+  };
+in result;
+
+# Define the parser for segments
+parser Segment = let
+  # Split the input into fields
+  fields: vector[bytestring] = split(input, "|");
+
+  # Extract the segment ID
+  segment_id: bytestring = fields[0];
+
+  # Extract the remaining fields
+  remaining_fields: vector[bytestring] = fields[1:]
+
+  result: Segment = {
+    segment_id = segment_id,
+    fields = remaining_fields,
+  };
+in result;
+
+# Define the parser for fields
+parser Field = let
+  # Split the input into components
+  components: vector[bytestring] = split(input, "^");
+
+  # Extract the field ID
+  field_id: bytestring = components[0];
+
+  # Extract the remaining components
+  remaining_components: vector[bytestring] = components[1:]
+
+  result: Field = {
+    field_id = field_id,
+    components = remaining_components,
+  };
+in result;
+
+# Define the parser for components
+parser Component = let
+  # Split the input into subcomponents
+  subcomponents: vector[bytestring] = split(input, "&");
+
+  # Extract the component ID
+  component_id: bytestring = subcomponents[0];
+
+  # Extract the remaining subcomponents
+  remaining_subcomponents: vector[bytestring] = subcomponents[1:]
+
+  result: Component = {
+    component_id = component_id,
+    subcomponents = remaining_subcomponents,
+  };
+in result;
+
+# Define the parser for subcomponents
+parser Subcomponent = let
+  # Extract the subcomponent ID and value
+  subcomponent_id: bytestring = input[:4];
+  value: bytestring = input[4:];
+
+  result: Subcomponent = {
+    subcomponent_id = subcomponent_id,
+    value = value,
+  };
+in result;

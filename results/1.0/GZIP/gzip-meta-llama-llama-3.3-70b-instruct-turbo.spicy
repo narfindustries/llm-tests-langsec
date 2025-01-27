@@ -1,0 +1,54 @@
+# GZIP File Format Specification
+file gzip_meta {
+    # Magic number (2 bytes)
+    uint16(0x1f, 0x8b) gzip_magic;
+
+    # Compression method (1 byte)
+    uint8(8) compression_method;
+
+    # Flags (1 byte)
+    uint8 flags;
+
+    # Modification time (4 bytes)
+    uint32 modification_time;
+
+    # Extra flags (1 byte)
+    uint8 extra_flags;
+
+    # Operating system (1 byte)
+    uint8 operating_system;
+
+    # Optional extra field
+    if (flags & 0x04) != 0 {
+        uint16 extra_field_length;
+        bytes(extra_field_length) extra_field;
+    }
+
+    # Optional file name
+    if (flags & 0x08) != 0 {
+        string file_name;
+    }
+
+    # Optional comment
+    if (flags & 0x10) != 0 {
+        string comment;
+    }
+
+    # Optional header CRC
+    if (flags & 0x02) != 0 {
+        uint16 header_crc;
+    }
+
+    # Compressed data
+    bytes acad compression_method;
+}
+
+# Example usage
+event zeek_init() {
+    local f: file;
+    f = open("example.gz");
+    local res: gzip_meta;
+    res = gzip_meta(f);
+    close(f);
+    print res;
+}

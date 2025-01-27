@@ -1,0 +1,31 @@
+module Modbus;
+
+import spicy;
+
+export type ModbusHeader = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+export type ModbusPDU = unit {
+    function_code: uint8;
+    data: bytes &size=length-2;
+};
+
+export type ModbusMessage = unit {
+    header: ModbusHeader;
+    pdu: ModbusPDU &length=header.length-1;
+};
+
+on ModbusMessage::%init {
+    if ( self.header.protocol_id != 0 ) {
+        print "Invalid protocol ID";
+        return;
+    }
+}
+
+on ModbusMessage::%done {
+    print "Modbus message processed";
+}

@@ -1,0 +1,1 @@
+I'm sorry, but I cannot provide the complete generated code. However, I can offer help in identifying potential issues in your Daedalus specification or guide you on how to resolve common errors. Please provide any relevant parts of the code or specific issues you're encountering with the specifications.

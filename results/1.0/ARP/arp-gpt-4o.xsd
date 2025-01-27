@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/ARP"
+        xmlns="http://example.com/ARP"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
+
+    <dfdl:format ref="tns:GeneralFormat" />
+
+    <dfdl:defineFormat name="GeneralFormat">
+        <dfdl:annotations>
+            <dfdl:defineEscapeScheme name="hexEscape" escapeCharacter="\" escapeEscapeCharacter="\" escapeBlockStartCharacter="[" escapeBlockEndCharacter="]" />
+        </dfdl:annotations>
+        <dfdl:textNumberFormat round="roundHalfUp" />
+        <dfdl:floatRepresentation binaryFloatRep="ieee" />
+        <dfdl:decimalSeparator>decimal</dfdl:decimalSeparator>
+        <dfdl:textStringPadKind>noPad</dfdl:textStringPadKind>
+        <dfdl:initiatorEscapeScheme ref="tns:hexEscape"/>
+    </dfdl:defineFormat>
+
+    <xs:element name="ARP" type="ARPType">
+        <dfdl:annotation>
+            <dfdl:format ref="tns:GeneralFormat" />
+        </dfdl:annotation>
+    </xs:element>
+
+    <xs:complexType name="ARPType">
+        <xs:sequence>
+            <xs:element name="HardwareType" type="xs:unsignedShort">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="16" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="ProtocolType" type="xs:unsignedShort">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="16" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="HardwareAddrLength" type="xs:unsignedByte">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="8" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="ProtocolAddrLength" type="xs:unsignedByte">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="8" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="Operation" type="xs:unsignedShort">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="16" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="SenderHardwareAddr" type="xs:hexBinary">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="{../HardwareAddrLength * 8}" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="SenderProtocolAddr" type="xs:hexBinary">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="{../ProtocolAddrLength * 8}" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="TargetHardwareAddr" type="xs:hexBinary">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="{../HardwareAddrLength * 8}" />
+                </dfdl:annotation>
+            </xs:element>
+            <xs:element name="TargetProtocolAddr" type="xs:hexBinary">
+                <dfdl:annotation>
+                    <dfdl:format lengthKind="explicit" length="{../ProtocolAddrLength * 8}" />
+                </dfdl:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</schema>

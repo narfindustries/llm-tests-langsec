@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns="http://example.com/mqtt"
+           elementFormDefault="qualified"
+           dfdl:encoding="utf-8">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:MQTTFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="MQTTHeader">
+        <xs:sequence>
+            <xs:element name="fixedHeader" type="tns:FixedHeader"/>
+            <xs:element name="variableHeader" type="tns:VariableHeader" minOccurs="0"/>
+            <xs:element name="payload" type="tns:Payload" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="FixedHeader">
+        <xs:sequence>
+            <xs:element name="controlPacketType" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bits"/>
+            <xs:element name="flags" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bits"/>
+            <xs:element name="remainingLength" type="xs:unsignedByte" dfdl:representation="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="VariableHeader">
+        <xs:sequence>
+            <xs:element name="protocolName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="6" dfdl:encoding="utf-8"/>
+            <xs:element name="protocolLevel" type="xs:unsignedByte"/>
+            <xs:element name="connectFlags" type="xs:unsignedByte"/>
+            <xs:element name="keepAlive" type="xs:unsignedShort" dfdl:representation="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Payload">
+        <xs:sequence>
+            <xs:element name="clientId" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8"/>
+            <xs:element name="willTopic" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
+            <xs:element name="willMessage" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
+            <xs:element name="username" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
+            <xs:element name="password" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="MQTTMessage" type="tns:MQTTHeader"/>
+
+    <dfdl:defineFormat name="MQTTFormat">
+        <dfdl:format
+            lengthKind="explicit"
+            lengthUnits="bytes"
+            byteOrder="bigEndian"
+            occursCountKind="expression"
+            occursCount="{ dfdl:occursCount }"
+            alignmentUnits="bytes"
+            alignment="1"/>
+    </dfdl:defineFormat>
+
+</xs:schema>

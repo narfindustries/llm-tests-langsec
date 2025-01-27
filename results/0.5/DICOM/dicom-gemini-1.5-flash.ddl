@@ -1,0 +1,1 @@
+Gemini API Error: 429 Resource has been exhausted (e.g. check quota).

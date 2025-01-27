@@ -1,0 +1,86 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method: bytes;
+    sp1: bytes &optional &length=1;
+    uri: bytes;
+    sp2: bytes &optional &length=1;
+    version: bytes;
+    crlf: bytes &length=2;
+
+    method_str: string = method.string();
+    uri_str: string = uri.string();
+    version_str: string = version.string();
+
+    on %init {
+        self.method = b"";
+        self.uri = b"";
+        self.version = b"";
+    }
+
+    on method parse {
+        self.method = self.method;
+    }
+
+    on uri parse {
+        self.uri = self.uri;
+    }
+
+    on version parse {
+        self.version = self.version;
+    }
+};
+
+public type Response = unit {
+    version: bytes;
+    sp1: bytes &optional &length=1;
+    status_code: bytes;
+    sp2: bytes &optional &length=1;
+    reason: bytes;
+    crlf: bytes &length=2;
+
+    version_str: string = version.string();
+    status_code_str: string = status_code.string();
+    reason_str: string = reason.string();
+
+    on %init {
+        self.version = b"";
+        self.status_code = b"";
+        self.reason = b"";
+    }
+
+    on version parse {
+        self.version = self.version;
+    }
+
+    on status_code parse {
+        self.status_code = self.status_code;
+    }
+
+    on reason parse {
+        self.reason = self.reason;
+    }
+};
+
+public type Headers = unit {
+    headers: vector<Header>;
+    end_of_headers: bytes &length=2;
+
+    type Header = unit {
+        name: bytes &until=b":";
+        sp: bytes &optional &length=1;
+        value: bytes &until=b"\r\n";
+        crlf: bytes &length=2;
+
+        name_str: string = name.string();
+        value_str: string = value.string();
+    }
+};
+
+public type Message = unit {
+    request: Request &optional;
+    response: Response &optional;
+    headers: Headers;
+};

@@ -1,0 +1,58 @@
+version = 0.1
+
+module JPEG;
+
+public type JPEGFile = unit {
+    segments: JPEGSegment[];
+};
+
+type JPEGSegment = unit {
+    marker: uint8 &requires=(self == 0xFF);
+    type: uint8;
+    
+    switch ( self.type ) {
+        0xD8 -> : void;  # SOI
+        0xD9 -> : void;  # EOI
+        0xDA -> : ScanHeader;  # SOS
+        0xC0, 0xC2 -> : FrameHeader;  # SOF0/SOF2
+        * -> : RegularSegment;
+    };
+};
+
+type RegularSegment = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type ScanHeader = unit {
+    length: uint16;
+    num_components: uint8;
+    components: ScanComponent[self.num_components];
+    start_spectral: uint8;
+    end_spectral: uint8;
+    ah_al: uint8;
+    scan_data: bytes &eod;
+};
+
+type ScanComponent = unit {
+    id: uint8;
+    dc_ac: uint8;
+};
+
+type FrameHeader = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: FrameComponent[self.num_components];
+};
+
+type FrameComponent = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    qt: uint8;
+};
+
+on JPEG::JPEGFile -> event JPEG::file_ready($file);
+on JPEG::FrameHeader -> event JPEG::dimensions(self.width, self.height);

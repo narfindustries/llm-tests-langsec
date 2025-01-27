@@ -1,0 +1,75 @@
+module GIF;
+
+import spicy;
+
+public type Signature = unit {
+    signature: bytes = b"GIF";
+    version: bytes(3) &requires($$=="87a" || $$=="89a");
+};
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16 be;
+    height: uint16 be;
+    packed_fields: uint8 {
+        global_color_table_flag: bitfield(0,1),
+        color_resolution: bitfield(1,3),
+        sort_flag: bitfield(4,1),
+        global_color_table_size: bitfield(5,3)
+    };
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ImageDescriptor = unit {
+    separator: uint8 &requires($$==0x2c);
+    left: uint16 be;
+    top: uint16 be;
+    width: uint16 be;
+    height: uint16 be;
+    packed_fields: uint8 {
+        local_color_table_flag: bitfield(0,1),
+        interlace_flag: bitfield(1,1),
+        sort_flag: bitfield(2,1),
+        reserved: bitfield(3,2),
+        local_color_table_size: bitfield(5,3)
+    };
+};
+
+public type GIF = unit {
+    signature: Signature;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: vector<ColorTableEntry> if ( logical_screen_descriptor.packed_fields.global_color_table_flag == 1 ) 
+        &size=(1 << (logical_screen_descriptor.packed_fields.global_color_table_size + 1));
+    
+    blocks: list<GIFBlock>;
+};
+
+public type GIFBlock = unit {
+    switch {
+        %init { local block_type = $$.read(1); }
+        block_type == b"\x21" -> extension: Extension;
+        block_type == b"\x2c" -> image_descriptor: ImageDescriptor;
+        block_type == b"\x3b" -> terminator: Terminator;
+    };
+};
+
+public type Extension = unit {
+    marker: uint8 &requires($$ == 0x21);
+    label: uint8;
+    data: list<DataSubBlock>;
+};
+
+public type DataSubBlock = unit {
+    size: uint8;
+    data: bytes(size) if (size > 0);
+};
+
+public type Terminator = unit {
+    marker: uint8 &requires($$ == 0x3b);
+};

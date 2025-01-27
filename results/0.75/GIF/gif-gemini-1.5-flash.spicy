@@ -1,0 +1,36 @@
+#version=2
+
+event gif_gemini_event(uint64 ts, string src_ip, string dst_ip, uint16 src_port, uint16 dst_port, string payload) {
+    print string($ts) + " " + $src_ip + " " + $dst_ip + " " + $src_port + " " + $dst_port + " " + $payload
+}
+
+redef record GIF_Gemini_Record {
+    uint64 ts;
+    string src_ip;
+    string dst_ip;
+    uint16 src_port;
+    uint16 dst_port;
+    string payload;
+}
+
+event process_gif_gemini_record(GIF_Gemini_Record rec) {
+    gif_gemini_event(rec.ts, rec.src_ip, rec.dst_ip, rec.src_port, rec.dst_port, rec.payload);
+}
+
+
+script gif_gemini_analysis {
+    event zeek_conn_event(conn conn_record) {
+        if (conn_record.service == "http") {
+            GIF_Gemini_Record gif_gemini_record = GIF_Gemini_Record(
+                ts: conn_record.ts,
+                src_ip: conn_record.id.orig_h,
+                dst_ip: conn_record.id.resp_h,
+                src_port: conn_record.id.orig_p,
+                dst_port: conn_record.id.resp_p,
+                payload: "HTTP Connection Detected"
+            );
+            process_gif_gemini_record(gif_gemini_record);
+        }
+    }
+}
+

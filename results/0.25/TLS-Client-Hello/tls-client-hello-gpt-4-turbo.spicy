@@ -1,0 +1,71 @@
+module TLS;
+
+import spicy;
+
+type ProtocolVersion = unit {
+    major: uint8;
+    minor: uint8;
+};
+
+type Random = unit {
+    gmt_unix_time: uint32;
+    random_bytes: bytes &size=28;
+};
+
+type SessionID = unit {
+    length: uint8;
+    session_id: bytes &size=self.length;
+};
+
+type CipherSuite = unit {
+    suites: uint16[];
+} &byte-order=big;
+
+type CompressionMethod = unit {
+    methods: uint8[];
+};
+
+type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=self.length;
+} &byte-order=big;
+
+type Extensions = unit {
+    length: uint16;
+    extensions: Extension[] &size=self.length;
+} &byte-order=big;
+
+type ClientHello = unit {
+    version: ProtocolVersion;
+    random: Random;
+    session_id: SessionID;
+    cipher_suites: CipherSuite;
+    compression_methods: CompressionMethod;
+    extensions: Extensions &optional;
+} &byte-order=big;
+
+public type Handshake = unit {
+    length: uint24;
+    msg_type: uint8;
+    client_hello: ClientHello &requires=self.msg_type == 1;
+} &byte-order=big;
+
+type RecordLayer = unit {
+    content_type: uint8;
+    version: ProtocolVersion;
+    length: uint16;
+    handshake: Handshake;
+} &byte-order=big;
+
+event zeek_init() &priority=5
+{
+    print "Zeek module for parsing TLS Client Hello loaded.";
+}
+
+event spicy_file_done(f: fa_file, meta: spicy_file_meta, is_orig: bool)
+{
+    print fmt("Finished processing %s", f$id);
+}
+
+public type FileAnalyzer = spicy::file_analysis::Analyzer<&name="TLS-CLIENT-HELLO">;

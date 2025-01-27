@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/ns/local"
+    targetNamespace="http://example.com/ns/local">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                encoding="UTF-8"
+                ignoreCase="no"
+                lengthKind="implicit"
+                lengthUnits="bytes"
+                occursCountKind="implicit"
+                separator=""
+                separatorSuppressionPolicy="anyEmpty"
+                separatorPosition="infix"
+                textNumberRep="standard"
+                initiator=""
+                terminator=""
+                textTrimKind="none"
+                escapeSchemeRef="" />
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="dicomFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+                <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+                <xs:element name="dataElements" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="tag">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="group" type="xs:unsignedShort"/>
+                                        <xs:element name="element" type="xs:unsignedShort"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="vr" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+                            <xs:element name="length" type="xs:unsignedInt"/>
+                            <xs:element name="value">
+                                <xs:complexType>
+                                    <xs:choice>
+                                        <xs:element name="string" type="xs:string" 
+                                            dfdl:lengthKind="explicit" 
+                                            dfdl:length="{../length}"/>
+                                        <xs:element name="binary" type="xs:hexBinary"
+                                            dfdl:lengthKind="explicit"
+                                            dfdl:length="{../length}"/>
+                                    </xs:choice>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

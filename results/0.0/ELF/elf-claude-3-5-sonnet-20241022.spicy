@@ -1,0 +1,62 @@
+module ELF;
+
+public type File = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    osabi: uint8;
+    abiversion: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on %done {
+        if ( self.magic != b"\x7fELF" )
+            throw "invalid ELF magic";
+    }
+};
+
+public type ProgramHeader = unit {
+    type: uint32;
+    flags: uint32;
+    offset: uint64;
+    vaddr: uint64;
+    paddr: uint64;
+    filesz: uint64;
+    memsz: uint64;
+    align: uint64;
+};
+
+public type SectionHeader = unit {
+    name: uint32;
+    type: uint32;
+    flags: uint64;
+    addr: uint64;
+    offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    addralign: uint64;
+    entsize: uint64;
+};
+
+type Symbol = unit {
+    name: uint32;
+    info: uint8;
+    other: uint8;
+    shndx: uint16;
+    value: uint64;
+    size: uint64;
+};

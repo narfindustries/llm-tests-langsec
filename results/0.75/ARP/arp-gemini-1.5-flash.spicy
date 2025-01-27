@@ -1,0 +1,22 @@
+#ifndef ARP_GEMINI_1_5_FLASH_SPICY
+#define ARP_GEMINI_1_5_FLASH_SPICY
+
+#include <stdint.h>
+
+// Define relevant structures if needed, based on the context of arp-gemini-1.5-flash.spicy
+
+// Example structure (replace with your actual structure)
+typedef struct {
+  uint8_t  mac_address[6];
+  uint32_t ip_address;
+} arp_entry_t;
+
+
+// Function prototypes (replace with your actual functions)
+
+// Example function (replace with your actual function)
+int process_arp_packet(const uint8_t* packet, size_t packet_len);
+
+// ... other functions ...
+
+#endif // ARP_GEMINI_1_5_FLASH_SPICY

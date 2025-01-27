@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://hl7.org/fhir/dfdl/hl7v2"
+           xmlns:hl7="http://hl7.org/fhir/dfdl/hl7v2">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator=""
+                  encoding="UTF-8" 
+                  representation="text"
+                  occursCountKind="parsed"
+                  separatorPosition="infix"
+                  separatorPolicy="suppressed"
+                  documentFinalTerminatorCanBeMissing="yes"
+                  byteOrder="littleEndian"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HL7Message" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="\r\n">
+        <xs:element name="Segment" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="|">
+              <xs:element name="SegmentType" type="xs:string" 
+                          dfdl:lengthKind="delimited"/>
+              <xs:element name="Fields" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Field" type="xs:string" 
+                                dfdl:lengthKind="delimited"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

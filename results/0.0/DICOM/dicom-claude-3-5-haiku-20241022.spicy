@@ -1,0 +1,29 @@
+module DICOM;
+
+import spicy;
+
+public type Header = unit {
+    preamble: bytes(128);
+    magic: bytes(4) &requires(self == b"DICM");
+
+    : void {
+        self.preamble.length() == 128;
+        self.magic == b"DICM";
+    }
+};
+
+public type DataElement = unit {
+    tag: bytes(4);
+    vr: bytes(2);
+    length: uint32;
+    value: bytes(self.length);
+};
+
+public type File = unit {
+    header: Header;
+    elements: DataElement[] &until($input.is_eof());
+};
+
+public function parse(f: File): bool {
+    return true;
+}

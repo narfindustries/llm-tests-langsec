@@ -1,0 +1,68 @@
+module JPEG;
+
+import spicy;
+
+public type File = unit {
+    start_marker: StartMarker;
+    segments: Segment[] while( self.segments[-1].marker != Marker::EOI );
+
+    var width: uint16 = 0;
+    var height: uint16 = 0;
+
+    on %done {
+        self.width = self.segments[0].width;
+        self.height = self.segments[0].height;
+    }
+};
+
+type StartMarker = unit {
+    marker: Marker = marker::SOI;
+};
+
+type Segment = unit {
+    marker: Marker;
+    
+    switch ( self.marker ) {
+        Marker::SOF0 -> {
+            length: uint16;
+            precision: uint8;
+            height: uint16;
+            width: uint16;
+            components: uint8;
+        }
+        Marker::DHT -> {
+            length: uint16;
+            data: bytes &size=(self.length - 2);
+        }
+        Marker::DQT -> {
+            length: uint16;
+            data: bytes &size=(self.length - 2);
+        }
+        Marker::SOS -> {
+            length: uint16;
+            data: bytes &size=(self.length - 2);
+        }
+        Marker::APP0 -> {
+            length: uint16;
+            identifier: bytes &size=5;
+            version: uint16;
+            units: uint8;
+            x_density: uint16;
+            y_density: uint16;
+        }
+        * -> {
+            length: uint16 if ( self.marker != Marker::EOI );
+            data: bytes &size=(self.length - 2) if ( self.marker != Marker::EOI );
+        }
+    }
+};
+
+enum Marker: uint16 {
+    SOI  = 0xFFD8,
+    EOI  = 0xFFD9,
+    SOF0 = 0xFFC0,
+    DHT  = 0xFFC4,
+    DQT  = 0xFFDB,
+    SOS  = 0xFFDA,
+    APP0 = 0xFFE0
+};

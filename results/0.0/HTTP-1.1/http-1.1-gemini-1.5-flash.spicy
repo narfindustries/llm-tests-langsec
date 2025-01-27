@@ -1,0 +1,30 @@
+#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+
+event http_request_gemini_flash(http_request_t req)
+{
+    if (req.method == "GET" &&
+        re_search("gemini://", req.uri) &&
+        re_search("\\.flash$", req.uri))
+    {
+        print("HTTP request for Gemini Flash resource detected: ", req.uri);
+        #ifdef DEBUG
+        print("Request headers: ", req.headers);
+        #endif
+    }
+}
+
+event http_response_gemini_flash(http_response_t resp)
+{
+    if (resp.status_code == 200 &&
+        re_search("gemini://", resp.uri) &&
+        re_search("\\.flash$", resp.uri))
+    {
+        print("HTTP response for Gemini Flash resource received: ", resp.uri);
+        #ifdef DEBUG
+        print("Response headers: ", resp.headers);
+        #endif
+    }
+}
+
+#endif

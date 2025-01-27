@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tls-client-hello"
+           xmlns:tns="http://example.com/tls-client-hello">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiator=""
+        terminator=""
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressedAtEndLax"
+        representation="binary"
+        encoding="ascii"
+        byteOrder="bigEndian"
+        bitOrder="mostSignificantBitFirst"
+        escapeSchemeRef=""
+        occursCountKind="parsed"
+        textNumberCheckPolicy="strict"
+        textNumberPattern=""
+        textZonedSignStyle="asciiStandard"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TLSClientHello" type="tns:TLSClientHelloType"/>
+
+  <xs:complexType name="TLSClientHelloType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ContentType" type="tns:UInt8"/>
+      <xs:element name="ProtocolVersion" type="tns:ProtocolVersionType"/>
+      <xs:element name="Length" type="tns:UInt16"/>
+      <xs:element name="HandshakeType" type="tns:UInt8"/>
+      <xs:element name="HandshakeLength" type="tns:UInt24"/>
+      <xs:element name="ClientVersion" type="tns:ProtocolVersionType"/>
+      <xs:element name="Random" type="tns:RandomType"/>
+      <xs:element name="SessionIDLength" type="tns:UInt8"/>
+      <xs:element name="SessionID" type="tns:SessionIDType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:SessionIDLength }"/>
+      <xs:element name="CipherSuitesLength" type="tns:UInt16"/>
+      <xs:element name="CipherSuites" type="tns:CipherSuitesType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:CipherSuitesLength }"/>
+      <xs:element name="CompressionMethodsLength" type="tns:UInt8"/>
+      <xs:element name="CompressionMethods" type="tns:CompressionMethodsType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:CompressionMethodsLength }"/>
+      <xs:element name="ExtensionsLength" type="tns:UInt16"/>
+      <xs:element name="Extensions" type="tns:ExtensionsType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:ExtensionsLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="UInt8" dfdl:lengthKind="explicit" dfdl:length="1">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="UInt16" dfdl:lengthKind="explicit" dfdl:length="2">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="UInt24" dfdl:lengthKind="explicit" dfdl:length="3">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:complexType name="ProtocolVersionType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Major" type="tns:UInt8"/>
+      <xs:element name="Minor" type="tns:UInt8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RandomType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Time" type="tns:UInt32"/>
+      <xs:element name="RandomBytes" type="tns:RandomBytesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="UInt32" dfdl:lengthKind="explicit" dfdl:length="4">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="RandomBytesType" dfdl:lengthKind="explicit" dfdl:length="28">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="SessionIDType" dfdl:lengthKind="explicit">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+  <xs:complexType name="CipherSuitesType" dfdl:lengthKind="explicit">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="CipherSuite" type="tns:UInt16" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompressionMethodsType" dfdl:lengthKind="explicit">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="CompressionMethod" type="tns:UInt8" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionsType" dfdl:lengthKind="explicit">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Extension" type="tns:ExtensionType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Type" type="tns:UInt16"/>
+      <xs:element name="Length" type="tns:UInt16"/>
+      <xs:element name="Data" type="tns:ExtensionDataType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ExtensionDataType" dfdl:lengthKind="explicit">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+</xs:schema>

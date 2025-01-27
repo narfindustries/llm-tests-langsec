@@ -1,0 +1,38 @@
+module MQTT;
+
+import spicy;
+
+public type Packet = unit {
+    header: Header;
+    payload: bytes &size=(header.remaining_length);
+
+    type Header = unit {
+        control_type: uint8 &parse_with=control_type_parse;
+        flags: uint8;
+        remaining_length: varint;
+
+        function control_type_parse(data: uint8) : uint8 {
+            return data >> 4;
+        }
+    };
+
+    type varint = unit {
+        value: bytes &until=($$.decode() & 0x80 == 0);
+
+        function decode(): uint32 {
+            local result: uint32 = 0;
+            local multiplier: uint32 = 1;
+
+            for ( b in self.value ) {
+                result += (b & 0x7F) * multiplier;
+                multiplier *= 0x80;
+            }
+
+            return result;
+        }
+    };
+};
+
+public type MQTTFlow = unit {
+    packets: Packet[];
+};

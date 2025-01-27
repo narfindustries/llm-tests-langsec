@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tls-client-hello"
+           xmlns:tns="http://example.com/tls-client-hello"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:TLSFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="TLSFormat"
+               byteOrder="bigEndian"
+               encoding="utf-8"
+               lengthKind="explicit"
+               lengthUnits="bytes"
+               occursCountKind="expression"
+               occursCount="{ ../length }"/>
+
+  <xs:element name="ClientHello">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="handshakeType" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="version" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="sessionIdLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="sessionId" type="xs:hexBinary" dfdl:length="{ ../sessionIdLength }"/>
+        <xs:element name="cipherSuitesLength" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="cipherSuites" type="xs:hexBinary" dfdl:length="{ ../cipherSuitesLength }"/>
+        <xs:element name="compressionMethodsLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="compressionMethods" type="xs:hexBinary" dfdl:length="{ ../compressionMethodsLength }"/>
+        <xs:element name="extensionsLength" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="extensions" type="xs:hexBinary" dfdl:length="{ ../extensionsLength }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

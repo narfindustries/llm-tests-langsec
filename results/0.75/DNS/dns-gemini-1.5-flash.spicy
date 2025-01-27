@@ -1,0 +1,17 @@
+#ifndef DNS_GEMINI_1_5_FLASH_SPICY
+#define DNS_GEMINI_1_5_FLASH_SPICY
+
+event zeek_dns_query(id, qtype, qname) {
+    if (qtype == "A") {
+        print "DNS A query for ", qname;
+    }
+}
+
+
+event zeek_dns_response(id, qtype, qname, rdata) {
+    if (qtype == "A") {
+        print "DNS A response for ", qname, ":", rdata;
+    }
+}
+
+#endif

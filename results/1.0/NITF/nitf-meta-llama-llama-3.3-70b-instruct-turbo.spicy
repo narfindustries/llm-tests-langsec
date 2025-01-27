@@ -1,0 +1,63 @@
+# NITF (National Image Transmission Format) file format parser
+# Header section
+type NITF_Header = record {
+    file_header: bytestring(9),
+    file_title: bytestring(25),
+    file_class: bytestring(1),
+    file_security: bytestring(1),
+    file_control: bytestring(2),
+    file_date: bytestring(8),
+    file_time: bytestring(4),
+    file_release: bytestring(2),
+    file_exemption: bytestring(1),
+    file_authority: bytestring(10),
+};
+
+# Image section
+type NITF_Image = record {
+    image_subheader: bytestring(1),
+    image_id: bytestring(25),
+    image_format: bytestring(4),
+    image_width: uint32,
+    image_height: uint32,
+    image_data: bytes(image_width * image_height),
+};
+
+# Lower level metadata (LLM)
+type NITF_LLM = record {
+    llm_id: bytestring(25),
+    llm_type: bytestring(4),
+    llm_data: bytes,
+};
+
+# DES (Data Extension Segment)
+type NITF_DES = record {
+    des_id: bytestring(25),
+    des_type: bytestring(4),
+    des_data: bytes,
+};
+
+# Main NITF parser
+type NITF_File = record {
+    header: NITF_Header,
+    images: array(NITF_Image),
+    llms: array(NITF_LLM),
+    deses: array(NITF_DES),
+    trailers: bytestring(0),
+};
+
+# Conditional types
+condition nitf_image_condition {
+    when image_subheader == "IM";
+}
+
+condition nitf_llm_condition {
+    when llm_type == "STD";
+}
+
+condition nitf_des_condition {
+    when des_type == "STD";
+}
+
+# Parser start
+start NITF_File;

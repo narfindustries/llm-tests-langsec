@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:gif="http://example.com/gif"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        representation="binary"
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        alignment="1"
+        alignmentUnits="bytes"
+        fillByte="%#r00"
+        occursCountKind="implicit"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GIF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="gif:HeaderType"/>
+        <xs:element name="LogicalScreenDescriptor" type="gif:LogicalScreenDescriptorType"/>
+        <xs:element name="GlobalColorTable" type="gif:ColorTableType" minOccurs="0"/>
+        <xs:element name="ImageDescriptors" type="gif:ImageDescriptorsType"/>
+        <xs:element name="Trailer" type="gif:TrailerType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:string" 
+        dfdl:length="3" 
+        dfdl:encoding="ASCII"/>
+      <xs:element name="Version" type="xs:string" 
+        dfdl:length="3" 
+        dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:sequence>
+      <xs:element name="Width" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="Height" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableType">
+    <xs:sequence>
+      <xs:element name="ColorEntry" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Red" type="xs:unsignedByte"/>
+            <xs:element name="Green" type="xs:unsignedByte"/>
+            <xs:element name="Blue" type="xs:unsignedByte"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDescriptorsType">
+    <xs:sequence>
+      <xs:element name="ImageDescriptor" minOccurs="1" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ImageSeparator" type="xs:string" 
+              dfdl:length="1" 
+              dfdl:encoding="ASCII"/>
+            <xs:element name="Left" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="Top" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="Width" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="Height" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="PackedFields" type="xs:unsignedByte"/>
+            <xs:element name="LocalColorTable" type="gif:ColorTableType" minOccurs="0"/>
+            <xs:element name="ImageData" type="xs:hexBinary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="Terminator" type="xs:string" 
+        dfdl:length="1" 
+        dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ELF"
+           xmlns:elf="http://example.com/ELF">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        separator=""
+        encoding="UTF-8"
+        representation="binary"
+        occursCountKind="parsed"
+        byteOrder="bigEndian"
+        nilKind="literalValue"
+        nilValue="0"
+        textNumberFormat="standard"
+        textNumberRounding="explicit"
+        escapeSchemeRef=""
+        initiator=""
+        terminator=""
+        separatorPosition="infix"
+        separatorSuppressionPolicy="anyEmpty"
+        documentFinalTerminatorCanBeMissing="yes"
+        emptyValueDelimiterPolicy="none"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ELFFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ELFHeader" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Magic" type="xs:hexBinary" 
+                          dfdl:length="4" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Class" type="xs:byte" 
+                          dfdl:length="1" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="DataEncoding" type="xs:byte" 
+                          dfdl:length="1" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Version" type="xs:byte" 
+                          dfdl:length="1" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="OSABI" type="xs:byte" 
+                          dfdl:length="1" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="ABIVersion" type="xs:byte" 
+                          dfdl:length="1" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Padding" type="xs:hexBinary" 
+                          dfdl:length="7" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Type" type="xs:unsignedShort" 
+                          dfdl:length="2" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Machine" type="xs:unsignedShort" 
+                          dfdl:length="2" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="Version2" type="xs:unsignedInt" 
+                          dfdl:length="4" 
+                          dfdl:lengthKind="explicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

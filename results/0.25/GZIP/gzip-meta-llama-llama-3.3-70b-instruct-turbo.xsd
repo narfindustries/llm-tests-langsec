@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GZIP"
+           xmlns="http://example.com/GZIP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="gzipFile" type="gzipFileType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+
+  <xs:complexType name="gzipFileType">
+    <xs:sequence>
+      <xs:element name="gzipHeader" type="gzipHeaderType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="compressedData" type="xs:hexBinary" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="gzipFooter" type="gzipFooterType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gzipHeaderType">
+    <xs:sequence>
+      <xs:element name="id1" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="id2" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="cm" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="mtime" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="xflags" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="os" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gzipFooterType">
+    <xs:sequence>
+      <xs:element name="crc16" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="4" dfdl:byteOrder="little"/>
+      <xs:element name="isize" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="4" dfdl:byteOrder="little"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

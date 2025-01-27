@@ -1,0 +1,51 @@
+%extern zeek_init
+%extern zeek_done
+
+module ELF;
+
+public type File = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    osabi: uint8;
+    abiversion: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on %init {
+        zeek::event_ELF_file_header(self.magic, self.class, self.data, self.version,
+                                  self.osabi, self.abiversion, self.type, self.machine,
+                                  self.version2, self.entry, self.phoff, self.shoff,
+                                  self.flags, self.ehsize, self.phentsize, self.phnum,
+                                  self.shentsize, self.shnum, self.shstrndx);
+    }
+};
+
+on File::magic {
+    if ( self.magic != b"\x7fELF" )
+        throw "invalid ELF magic";
+}
+
+public function zeek_init() {
+    print "ELF analyzer initialized";
+}
+
+public function zeek_done() {
+    print "ELF analyzer finished";
+}
+
+@zeek_init
+@zeek_done

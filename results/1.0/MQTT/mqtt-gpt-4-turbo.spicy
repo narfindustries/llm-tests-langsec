@@ -1,0 +1,60 @@
+module MQTT;
+
+import spicy;
+
+type ControlFlags = unit {
+    reserved: uint4;
+    typeflags: uint4;
+};
+
+type ConnectFlags = unit {
+    reserved: bit;
+    cleanSession: bit;
+    willFlag: bit;
+    willQoS: uint2;
+    willRetain: bit;
+    passwordFlag: bit;
+    usernameFlag: bit;
+};
+
+type ConnectVariableHeader = unit {
+    protocolName: bytes &size=6; # "MQTT\4"
+    protocolLevel: uint8;
+    flags: ConnectFlags;
+    keepAlive: uint16;
+};
+
+type ConnectPayload = unit {
+    clientIdentifier: bytes &eod;
+    willTopic: bytes &size=(self^.parent.connectFlags.willFlag ? self^.parent.connectFlags.willFlag : 0);
+    willMessage: bytes &size=(self^.parent.connectFlags.willFlag ? self^.parent.connectFlags.willFlag : 0);
+    username: bytes &size=(self^.parent.connectFlags.usernameFlag ? self^.parent.connectFlags.usernameFlag : 0);
+    password: bytes &size=(self^.parent.connectFlags.passwordFlag ? self^.parent.connectFlags.passwordFlag : 0);
+};
+
+type ConnectPacket = unit {
+    variableHeader: ConnectVariableHeader;
+    payload: ConnectPayload &size=self^.variableHeader;
+};
+
+public type MQTT_Packet = unit {
+    ctrlFlags: ControlFlags;
+    remainingLength: int;
+    payload: switch (self.ctrlFlags.typeflags) {
+        # Depending on Control Type
+        0x10 -> connectPayload: ConnectPacket;
+        # Add other cases here for different types of control flags
+    };
+};
+
+event zeek_init() &priority=-5 {
+    print "Spicy MQTT analyzer loaded.";
+}
+
+event protocol_confirmation(analyzer: Analyzer::Tag, atype: Analyzer::Tag, aid: count) &priority=5 {
+    print fmt("Analyzer %s confirmed as type %s with id %d.", analyzer, atype, aid);
+}
+
+event protocol_violation(description: string, analyzer: Analyzer::Tag) &priority=5 {
+    print fmt("Protocol violation in %s: %s", analyzer, description);
+}

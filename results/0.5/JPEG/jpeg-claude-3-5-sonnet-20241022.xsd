@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/jpeg"
+    targetNamespace="http://example.com/jpeg">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthUnits="bytes"
+                lengthKind="explicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="jpeg">
+        <xs:complexType>
+            <xs:sequence>
+                <!-- SOI Marker -->
+                <xs:element name="soi" type="local:markerType" fixed="0xFFD8"/>
+                
+                <!-- APP0 Segment -->
+                <xs:element name="app0" type="local:app0Type"/>
+                
+                <!-- Additional Segments -->
+                <xs:element name="segments" type="local:segmentsType"/>
+                
+                <!-- EOI Marker -->
+                <xs:element name="eoi" type="local:markerType" fixed="0xFFD9"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="markerType">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="2"/>
+            </xs:appinfo>
+        </xs:annotation>
+        <xs:restriction base="xs:hexBinary"/>
+    </xs:simpleType>
+
+    <xs:complexType name="app0Type">
+        <xs:sequence>
+            <xs:element name="marker" type="local:markerType" fixed="0xFFE0"/>
+            <xs:element name="length" type="local:uint16"/>
+            <xs:element name="identifier" type="local:identifierType"/>
+            <xs:element name="version" type="local:versionType"/>
+            <xs:element name="units" type="xs:unsignedByte"/>
+            <xs:element name="xdensity" type="local:uint16"/>
+            <xs:element name="ydensity" type="local:uint16"/>
+            <xs:element name="xthumbnail" type="xs:unsignedByte"/>
+            <xs:element name="ythumbnail" type="xs:unsignedByte"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="uint16">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="2"/>
+            </xs:appinfo>
+        </xs:annotation>
+        <xs:restriction base="xs:unsignedInt"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="identifierType">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="5" encoding="ASCII"/>
+            </xs:appinfo>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="JFIF\x00"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="versionType">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="2"/>
+            </xs:appinfo>
+        </xs:annotation>
+        <xs:restriction base="xs:hexBinary"/>
+    </xs:simpleType>
+
+    <xs:complexType name="segmentsType">
+        <xs:sequence>
+            <xs:element name="segment" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="marker" type="local:markerType"/>
+                        <xs:element name="length" type="local:uint16"/>
+                        <xs:element name="data">
+                            <xs:annotation>
+                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                    <dfdl:element lengthKind="expression"
+                                        lengthUnits="bytes"
+                                        length="{../length - 2}"/>
+                                </xs:appinfo>
+                            </xs:annotation>
+                            <xs:simpleType>
+                                <xs:restriction base="xs:hexBinary"/>
+                            </xs:simpleType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

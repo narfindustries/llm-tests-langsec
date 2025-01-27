@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/elf_gemini" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty" dfdl:lengthUnits="bytes">
+
+  <xs:element name="elf_gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="12"/>
+        <xs:element name="data" type="DataType" dfdl:lengthKind="variable" dfdl:length="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="version" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="reserved" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="record" type="RecordType" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:int" dfdl:length="4"/>
+      <xs:element name="field2" type="xs:string" dfdl:length="10"/>
+      <!-- Add more fields as needed -->
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,41 @@
+module BitcoinTransactions;
+
+public type Transaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: array[input_count] of Input;
+    output_count: varint;
+    outputs: array[output_count] of Output;
+    lock_time: uint32;
+};
+
+type Input = unit {
+    previous_output: Outpoint;
+    script_length: varint;
+    script: bytes &length=script_length;
+    sequence: uint32;
+};
+
+type Outpoint = unit {
+    hash: bytes &length=32;
+    index: uint32;
+};
+
+type Output = unit {
+    value: uint64;
+    script_length: varint;
+    script: bytes &length=script_length;
+};
+
+type varint = switch (uint8) {
+    case 0xfd: uint16;
+    case 0xfe: uint32;
+    case 0xff: uint64;
+    else: uint8;
+};
+
+public module BitcoinTransactionsParser = module {
+    public function parse(data: bytes): Transaction {
+        return parse_Transaction(data);
+    }
+};

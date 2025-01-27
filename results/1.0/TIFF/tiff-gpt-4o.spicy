@@ -1,0 +1,27 @@
+module TIFF;
+
+import zeek;
+import zeek.ftp; 
+import zeek.b58; 
+
+public type TIFF = unit {
+    endianness: Endianness,
+    tiff_tag: array[uint16] of TIFFTagBody(endian => endianness),
+} &byte-order=le;
+
+public type Endianness = enum {
+    LE = 0x4949,       // Little Endian
+    BE = 0x4D4D        // Big Endian
+};
+
+public type TIFFTagBody = unit(endian : Endianness) {
+    tag_id: uint16 &byte-order=endian,
+    data_type: uint16 &byte-order=endian,
+    num_values: uint32 &byte-order=endian,
+    value_offset: uint32 &byte-order=endian,
+};
+
+public type TIFFTag = unit {
+    tags: uint16,
+    body: array[tags] of TIFFTagBody,
+};

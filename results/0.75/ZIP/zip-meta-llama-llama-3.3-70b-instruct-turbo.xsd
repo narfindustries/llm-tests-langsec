@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns="http://example.com/zip"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+
+  <xs:element name="zipFile">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementoccurs ces_min="1" ces_max="-1" />
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="localHeader" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="localHeader">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementoccurs ces_min="1" ces_max="1" />
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="localHeaderSignature" type="xs:hexBinary" dfdl:length="4" />
+        <xs:element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" />
+        <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" />
+        <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" />
+        <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" />
+        <xs:element name="fileName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="fileNameLength" />
+        <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="extraFieldLength" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

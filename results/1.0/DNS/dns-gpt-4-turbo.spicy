@@ -1,0 +1,51 @@
+module DNS;
+
+export {
+    type DNS_Header = unit {
+        id: uint16;
+        qr: bit;
+        opcode: uint4;
+        aa: bit;
+        tc: bit;
+        rd: bit;
+        ra: bit;
+        z: uint3;
+        rcode: uint4;
+        qdcount: uint16;
+        ancount: uint16;
+        nscount: uint16;
+        arcount: uint16;
+    };
+
+    type Query = unit {
+        name: bytes &eod;
+        type: uint16;
+        class: uint16;
+    };
+
+    type Answer = unit {
+        name: bytes &eod;
+        type: uint16;
+        class: uint16;
+        ttl: uint32;
+        data_len: uint16;
+        data: bytes &size=data_len;
+    };
+
+    type Message = unit {
+        header: DNS_Header;
+        queries: Query[] &size=header.qdcount;
+        answers: Answer[] &size=header.ancount;
+        authorities: Answer[] &size=header.nscount;
+        additionals: Answer[] &size=header.arcount;
+        
+        on %init {
+            print self;
+        }
+    };
+
+    public type DNS_Packet = unit {
+        data: bytes &restreamed;
+        dns_message: Message(data) &parse-from=BeginningOfData;
+    };
+}

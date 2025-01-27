@@ -1,0 +1,35 @@
+module DNS;
+
+import spicy;
+
+public type DNS_PDU = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+    questions: Question[qdcount];
+    answers: ResourceRecord[ancount];
+    authorities: ResourceRecord[nscount];
+    additional: ResourceRecord[arcount];
+};
+
+type Question = unit {
+    qname: bytes &until=b"\x00";
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: bytes &until=b"\x00";
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &length=rdlength;
+};
+
+on DNS_PDU::%done {
+    print self;
+}

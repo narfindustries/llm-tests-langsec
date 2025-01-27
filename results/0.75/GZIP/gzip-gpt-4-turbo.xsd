@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gzip"
+           xmlns:tns="http://example.com/gzip">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/dfdl.xsd"/>
+
+  <xs:element name="GzipFile" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID1" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+        <xs:element name="ID2" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+        <xs:element name="CompressionMethod" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+        <xs:element name="Flags" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+        <xs:element name="ModificationTime" type="xs:int" dfdl:textNumberRep="binary" dfdl:length="4" />
+        <xs:element name="ExtraFlags" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+        <xs:element name="OperatingSystem" type="xs:byte" dfdl:textNumberRep="binary" dfdl:length="1" />
+
+        <xs:element name="Extra" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if (fn:boolean(Flags and 4)) 1 else 0 }">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="XLEN" type="xs:short" dfdl:textNumberRep="binary" dfdl:length="2" />
+              <xs:element name="Extras" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../XLEN * 8 }"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="FileName" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if (fn:boolean(Flags and 8)) 1 else 0 }">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:whiteSpace value="preserve"/>
+            </xs:restriction>
+          </xs:simpleType>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:terminator value="\0" />
+              <dfdl:lengthKind="delimited"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="Comment" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if (fn:boolean(Flags and 16)) 1 else 0 }">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:whiteSpace value="preserve"/>
+            </xs:restriction>
+          </xs:simpleType>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:terminator value="\0" />
+              <dfdl:lengthKind="delimited"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="CRC16" type="xs:short" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if (fn:boolean(Flags and 2)) 1 else 0 }" dfdl:textNumberRep="binary" dfdl:length="2"/>
+
+        <xs:element name="CompressedBlocks" type="xs:hexBinary" dfdl:lengthKind="delimited">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:terminator value="\x1F\x8B"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

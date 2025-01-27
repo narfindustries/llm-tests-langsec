@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="GeneralFormat">
+    <xs:attributeGroup>
+      <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+      <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
+      <xs:attribute name="binaryNumberRep" type="xs:string" use="required" fixed="binary"/>
+      <xs:attribute name="textNumberRep" type="xs:string" use="required" fixed="standard"/>
+      <xs:attribute name="textBooleanTrueRep" type="xs:string" use="required" fixed="true"/>
+      <xs:attribute name="textBooleanFalseRep" type="xs:string" use="required" fixed="false"/>
+      <xs:attribute name="textStandardBase" type="xs:int" use="required" fixed="10"/>
+      <xs:attribute name="textStandardDecimalSeparator" type="xs:string" use="required" fixed="."/>
+      <xs:attribute name="textStandardGroupingSeparator" type="xs:string" use="required" fixed=","/>
+      <xs:attribute name="textStandardExponentRep" type="xs:string" use="required" fixed="E"/>
+      <xs:attribute name="textStandardInfinityRep" type="xs:string" use="required" fixed="Inf"/>
+      <xs:attribute name="textStandardNaNRep" type="xs:string" use="required" fixed="NaN"/>
+      <xs:attribute name="textStandardZeroRep" type="xs:string" use="required" fixed="0"/>
+      <xs:attribute name="textStandardMinusSign" type="xs:string" use="required" fixed="-"/>
+      <xs:attribute name="textStandardPlusSign" type="xs:string" use="required" fixed="+"/>
+      <xs:attribute name="textStandardCalendarLanguage" type="xs:string" use="required" fixed="en-US"/>
+      <xs:attribute name="textStandardCalendarPatternKind" type="xs:string" use="required" fixed="implicit"/>
+      <xs:attribute name="textStandardCalendarPattern" type="xs:string" use="required" fixed="MM-dd-yyyy"/>
+      <xs:attribute name="textStandardTimeZone" type="xs:string" use="required" fixed="UTC"/>
+      <xs:attribute name="textStandardEncoding" type="xs:string" use="required" fixed="UTF-8"/>
+      <xs:attribute name="textStandardLengthKind" type="xs:string" use="required" fixed="delimited"/>
+      <xs:attribute name="textStandardLengthPattern" type="xs:string" use="required" fixed="\\r?\\n"/>
+      <xs:attribute name="textStandardInitiator" type="xs:string" use="optional"/>
+      <xs:attribute name="textStandardTerminator" type="xs:string" use="optional"/>
+      <xs:attribute name="textStandardSeparator" type="xs:string" use="optional"/>
+      <xs:attribute name="textStandardSeparatorPosition" type="xs:string" use="optional" fixed="infix"/>
+      <xs:attribute name="textStandardSeparatorSuppressionPolicy" type="xs:string" use="optional" fixed="anyEmpty"/>
+    </xs:attributeGroup>
+  </xs:complexType>
+
+  <xs:element name="PNGFile" type="tns:PNGFileType"/>
+
+  <xs:complexType name="PNGFileType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="chunks" type="tns:ChunksType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunksType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:length="{ ../length }" dfdl:lengthKind="explicit"/>
+      <xs:element name="crc" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

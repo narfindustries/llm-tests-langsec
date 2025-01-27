@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/NITF"
+           xmlns:nitf="http://www.example.org/NITF"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="text"
+                  encoding="UTF-8"
+                  separator=""
+                  initiator=""
+                  terminator=""
+                  leadingSkip="0"
+                  trailingSkip="0"
+                  textTrimKind="none"
+                  initiatedContent="no"
+                  separator=""
+                  separatorPosition="prefix"
+                  separatorPolicy="suppressed"
+                  documentFinalTerminatorCanBeMissing="yes"
+                  byteOrder="bigEndian"
+                  bitOrder="mostSignificantBitFirst"
+                  fillByte="%#r20"
+                  escapeSchemeRef=""/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="nitf" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="fieldA" type="xs:string" 
+                          dfdl:lengthKind="delimited"
+                          dfdl:terminator="|"/>
+              <xs:element name="fieldB" type="xs:integer" 
+                          dfdl:lengthKind="delimited"
+                          dfdl:terminator="|"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="body" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="content" type="xs:string" 
+                          dfdl:lengthKind="delimited"
+                          dfdl:terminator="%NL;"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

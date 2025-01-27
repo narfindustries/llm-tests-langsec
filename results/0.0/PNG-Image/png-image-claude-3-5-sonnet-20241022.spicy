@@ -1,0 +1,38 @@
+module PNG-Image;
+
+import spicy;
+
+public type PNG = unit {
+    signature: bytes &size=8 &requires=($$ == b"\x89PNG\x0d\x0a\x1a\x0a");
+    chunks: Chunk[];
+};
+
+type Chunk = unit {
+    length: uint32 &byte-order=BigEndian;
+    type: bytes &size=4;
+    data: bytes &size=self.length;
+    crc: bytes &size=4;
+
+    on %done {
+        if ( self.type == b"IHDR" ) {
+            local width = bytes_to_uint32(self.data[0:4]);
+            local height = bytes_to_uint32(self.data[4:8]);
+            local bit_depth = self.data[8];
+            local color_type = self.data[9];
+            local compression = self.data[10];
+            local filter = self.data[11];
+            local interlace = self.data[12];
+        }
+    }
+};
+
+function bytes_to_uint32(b: bytes): uint64 {
+    return (((b[0] as uint64) << 24) |
+            ((b[1] as uint64) << 16) |
+            ((b[2] as uint64) << 8) |
+             (b[3] as uint64));
+}
+
+on PNG::%done {
+    print "PNG file parsed";
+}

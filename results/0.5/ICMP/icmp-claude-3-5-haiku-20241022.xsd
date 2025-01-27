@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/icmp"
+           xmlns:icmp="http://example.com/icmp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiator=""
+        terminator=""
+        separator=""
+        separatorPolicy="suppressed"
+        separatorPosition="infix"
+        documentFinalTerminatorCanBeMissing="yes"
+        byteOrder="bigEndian"
+        encoding="UTF-8"
+        representation="binary"
+        occursCountKind="parsed"
+        textNumberRep="standard"
+        textNumberPattern=""
+        textZonedSignStyle="asciiStandard"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMPPacket">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Type" type="xs:unsignedByte" 
+          dfdl:length="1" 
+          dfdl:lengthKind="explicit"/>
+        
+        <xs:element name="Code" type="xs:unsignedByte" 
+          dfdl:length="1" 
+          dfdl:lengthKind="explicit"/>
+        
+        <xs:element name="Checksum" type="xs:unsignedShort" 
+          dfdl:length="2" 
+          dfdl:lengthKind="explicit"/>
+        
+        <xs:element name="RestOfHeader" type="xs:hexBinary" 
+          dfdl:length="4" 
+          dfdl:lengthKind="explicit"/>
+        
+        <xs:element name="Payload" type="xs:hexBinary" 
+          dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,13 @@
+#ifndef TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+#define TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+
+event tls_client_hello_gemini_1_5_flash(tls_client_hello: tls_client_hello_t)
+	{
+	// Add your logic here to process the TLS Client Hello message.
+	// Example: Log the server name indication (SNI) if available.
+	if (tls_client_hello.server_name != "") {
+		print fmt("TLS Client Hello with SNI: %s", tls_client_hello.server_name);
+	}
+	}
+
+#endif

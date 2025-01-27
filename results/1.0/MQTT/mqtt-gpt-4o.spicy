@@ -1,0 +1,67 @@
+module MQTT;
+
+export {
+    type ConnectFlags = bitfield {
+        user_name_flag     : 1;   # Set if a user name is present
+        password_flag      : 1;   # Set if a password is present
+        will_retain        : 1;   # Set if the will message needs to be retained
+        will_qos           : 2;   # Quality of Service level for the will message
+        will_flag          : 1;   # Set if a will message is present
+        clean_session      : 1;   # Set if the session needs to be cleaned up
+        reserved           : 1;
+    };
+
+    type ConnectPacket = unit {
+        protocol_name_len  : uint16;
+        protocol_name      : bytes &length=protocol_name_len;
+        protocol_level     : uint8;
+        connect_flags      : ConnectFlags;
+        keep_alive         : uint16;
+        client_id_len      : uint16;
+        client_id          : bytes &length=client_id_len;
+        rest               : bytes &restofdata;
+    };
+
+    type Packet = unit {
+        type_and_flags     : uint8;
+        remaining_length   : uint8;
+        connect            : optional<ConnectPacket> &if=(type_and_flags >> 4) == 1;
+    };
+}
+
+module MQTT_Analyzer;
+
+import { MQTT }
+
+declares {
+    event mqtt_connect(
+        protocol_name: string,
+        protocol_level: uint8,
+        client_id: string,
+        keep_alive: uint16,
+        flags: MQTT::ConnectFlags
+    );
+}
+
+const MAGIC_BYTE: uint8 = 0x10;
+
+function parse(stream: bytes): bool {
+    local pkt = parse_unit(MQTT::Packet, stream);
+    
+    if (pkt.connect? && pkt.type_and_flags == MAGIC_BYTE) {
+        local protocol_name = as_string(pkt.connect.protocol_name);
+        local client_id = as_string(pkt.connect.client_id);
+        
+        event mqtt_connect(
+            protocol_name,
+            pkt.connect.protocol_level,
+            client_id,
+            pkt.connect.keep_alive,
+            pkt.connect.connect_flags
+        );
+        
+        return true;
+    }
+    
+    return false;
+}

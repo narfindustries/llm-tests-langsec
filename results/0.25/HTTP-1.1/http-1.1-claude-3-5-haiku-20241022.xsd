@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:http="http://example.com/HTTP-1.1">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        leadingSkip="0"
+        trailingSkip="0"
+        textStringJustification="left"
+        textStringPadCharacter=" "
+        textTrimKind="none"
+        textPadKind="none"
+        representation="text"
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        nilKind="literalValue"
+        nilValue="%ES;"
+        escapeSchemeRef=""
+        occursCountKind="parsed"
+        choiceLengthKind="implicit"
+        sequenceKind="ordered"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RequestLine" dfdl:lengthKind="delimited">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Method" type="xs:string" 
+                dfdl:lengthKind="delimited" 
+                dfdl:terminator=" "/>
+              <xs:element name="URI" type="xs:string" 
+                dfdl:lengthKind="delimited" 
+                dfdl:terminator=" "/>
+              <xs:element name="HTTPVersion" type="xs:string" 
+                dfdl:lengthKind="delimited" 
+                dfdl:terminator="\r\n"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Headers" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="\r\n" dfdl:separatorPosition="postfix">
+              <xs:element name="Header" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Name" type="xs:string" 
+                      dfdl:lengthKind="delimited" 
+                      dfdl:terminator=": "/>
+                    <xs:element name="Value" type="xs:string" 
+                      dfdl:lengthKind="delimited" 
+                      dfdl:terminator="\r\n"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Body" type="xs:string" 
+          dfdl:lengthKind="implicit" 
+          minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

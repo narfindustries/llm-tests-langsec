@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom"
+           xmlns="http://example.com/dicom"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="DicomMeta">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="DicomTag" minOccurs="0" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DicomTag">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="tag" type="xs:hexBinary" dfdl:length="4"/>
+        <xs:element name="vr" type="xs:string" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="value" type="xs:string" dfdl:length="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="uint16">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="uint32">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="4294967295"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <dfdl:format xmlNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" xmlPrefix="dfdl">
+    <dfdl:property name="encoding" value="ISO-8859-1"/>
+    <dfdl:property name="sequence" value="strict"/>
+    <dfdl:property name="requireStartOfExpression" value="true"/>
+  </dfdl:format>
+
+</xs:schema>

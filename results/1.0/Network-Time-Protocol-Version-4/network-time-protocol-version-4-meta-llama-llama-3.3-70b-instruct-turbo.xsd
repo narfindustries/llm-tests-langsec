@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
+           xmlns:tns="http://example.com/Network-Time-Protocol-Version-4"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="NTPPacket" type="tns:NTPPacketType" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+
+  <xs:complexType name="NTPPacketType">
+    <xs:sequence>
+      <xs:element name="leap" type="xs:integer" dfdl:length="2" dfdl:bitLength="2"/>
+      <xs:element name="version" type="xs:integer" dfdl:length="3" dfdl:bitLength="3"/>
+      <xs:element name="mode" type="xs:integer" dfdl:length="3" dfdl:bitLength="3"/>
+      <xs:element name="poll" type="xs:integer" dfdl:length="8" dfdl:bitLength="8"/>
+      <xs:element name="precision" type="xs:integer" dfdl:length="8" dfdl:bitLength="8"/>
+      <xs:element name="delay" type="xs:integer" dfdl:length="32" dfdl:bitLength="32"/>
+      <xs:element name="dispersion" type="xs:integer" dfdl:length="32" dfdl:bitLength="32"/>
+      <xs:element name="identifier" type="xs:string" dfdl:length="4" dfdl:encoding="ASCII"/>
+      <xs:element name="referenceTimestamp" type="xs:integer" dfdl:length="64" dfdl:bitLength="64"/>
+      <xs:element name="originTimestamp" type="xs:integer" dfdl:length="64" dfdl:bitLength="64"/>
+      <xs:element name="receiveTimestamp" type="xs:integer" dfdl:length="64" dfdl:bitLength="64"/>
+      <xs:element name="transmitTimestamp" type="xs:integer" dfdl:length="64" dfdl:bitLength="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

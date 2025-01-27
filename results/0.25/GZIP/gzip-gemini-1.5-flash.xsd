@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gemini"
+           xmlns="http://example.org/gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="data" type="dataType" maxOccurs="unbounded"/>
+        <xs:element name="trailer" type="trailerType"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:lengthKind>delimited</dfdl:lengthKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:length" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:length>1000</dfdl:length>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:occursCountKind" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:occursCountKind>fixed</dfdl:occursCountKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:occursCount" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:occursCount>1</dfdl:occursCount>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:length kind="fixed">4</dfdl:length>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:integer"/>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="trailerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="dfdl:text"/>
+      <dfdl:encoding>UTF-8</dfdl:encoding>
+      <dfdl:separator separatorKind="newline"/>
+      <dfdl:compression>gzip</dfdl:compression>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

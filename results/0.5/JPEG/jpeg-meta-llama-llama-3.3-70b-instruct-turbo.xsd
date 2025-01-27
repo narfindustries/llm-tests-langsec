@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns="http://example.com/jpeg"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl-namespace-1.0.xsd"/>
+
+  <xs:element name="jpeg" type="JpegType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+
+  <xs:complexType name="JpegType">
+    <xs:sequence>
+      <xs:element name="soi" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="app0" type="App0Type" dfdl:occurs="1..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="app1" type="App1Type" dfdl:occurs="0..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="dht" type="DhtType" dfdl:occurs="0..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="dqt" type="DqtType" dfdl:occurs="0..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="sof0" type="Sof0Type" dfdl:occurs="1..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="b pend" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="eoi" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="App0Type">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:padding="0" dfdl:encoding="ascii" dfdl:representation="text"/>
+      <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="units" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="x-density" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="y-density" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="App1Type">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="exif-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DhtType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="ht-info" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="ht-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DqtType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="qt-info" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="qt-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Sof0Type">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="precision" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="height" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="width" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="num-components" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="component" type="ComponentType" dfdl:occurs="1..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="hsamp" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="vsamp" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="qt" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

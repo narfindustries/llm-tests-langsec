@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:nitf="urn:nitf:3.5"
+    targetNamespace="urn:nitf:3.5">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="nitf:NITFFormat"/>
+            <dfdl:defineFormat name="NITFFormat">
+                <dfdl:format alignment="1" 
+                    lengthKind="explicit" 
+                    lengthUnits="bytes"
+                    encoding="UTF-8"
+                    ignoreCase="no"
+                    initiator=""
+                    terminator=""
+                    leadingSkip="0"
+                    trailingSkip="0"
+                    textTrimKind="none"
+                    textPadKind="none"
+                    fillByte="%#r20"
+                    occursCountKind="fixed"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="nitf">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="fileHeader" type="xs:string" dfdl:length="9" dfdl:initiator="NITF"/>
+                            <xs:element name="fileVersion" type="xs:string" dfdl:length="5"/>
+                            <xs:element name="complexityLevel" type="xs:string" dfdl:length="2"/>
+                            <xs:element name="standardType" type="xs:string" dfdl:length="4"/>
+                            <xs:element name="originatingStationId" type="xs:string" dfdl:length="10"/>
+                            <xs:element name="fileDateTime" type="xs:string" dfdl:length="14"/>
+                            <xs:element name="fileTitle" type="xs:string" dfdl:length="80"/>
+                            <xs:element name="classification" type="xs:string" dfdl:length="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="body">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="imageSegments" minOccurs="0" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="imageSubheader">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="filePartType" type="xs:string" dfdl:length="2"/>
+                                                    <xs:element name="imageId" type="xs:string" dfdl:length="10"/>
+                                                    <xs:element name="imageDateTime" type="xs:string" dfdl:length="14"/>
+                                                    <xs:element name="targetId" type="xs:string" dfdl:length="17"/>
+                                                    <xs:element name="imageTitle" type="xs:string" dfdl:length="80"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

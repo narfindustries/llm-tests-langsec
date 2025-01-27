@@ -1,0 +1,53 @@
+module JPEG;
+
+public type JPEG = unit {
+    var is_valid: bool = false;
+    
+    : SOIMarker;
+    : AppSegments[];
+    : SOFSegment;
+    : SOSSegment;
+    : ImageData;
+    : EOIMarker;
+
+    on %done { self.is_valid = true; }
+};
+
+type SOIMarker = unit {
+    marker: bytes &size=2 &requires=($$ == b"\xFF\xD8");
+};
+
+type AppSegments = unit {
+    marker: bytes &size=2 &requires=(($$ & b"\xFF\x00") == b"\xFF\x00");
+    length: uint16 &requires=($$ >= 2);
+    data: bytes &size=(self.length - 2);
+} &requires=(self.marker[0] == 0xFF);
+
+type SOFSegment = unit {
+    marker: bytes &size=2 &requires=($$ == b"\xFF\xC0");
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    components: uint8;
+    component_data: bytes &size=(self.length - 8);
+};
+
+type SOSSegment = unit {
+    marker: bytes &size=2 &requires=($$ == b"\xFF\xDA");
+    length: uint16;
+    components: uint8;
+    scan_data: bytes &size=(self.length - 3);
+};
+
+type ImageData = unit {
+    data: bytes &eod;
+} &requires=(self.data[-2:] == b"\xFF\xD9");
+
+type EOIMarker = unit {
+    marker: bytes &size=2 &requires=($$ == b"\xFF\xD9");
+};
+
+public function is_valid(data: JPEG): bool {
+    return data.is_valid;
+}

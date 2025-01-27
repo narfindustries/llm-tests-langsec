@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tiff="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator="" 
+                   encoding="UTF-8" 
+                   byteOrder="bigEndian" 
+                   representation="binary"
+                   occursCountKind="parsed"
+                   alignmentUnits="bytes"
+                   alignment="1"
+                   fillByte="%#r00"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFFFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tiff:TIFFHeaderType"/>
+        <xs:element name="ImageFileDirectories" type="tiff:ImageFileDirectoriesType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="TIFFHeaderType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="FirstIFDOffset" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageFileDirectoriesType">
+    <xs:sequence>
+      <xs:element name="ImageFileDirectory" type="tiff:ImageFileDirectoryType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageFileDirectoryType">
+    <xs:sequence>
+      <xs:element name="NumberOfEntries" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="Entries">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Entry" type="tiff:EntryType" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../../../NumberOfEntries }"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="Value" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

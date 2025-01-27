@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/zipgemini"
+           xmlns="http://example.org/zipgemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="zipGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="10"/>
+        <xs:element name="data" type="xs:string" dfdl:lengthKind="implicit" dfdl:occursCountKind="unbounded"/>
+        <xs:element name="footer" type="FooterType" dfdl:lengthKind="explicit" dfdl:length="5"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string" dfdl:length="2"/>
+      <xs:element name="id" type="xs:string" dfdl:length="8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="checksum" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8"
+                 lengthUnits="bytes" representation="text"/>
+    <dfdl:textStandard dfdl:representation="text"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

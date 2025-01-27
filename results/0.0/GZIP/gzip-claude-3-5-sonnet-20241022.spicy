@@ -1,0 +1,25 @@
+module GZIP;
+
+import spicy;
+
+public type GZIP = unit {
+    magic1: uint8 &requires = 0x1f;
+    magic2: uint8 &requires = 0x8b;
+    cm: uint8 &requires = 0x08;
+    flags: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+    
+    on %done {
+        print self;
+    }
+};
+
+type Flags = enum {
+    FTEXT = 0x01,
+    FHCRC = 0x02,
+    FEXTRA = 0x04,
+    FNAME = 0x08,
+    FCOMMENT = 0x10
+};

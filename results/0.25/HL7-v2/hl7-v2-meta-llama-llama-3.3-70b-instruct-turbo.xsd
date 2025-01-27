@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7-v2"
+           xmlns="http://example.com/HL7-v2"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="HL7-v2-message">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementConstraints>
+          <dfdl:occurs maxOccurs="unbounded" minOccurs="1"/>
+        </dfdl:elementConstraints>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="MSH" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:separator separatorType="fixed" value="|" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element ref="EVN" maxOccurs="1" minOccurs="0">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="0"/>
+                <dfdl:separator separatorType="fixed" value="|" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element ref="PID" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:separator separatorType="fixed" value="|" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="MSH">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementConstraints>
+          <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+          <dfdl:separator separatorType="fixed" value="" />
+        </dfdl:elementConstraints>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FieldSeparator" type="xs:string" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:length kind="fixed" length="1" />
+                <dfdl:separator separatorType="fixed" value="" />
+                <dfdl:encoding scheme="char" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="EncodingCharacters" type="xs:string" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:length kind="fixed" length="4" />
+                <dfdl:separator separatorType="fixed" value="" />
+                <dfdl:encoding scheme="char" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="SendingFacility" type="xs:string" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:length kind="fixed" length="20" />
+                <dfdl:separator separatorType="fixed" value="|" />
+                <dfdl:encoding scheme="char" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EVN">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementConstraints>
+          <dfdl:occurs maxOccurs="1" minOccurs="0"/>
+          <dfdl:separator separatorType="fixed" value="" />
+        </dfdl:elementConstraints>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="EventType" type="xs:string" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:length kind="fixed" length="5" />
+                <dfdl:separator separatorType="fixed" value="|" />
+                <dfdl:encoding scheme="char" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="PID">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:elementConstraints>
+          <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+          <dfdl:separator separatorType="fixed" value="" />
+        </dfdl:elementConstraints>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PatientID" type="xs:string" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:elementConstraints>
+                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
+                <dfdl:length kind="fixed" length="20" />
+                <dfdl:separator separatorType="fixed" value="|" />
+                <dfdl:encoding scheme="char" />
+              </dfdl:elementConstraints>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,42 @@
+module Bitcoin::Transactions;
+
+import spicy;
+
+public type BitcoinTransaction = unit {
+    version:     bytes(4) &convert=$$.to_uint32();
+    input_count: uintptr &parse_with=parse_compact_size();
+    inputs:      Input[input_count];
+    output_count: uintptr &parse_with=parse_compact_size();
+    outputs:     Output[output_count];
+    locktime:    bytes(4) &convert=$$.to_uint32();
+
+    type Input = unit {
+        previous_tx_hash: bytes(32);
+        previous_tx_index: uint32;
+        script_length: uintptr &parse_with=parse_compact_size();
+        script_sig: bytes(script_length);
+        sequence_number: uint32;
+    };
+
+    type Output = unit {
+        value: uint64;
+        pk_script_length: uintptr &parse_with=parse_compact_size();
+        pk_script: bytes(pk_script_length);
+    };
+
+    function parse_compact_size: type<uintptr>() = {
+        local first_byte = self.input(1)[0];
+        if ( first_byte < 0xfd ) {
+            return first_byte;
+        }
+        else if ( first_byte == 0xfd ) {
+            return self.input(3)[0:2].to_uint16();
+        }
+        else if ( first_byte == 0xfe ) {
+            return self.input(5)[0:4].to_uint32();
+        }
+        else {
+            return self.input(9)[0:8].to_uint64();
+        }
+    }
+}

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+                 xmlns:ex="http://example.com" 
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                 xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"
+                 dfdl:sequenceKind="unordered"
+                 dfdl:syntax="binary"
+                 dfdl:encoding="UTF-8"
+                 dfdl:separatorSuppression="true"
+                 dfdl:separatorPolicy="ignore"
+                 dfdl:format="fixed"
+                 dfdl:extension="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <dfdl:element ref="root"/>
+  
+  <dfdl:element name="root">
+    <dfdl:sequence>
+      <dfdl:element ref="hl7Segment"/>
+    </dfdl:sequence>
+  </dfdl:element>
+  
+  <dfdl:element name="hl7Segment">
+    <dfdl:sequence>
+      <dfdl:element name="segmentIdentifier" dfdl:length="3" dfdl:executableAssertion="segmentIdentifier eq 'MSH'"/>
+      <dfdl:element name="fieldSeparator" dfdl:length="1" dfdl:completionByte="0x7c"/>
+      <dfdl:element name="sendingFacility" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <dfdl:element name="sendingFacilityNamespaceId" dfdl:length="20" dfdl:encoding="ASCII"/>
+      <dfdl:element name="receivingFacility" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <dfdl:element name="receivingFacilityNamespaceId" dfdl:length="20" dfdl:encoding="ASCII"/>
+      <dfdl:element name="date" dfdl:length="8" dfdl:encoding="ASCII"/>
+      <dfdl:element name="time" dfdl:length="6" dfdl:encoding="ASCII"/>
+      <dfdl:element name="security" dfdl:length="40" dfdl:encoding="ASCII"/>
+      <dfdl:element name="messageType" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <dfdl:element name="messageTypeTriggerEvent" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <dfdl:element name="messageControlId" dfdl:length="20" dfdl:encoding="ASCII"/>
+      <dfdl:element name="processingId" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <dfdl:element name="versionId" dfdl:length="12" dfdl:encoding="ASCII"/>
+      <dfdl:element name="sequenceNumber" dfdl:length="10" dfdl:encoding="ASCII"/>
+      <dfdl:element name="continuationPointer" dfdl:length="180" dfdl:encoding="ASCII"/>
+    </dfdl:sequence>
+  </dfdl:element>
+</dfdl:definition>

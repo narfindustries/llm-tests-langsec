@@ -1,0 +1,37 @@
+module HL7_v2;
+
+import spicy;
+
+type HL7_Message = unit {
+    segment: Segment[] until $$ == b"\r";
+};
+
+type Segment = unit {
+    fields: Field[] until $$ == b"|";
+};
+
+type Field = unit {
+    subfields: Subfield[] until $$ == b"^";
+};
+
+type Subfield = unit {
+    value: bytes &size=1;
+};
+
+on HL7_Message::%init {
+    print "Parsing HL7 v2 message";
+}
+
+on Segment::%init {
+    print "Parsing segment";
+}
+
+on Field::%init {
+    print "Parsing field";
+}
+
+on Subfield::%init {
+    print "Parsing subfield";
+}
+
+export HL7_Message;

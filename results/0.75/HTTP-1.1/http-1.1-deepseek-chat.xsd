@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:ex="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:HTTPFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="HTTPMessageType">
+    <xs:sequence>
+      <xs:element name="startLine" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NL;"/>
+      <xs:element name="headers" type="ex:HeadersType" dfdl:occursCount="*" dfdl:separator="%NL;"/>
+      <xs:element name="body" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="%NL;%NL;" dfdl:emptyValueDelimiterPolicy="none"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="header" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NL;"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="HTTPMessage" type="ex:HTTPMessageType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:defineFormat name="HTTPFormat">
+          <dfdl:format representation="text" encoding="UTF-8" lengthKind="delimited" initiator="" terminator="" separator="" separatorPosition="infix" separatorSuppressionPolicy="anyEmpty" emptyValueDelimiterPolicy="none" nilValueDelimiterPolicy="none" textNumberRep="standard" textNumberRoundingMode="roundHalfEven" textNumberPattern="" textNumberCheckPolicy="lax" textNumberBase="10" textNumberGroupingSeparator="" textNumberDecimalSeparator="." textNumberExponentRep="E" textNumberRoundingIncrement="0" textNumberRounding="roundHalfEven" textNumberMinInclusive="" textNumberMaxInclusive="" textNumberMinExclusive="" textNumberMaxExclusive="" textNumberMinScale="" textNumberMaxScale="" textNumberMinLength="" textNumberMaxLength="" textNumberPatternKind="explicit" textNumberRoundingModeKind="explicit" textNumberRoundingIncrementKind="explicit" textNumberRoundingKind="explicit" textNumberMinScaleKind="explicit" textNumberMaxScaleKind="explicit" textNumberMinLengthKind="explicit" textNumberMaxLengthKind="explicit" textNumberMinInclusiveKind="explicit" textNumberMaxInclusiveKind="explicit" textNumberMinExclusiveKind="explicit" textNumberMaxExclusiveKind="explicit" textNumberBaseKind="explicit" textNumberGroupingSeparatorKind="explicit" textNumberDecimalSeparatorKind="explicit" textNumberExponentRepKind="explicit" textNumberPatternKind="explicit" textNumberRoundingModeKind="explicit" textNumberRoundingIncrementKind="explicit" textNumberRoundingKind="explicit" textNumberMinScaleKind="explicit" textNumberMaxScaleKind="explicit" textNumberMinLengthKind="explicit" textNumberMaxLengthKind="explicit" textNumberMinInclusiveKind="explicit" textNumberMaxInclusiveKind="explicit" textNumberMinExclusiveKind="explicit" textNumberMaxExclusiveKind="explicit" textNumberBaseKind="explicit" textNumberGroupingSeparatorKind="explicit" textNumberDecimalSeparatorKind="explicit" textNumberExponentRepKind="explicit"/>
+        </dfdl:defineFormat>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://example.com/zip"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="dfdl:GeneralFormat"/>
+        </appinfo>
+    </annotation>
+
+    <complexType name="ZIPFileType">
+        <sequence>
+            <element name="localFileHeader" type="LocalFileHeaderType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="LocalFileHeaderType">
+        <annotation>
+            <appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:format byteOrder="littleEndian" lengthUnits="bytes"/>
+            </appinfo>
+        </annotation>
+        <sequence>
+            <element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+            <element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+            <element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+            <element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+            <element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <element name="fileName" type="xs:string" dfdl:length="{../fileNameLength}" dfdl:lengthUnits="bytes" dfdl:encoding="utf-8"/>
+            <element name="extraField" type="xs:hexBinary" dfdl:length="{../extraFieldLength}" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <element name="ZIPFile" type="ZIPFileType">
+        <annotation>
+            <appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:format ref="dfdl:GeneralFormat" lengthKind="implicit"/>
+            </appinfo>
+        </annotation>
+    </element>
+</schema>

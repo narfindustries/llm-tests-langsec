@@ -1,0 +1,33 @@
+#ifndef NITF_GEMINI_1_5_FLASH_SPICY
+#define NITF_GEMINI_1_5_FLASH_SPICY
+
+event nitf_gemini_1_5_flash_event(uint64 timestamp, string payload) {
+    # This event is triggered when a NITF Gemini 1.5 flash is detected.
+    # The payload contains the raw data of the flash.
+    # Further processing may be required to extract meaningful information.
+}
+
+function process_nitf_gemini_1_5_flash(string filename) : bool {
+    # This function processes a NITF Gemini 1.5 flash file.
+    # It returns true if the processing was successful, false otherwise.
+    local file f;
+    local string data;
+
+    if (open(f, filename, "r") == -1) {
+        print("Error opening file: " + filename);
+        return false;
+    }
+
+    data = f.read();
+    f.close();
+
+    if (data == "") {
+        print("Error: File is empty: " + filename);
+        return false;
+    }
+
+    nitf_gemini_1_5_flash_event(current_time(), data);
+    return true;
+}
+
+#endif

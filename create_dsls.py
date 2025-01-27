@@ -58,6 +58,8 @@ class DSLGenerator:
             response2 = function(query_2, model) # Step 3
             self.create_response_file(response2, format, dir_path, filename)
             current_response = response2
+        else:
+            return
 
         # Check if the generated file can be compiled
         compilation_output = None
@@ -165,7 +167,7 @@ class DSLGenerator:
         
         # Wait for all the threads to terminate
         for t in threads:
-            t.join()
+            t.join(300)
 
     def insert_data_into_db(self, db: Database, compilation_output: Dict[str, Any], model: str, ddl: str, format: str, try_no: int, current_response: str):
         """Insert the data into the database after the compilation is complete"""
@@ -224,8 +226,7 @@ def main():
     if args.time:
         cur_time = int(args.time)
 
-    # temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
-    temperatures = [0.25]
+    temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
     # Combining parsing the file-formats and network protocols in one loop to make things easier
     specs = None
     if args.format == "all":

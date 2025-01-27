@@ -1,0 +1,42 @@
+module SQLITE3_DB;
+
+import spicy;
+
+public type SQLiteHeader = unit {
+    magic: bytes(4) &requires(self.magic == b"SQLi");
+    page_size: uint16;
+    write_version: uint8;
+    read_version: uint8;
+    unused_reserved_space: bytes(20);
+
+    var total_pages: uint32;
+    var page_type: uint8;
+
+    : bytes(4) &parse_at(4); 
+
+    page_type = $$.read_uint8();
+    total_pages = $$.read_uint32();
+
+    on %done {
+        print fmt("SQLite Database Header: Page Size=%d, Pages=%d, Write Version=%d, Read Version=%d", 
+                  page_size, total_pages, write_version, read_version);
+    }
+}
+
+public type SQLiteRecord = unit {
+    length: uint64 &convert(self.length);
+    data: bytes(self.length);
+
+    on %done {
+        print fmt("Record Length: %d", length);
+    }
+}
+
+public type SQLiteParser = unit {
+    header: SQLiteHeader;
+    records: SQLiteRecord[] &until($$.is_eof());
+
+    on %done {
+        print "SQLite Database Parsed Successfully";
+    }
+}

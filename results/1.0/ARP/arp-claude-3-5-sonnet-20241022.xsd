@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:arp="urn:arp:1.0"
+    targetNamespace="urn:arp:1.0">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary"
+                        byteOrder="bigEndian"
+                        binaryNumberRep="binary"
+                        alignment="1"
+                        alignmentUnits="bytes"
+                        lengthUnits="bytes"
+                        lengthKind="implicit"
+                        encodingErrorPolicy="replace"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="arpPacket">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="hardwareType" type="xs:unsignedShort"/>
+                <xs:element name="protocolType" type="xs:unsignedShort"/>
+                <xs:element name="hardwareAddrLength" type="xs:unsignedByte"/>
+                <xs:element name="protocolAddrLength" type="xs:unsignedByte"/>
+                <xs:element name="operation" type="xs:unsignedShort"/>
+                <xs:element name="senderHardwareAddr">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:length value="6"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="senderProtocolAddr">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:length value="4"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="targetHardwareAddr">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:length value="6"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="targetProtocolAddr">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:length value="4"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

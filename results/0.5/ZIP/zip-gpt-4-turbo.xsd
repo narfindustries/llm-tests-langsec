@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns:tns="http://example.com/zip">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="LocalFileHeader">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="version" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="flag" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="lastModTime" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="lastModDate" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="fileName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:fileNameLength }" dfdl:encoding="ASCII"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:extraFieldLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ZipFile">
+    <xs:complexType>
+      <xs:sequence dfdl:separatorSuppressionPolicy="never">
+        <xs:element name="LocalFileHeader" type="tns:LocalFileHeader" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

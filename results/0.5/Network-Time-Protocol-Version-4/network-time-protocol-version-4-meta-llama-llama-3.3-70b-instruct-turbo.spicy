@@ -1,0 +1,32 @@
+# Network Time Protocol (NTP) Version 4
+
+type NtpPacket = record {
+    leap: uint8[2];
+    version: uint8[3];
+    mode: uint8[3];
+    poll: uint8[8];
+    precision: uint8[8];
+    delay: uint32;
+    dispersion: uint32;
+    identifier: bytestring[4];
+    reference_timestamp: uint64[32];
+    originate_timestamp: uint64[32];
+    receive_timestamp: uint64[32];
+    transmit_timestamp: uint64[32];
+};
+
+# Meta-LLaMA-LLaMA-3 Layers
+layer meta_llama_llama_3: NtpPacket = {
+    leap: 0x00;
+    version: 0x04;
+    mode: 0x04;
+    poll: 0x00;
+    precision: 0x00;
+    delay: 0x00;
+    dispersion: 0x00;
+    identifier: "META";
+    reference_timestamp: 0x00000000;
+    originate_timestamp: 0x00000000;
+    receive_timestamp: 0x00000000;
+    transmit_timestamp: 0x00000000;
+};

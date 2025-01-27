@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom"
+           xmlns="http://example.com/dicom"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <dfdl:format ref="tns:dicomFormat"/>
+
+  <dfdl:defineFormat name="dicomFormat">
+    <dfdl:byteOrder value="bigEndian"/>
+    <dfdl:encoding value="utf-8"/>
+    <dfdl:lengthKind value="explicit"/>
+    <dfdl:terminator value=""/>
+    <dfdl:sequenceKind value="ordered"/>
+    <dfdl:separatorSuppressionPolicy value="never"/>
+  </dfdl:defineFormat>
+
+  <xs:element name="DICOMFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element length="128" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Prefix" type="xs:string">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element length="4" lengthUnits="bytes" dfdl:encoding="ascii"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MetaInfo" type="MetaInfoType"/>
+        <xs:element name="DataSet" type="DataSetType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MetaInfoType">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationGroupLength" type="xs:unsignedInt">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element length="4" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element length="2" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="delimited" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="delimited" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="TransferSyntaxUID" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="delimited" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ImplementationClassUID" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="delimited" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ImplementationVersionName" type="xs:string" minOccurs="0">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="delimited" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataSetType">
+    <xs:sequence>
+      <xs:element name="DataElement" type="DataElementType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataElementType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element length="4" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ValueRepresentation" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element length="2" lengthUnits="bytes" dfdl:encoding="ascii"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ValueLength" type="xs:unsignedInt">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element length="4" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Value" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element lengthKind="explicit" length="{ ../ValueLength }" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

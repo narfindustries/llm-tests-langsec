@@ -1,0 +1,50 @@
+module Bitcoin;
+
+public type Transaction = unit {
+    version: int32;
+    tx_in_count: varint;
+    tx_in: TxInput[tx_in_count];
+    tx_out_count: varint;
+    tx_out: TxOutput[tx_out_count];
+    lock_time: uint32;
+};
+
+type TxInput = unit {
+    previous_output: OutPoint;
+    script_length: varint;
+    signature_script: bytes &size=self.script_length;
+    sequence: uint32;
+};
+
+type TxOutput = unit {
+    value: uint64;
+    pk_script_length: varint;
+    pk_script: bytes &size=self.pk_script_length;
+};
+
+type OutPoint = unit {
+    hash: bytes &size=32;
+    index: uint32;
+};
+
+type varint = unit {
+    prefix: uint8;
+    switch ( self.prefix ) {
+        0xff -> value: uint64;
+        0xfe -> value: uint32;
+        0xfd -> value: uint16;
+        *    -> value: uint8 { self.value = self.prefix; }
+    };
+} &convert=uint64(self.value);
+
+on Transaction::version -> event Bitcoin::transaction_version($input, self.version);
+on Transaction::tx_in_count -> event Bitcoin::transaction_input_count($input, self.tx_in_count);
+on Transaction::tx_out_count -> event Bitcoin::transaction_output_count($input, self.tx_out_count);
+on Transaction::lock_time -> event Bitcoin::transaction_lock_time($input, self.lock_time);
+
+on TxInput::previous_output -> event Bitcoin::transaction_input_outpoint($input, self.previous_output.hash, self.previous_output.index);
+on TxInput::signature_script -> event Bitcoin::transaction_input_script($input, self.signature_script);
+on TxInput::sequence -> event Bitcoin::transaction_input_sequence($input, self.sequence);
+
+on TxOutput::value -> event Bitcoin::transaction_output_value($input, self.value);
+on TxOutput::pk_script -> event Bitcoin::transaction_output_script($input, self.pk_script);

@@ -1,0 +1,44 @@
+module PNG_Image;
+
+import spicy;
+
+type PNG_Signature = bytes &size=8 &convert="PNG\\r\\n\\x1a\\n";
+
+type Chunk_Type = enum {
+    IHDR = 0x49484452,
+    IDAT = 0x49444154,
+    IEND = 0x49454E44,
+    PLTE = 0x504C5445,
+    tRNS = 0x74524E53,
+    cHRM = 0x6348524D,
+    gAMA = 0x67414D41,
+    iCCP = 0x69434350,
+    sBIT = 0x73424954,
+    sRGB = 0x73524742,
+    tEXt = 0x74455874,
+    zTXt = 0x7A545874,
+    iTXt = 0x69545874,
+    bKGD = 0x624B4744,
+    hIST = 0x68495354,
+    pHYs = 0x70485973,
+    sPLT = 0x73504C54,
+    tIME = 0x74494D45
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: Chunk_Type;
+    data: bytes &size=length;
+    crc: uint32;
+};
+
+type PNG_File = unit {
+    signature: PNG_Signature;
+    chunks: Chunk[] &until=$input.size() == 0;
+};
+
+on PNG_File::%done {
+    print "PNG file parsed successfully.";
+}
+
+export PNG_File;

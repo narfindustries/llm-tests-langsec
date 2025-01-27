@@ -1,0 +1,48 @@
+#ifndef _SPICY_GEMINI_H_
+#define _SPICY_GEMINI_H_
+
+#include <stdint.h>
+
+// Define structures for Gemini data
+typedef struct {
+  uint32_t  field1;
+  uint16_t  field2;
+  uint8_t   field3[16];
+} gemini_data_t;
+
+
+// Function prototypes
+int process_gemini_data(gemini_data_t* data);
+
+#endif // _SPICY_GEMINI_H_
+
+
+#include "gemini.h"
+
+int process_gemini_data(gemini_data_t* data) {
+  // Add your Gemini data processing logic here.
+  // Example: Check for specific values in the data structure.
+  if (data->field1 == 0xABCD1234) {
+    // Handle specific case.
+    return 0;
+  } else {
+    // Handle other cases.
+    return 1;
+  }
+}
+
+
+// Example usage
+int main() {
+  gemini_data_t my_data;
+  // Initialize my_data
+  my_data.field1 = 0xABCD1234;
+  my_data.field2 = 0x5678;
+  // Initialize field3
+  for (int i = 0; i < 16; i++) {
+      my_data.field3[i] = i;
+  }
+
+  int result = process_gemini_data(&my_data);
+  return result;
+}

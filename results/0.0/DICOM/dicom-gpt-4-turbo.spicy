@@ -1,0 +1,53 @@
+module DICOM;
+
+public type File = unit {
+    preamble: bytes &size=128;
+    prefix: string &size=4;
+    elements: Element(self)[];
+
+    on %done {
+        print self;
+    }
+};
+
+type Element = unit(parent: File) {
+    tagGroup: uint16;
+    tagElement: uint16;
+    vr: string &size=2;
+    length: uint16;
+    value: switch (self.vr) {
+        case "AE", "AS", "CS", "DA", "DS", "DT", "IS", "TM", "UI": ASCIIString(self.length);
+        case "US": UInt16Array(self.length);
+        case "UL": UInt32Array(self.length);
+        case "OB", "OW", "UN", "SQ": Bytes(self.length);
+        default: UnknownValue(self.length);
+    };
+
+    on %done {
+        if (self.tagGroup == 0x0002 && self.tagElement == 0x0010) {
+            local ts = cast(ASCIIString, self.value);
+            if (ts)
+                print fmt("Transfer Syntax: %s", ts.value);
+        }
+    }
+};
+
+type ASCIIString = unit(len: uint16) {
+    value: string &size=len;
+};
+
+type UInt16Array = unit(len: uint16) {
+    values: uint16[] &size=len/2;
+};
+
+type UInt32Array = unit(len: uint16) {
+    values: uint32[] &size=len/4;
+};
+
+type Bytes = unit(len: uint16) {
+    data: bytes &size=len;
+};
+
+type UnknownValue = unit(len: uint16) {
+    data: bytes &size=len;
+};

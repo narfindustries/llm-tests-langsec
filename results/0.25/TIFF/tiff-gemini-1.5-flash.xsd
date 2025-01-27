@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tiff" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+
+  <xs:element name="tiffGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="imageWidth" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="imageLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="bitsPerSample" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="compression" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="imageData" type="xs:base64Binary" dfdl:lengthKind="expression" dfdl:length="string-length(./preceding-sibling::imageWidth) * string-length(./preceding-sibling::imageLength) * string-length(./preceding-sibling::bitsPerSample) div 8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="fixedValue" type="xs:string" dfdl:occurs="1" fixed="49492A00"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+</xs:schema>

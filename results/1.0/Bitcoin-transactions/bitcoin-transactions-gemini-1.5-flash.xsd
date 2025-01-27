@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/bitcoinTransactions" elementFormDefault="qualified" dfdl:lengthUnits="bytes" dfdl:byteOrder="bigEndian">
+
+  <xs:element name="BitcoinTransactions">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Transaction" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TransactionID" type="xs:string" dfdl:length="64" dfdl:occursCountKind="implicit"/>
+              <xs:element name="Timestamp" type="xs:dateTime" dfdl:length="19" dfdl:occursCountKind="implicit"/>
+              <xs:element name="Amount" type="xs:decimal" dfdl:length="16" dfdl:occursCountKind="implicit"/>
+              <xs:element name="FromAddress" type="xs:string" dfdl:length="34" dfdl:occursCountKind="implicit"/>
+              <xs:element name="ToAddress" type="xs:string" dfdl:length="34" dfdl:occursCountKind="implicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

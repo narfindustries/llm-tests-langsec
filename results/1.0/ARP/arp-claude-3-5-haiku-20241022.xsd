@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:arp="http://example.com/arp"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        representation="text"
+        encoding="UTF-8"
+        separator=""
+        initiator=""
+        terminator=""
+        textNumberRep="standard"
+        textNumberPattern="#0"
+        escapeSchemeRef=""
+        lengthKind="delimited"
+        alignment="1"
+        alignmentUnits="bytes"
+        fillByte="%NUL;"
+        occursCountKind="parsed"
+        truncateSpecifiedLengthString="no"
+        prefixIncludesPadding="no"
+        textTrimKind="none"
+        textPadKind="none"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARPRecord" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="SenderMAC" type="xs:string" 
+          dfdl:lengthKind="pattern" 
+          dfdl:lengthPattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"/>
+        
+        <xs:element name="SenderIP" type="xs:string"
+          dfdl:lengthKind="pattern"
+          dfdl:lengthPattern="(\d{1,3}\.){3}\d{1,3}"/>
+        
+        <xs:element name="TargetMAC" type="xs:string"
+          dfdl:lengthKind="pattern" 
+          dfdl:lengthPattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"/>
+        
+        <xs:element name="TargetIP" type="xs:string"
+          dfdl:lengthKind="pattern"
+          dfdl:lengthPattern="(\d{1,3}\.){3}\d{1,3}"/>
+        
+        <xs:element name="Operation" type="xs:string"
+          dfdl:lengthKind="pattern"
+          dfdl:lengthPattern="(request|reply)"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

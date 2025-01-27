@@ -1,0 +1,90 @@
+#ifndef _SQLITE3_DB_GEMINI_1_H_
+#define _SQLITE3_DB_GEMINI_1_H_
+
+#include <zeek/zeek-config.h>
+
+#ifdef HAVE_SQLITE3
+
+#include <sqlite3.h>
+
+typedef struct {
+    sqlite3* db;
+} sqlite3_db_t;
+
+export module SQLite3_DB_Gemini_1;
+
+export event sqlite3_db_open(string db_path)
+{
+    sqlite3_db_t* db = new sqlite3_db_t;
+    int rc = sqlite3_open(db_path, &db->db);
+    if ( rc ) {
+        error("Can't open database: %s", sqlite3_errmsg(db->db));
+        delete db;
+        return;
+    }
+    set_global_value("sqlite3_db", db);
+}
+
+export event sqlite3_db_close()
+{
+    sqlite3_db_t* db = get_global_value("sqlite3_db");
+    if (db) {
+        sqlite3_close(db->db);
+        delete db;
+        unset_global_value("sqlite3_db");
+    }
+}
+
+export event sqlite3_db_query(string sql)
+{
+    sqlite3_db_t* db = get_global_value("sqlite3_db");
+    if (!db) {
+        error("Database not open");
+        return;
+    }
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db->db, sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        error("SQL error: %s", sqlite3_errmsg(db->db));
+        return;
+    }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        int cols = sqlite3_column_count(stmt);
+        for (int i = 0; i < cols; ++i) {
+            const char* col_name = sqlite3_column_name(stmt, i);
+            switch (sqlite3_column_type(stmt, i)) {
+                case SQLITE_INTEGER:
+                    print("%s: %d", col_name, sqlite3_column_int(stmt, i));
+                    break;
+                case SQLITE_FLOAT:
+                    print("%s: %f", col_name, sqlite3_column_double(stmt, i));
+                    break;
+                case SQLITE_TEXT:
+                    print("%s: %s", col_name, sqlite3_column_text(stmt, i));
+                    break;
+                case SQLITE_BLOB:
+                    print("%s: <blob>", col_name);
+                    break;
+                case SQLITE_NULL:
+                    print("%s: NULL", col_name);
+                    break;
+                default:
+                    print("%s: <unknown>", col_name);
+                    break;
+            }
+        }
+        print("");
+    }
+
+    if (rc != SQLITE_DONE) {
+        error("SQL error: %s", sqlite3_errmsg(db->db));
+    }
+
+    sqlite3_finalize(stmt);
+}
+
+#endif // HAVE_SQLITE3
+
+#endif // _SQLITE3_DB_GEMINI_1_H_

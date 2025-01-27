@@ -1,0 +1,38 @@
+module ICMP;
+
+import spicy;
+
+public type ICMP_Message = unit {
+    type_code: bitfield(8) {
+        type: 0..7;
+        code: 8..15;
+    };
+
+    checksum: uint16;
+    rest_of_header: bytes &length=4;
+
+    var payload_length: uint64;
+    payload: bytes &length=payload_length;
+
+    on %init {
+        self.payload_length = self.input.remaining();
+    }
+
+    method parse_type() : uint8 {
+        return self.type_code.type;
+    }
+
+    method parse_code() : uint8 {
+        return self.type_code.code;
+    }
+};
+
+public type ICMP_Analyzer = unit {
+    message: ICMP_Message;
+
+    on %done {
+        print "ICMP Message Type:", self.message.parse_type();
+        print "ICMP Message Code:", self.message.parse_code();
+        print "ICMP Payload Length:", |self.message.payload|;
+    }
+};

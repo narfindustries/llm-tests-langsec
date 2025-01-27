@@ -1,0 +1,56 @@
+%include "file-analysis/tiff/consts.spicy"
+
+module TIFF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    ifd_offset: uint32;
+    on %done { print self; }
+};
+
+type Header = unit {
+    byte_order: bytes &size=2 {
+        if ( $$ != b"II" && $$ != b"MM" )
+            throw "invalid byte order";
+    }
+    version: uint16 {
+        if ( $$ != 42 )
+            throw "invalid TIFF version";
+    }
+};
+
+type IFD = unit {
+    entry_count: uint16;
+    entries: Entry[self.entry_count];
+    next_ifd: uint32;
+};
+
+type Entry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value: uint32;
+};
+
+public function parse_tiff(data: bytes) : bool {
+    try {
+        local tiff = parse<File>(data);
+        return True;
+    }
+    catch {
+        return False;
+    }
+}
+
+on File::%done {
+    print "TIFF file parsed successfully";
+}
+
+on Entry::%done {
+    print "Tag:", self.tag;
+    print "Type:", self.type;
+    print "Count:", self.count;
+    print "Value:", self.value;
+}

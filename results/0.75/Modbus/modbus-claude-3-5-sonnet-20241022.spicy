@@ -1,0 +1,125 @@
+module Modbus;
+
+import spicy;
+
+public type ModbusHeader = unit {
+    transaction_id: bytes &size=2;
+    protocol_id: bytes &size=2;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+
+    on %done {
+        self.transaction_id_uint = bytes_to_uint16(self.transaction_id);
+        self.protocol_id_uint = bytes_to_uint16(self.protocol_id);
+    }
+
+    var transaction_id_uint: uint16;
+    var protocol_id_uint: uint16;
+};
+
+type ModbusRequest = unit {
+    header: ModbusHeader;
+    
+    switch ( self.header.function_code ) {
+        1, 2 -> read_coils: ReadCoilsRequest;
+        3, 4 -> read_registers: ReadRegistersRequest;
+        5 -> write_single_coil: WriteSingleCoilRequest;
+        6 -> write_single_register: WriteSingleRegisterRequest;
+        15 -> write_multiple_coils: WriteMultipleCoilsRequest;
+        16 -> write_multiple_registers: WriteMultipleRegistersRequest;
+        * -> unknown: bytes &eod;
+    };
+};
+
+type ReadCoilsRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type ReadRegistersRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type WriteSingleCoilRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteSingleRegisterRequest = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type WriteMultipleCoilsRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type WriteMultipleRegistersRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type ModbusResponse = unit {
+    header: ModbusHeader;
+    
+    switch ( self.header.function_code ) {
+        1, 2 -> read_coils: ReadCoilsResponse;
+        3, 4 -> read_registers: ReadRegistersResponse;
+        5 -> write_single_coil: WriteSingleCoilResponse;
+        6 -> write_single_register: WriteSingleRegisterResponse;
+        15 -> write_multiple_coils: WriteMultipleCoilsResponse;
+        16 -> write_multiple_registers: WriteMultipleRegistersResponse;
+        * -> error: ModbusError if (self.header.function_code & 0x80) != 0;
+        * -> unknown: bytes &eod;
+    };
+};
+
+type ReadCoilsResponse = unit {
+    byte_count: uint8;
+    status: bytes &size=self.byte_count;
+};
+
+type ReadRegistersResponse = unit {
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type WriteSingleCoilResponse = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteSingleRegisterResponse = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type WriteMultipleCoilsResponse = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type WriteMultipleRegistersResponse = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type ModbusError = unit {
+    exception_code: uint8;
+};
+
+function bytes_to_uint16(b: bytes): uint16 {
+    return (((b[0] as uint16) << 8) | (b[1] as uint16));
+}
+
+public type Message = unit {
+    : ModbusRequest if (connection.is_originator());
+    : ModbusResponse if (!connection.is_originator());
+};

@@ -1,0 +1,49 @@
+module ELF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    sections: Section[] &until($!.is_done);
+
+    var is_done: bool = false;
+};
+
+type Header = unit {
+    magic: bytes &size=4 
+        where $$ == b"\x7fELF";
+    
+    class: uint8 
+        where $$ == 1 || $$ == 2;  # 32-bit or 64-bit
+    
+    endian: uint8 
+        where $$ == 1 || $$ == 2;  # Little or big endian
+    
+    version: uint8;
+    
+    os_abi: uint8;
+    abi_version: uint8;
+    
+    padding: bytes &size=7;
+    
+    type: uint16;
+    machine: uint16;
+    elf_version: uint32;
+};
+
+type Section = unit {
+    name_index: uint32;
+    type: uint32;
+    flags: uint64;
+    addr: uint64;
+    offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    addr_align: uint64;
+    entry_size: uint64;
+
+    on %done { 
+        self.parent<File>().is_done = true if self.type == 0; 
+    }
+};

@@ -1,0 +1,71 @@
+meta:
+  id: http_1_1
+  title: HTTP 1.1 Protocol
+  application: HTTP
+  file-extension: http
+  endian: be
+  license: CC0-1.0
+doc: |
+  A basic implementation of HTTP/1.1 protocol parsing, focusing on the structure of HTTP requests and responses.
+
+seq:
+  - id: request
+    type: http_request
+  - id: response
+    type: http_response
+
+types:
+  http_request:
+    seq:
+      - id: method
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: uri
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: version
+        type: str
+        encoding: ASCII
+        terminator: 0x0D
+      - id: crlf
+        size: 1
+      - id: headers
+        type: header
+        repeat: eos
+
+  http_response:
+    seq:
+      - id: version
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: status_code
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: reason_phrase
+        type: str
+        encoding: ASCII
+        terminator: 0x0D
+      - id: crlf
+        size: 1
+      - id: headers
+        type: header
+        repeat: eos
+
+  header:
+    seq:
+      - id: name
+        type: str
+        encoding: ASCII
+        terminator: 0x3A
+      - id: space
+        size: 1
+      - id: value
+        type: str
+        encoding: ASCII
+        terminator: 0x0D
+      - id: crlf
+        size: 1

@@ -1,0 +1,77 @@
+# Zeek Spicy Specification for PNG Image Parsing
+
+%header {
+    # Import necessary modules
+    import zeek(spicy/bridge);
+}
+
+%config {
+    # Set module path for PNG library
+    module_path = "/usr/local/lib";
+}
+
+%definition png_image {
+    magic = "\x89PNG\r\n\x1a\n";
+
+    # PNG file signature (8 bytes)
+    signature: bytestring(8) = magic;
+
+    # IHDR chunk (25 bytes)
+    ihdr: ihdr_chunk;
+
+    # IDAT chunk(s)
+    idat: idat_chunk*;
+
+    # IEND chunk (12 bytes)
+    iend: iend_chunk;
+
+    # Ensure IHDR chunk is present and valid
+    condition = ihdr.width > 0 && ihdr.height > 0;
+
+    # Extract relevant metadata
+    metadata: png_metadata = {
+        width = ihdr.width,
+        height = ihdr.height,
+        bit_depth = ihdr.bit_depth,
+        color_type = ihdr.color_type,
+        compression_method = ihdr.compression_method,
+        filter_method = ihdr.filter_method,
+        interlace_method = ihdr.interlace_method
+    };
+}
+
+%definition ihdr_chunk {
+    length: uint32 = 13;
+    type: bytestring(4) = "IHDR";
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+    crc: uint32;
+}
+
+%definition idat_chunk {
+    length: uint32;
+    type: bytestring(4) = "IDAT";
+    data: bytestring(length);
+    crc: uint32;
+}
+
+%definition iend_chunk {
+    length: uint32 = 0;
+    type: bytestring(4) = "IEND";
+    crc: uint32 = 0xae426082;
+}
+
+%definition png_metadata {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+}

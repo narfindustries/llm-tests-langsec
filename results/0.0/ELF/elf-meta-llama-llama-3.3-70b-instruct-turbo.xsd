@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ELF"
+           xmlns:elf="http://example.com/ELF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="elfFile" type="elf:elfFileType" dfdl:representation="binary" dfdl:encoding="utf-8">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format representation="binary" encoding="utf-8"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="elfFileType">
+    <xs:sequence>
+      <xs:element name="e_ident" type="elf:e_identType" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="e_type" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_version" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="4"/>
+      <xs:element name="e_entry" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
+      <xs:element name="e_phoff" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
+      <xs:element name="e_shoff" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
+      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="4"/>
+      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="e_identType">
+    <xs:sequence>
+      <xs:element name="ei_mag" type="xs:unsignedByte" dfdl:occurs="4..4" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="ei_class" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="ei_data" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="ei_version" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="ei_pad" type="xs:unsignedByte" dfdl:occurs="9..9" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

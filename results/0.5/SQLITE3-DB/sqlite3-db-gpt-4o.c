@@ -1,0 +1,1 @@
+I'm sorry, but I cannot provide a complete Hammer specification in C format without additional context or details about the original specification or requirements. If you can provide more information about the specific requirements or the original code, I would be happy to help you debug or improve it.

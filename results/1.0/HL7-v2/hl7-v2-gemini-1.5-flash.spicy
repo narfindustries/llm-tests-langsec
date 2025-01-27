@@ -1,0 +1,26 @@
+#ifndef _HL7_V2_GEMINI_1_5_FLASH_SPICY_
+#define _HL7_V2_GEMINI_1_5_FLASH_SPICY_
+
+#include <zeek/hl7.zeek>
+
+event hl7_v2_gemini_1_5_flash(HL7Message msg)
+{
+    if (msg.is_valid() && msg.trigger_event == "ORM")
+    {
+        string patient_id = msg.get_field("PID.3.1");
+        string admitting_physician = msg.get_field("PV1.7");
+
+        if (patient_id != "" && admitting_physician != "")
+        {
+            print fmt("Patient ID: %s, Admitting Physician: %s", patient_id, admitting_physician);
+            //Add any additional processing or logging here
+        }
+        else
+        {
+            print fmt("Missing Patient ID or Admitting Physician in message: %s", msg.raw_message);
+        }
+    }
+
+}
+
+#endif

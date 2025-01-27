@@ -1,0 +1,1 @@
+-- This is a placeholder.  The error message provides no information about the actual Daedalus code that caused the problem.  A correct Daedalus specification requires knowing the intended functionality and the nature of the error.  A functional example needs to be provided to fix it.

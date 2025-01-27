@@ -1,0 +1,26 @@
+module ARP;
+
+public type Header = unit {
+    hw_type: uint16;
+    protocol_type: uint16;
+    hw_size: uint8;
+    protocol_size: uint8;
+    opcode: uint16;
+    sender_mac: bytes &size=6;
+    sender_ip: bytes &size=4;
+    target_mac: bytes &size=6;
+    target_ip: bytes &size=4;
+    
+    on %done {
+        print "ARP Operation:", self.opcode;
+        print "Sender MAC:", self.sender_mac;
+        print "Sender IP:", self.sender_ip;
+        print "Target MAC:", self.target_mac;
+        print "Target IP:", self.target_ip;
+    }
+};
+
+type Operation = enum {
+    REQUEST = 1,
+    REPLY = 2
+};

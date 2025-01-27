@@ -1,0 +1,77 @@
+module JPEG;
+
+public type JPEG = unit {
+    var width: uint64;
+    var height: uint64;
+    var components: uint8;
+    var precision: uint8;
+
+    on %init {
+        self.width = 0;
+        self.height = 0;
+        self.components = 0;
+        self.precision = 0;
+    }
+
+    : Segment[] &eod;
+};
+
+type Segment = unit {
+    marker: uint16;
+    : switch (self.marker) {
+        0xFFD8 -> SOIMarker,
+        0xFFE0, 0xFFE1, 0xFFE2, 0xFFE3, 0xFFE4, 0xFFE5,
+        0xFFE6, 0xFFE7, 0xFFE8, 0xFFE9, 0xFFEA, 0xFFEB,
+        0xFFEC, 0xFFED, 0xFFEE, 0xFFEF -> APPMarker,
+        0xFFC0 -> SOF0Marker,
+        0xFFDA -> SOSMarker,
+        0xFFD9 -> EOIMarker,
+        * -> SkipMarker
+    };
+};
+
+type SOIMarker = unit {};
+
+type APPMarker = unit {
+    length: uint16;
+    data: bytes &size=self.length - 2;
+};
+
+type SOF0Marker = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    components: uint8;
+    component_data: bytes &size=self.length - 8;
+
+    on %done {
+        self.parent.parent.width = self.width;
+        self.parent.parent.height = self.height;
+        self.parent.parent.components = self.components;
+        self.parent.parent.precision = self.precision;
+    }
+};
+
+type SOSMarker = unit {
+    length: uint16;
+    data: bytes &size=self.length - 2;
+    : ImageData;
+};
+
+type ImageData = unit {
+    data: bytes &eod &chunked;
+};
+
+type EOIMarker = unit {};
+
+type SkipMarker = unit {
+    length: uint16;
+    data: bytes &size=self.length - 2;
+};
+
+on JPEG::%done {
+    print "JPEG Image:", self.width, "x", self.height, 
+          "pixels,", self.components, "components,",
+          self.precision, "bits precision";
+}

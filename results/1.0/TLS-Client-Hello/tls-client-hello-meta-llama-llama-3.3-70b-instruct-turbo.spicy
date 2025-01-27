@@ -1,0 +1,44 @@
+# TLS Client Hello Spice
+
+@header {
+  name: "TLS-Client-Hello"
+  namespace: "meta::llama::llama"
+  major_version: 3
+  minor_version: 70
+}
+
+type TLS_Client_Hello(isn: uint32) = record {
+  handshake_type: uint8 = 1,
+  length: uint24,
+  version: uint16,
+  random: bytestring[32],
+  session_id_length: uint8,
+  session_id: bytestring[session_id_length],
+  cipher_suites_length: uint16,
+  cipher_suites: array[cipher_suites_length/2] of uint16,
+  compression_methods_length: uint8,
+  compression_methods: array[compression_methods_length] of uint8,
+  extensions_length: uint16,
+  extensions: array[extensions_length] of TLS_Extension,
+} &byteorder=big-endian;
+
+type TLS_Extension = record {
+  extension_type: uint16,
+  length: uint16,
+  data: bytestring[length],
+} &byteorder=big-endian;
+
+type TLS_Extensions = record {
+  server_name: TLS_Extension,
+  supported_versions: TLS_Extension,
+  # Add other extensions as needed
+} &byteorder=big-endian;
+
+type TLS_Client_Hello_Variant(isn: uint32) = variant {
+  type: TLS_Client_Hello,
+  extensions: array[TLS_Extensions],
+};
+
+event tls_client_hello(c: connection, msg: TLS_Client_Hello_Variant) {
+  # Implement event handling logic here
+}

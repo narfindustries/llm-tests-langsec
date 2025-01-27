@@ -1,0 +1,58 @@
+module GIF;
+
+import spicy;
+
+public type GIF = unit {
+    magic: bytes &length=6 &check=$$ == "\x47\x49\x46\x38\x39\x61";
+
+    logical_screen_descriptor: {
+        width: uint16;
+        height: uint16;
+        packed_fields: uint8;
+        background_color_index: uint8;
+        pixel_aspect_ratio: uint8;
+    };
+
+    global_color_table: [*] = {
+        if ( logical_screen_descriptor.packed_fields & 0x80 ) {
+            [logical_screen_descriptor.packed_fields & 0x07 + 1] of color_table_entry
+        }
+    };
+
+    frames: [*] = frame until ( $$ == "\x3B" );
+
+    terminator: bytes &length=1 &check=$$ == "\x3B";
+};
+
+type color_table_entry = bytes &length=3;
+
+type frame = unit {
+    separator: uint8 &check=$$ == 0x2C;
+    image_descriptor: {
+        left_position: uint16;
+        top_position: uint16;
+        width: uint16;
+        height: uint16;
+        packed_fields: uint8;
+    };
+
+    local_color_table: [*] = {
+        if ( image_descriptor.packed_fields & 0x80 ) {
+            [image_descriptor.packed_fields & 0x07 + 1] of color_table_entry
+        }
+    };
+
+    lzw_minimum_code_size: uint8;
+    image_data: [*] = subblock;
+};
+
+type subblock = unit {
+    size: uint8;
+    data: bytes &length=size;
+} until ( size == 0 );
+
+public export { 
+    parse-gif: function(input: bytes) -> GIF {
+        return GIF(input);
+    }
+}

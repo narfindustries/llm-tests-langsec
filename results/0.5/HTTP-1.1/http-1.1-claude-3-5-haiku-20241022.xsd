@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:http="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" separatorPosition="prefix" separatorPolicy="suppressed"
+                   encoding="UTF-8" byteOrder="bigEndian" 
+                   representation="text" 
+                   occursCountKind="parsed" 
+                   initiatedContent="no"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RequestLine" type="http:RequestLineType"/>
+        <xs:element name="Headers" type="http:HeadersType"/>
+        <xs:element name="Body" type="http:BodyType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="RequestLineType">
+    <xs:sequence dfdl:separator="\r\n">
+      <xs:element name="Method" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:assert testKind="pattern" testPattern="(GET|POST|PUT|DELETE|HEAD|OPTIONS|TRACE|CONNECT)"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="URI" type="xs:string"/>
+      <xs:element name="HTTPVersion" type="xs:string" 
+                   dfdl:pattern="HTTP/1\.[01]"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="Header" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="\r\n">
+            <xs:element name="Name" type="xs:string"/>
+            <xs:element name="Value" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="HeaderTerminator" type="xs:string" 
+                   fixed="\r\n" dfdl:terminator="\r\n"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Content" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

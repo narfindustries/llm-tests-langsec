@@ -1,0 +1,121 @@
+# DNS Protocol Specification in Zeek Spicy
+%header{
+#include "zeek-spicy/protocol/dns/types.zeek"
+}
+
+%proto dns {
+    # DNS Header
+    header: {
+        id: uint16;
+        flags: uint16;
+        qdcount: uint16;
+        ancount: uint16;
+        nscount: uint16;
+        arcount: uint16;
+    };
+
+    # DNS Question
+    question: {
+        qname: bytestring;
+        qtype: uint16;
+        qclass: uint16;
+    };
+
+    # DNS Answer
+    answer: {
+        name: uint16;
+        type: uint16;
+        class: uint16;
+        ttl: uint32;
+        rdlength: uint16;
+        rdata: bytestring;
+    };
+
+    # DNS Parser
+    parser: {
+        header;
+        questions: array(question);
+        answers: array(answer);
+        authorities: array(answer);
+        additionals: array(answer);
+    };
+}
+
+%parser dns {
+    # Parse DNS Header
+    header: parse_header;
+
+    # Parse DNS Questions
+    questions: {
+        parse_question(qdcount);
+    };
+
+    # Parse DNS Answers
+    answers: {
+        parse_answer(ancount);
+    };
+
+    # Parse DNS Authorities
+    authorities: {
+        parse_answer(nscount);
+    };
+
+    # Parse DNS Additionals
+    additionals: {
+        parse_answer(arcount);
+    };
+}
+
+%function parse_header : header {
+    # Parse DNS Header
+    header: {
+        id = uint16();
+        flags = uint16();
+        qdcount = uint16();
+        ancount = uint16();
+        nscount = uint16();
+        arcount = uint16();
+    };
+}
+
+%function parse_question(count) : array(question) {
+    # Parse DNS Questions
+    questions: array(question);
+    for (i = 0; i < count; i++) {
+        q: question;
+        q.qname = parse_qname();
+        q.qtype = uint16();
+        q.qclass = uint16();
+        questions.add(q);
+    }
+    return questions;
+}
+
+%function parse_answer(count) : array(answer) {
+    # Parse DNS Answers
+    answers: array(answer);
+    for (i = 0; i < count; i++) {
+        a: answer;
+        a.name = uint16();
+        a.type = uint16();
+        a.class = uint16();
+        a.ttl = uint32();
+        a.rdlength = uint16();
+        a.rdata = bytestring(a.rdlength);
+        answers.add(a);
+    }
+    return answers;
+}
+
+%function parse_qname() : bytestring {
+    # Parse DNS QNAME
+    qname: bytestring;
+    while (true) {
+        len = uint8();
+        if (len == 0) {
+            break;
+        }
+        qname += bytestring(len);
+    }
+    return qname;
+}

@@ -1,0 +1,37 @@
+module JPEG;
+
+import spicy;
+
+public type File = unit {
+    start_marker: StartMarker;
+    segments: Segment[] &eod;
+};
+
+type StartMarker = unit {
+    marker: bytes = b"\xff\xd8";
+};
+
+type Segment = unit {
+    marker: bytes = b"\xff" ~ marker_type;
+    length: uint16 be;
+    data: bytes &size=(length - 2);
+
+    var marker_type: bytes;
+
+    on marker_type {
+        switch ( marker_type ) {
+            b"\xc0" -> { type = "SOF0 (Baseline DCT)"; }
+            b"\xc1" -> { type = "SOF1 (Extended Sequential DCT)"; }
+            b"\xc2" -> { type = "SOF2 (Progressive DCT)"; }
+            b"\xc9" -> { type = "SOF9 (Extended Sequential DCT, Arithmetic)"; }
+            b"\xca" -> { type = "SOF10 (Progressive DCT, Arithmetic)"; }
+            b"\xdb" -> { type = "Define Quantization Table"; }
+            b"\xc4" -> { type = "Define Huffman Table"; }
+            b"\xda" -> { type = "Start of Scan"; }
+            b"\xd9" -> { type = "End of Image"; }
+            * -> { type = "Unknown Marker"; }
+        }
+    }
+
+    var type: string;
+};

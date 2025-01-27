@@ -1,0 +1,26 @@
+module DICOM;
+
+export {
+    type Info = tuple {
+        magic: string,
+        meta_length: uint32,
+        file_meta: string,
+        transfer_syntax_uid: string
+    };
+
+    type DICOM = unit {
+        magic: bytes &size=4 &check=$magic == |[0x44, 0x49, 0x43, 0x4D]|,
+        reserved: bytes &size=124 &opaque, // Reserved space in DICOM file
+        meta_length: uint32,
+
+        file_meta: bytes &size=meta_length &opaque, // Placeholder for parsing metadata
+        transfer_syntax_uid: string &restofdata,
+
+        on %done {
+            if ( $transfer_syntax_uid != "" )
+                print "Transfer Syntax UID: ", $transfer_syntax_uid;
+            else
+                print "Transfer Syntax UID not found.";
+        }
+    } &byteorder=big;
+}

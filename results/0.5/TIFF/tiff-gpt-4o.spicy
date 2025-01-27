@@ -1,0 +1,40 @@
+module TIFF;
+
+import spicy;
+
+type TIFFHeader = unit {
+    magic: uint16 &validate=(magic == 0x4949 || magic == 0x4D4D),
+    version: uint16 &validate=(version == 42),
+    ifd_offset: uint32,
+};
+
+type IFDEntry = unit {
+    tag: uint16,
+    type: uint16,
+    count: uint32,
+    value_offset: uint32,
+};
+
+type IFD = unit {
+    num_entries: uint16,
+    entries: array[num_entries] of IFDEntry,
+    next_ifd_offset: uint32,
+};
+
+public type TIFFFile = unit {
+    header: TIFFHeader,
+    ifds: array of IFD {
+        count = (self.header.ifd_offset != 0) ? 1 : 0,
+        until ($$ >= self.header.ifd_offset + self.header.ifd_offset)
+    } &length=(self.header.ifd_offset != 0) ? 1 : 0,
+};
+
+public module Parser = spicy::Parser for TIFFFile {
+    on %init {
+        print "TIFF parser initialized";
+    }
+
+    on %done {
+        print "TIFF parsing completed";
+    }
+};

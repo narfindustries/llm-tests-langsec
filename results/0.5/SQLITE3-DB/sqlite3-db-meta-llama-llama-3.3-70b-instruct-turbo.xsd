@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com"
+           targetNamespace="http://example.com"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="=dfdl.dtd"/>
+
+  <xs:element name="sqlite3-db-meta-llama-llama">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ex:sqlite3-db-header" dfdl:encoding="ISO-8859-1" dfdl:separator=" " dfdl:terminator=";" dfdl:format modificar=""/>
+        <xs:element ref="ex:sqlite3-db-schema" dfdl:encoding="UTF-8" dfdl:separator="\t" dfdl:terminator="\n" dfdl:format modifier="" occurs="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="sqlite3-db-header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header-magic" type="xs:hexBinary" dfdl:length="16" dfdl:encoding="binary" dfdl:format modifier=""/>
+        <xs:element name="page-size" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+        <xs:element name="write-version" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+        <xs:element name="read-version" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+        <xs:element name="reserved-space" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="sqlite3-db-schema">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="column-name" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
+        <xs:element name="column-type" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
+        <xs:element name="column-default-value" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
+        <xs:element name="not-null" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+        <xs:element name="dflt-value" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+        <xs:element name="pk" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

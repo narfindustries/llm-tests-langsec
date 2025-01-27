@@ -1,0 +1,19 @@
+module PNG_Image;
+
+import spicy;
+
+public type Image = unit {
+    magic: bytes &size=8;
+    chunks: Chunk[] &eod;
+
+    on %done {
+        print self;
+    }
+};
+
+type Chunk = unit {
+    length: uint32 &byte-order=BigEndian;
+    type: bytes &size=4;
+    data: bytes &size=self.length;
+    crc: bytes &size=4;
+};

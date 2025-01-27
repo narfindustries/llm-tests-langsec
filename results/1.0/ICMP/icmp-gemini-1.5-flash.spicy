@@ -1,0 +1,44 @@
+#ifndef _ICMP_GEMINI_1_H
+#define _ICMP_GEMINI_1_H
+
+#include <stdint.h>
+
+typedef struct {
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint16_t identifier;
+    uint16_t sequence_number;
+} icmp_header_t;
+
+
+global icmp_header_t icmp_packet;
+
+event zeek_init() {
+    // Initialization, if needed
+}
+
+
+function int parse_icmp(uint8_t* packet_data, int packet_len)
+{
+    if (packet_len < sizeof(icmp_header_t)) {
+        return 0;
+    }
+
+    icmp_packet = *(icmp_header_t*)packet_data;
+    return sizeof(icmp_header_t);
+}
+
+
+
+event ICMP_packet(uint8_t *data, int len) {
+	int parsed_len;
+	parsed_len = parse_icmp(data, len);
+    if (parsed_len > 0) {
+    	print ICMP_packet.type, ICMP_packet.code, ICMP_packet.checksum, ICMP_packet.identifier, ICMP_packet.sequence_number;
+    } else {
+    	print "ICMP Packet parsing failed!";
+    }
+}
+
+#endif

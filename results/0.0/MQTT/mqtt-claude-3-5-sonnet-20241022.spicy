@@ -1,0 +1,113 @@
+module MQTT;
+
+import spicy;
+
+public type FixedHeader = unit {
+    byte1: uint8;
+    remaining_length: uint8;
+    
+    on %done {
+        self.message_type = (self.byte1 & 0xF0) >> 4;
+        self.dup_flag = (self.byte1 & 0x08) >> 3;
+        self.qos_level = (self.byte1 & 0x06) >> 1;
+        self.retain = self.byte1 & 0x01;
+    }
+    
+    var message_type: uint8;
+    var dup_flag: uint8;
+    var qos_level: uint8;
+    var retain: uint8;
+};
+
+public type ConnectFlags = unit {
+    byte1: uint8;
+    
+    on %done {
+        self.username_flag = (self.byte1 & 0x80) >> 7;
+        self.password_flag = (self.byte1 & 0x40) >> 6;
+        self.will_retain = (self.byte1 & 0x20) >> 5;
+        self.will_qos = (self.byte1 & 0x18) >> 3;
+        self.will_flag = (self.byte1 & 0x04) >> 2;
+        self.clean_session = (self.byte1 & 0x02) >> 1;
+        self.reserved = self.byte1 & 0x01;
+    }
+    
+    var username_flag: uint8;
+    var password_flag: uint8;
+    var will_retain: uint8;
+    var will_qos: uint8;
+    var will_flag: uint8;
+    var clean_session: uint8;
+    var reserved: uint8;
+};
+
+type String = unit {
+    length: uint16;
+    value: bytes &size=self.length;
+};
+
+public type Connect = unit {
+    protocol_name: String;
+    protocol_version: uint8;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    client_id: String;
+    will_topic: String if (self.connect_flags.will_flag == 1);
+    will_message: String if (self.connect_flags.will_flag == 1);
+    username: String if (self.connect_flags.username_flag == 1);
+    password: String if (self.connect_flags.password_flag == 1);
+};
+
+public type Publish = unit {
+    topic: String;
+    packet_id: uint16 if ($$.fixed_header.qos_level > 0);
+    payload: bytes &eod;
+};
+
+public type Subscribe = unit {
+    packet_id: uint16;
+    topics: list<SubscribeTopic>;
+};
+
+type SubscribeTopic = unit {
+    topic: String;
+    qos: uint8;
+};
+
+public type Unsubscribe = unit {
+    packet_id: uint16;
+    topics: list<String>;
+};
+
+public type ConnAck = unit {
+    session_present: uint8;
+    return_code: uint8;
+};
+
+public type PubAck = unit {
+    packet_id: uint16;
+};
+
+public type SubAck = unit {
+    packet_id: uint16;
+    return_codes: bytes &eod;
+};
+
+public type UnsubAck = unit {
+    packet_id: uint16;
+};
+
+public type Message = unit {
+    fixed_header: FixedHeader;
+    
+    switch ( self.fixed_header.message_type ) {
+        1 -> connect: Connect;
+        2 -> connack: ConnAck;
+        3 -> publish: Publish;
+        4 -> puback: PubAck;
+        8 -> subscribe: Subscribe;
+        9 -> suback: SubAck;
+        10 -> unsubscribe: Unsubscribe;
+        11 -> unsuback: UnsubAck;
+    };
+};

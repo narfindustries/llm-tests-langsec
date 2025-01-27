@@ -1,0 +1,17 @@
+module ICMP;
+
+public type ICMPMessage = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    payload: bytes &size=($$ - 4);  # Payload size is total size minus the header size
+
+    on %init {
+        print "ICMP Message Type: ", self.type;
+        print "ICMP Message Code: ", self.code;
+    }
+};
+
+public type Main = unit {
+    msg: ICMPMessage;
+};

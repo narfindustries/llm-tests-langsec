@@ -1,0 +1,44 @@
+module DICOM;
+
+public type FileHeader = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    elements: Element(self)[] &eod;
+};
+
+public type Element = unit(parent: FileHeader) {
+    tagGroup: uint16;
+    tagElement: uint16;
+    vr: bytes &size=2;
+    length: uint16;
+    value: switch (self.vr) {
+        b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"TM", b"UI" -> string : bytes &size=self.length;
+        b"US" -> uint16 : uint16;
+        b"UL" -> uint32 : uint32;
+        b"SS" -> int16 : int16;
+        b"SL" -> int32 : int32;
+        b"FL" -> float : float;
+        b"FD" -> double : double;
+        b"OB", b"OW", b"UN", b"SQ", b"UT" -> bytes : bytes &size=self.length;
+        default -> opaque : bytes &size=self.length;
+    } &optional;
+
+    on %done {
+        if (self.tagGroup == 0x0002 && self.tagElement == 0x0010) {
+            if (self.value as string == "1.2.840.10008.1.2.1") {
+                print "Explicit VR Little Endian";
+            }
+        }
+    }
+};
+
+public type DICOM_File = unit {
+    header: FileHeader;
+    on %done {
+        print "DICOM file parsing completed.";
+    }
+};
+
+event zeek_init() {
+    print "Zeek Spicy DICOM parser loaded.";
+}

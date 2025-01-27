@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:modbus-format"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:defineFormat name="modbus-format">
+    <dfdl:format 
+      alignment="1" 
+      alignmentUnits="bytes"
+      binaryNumberRep="binary"
+      byteOrder="bigEndian"
+      encoding="UTF-8"
+      escapeScheme="none"
+      initiated="no"
+      representation="binary"
+      separatorPosition="prefix"
+      textNumberRep="standard"
+      separator=""
+      truncateSpecifiedLengthString="no"/>
+  </dfdl:defineFormat>
+
+  <xs:element name="ModbusFrame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SlaveAddress" type="tns:SlaveAddressType"/>
+        <xs:element name="FunctionCode" type="tns:FunctionCodeType"/>
+        <xs:element name="Data" type="tns:DataType"/>
+        <xs:element name="CRC" type="tns:CRCType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="SlaveAddressType">
+    <xs:restriction base="xs:unsignedByte">
+      <dfdl:restriction base="xs:unsignedByte">
+        <dfdl:minInclusive value="0"/>
+        <dfdl:maxInclusive value="247"/>
+      </dfdl:restriction>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FunctionCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <dfdl:restriction base="xs:unsignedByte">
+        <dfdl:enumeration value="1"/>   <!-- Read Coils -->
+        <dfdl:enumeration value="2"/>   <!-- Read Discrete Inputs -->
+        <dfdl:enumeration value="3"/>   <!-- Read Holding Registers -->
+        <dfdl:enumeration value="4"/>   <!-- Read Input Registers -->
+        <dfdl:enumeration value="5"/>   <!-- Write Single Coil -->
+        <dfdl:enumeration value="6"/>   <!-- Write Single Register -->
+        <dfdl:enumeration value="15"/>  <!-- Write Multiple Coils -->
+        <dfdl:enumeration value="16"/>  <!-- Write Multiple Registers -->
+      </dfdl:restriction>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="Payload" type="xs:hexBinary" 
+        dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="CRCType">
+    <xs:restriction base="xs:unsignedShort">
+      <dfdl:restriction base="xs:unsignedShort">
+        <dfdl:minInclusive value="0"/>
+        <dfdl:maxInclusive value="65535"/>
+      </dfdl:restriction>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

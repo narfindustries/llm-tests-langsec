@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/sqlite3-db"
+           xmlns:tns="http://example.com/dfdl/sqlite3-db">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="SQLite3Database">
+    <xs:sequence>
+      <xs:element name="header" type="tns:Header" dfdl:length="100" />
+      <xs:element name="body" type="tns:Body" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII"/>
+      <xs:element name="pageSize" type="xs:int" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="writeVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="readVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="reservedSpace" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="maxPayloadFrac" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="minPayloadFrac" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="leafPayloadFrac" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="changeCounter" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="numPages" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="firstFreelistTrunkPage" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="numFreelistPages" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="schemaCookie" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="schemaFormat" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="defaultCacheSize" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="largestRootPage" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="textEncoding" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="userVersion" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="incrementVersion" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Body">
+    <xs:sequence>
+      <xs:element name="page" type="tns:Page" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="pattern" dfdl:lengthPattern="\u0000{5}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Page">
+    <xs:sequence>
+      <xs:element name="pageType" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="firstFreeblock" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="numCells" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="cellContentArea" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="fragmentedFreeBytes" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="rightMostPointer" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:occursCountKind="implicit"/>
+      <xs:element name="cellPointers" type="xs:int" dfdl:length="2" dfdl:byteOrder="bigEndian" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

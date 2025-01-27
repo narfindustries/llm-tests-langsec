@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/tiff" elementFormDefault="qualified"
+           xmlns:tns="http://example.org/tiff"
+           dfdl:byteOrder="bigEndian">
+
+  <xs:element name="TIFF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ImageWidth" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ImageHeight" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="BitsPerSample" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="Compression" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <!-- Add other TIFF tags as needed -->
+        <xs:element name="ImageData" dfdl:lengthKind="expression" dfdl:length="{ImageWidth * ImageHeight * BitsPerSample div 8}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

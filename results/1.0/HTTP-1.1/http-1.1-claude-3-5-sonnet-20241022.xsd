@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/http"
+    targetNamespace="http://example.com/http">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" lengthKind="delimited" 
+                separator="" separatorPolicy="required" 
+                leadingSkip="0" trailingSkip="0"
+                documentFinalTerminatorCanBeMissing="yes"
+                encoding="UTF-8" byteOrder="bigEndian"
+                ignoreCase="no" initiator="" terminator=""
+                occursCountKind="implicit"
+                nilValueDelimiterPolicy="none"
+                textNumberRep="standard"
+                textStringJustification="left"
+                escapeSchemeRef=""/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="http">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="requestLine">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="method" type="xs:string" dfdl:terminator=" "/>
+                            <xs:element name="requestURI" type="xs:string" dfdl:terminator=" "/>
+                            <xs:element name="httpVersion" type="xs:string" dfdl:terminator="%NL;"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="headers" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="xs:string" dfdl:terminator=": "/>
+                            <xs:element name="value" type="xs:string" dfdl:terminator="%NL;"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="emptyLine" dfdl:terminator="%NL;" dfdl:initiator="%WSP*;"/>
+                <xs:element name="body" type="xs:string" minOccurs="0" maxOccurs="1"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="defaults">
+                <dfdl:format ref="local:GeneralFormat"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+</xs:schema>

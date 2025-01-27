@@ -1,0 +1,17 @@
+#ifndef _NETWORK_TIME_PROTOCOL_VERSION_4_H
+#define _NETWORK_TIME_PROTOCOL_VERSION_4_H
+
+#include <zeek/analyzer/protocol/ntp.zeek>
+
+#define NTP_PORT 123
+
+event ntp_packet(conn, pkt) {
+    if (pkt[TCP].port == NTP_PORT) {
+        local ntp_header = ntp_decode(pkt[TCP].payload);
+        if (ntp_header != null) {
+            print fmt("NTP Packet: %s", ntp_header);
+        }
+    }
+}
+
+#endif

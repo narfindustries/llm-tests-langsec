@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7-v2"
+           xmlns:tns="http://example.com/HL7-v2"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="HL7-v2-xml.xsd"/>
+
+  <xs:element name="HL7-v2-message">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:HL7-v2-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:MSH" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="tns:EVN" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="tns:PID" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="tns:PV1" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="tns:OBR" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="tns:OBX" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="MSH">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:MSH-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FieldSeparator" type="xs:string" fixed="|"/>
+        <xs:element name="EncodingCharacters" type="xs:string" fixed="^~\&"/>
+        <xs:element name="SendingFacility" type="xs:string"/>
+        <xs:element name="SendingApplication" type="xs:string"/>
+        <xs:element name="MessageDateTime" type="xs:string"/>
+        <xs:element name="Security" type="xs:string" minOccurs="0"/>
+        <xs:element name="MessageType" type="xs:string"/>
+        <xs:element name="MessageControlID" type="xs:string"/>
+        <xs:element name="ProcessingID" type="xs:string"/>
+        <xs:element name="VersionID" type="xs:string"/>
+        <xs:element name="SequenceNumber" type="xs:string" minOccurs="0"/>
+        <xs:element name="ContinuationPointer" type="xs:string" minOccurs="0"/>
+        <xs:element name="AcceptAcknowledgmentType" type="xs:string" minOccurs="0"/>
+        <xs:element name="ApplicationAcknowledgmentType" type="xs:string" minOccurs="0"/>
+        <xs:element name="CountryCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="CharacterSet" type="xs:string" minOccurs="0"/>
+        <xs:element name="PrincipalLanguageOfMessage" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EVN">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:EVN-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="EventType" type="xs:string"/>
+        <xs:element name="EventDateTime" type="xs:string"/>
+        <xs:element name="EventFacility" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="PID">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:PID-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PatientID" type="xs:string"/>
+        <xs:element name="PatientName" type="xs:string"/>
+        <xs:element name="DateOfBirth" type="xs:string"/>
+        <xs:element name="Sex" type="xs:string"/>
+        <xs:element name="PatientAddress" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="PV1">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:PV1-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="VisitNumber" type="xs:string"/>
+        <xs:element name="PatientClass" type="xs:string"/>
+        <xs:element name="VisitDateTime" type="xs:string"/>
+        <xs:element name="AdmittingDoctor" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="OBR">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:OBR-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ObservationRequestID" type="xs:string"/>
+        <xs:element name="ObservationPriority" type="xs:string"/>
+        <xs:element name="ObservationDateTime" type="xs:string"/>
+        <xs:element name="ObservationType" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="OBX">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:OBX-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ObservationResultID" type="xs:string"/>
+        <xs:element name="ObservationResultStatus" type="xs:string"/>
+        <xs:element name="ObservationResultValue" type="xs:string"/>
+        <xs:element name="ObservationUnits" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format ref="tns:HL7-v2-format"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:notation name="HL7-v2-format" public="http://www.example.com/HL7-v2-format"
+               system="http://www.example.com/HL7-v2-format-system"/>
+
+  <xs:notation name="MSH-format" public="http://www.example.com/MSH-format"
+               system="http://www.example.com/MSH-format-system"/>
+
+  <xs:notation name="EVN-format" public="http://www.example.com/EVN-format"
+               system="http://www.example.com/EVN-format-system"/>
+
+  <xs:notation name="PID-format" public="http://www.example.com/PID-format"
+               system="http://www.example.com/PID-format-system"/>
+
+  <xs:notation name="PV1-format" public="http://www.example.com/PV1-format"
+               system="http://www.example.com/PV1-format-system"/>
+
+  <xs:notation name="OBR-format" public="http://www.example.com/OBR-format"
+               system="http://www.example.com/OBR-format-system"/>
+
+  <xs:notation name="OBX-format" public="http://www.example.com/OBX-format"
+               system="http://www.example.com/OBX-format-system"/>
+
+</xs:schema>

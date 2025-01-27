@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="urn:example:ELF"
+        xmlns:tns="urn:example:ELF"
+        elementFormDefault="qualified">
+
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:ELFFormat"/>
+        </appinfo>
+    </annotation>
+
+    <dfdl:format name="ELFFormat"
+                 alignmentUnits="bytes"
+                 byteOrder="bigEndian"
+                 lengthKind="explicit"
+                 encoding="utf-8"/>
+
+    <element name="ELFFile">
+        <complexType>
+            <sequence>
+                <element name="header" type="tns:ELFHeader"/>
+                <element name="programHeader" type="tns:ProgramHeader" minOccurs="0" maxOccurs="unbounded"/>
+                <element name="sectionHeader" type="tns:SectionHeader" minOccurs="0" maxOccurs="unbounded"/>
+            </sequence>
+        </complexType>
+    </element>
+
+    <complexType name="ELFHeader">
+        <sequence>
+            <element name="magicNumber" type="hexBinary" dfdl:length="4"/>
+            <element name="class" type="unsignedByte" dfdl:length="1"/>
+            <element name="data" type="unsignedByte" dfdl:length="1"/>
+            <element name="version" type="unsignedByte" dfdl:length="1"/>
+            <element name="osAbi" type="unsignedByte" dfdl:length="1"/>
+            <element name="abiVersion" type="unsignedByte" dfdl:length="1"/>
+            <element name="pad" type="hexBinary" dfdl:length="7"/>
+            <element name="type" type="unsignedShort"/>
+            <element name="machine" type="unsignedShort"/>
+            <element name="version2" type="unsignedInt"/>
+            <element name="entry" type="unsignedInt"/>
+            <element name="phOff" type="unsignedInt"/>
+            <element name="shOff" type="unsignedInt"/>
+            <element name="flags" type="unsignedInt"/>
+            <element name="ehSize" type="unsignedShort"/>
+            <element name="phEntSize" type="unsignedShort"/>
+            <element name="phNum" type="unsignedShort"/>
+            <element name="shEntSize" type="unsignedShort"/>
+            <element name="shNum" type="unsignedShort"/>
+            <element name="shStrNdx" type="unsignedShort"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ProgramHeader">
+        <sequence>
+            <element name="type" type="unsignedInt"/>
+            <element name="offset" type="unsignedInt"/>
+            <element name="vaddr" type="unsignedInt"/>
+            <element name="paddr" type="unsignedInt"/>
+            <element name="fileSize" type="unsignedInt"/>
+            <element name="memSize" type="unsignedInt"/>
+            <element name="flags" type="unsignedInt"/>
+            <element name="align" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="SectionHeader">
+        <sequence>
+            <element name="name" type="unsignedInt"/>
+            <element name="type" type="unsignedInt"/>
+            <element name="flags" type="unsignedInt"/>
+            <element name="addr" type="unsignedInt"/>
+            <element name="offset" type="unsignedInt"/>
+            <element name="size" type="unsignedInt"/>
+            <element name="link" type="unsignedInt"/>
+            <element name="info" type="unsignedInt"/>
+            <element name="addrAlign" type="unsignedInt"/>
+            <element name="entSize" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+</schema>

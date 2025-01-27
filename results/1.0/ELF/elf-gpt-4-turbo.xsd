@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/elf"
+           xmlns:ex="http://example.com/elf">
+
+  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+
+  <xs:element name="ExecutableAndLinkableFormatFile" type="ex:ELFType"/>
+
+  <xs:complexType name="ELFType">
+    <xs:sequence>
+      <xs:element name="Header" type="ex:ELFHeader"/>
+      <xs:element name="ProgramHeaderTable" type="ex:ProgramHeaderTable" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../Header/ProgramHeaderCount }"/>
+      <xs:element name="SectionHeaderTable" type="ex:SectionHeaderTable" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../Header/SectionHeaderCount }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ELFHeader">
+    <xs:sequence>
+      <xs:element name="MagicNumber" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="Class" type="ex:ELFClass"/>
+      <xs:element name="DataEncoding" type="ex:DataEncoding"/>
+      <xs:element name="Version" type="ex:Version"/>
+      <xs:element name="ABI" type="ex:ABI"/>
+      <xs:element name="ABIVersion" type="xs:unsignedByte" dfdl:textNumberRep="binary"/>
+      <xs:element name="Pad" type="xs:hexBinary" dfdl:length="7" dfdl:lengthKind="explicit"/>
+      <xs:element name="Type" type="ex:ELFTypeField"/>
+      <xs:element name="Machine" type="ex:Machine"/>
+      <xs:element name="FileVersion" type="ex:Version"/>
+      <xs:element name="EntryPoint" type="ex:Address" dfdl:outputValueCalc="{ if (ex:Class = 'ELF32') then xs:hexBinary(32) else xs:hexBinary(64) }"/>
+      <xs:element name="ProgramHeaderOffset" type="ex:Address"/>
+      <xs:element name="SectionHeaderOffset" type="ex:Address"/>
+      <xs:element name="Flags" type="xs:unsignedInt" dfdl:textNumberRep="binary"/>
+      <xs:element name="HeaderSize" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+      <xs:element name="ProgramHeaderEntrySize" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+      <xs:element name="ProgramHeaderCount" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+      <xs:element name="SectionHeaderEntrySize" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+      <xs:element name="SectionHeaderCount" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+      <xs:element name="SectionHeaderStringIndex" type="xs:unsignedShort" dfdl:textNumberRep="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define ProgramHeaderTable, SectionHeaderTable, and other types... -->
+</xs:schema>

@@ -1,0 +1,199 @@
+# Define the HL7 message structure
+type HL7_Message = record {
+  msg_type: bytestring(3);
+  trigger_event: bytestring(3);
+  message_control_id: bytestring(20);
+  processing_id: bytestring(3);
+  version_id: bytestring(12);
+  sequence_number: bytestring(15);
+  continuation_pointer: bytestring(180);
+  accepting_application: bytestring(20);
+  accepting_facility: bytestring(20);
+  date: bytestring(8);
+  time: bytestring(6);
+  security: bytestring(40);
+  message_profile_id: bytestring(80);
+  accepting_application_facility: bytestring(20);
+  responding_application: bytestring(20);
+  responding_facility: bytestring(20);
+  error_condition: bytestring(2);
+  segment_count: bytestring(4);
+  segments: bytestring;
+};
+
+# Define the segment structure
+type Segment = record {
+  segment_id: bytestring(3);
+  fields: bytestring;
+};
+
+# Define the field structure
+type Field = record {
+  field_id: bytestring(4);
+  component_id: bytestring(4);
+  sub_component_id: bytestring(4);
+  value: bytestring;
+};
+
+# Define the HL7 message parser
+parser HL7_Parser = {
+  # Parse the HL7 message
+  msg: HL7_Message = parse_hl7_message(input);
+  
+  # Parse the segments
+  segments: vector(Segment) = parse_segments(msg.segments);
+  
+  # Parse the fields
+  fields: vector(Field) = parse_fields(segments);
+};
+
+# Define the parse_hl7_message function
+function parse_hl7_message(input: bytestring): HL7_Message {
+  # Parse the message type
+  msg_type: bytestring(3) = input[0..2];
+  
+  # Parse the trigger event
+  trigger_event: bytestring(3) = input[3..5];
+  
+  # Parse the message control ID
+  message_control_id: bytestring(20) = input[6..25];
+  
+  # Parse the processing ID
+  processing_id: bytestring(3) = input[26..28];
+  
+  # Parse the version ID
+  version_id: bytestring(12) = input[29..40];
+  
+  # Parse the sequence number
+  sequence_number: bytestring(15) = input[41..55];
+  
+  # Parse the continuation pointer
+  continuation_pointer: bytestring(180) = input[56..235];
+  
+  # Parse the accepting application
+  accepting_application: bytestring(20) = input[236..255];
+  
+  # Parse the accepting facility
+  accepting_facility: bytestring(20) = input[256..275];
+  
+  # Parse the date
+  date: bytestring(8) = input[276..283];
+  
+  # Parse the time
+  time: bytestring(6) = input[284..289];
+  
+  # Parse the security
+  security: bytestring(40) = input[290..329];
+  
+  # Parse the message profile ID
+  message_profile_id: bytestring(80) = input[330..409];
+  
+  # Parse the accepting application facility
+  accepting_application_facility: bytestring(20) = input[410..429];
+  
+  # Parse the responding application
+  responding_application: bytestring(20) = input[430..449];
+  
+  # Parse the responding facility
+  responding_facility: bytestring(20) = input[450..469];
+  
+  # Parse the error condition
+  error_condition: bytestring(2) = input[470..471];
+  
+  # Parse the segment count
+  segment_count: bytestring(4) = input[472..475];
+  
+  # Parse the segments
+  segments: bytestring = input[476..];
+  
+  # Return the parsed HL7 message
+  return HL7_Message(
+    msg_type=msg_type,
+    trigger_event=trigger_event,
+    message_control_id=message_control_id,
+    processing_id=processing_id,
+    version_id=version_id,
+    sequence_number=sequence_number,
+    continuation_pointer=continuation_pointer,
+    accepting_application=accepting_application,
+    accepting_facility=accepting_facility,
+    date=date,
+    time=time,
+    security=security,
+    message_profile_id=message_profile_id,
+    accepting_application_facility=accepting_application_facility,
+    responding_application=responding_application,
+    responding_facility=responding_facility,
+    error_condition=error_condition,
+    segment_count=segment_count,
+    segments=segments
+  );
+};
+
+# Define the parse_segments function
+function parse_segments(segments: bytestring): vector(Segment) {
+  # Initialize an empty vector to store the segments
+  segment_vector: vector(Segment) = vector();
+  
+  # Loop through the segments
+  while (|segments| > 0) {
+    # Parse the segment ID
+    segment_id: bytestring(3) = segments[0..2];
+    
+    # Parse the fields
+    fields: bytestring = segments[3..];
+    
+    # Add the segment to the vector
+    segment_vector += Segment(
+      segment_id=segment_id,
+      fields=fields
+    );
+    
+    # Remove the parsed segment from the input
+    segments = segments[|fields|+3..];
+  };
+  
+  # Return the vector of segments
+  return segment_vector;
+};
+
+# Define the parse_fields function
+function parse_fields(segments: vector(Segment)): vector(Field) {
+  # Initialize an empty vector to store the fields
+  field_vector: vector(Field) = vector();
+  
+  # Loop through the segments
+  for (segment in segments) {
+    # Parse the fields
+    fields: bytestring = segment.fields;
+    
+    # Loop through the fields
+    while (|fields| > 0) {
+      # Parse the field ID
+      field_id: bytestring(4) = fields[0..3];
+      
+      # Parse the component ID
+      component_id: bytestring(4) = fields[4..7];
+      
+      # Parse the sub-component ID
+      sub_component_id: bytestring(4) = fields[8..11];
+      
+      # Parse the value
+      value: bytestring = fields[12..];
+      
+      # Add the field to the vector
+      field_vector += Field(
+        field_id=field_id,
+        component_id=component_id,
+        sub_component_id=sub_component_id,
+        value=value
+      );
+      
+      # Remove the parsed field from the input
+      fields = fields[|value|+12..];
+    };
+  };
+  
+  # Return the vector of fields
+  return field_vector;
+};

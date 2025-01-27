@@ -1,0 +1,39 @@
+domain DICOM {
+  types {
+    uint16 uint16;
+    uint32 uint32;
+    string string;
+    seq sequence;
+  }
+
+  decoding {
+    DICOM_META_INFO {
+      GROUP_0002 {
+        FILE_META_VERSION: uint16 = 0x0000;
+        MEDIA_STORAGE_SOP_INSTANCE_UID: string = 0x0002;
+        MEDIA_STORAGE_SOP_CLASS_UID: string = 0x0004;
+        IMPLEMENTATION_CLASS_UID: string = 0x0006;
+        TRANSFER_SYNTAX_UID: string = 0x0010;
+        IMPLEMENTATION_VERSION_NAME: string = 0x0012;
+      }
+
+      GROUP_0008 {
+        REFERENCE_DATE: string = 0x0022;
+        REFERENCE_TIME: string = 0x0032;
+      }
+
+      PATIENT_INFO {
+        PATIENT_NAME: string = 0x0010;
+        PATIENT_ID: string = 0x0020;
+        PATIENT_BIRTH_DATE: string = 0x0030;
+      }
+    }
+  }
+
+  grammar {
+    DICOM_META_INFO: GROUP_0002 GROUP_0008 PATIENT_INFO;
+    GROUP_0002: FILE_META_VERSION MEDIA_STORAGE_SOP_INSTANCE_UID MEDIA_STORAGE_SOP_CLASS_UID IMPLEMENTATION_CLASS_UID TRANSFER_SYNTAX_UID IMPLEMENTATION_VERSION_NAME;
+    GROUP_0008: REFERENCE_DATE REFERENCE_TIME;
+    PATIENT_INFO: PATIENT_NAME PATIENT_ID PATIENT_BIRTH_DATE;
+  }
+}

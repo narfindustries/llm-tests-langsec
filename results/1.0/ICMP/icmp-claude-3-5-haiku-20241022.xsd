@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="urn:icmp:dfdl:1.0"
+           xmlns:icmp="urn:icmp:dfdl:1.0">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary"
+                  alignment="1"
+                  alignmentUnits="bytes"
+                  byteOrder="bigEndian"
+                  encoding="ascii"
+                  fillByte="%#x00"
+                  occursCountKind="parsed"
+                  lengthKind="implicit"
+                  lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMPPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="RestOfHeader" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

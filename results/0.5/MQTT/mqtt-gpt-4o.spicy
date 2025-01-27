@@ -1,0 +1,60 @@
+module MQTT;
+
+import zeek;
+
+public type MQTTMessage = unit {
+    fixed_header: FixedHeader,
+    variable_header: VariableHeader,
+    payload: Payload
+};
+
+type FixedHeader = unit {
+    byte_1: uint8,
+    remaining_length: varint
+};
+
+type VariableHeader = unit {
+    packet_type: uint8 = (fixed_header.byte_1 & 0xF0) >> 4,
+    flags: uint8 = fixed_header.byte_1 & 0x0F,
+    connect_flags: connect_flags_type = (packet_type == 1) ? parse_connect_flags() : nil,
+    keep_alive: uint16 = (packet_type == 1) ? parse_keep_alive() : nil
+} &requires {
+    packet_type in [1, 3, 8, 9, 10, 11, 12, 13, 14]
+};
+
+type connect_flags_type = unit {
+    clean_session: bool = (flags & 0x02) != 0,
+    will_flag: bool = (flags & 0x04) != 0,
+    will_qos: uint8 = (flags & 0x18) >> 3,
+    will_retain: bool = (flags & 0x20) != 0,
+    password_flag: bool = (flags & 0x40) != 0,
+    username_flag: bool = (flags & 0x80) != 0
+};
+
+function parse_connect_flags() : connect_flags_type {
+    return connect_flags_type;
+}
+
+function parse_keep_alive() : uint16 {
+    return 0;  # Placeholder, replace with actual parsing logic if needed
+}
+
+type Payload = unit {
+    data: bytes &length = fixed_header.remaining_length
+};
+
+function varint() : uint32 {
+    local value: uint32 = 0;
+    local shift: int = 0;
+    while (true) {
+        local byte: uint8 = parse_byte();
+        value |= (byte & 0x7F) << shift;
+        if ((byte & 0x80) == 0) break;
+        shift += 7;
+    }
+    return value;
+}
+
+function parse_byte() : uint8 {
+    return 0;  # Placeholder, replace with actual byte parsing logic if needed
+}

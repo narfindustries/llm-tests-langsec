@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png">
+
+  <!-- Define a PNG file format using DFDL -->
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <!-- Root element -->
+      <dfdl:format ref="tns:generalFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="PngFile" type="tns:PNGFileType"/>
+
+  <xs:complexType name="PNGFileType">
+    <xs:sequence>
+      <xs:element name="header" type="tns:PNGHeaderType"/>
+      <xs:element name="dataBlocks" type="tns:DataBlocksType"/>
+      <xs:element name="end" type="tns:IENDChunkType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PNGHeaderType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="8"/>
+      <xs:element name="ihdrChunk" type="tns:IHDRChunkType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IHDRChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:int" dfdl:length="4"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="width" type="xs:int" dfdl:length="4"/>
+      <xs:element name="height" type="xs:int" dfdl:length="4"/>
+      <xs:element name="bitDepth" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="colorType" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="compression" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="filter" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="interlace" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="crc" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataBlocksType">
+    <xs:sequence>
+      <xs:element name="chunk" type="tns:ChunkType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:int" dfdl:length="4"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:length="{ ../length }"/>
+      <xs:element name="crc" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IENDChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:int" dfdl:length="4"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="crc" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:defineFormat name="generalFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     representation="binary"
+                     textNumberRep="standard"
+                     textBooleanTrueRep="true"
+                     textBooleanFalseRep="false"
+                     lengthKind="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

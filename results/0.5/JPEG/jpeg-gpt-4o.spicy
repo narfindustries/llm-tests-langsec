@@ -1,0 +1,26 @@
+module JPEG;
+
+public type JPEG = unit {
+    marker: uint16 &convert=to_marker;
+    length: optional uint16 {
+        do {
+            if ( marker == 0xffd8 )
+                return nil; // SOI doesn't have length
+            return %parse_uint16();
+        }
+    },
+    payload: bytes &rest_of_data;
+
+    on %done {
+        if ( marker == 0xffd8 )
+            print "Start of Image (SOI)";
+        else if ( marker == 0xffd9 )
+            print "End of Image (EOI)";
+        else
+            print fmt("Marker: 0x%x, Length: %d", marker, length ? length : 0);
+    }
+};
+
+function to_marker(raw: uint16): uint16 {
+    return raw;
+}

@@ -1,0 +1,72 @@
+module PNG;
+
+import spicy;
+
+type PNG_Header = unit {
+    magic: bytes &size=8;
+};
+
+type IHDR_Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+    crc: uint32;
+};
+
+type IDAT_Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=length;
+    crc: uint32;
+};
+
+type IEND_Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    crc: uint32;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: case (type) of {
+        "IHDR" -> ihdr: IHDR_Chunk;
+        "IDAT" -> idat: IDAT_Chunk;
+        "IEND" -> iend: IEND_Chunk;
+        * -> unknown: bytes &size=length;
+    };
+    crc: uint32;
+};
+
+type PNG_File = unit {
+    header: PNG_Header;
+    chunks: Chunk[] &until($$.type == "IEND");
+};
+
+on PNG_File::%init {
+    if ( self.header.magic != b"\x89PNG\r\n\x1a\n" )
+        throw InvalidFormat("Invalid PNG header");
+}
+
+on IHDR_Chunk::%done {
+    if ( self.width == 0 || self.height == 0 )
+        throw InvalidFormat("Invalid dimensions in IHDR chunk");
+}
+
+on IDAT_Chunk::%done {
+    if ( self.length == 0 )
+        throw InvalidFormat("Invalid length in IDAT chunk");
+}
+
+on IEND_Chunk::%done {
+    if ( self.length != 0 )
+        throw InvalidFormat("Invalid length in IEND chunk");
+}
+
+export PNG_File;

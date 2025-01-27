@@ -1,0 +1,73 @@
+module ZIP;
+
+import spicy;
+
+public type FileHeader = unit {
+    magic: bytes &size=4 &convert=hex &requires=$ == b'\x50\x4B\x03\x04';
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_name: bytes &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
+};
+
+public type CentralDirectoryHeader = unit {
+    magic: bytes &size=4 &convert=hex &requires=$ == b'\x50\x4B\x01\x02';
+    version_made_by: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number: uint16;
+    internal_attrs: uint16;
+    external_attrs: uint32;
+    local_header_offset: uint32;
+    file_name: bytes &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
+    file_comment: bytes &size=file_comment_length;
+};
+
+public type EndOfCentralDirectoryRecord = unit {
+    magic: bytes &size=4 &convert=hex &requires=$ == b'\x50\x4B\x05\x06';
+    disk_number: uint16;
+    start_disk_number: uint16;
+    num_entries_on_disk: uint16;
+    total_entries: uint16;
+    central_directory_size: uint32;
+    central_directory_offset: uint32;
+    comment_length: uint16;
+    comment: bytes &size=comment_length;
+};
+
+public type ZIP = unit {
+    file_headers: FileHeader[];
+    central_directory_headers: CentralDirectoryHeader[];
+    end_of_central_directory_record: EndOfCentralDirectoryRecord;
+};
+
+on ZIP::%init {
+    self.file_headers = [];
+    self.central_directory_headers = [];
+}
+
+on FileHeader::%done {
+    self.parent.file_headers += self;
+}
+
+on CentralDirectoryHeader::%done {
+    self.parent.central_directory_headers += self;
+}

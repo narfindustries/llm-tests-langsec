@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/modbus"
+           xmlns:tns="http://example.com/dfdl/modbus">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:element name="ModbusFrame" type="tns:ModbusFrameType"/>
+
+  <xs:complexType name="ModbusFrameType">
+    <xs:sequence>
+      <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
+      <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
+      <xs:element name="LengthField" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
+      <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+      <xs:element name="Data" type="tns:DataField" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataField">
+    <xs:sequence>
+      <xs:element name="DataBytes" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

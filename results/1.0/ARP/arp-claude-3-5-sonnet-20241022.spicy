@@ -1,0 +1,31 @@
+module ARP;
+
+public type Packet = unit {
+    hw_type: uint16;
+    proto_type: uint16;
+    hw_size: uint8;
+    proto_size: uint8;
+    op_code: uint16;
+    sender_mac: bytes &size=6;
+    sender_ip: bytes &size=4;
+    target_mac: bytes &size=6;
+    target_ip: bytes &size=4;
+
+    on %done {
+        self.connect_zeek_ARP();
+    }
+};
+
+public function connect_zeek_ARP(p: Packet) {
+    zeek::arp_request(
+        $hw_type = p.hw_type,
+        $proto_type = p.proto_type,
+        $hw_size = p.hw_size,
+        $proto_size = p.proto_size,
+        $op_code = p.op_code,
+        $sender_mac = p.sender_mac,
+        $sender_ip = p.sender_ip,
+        $target_mac = p.target_mac,
+        $target_ip = p.target_ip
+    );
+}

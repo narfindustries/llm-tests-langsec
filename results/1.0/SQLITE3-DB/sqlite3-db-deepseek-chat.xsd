@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="SQLITE3-DB">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="ex:HeaderType"/>
+        <xs:element name="Pages" type="ex:PagesType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII"/>
+      <xs:element name="PageSize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="FileFormatWriteVersion" type="xs:unsignedByte"/>
+      <xs:element name="FileFormatReadVersion" type="xs:unsignedByte"/>
+      <xs:element name="ReservedSpace" type="xs:unsignedByte"/>
+      <xs:element name="MaxEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="MinEmbeddedPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="LeafPayloadFraction" type="xs:unsignedByte"/>
+      <xs:element name="FileChangeCounter" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="DatabaseSizeInPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="FirstFreelistPage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="NumberOfFreelistPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="SchemaCookie" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="SchemaFormatNumber" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="DefaultPageCacheSize" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="LargestRootBtreePage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="TextEncoding" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="UserVersion" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="IncrementalVacuumMode" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ApplicationID" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Reserved" type="xs:hexBinary" dfdl:length="20"/>
+      <xs:element name="VersionValidFor" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="SQLiteVersionNumber" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PagesType">
+    <xs:sequence>
+      <xs:element name="Page" type="ex:PageType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="ex:PageHeaderType"/>
+      <xs:element name="Cells" type="ex:CellsType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte"/>
+      <xs:element name="FirstFreeBlock" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="NumberOfCells" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="StartOfCellContentArea" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellsType">
+    <xs:sequence>
+      <xs:element name="Cell" type="ex:CellType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellType">
+    <xs:sequence>
+      <xs:element name="PayloadSize" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="RowID" type="xs:unsignedLong" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Payload" type="xs:hexBinary" dfdl:length="{ ../PayloadSize }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:modbus="http://example.com/modbus">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressed"
+        representation="binary"
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        bitOrder="mostSignificantBitFirst"
+        fillByte="%#x00"
+        escapeSchemeRef=""
+        occursCountKind="parsed"
+        textNumberRep="standard"
+        textNumberCheckPolicy="strict"
+        textZeroRep="0"
+        initiatedContent="no"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ModbusFrame" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SlaveAddress" type="xs:unsignedByte" 
+          dfdl:lengthKind="explicit" 
+          dfdl:length="1"/>
+        
+        <xs:element name="FunctionCode" type="xs:unsignedByte" 
+          dfdl:lengthKind="explicit" 
+          dfdl:length="1"/>
+        
+        <xs:element name="Data" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataBytes" type="xs:hexBinary" 
+                dfdl:lengthKind="delimited" 
+                dfdl:terminator="%x00"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="CRC" type="xs:unsignedShort" 
+          dfdl:lengthKind="explicit" 
+          dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/TLS"
+           xmlns:tns="http://example.com/TLS">
+
+  <!-- Define a complex type for the TLS Client Hello Message -->
+  <xs:complexType name="TLSClientHello">
+    <xs:sequence>
+      <xs:element name="ContentType" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="MajorVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="MinorVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Length" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="HandshakeType" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="LengthHandshake" type="xs:int" dfdl:length="3" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="HandshakeVersionMajor" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="HandshakeVersionMinor" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Random" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="SessionIDLength" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="SessionID" type="xs:hexBinary" dfdl:length="{ ../SessionIDLength }"/>
+      <xs:element name="CipherSuiteLength" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:sequence dfdl:occursCountKind="implicit" dfdl:lengthKind="explicit" dfdl:length="{ ../CipherSuiteLength }">
+        <xs:element name="CipherSuite" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      </xs:sequence>
+      <xs:element name="CompressionMethodLength" type="xs:byte" dfdl:length="1"/>
+      <xs:sequence dfdl:occursCountKind="implicit" dfdl:lengthKind="explicit" dfdl:length="{ ../CompressionMethodLength }">
+        <xs:element name="CompressionMethod" type="xs:byte" dfdl:length="1"/>
+      </xs:sequence>
+      <!-- Extensions Length and Data are optional -->
+      <xs:element name="ExtensionsLength" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian" minOccurs="0" dfdl:occursCountKind="implicit"/>
+      <xs:element name="ExtensionsData" type="xs:hexBinary" dfdl:length="{ ../ExtensionsLength }" dfdl:occursCountKind="implicit" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the root element -->
+  <xs:element name="TLSClientHelloMessage" type="tns:TLSClientHello" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+
+</xs:schema>

@@ -1,0 +1,54 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method: /[A-Z]+/ &until(b" ");
+    uri: bytes &until(b" ");
+    version: /HTTP\/[0-9]+\.[0-9]+/ &until(b"\r\n");
+    headers: Header[] &until(b"\r\n");
+    : b"\r\n";
+    body: Body;
+};
+
+public type Response = unit {
+    version: /HTTP\/[0-9]+\.[0-9]+/ &until(b" ");
+    status: uint16 &until(b" ");
+    reason: bytes &until(b"\r\n");
+    headers: Header[] &until(b"\r\n");
+    : b"\r\n";
+    body: Body;
+};
+
+type Header = unit {
+    name: bytes &until(b":");
+    : b": ";
+    value: bytes &until(b"\r\n");
+    : b"\r\n";
+};
+
+type Body = unit {
+    data: bytes &eod;
+};
+
+on Request::%init {
+    self.method = "";
+    self.uri = b"";
+    self.version = "";
+}
+
+on Response::%init {
+    self.version = "";
+    self.status = 0;
+    self.reason = b"";
+}
+
+on Header::%init {
+    self.name = b"";
+    self.value = b"";
+}
+
+public type HTTP = unit {
+    request: Request;
+    response: Response;
+};

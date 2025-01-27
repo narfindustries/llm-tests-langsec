@@ -1,0 +1,27 @@
+#include <base64.zeek>
+
+function dicom_decode(data: string) : string {
+    local decoded_data: string;
+    local base64_decoded: string;
+
+    # Attempt to decode as base64 first
+    base64_decoded = base64_decode(data);
+    if (base64_decoded != "") {
+        decoded_data = base64_decoded;
+    } else {
+        # Handle cases where it's not base64 (add other decoding methods if needed)
+        decoded_data = data;
+    }
+    return decoded_data;
+}
+
+
+event zeek_spicy_event(data: string) {
+    local decoded_data: string;
+    decoded_data = dicom_decode(data);
+    print conn, decoded_data;
+}
+
+# Example usage (replace with your actual data)
+zeek_spicy_event("This is a test string.");
+zeek_spicy_event("SGVsbG8gV29ybGQh"); # "Hello World!" in base64

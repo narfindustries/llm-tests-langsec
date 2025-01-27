@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/ns/local"
+    targetNamespace="http://example.com/ns/local">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="dfdl:GeneralFormat"
+                lengthKind="delimited"
+                encoding="UTF-8"
+                initiator=""
+                terminator=""
+                leadingSkip="0"
+                trailingSkip="0"
+                textTrimKind="none"
+                initiatedContent="no"
+                separatorSuppressionPolicy="anyEmpty"
+                separatorPosition="infix"
+                ignoreCase="no"
+                representation="text"
+                textNumberRep="standard"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="nitf">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="head">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="title" type="xs:string"/>
+                            <xs:element name="meta" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                            <xs:element name="docdata">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="date.issue" type="xs:string"/>
+                                        <xs:element name="doc-id" type="xs:string"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="body">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="body.head">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="hedline">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="hl1" type="xs:string"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="body.content">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="block" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

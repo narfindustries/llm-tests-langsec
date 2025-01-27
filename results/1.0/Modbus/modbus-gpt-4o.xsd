@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" 
+        xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+        targetNamespace="http://example.com/Modbus"
+        xmlns:tns="http://example.com/Modbus"
+        elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format ref="tns:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:dfdlFormat name="GeneralFormat" representation="text">
+    <dfdl:defineFormat name="GeneralFormat">
+      <dfdl:sequenceKind xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">unordered</dfdl:sequenceKind>
+      <dfdl:textNumberCheckPolicy xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">lax</dfdl:textNumberCheckPolicy>
+      <dfdl:textNumberPattern xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">#,##0.###</dfdl:textNumberPattern>
+    </dfdl:defineFormat>
+  </xs:dfdlFormat>
+
+  <xs:element name="ModbusMessage" type="tns:ModbusMessageType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:format ref="tns:GeneralFormat" />
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="ModbusMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="TransactionID" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+            <dfdl:length>2</dfdl:length>
+            <dfdl:encoding>ascii</dfdl:encoding>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      
+      <xs:element name="ProtocolID" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+            <dfdl:length>2</dfdl:length>
+            <dfdl:encoding>ascii</dfdl:encoding>
+            <dfdl:initiator>00</dfdl:initiator>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      
+      <xs:element name="Length" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+            <dfdl:length>2</dfdl:length>
+            <dfdl:encoding>ascii</dfdl:encoding>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      
+      <xs:element name="UnitID" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+            <dfdl:length>1</dfdl:length>
+            <dfdl:encoding>ascii</dfdl:encoding>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      
+      <xs:choice>
+        <xs:element name="FunctionCode" type="tns:FunctionCodeType" />
+      </xs:choice>
+      
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="FunctionCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1" />
+      <xs:enumeration value="2" />
+      <xs:enumeration value="3" />
+      <xs:enumeration value="4" />
+      <xs:enumeration value="5" />
+      <xs:enumeration value="6" />
+      <xs:enumeration value="15" />
+      <xs:enumeration value="16" />
+    </xs:restriction>
+  </xs:simpleType>
+
+</schema>

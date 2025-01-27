@@ -1,0 +1,136 @@
+module GIF;
+
+import spicy;
+
+public type Version = enum {
+    GIF87a = 0x383761,
+    GIF89a = 0x393861
+};
+
+public type Block = enum {
+    Extension = 0x21,
+    Image = 0x2c,
+    Trailer = 0x3b
+};
+
+public type ExtensionLabel = enum {
+    GraphicControl = 0xf9,
+    Comment = 0xfe,
+    PlainText = 0x01,
+    Application = 0xff
+};
+
+type Color = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
+type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color: uint8;
+    aspect_ratio: uint8;
+    
+    var has_gct: bool;
+    var gct_size: uint64;
+    
+    on packed {
+        self.has_gct = (self.packed & 0x80) != 0;
+        self.gct_size = 1 << ((self.packed & 0x07) + 1);
+    }
+};
+
+type GraphicControlExtension = unit {
+    block_size: uint8;
+    packed: uint8;
+    delay_time: uint16;
+    transparent_color: uint8;
+    terminator: uint8;
+};
+
+type ImageDescriptor = unit {
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    
+    var has_lct: bool;
+    var lct_size: uint64;
+    
+    on packed {
+        self.has_lct = (self.packed & 0x80) != 0;
+        self.lct_size = 1 << ((self.packed & 0x07) + 1);
+    }
+};
+
+type SubBlock = unit {
+    size: uint8;
+    data: bytes &size=self.size;
+};
+
+type DataBlocks = unit {
+    blocks: SubBlock[] &until-including($$.size == 0);
+};
+
+type ApplicationExtension = unit {
+    block_size: uint8;
+    identifier: bytes &size=8;
+    auth_code: bytes &size=3;
+    data: DataBlocks;
+};
+
+type CommentExtension = unit {
+    data: DataBlocks;
+};
+
+type PlainTextExtension = unit {
+    block_size: uint8;
+    text_grid_left: uint16;
+    text_grid_top: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    cell_width: uint8;
+    cell_height: uint8;
+    text_fg_color: uint8;
+    text_bg_color: uint8;
+    data: DataBlocks;
+};
+
+type Extension = unit {
+    label: ExtensionLabel;
+    switch ( self.label ) {
+        ExtensionLabel::GraphicControl -> graphic_control: GraphicControlExtension;
+        ExtensionLabel::Application -> application: ApplicationExtension;
+        ExtensionLabel::Comment -> comment: CommentExtension;
+        ExtensionLabel::PlainText -> plain_text: PlainTextExtension;
+    };
+};
+
+type ImageData = unit {
+    lzw_min_code_size: uint8;
+    data: DataBlocks;
+};
+
+type ImageBlock = unit {
+    descriptor: ImageDescriptor;
+    local_color_table: Color[self.descriptor.lct_size] if ( self.descriptor.has_lct );
+    image_data: ImageData;
+};
+
+public type GIF = unit {
+    magic: bytes &size=3;
+    version: bytes &size=3;
+    screen: LogicalScreenDescriptor;
+    global_color_table: Color[self.screen.gct_size] if ( self.screen.has_gct );
+    
+    blocks: Block[] &until-including($$ == Block::Trailer) {
+        switch ( $$ ) {
+            Block::Extension -> extension: Extension;
+            Block::Image -> image: ImageBlock;
+            Block::Trailer -> : void;
+        };
+    };
+};

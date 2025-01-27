@@ -1,0 +1,51 @@
+module DICOM;
+
+import spicy;
+
+public type Header = unit {
+    prefix: bytes(4) = b"DICM";
+    meta_info_length: uint32;
+    meta_info: bytes(self.meta_info_length);
+
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        if ( self.prefix != b"DICM" ) {
+            throw "Invalid DICOM header prefix";
+        }
+    }
+};
+
+public type DataElement = unit {
+    tag: bytes(4);
+    vr: bytes(2);
+    length: uint32;
+    value: bytes(self.length);
+
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        # Optional validation logic for data elements
+    }
+};
+
+public type File = unit {
+    header: Header;
+    elements: DataElement[];
+
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        # Optional file-level validation
+    }
+};
+
+public type Parser = unit {
+    file: File;
+};

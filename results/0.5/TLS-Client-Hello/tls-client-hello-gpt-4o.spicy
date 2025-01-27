@@ -1,0 +1,42 @@
+module TLS::ClientHello;
+
+public type ClientHello = unit {
+    version: uint16;
+    random: bytes &size=32;
+    session_id: bytes &length_type=uint8;
+    cipher_suites: array of uint16 &length_type=uint16;
+    compression_methods: array of uint8 &length_type=uint8;
+    extensions: array of Extension &length_type=uint16;
+};
+
+public type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=length;
+};
+
+public type TLSRecord = unit {
+    content_type: uint8;
+    version: uint16;
+    length: uint16;
+    content: bytes &size=length;
+};
+
+public type TLSHandshake = unit {
+    handshake_type: uint8;
+    length: uint24;
+    body: bytes &size=length;
+};
+
+public type TLSClientHello = unit {
+    record: TLSRecord {
+        content_type == 22; # Handshake
+    }
+    handshake: TLSHandshake {
+        handshake_type == 1; # ClientHello
+    }
+    client_hello: ClientHello {
+        # Parsing the body of the handshake message as a ClientHello
+        parse_from=handshake.body;
+    }
+};

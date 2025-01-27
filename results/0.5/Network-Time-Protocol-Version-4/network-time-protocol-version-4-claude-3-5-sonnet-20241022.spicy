@@ -1,0 +1,37 @@
+module Network-Time-Protocol-Version-4;
+
+import spicy;
+
+public type NTPv4 = unit {
+    li_vn_mode: uint8 {
+        self.leap_indicator = ($$) >> 6;
+        self.version = (($$) >> 3) & 0x07;
+        self.mode = ($$) & 0x07;
+    }
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: bytes &size=4;
+    reference_timestamp: uint64;
+    origin_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    var leap_indicator: uint8;
+    var version: uint8;
+    var mode: uint8;
+};
+
+on NTPv4::li_vn_mode -> event NTPv4::li_vn_mode($input.leap_indicator, $input.version, $input.mode);
+on NTPv4::stratum -> event NTPv4::stratum($input.stratum);
+on NTPv4::poll -> event NTPv4::poll($input.poll);
+on NTPv4::precision -> event NTPv4::precision($input.precision);
+on NTPv4::root_delay -> event NTPv4::root_delay($input.root_delay);
+on NTPv4::root_dispersion -> event NTPv4::root_dispersion($input.root_dispersion);
+on NTPv4::reference_id -> event NTPv4::reference_id($input.reference_id);
+on NTPv4::reference_timestamp -> event NTPv4::reference_timestamp($input.reference_timestamp);
+on NTPv4::origin_timestamp -> event NTPv4::origin_timestamp($input.origin_timestamp);
+on NTPv4::receive_timestamp -> event NTPv4::receive_timestamp($input.receive_timestamp);
+on NTPv4::transmit_timestamp -> event NTPv4::transmit_timestamp($input.transmit_timestamp);

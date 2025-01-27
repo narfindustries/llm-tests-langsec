@@ -1,0 +1,85 @@
+%header {
+    #ifdef HAVE_CONFIG_H
+    #  include "config.h"
+    #endif
+}
+
+%code {
+    #include <zeek/zeek.h>
+    #include <zeek/Spicy.h>
+    using namespace zeek::spicy;
+
+    #define DEBUG_SPICY 1
+    #if DEBUG_SPICY
+    #  define DEBUG_MSG(...) printf(__VA_ARGS__)
+    #else
+    #  define DEBUG_MSG(...)
+    #endif
+}
+
+%export {
+    #if DEBUG_SPICY
+    global log_file: file = open_log_file("spicy_debug.log");
+    #endif
+}
+
+%type tiff  = TIFF;
+%type ifd   = IFD;
+%type entry = Entry;
+
+%(include binpac_pia/zeek.pac)
+
+%parser tiff_parser {
+    tiff = $(header: TIFF_Header,
+             ifds: IFD*
+            );
+};
+
+%parser ifd_parser {
+    ifd = $(tag: uint16,
+            type: uint16,
+            count: uint32,
+            value: bytestring &lengthφερ=count * (type == 1 ? 1 : type == 2 ? 1 : type == 3 ? 2 : type == 4 ? 4 : type == 5 ? 8 : type == 7 ? 1 : type == 9 ? 4 : type == 10 ? 8 : 0),
+            next_ifd: uint32 &optional &transient
+           );
+};
+
+ TIFF_Header = record {
+    byte_order: bytestring(2);
+    magic: bytestring(2);
+    ifd_offset: uint32;
+};
+
+%allocator tiff {
+    header: $ctx->input()->Read(4);
+    ifd_offset: $ctx->input()->Read(4);
+    num_ifds: 1;
+    current_ifd: 0;
+    done: false;
+};
+
+%allocator ifd {
+    entry: $ctx->input()->Read(12);
+    num_entries: $(count: uint16 = $ctx->input()->Read(2), count);
+    current_entry: 0;
+    done: false;
+};
+
+%element entry -tag {
+    case $ctx->input()->Read(2) of {
+        254 -> $(type: uint16 = $ctx->input()->Read(2), value: uint32 = $ctx->input()->Read(4));
+        255 -> $(type: uint16 = $ctx->input()->Read(2), value: bytestring &length=4);
+        _ -> $(value: bytestring &length=$ctx->input()->Read(4));
+    }
+};
+
+%validator tiff {
+    DEBUG_MSG("Validating tiff...\n");
+    if ($ctx->input()->Size() < 8)
+        return false;
+    if ($ctx->input()->Read(2) != "\x49\x49")
+        return false;
+    if ($ctx->input()->Read(2) != "\x2A\x00")
+        return false;
+    return true;
+};

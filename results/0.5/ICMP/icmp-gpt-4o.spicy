@@ -1,0 +1,37 @@
+module ICMP;
+
+import spicy;
+import zeek;
+
+export {
+    type ICMPMessage = unit {
+        type: uint8;
+        code: uint8;
+        checksum: uint16;
+        payload: bytes &restofdata;
+
+        on %init {
+            if (self.type == 8 && self.code == 0) {
+                print("Detected ICMP Echo Request");
+            }
+            else if (self.type == 0 && self.code == 0) {
+                print("Detected ICMP Echo Reply");
+            }
+        }
+    };
+}
+
+public type ICMPAnalyzer = Analyzer::Transport {
+    .id = "ICMP";
+
+    .on_packet = function (self: ICMPAnalyzer, pkt: bytes) {
+        local msg = parse(pkt, ICMP::ICMPMessage);
+        if ( msg?$type && msg?$code ) {
+            print(fmt("ICMP Message: Type=%d, Code=%d", msg.type, msg.code));
+        }
+    };
+};
+
+hook zeek_init() {
+    Analyzer::register_for_transport(Analyzer::ICMPAnalyzer);
+}

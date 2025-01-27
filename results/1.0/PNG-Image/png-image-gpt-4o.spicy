@@ -1,0 +1,29 @@
+module PNG_Image;
+
+import zeek;
+
+public type PNG = unit {
+    magic: bytes &length=8 &check=magic == "\x89PNG\r\n\x1A\n",
+    ihdr_length: uint32,
+    ihdr_type: string &length=4 &check=ihdr_type == "IHDR",
+    width: uint32,
+    height: uint32,
+    bit_depth: uint8,
+    color_type: uint8,
+    compression_method: uint8 &check=compression_method == 0,
+    filter_method: uint8 &check=filter_method == 0,
+    interlace_method: uint8 &check=(interlace_method == 0 || interlace_method == 1),
+    crc: uint32,
+    chunks: list of Chunk
+} &byteorder=be;
+
+public type Chunk = unit {
+    length: uint32,
+    type: string &length=4,
+    data: bytes &length=length,
+    crc: uint32,
+} &byteorder=be;
+
+event zeek_init() {
+    print("PNG_Image analyzer loaded.");
+}

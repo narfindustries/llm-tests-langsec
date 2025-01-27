@@ -1,0 +1,45 @@
+module JPEG;
+
+import spicy;
+
+public type JPEG = unit {
+    on %init { self.markers = vector(); }
+
+    : SOI;
+    : Segments[] &until($input.at_end());
+
+    var markers: vector<uint16>;
+};
+
+type SOI = unit {
+    magic: bytes &size=2 &requires=(magic == b"\xFF\xD8");
+};
+
+type Segment = unit {
+    marker: uint16 &requires=(($$ & 0xFF00) == 0xFF00);
+    size: uint16 if (marker != 0xFFD8 && marker != 0xFFD9);
+    data: bytes &size=(self.size - 2) if (self.size > 0);
+
+    on marker {
+        self.parent.markers.push_back($$);
+    }
+};
+
+type Segments = unit {
+    segment: Segment;
+};
+
+on JPEG::%done {
+    local seen_soi = 0;
+    local seen_eoi = 0;
+
+    for ( m in self.markers ) {
+        if ( m == 0xFFD8 )
+            seen_soi += 1;
+        if ( m == 0xFFD9 )
+            seen_eoi += 1;
+    }
+
+    if ( seen_soi != 1 || seen_eoi != 1 )
+        spicy::accept_input(False);
+}

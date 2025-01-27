@@ -1,0 +1,52 @@
+module ICMP;
+
+public type Message = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    
+    switch ( self.type ) {
+        0 -> echo_reply: EchoMessage;
+        3 -> dest_unreach: DestUnreachMessage;
+        8 -> echo_request: EchoMessage;
+        11 -> time_exceeded: TimeExceededMessage;
+        * -> payload: bytes &eod;
+    };
+};
+
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    payload: bytes &eod;
+};
+
+type DestUnreachMessage = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+type TimeExceededMessage = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+on ICMP::Message::%done {
+    print "ICMP Message:";
+    print fmt("  Type: %d", self.type);
+    print fmt("  Code: %d", self.code);
+    print fmt("  Checksum: %d", self.checksum);
+}
+
+on ICMP::EchoMessage::%done {
+    print "Echo Message:";
+    print fmt("  Identifier: %d", self.identifier);
+    print fmt("  Sequence: %d", self.sequence);
+}
+
+on ICMP::DestUnreachMessage::%done {
+    print "Destination Unreachable Message";
+}
+
+on ICMP::TimeExceededMessage::%done {
+    print "Time Exceeded Message";
+}

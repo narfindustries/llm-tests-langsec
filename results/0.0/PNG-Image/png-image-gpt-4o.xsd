@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png"
+           elementFormDefault="qualified"
+           dfdl:format="true"
+           dfdl:byteOrder="bigEndian"
+           dfdl:encoding="utf-8">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:PNGFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <dfdl:defineFormat name="PNGFormat">
+        <dfdl:byteOrder value="bigEndian"/>
+        <dfdl:encoding value="utf-8"/>
+        <dfdl:lengthKind value="explicit"/>
+        <dfdl:terminator value=""/>
+    </dfdl:defineFormat>
+
+    <xs:element name="PNG" type="tns:PNGType"/>
+
+    <xs:complexType name="PNGType">
+        <xs:sequence>
+            <xs:element name="Signature" type="tns:SignatureType" dfdl:length="8" dfdl:lengthUnits="bytes"/>
+            <xs:element name="Chunks" type="tns:ChunksType" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SignatureType">
+        <xs:simpleContent>
+            <xs:extension base="xs:hexBinary">
+                <xs:attribute name="value" type="xs:string" fixed="89504E470D0A1A0A"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="ChunksType">
+        <xs:sequence>
+            <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <xs:element name="Type" type="tns:ChunkTypeType" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <xs:element name="Data" type="tns:ChunkDataType" dfdl:length="{../Length}" dfdl:lengthUnits="bytes"/>
+            <xs:element name="CRC" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="ChunkTypeType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Za-z]{4}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ChunkDataType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:minLength value="0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

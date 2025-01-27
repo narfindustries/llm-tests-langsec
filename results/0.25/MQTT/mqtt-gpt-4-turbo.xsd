@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:element name="MQTT" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+        <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+        <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="delimited" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="MessageType" type="tns:MessageType"/>
+      <xs:element name="DUP" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="QoS" type="tns:QoSLevel"/>
+      <xs:element name="Retain" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="RemainingLength" type="xs:int" dfdl:lengthKind="prefixed" dfdl:prefixLengthType="xs:int" dfdl:prefixIncludesPrefixLength="true"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:choice>
+      <xs:element name="ConnectFlags" type="tns:ConnectFlagsType"/>
+      <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="2"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:simpleType name="MessageType">
+    <xs:restriction base="xs:int">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="QoSLevel">
+    <xs:restriction base="xs:int">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ConnectFlagsType">
+    <xs:sequence>
+      <xs:element name="UserNameFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="PasswordFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="WillRetain" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="WillQoS" type="tns:QoSLevel"/>
+      <xs:element name="WillFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="CleanSession" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="Reserved" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

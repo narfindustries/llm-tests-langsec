@@ -1,0 +1,10 @@
+#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+
+event png_image_gemini_1_5_flash_event(uint8 data) {
+    // Add your logic here to process the data
+    // This is a placeholder, replace with your actual processing
+    print("Received data: ", data);
+}
+
+#endif

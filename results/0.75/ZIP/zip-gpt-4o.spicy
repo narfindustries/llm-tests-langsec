@@ -1,0 +1,59 @@
+module ZIP;
+
+type CentralDirectoryEntry = unit {
+    signature: uint32 &assert(signature == 0x02014b50);
+    version_made_by: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number_start: uint16;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
+    relative_offset_of_local_header: uint32;
+    filename: bytestring &length=filename_length;
+    extra_field: bytestring &length=extra_field_length;
+    file_comment: bytestring &length=file_comment_length;
+};
+
+type LocalFileHeader = unit {
+    signature: uint32 &assert(signature == 0x04034b50);
+    version_needed: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    filename: bytestring &length=filename_length;
+    extra_field: bytestring &length=extra_field_length;
+    data: bytestring &length=compressed_size;
+};
+
+type EndOfCentralDirectory = unit {
+    signature: uint32 &assert(signature == 0x06054b50);
+    disk_number: uint16;
+    central_directory_disk_number: uint16;
+    num_of_entries_on_this_disk: uint16;
+    total_num_of_entries: uint16;
+    central_directory_size: uint32;
+    central_directory_offset: uint32;
+    comment_length: uint16;
+    comment: bytestring &length=comment_length;
+};
+
+type ZIPArchive = unit {
+    local_file_headers: vector<LocalFileHeader>;
+    central_directory_entries: vector<CentralDirectoryEntry>;
+    end_of_central_directory: EndOfCentralDirectory;
+};

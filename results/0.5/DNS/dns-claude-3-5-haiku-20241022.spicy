@@ -1,0 +1,64 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    queries: list<Query> &until($input.eof());
+    answers: list<ResourceRecord> &until($input.eof());
+    authorities: list<ResourceRecord> &until($input.eof());
+    additional: list<ResourceRecord> &until($input.eof());
+
+    on %done {
+        self.header.validate();
+    }
+};
+
+type Header = unit {
+    id: uint16;
+    flags: Flags;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+
+    method validate() {
+        # Optional validation logic
+    }
+};
+
+type Flags = unit {
+    qr: bool;
+    opcode: uint8[4];
+    aa: bool;
+    tc: bool;
+    rd: bool;
+    ra: bool;
+    z: uint8[3];
+    rcode: uint8[4];
+};
+
+type Query = unit {
+    name: Name;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: Name;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+type Name = unit {
+    labels: list<Label> &until($input.lookahead(1) == b"\x00");
+    end: uint8 where $$ == 0;
+
+    type Label = unit {
+        length: uint8 where $$ <= 63;
+        label: bytes &size=self.length;
+    };
+};

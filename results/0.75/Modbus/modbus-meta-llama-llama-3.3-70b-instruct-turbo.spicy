@@ -1,0 +1,59 @@
+# Import necessary modules
+%import binpac
+
+# Define the Modbus protocol
+%protocol modbus {
+  # Define the frame structure
+  frame ModbusFrame {
+    # Modbus address
+    uint8_t address;
+    
+    # Modbus function code
+    uint8_t function_code;
+    
+    # Data length
+    uint8_t data_length;
+    
+    # Data
+    uint8_t[data_length] data;
+    
+    # CRC
+    uint16_t crc;
+  }
+}
+
+# Define the event for parsing Modbus frames
+%event modbus_frame(parse_result: ModbusFrame) {
+  # Log the parsed frame
+  print("Modbus frame parsed:");
+  print("Address:", parse_result.address);
+  print("Function code:", parse_result.function_code);
+  print("Data length:", parse_result.data_length);
+  print("Data:", parse_result.data);
+  print("CRC:", parse_result.crc);
+}
+
+# Define the parser for Modbus frames
+%parser modbus_parser ModbusFrame {
+  # Check if the frame has a valid CRC
+  CRC_OK {
+    uint16_t crc_value = 0;
+    for (i in 0..data_length-1) {
+      crc_value = crc_value ^ data[i];
+    }
+    crc_value = crc_value ^ (crc >> 8);
+    crc_value = crc_value ^ (crc & 0xFF);
+    if (crc_value != 0) {
+      # If the CRC is invalid, raise an error
+      error("Invalid CRC");
+    }
+  }
+}
+
+# Define the parser for the Modbus protocol
+%parser modbus_protocol {
+  # Parse the Modbus frame
+  frame = modbus_parser();
+  # Raise the modbus_frame event with the parsed frame
+  event modbus_frame(frame);
+}

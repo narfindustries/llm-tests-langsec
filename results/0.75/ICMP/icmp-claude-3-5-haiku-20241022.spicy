@@ -1,0 +1,35 @@
+module ICMP;
+
+import spicy;
+
+public type ICMP = unit {
+    type_code: bitfield(8) {
+        type:  0..7;
+        code:  8..15;
+    };
+
+    header: record {
+        type:     uint8;
+        code:     uint8;
+        checksum: uint16;
+    } &byte-order=spicy::ByteOrder::Big;
+
+    payload: bytes &size=remaining();
+
+    on %init {
+        self.type_code = self.header.type;
+    }
+
+    # Type-specific handling
+    var type_code: bitfield(8);
+
+    # Common ICMP types
+    const ECHO_REQUEST: uint8 = 8;
+    const ECHO_REPLY:   uint8 = 0;
+
+    # Optional additional type-specific parsing
+    on header if ( header.type == ECHO_REQUEST || header.type == ECHO_REPLY ) {
+        identifier: uint16;
+        sequence:   uint16;
+    }
+} &byteorder=spicy::ByteOrder::Big;

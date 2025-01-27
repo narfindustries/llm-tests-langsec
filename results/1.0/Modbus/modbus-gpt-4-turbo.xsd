@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:ModbusFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:include schemaLocation="ModbusCommonTypes.xsd"/>
+
+    <xs:element name="ModbusData" dfdl:lengthKind="delimited">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionIdentifier" type="tns:UInt16" dfdl:length="2" />
+                <xs:element name="ProtocolIdentifier" type="tns:UInt16" dfdl:length="2" />
+                <xs:element name="Length" type="tns:UInt16" dfdl:length="2" />
+                <xs:element name="UnitIdentifier" type="tns:UInt8" dfdl:length="1" />
+                <xs:element name="FunctionCode" type="tns:UInt8" dfdl:length="1" />
+                <xs:element name="Data" type="tns:DataField" dfdl:lengthKind="implicit" />
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="UInt8">
+        <xs:restriction base="xs:unsignedByte" />
+    </xs:simpleType>
+
+    <xs:simpleType name="UInt16">
+        <xs:restriction base="xs:unsignedShort">
+            <xs:maxLength value="2"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="DataField">
+        <xs:sequence>
+            <xs:element name="RegisterValues" type="tns:UInt16" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="parsed" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Definition for generic format properties -->
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="ModbusFormat">
+                <dfdl:format byteOrder="bigEndian"
+                             bitOrder="mostSignificantBitFirst"
+                             representation="binary"
+                             lengthUnits="bytes"
+                             encoding="ISO-8859-1"/>
+                </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+</xs:schema>

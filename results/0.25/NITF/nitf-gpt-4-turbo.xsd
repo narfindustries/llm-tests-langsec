@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf">
+
+  <xs:include schemaLocation="DFDLGeneralAnnotations.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="FileHeader">
+    <xs:sequence>
+      <xs:element name="FileType" type="xs:string" dfdl:length="10" dfdl:encoding="ascii"/>
+      <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="2" dfdl:encoding="ascii"/>
+      <xs:element name="SystemType" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
+      <xs:element name="OriginStationID" type="xs:string" dfdl:length="10" dfdl:encoding="ascii"/>
+      <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:encoding="ascii"/>
+      <xs:element name="FileTitle" type="xs:string" dfdl:length="80" dfdl:encoding="ascii"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageSegment">
+    <xs:sequence>
+      <xs:element name="ImageID" type="xs:string" dfdl:length="10" dfdl:encoding="ascii"/>
+      <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:encoding="ascii"/>
+      <xs:element name="TargetID" type="xs:string" dfdl:length="17" dfdl:encoding="ascii"/>
+      <xs:element name="Title" type="xs:string" dfdl:length="80" dfdl:encoding="ascii"/>
+      <xs:element name="SecurityClass" type="xs:string" dfdl:length="1" dfdl:encoding="ascii"/>
+      <xs:element name="Encryption" type="xs:string" dfdl:length="1" dfdl:encoding="ascii"/>
+      <xs:element name="ImageFormat" type="xs:string" dfdl:length="3" dfdl:encoding="ascii"/>
+      <xs:element name="ImageSize" type="xs:decimal" dfdl:length="6" dfdl:textNumberPattern="#####0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TextSegment">
+    <xs:sequence>
+      <xs:element name="TextID" type="xs:string" dfdl:length="7" dfdl:encoding="ascii"/>
+      <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:encoding="ascii"/>
+      <xs:element name="TextTitle" type="xs:string" dfdl:length="80" dfdl:encoding="ascii"/>
+      <xs:element name="TextFormat" type="xs:string" dfdl:length="3" dfdl:encoding="ascii"/>
+      <xs:element name="TextSize" type="xs:decimal" dfdl:length="6" dfdl:textNumberPattern="#####0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="tns:FileHeader"/>
+        <xs:element name="ImageSegments" type="tns:ImageSegment" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="TextSegments" type="tns:TextSegment" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

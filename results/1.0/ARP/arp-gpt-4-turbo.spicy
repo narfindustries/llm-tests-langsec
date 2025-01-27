@@ -1,0 +1,45 @@
+module ARP;
+
+public type ARP_Header = unit {
+    hardwareType: uint16;
+    protocolType: uint16;
+    hardwareSize: uint8;
+    protocolSize: uint8;
+    opcode: uint16;
+
+    senderMAC: bytes &size=6;
+    senderIP: bytes &size=4;
+    targetMAC: bytes &size=6;
+    targetIP: bytes &size=4;
+
+    on opcode : uint16 {
+        self.opcode = self.opcode;
+    }
+
+    on senderMAC : bytes {
+        self.senderMAC = self.senderMAC;
+    }
+
+    on senderIP : bytes {
+        self.senderIP = self.senderIP;
+    }
+
+    on targetMAC : bytes {
+        self.targetMAC = self.targetMAC;
+    }
+
+    on targetIP : bytes {
+        self.targetIP = self.targetIP;
+    }
+
+    &byteorder = big;
+};
+
+event ARP::arp_message(c: connection, is_orig: bool, hdr: ARP::ARP_Header) {
+    print fmt("ARP Message: Opcode=%s, Sender MAC=%s, Sender IP=%s, Target MAC=%s, Target IP=%s",
+              hdr.opcode,
+              hdr.senderMAC,
+              hdr.senderIP,
+              hdr.targetMAC,
+              hdr.targetIP);
+}

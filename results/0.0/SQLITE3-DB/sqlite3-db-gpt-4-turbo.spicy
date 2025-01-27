@@ -1,0 +1,39 @@
+module SQLite3;
+
+import spicy;
+
+type Header = unit {
+    magic: bytes &size=16;
+    pageSize: uint16;
+    writeVersion: uint8;
+    readVersion: uint8;
+    reservedSpace: uint8;
+    maxPayloadFrac: uint8;
+    minPayloadFrac: uint8;
+    leafPayloadFrac: uint8;
+    changeCounter: uint32;
+    inHeaderDBSize: uint32;
+    firstFreelistTrunkPage: uint32;
+    totalFreelistPages: uint32;
+    schemaCookie: uint32;
+    schemaFormat: uint32;
+    defaultCacheSize: uint32;
+    largestRootPage: uint32;
+    textEncoding: uint32;
+    userVersion: uint32;
+    incrementalVacuumMode: uint32;
+    applicationId: uint32;
+    reserved: bytes &size=20;
+    versionValidFor: uint32;
+    sqliteVersion: uint32;
+};
+
+type Record = unit {
+    header: Header;
+    data: bytes &eod;
+};
+
+public type SQLite3File = unit {
+    header: Header;
+    records: Record[] &eod;
+};

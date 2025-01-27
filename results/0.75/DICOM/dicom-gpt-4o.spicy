@@ -1,0 +1,26 @@
+module DICOM;
+
+import zeek;
+
+public type DICOM_Header = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4 &assert(p == "DICM", "Invalid DICOM prefix");
+    
+    elements: array of DICOM_Element;
+};
+
+type DICOM_Element = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: string &size=2;
+    length: uint16;
+    value: bytes &size=length;
+};
+
+public type DICOM_File = unit {
+    header: DICOM_Header;
+};
+
+public event error(msg: string) {
+    print "Error: " + msg;
+}

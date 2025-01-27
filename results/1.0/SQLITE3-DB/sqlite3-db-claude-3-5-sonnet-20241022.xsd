@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:sqlite="urn:sqlite:db:1.0"
+    targetNamespace="urn:sqlite:db:1.0">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                alignmentUnits="bytes"
+                occursCountKind="implicit"
+                encoding="UTF-8"
+                initiator=""
+                terminator=""
+                separator=""
+                ignoreCase="no"
+                textNumberRep="standard"
+                lengthKind="explicit"
+                lengthUnits="bytes"
+                fillByte="%#r00"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="sqlite3_file">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="magic_header" type="xs:string" dfdl:length="16" dfdl:lengthKind="explicit"/>
+                            <xs:element name="page_size" type="xs:unsignedShort"/>
+                            <xs:element name="write_version" type="xs:unsignedByte"/>
+                            <xs:element name="read_version" type="xs:unsignedByte"/>
+                            <xs:element name="reserved_space" type="xs:unsignedByte"/>
+                            <xs:element name="max_payload_fraction" type="xs:unsignedByte"/>
+                            <xs:element name="min_payload_fraction" type="xs:unsignedByte"/>
+                            <xs:element name="leaf_payload_fraction" type="xs:unsignedByte"/>
+                            <xs:element name="file_change_counter" type="xs:unsignedInt"/>
+                            <xs:element name="database_size" type="xs:unsignedInt"/>
+                            <xs:element name="first_freelist_trunk_page" type="xs:unsignedInt"/>
+                            <xs:element name="total_freelist_pages" type="xs:unsignedInt"/>
+                            <xs:element name="schema_cookie" type="xs:unsignedInt"/>
+                            <xs:element name="schema_format" type="xs:unsignedInt"/>
+                            <xs:element name="default_page_cache_size" type="xs:unsignedInt"/>
+                            <xs:element name="largest_root_btree_page" type="xs:unsignedInt"/>
+                            <xs:element name="database_text_encoding" type="xs:unsignedInt"/>
+                            <xs:element name="user_version" type="xs:unsignedInt"/>
+                            <xs:element name="incremental_vacuum_mode" type="xs:unsignedInt"/>
+                            <xs:element name="application_id" type="xs:unsignedInt"/>
+                            <xs:element name="reserved" type="xs:hexBinary" dfdl:length="20"/>
+                            <xs:element name="version_valid_for" type="xs:unsignedInt"/>
+                            <xs:element name="sqlite_version_number" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="pages" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="page_type" type="xs:unsignedByte"/>
+                            <xs:element name="page_data" type="xs:hexBinary" dfdl:lengthKind="explicit" 
+                                      dfdl:length="{ ../header/page_size - 1 }"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

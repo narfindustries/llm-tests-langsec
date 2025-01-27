@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/zipgemini"
+           xmlns="http://example.org/zipgemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="zipGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:occursCount="1"/>
+        <xs:element name="records" type="recordsType" dfdl:occursCount="unbounded"/>
+        <xs:element name="trailer" type="trailerType" dfdl:occursCount="1"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCount="1"/>
+    </xs:complexType>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:format ref="zipGeminiFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="creationDate" type="xs:date"/>
+      <xs:element name="recordCount" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="recordsType">
+    <xs:sequence>
+      <xs:element name="record" type="recordType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:string"/>
+      <xs:element name="value" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="trailerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:defineSchema name="zipGeminiFormat">
+          <dfdl:format binary="false" encoding="UTF-8" ignoreCase="no" lengthKind="delimited"
+                       lengthUnits="bytes" paddingAmount="0" separator="|"
+                       textSeparator="|" representation="text"
+                       byteOrder="bigEndian"
+                       textLayout="delimited"/>
+      </dfdl:defineSchema>
+    </xs:appinfo>
+  </xs:annotation>
+
+
+</xs:schema>

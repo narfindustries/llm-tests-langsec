@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/dicom-deepseek-chat"
+           xmlns="http://www.example.org/dicom-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:DICOMFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="DICOMFormat">
+    <xs:sequence>
+      <xs:element name="Header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="128" />
+      <xs:element name="Data" type="DataBlockType" dfdl:lengthKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicNumber" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:encoding="ASCII" />
+      <xs:element name="Version" type="xs:int" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Timestamp" type="xs:long" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataBlockType">
+    <xs:sequence>
+      <xs:element name="DataLength" type="xs:int" dfdl:byteOrder="bigEndian" />
+      <xs:element name="DataContent" type="xs:hexBinary" dfdl:length="{ ../DataLength }" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DICOM" type="DICOMFormat" />
+
+</xs:schema>

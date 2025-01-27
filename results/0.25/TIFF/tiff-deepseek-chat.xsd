@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://example.com/tiff"
+           targetNamespace="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:TIFFFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="TIFFFormat">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:TIFFHeader"/>
+      <xs:element name="ImageFileDirectories" type="tns:ImageFileDirectory" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TIFFHeader">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="tns:ByteOrderType"/>
+      <xs:element name="Version" type="xs:short"/>
+      <xs:element name="FirstIFDOffset" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ByteOrderType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="II"/>
+      <xs:enumeration value="MM"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ImageFileDirectory">
+    <xs:sequence>
+      <xs:element name="EntryCount" type="xs:unsignedShort"/>
+      <xs:element name="Entries" type="tns:IFDEntry" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IFDEntry">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort"/>
+      <xs:element name="Type" type="xs:unsignedShort"/>
+      <xs:element name="Count" type="xs:unsignedInt"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="TIFF" type="tns:TIFFFormat"/>
+
+</xs:schema>

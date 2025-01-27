@@ -1,0 +1,82 @@
+module SQLITE3;
+
+import spicy;
+
+type FileHeader = unit {
+    magic: bytes &size=16;
+    pageSize: uint16;
+    fileChangeCounter: uint32;
+    numPages: uint32;
+    on $init {
+        if (self.magic != b"SQLite format 3\0") {
+            throw ParseError("Not a valid SQLite3 database file");
+        }
+    }
+};
+
+type Varint = unit {
+    value: uint64;
+    on $init {
+        local bytePos = 0;
+        local byte = self.parseByte();
+        local intValue = (byte & 0x7F);
+        while (byte & 0x80) {
+            byte = self.parseByte();
+            intValue |= ((byte & 0x7F) << (7 * ++bytePos));
+        }
+        self.value = intValue;
+    }
+    method parseByte(): uint8 {
+        local byte = self.context().consume(1);
+        if ( ! byte || byte.size() != 1)
+            throw ParseError("Incomplete varint byte sequence");
+        return byte[0];
+    }
+};
+
+type Record = unit {
+    columns: Vector<Column>;
+    on $init {
+        local header = self.parseRecordHeader();
+        for (i in header) {
+            switch (i)
+            {
+                // Implement column types based on their codes, e.g., 0 for NULL, 1 for 8-bit int, etc.
+                0 -> self.columns.push(NullColumn());
+                1 -> self.columns.push(IntegerColumn(self.parseInteger()));
+                // Additional cases for other supported SQLite types
+            }
+        }
+    }
+
+    method parseRecordHeader(): Vector<int> {
+        local headerLen = self.parseVarint().value;
+        local headerBytes = self.context().consume(headerLen); // Fix the length as necessary
+        return self.decodeHeader(headerBytes);
+    }
+
+    method parseVarint(): Varint {
+        return spicy.parse<Varint>(self);
+    }
+    
+    method decodeHeader(data: bytes): Vector<int> {
+        local result = Vector<int>();
+        local pos = 0;
+        while (pos < data.size()) {
+            local vint = self.parseVarint();
+            result.push(vint.value);
+            pos += vint.size();
+        }
+        return result;
+    }
+
+    method parseInteger(): int64 {
+        local intBytes = self.context().consume(8); // Assuming big-endian
+        return bytes_to_int(intBytes, byteorder=Big);
+    }
+};
+
+type SQLite3DB = unit {
+    fileHeader: FileHeader;
+    records: Vector<Record>;
+};

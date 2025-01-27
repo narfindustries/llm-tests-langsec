@@ -1,0 +1,54 @@
+@header {
+    import "SpicyBCtrl.bif"
+}
+
+module BitcoinTransactions;
+
+@load base/protocols/conn
+
+type Input: record {
+    prev_tx: bytestring &length=32;
+    prev_out_idx: uint32;
+    script: bytestring;
+    sequence: uint32;
+    script_sig: bytestring;
+    script_pub_key: bytestring;
+    redeemed_txid: bytestring &length=32;
+};
+
+type TxOut: record {
+    value: uint64;
+    script_pub_key: bytestring;
+};
+
+type Transaction: record {
+    version: uint32;
+    num_inputs: uint32;
+    inputs: vector of Input;
+    num_outputs: uint32;
+    outputs: vector of TxOut;
+    lock_time: uint32;
+};
+
+event zeek_init() {
+    Spicy::register("BitcoinTransaction", "$external/BitcoinTransactions::Transaction", WriteEvt);
+}
+
+event Spicy::write_BitcoinTransaction(rec: Transaction) {
+    local msg = fmt("Transaction: version=%d, num_inputs=%d, num_outputs=%d, lock_time=%d",
+                   rec.version, rec.num_inputs, rec.num_outputs, rec.lock_time);
+    print(msg);
+
+    for (i in rec.inputs) {
+        local input = rec.inputs[i];
+        local input_msg = fmt("  Input %d: prev_tx=%s, prev_out_idx=%d, sequence=%d",
+                              i, input.prev_tx, input.prev_out_idx, input.sequence);
+        print(input_msg);
+    }
+
+    for (i in rec.outputs) {
+        local output = rec.outputs[i];
+        local output_msg = fmt("  Output %d: value=%d", i, output.value);
+        print(output_msg);
+    }
+}

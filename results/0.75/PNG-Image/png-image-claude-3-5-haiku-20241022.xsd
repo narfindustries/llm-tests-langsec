@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        separator=""
+        separatorSuppressionPolicy="never"
+        separatorPosition="infix"
+        documentFinalTerminatorCanBeMissing="yes"
+        initiator=""
+        terminator=""
+        textNumberRep="standard"
+        textNumberCheckPolicy="strict"
+        textZeroRep="0"
+        escapeSchemeRef=""
+        byteOrder="bigEndian"
+        representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="PNGImage">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Signature" type="tns:SignatureType"/>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="Chunks" type="tns:ChunksType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SignatureType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="SignatureBytes" type="xs:hexBinary"
+        dfdl:lengthKind="explicit"
+        dfdl:length="8"
+        dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Length" type="xs:unsignedInt"
+        dfdl:representation="binary"/>
+      <xs:element name="ChunkType" type="xs:string"
+        dfdl:lengthKind="explicit"
+        dfdl:length="4"
+        dfdl:encoding="ASCII"/>
+      <xs:element name="Width" type="xs:unsignedInt"
+        dfdl:representation="binary"/>
+      <xs:element name="Height" type="xs:unsignedInt"
+        dfdl:representation="binary"/>
+      <xs:element name="BitDepth" type="xs:unsignedByte"
+        dfdl:representation="binary"/>
+      <xs:element name="ColorType" type="xs:unsignedByte"
+        dfdl:representation="binary"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"
+        dfdl:representation="binary"/>
+      <xs:element name="FilterMethod" type="xs:unsignedByte"
+        dfdl:representation="binary"/>
+      <xs:element name="InterlaceMethod" type="xs:unsignedByte"
+        dfdl:representation="binary"/>
+      <xs:element name="CRC" type="xs:hexBinary"
+        dfdl:lengthKind="explicit"
+        dfdl:length="4"
+        dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunksType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Chunk" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="Length" type="xs:unsignedInt"
+              dfdl:representation="binary"/>
+            <xs:element name="ChunkType" type="xs:string"
+              dfdl:lengthKind="explicit"
+              dfdl:length="4"
+              dfdl:encoding="ASCII"/>
+            <xs:element name="ChunkData" type="xs:hexBinary"
+              dfdl:lengthKind="explicit"
+              dfdl:length="{ ../Length }"/>
+            <xs:element name="CRC" type="xs:hexBinary"
+              dfdl:lengthKind="explicit"
+              dfdl:length="4"
+              dfdl:representation="binary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

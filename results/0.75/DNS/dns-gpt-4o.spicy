@@ -1,0 +1,40 @@
+module DNS;
+
+import spicy;
+import zeek;
+
+type DNSHeader = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+type DNSQuestion = unit {
+    qname: bytes &until=0x00;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type DNSResourceRecord = unit {
+    name: bytes &until=0x00;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=rdlength;
+};
+
+public type DNSMessage = unit {
+    header: DNSHeader;
+    questions: array of DNSQuestion &length=header.qdcount;
+    answers: array of DNSResourceRecord &length=header.ancount;
+    authorities: array of DNSResourceRecord &length=header.nscount;
+    additionals: array of DNSResourceRecord &length=header.arcount;
+};
+
+public global dns_message: function(input: bytes): DNSMessage %parse {
+    return parse_DNSMessage(input);
+};

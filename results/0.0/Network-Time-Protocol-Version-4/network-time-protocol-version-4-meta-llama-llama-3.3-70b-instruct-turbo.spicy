@@ -1,0 +1,50 @@
+# Network Time Protocol (NTP) Version 4
+
+type NTPPacket = record {
+    leap: uint8 &bits=2;
+    version: uint8 &bits=3;
+    mode: uint8 &bits=3;
+    poll: uint8 &bits=4;
+    precision: uint8 &bits=4;
+    delay: uint32;
+    dispersion: uint32;
+    identifier: uint32;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+} &byteorder=little-endian;
+
+type NTPExtension = record {
+    type: uint16;
+    length: uint16;
+    data: bytestring &length=this.length;
+} &byteorder=big-endian;
+
+type NTPExtensions = vector of NTPExtension;
+
+type NTPPacketWithExtensions = record {
+    header: NTPPacket;
+    extensions: NTPExtensions;
+};
+
+event zeek::packet_capture(c: connection, p: NTPPacketWithExtensions) {
+    print("NTP packet captured:");
+    print("  leap:", p$header$leap);
+    print("  version:", p$header$version);
+    print("  mode:", p$header$mode);
+    print("  poll:", p$header$poll);
+    print("  precision:", p$header$precision);
+    print("  delay:", p$header$delay);
+    print("  dispersion:", p$header$dispersion);
+    print("  identifier:", p$header$identifier);
+    print("  reference timestamp:", p$header$reference_timestamp);
+    print("  originate timestamp:", p$header$originate_timestamp);
+    print("  receive timestamp:", p$header$receive_timestamp);
+    print("  transmit timestamp:", p$header$transmit_timestamp);
+    for (ext in p$extensions) {
+        print("  extension type:", ext$type);
+        print("  extension length:", ext$length);
+        print("  extension data:", ext$data);
+    }
+}

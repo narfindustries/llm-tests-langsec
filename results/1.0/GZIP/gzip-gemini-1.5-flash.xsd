@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gemini"
+           xmlns="http://example.org/gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"  dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
+        <xs:element name="data" type="dataType" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="record" type="recordType" maxOccurs="unbounded" dfdl:separator="CRLF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="field3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="field4" type="xs:decimal" dfdl:length="8" dfdl:binaryDecimalSeparator="." dfdl:decimalSeparator="."> </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes" representation="text" separatorPosition="trailing" textAlignment="left">
+        <dfdl:ignoreChars>[\u0000-\u001F\u007F-\u009F]</dfdl:ignoreChars>
+    </dfdl:format>
+    <dfdl:textStandard>
+      <dfdl:textStandardVersion>1.0</dfdl:textStandardVersion>
+    </dfdl:textStandard>
+    <dfdl:unparsed>
+      <dfdl:textCompressor>gzip</dfdl:textCompressor>
+    </dfdl:unparsed>
+
+  </dfdl:defineSchema>
+
+</xs:schema>

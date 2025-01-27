@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom"
+           xmlns:tns="http://example.com/dicom"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:dicomFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="dicomFormat" byteOrder="bigEndian" lengthKind="explicit" encoding="utf-8"/>
+
+  <xs:element name="DICOMFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="tns:PreambleType" dfdl:length="128" dfdl:lengthUnits="bytes"/>
+        <xs:element name="Prefix" type="tns:PrefixType" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        <xs:element name="DataSet" type="tns:DataSetType" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PreambleType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="description" type="xs:string" fixed="DICOM Preamble"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="PrefixType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="description" type="xs:string" fixed="DICOM Prefix"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="DataSetType">
+    <xs:sequence>
+      <xs:element name="Element" type="tns:ElementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ElementType">
+    <xs:sequence>
+      <xs:element name="Tag" type="tns:TagType"/>
+      <xs:element name="VR" type="tns:VRType"/>
+      <xs:element name="Length" type="tns:LengthType"/>
+      <xs:element name="Value" type="tns:ValueType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="TagType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="VRType">
+    <xs:restriction base="xs:string">
+      <xs:length value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LengthType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:complexType name="ValueType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="description" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,41 @@
+module GZIP;
+
+import spicy;
+
+public type Compressor = unit {
+    magic: bytes(2) &requires { $ == b"\x1f\x8b" };
+    method: uint8 &requires { $ == 8 };
+    flags: uint8;
+    mtime: uint32;
+    extra_flags: uint8;
+    os: uint8;
+
+    extra_data: optional bytes if (flags & 0x04) {
+        length: uint16;
+        data: bytes(length);
+    };
+
+    original_name: optional string if (flags & 0x08) {
+        value: bytes &until(b"\x00");
+    };
+
+    comment: optional string if (flags & 0x10) {
+        value: bytes &until(b"\x00");
+    };
+
+    header_crc: optional uint16 if (flags & 0x02);
+
+    compressed_data: bytes &eod;
+    footer: CRC32Footer;
+
+    on %done {
+        spicy::confirm_cookie(magic == b"\x1f\x8b");
+    }
+};
+
+public type CRC32Footer = unit {
+    crc32: uint32;
+    original_size: uint32;
+};
+
+public type GZIP = Compressor;

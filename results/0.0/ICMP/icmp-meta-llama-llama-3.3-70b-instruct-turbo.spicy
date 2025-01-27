@@ -1,0 +1,111 @@
+# ICMP Spicy Specification
+
+%header {
+    import "zeek/spicy/standard-protocol.icmp"
+}
+
+%protocol icmp {
+    %include standard-protocol.icmp
+
+    # Define the ICMP message structure
+    type Msg = record {
+        type:   uint8,
+        code:   uint8,
+        checksum: uint16,
+        data:   bytestring &restofdata,
+    };
+
+    # Define the ICMP echo request structure
+    type EchoRequest = record {
+        id:     uint16,
+        seq:    uint16,
+        data:   bytestring &restofdata,
+    };
+
+    # Define the ICMP echo reply structure
+    type EchoReply = record {
+        id:     uint16,
+        seq:    uint16,
+        data:   bytestring &restofdata,
+    };
+
+    # Define the ICMP destination unreachable structure
+    type DestinationUnreachable = record {
+        unused: uint32,
+        data:   bytestring &restofdata,
+    };
+
+    # Define the ICMP redirect structure
+    type Redirect = record {
+        gateway: ip,
+        data:   bytestring &restofdata,
+    };
+
+    # Define the ICMP echo request handler
+    function echo_request(msg: Msg): bool {
+        if (msg.type == 8) {
+            local echo_req: EchoRequest = EchoRequest();
+            echo_req.id = 0;
+            echo_req.seq = 0;
+            echo_req.data = msg.data;
+            # Handle the echo request
+            print("Received ICMP echo request");
+            return true;
+        }
+        return false;
+    }
+
+    # Define the ICMP echo reply handler
+    function echo_reply(msg: Msg): bool {
+        if (msg.type == 0) {
+            local echo_rep: EchoReply = EchoReply();
+            echo_rep.id = 0;
+            echo_rep.seq = 0;
+            echo_rep.data = msg.data;
+            # Handle the echo reply
+            print("Received ICMP echo reply");
+            return true;
+        }
+        return false;
+    }
+
+    # Define the ICMP destination unreachable handler
+    function destination_unreachable(msg: Msg): bool {
+        if (msg.type == 3) {
+            local dest_unreach: DestinationUnreachable = DestinationUnreachable();
+            dest_unreach.unused = 0;
+            dest_unreach.data = msg.data;
+            # Handle the destination unreachable message
+            print("Received ICMP destination unreachable");
+            return true;
+        }
+        return false;
+    }
+
+    # Define the ICMP redirect handler
+    function redirect(msg: Msg): bool {
+        if (msg.type == 5) {
+            local redir: Redirect = Redirect();
+            redir.gateway = 0.0.0.0;
+            redir.data = msg.data;
+            # Handle the redirect message
+            print("Received ICMP redirect");
+            return true;
+        }
+        return false;
+    }
+
+    # Define the main ICMP handler
+    function icmp_handler(msg: Msg): bool {
+        if (echo_request(msg)) {
+            return true;
+        } else if (echo_reply(msg)) {
+            return true;
+        } else if (destination_unreachable(msg)) {
+            return true;
+        } else if (redirect(msg)) {
+            return true;
+        }
+        return false;
+    }
+}

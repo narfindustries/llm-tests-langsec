@@ -1,0 +1,61 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method: bytes;
+    sp1: bytes &size=1;
+    uri: bytes;
+    sp2: bytes &size=1;
+    version: bytes;
+    crlf: bytes &size=2;
+
+    method_str: string = method.decode("ascii");
+    uri_str: string = uri.decode("ascii");
+    version_str: string = version.decode("ascii");
+
+    on %done {
+        print self.method_str, self.uri_str, self.version_str;
+    }
+};
+
+public type Response = unit {
+    version: bytes;
+    sp1: bytes &size=1;
+    status_code: bytes;
+    sp2: bytes &size=1;
+    status_text: bytes;
+    crlf: bytes &size=2;
+
+    version_str: string = version.decode("ascii");
+    status_code_str: string = status_code.decode("ascii");
+    status_text_str: string = status_text.decode("ascii");
+
+    on %done {
+        print self.version_str, self.status_code_str, self.status_text_str;
+    }
+};
+
+public type Header = unit {
+    name: bytes &until=b":";
+    colon: bytes &size=1;
+    sp: bytes &size=1;
+    value: bytes &until=b"\r\n";
+    crlf: bytes &size=2;
+
+    name_str: string = name.decode("ascii");
+    value_str: string = value.decode("ascii");
+
+    on %done {
+        print self.name_str, self.value_str;
+    }
+};
+
+public type Headers = unit {
+    headers: Header[] &until=b"\r\n";
+};
+
+public type Message = unit {
+    request: Request;
+    headers: Headers;
+};

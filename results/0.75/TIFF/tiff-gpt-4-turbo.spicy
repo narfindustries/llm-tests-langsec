@@ -1,0 +1,26 @@
+module TIFF;
+
+public type IfdEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    valueOffset: bytes &size=4;
+};
+
+public type IFD = unit {
+    entries: IfdEntry[] &until($$.entries.size() == 0);
+    nextIfdOffset: uint32;
+};
+
+public type GPT4Turbo = unit {
+    header: bytes &size=8;
+    ifd: IFD;
+    
+    on %init {
+        print "Starting to parse TIFF file...";
+    }
+
+    on %done {
+        print "Finished parsing TIFF file.";
+    }
+};

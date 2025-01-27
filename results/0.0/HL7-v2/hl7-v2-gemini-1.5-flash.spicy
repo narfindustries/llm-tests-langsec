@@ -1,0 +1,32 @@
+#ifndef HL7_V2_GEMINI_1_5_FLASH_SPICY
+#define HL7_V2_GEMINI_1_5_FLASH_SPICY
+
+#include <zeek/analyzer/protocol/hl7/hl7.zeek>
+
+event hl7_v2_gemini_1_5_flash_message(HL7_V2_Message msg) {
+    // Add your custom logic here to process the HL7 v2 Gemini 1.5 Flash message.
+    // Access message segments and fields using msg.MSH, msg.PID, etc.
+    // Example:
+    // print fmt("Received HL7 v2 message: %s", msg.MSH.SendingApplication);
+}
+
+global HL7_V2_Analyzer hl7_v2_gemini_1_5_flash_analyzer;
+
+redef record HL7_V2_Message {
+    // Add any custom fields or modifications to the HL7_V2_Message record here.
+    // Example:
+    // string custom_field;
+}
+
+event zeek_init() {
+    hl7_v2_gemini_1_5_flash_analyzer = new HL7_V2_Analyzer(
+        "hl7-v2-gemini-1.5-flash",
+        {
+            // Add any custom message types or event handlers here.
+            // Example:
+            // "MSH|^~\&|SendingApplication|SendingFacility|ReceivingApplication|ReceivingFacility|DateTime|MessageID|MessageControlID|P|2.5|..."
+        }
+    );
+}
+
+#endif

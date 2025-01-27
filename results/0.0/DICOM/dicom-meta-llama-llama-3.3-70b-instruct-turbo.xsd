@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DICOM"
+           xmlns="http://example.com/DICOM"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="DICOM">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="dicomFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Preamble" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="Prefix" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="DataSet" minOccurs="1" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Preamble">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="preambleFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PreambleData" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="preambleDataFormat"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Prefix">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="prefixFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PrefixData" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="prefixDataFormat"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DataSet">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="dataSetFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="DataElement" type="DataElementType" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DataElementType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format ref="tagFormat"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="VR" type="xs:string" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format ref="vrFormat"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Length" type="xs:integer" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format ref="lengthFormat"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Value" type="xs:string" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format ref="valueFormat"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="dicomFormat" representation="binary" lengthKind="implicit" length="4">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="preambleFormat" representation="binary" lengthKind="implicit" length="128">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="preambleDataFormat" representation="binary" lengthKind="implicit" length="128">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="prefixFormat" representation="binary" lengthKind="implicit" length="4">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="prefixDataFormat" representation="binary" lengthKind="implicit" length="4">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="dataSetFormat" representation="binary" lengthKind="implicit">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="tagFormat" representation="binary" lengthKind="implicit" length="2">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="vrFormat" representation="binary" lengthKind="implicit" length="2">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="lengthFormat" representation="binary" lengthKind="implicit" length="2">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+  <dfdl:format name="valueFormat" representation="binary" lengthKind="implicit">
+    <dfdl:property name="dfdl:byteOrder" value="big"/>
+  </dfdl:format>
+
+</xs:schema>

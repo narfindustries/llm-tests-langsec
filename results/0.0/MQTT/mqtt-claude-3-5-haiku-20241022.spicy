@@ -1,0 +1,82 @@
+module MQTT;
+
+import spicy;
+
+public type Packet = unit {
+    var fixed_header: FixedHeader;
+    var variable_header: VariableHeader;
+    var payload: bytes &optional;
+
+    parse {
+        self.fixed_header = self.parse_fixed_header();
+        
+        switch ( self.fixed_header.packet_type ) {
+            CONNECT -> {
+                self.variable_header = self.parse_connect_variable_header();
+                self.payload = self.input.remaining();
+            }
+            PUBLISH -> {
+                self.variable_header = self.parse_publish_variable_header();
+                self.payload = self.input.remaining();
+            }
+            default -> {
+                self.variable_header = VariableHeader();
+            }
+        }
+    }
+
+    function parse_fixed_header(): FixedHeader {
+        return FixedHeader();
+    }
+
+    function parse_connect_variable_header(): VariableHeader {
+        return VariableHeader();
+    }
+
+    function parse_publish_variable_header(): VariableHeader {
+        return VariableHeader();
+    }
+};
+
+public type FixedHeader = unit {
+    packet_type: uint8 &convert=PacketType($$);
+    flags: uint8;
+    remaining_length: varlen_integer;
+};
+
+type VariableHeader = unit {
+    // Placeholder for variable header parsing
+};
+
+enum PacketType : uint8 {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14
+};
+
+type varlen_integer = unit {
+    digit: uint8;
+    multiplier: uint32 = 1;
+    value: uint32 = 0;
+
+    parse {
+        local continue = (self.digit & 0x80) != 0;
+        self.value += (self.digit & 0x7F) * self.multiplier;
+        self.multiplier *= 128;
+
+        if ( continue ) {
+            self.-> digit;
+        }
+    }
+};

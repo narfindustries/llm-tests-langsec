@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:tns="http://example.com/dns"
+           elementFormDefault="qualified"
+           dfdl:format="tns:DNSFormat">
+
+  <dfdl:format ref="tns:DNSFormat"/>
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="Flags" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="QuestionCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="AnswerCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="AuthorityCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="AdditionalCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="Questions" type="tns:QuestionSection" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Answers" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Authorities" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Additionals" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="QuestionSection">
+    <xs:sequence>
+      <xs:element name="QName" type="tns:DomainName"/>
+      <xs:element name="QType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="QClass" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResourceRecord">
+    <xs:sequence>
+      <xs:element name="Name" type="tns:DomainName"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="RDLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="RData" type="xs:hexBinary" dfdl:length="{../RDLength}" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="DomainName">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <dfdl:defineFormat name="DNSFormat">
+    <dfdl:format lengthKind="explicit" byteOrder="bigEndian" encoding="utf-8"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db"
+           xmlns="http://example.com/sqlite3-db"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="SQLite3DBType">
+    <xs:sequence>
+      <xs:element name="Header" type="HeaderType" />
+      <xs:element name="Pages" type="PagesType" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII" />
+      <xs:element name="PageSize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="FileFormatWriteVersion" type="xs:unsignedByte" />
+      <xs:element name="FileFormatReadVersion" type="xs:unsignedByte" />
+      <xs:element name="ReservedSpace" type="xs:unsignedByte" />
+      <xs:element name="MaxEmbeddedPayloadFraction" type="xs:unsignedByte" />
+      <xs:element name="MinEmbeddedPayloadFraction" type="xs:unsignedByte" />
+      <xs:element name="LeafPayloadFraction" type="xs:unsignedByte" />
+      <xs:element name="FileChangeCounter" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="DatabaseSizeInPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="FirstFreelistPage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="NumberOfFreelistPages" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="SchemaCookie" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="SchemaFormatNumber" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="DefaultPageCacheSize" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="LargestRootBtreePage" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="TextEncoding" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="UserVersion" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="IncrementalVacuumMode" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="ApplicationID" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Reserved" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="VersionValidFor" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="SQLiteVersionNumber" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PagesType">
+    <xs:sequence>
+      <xs:element name="Page" type="PageType" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="PageHeaderType" />
+      <xs:element name="CellPointers" type="CellPointersType" />
+      <xs:element name="Cells" type="CellsType" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte" />
+      <xs:element name="FirstFreeBlock" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="NumberOfCells" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="StartOfCellContentArea" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellPointersType">
+    <xs:sequence>
+      <xs:element name="CellPointer" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellsType">
+    <xs:sequence>
+      <xs:element name="Cell" type="CellType" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellType">
+    <xs:sequence>
+      <xs:element name="PayloadSize" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="RowID" type="xs:unsignedLong" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Payload" type="xs:hexBinary" dfdl:length="{ (../PayloadSize) }" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="SQLite3DB" type="SQLite3DBType" />
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" />
+  </dfdl:defineFormat>
+
+</xs:schema>

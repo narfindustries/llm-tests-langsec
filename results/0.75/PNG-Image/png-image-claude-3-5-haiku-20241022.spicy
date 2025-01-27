@@ -1,0 +1,35 @@
+module PNG;
+
+import spicy;
+
+public type Image = unit {
+    signature: bytes = b"\x89PNG\r\n\x1a\n";
+    chunks: Chunk[] while ( self.input.remaining() > 0 );
+};
+
+type Chunk = unit {
+    length: uint32;
+    chunk_type: bytes(4);
+    data: bytes(self.length) if ( self.length > 0 );
+    crc: uint32;
+
+    var type_str: string = self.chunk_type.decode();
+
+    on %init {
+        if ( self.type_str == "IHDR" ) {
+            # Header chunk parsing
+            self.data.seek(0);
+            width: uint32;
+            height: uint32;
+            bit_depth: uint8;
+            color_type: uint8;
+            compression: uint8;
+            filter: uint8;
+            interlace: uint8;
+        }
+    }
+};
+
+public type Parser = unit {
+    image: Image;
+};

@@ -1,0 +1,39 @@
+# Spicy specification for PNG image metadata
+type png_image_meta = record {
+    signature: byte[8] = b"\x89PNG\r\n\x1a\n";
+    ihdr: ihdr_chunk;
+    idat: idat_chunk;
+    iend: iend_chunk;
+};
+
+type ihdr_chunk = record {
+    length: uint32 = 13;
+    type: byte[4] = b"IHDR";
+    width: uint32;
+    height: uint32;
+    bit_depth: byte;
+    color_type: byte;
+    compression_method: byte;
+    filter_method: byte;
+    interlace_method: byte;
+    crc: uint32;
+};
+
+type idat_chunk = record {
+    length: uint32;
+    type: byte[4] = b"IDAT";
+    data: byte[length];
+    crc: uint32;
+};
+
+type iend_chunk = record {
+    length: uint32 = 0;
+    type: byte[4] = b"IEND";
+    crc: uint32 = 0xae426082;
+};
+
+analyzer png_image_meta_analyzer = Analyzer(
+    name="PNG Image Meta",
+    spec=png_image_meta,
+    protocol="tcp"
+);

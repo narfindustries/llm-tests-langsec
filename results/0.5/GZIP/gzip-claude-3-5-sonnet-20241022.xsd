@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:gzip="http://example.com/gzip"
+    targetNamespace="http://example.com/gzip">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                lengthUnits="bytes"
+                lengthKind="implicit"
+                encoding="UTF-8"
+                initiator="" terminator=""
+                occursCountKind="implicit"
+                ignoreCase="no"
+                textNumberRep="standard"
+                separator="" separatorSuppressionPolicy="anyEmpty"
+                separatorPosition="infix"
+                documentFinalTerminatorCanBeMissing="yes"
+                initiatedContent="no"
+                fillByte="%#r20"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="gzipFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="id1" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="id2" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="flags" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="mtime" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+                            <xs:element name="xfl" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="os" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="compressedBlocks">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="compressedData" type="xs:hexBinary" 
+                                      dfdl:lengthKind="endOfParent"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="trailer">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="crc32" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+                            <xs:element name="isize" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

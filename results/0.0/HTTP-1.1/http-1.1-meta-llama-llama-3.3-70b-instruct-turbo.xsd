@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/http-1.1"
+           xmlns:tns="http://example.com/http-1.1"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http-1.1.xsd"/>
+
+  <xs:element name="http-1.1-meta-llama-llama-3.3-70b-instruct-turbo">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:request-line" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:headers" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:message-body" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="request-line">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="method" type="xs:string" dfdl:length="3..10"/>
+        <xs:element name="request-target" type="xs:string" dfdl:length="1..2000"/>
+        <xs:element name="http-version" type="xs:string" dfdl:length="8" dfdl:pattern="[Hh][Tt][Tt][Pp]/1\.1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:header" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="field-name" type="xs:string" dfdl:length="1..50"/>
+        <xs:element name="field-value" type="xs:string" dfdl:length="0..1000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="message-body">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element name="body" type="xs:base64Binary" dfdl:length="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format dfdl:encoding="UTF-8" dfdl:lineEndingStyle="lf" dfdl:sequenceKind="ordered" dfdl:separator=" " dfdl:terminator=""/>
+
+</xs:schema>

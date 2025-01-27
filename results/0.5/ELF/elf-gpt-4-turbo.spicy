@@ -1,0 +1,60 @@
+module ELF;
+
+public type ElfHeader = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    os_abi: uint8;
+    abi_version: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: addr;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on %init {
+        self.entry = self.class == 1 ? self.entry &as=addr_little : self.entry &as=addr_big;
+        self.phoff = self.class == 1 ? self.phoff &as=uint64_little : self.phoff &as=uint64_big;
+        self.shoff = self.class == 1 ? self.shoff &as=uint64_little : self.shoff &as=uint64_big;
+    }
+};
+
+public type ProgramHeader = unit {
+    type: uint32;
+    flags: uint32;
+    offset: uint64;
+    vaddr: addr;
+    paddr: addr;
+    filesz: uint64;
+    memsz: uint64;
+    align: uint64;
+};
+
+public type SectionHeader = unit {
+    name: uint32;
+    type: uint32;
+    flags: uint64;
+    addr: addr;
+    offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    addralign: uint64;
+    entsize: uint64;
+};
+
+public type ELFFile = unit {
+    header: ElfHeader;
+    program_headers: ProgramHeader[] &length=self.header.phnum;
+    section_headers: SectionHeader[] &length=self.header.shnum;
+};

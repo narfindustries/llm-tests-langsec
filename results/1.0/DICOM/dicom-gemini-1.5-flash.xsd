@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/dicom" targetNamespace="http://example.org/dicom" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PatientName" type="tns:PatientNameType" dfdl:lengthKind="implicit"/>
+        <xs:element name="StudyDate" type="xs:date" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="StudyID" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="16"/>
+        <!-- Add other DICOM elements as needed -->
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PatientNameType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="encoding" type="xs:string" use="required" dfdl:occurs="1"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="tns:DICOM"/>
+    <dfdl:textStandard name="US-ASCII"/>
+    <dfdl:separator separatorPosition="trailing">
+      <dfdl:occurs>1</dfdl:occurs>
+      <dfdl:value>0x0000</dfdl:value>
+    </dfdl:separator>
+    <dfdl:representation name="text"/>
+    <dfdl:binaryNumberRepresentation binaryNumberType="binary"/>
+    <dfdl:encoding encodingScheme="UTF-8"/>
+  </dfdl:defineSchema>
+</xs:schema>
+

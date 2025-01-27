@@ -1,0 +1,26 @@
+# ARP packet specification in Zeek Spicy format
+type ARP = record {
+  hw_type: uint16,
+  proto_type: uint16,
+  hw_addr_len: uint8,
+  proto_addr_len: uint8,
+  op: uint16,
+  sender_hw_addr: bytestring &length = hw_addr_len,
+  sender_proto_addr: bytestring &length = proto_addr_len,
+  target_hw_addr: bytestring &length = hw_addr_len,
+  target_proto_addr: bytestring &length = proto_addr_len,
+} &byteorder = little_endian;
+
+type Meta = record {
+  version: uint8,
+  timestamp: uint64,
+  packet_length: uint16,
+  eth_src: bytestring &length = 6,
+  eth_dst: bytestring &length = 6,
+  eth_type: uint16,
+  arp: ARP,
+} &byteorder = little_endian;
+
+type Spicy = record {
+  meta: Meta,
+} &byteorder = little_endian;

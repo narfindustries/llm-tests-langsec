@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/elf"
+           xmlns:ex="http://example.com/elf">
+
+  <xs:include schemaLocation="org.apache.daffodil.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:elfFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="uint32">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+          <dfdl:byteOrder="bigEndian"/>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="hexBinary"/>
+      <xs:element name="class" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="data" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="version" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="osABI" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="abiVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="pad" type="xs:hexBinary" dfdl:length="7" dfdl:initiatedContent="true"/>
+      <xs:element name="type" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="machine" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="version" type="ex:uint32" dfdl:length="4"/>
+      <xs:element name="entry" type="ex:uint32" dfdl:length="4"/>
+      <xs:element name="phoff" type="ex:uint32" dfdl:length="4"/>
+      <xs:element name="shoff" type="ex:uint32" dfdl:length="4"/>
+      <xs:element name="flags" type="ex:uint32" dfdl:length="4"/>
+      <xs:element name="ehsize" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="phentsize" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="phnum" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="shentsize" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="shnum" type="ex:uint32" dfdl:length="2"/>
+      <xs:element name="shstrndx" type="ex:uint32" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ELF" type="ex:Header"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="elfFormat">
+        <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                     binaryNumberRep="binary" lengthKind="explicit" encoding="ISO-8859-1"
+                     textBidi="false"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

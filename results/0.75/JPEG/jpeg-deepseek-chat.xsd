@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="JPEGType">
+    <xs:sequence>
+      <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8" />
+      <xs:element name="APP0" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFE0" />
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Identifier" type="xs:string" dfdl:length="5" dfdl:encoding="ASCII" />
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Units" type="xs:unsignedByte" />
+      <xs:element name="Xdensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Ydensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Xthumbnail" type="xs:unsignedByte" />
+      <xs:element name="Ythumbnail" type="xs:unsignedByte" />
+      <xs:element name="ThumbnailData" type="xs:hexBinary" dfdl:length="{ (../Length - 16) }" />
+      <xs:element name="OtherSegments" type="ex:OtherSegmentsType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="SOS" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFDA" />
+      <xs:element name="ImageData" type="xs:hexBinary" dfdl:length="unbounded" />
+      <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD9" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OtherSegmentsType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" />
+      <xs:element name="SegmentLength" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="SegmentData" type="xs:hexBinary" dfdl:length="{ (../SegmentLength - 2) }" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="JPEG" type="ex:JPEGType" />
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" encoding="ASCII" />
+  </dfdl:defineFormat>
+
+</xs:schema>

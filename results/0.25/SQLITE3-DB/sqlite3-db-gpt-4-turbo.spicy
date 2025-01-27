@@ -1,0 +1,41 @@
+module SQLite;
+
+type SQLiteHeader = unit {
+    magic: bytes &size=16;  # "SQLite format 3\0"
+    pageSize: uint16;
+    writeVersion: uint8;
+    readVersion: uint8;
+    reservedSpace: uint8;
+    maxPayloadFrac: uint8;
+    minPayloadFrac: uint8;
+    leafPayloadFrac: uint8;
+    changeCounter: uint32;
+    inHeaderDBSize: uint32;
+    startOfFreelist: uint32;
+    numFreelistPages: uint32;
+    schemaCookie: uint32;
+    schemaFormat: uint32;
+    defaultPageCacheSize: uint32;
+    largestRootPage: uint32;
+    textEncoding: uint32;
+    userVersion: uint32;
+    incrementalVacuumMode: uint32;
+    applicationId: uint32;
+    reserved: bytes &size=20;
+    versionValidFor: uint32;
+    sqliteVersion: uint32;
+};
+
+type Record = unit {
+    header: SQLiteHeader;
+    pages: Page(self.header.pageSize)[] &eod;
+};
+
+type Page = unit(pageSize: uint32) {
+    data: bytes &size=pageSize;
+};
+
+public type SQLiteFile = unit {
+    header: SQLiteHeader;
+    records: Record[];
+};

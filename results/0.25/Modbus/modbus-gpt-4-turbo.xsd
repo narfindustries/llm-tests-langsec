@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ModbusFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="UInt16">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="TransactionId" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="ProtocolId" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Length" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="UnitId" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ModbusPDU">
+    <xs:sequence>
+      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator=";"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ModbusADU">
+    <xs:sequence>
+      <xs:element name="ModbusHeader" type="tns:Header"/>
+      <xs:element name="ModbusPDU" type="tns:ModbusPDU"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ModbusMessage" type="tns:ModbusADU"/>
+
+  <xs:element name="ModbusFormat">
+    <xs:complexType>
+      <xs:attributeGroup ref="dfdl:format"/>
+      <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+      <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
+      <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+      <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
+      <xs:attribute name="encoding" type="xs:string" use="required" fixed="ISO-8859-1"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

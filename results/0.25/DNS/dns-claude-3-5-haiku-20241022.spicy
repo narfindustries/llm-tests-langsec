@@ -1,0 +1,126 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    queries: list<Query>;
+    answers: list<Answer>;
+    authorities: list<Authority>;
+    additional: list<Additional>;
+
+    var query_count: uint16;
+    var answer_count: uint16;
+    var authority_count: uint16;
+    var additional_count: uint16;
+
+    parse {
+        self.header = $$ = Header();
+        self.query_count = self.header.qdcount;
+        self.answer_count = self.header.ancount;
+        self.authority_count = self.header.nscount;
+        self.additional_count = self.header.arcount;
+
+        self.queries = [];
+        for ( i in range(0, self.query_count) ) {
+            self.queries.push(Query());
+        }
+
+        self.answers = [];
+        for ( i in range(0, self.answer_count) ) {
+            self.answers.push(Answer());
+        }
+
+        self.authorities = [];
+        for ( i in range(0, self.authority_count) ) {
+            self.authorities.push(Authority());
+        }
+
+        self.additional = [];
+        for ( i in range(0, self.additional_count) ) {
+            self.additional.push(Additional());
+        }
+    }
+};
+
+type Header = unit {
+    id: uint16;
+    flags: Flags;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+type Flags = unit {
+    data: uint16;
+
+    qr:     bool = data[15:16] == 1;
+    opcode: uint8 = data[11:15];
+    aa:     bool = data[10:11] == 1;
+    tc:     bool = data[9:10] == 1;
+    rd:     bool = data[8:9] == 1;
+    ra:     bool = data[7:8] == 1;
+    z:      uint8 = data[4:7];
+    rcode:  uint8 = data[0:4];
+};
+
+type Query = unit {
+    name: Name;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type Answer = unit {
+    name: Name;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=rdlength;
+};
+
+type Authority = unit {
+    name: Name;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=rdlength;
+};
+
+type Additional = unit {
+    name: Name;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=rdlength;
+};
+
+type Name = unit {
+    names: list<string>;
+
+    parse {
+        self.names = [];
+        while ( true ) {
+            local len = self.input.read<uint8>();
+            if ( len == 0 ) {
+                break;
+            }
+
+            if ( len & 0xC0 == 0xC0 ) {
+                # Pointer to another name
+                local offset = ((len & 0x3F) << 8) | self.input.read<uint8>();
+                break;
+            }
+
+            local name = self.input.read(len).decode("ascii");
+            self.names.push(name);
+        }
+    }
+
+    function to_string(): string {
+        return join(self.names, ".");
+    }
+};

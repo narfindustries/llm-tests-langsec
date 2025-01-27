@@ -1,0 +1,79 @@
+# Zeek Spicy specification for GIF file format
+
+type GifHeader = record {
+    signature: bytestring(3) = "GIF",
+    version: bytestring(3),
+};
+
+type GifLogicalScreenDescriptor = record {
+    width: uint16,
+    height: uint16,
+    flags: uint8,
+    bg_color_index: uint8,
+    pixel_aspect_ratio: uint8,
+};
+
+type GifImageDescriptor = record {
+    left: uint16,
+    top: uint16,
+    width: uint16,
+    height: uint16,
+    flags: uint8,
+};
+
+type GifColorTable = array of uint8;
+
+type GifImage = record {
+    descriptor: GifImageDescriptor,
+    data: bytestring,
+};
+
+type GifFile = record {
+    header: GifHeader,
+    logical_screen_descriptor: GifLogicalScreenDescriptor,
+    global_color_table: GifColorTable,
+    images: array of GifImage,
+};
+
+# Define the parser for the GIF file format
+parser GifParser = {
+    header: GifHeader,
+    logical_screen_descriptor: GifLogicalScreenDescriptor,
+    global_color_table: GifColorTable,
+    images: array of GifImage,
+};
+
+# Define the event handler for the GIF file format
+event GifEventHandler {
+    # Handle the GIF file header
+    on_header(header: GifHeader) {
+        print("GIF file header:", header);
+    }
+
+    # Handle the logical screen descriptor
+    on_logical_screen_descriptor(descriptor: GifLogicalScreenDescriptor) {
+        print("Logical screen descriptor:", descriptor);
+    }
+
+    # Handle the global color table
+    on_global_color_table(color_table: GifColorTable) {
+        print("Global color table:", color_table);
+    }
+
+    # Handle each image in the GIF file
+    on_image(image: GifImage) {
+        print("Image:", image);
+    }
+};
+
+# Define the main function to parse the GIF file
+function main(file: bytestring) {
+    # Create a new parser instance
+    parser := GifParser();
+
+    # Parse the GIF file
+    parser.parse(file);
+
+    # Handle any events generated during parsing
+    GifEventHandler();
+}

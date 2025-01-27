@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt-deepseek-chat"
+           xmlns="http://example.com/mqtt-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="MQTTMessage" type="MQTTMessageType"/>
+
+  <xs:complexType name="MQTTMessageType">
+    <xs:sequence>
+      <xs:element name="FixedHeader" type="FixedHeaderType"/>
+      <xs:element name="VariableHeader" type="VariableHeaderType" minOccurs="0"/>
+      <xs:element name="Payload" type="PayloadType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="MessageType" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="DUP" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="QoS" type="xs:unsignedByte" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="RETAIN" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="RemainingLength" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthKind="explicit" minOccurs="0"/>
+      <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../FixedHeader/RemainingLength }" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PayloadType">
+    <xs:sequence>
+      <xs:element name="Message" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../FixedHeader/RemainingLength }" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" encoding="UTF-8" lengthKind="explicit"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

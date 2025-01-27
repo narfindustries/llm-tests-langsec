@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/png"
+           xmlns:tns="http://example.com/dfdl/png"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:documentation>
+      DFDL schema for PNG image format
+    </xs:documentation>
+  </xs:annotation>
+
+  <dfdl:format ref="tns:ImageFormat" />
+
+  <xs:element name="PNG">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="tns:SignatureType" />
+        <xs:element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PNG signature (8 bytes constant value) -->
+  <xs:simpleType name="SignatureType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="8" />
+      <xs:pattern value="89504E470D0A1A0A" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- PNG Chunk Type -->
+  <xs:complexType name="ChunksType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Type" type="tns:ChunkType" dfdl:lengthKind="explicit" dfdl:length="4" />
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../Length}" />
+      <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- PNG Chunk Type Name -->
+  <xs:simpleType name="ChunkType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="IHDR" />
+      <xs:enumeration value="PLTE" />
+      <xs:enumeration value="IDAT" />
+      <xs:enumeration value="IEND" />
+      <xs:enumeration value="tRNS" />
+      <xs:enumeration value="cHRM" />
+      <xs:enumeration value="gAMA" />
+      <xs:enumeration value="iCCP" />
+      <xs:enumeration value="sBIT" />
+      <xs:enumeration value="sRGB" />
+      <xs:enumeration value="tEXt" />
+      <xs:enumeration value="zTXt" />
+      <xs:enumeration value="iTXt" />
+      <xs:enumeration value="bKGD" />
+      <xs:enumeration value="hIST" />
+      <xs:enumeration value="pHYs" />
+      <xs:enumeration value="sPLT" />
+      <xs:enumeration value="tIME" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- DFDL image format -->
+  <dfdl:defineFormat name="ImageFormat">
+    <dfdl:format encoding="utf-8" byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes" documentFinalTerminatorCanBeMissing="yes" />
+  </dfdl:defineFormat>
+
+</xs:schema>

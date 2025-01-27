@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/NITF"
+           xmlns:tns="http://example.com/NITF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="NITF-Core.xsd"/>
+  <xs:include schemaLocation="NITF-Header.xsd"/>
+  <xs:include schemaLocation="NITF-TREs.xsd"/>
+
+  <xs:element name="NITF" type="tns:NITFType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format InfosetSeparators="&#10;" dfdl:sequenceKind="unordered"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="NITFType">
+    <xs:sequence>
+      <xs:element ref="tns:NIHF" minOccurs="1" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element ref="tns:NTREs" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element ref="tns:NDATA" minOccurs="0" maxOccurs="1">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NIHF" type="tns:NIHFType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format InfosetSeparators="&#10;" dfdl:sequenceKind="unordered"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="NIHFType">
+    <xs:sequence>
+      <xs:element name="NITFHeader" type="tns:NITFHeaderType">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="NITF" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="TREs" type="tns:TREsType" minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NITFHeaderType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:encoding="ASCII"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TREsType">
+    <xs:sequence>
+      <xs:element name="TRE" type="tns:TREType" minOccurs="1" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TREType">
+    <xs:sequence>
+      <xs:element name="TREHeader" type="tns:TREHeaderType">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="TREData" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="*">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:encoding="ASCII"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TREHeaderType">
+    <xs:sequence>
+      <xs:element name="TREName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:encoding="ASCII"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NDATA" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="*">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format dfdl:encoding="ASCII"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

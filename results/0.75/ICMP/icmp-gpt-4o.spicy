@@ -1,0 +1,54 @@
+module ICMP;
+
+import spicy;
+
+type ICMP = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    body: switch(type) {
+        0, 8  => Echo,
+        3     => DestinationUnreachable,
+        11    => TimeExceeded,
+        5     => RedirectMessage,
+        13, 14 => Timestamp,
+        17, 18 => AddressMask,
+        // Add more ICMP message types as needed
+        default => bytes &restofdata
+    }
+} &byteorder=be;
+
+type Echo = unit {
+    id: uint16;
+    sequence: uint16;
+    data: bytes &restofdata;
+} &byteorder=be;
+
+type DestinationUnreachable = unit {
+    unused: uint32;
+    data: bytes &restofdata;
+} &byteorder=be;
+
+type TimeExceeded = unit {
+    unused: uint32;
+    data: bytes &restofdata;
+} &byteorder=be;
+
+type RedirectMessage = unit {
+    gateway: uint32;
+    data: bytes &restofdata;
+} &byteorder=be;
+
+type Timestamp = unit {
+    id: uint16;
+    sequence: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+} &byteorder=be;
+
+type AddressMask = unit {
+    id: uint16;
+    sequence: uint16;
+    mask: uint32;
+} &byteorder=be;

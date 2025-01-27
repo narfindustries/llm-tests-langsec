@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gemini"
+           xmlns="http://example.org/gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="data" type="dataType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="trailer" type="trailerType"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:text lengthKind="delimited" lengthUnits="bytes" encoding="UTF-8"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:string"/>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string"/>
+      <xs:element name="field2" type="xs:integer"/>
+      <xs:element name="field3" type="xs:decimal"/>
+    </xs:sequence>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:complexType>
+
+  <xs:complexType name="trailerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:string"/>
+    </xs:sequence>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:complexType>
+
+</xs:schema>

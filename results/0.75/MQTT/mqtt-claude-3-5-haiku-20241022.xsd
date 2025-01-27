@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator=""
+                  encoding="UTF-8" 
+                  byteOrder="bigEndian"
+                  occursCountKind="parsed"
+                  representation="binary"
+                  lengthKind="explicit"
+                  nilKind="literalValue"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="MQTTMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+        <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+        <xs:element name="Payload" type="tns:PayloadType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="PacketType">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedByte">
+            <dfdl:assertion message="Invalid MQTT Packet Type"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="RemainingLength">
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <dfdl:assertion message="Invalid Remaining Length"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:sequence>
+      <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="MessageID" type="xs:unsignedShort" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PayloadType">
+    <xs:sequence>
+      <xs:element name="MessageContent" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

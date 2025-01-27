@@ -1,0 +1,42 @@
+module HL7;
+
+public type Message = unit {
+    segments: Segment[];
+} &until($input.length() == 0);
+
+type Segment = unit {
+    segment_type: bytes &until(b"|");
+    : bytes &consume(1);
+    fields: Field[] &until($input.length() == 0 || /[\r\n]/.match($input));
+    : bytes &consume-if(/[\r\n]/);
+
+    on %done {
+        if ( self.segment_type == b"MSH" ) {
+            self.fields.insert(0, Field(b"MSH"));
+            self.fields.insert(1, Field(b"|"));
+        }
+    }
+};
+
+type Field = unit {
+    value: bytes &until([b"|", b"\r", b"\n"]);
+    : bytes &consume-if(b"|");
+
+    on %done {
+        if ( |self.value| == 0 ) {
+            self.value = b"";
+        }
+    }
+};
+
+on Message::%done {
+    local segments = vector();
+    for ( seg in self.segments ) {
+        local fields = vector();
+        for ( f in seg.fields ) {
+            fields.push_back(f.value);
+        }
+        segments.push_back([seg.segment_type, fields]);
+    }
+    print fmt("HL7::message %s", segments);
+}

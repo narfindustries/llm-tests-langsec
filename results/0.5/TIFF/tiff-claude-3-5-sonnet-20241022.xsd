@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:tiff="http://example.com/tiff"
+    targetNamespace="http://example.com/tiff">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                lengthUnits="bytes"
+                lengthKind="implicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="tiffFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header" type="tiff:HeaderType"/>
+                <xs:element name="ifd" type="tiff:IFDType" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="byteOrder" type="xs:hexBinary" dfdl:length="2" dfdl:outputValueCalc="{ xs:hexBinary('4949') }"/>
+            <xs:element name="magic" type="xs:unsignedShort" dfdl:length="2" dfdl:outputValueCalc="{ 42 }"/>
+            <xs:element name="firstIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="IFDType">
+        <xs:sequence>
+            <xs:element name="numEntries" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="entries" type="tiff:IFDEntryType" maxOccurs="unbounded"/>
+            <xs:element name="nextIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="IFDEntryType">
+        <xs:sequence>
+            <xs:element name="tag" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="dataType" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="dataCount" type="xs:unsignedInt" dfdl:length="4"/>
+            <xs:element name="dataOffset" type="xs:unsignedInt" dfdl:length="4"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,37 @@
+module DNS;
+
+type DNSHeader = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+type DNSQuestion = unit {
+    qname: string &until=($$ == 0);
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type DNSRR = unit {
+    name: string &until=($$ == 0);
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &length=rdlength;
+};
+
+type DNSMessage = unit {
+    header: DNSHeader;
+    questions: array[DNSQuestion] &length=header.qdcount;
+    answers: array[DNSRR] &length=header.ancount;
+    authorities: array[DNSRR] &length=header.nscount;
+    additionals: array[DNSRR] &length=header.arcount;
+};
+
+public type DNSAnalyzer = unit {
+    dns: DNSMessage;
+} &byteorder=bigendian;

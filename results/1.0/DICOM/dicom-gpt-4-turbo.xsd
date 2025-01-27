@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    targetNamespace="http://example.com/dicom"
+    xmlns:tns="http://example.com/dicom">
+
+  <xs:include schemaLocation="DFDLGeneralAnnotations.xsd"/>
+  
+  <xs:complexType name="FileHeader">
+    <xs:sequence>
+      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="ascii" dfdl:terminator="00"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataElement">
+    <xs:sequence>
+      <xs:element name="GroupTag" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ElementTag" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="ascii"/>
+      <xs:element name="Reserved" type="xs:byte" dfdl:occursCount="1" dfdl:lengthKind="implicit" dfdl:initiator="00"/>
+      <xs:element name="Length" type="xs:int" dfdl:byteOrder="littleEndian"/>     
+      <xs:element name="Value" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="base64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DICOMFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="tns:FileHeader"/>
+        <xs:element name="DataElements" type="tns:DataElement" dfdl:occursCountKind="parsed" dfdl:representation="sequence"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

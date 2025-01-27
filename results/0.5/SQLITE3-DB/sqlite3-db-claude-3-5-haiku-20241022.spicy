@@ -1,0 +1,43 @@
+module SQLITE3_DB;
+
+import spicy;
+
+public type SQLiteHeader = unit {
+    magic: bytes(4) where $ == b"SQLi";
+    version: uint32;
+    page_size: uint16;
+    write_version: uint8;
+    read_version: uint8;
+    reserved_space: uint8;
+    max_payload_fraction: uint8;
+    min_payload_fraction: uint8;
+    leaf_payload_fraction: uint8;
+    file_change_counter: uint32;
+    database_size: uint32;
+    first_freelist_page: uint32;
+    freelist_pages: uint32;
+    schema_cookie: uint32;
+    schema_format: uint32;
+    default_cache_size: uint32;
+    largest_root_page: uint32;
+    text_encoding: uint32;
+    user_version: uint32;
+    incremental_vacuum_mode: uint32;
+    application_id: uint32;
+    reserved: bytes(20);
+    version_valid_for: uint32;
+    sqlite_version: uint32;
+
+    on %done {
+        print self;
+    }
+}
+
+public type SQLiteDatabase = unit {
+    header: SQLiteHeader;
+}
+
+public function parse(data: bytes) : SQLiteDatabase {
+    local db = SQLiteDatabase(data);
+    return db;
+}

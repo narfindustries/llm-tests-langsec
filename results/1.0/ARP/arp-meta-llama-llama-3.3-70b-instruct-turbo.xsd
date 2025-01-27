@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ARP"
+           xmlns="http://example.com/ARP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="arp" dfdl:sequenceKind="unordered" dfdl:escapeSchema="##">
+    <xs:complexType>
+      <xs:sequence>
+
+        <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:lengthKind="implicit">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format(GroupRef="ARP_HTYPE_16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="protocolType" type="xs:unsignedShort" dfdl:lengthKind="implicit">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format(GroupRef="Ethernet_Type_16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="hardwareAddressLength" type="xs:unsignedByte" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"/>
+        <xs:element name="protocolAddressLength" type="xs:unsignedByte" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"/>
+
+        <xs:element name="operation" type="xs:unsignedShort" dfdl:lengthKind="implicit">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format(GroupRef="ARP_OP_16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"
+                    dfdl:initiatedContent="true" dfdl:occursCount="6"/>
+        <xs:element name="senderProtocolAddress" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"
+                    dfdl:initiatedContent="true" dfdl:occursCount="4"/>
+        <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"
+                    dfdl:initiatedContent="true" dfdl:occursCount="6"/>
+        <xs:element name="targetProtocolAddress" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:encoding="utf-8"
+                    dfdl:initiatedContent="true" dfdl:occursCount="4"/>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:defineFormat name="ARP_HTYPE_16" type="unsignedShort" length="2" byteOrder="big"/>
+      <dfdl:defineFormat name="Ethernet_Type_16" type="unsignedShort" length="2" byteOrder="big"/>
+      <dfdl:defineFormat name="ARP_OP_16" type="unsignedShort" length="2" byteOrder="big"/>
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

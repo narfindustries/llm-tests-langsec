@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/hl7v2"
+           xmlns:tns="http://example.org/hl7v2"
+           elementFormDefault="qualified">
+
+  <xs:element name="HL7Message">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MSH" type="tns:MSH"/>
+        <xs:element name="OtherSegments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any namespace="##any" processContents="lax"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MSH">
+    <xs:sequence>
+      <xs:element name="Field1" type="xs:string" dfdl:length="3"/>
+      <xs:element name="Field2" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field3" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field4" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field5" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field6" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field7" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field8" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field9" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field10" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field11" type="xs:string" dfdl:length="1"/>
+      <xs:element name="Field12" type="xs:string" dfdl:length="1"/>
+    </xs:sequence>
+    <xs:attribute name="encoding" type="xs:string" use="required" dfdl:occurs="1"/>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="http://www.ogf.org/dfdl/dfdl-1.0/text"/>
+    <dfdl:textLengthKind>explicit</dfdl:textLengthKind>
+    <dfdl:separator>CRLF</dfdl:separator>
+    <dfdl:representation>text</dfdl:representation>
+    <dfdl:escapeScheme>none</dfdl:escapeScheme>
+    <dfdl:encoding>UTF-8</dfdl:encoding>
+  </dfdl:defineSchema>
+
+</xs:schema>

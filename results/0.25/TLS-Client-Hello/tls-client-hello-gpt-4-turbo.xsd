@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/tls-client-hello"
+           xmlns:tns="http://example.com/dfdl/tls-client-hello">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:tlsBaseFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ProtocolVersion">
+    <xs:sequence>
+      <xs:element name="major" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="minor" type="xs:byte" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Random">
+    <xs:sequence>
+      <xs:element name="gmt_unix_time" type="xs:int" dfdl:length="4"/>
+      <xs:element name="random_bytes" type="xs:hexBinary" dfdl:length="28"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SessionID">
+    <xs:sequence>
+      <xs:element name="length" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="session_id" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CipherSuites">
+    <xs:sequence>
+      <xs:element name="length" type="xs:short" dfdl:length="2"/>
+      <xs:element name="cipher_suites" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompressionMethods">
+    <xs:sequence>
+      <xs:element name="length" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="compression_methods" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TLSClientHello">
+    <xs:sequence>
+      <xs:element name="protocol_version" type="tns:ProtocolVersion"/>
+      <xs:element name="random" type="tns:Random"/>
+      <xs:element name="session_id" type="tns:SessionID"/>
+      <xs:element name="cipher_suites" type="tns:CipherSuites"/>
+      <xs:element name="compression_methods" type="tns:CompressionMethods"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="TLSClientHello" type="tns:TLSClientHello"/>
+
+  <xs:defineFormat name="tlsBaseFormat">
+    <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                 textNumberRep="standard" textBooleanPadCharacter="%SP;"
+                 textNumberPadCharacter="%SP;" textPadKind="none" textTrimKind="none"
+                 lengthKind="delimited" encoding="UTF-8" ignoreCase="no"/>
+  </xs:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,51 @@
+<dfdl:format xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+             name="ELF_Format"
+             alignmentUnits="bytes"
+             lengthUnits="bytes"
+             encoding="ISO-8859-1"
+             byteOrder="bigEndian"
+             bitOrder="mostSignificantBitFirst"
+             occursCountKind="implicit"
+             lengthKind="implicit">
+  <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+             targetNamespace="urn:example:ELF"
+             xmlns:tns="urn:example:ELF"
+             elementFormDefault="qualified">
+    
+    <xs:element name="ELFFile" type="tns:ELFType"/>
+    
+    <xs:complexType name="ELFType">
+      <xs:sequence>
+        <xs:element name="e_ident" type="tns:IdentType" dfdl:length="16"/>
+        <xs:element name="e_type" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_machine" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_version" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="e_entry" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="e_flags" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="IdentType">
+      <xs:sequence>
+        <xs:element name="magic" type="xs:hexBinary" dfdl:length="4"/>
+        <xs:element name="class" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="data" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="version" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="osabi" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="abiversion" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="pad" type="xs:unsignedByte" dfdl:length="7" dfdl:initiator="{fill(7, %xb0)}"/>
+      </xs:sequence>
+    </xs:complexType>
+
+  </xs:schema>
+</dfdl:format>

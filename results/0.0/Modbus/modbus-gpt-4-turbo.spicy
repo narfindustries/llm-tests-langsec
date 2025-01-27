@@ -1,0 +1,49 @@
+module Modbus;
+
+public type ExceptionFunction = unit {
+    functionCode: uint8 &convert=Modbus::ExceptionFunctionCode;
+    exceptionCode: uint8;
+};
+
+public type ADU = unit {
+    transactionId: uint16;
+    protocolId: uint16;
+    length: uint16;
+    unitId: uint8;
+    pdu: PDU;
+};
+
+public type PDU = unit {
+    functionCode: uint8;
+    data: switch (self.functionCode) {
+        1, 2, 3, 4, 5, 6, 15, 16 -> ModbusData(self.functionCode);
+        129, 130, 131, 132, 133, 134, 145, 146 -> ExceptionFunction;
+        * -> bytes &size=self.length - 2;
+    };
+};
+
+public type ModbusData = unit(functionCode: uint8) {
+    values: switch (functionCode) {
+        1, 2 -> CoilStatus;
+        3, 4 -> RegisterValues;
+        5, 6, 15, 16 -> WriteSingle;
+        * -> bytes &size=self.length - 2;
+    };
+};
+
+public type CoilStatus = unit {
+    status: uint8[];
+};
+
+public type RegisterValues = unit {
+    values: uint16[];
+};
+
+public type WriteSingle = unit {
+    address: uint16;
+    value: uint16;
+};
+
+event zeek_init() {
+    print "Zeek module for Modbus protocol loaded.";
+}

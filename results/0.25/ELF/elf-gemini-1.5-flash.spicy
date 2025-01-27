@@ -1,0 +1,22 @@
+#include <base64.zeek>
+
+function test_base64_encode(input: string) : string
+{
+	return base64_encode(input);
+}
+
+function test_base64_decode(input: string) : string
+{
+	return base64_decode(input);
+}
+
+event zeek_test_base64()
+{
+	print("Base64 Encoding Test:");
+	print(test_base64_encode("Hello, world!"));
+
+	print("\nBase64 Decoding Test:");
+	print(test_base64_decode("SGVsbG8sIHdvcmxkIQ=="));
+}
+
+zeek_test_base64();

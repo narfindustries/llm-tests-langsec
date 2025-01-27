@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/MQTT"
+           xmlns:tt="http://example.com/MQTT"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="MQTT-DFDL-types.xsd"/>
+
+  <xs:element name="MQTTMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tt:FixedHeader" dfdl:occurs="1..1"/>
+        <xs:element ref="tt:VariableHeader" dfdl:occurs="0..1"/>
+        <xs:element ref="tt:Payload" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="FixedHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MessageType" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:lengthKind="delimited" dfdl:sequenceKind="optional">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+              <dfdl:length>variable</dfdl:length>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="VariableHeader" dfdl:occurs="0..1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>text</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="2">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Payload" dfdl:occurs="0..1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="connectFlags">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="UsernameFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PasswordFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="WillRetain" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="WillQoS" type="xs:unsignedByte" dfdl:length="2" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="WillFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="CleanSession" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:representation>binary</dfdl:representation>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

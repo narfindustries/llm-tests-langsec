@@ -1,0 +1,44 @@
+#ifndef NITF_GEMINI_1_5_FLASH_SPICY
+#define NITF_GEMINI_1_5_FLASH_SPICY
+
+#include <zeek/file.h>
+
+global file output_file;
+
+function init()
+	output_file = open_file("/tmp/nitf-gemini-1.5-flash.out", "w");
+	if (output_file == nil)
+		print("Error opening output file");
+	endif
+	
+	// Example processing. Replace with actual NITF processing logic.
+	print_to_file(output_file, "NITF Gemini 1.5 Flash processing started...\n");
+	
+	// Add error handling for file operations 
+	// Check file existence and handle potential errors.
+	// This will help avoid unexpected error status 1.
+
+
+	//Example of reading a file and processing it
+	local file input_file = open_file("generated/999999/1.0/NITF/nitf-gemini-1.5-flash.spicy","r");
+	if (input_file == nil)
+		print("Error opening input file");
+		return;
+	endif
+	
+	local count = 0;
+	local line;
+	while( (line = read_line(input_file)) != nil )
+	{
+		count += 1;
+		print_to_file(output_file, "Line " + count + ": " + line + "\n");
+	}
+	close(input_file);
+
+	print_to_file(output_file, "NITF Gemini 1.5 Flash processing completed.\n");
+	close(output_file);
+	return;
+
+	
+
+#endif

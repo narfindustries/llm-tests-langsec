@@ -1,0 +1,89 @@
+module GIF;
+
+public type LogicalScreenDescriptor = unit {
+    canvasWidth: uint16;
+    canvasHeight: uint16;
+    packedFields: uint8;
+    backgroundColorIndex: uint8;
+    pixelAspectRatio: uint8;
+};
+
+public type ImageDescriptor = unit {
+    leftPosition: uint16;
+    topPosition: uint16;
+    width: uint16;
+    height: uint16;
+    packedFields: uint8;
+};
+
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type GlobalColorTable = unit {
+    entries: ColorTableEntry[] &size=globalColorTableSize;
+};
+
+public type ImageData = unit {
+    lzwMinimumCodeSize: uint8;
+    imageData: bytes &eod;
+};
+
+public type Block = unit {
+    introducer: uint8;
+    label: uint8;
+    blockSize: uint8;
+    data: switch (self.label) {
+        0xF9 -> graphicControl: GraphicControl;
+        0x01 -> plainText: PlainText;
+        0xFE -> comment: Comment;
+        0xFF -> application: Application;
+        default -> data: bytes &size=self.blockSize;
+    };
+    blockTerminator: uint8;
+};
+
+public type GIF = unit {
+    header: bytes &size=6;
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable: GlobalColorTable &if=(self.logicalScreenDescriptor.packedFields & 0x80) != 0;
+    contents: ImageData[];
+
+    on %done {
+        print "Finished parsing GIF file.";
+    }
+};
+
+public type GraphicControl = unit {
+    blockSize: uint8;
+    packedFields: uint8;
+    delayTime: uint16;
+    transparentColorIndex: uint8;
+    terminator: uint8;
+};
+
+public type PlainText = unit {
+    blockSize: uint8;
+    textGridLeftPosition: uint16;
+    textGridTopPosition: uint16;
+    textGridWidth: uint16;
+    textGridHeight: uint16;
+    characterCellWidth: uint8;
+    characterCellHeight: uint8;
+    textForegroundColorIndex: uint8;
+    textBackgroundColorIndex: uint8;
+    plainTextData: bytes &eod;
+};
+
+public type Comment = unit {
+    commentData: bytes &eod;
+};
+
+public type Application = unit {
+    blockSize: uint8;
+    applicationIdentifier: bytes &size=8;
+    applicationAuthCode: bytes &size=3;
+    applicationData: bytes &eod;
+};

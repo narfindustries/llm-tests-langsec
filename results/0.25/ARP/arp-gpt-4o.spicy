@@ -1,0 +1,21 @@
+module ARP;
+
+public type ARPMessage = unit {
+    htype: uint16;    # Hardware type
+    ptype: uint16;    # Protocol type
+    hlen: uint8;      # Hardware address length
+    plen: uint8;      # Protocol address length
+    oper: uint16;     # Operation code
+    sha: bytes &length=hlen; # Sender hardware address
+    spa: bytes &length=plen; # Sender protocol address
+    tha: bytes &length=hlen; # Target hardware address
+    tpa: bytes &length=plen; # Target protocol address
+};
+
+public type ARPParser = unit {
+    message: ARPMessage;
+} &byte_order=big;
+
+public hook zeek_init() {
+    Spicy::register_protocol_analyzer(ARP::ARPParser, "arp", "arp");
+}

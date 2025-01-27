@@ -1,0 +1,46 @@
+module HL7;
+
+public type MSH = unit {
+    field_sep: bytes &size=1;
+    encoding_chars: bytes &size=4;
+    sending_application: bytes &until=b"|";
+    sending_facility: bytes &until=b"|";
+    receiving_application: bytes &until=b"|";
+    receiving_facility: bytes &until=b"|";
+    date_time: bytes &until=b"|";
+    security: bytes &until=b"|";
+    message_type: bytes &until=b"|";
+    message_control_id: bytes &until=b"|";
+    processing_id: bytes &until=b"|";
+    version_id: bytes &until=b"|";
+    sequence_number: bytes &until=b"|";
+    continuation_pointer: bytes &until=b"|";
+    accept_ack_type: bytes &until=b"|";
+    application_ack_type: bytes &until=b"|";
+    country_code: bytes &until=b"|";
+    character_set: bytes &until=b"|";
+    principal_language_of_message: bytes &until=b"|";
+    alt_character_set_handling_scheme: bytes &until=b"|";
+    message_profile_identifier: bytes &until=b"|";
+    on "&eod" { self.confirm(); }
+};
+
+public type HL7Message = unit {
+    segments: Segment(self)[] &eod;
+};
+
+public type Segment = unit(parent: HL7Message) {
+    seg_type: bytes &size=3;
+    fields: switch (self.seg_type) {
+        case b"MSH": MSH;
+        default: bytes &rest;
+    };
+};
+
+public type HL7v2 = unit {
+    messages: HL7Message[] &eod;
+};
+
+event zeek_init() {
+    print "Zeek module HL7 initialized.";
+}

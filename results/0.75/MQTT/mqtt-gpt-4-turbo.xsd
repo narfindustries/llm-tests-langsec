@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:mqttGeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="MQTTMessageType">
+        <xs:sequence>
+            <xs:element name="type" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
+            <xs:element name="flags" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MQTTPayload">
+        <xs:sequence>
+            <xs:element name="length" type="xs:int" dfdl:lengthKind="implicit"/>
+            <xs:element name="content" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MQTT">
+        <xs:sequence>
+            <xs:element name="header" type="tns:MQTTMessageType"/>
+            <xs:element name="payload" type="tns:MQTTPayload"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="MQTTMessage" type="tns:MQTT"/>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="mqttGeneralFormat">
+                <dfdl:format byteOrder="bigEndian"
+                             bitOrder="mostSignificantBitFirst"
+                             lengthKind="delimited"
+                             representation="binary"
+                             encoding="utf-8"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+</xs:schema>

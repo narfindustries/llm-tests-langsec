@@ -1,0 +1,33 @@
+#include <zeek/file.zeek>
+
+function zip_gemini_1_5_flash(): string
+{
+    local file_path: string = "/path/to/zip-gemini-1.5-flash.spicy"; //Replace with actual path
+    local file_content: string;
+    
+    if (file_exists(file_path)) {
+        file_content = read_file(file_path);
+        return file_content;
+    } else {
+        return "Error: File not found.";
+    }
+}
+
+event zeek_init()
+{
+    local spicy_code: string = zip_gemini_1_5_flash();
+    
+    if (spicy_code != "Error: File not found.") {
+        //Attempt to compile and run Spicy code (requires appropriate Spicy compiler setup)
+        try {
+            //Replace with actual Spicy compiler command.  Error handling is crucial here.
+            exec("spicyc -o /tmp/output.hlto " + spicy_code); 
+            //Further processing of the compiled output (if needed)
+        } catch (e) {
+            print("Spicy compilation error: " + e);
+        }
+    } else {
+        print(spicy_code);
+    }
+}
+

@@ -1,0 +1,36 @@
+module HL7;
+
+import spicy;
+
+public type Message = unit {
+    : bytes &size=3 == b"MSH";
+    separators: Separators;
+    sending_app: field;
+    sending_facility: field;
+    receiving_app: field;
+    receiving_facility: field;
+    timestamp: field;
+    security: field;
+    message_type: field;
+    message_control_id: field;
+    processing_id: field;
+    version: field;
+
+    segments: list<Segment> &until($$.type != b"");
+
+    type Separators = unit {
+        field_separator: bytes &size=1;
+        encoding_chars: bytes &size=4;
+    }
+
+    type Segment = unit {
+        type: bytes &size=3;
+        fields: list<field> &separator=separators.field_separator;
+    }
+
+    type field = bytes;
+};
+
+public function parse(data: bytes) : Message {
+    return Message(data);
+}

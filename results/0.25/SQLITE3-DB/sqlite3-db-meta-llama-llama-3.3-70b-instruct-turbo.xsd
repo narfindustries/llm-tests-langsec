@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/SQLITE3-DB"
+           xmlns="http://example.com/SQLITE3-DB"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="sqlite3-db-meta">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="database" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="database">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="page-size" type="xs:integer"/>
+        <xs:element name="page-count" type="xs:integer"/>
+        <xs:element ref="table" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="table">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="root-page" type="xs:integer"/>
+        <xs:element name="column-count" type="xs:integer"/>
+        <xs:element ref="column" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="column">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="type" type="xs:string"/>
+        <xs:element name="nullable" type="xs:boolean"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format ref="binary"/>
+  <dfdl:sequence ref="sqlite3-db-meta"/>
+  <dfdl:element ref="sqlite3-db-meta">
+    <dfdl:occurs count="*"/>
+  </dfdl:element>
+  <dfdl:element ref="database">
+    <dfdl:occurs count="*"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="name">
+    <dfdl:format ref="utf8-string"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="page-size">
+    <dfdl:format ref="uint32-be"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="page-count">
+    <dfdl:format ref="uint32-be"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="table">
+    <dfdl:occurs count="*"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="root-page">
+    <dfdl:format ref="uint32-be"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="column-count">
+    <dfdl:format ref="uint32-be"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="column">
+    <dfdl:occurs count="*"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="type">
+    <dfdl:format ref="utf8-string"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+  <dfdl:element ref="nullable">
+    <dfdl:format ref="uint8"/>
+    <dfdl:outputValue calculation="$value"/>
+  </dfdl:element>
+
+  <dfdl:format name="binary" type="binary"/>
+  <dfdl:format name="utf8-string" type="utf8-string"/>
+  <dfdl:format name="uint32-be" type="uint32" byteOrder="big"/>
+  <dfdl:format name="uint8" type="uint8"/>
+
+</xs:schema>

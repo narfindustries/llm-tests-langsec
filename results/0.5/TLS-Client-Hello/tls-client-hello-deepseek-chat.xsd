@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/tls-client-hello"
+           xmlns:tls="http://www.example.org/tls-client-hello"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tls:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TLSClientHello" type="tls:TLSClientHelloType"/>
+
+  <xs:complexType name="TLSClientHelloType">
+    <xs:sequence>
+      <xs:element name="ProtocolVersion" type="tls:ProtocolVersionType"/>
+      <xs:element name="Random" type="tls:RandomType"/>
+      <xs:element name="SessionID" type="tls:SessionIDType"/>
+      <xs:element name="CipherSuites" type="tls:CipherSuitesType"/>
+      <xs:element name="CompressionMethods" type="tls:CompressionMethodsType"/>
+      <xs:element name="Extensions" type="tls:ExtensionsType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProtocolVersionType">
+    <xs:sequence>
+      <xs:element name="Major" type="xs:unsignedByte"/>
+      <xs:element name="Minor" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RandomType">
+    <xs:sequence>
+      <xs:element name="GMTUnixTime" type="xs:unsignedInt"/>
+      <xs:element name="RandomBytes" type="xs:hexBinary" dfdl:length="28"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SessionIDType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedByte"/>
+      <xs:element name="SessionID" type="xs:hexBinary" dfdl:length="{../Length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CipherSuitesType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="CipherSuite" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occursCount="{../Length div 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompressionMethodsType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedByte"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte" maxOccurs="unbounded" dfdl:occursCount="{../Length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionsType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Extension" type="tls:ExtensionType" maxOccurs="unbounded" dfdl:occursCount="{../Length div 4}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:unsignedShort"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" encoding="UTF-8" alignmentUnits="bytes"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

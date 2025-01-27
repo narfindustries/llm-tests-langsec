@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/tiff"
+           xmlns:tiff="http://www.example.org/tiff">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator=""
+                  encoding="UTF-8" byteOrder="bigEndian"
+                  representation="binary" 
+                  occursCountKind="implicit"
+                  lengthKind="explicit"
+                  alignment="1" alignmentUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFF">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Header" type="tiff:HeaderType"/>
+        <xs:element name="ImageData" type="tiff:ImageDataType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ByteOrder" type="xs:string" 
+                  dfdl:length="2" 
+                  dfdl:encoding="ASCII"/>
+      <xs:element name="Version" type="xs:unsignedShort" 
+                  dfdl:length="2"/>
+      <xs:element name="IFDOffset" type="xs:unsignedInt" 
+                  dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDataType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ImageWidth" type="xs:unsignedInt"/>
+      <xs:element name="ImageHeight" type="xs:unsignedInt"/>
+      <xs:element name="PixelData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

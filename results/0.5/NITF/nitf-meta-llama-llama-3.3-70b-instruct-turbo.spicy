@@ -1,0 +1,65 @@
+# Definition of the NITF file format in Zeek Spicy
+file NITF {
+    # File header
+    header: Header;
+
+    # File body
+    body: Body;
+}
+
+# Header section
+type Header {
+    file_header_length: uint16;
+    file_header_fields: FileHeaderFields;
+    file_type: string(4);  # Should be "NITF"
+    file_version: string(5);  # Should be "02.10"
+}
+
+# File header fields
+type FileHeaderFields {
+    file_id: string(25);
+    classification: string(1);
+    title: string(80);
+    security_control_info: string(11);
+    file_date: string(10);
+    file_title: string(80);
+    file_security_classification: string(1);
+}
+
+# Body section
+type Body {
+    image_segments: Segment[ImageSegment];
+    text_segments: Segment[TextSegment];
+    graphics_segments: Segment[GraphicsSegment];
+}
+
+# Segment
+type Segment<T> {
+    segment_type: string(2);  # Should be "IM" for image segments, "TE" for text segments, "GR" for graphics segments
+    segment_length: uint32;
+    data: T;
+}
+
+# Image segment
+type ImageSegment {
+    image_id: string(25);
+    image_date: string(10);
+    image_security_classification: string(1);
+    image_data: bytes($$.segment_length - 34);
+}
+
+# Text segment
+type TextSegment {
+    text_id: string(25);
+    text_date: string(10);
+    text_security_classification: string(1);
+    text_data: string($$.segment_length - 34);
+}
+
+# Graphics segment
+type GraphicsSegment {
+    graphics_id: string(25);
+    graphics_date: string(10);
+    graphics_security_classification: string(1);
+    graphics_data: bytes($$.segment_length - 34);
+}

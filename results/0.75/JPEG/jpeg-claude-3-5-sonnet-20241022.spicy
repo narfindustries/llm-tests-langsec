@@ -1,0 +1,46 @@
+module JPEG;
+
+public type Header = unit {
+    marker1: uint8 &requires = 0xFF;
+    marker2: uint8 &requires = 0xD8;
+    
+    on %done {
+        print "JPEG Start Of Image (SOI) marker found";
+    }
+};
+
+public type Segment = unit {
+    marker1: uint8 &requires = 0xFF;
+    marker2: uint8;
+    length: uint16;
+    data: bytes &size = self.length - 2;
+    
+    on %done {
+        switch ( self.marker2 ) {
+            case 0xE0: print "JFIF APP0 segment";
+            case 0xE1: print "EXIF APP1 segment";
+            case 0xDB: print "Quantization Table";
+            case 0xC0: print "Start Of Frame (baseline)";
+            case 0xC2: print "Start Of Frame (progressive)";
+            case 0xC4: print "Huffman Table";
+            case 0xDA: print "Start Of Scan";
+            case 0xD9: print "End Of Image";
+            default: print "Other JPEG segment";
+        }
+    }
+};
+
+public type File = unit {
+    header: Header;
+    segments: Segment[] &eod;
+};
+
+# Hook that's called at initialization time.
+on JPEG::File::%init {
+    print "Initializing JPEG parser";
+}
+
+# Hook that's called when parsing has finished.
+on JPEG::File::%done {
+    print "Finished parsing JPEG file";
+}

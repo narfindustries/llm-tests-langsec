@@ -1,0 +1,52 @@
+module Modbus;
+
+import spicy;
+import zeek;
+
+public type ModbusRequest = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    data: bytes &restofdata;
+};
+
+public type ModbusResponse = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    data: bytes &restofdata;
+};
+
+public type ModbusMessage = unit {
+    is_request: bool;
+    body: case is_request of {
+        true  -> ModbusRequest,
+        false -> ModbusResponse
+    };
+};
+
+public global modbus_request: event(msg: ModbusRequest);
+public global modbus_response: event(msg: ModbusResponse);
+
+public function process_modbus_message(msg: ModbusMessage) {
+    if ( msg.is_request ) {
+        event modbus_request(msg.body as ModbusRequest);
+    }
+    else {
+        event modbus_response(msg.body as ModbusResponse);
+    }
+}
+
+public module Parser = spicy::Parser for ModbusMessage {
+    on %done {
+        process_modbus_message(self);
+    }
+};
+
+public hook zeek_init() {
+    Parser::register();
+}

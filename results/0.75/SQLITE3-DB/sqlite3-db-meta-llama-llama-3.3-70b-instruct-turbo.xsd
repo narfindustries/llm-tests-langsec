@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db-meta"
+           xmlns:tns="http://example.com/sqlite3-db-meta"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xml"/>
+
+  <xs:element name="sqlite3-db-meta">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:fixedLengthFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="database" type="tns:databaseType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="databaseType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="page_size" type="xs:integer"/>
+      <xs:element name="file_format" type="xs:string"/>
+      <xs:element name="table" type="tns:tableType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tableType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="column" type="tns:columnType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="columnType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="data_type" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="fixedLengthFormat" type="tns:fixedLengthFormatType"/>
+
+  <xs:complexType name="fixedLengthFormatType">
+    <xs:sequence>
+      <xs:element name="record" type="tns:recordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="field" type="tns:fieldType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="separator" type="xs:string" fixed=","/>
+  </xs:complexType>
+
+  <xs:complexType name="fieldType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="type" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="output_dfdl">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:outputFormat ref="tns:outputFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="record" type="tns:outputRecordType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="outputRecordType">
+    <xs:sequence>
+      <xs:element name="field" type="tns:outputFieldType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="separator" type="xs:string" fixed=","/>
+  </xs:complexType>
+
+  <xs:complexType name="outputFieldType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="type" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+</xs:schema>

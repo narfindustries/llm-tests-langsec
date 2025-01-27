@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/specificationModel/dfdl-1.0/"
+           targetNamespace="urn:gzip"
+           xmlns:tns="urn:gzip">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/specificationModel/dfdl-1.0/">
+      <dfdl:format 
+        representation="binary"
+        alignmentUnits="bytes"
+        alignment="1"
+        bitOrder="mostSignificantBitFirst"
+        byteOrder="bigEndian"
+        fillByte="%#x00"
+        escapeScheme="none"
+        occursCountKind="parsed"
+        textNumberPattern="#0"
+        textNumberJustification="right"
+        textTrimKind="none"
+        textPadKind="none"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="gzipFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="header" type="tns:gzipHeader"/>
+        <xs:element name="compressedBlocks" type="tns:compressedData"/>
+        <xs:element name="trailer" type="tns:gzipTrailer"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="gzipHeader">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="magicNumber" type="xs:hexBinary" 
+        dfdl:length="2" 
+        dfdl:lengthKind="explicit"
+        dfdl:inputValuePattern="1F8B"/>
+      <xs:element name="compressionMethod" type="xs:unsignedByte" 
+        dfdl:length="1" 
+        dfdl:lengthKind="explicit"/>
+      <xs:element name="flags" type="xs:unsignedByte" 
+        dfdl:length="1" 
+        dfdl:lengthKind="explicit"/>
+      <xs:element name="modificationTime" type="xs:unsignedInt" 
+        dfdl:length="4" 
+        dfdl:lengthKind="explicit"/>
+      <xs:element name="extraFlags" type="xs:unsignedByte" 
+        dfdl:length="1" 
+        dfdl:lengthKind="explicit"/>
+      <xs:element name="operatingSystem" type="xs:unsignedByte" 
+        dfdl:length="1" 
+        dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="compressedData">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="deflateBlock" type="xs:hexBinary" 
+        dfdl:lengthKind="implicit" 
+        dfdl:encoding="deflate"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gzipTrailer">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="crc32" type="xs:unsignedInt" 
+        dfdl:length="4" 
+        dfdl:lengthKind="explicit"/>
+      <xs:element name="originalSize" type="xs:unsignedInt" 
+        dfdl:length="4" 
+        dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

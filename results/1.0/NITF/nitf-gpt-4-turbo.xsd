@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define a simple example of a DFDL schema for a file format like NITF (National Imagery Transmission Format) -->
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:basicFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+  
+  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+
+  <!-- Root element -->
+  <xs:element name="NITF" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- File Header section -->
+        <xs:element name="FileHeader" type="xs:string" dfdl:length="10" dfdl:lengthKind="explicit"/>
+        <xs:element name="FileType" type="xs:string" dfdl:length="14" dfdl:lengthKind="explicit"/>
+        <xs:element name="FileClass" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+        <xs:element name="FileDateTime" type="xs:string" dfdl:length="14" dfdl:lengthKind="explicit"/>
+        <xs:element name="FileTitle" type="xs:string" dfdl:length="80" dfdl:lengthKind="explicit"/>
+        
+        <!-- Image Segment -->
+        <xs:element name="ImageSegment" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageID" type="xs:string" dfdl:length="10" dfdl:lengthKind="explicit"/>
+              <xs:element name="ImageDate" type="xs:string" dfdl:length="14" dfdl:lengthKind="explicit"/>
+              <xs:element name="ImageType" type="xs:string" dfdl:length="3" dfdl:lengthKind="explicit"/>
+              <xs:element name="ImageSize" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="5"/>
+              <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="prefixed" dfdl:lengthUnits="bytes" dfdl:length="{../ImageSize}"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Metadata -->
+        <xs:element name="Metadata" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="MetaID" type="xs:string" dfdl:length="10" dfdl:lengthKind="explicit"/>
+              <xs:element name="MetaValue" type="xs:string" dfdl:lengthKind="delimited"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="basicFormatType">
+    <xs:restriction base="xs:string">
+      <xs:whiteSpace value="replace"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="basicFormat">
+        <dfdl:format textBidi="no"
+                     representation="text"
+                     lengthKind="delimited"
+                     textStringJustification="left"
+                     textPadKind="none"
+                     textTrimKind="none"
+                     textNumberBase="10"
+                     ignoreCase="no"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

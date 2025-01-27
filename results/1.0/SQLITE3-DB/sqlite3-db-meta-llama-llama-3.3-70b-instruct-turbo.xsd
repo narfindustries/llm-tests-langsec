@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db-meta"
+           xmlns="http://example.com/sqlite3-db-meta"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+
+  <xs:element name="sqlite3-db">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="database" minOccurs="0" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="database">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string" dfdl:length="256"/>
+        <xs:element name="page-size" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="checksum" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="root-page" type="xs:integer" dfdl:length="4"/>
+        <xs:element ref="table" minOccurs="0" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="table">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string" dfdl:length="256"/>
+        <xs:element name="columns" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="schema-cookie" type="xs:integer" dfdl:length="4"/>
+        <xs:element ref="column" minOccurs="0" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="column">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string" dfdl:length="256"/>
+        <xs:element name="type" type="xs:string" dfdl:length="16"/>
+        <xs:element name="not-null" type="xs:boolean" dfdl:length="1"/>
+        <xs:element name="default-value" type="xs:string" dfdl:length="256" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

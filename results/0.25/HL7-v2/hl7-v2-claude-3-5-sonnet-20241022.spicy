@@ -1,0 +1,28 @@
+module HL7;
+
+public type Message = unit {
+    segments: Segment[];
+} &eod;
+
+type Segment = unit {
+    : b"\r";
+    segment_type: bytes &until=b"|";
+    fields: Field[];
+    : b"\r\n";
+};
+
+type Field = unit {
+    value: bytes &until=b"|";
+};
+
+on Message::%done {
+    print self;
+}
+
+on Segment::%done {
+    print self.segment_type;
+}
+
+on Field::%done {
+    print self.value;
+}

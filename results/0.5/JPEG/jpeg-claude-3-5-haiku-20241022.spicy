@@ -1,0 +1,69 @@
+module JPEG;
+
+import spicy;
+
+public type File = unit {
+    start_marker: StartMarker;
+    segments: Segment[];
+
+    on %init { self.segments = []; }
+};
+
+type StartMarker = unit {
+    marker: bytes &size=2 where $$.starts_with(b"\xff\xd8");
+};
+
+type Segment = unit {
+    marker: bytes &size=2;
+    length: uint16 &convert=network_order;
+    data: bytes &size=(self.length - 2) if ( self.marker != b"\xff\xda" );
+    
+    on %init {
+        switch (self.marker) {
+            b"\xff\xc0" -> self.data as SOF0Marker;
+            b"\xff\xc4" -> self.data as HuffmanTableMarker;
+            b"\xff\xdb" -> self.data as QuantizationTableMarker;
+            b"\xff\xda" -> self.data as ScanMarker;
+        }
+    }
+};
+
+type SOF0Marker = unit {
+    precision: uint8;
+    height: uint16 &convert=network_order;
+    width: uint16 &convert=network_order;
+    components: uint8;
+};
+
+type HuffmanTableMarker = unit {
+    tables: HuffmanTable[];
+    
+    on %init { self.tables = []; }
+};
+
+type HuffmanTable = unit {
+    table_class: uint8;
+    table_identifier: uint8;
+    lengths: uint8[16];
+    values: bytes;
+};
+
+type QuantizationTableMarker = unit {
+    tables: QuantTable[];
+    
+    on %init { self.tables = []; }
+};
+
+type QuantTable = unit {
+    precision: uint8;
+    table: bytes;
+};
+
+type ScanMarker = unit {
+    components: uint8;
+    spectral_start: uint8;
+    spectral_end: uint8;
+    approx_high: uint8;
+    approx_low: uint8;
+    compressed_data: bytes;
+};

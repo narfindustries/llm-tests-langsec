@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/arp"
+           xmlns="http://example.org/arp"
+           elementFormDefault="qualified">
+
+  <xs:element name="arp_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType"/>
+        <xs:element name="data" type="DataType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="footer" type="FooterType"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:format ref="format1"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="field3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="field4" type="xs:decimal" dfdl:length="8" dfdl:fractionDigits="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="field5" type="xs:string" dfdl:length="15"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="format1">
+        <dfdl:textStandardEncoding>UTF-8</dfdl:textStandardEncoding>
+        <dfdl:textSeparator>
+          <dfdl:separator>CRLF</dfdl:separator>
+        </dfdl:textSeparator>
+        <dfdl:binaryEncoding>bigEndian</dfdl:binaryEncoding>
+        <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

@@ -1,0 +1,37 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes &size=4;
+    version: uint8;
+    flags: uint8;
+    header_length: uint16;
+    data_length: uint32;
+};
+
+public type Segment = unit {
+    segment_type: uint8;
+    segment_length: uint32;
+    data: bytes &size=segment_length;
+};
+
+public type File = unit {
+    header: Header;
+    segments: Segment[] &until($input.size() == 0);
+};
+
+on File::%init {
+    if ( self.header.magic != b"NITF" )
+        throw InvalidFormat("Invalid magic number");
+}
+
+on File::%done {
+    if ( self.header.data_length != $input.size() )
+        throw InvalidFormat("Data length mismatch");
+}
+
+on Segment::%done {
+    if ( self.segment_length != self.data.size() )
+        throw InvalidFormat("Segment length mismatch");
+}

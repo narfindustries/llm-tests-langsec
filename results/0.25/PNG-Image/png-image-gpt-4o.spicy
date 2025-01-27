@@ -1,0 +1,33 @@
+module PNG;
+
+public type PNG = unit {
+    magic: bytes &length=8 &check=$$ == "\x89PNG\r\n\x1a\n";
+
+    chunks: Chunk[] &until=io.eof;
+
+    on %done {
+        print fmt("Parsed PNG with %d chunks", chunks.length());
+    }
+};
+
+type Chunk = unit {
+    length: uint32;
+
+    type: string &length=4;
+
+    data: bytes &length=length;
+
+    crc: uint32;
+
+    on %done {
+        local computed_crc = crc32(type + data);
+        if (computed_crc != crc) {
+            print fmt("CRC mismatch: expected %x, got %x", crc, computed_crc);
+        }
+    }
+};
+
+function crc32(data: bytes): uint32 {
+    # This is a placeholder function. You need to implement the CRC32 calculation.
+    return 0;
+}

@@ -1,0 +1,58 @@
+module HTTP_1_1;
+
+import spicy;
+
+type Version = enum {
+    HTTP_1_0 = b"HTTP/1.0",
+    HTTP_1_1 = b"HTTP/1.1"
+};
+
+type Method = enum {
+    GET     = b"GET",
+    POST    = b"POST",
+    PUT     = b"PUT",
+    DELETE  = b"DELETE",
+    HEAD    = b"HEAD",
+    OPTIONS = b"OPTIONS",
+    CONNECT = b"CONNECT",
+    TRACE   = b"TRACE",
+    PATCH   = b"PATCH"
+};
+
+type Request = unit {
+    method: Method;
+    uri: bytes &eod;
+    version: Version;
+    headers: Header[] &until($$ == b"\r\n\r\n");
+    body: bytes &size=0;
+};
+
+type Header = unit {
+    name: bytes &until=b":";
+    value: bytes &until=b"\r\n";
+};
+
+type Response = unit {
+    version: Version;
+    status_code: uint16;
+    reason_phrase: bytes &until=b"\r\n";
+    headers: Header[] &until($$ == b"\r\n\r\n");
+    body: bytes &size=0;
+};
+
+on Request::%done {
+    print self.method, self.uri, self.version;
+    for (h in self.headers)
+        print h.name, h.value;
+}
+
+on Response::%done {
+    print self.version, self.status_code, self.reason_phrase;
+    for (h in self.headers)
+        print h.name, h.value;
+}
+
+export {
+    HTTP_1_1::Request as HTTP_Request;
+    HTTP_1_1::Response as HTTP_Response;
+}

@@ -1,0 +1,172 @@
+# Define the HL7 message structure
+type HL7_Message = record {
+  msg_type: bytestring(3);
+  encoding_chars: bytestring(4);
+  sending_facility: bytestring(3);
+  sending_app: bytestring(3);
+  receiving_facility: bytestring(3);
+  receiving_app: bytestring(3);
+  msg_date: bytestring(8);
+  msg_time: bytestring(6);
+  seq_num: bytestring(6);
+  continuity_ptr: bytestring;
+  segment: +Segment;
+};
+
+# Define the Segment structure
+type Segment = record {
+  seg_id: bytestring(3);
+  fields: +Field;
+};
+
+# Define the Field structure
+type Field = record {
+  field_num: int;
+  repetition: int;
+  component: +Component;
+};
+
+# Define the Component structure
+type Component = record {
+  component_num: int;
+  subcomponent: +Subcomponent;
+};
+
+# Define the Subcomponent structure
+type Subcomponent = record {
+  subcomponent_num: int;
+  data: bytestring;
+};
+
+# Define the encoding characters
+const encoding_chars: bytestring = "|^~\&";
+
+# Define the segment terminator
+const segment_terminator: bytestring = "\r";
+
+# Define the field separator
+const field_separator: bytestring = "|";
+
+# Define the component separator
+const component_separator: bytestring = "^";
+
+# Define the repetition separator
+const repetition_separator: bytestring = "~";
+
+# Define the escape character
+const escape_char: bytestring = "\&";
+
+# Define the HL7 message parser
+parser HL7_Parse(msg: bytestring): HL7_Message = {
+  # Parse the message type
+  msg_type := msg[0..2];
+
+  # Parse the encoding characters
+  encoding_chars := msg[3..6];
+
+  # Parse the sending facility
+  sending_facility := msg[7..9];
+
+  # Parse the sending application
+  sending_app := msg[10..12];
+
+  # Parse the receiving facility
+  receiving_facility := msg[13..15];
+
+  # Parse the receiving application
+  receiving_app := msg[16..18];
+
+  # Parse the message date
+  msg_date := msg[19..26];
+
+  # Parse the message time
+  msg_time := msg[27..32];
+
+  # Parse the sequence number
+  seq_num := msg[33..38];
+
+  # Parse the continuity pointer
+  continuity_ptr := msg[39..];
+
+  # Parse the segments
+  segment := +parse_segment(msg[40..]);
+
+  # Return the parsed HL7 message
+  return {
+    msg_type: msg_type,
+    encoding_chars: encoding_chars,
+    sending_facility: sending_facility,
+    sending_app: sending_app,
+    receiving_facility: receiving_facility,
+    receiving_app: receiving_app,
+    msg_date: msg_date,
+    msg_time: msg_time,
+    seq_num: seq_num,
+    continuity_ptr: continuity_ptr,
+    segment: segment,
+  };
+};
+
+# Define the segment parser
+parser parse_segment(seg: bytestring): Segment = {
+  # Parse the segment ID
+  seg_id := seg[0..2];
+
+  # Parse the fields
+  fields := +parse_field(seg[3..]);
+
+  # Return the parsed segment
+  return {
+    seg_id: seg_id,
+    fields: fields,
+  };
+};
+
+# Define the field parser
+parser parse_field(field: bytestring): Field = {
+  # Parse the field number
+  field_num := int(field[0]);
+
+  # Parse the repetition
+  repetition := int(field[1]);
+
+  # Parse the components
+  component := +parse_component(field[2..]);
+
+  # Return the parsed field
+  return {
+    field_num: field_num,
+    repetition: repetition,
+    component: component,
+  };
+};
+
+# Define the component parser
+parser parse_component(comp: bytestring): Component = {
+  # Parse the component number
+  component_num := int(comp[0]);
+
+  # Parse the subcomponents
+  subcomponent := +parse_subcomponent(comp[1..]);
+
+  # Return the parsed component
+  return {
+    component_num: component_num,
+    subcomponent: subcomponent,
+  };
+};
+
+# Define the subcomponent parser
+parser parse_subcomponent(subcomp: bytestring): Subcomponent = {
+  # Parse the subcomponent number
+  subcomponent_num := int(subcomp[0]);
+
+  # Parse the data
+  data := subcomp[1..];
+
+  # Return the parsed subcomponent
+  return {
+    subcomponent_num: subcomponent_num,
+    data: data,
+  };
+};

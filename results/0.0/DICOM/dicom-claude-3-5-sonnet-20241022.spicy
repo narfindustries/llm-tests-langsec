@@ -1,0 +1,61 @@
+module DICOM;
+
+import spicy;
+
+public type PDU = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    
+    switch ( prefix ) {
+        b"DICM" -> : DICOM_Dataset;
+        * -> : void;
+    };
+};
+
+type DICOM_Dataset = unit {
+    elements: DICOM_Element[];
+};
+
+type DICOM_Element = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: bytes &size=2;
+    
+    switch ( self.vr ) {
+        b"OB" -> : OB_Element;
+        b"OW" -> : OW_Element;
+        b"SQ" -> : SQ_Element;
+        * -> : Standard_Element;
+    };
+};
+
+type Standard_Element = unit {
+    length: uint16;
+    value: bytes &size=self.length;
+};
+
+type OB_Element = unit {
+    reserved: uint16;
+    length: uint32;
+    value: bytes &size=self.length;
+};
+
+type OW_Element = unit {
+    reserved: uint16;
+    length: uint32;
+    value: bytes &size=self.length;
+};
+
+type SQ_Element = unit {
+    reserved: uint16;
+    length: uint32;
+    items: DICOM_Dataset[] &until=$input.length() == 0;
+};
+
+on PDU::preamble -> event DICOM::preamble($data);
+on DICOM_Element::tag_group -> event DICOM::tag_group(self.tag_group);
+on DICOM_Element::tag_element -> event DICOM::tag_element(self.tag_element);
+on DICOM_Element::vr -> event DICOM::vr(self.vr);
+on Standard_Element::value -> event DICOM::value(self.value);
+on OB_Element::value -> event DICOM::value(self.value);
+on OW_Element::value -> event DICOM::value(self.value);

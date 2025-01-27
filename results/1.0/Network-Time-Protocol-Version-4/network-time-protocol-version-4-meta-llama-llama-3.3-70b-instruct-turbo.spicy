@@ -1,0 +1,72 @@
+# Define the NTP protocol version 4
+type NTPv4 = record {
+    leap:        uint8, # 2 bits, leap indicator
+    version:     uint8, # 3 bits, version number
+    mode:        uint8, # 3 bits, mode
+    stratum:     uint8, # 8 bits, stratum
+    poll:        uint8, # 8 bits, poll interval
+    precision:   uint8, # 8 bits, precision
+    delay:       uint32, # 32 bits, delay
+    dispersion:  uint32, # 32 bits, dispersion
+    identifier:  uint32, # 32 bits, reference clock identifier
+    ref_time:    uint64, # 64 bits, reference timestamp
+    orig_time:   uint64, # 64 bits, originate timestamp
+    recv_time:   uint64, # 64 bits, receive timestamp
+    trans_time:  uint64, # 64 bits, transmit timestamp
+};
+
+# Define a flow that uses NTPv4 messages
+type NTPv4Flow = flow {
+    ntpv4: NTPv4;
+};
+
+# Define a parser for NTPv4 messages
+ntp_parser = parser {
+    # Skip the leap, version, and mode bits
+    skip 1;
+
+    # Parse the stratum, poll, and precision
+    stratum <- uint8;
+    poll <- uint8;
+    precision <- uint8;
+
+    # Parse the delay, dispersion, and identifier
+    delay <- uint32;
+    dispersion <- uint32;
+    identifier <- uint32;
+
+    # Parse the reference timestamp
+    ref_time <- uint64;
+
+    # Parse the originate, receive, and transmit timestamps
+    orig_time <- uint64;
+    recv_time <- uint64;
+    trans_time <- uint64;
+};
+
+# Define an event for NTPv4 messages
+event ntpv4_message(c: connection, ntpv4: NTPv4) {
+    print "NTPv4 message received";
+};
+
+# Define an actions for NTPv4 messages
+action ntpv4_action(c: connection, ntpv4: NTPv4) {
+    print "NTPv4 message action";
+};
+
+# Add the NTPv4 parser to the Zeek parser
+ Zeek::add_parser(ntp_parser, "ntp/4");
+
+# Define an event handler for NTPv4 messages
+event Zeek::parser_done(c: connection, p: parser) {
+    if (p == ntp_parser) {
+        ntpv4_message(c, ntpv4);
+    }
+};
+
+# Define an action handler for NTPv4 messages
+event Zeek::action_done(c: connection, a: action) {
+    if (a == ntpv4_action) {
+        ntpv4_action(c, ntpv4);
+    }
+};

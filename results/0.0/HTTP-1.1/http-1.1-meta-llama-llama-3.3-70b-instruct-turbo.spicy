@@ -1,0 +1,73 @@
+# HTTP-1.1 Zeek Spicy Specification
+
+%header {
+    # Import necessary modules
+    @load base/protocols/http
+    @load zeek/spicy
+}
+
+%config {
+    # Define the protocol and its version
+    protocol: HTTP
+    version: 1.1
+}
+
+%definition http_request {
+    # Define the structure of an HTTP request
+    method: string(1..10) &byte_test(method, "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "PATCH")
+    space: byte(0x20)
+    request_uri: string(1..1000) &byte_test(request_uri, /^\/.*$/)
+    space: byte(0x20)
+    http_version: string(8) &byte_test(http_version, "HTTP/1.1")
+    crlf: byte(0x0d, 0x0a)
+
+    # Define the structure of HTTP headers
+    headers: *(
+        header_name: string(1..50) &byte_test(header_name, /^[a-zA-Z-]+$/)
+        colon: byte(0x3a)
+        space: byte(0x20)
+        header_value: string(1..1000) &byte_test(header_value, /.*/)
+        crlf: byte(0x0d, 0x0a)
+    )
+
+    # Define the structure of the request body
+    body: string(0..10000) &byte_test(body, /.*/)
+}
+
+%definition http_response {
+    # Define the structure of an HTTP response
+    http_version: string(8) &byte_test(http_version, "HTTP/1.1")
+    space: byte(0x20)
+    status_code: string(3) &byte_test(status_code, /^[0-9]{3}$/)
+    space: byte(0x20)
+    reason_phrase: string(1..50) &byte_test(reason_phrase, /.*/)
+    crlf: byte(0x0d, 0x0a)
+
+    # Define the structure of HTTP headers
+    headers: *(
+        header_name: string(1..50) &byte_test(header_name, /^[a-zA-Z-]+$/)
+        colon: byte(0x3a)
+        space: byte(0x20)
+        header_value: string(1..1000) &byte_test(header_value, /.*/)
+        crlf: byte(0x0d, 0x0a)
+    )
+
+    # Define the structure of the response body
+    body: string(0..10000) &byte_test(body, /.*/)
+}
+
+%parser http_parser {
+    # Define the parser for HTTP requests and responses
+    request: http_request
+    response: http_response
+}
+
+%node http_node {
+    # Define the node for HTTP parsing
+    parser: http_parser
+}
+
+%unit http_unit {
+    # Define the unit for HTTP parsing
+    node: http_node
+}

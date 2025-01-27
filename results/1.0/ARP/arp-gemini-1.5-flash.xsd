@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/arp"
+           xmlns="http://example.org/arp"
+           elementFormDefault="qualified">
+
+  <xs:element name="arp_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
+        <xs:element name="data" type="dataType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
+        <xs:element name="footer" type="footerType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left"/>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:representation="text" dfdl:textPattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"/>
+
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+      <xs:sequence>
+          <xs:element name="record" type="recordType" dfdl:occursCountKind="unbounded"/>
+      </xs:sequence>
+  </xs:complexType>
+
+    <xs:complexType name="recordType">
+        <xs:sequence>
+            <xs:element name="field1" type="xs:string" dfdl:length="10"/>
+            <xs:element name="field2" type="xs:integer"/>
+            <xs:element name="field3" type="xs:decimal" dfdl:length="8" dfdl:fractionDigits="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+
+  <xs:complexType name="footerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:element name="arp_gemini_1" dfdl:lengthKind="implicit" dfdl:byteOrder="bigEndian"/>
+
+</xs:schema>

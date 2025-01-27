@@ -1,0 +1,43 @@
+module TIFF;
+
+import spicy;
+
+public type Header = unit {
+    byte_order: bytes &size=2;
+    version: uint16;
+    ifd_offset: uint32;
+
+    on %init {
+        if ( self.byte_order != b"II" && self.byte_order != b"MM" ) {
+            self.stop();
+        }
+    }
+};
+
+type IFDEntry = unit {
+    tag: uint16;
+    field_type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+type IFD = unit {
+    entry_count: uint16;
+    entries: IFDEntry[self.entry_count];
+    next_ifd_offset: uint32;
+};
+
+public type File = unit {
+    header: Header;
+    : skip bytes &size=self.header.ifd_offset - 8;
+    ifd: IFD;
+};
+
+on File::%done {
+    print "TIFF file processed";
+}
+
+on IFDEntry::%done {
+    print fmt("IFD Entry - Tag: %d, Type: %d, Count: %d, Value/Offset: %d",
+        self.tag, self.field_type, self.count, self.value_offset);
+}

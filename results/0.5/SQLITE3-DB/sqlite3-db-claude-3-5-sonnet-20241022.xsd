@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:sqlite="urn:sqlite:db:format"
+    targetNamespace="urn:sqlite:db:format">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthUnits="bytes"
+                lengthKind="implicit"
+                encoding="UTF-8"
+                initiator="" terminator=""
+                textNumberRep="standard"
+                ignoreCase="no"
+                textPadKind="none"
+                trailingSkip="0"
+                leadingSkip="0"
+                fillByte="%#r00"
+                textTrimKind="none"
+                truncateSpecifiedLengthString="no"
+                escapeSchemeRef=""/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="sqlite3_file">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="magic_header" type="xs:string" dfdl:length="16" dfdl:lengthKind="explicit"/>
+                            <xs:element name="page_size" type="xs:unsignedShort"/>
+                            <xs:element name="file_format_version" type="xs:unsignedByte"/>
+                            <xs:element name="file_format_read_version" type="xs:unsignedByte"/>
+                            <xs:element name="reserved_space" type="xs:unsignedByte"/>
+                            <xs:element name="max_fraction" type="xs:unsignedByte"/>
+                            <xs:element name="min_fraction" type="xs:unsignedByte"/>
+                            <xs:element name="leaf_payload" type="xs:unsignedByte"/>
+                            <xs:element name="file_change_counter" type="xs:unsignedInt"/>
+                            <xs:element name="database_size" type="xs:unsignedInt"/>
+                            <xs:element name="first_freelist_trunk" type="xs:unsignedInt"/>
+                            <xs:element name="total_freelist_pages" type="xs:unsignedInt"/>
+                            <xs:element name="schema_cookie" type="xs:unsignedInt"/>
+                            <xs:element name="schema_format" type="xs:unsignedInt"/>
+                            <xs:element name="default_page_cache" type="xs:unsignedInt"/>
+                            <xs:element name="largest_root_btree" type="xs:unsignedInt"/>
+                            <xs:element name="text_encoding" type="xs:unsignedInt"/>
+                            <xs:element name="user_version" type="xs:unsignedInt"/>
+                            <xs:element name="incremental_vacuum" type="xs:unsignedInt"/>
+                            <xs:element name="application_id" type="xs:unsignedInt"/>
+                            <xs:element name="reserved" type="xs:hexBinary" dfdl:length="20" dfdl:lengthKind="explicit"/>
+                            <xs:element name="version_valid_for" type="xs:unsignedInt"/>
+                            <xs:element name="sqlite_version" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="pages" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="page_type" type="xs:unsignedByte"/>
+                            <xs:element name="first_freeblock" type="xs:unsignedShort"/>
+                            <xs:element name="cell_count" type="xs:unsignedShort"/>
+                            <xs:element name="cell_content_offset" type="xs:unsignedShort"/>
+                            <xs:element name="fragmented_free_bytes" type="xs:unsignedByte"/>
+                            <xs:element name="right_ptr" type="xs:unsignedInt" minOccurs="0"/>
+                            <xs:element name="cell_pointers" type="xs:unsignedShort" minOccurs="0" maxOccurs="unbounded"/>
+                            <xs:element name="content" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

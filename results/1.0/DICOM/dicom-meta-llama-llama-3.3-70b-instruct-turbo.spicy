@@ -1,0 +1,44 @@
+# Spicy specification for DICOM metadata parsing
+
+# Import required modules
+import Spicy
+
+# Define the DICOM metadata structure
+type DicomMeta = struct {
+  group: uint16,
+  element: uint16,
+  vr: string(2),
+  length: uint32,
+  value: string(length),
+}
+
+# Define the DICOM file structure
+type DicomFile = seq(DicomMeta)
+
+# Define the parsing function
+parse_dcm(file:_input byte[:]) -> DicomFile {
+  var meta_list: DicomFile = []
+  var offset: int = 0
+
+  while offset < file.length {
+    var group: uint16 = Spicy.unmarshal_uint16_le(file, offset)
+    var element: uint16 = Spicy.unmarshal_uint16_le(file, offset + 2)
+    var vr: string(2) = Spicy.unmarshal_string(file, offset + 4, 2)
+    var length: uint32 = Spicy.unmarshal_uint32_be(file, offset + 6)
+
+    var value: string(length) = Spicy.unmarshal_string(file, offset + 10, length)
+
+    var meta: DicomMeta = {
+      group: group,
+      element: element,
+      vr: vr,
+      length: length,
+      value: value,
+    }
+
+    meta_list += [meta]
+    offset += 10 + length
+  }
+
+  return meta_list
+}

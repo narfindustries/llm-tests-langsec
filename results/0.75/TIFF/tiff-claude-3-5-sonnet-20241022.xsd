@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:tns="http://example.com/tiff"
+    targetNamespace="http://example.com/tiff"
+    elementFormDefault="qualified">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthUnits="bytes"
+                lengthKind="implicit"
+                initiator="" terminator=""
+                encoding="utf-8"
+                textTrimKind="none"
+                textPadKind="none"
+                fillByte="%#r00"
+                leadingSkip="0"
+                trailingSkip="0"
+                separator="" separatorSuppressionPolicy="anyEmpty"
+                sequenceKind="ordered"
+                ignoreCase="no"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="tiff">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="byteOrder" type="xs:unsignedShort"/>
+                            <xs:element name="magic" type="xs:unsignedShort"/>
+                            <xs:element name="ifdOffset" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="ifd" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="numEntries" type="xs:unsignedShort"/>
+                            <xs:element name="entry" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="tag" type="xs:unsignedShort"/>
+                                        <xs:element name="type" type="xs:unsignedShort"/>
+                                        <xs:element name="count" type="xs:unsignedInt"/>
+                                        <xs:element name="valueOffset" type="xs:unsignedInt"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="nextIfdOffset" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="imageData" type="xs:hexBinary"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

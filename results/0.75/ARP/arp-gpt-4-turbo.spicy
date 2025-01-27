@@ -1,0 +1,21 @@
+module ARP;
+
+public type ARP_Header = unit {
+    hwType: uint16;
+    protoType: uint16;
+    hwSize: uint8;
+    protoSize: uint8;
+    opcode: uint16;
+    senderHwAddr: bytes &size=6;
+    senderProtoAddr: bytes &size=4;
+    targetHwAddr: bytes &size=6;
+    targetProtoAddr: bytes &size=4;
+
+    on %done {
+        print self;
+    }
+};
+
+public type ARP_Packet = unit {
+    header: ARP_Header;
+};

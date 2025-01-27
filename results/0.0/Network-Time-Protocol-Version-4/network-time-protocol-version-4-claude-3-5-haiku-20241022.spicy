@@ -1,0 +1,38 @@
+module NTP;
+
+import spicy;
+
+public type Packet = unit {
+    leap_indicator: bitfield(2) {
+        reserved: 0..1;
+    };
+
+    version: bitfield(3) {
+        ver: 0..2;
+    };
+
+    mode: bitfield(3) {
+        mode_type: 0..2;
+    };
+
+    stratum: uint8;
+    poll_interval: int8;
+    precision: int8;
+
+    root_delay: bytes(4);
+    root_dispersion: bytes(4);
+    reference_id: bytes(4);
+
+    reference_timestamp: bytes(8);
+    originate_timestamp: bytes(8);
+    receive_timestamp: bytes(8);
+    transmit_timestamp: bytes(8);
+
+    on %init {
+        self.version.ver = 4;
+    }
+};
+
+public type Message = unit {
+    packet: Packet;
+};

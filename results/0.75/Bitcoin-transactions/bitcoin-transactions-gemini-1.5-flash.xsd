@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/bitcoinTransactions" elementFormDefault="qualified" xmlns:tns="http://example.org/bitcoinTransactions">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format ref="tns:bitcoinTransactionFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="BitcoinTransactions">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Transaction" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Version" type="xs:integer"/>
+              <xs:element name="InputCount" type="xs:integer"/>
+              <xs:element name="Inputs" type="tns:InputsType"/>
+              <xs:element name="OutputCount" type="xs:integer"/>
+              <xs:element name="Outputs" type="tns:OutputsType"/>
+              <xs:element name="LockTime" type="xs:integer"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="InputsType">
+    <xs:sequence>
+      <xs:element name="Input" type="tns:InputType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="InputType">
+    <xs:sequence>
+      <xs:element name="PreviousTransactionHash" type="xs:hexBinary"/>
+      <xs:element name="PreviousOutputIndex" type="xs:integer"/>
+      <xs:element name="ScriptLength" type="xs:integer"/>
+      <xs:element name="Script" type="xs:base64Binary"/>
+      <xs:element name="Sequence" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OutputsType">
+    <xs:sequence>
+      <xs:element name="Output" type="tns:OutputType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OutputType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:decimal"/>
+      <xs:element name="ScriptLength" type="xs:integer"/>
+      <xs:element name="Script" type="xs:base64Binary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="bitcoinTransactionFormat">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:format binary="true" lengthKind="implicit" encoding="UTF-8" byteOrder="bigEndian">
+          <dfdl:textLengthLengthUnits>bytes</dfdl:textLengthLengthUnits>
+          <dfdl:sequence>
+            <dfdl:element ref="tns:BitcoinTransactions"/>
+          </dfdl:sequence>
+        </dfdl:format>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

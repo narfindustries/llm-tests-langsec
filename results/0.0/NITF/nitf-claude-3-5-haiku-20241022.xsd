@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:nitf="http://example.com/nitf">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        alignment="1"
+        alignmentUnits="bytes"
+        fillByte="%NUL;"
+        occursCountKind="parsed"
+        representation="binary"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NITF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" dfdl:lengthKind="explicit" dfdl:length="24">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="RecordType" type="xs:string" dfdl:length="4"/>
+              <xs:element name="Version" type="xs:string" dfdl:length="4"/>
+              <xs:element name="FileDateTime" type="xs:string" dfdl:length="14"/>
+              <xs:element name="Reserved" type="xs:string" dfdl:length="2"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Content" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Poem" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

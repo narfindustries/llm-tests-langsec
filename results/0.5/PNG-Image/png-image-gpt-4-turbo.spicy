@@ -1,0 +1,60 @@
+module PNG;
+
+public type PNGFile = unit {
+    signature: bytes &size=8;
+    chunks: Chunk(self)[];
+
+    on signature {
+        if (self.signature != b"\x89PNG\r\n\x1a\n")
+            throw Error("Not a valid PNG file.");
+    }
+};
+
+public type Chunk = unit(parent: PNGFile) {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=this.length;
+    crc: uint32;
+
+    on crc {
+        local computed_crc = compute_crc(this.type + this.data);
+        if (this.crc != computed_crc)
+            throw Error("CRC mismatch.");
+    }
+
+    on type {
+        if (this.type == b"IHDR") {
+            local ihdr: IHDRChunk(self.data);
+            print fmt("Width: %d, Height: %d", ihdr.width, ihdr.height);
+        }
+        if (this.type == b"PLTE") {
+            local plte: PLTEChunk(self.data);
+            print fmt("Palette size: %d", |plte.entries|);
+        }
+    }
+};
+
+public type IHDRChunk = unit(data: bytes) {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression: uint8;
+    filter: uint8;
+    interlace: uint8;
+};
+
+public type PLTEChunk = unit(data: bytes) {
+    entries: RGBEntry[] &eod;
+
+    public type RGBEntry = record {
+        red: uint8;
+        green: uint8;
+        blue: uint8;
+    };
+};
+
+function compute_crc(data: bytes): uint32 {
+    # Placeholder for CRC computation
+    return 0; # This should be replaced with actual CRC computation logic
+}

@@ -1,0 +1,42 @@
+module NITF;
+
+public type Header = unit {
+    file_profile_name: bytes &size=4;
+    file_version: bytes &size=5;
+    complexity_level: bytes &size=2;
+    system_type: bytes &size=2;
+    origin_station_id: bytes &size=10;
+    file_date_time: bytes &size=14;
+    file_title: bytes &size=80;
+    file_security_classification: bytes &size=1;
+    file_security_classification_system: bytes &size=2;
+    file_codewords: bytes &size=11;
+    file_control_and_handling: bytes &size=2;
+    file_releasing_instructions: bytes &size=20;
+    file_declassification_type: bytes &size=2;
+    file_declassification_date: bytes &size=8;
+    file_declassification_exemption: bytes &size=4;
+    file_downgrade: bytes &size=1;
+    file_downgrade_date: bytes &size=8;
+    file_classification_text: bytes &size=43;
+    file_classification_authority_type: bytes &size=1;
+    file_classification_authority: bytes &size=40;
+    file_classification_reason: bytes &size=1;
+    file_security_source_date: bytes &size=8;
+    file_security_control_number: bytes &size=15;
+    file_copy_number: bytes &size=5;
+    file_number_of_copies: bytes &size=5;
+    file_encryption: bytes &size=1;
+    file_length: uint32 &byte-order=big;
+    header_length: uint32 &byte-order=big;
+    number_of_image_segments: uint16 &byte-order=big;
+    number_of_graphics_segments: uint16 &byte-order=big;
+    number_of_text_files: uint16 &byte-order=big;
+    number_of_data_extension_segments: uint16 &byte-order=big;
+    number_of_reserved_extension_segments: uint16 &byte-order=big;
+};
+
+public type NITF = unit {
+    header: Header;
+    // Additional fields and parsing logic can be added here
+};

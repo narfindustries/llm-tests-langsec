@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ntp"
+           xmlns:ntp="http://example.com/ntp"
+           elementFormDefault="qualified"
+           dfdl:format="true"
+           dfdl:encoding="utf-8">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ntp:ntpFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:defineFormat name="ntpFormat">
+    <dfdl:format byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes"/>
+  </dfdl:defineFormat>
+
+  <xs:element name="NetworkTimeProtocol">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LeapIndicator" type="xs:unsignedByte" dfdl:length="2" dfdl:inputValueCalc="{ (../Flags & 0xC0) >> 6 }"/>
+        <xs:element name="VersionNumber" type="xs:unsignedByte" dfdl:length="3" dfdl:inputValueCalc="{ (../Flags & 0x38) >> 3 }"/>
+        <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3" dfdl:inputValueCalc="{ ../Flags & 0x07 }"/>
+        <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Poll" type="xs:byte" dfdl:length="1"/>
+        <xs:element name="Precision" type="xs:byte" dfdl:length="1"/>
+        <xs:element name="RootDelay" type="xs:int" dfdl:length="4"/>
+        <xs:element name="RootDispersion" type="xs:int" dfdl:length="4"/>
+        <xs:element name="ReferenceIdentifier" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+        <xs:element name="OriginateTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+        <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+        <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1"/>
+
+</xs:schema>

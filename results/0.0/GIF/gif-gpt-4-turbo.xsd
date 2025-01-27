@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:tns="http://example.com/gif">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:gifFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="byte">
+    <xs:restriction base="xs:byte"/>
+  </xs:simpleType>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
+      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptor">
+    <xs:sequence>
+      <xs:element name="screenWidth" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="screenHeight" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="packedFields" type="xs:byte"/>
+      <xs:element name="backgroundColorIndex" type="xs:byte"/>
+      <xs:element name="pixelAspectRatio" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GIF">
+    <xs:sequence>
+      <xs:element name="header" type="tns:Header"/>
+      <xs:element name="logicalScreenDescriptor" type="tns:LogicalScreenDescriptor"/>
+      <!-- Additional components like ColorTable, ImageBlocks, etc., would be defined here -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="GIFFile" type="tns:GIF"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="gifFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     bitOrder="mostSignificantBitFirst"
+                     representation="binary"
+                     lengthKind="explicit"
+                     encoding="US-ASCII"
+                     binaryNumberRep="binary"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

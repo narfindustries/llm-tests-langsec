@@ -1,0 +1,35 @@
+module TIFF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(2) &requires($$=="II" || $$=="MM");
+    version: uint16 &requires($$==42);
+    ifd_offset: uint32;
+};
+
+type IFDEntry = unit {
+    tag: uint16;
+    type_code: uint16;
+    count: uint32;
+    value_or_offset: uint32;
+};
+
+type IFD = unit {
+    num_entries: uint16;
+    entries: IFDEntry[num_entries];
+    next_ifd_offset: uint32;
+};
+
+public type File = unit {
+    header: Header;
+    first_ifd: IFD;
+};
+
+public function __load__() {
+    spicy::register_file_analyzer(
+        "TIFF", 
+        $mime_types=["image/tiff"], 
+        $file_magic=b"II*\x00"
+    );
+}

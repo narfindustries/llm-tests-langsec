@@ -26,6 +26,28 @@
     "test": {
         "Network Time Protocol Version 4": "RFC 5905"
     },
+    "lookup": {
+        "PNG Image": "PNG",
+        "JPEG": "JPEG",
+        "GIF": "GIF",
+        "TIFF": "TIFF",
+        "DICOM": "DICOM",
+        "NITF": "NITF",
+        "ELF": "ELF",
+        "ZIP": "ZIP",
+        "GZIP": "GZIP",
+        "SQLITE3 DB": "SQLITE3",
+        "Network Time Protocol Version 4": "NTP",
+        "Bitcoin transactions": "Bitcoin",
+        "Modbus": "Modbus",
+        "ARP": "ARP",
+        "MQTT": "MQTT",
+        "HTTP 1.1": "HTTP/1.1",
+        "TLS Client Hello": "TLS Hello",
+        "ICMP": "ICMP",
+        "DNS": "DNS",
+        "HL7 v2": "HL7 v2"
+    },
     "DDLs": {
         "Kaitai Struct": ["yaml", "ksy"],
         "Daedalus": ["Daedalus", "ddl"],

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/tiff"
+           xmlns:tns="http://example.com/dfdl/tiff">
+
+    <xs:include schemaLocation="DFDLGeneralFormat.xsd" />
+
+    <xs:complexType name="TIFFHeader">
+        <xs:sequence>
+            <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:discriminator test="{ . = 'II' or . = 'MM' }"/>
+                        <dfdl:choiceBranchKey='{ . }'/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="magicNumber" type="xs:unsignedShort" dfdl:length="2">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:binaryNumberRep dfdl:byteOrder="{ ../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
+                        <dfdl:assert test="{ . = 42 }"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="offsetFirstIFD" type="xs:unsignedInt" dfdl:length="4">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:binaryNumberRep dfdl:byteOrder="{ ../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="TIFFFile" type="tns:TIFFHeader">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:format ref="tns:GeneralFormat"/>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:element>
+
+</xs:schema>

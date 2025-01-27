@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:tns="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified"
+           dfdl:formatRef="tns:HTTPFormat">
+
+  <dfdl:format name="HTTPFormat" ref="tns:BaseFormat" lengthKind="delimited" encoding="UTF-8" />
+
+  <xs:element name="HTTPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RequestLine" type="tns:RequestLineType" dfdl:lengthKind="delimited" />
+        <xs:element name="Headers" type="tns:HeadersType" dfdl:lengthKind="delimited" />
+        <xs:element name="Body" type="tns:BodyType" minOccurs="0" dfdl:lengthKind="delimited" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="RequestLineType">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" />
+      <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" />
+      <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType" minOccurs="0" maxOccurs="unbounded" dfdl:separator="&#x0D;&#x0A;" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="FieldName" type="xs:string" dfdl:lengthKind="delimited" />
+      <xs:element name="FieldValue" type="xs:string" dfdl:lengthKind="delimited" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Content" type="xs:string" dfdl:lengthKind="delimited" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="BaseFormat">
+    <dfdl:format lengthKind="delimited" encoding="UTF-8" initiator="" terminator="" separator=" " />
+  </dfdl:defineFormat>
+
+</xs:schema>

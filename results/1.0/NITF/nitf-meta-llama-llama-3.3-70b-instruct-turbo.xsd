@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/NITF"
+           xmlns="http://example.com/NITF"
+           elementFormDefault="qualified">
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="NITFHeader" dfdl:occurs="1..1"/>
+        <xs:element ref="NITFBody" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="NITFHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="FileHeaderType" dfdl:occurs="1..1"/>
+        <xs:element name="ImageHeaders" type="ImageHeadersType" dfdl:occurs="1..1"/>
+        <xs:element name="TREHeaders" type="TREHeadersType" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FileHeaderIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
+      <xs:element name="FileHeaderVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
+      <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
+      <xs:element name="StandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
+      <xs:element name="CountryCode" type="xs:string" dfdl:length="3" dfdl:occurs="1..1"/>
+      <xs:element name="SecurityClassification" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
+      <xs:element name="SecurityClassificationSubstitution" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+      <xs:element name="ControlAndDisplayInformation" type="xs:string" dfdl:length="8" dfdl:occurs="1..1"/>
+      <xs:element name="FileDateAndTime" type="xs:string" dfdl:length="14" dfdl:occurs="1..1"/>
+      <xs:element name="Title" type="xs:string" dfdl:length="35" dfdl:occurs="1..1"/>
+      <xs:element name="SecurityMetadata" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageHeadersType">
+    <xs:sequence>
+      <xs:element name="ImageIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
+      <xs:element name="ImageHeaderComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
+      <xs:element name="ImageHeaderStandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
+      <xs:element name="ImageEncryption" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+      <xs:element name="ImageCompression" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+      <xs:element name="ImageNumberOfBytes" type="xs:integer" dfdl:length="6" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TREHeadersType">
+    <xs:sequence>
+      <xs:element name="TREIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
+      <xs:element name="TREHeaderComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
+      <xs:element name="TREHeaderStandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
+      <xs:element name="TREHeaderSecurityMetadata" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NITFBody">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ImageData" dfdl:occurs="1..1"/>
+        <xs:element ref="TREData" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ImageData" type="xs:base64Binary" dfdl:occurs="1..1"/>
+
+  <xs:element name="TREData" type="xs:base64Binary" dfdl:occurs="0..1"/>
+
+</xs:schema>

@@ -1,0 +1,58 @@
+module Modbus;
+
+public type ExceptionResponse = unit {
+    functionCode: uint8;
+    exceptionCode: uint8;
+};
+
+public type ADU = unit {
+    transactionId: uint16;
+    protocolId: uint16;
+    length: uint16;
+    unitId: uint8;
+    pdu: PDU;
+};
+
+public type PDU = unit {
+    functionCode: uint8;
+    data: switch (self.functionCode) {
+        1, 2, 3, 4, 5, 6, 15, 16 -> ReadWriteMultipleResponse,
+        7 -> ExceptionResponse,
+        default -> bytes &size=self.length-1;
+    };
+};
+
+public type ReadWriteMultipleResponse = unit {
+    byteCount: uint8;
+    data: bytes &size=self.byteCount;
+};
+
+event zeek_init() &priority=5
+{
+    print "Modbus Spicy parser loaded.";
+}
+
+event modbus_message(c: connection, is_orig: bool, adu: ADU)
+{
+    print fmt("Modbus message from %s: transaction ID %d, protocol ID %d, length %d, unit ID %d",
+              is_orig ? "originator" : "responder",
+              adu.transactionId,
+              adu.protocolId,
+              adu.length,
+              adu.unitId);
+
+    if ( adu$pdu$data$functionCode == 7 )
+    {
+        print fmt("Modbus Exception: Function Code %d, Exception Code %d",
+                  adu$pdu$data$functionCode,
+                  adu$pdu$data$exceptionCode);
+    }
+}
+
+event modbus_exception(c: connection, is_orig: bool, ex: ExceptionResponse)
+{
+    print fmt("Modbus Exception from %s: Function Code %d, Exception Code %d",
+              is_orig ? "originator" : "responder",
+              ex$functionCode,
+              ex$exceptionCode);
+}

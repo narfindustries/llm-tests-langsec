@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:hl7="urn:hl7-org:v2xml"
+    targetNamespace="urn:hl7-org:v2xml">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="delimited" 
+                        encoding="UTF-8"
+                        separator=""
+                        ignoreCase="no"
+                        initiator=""
+                        terminator=""
+                        textOutputMinLength="1"
+                        textPadKind="none"
+                        textTrimKind="none"
+                        textBidi="no"
+                        nilValueDelimiterPolicy="both"
+                        documentFinalTerminatorCanBeMissing="yes"
+                        initiatedContent="no"
+                        representation="text"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="hl7Message">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="segment" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="field" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="component" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+                                            <xs:annotation>
+                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                                    <dfdl:element separator="^"/>
+                                                </xs:appinfo>
+                                            </xs:annotation>
+                                        </xs:element>
+                                    </xs:sequence>
+                                    <xs:annotation>
+                                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                            <dfdl:element separator="|"/>
+                                        </xs:appinfo>
+                                    </xs:annotation>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="type" type="xs:string"/>
+                        <xs:annotation>
+                            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                <dfdl:element separator="\r\n"/>
+                            </xs:appinfo>
+                        </xs:annotation>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

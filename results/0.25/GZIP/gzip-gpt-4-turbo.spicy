@@ -1,0 +1,28 @@
+module GZIP;
+
+public type GzipHeader = unit {
+    id1: uint8;
+    id2: uint8;
+    compressionMethod: uint8;
+    flags: uint8;
+    mtime: uint32;
+    extraFlags: uint8;
+    os: uint8;
+
+    on %init {
+        if (self.id1 != 0x1f || self.id2 != 0x8b) {
+            throw ParseError("Not a valid GZIP header");
+        }
+    }
+};
+
+public type GzipFooter = unit {
+    crc32: uint32;
+    inputSize: uint32;
+};
+
+public type GzipFile = unit {
+    header: GzipHeader;
+    body: /[^\0]*/ : bytes &eod;
+    footer: GzipFooter;
+};

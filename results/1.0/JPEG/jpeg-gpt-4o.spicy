@@ -1,0 +1,21 @@
+module JPEG;
+
+type JPEGHeader = unit {
+    magic: bytes &length=2 &assertion=magic == b"\xff\xd8" &doc="JPEG file should start with FFD8";
+    segments: vector of JPEGSegment &doc="JPEG file segments";
+};
+
+type JPEGSegment = unit {
+    marker: uint16 &byteorder=be &assertion=((marker & 0xff00) == 0xff00) &doc="Segment marker must begin with FF";
+    length: uint16 &byteorder=be &convert=payload_length &doc="Length of segment payload";
+    payload: bytes &length=length-2 &doc="Segment payload";
+    
+    on %done {
+        if ( marker == 0xffda ) 
+            terminate;
+    }
+};
+
+function payload_length(raw: uint16): uint16 {
+    return raw - 2;
+}

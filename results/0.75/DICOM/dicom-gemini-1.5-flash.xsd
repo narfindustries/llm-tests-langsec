@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/dicom"
+           xmlns="http://example.org/dicom"
+           elementFormDefault="qualified">
+
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="HeaderType"/>
+        <xs:element name="Data" type="DataType"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="PatientName" type="xs:string" dfdl:length="64"/>
+      <xs:element name="StudyID" type="xs:string" dfdl:length="16"/>
+      <xs:element name="SeriesNumber" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="PixelData" type="xs:base64Binary" dfdl:lengthKind="length" dfdl:length="1024"/>  <!-- Example length, adjust as needed -->
+    </xs:sequence>
+  </xs:complexType>
+
+
+</xs:schema>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns:tns="http://example.com/zip"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:zipFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="zipFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="localFileHeader" type="tns:localFileHeaderType" maxOccurs="unbounded"/>
+        <xs:element name="centralDirectory" type="tns:centralDirectoryType"/>
+        <xs:element name="endOfCentralDirectory" type="tns:endOfCentralDirectoryType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="localFileHeaderType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian" dfdl:inputValueCalc="{ 0x04034b50 }"/>
+      <xs:element name="versionNeeded" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="fileName" type="xs:string" dfdl:length="{ ../fileNameLength }" dfdl:lengthKind="explicit"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{ ../extraFieldLength }" dfdl:lengthKind="explicit"/>
+      <xs:element name="fileData" type="xs:hexBinary" dfdl:length="{ ../compressedSize }" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="centralDirectoryType">
+    <xs:sequence>
+      <xs:element name="centralFileHeader" type="tns:centralFileHeaderType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="centralFileHeaderType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian" dfdl:inputValueCalc="{ 0x02014b50 }"/>
+      <xs:element name="versionMadeBy" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="versionNeeded" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="fileCommentLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="diskNumberStart" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="internalFileAttributes" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="externalFileAttributes" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="relativeOffsetOfLocalHeader" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="fileName" type="xs:string" dfdl:length="{ ../fileNameLength }" dfdl:lengthKind="explicit"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{ ../extraFieldLength }" dfdl:lengthKind="explicit"/>
+      <xs:element name="fileComment" type="xs:string" dfdl:length="{ ../fileCommentLength }" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="endOfCentralDirectoryType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian" dfdl:inputValueCalc="{ 0x06054b50 }"/>
+      <xs:element name="numberOfThisDisk" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="diskWhereCentralDirectoryStarts" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="numberOfCentralDirectoryRecordsOnThisDisk" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="totalNumberOfCentralDirectoryRecords" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sizeOfCentralDirectory" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="offsetOfStartOfCentralDirectory" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="commentLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="comment" type="xs:string" dfdl:length="{ ../commentLength }" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="zipFormat">
+    <dfdl:format byteOrder="littleEndian" encoding="utf-8" lengthKind="explicit" lengthUnits="bytes"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

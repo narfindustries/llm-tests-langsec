@@ -1,0 +1,37 @@
+module HL7;
+
+public type MSH = unit {
+    field_sep: bytes &size=1;
+    encoding_chars: bytes &size=4;
+    sending_app: bytes &eod;
+    sending_fac: bytes &eod;
+    receiving_app: bytes &eod;
+    receiving_fac: bytes &eod;
+    date_time: bytes &eod;
+    security: bytes &eod;
+    message_type: bytes &eod;
+    message_control_id: bytes &eod;
+    processing_id: bytes &eod;
+    version_id: bytes &eod;
+    sequence_number: bytes &eod;
+    continuation_pointer: bytes &eod;
+    accept_ack_type: bytes &eod;
+    application_ack_type: bytes &eod;
+    country_code: bytes &eod;
+    charset: bytes &eod;
+    principal_language: bytes &eod;
+    alt_charset_handling_scheme: bytes &eod;
+    message_profile_id: bytes &eod;
+};
+
+public type HL7Message = unit {
+    msh: MSH;
+    data: bytes &eod;
+    on %done {
+        print self;
+    }
+};
+
+public type HL7Stream = unit {
+    messages: HL7Message[] &eod;
+};

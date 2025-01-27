@@ -1,0 +1,24 @@
+#ifndef _SPICY_H_
+#define _SPICY_H_
+
+#include <zeek/plugin.h>
+
+// Define your Spicy functions here
+
+#endif // _SPICY_H_
+
+
+#include "spicy.h"
+
+//Implement your Spicy functions here
+
+ZEK_PLUGIN_EXPORT int zeek_init(void) {
+    // Initialization code here
+    return 0;
+}
+
+ZEK_PLUGIN_EXPORT int zeek_fini(void) {
+    // Cleanup code here
+    return 0;
+}
+

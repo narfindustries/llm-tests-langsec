@@ -1,0 +1,39 @@
+module ELF;
+
+import spicy;
+import zeek;
+
+public type ELF = unit {
+    magic: bytes &length=4 &check=$$ == b"\x7fELF";
+
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    os_abi: uint8;
+    abi_version: uint8;
+    pad: bytes &length=7;
+
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on %done {
+        if ( magic != b"\x7fELF" ) {
+            print("Error: Not a valid ELF file.");
+        }
+    }
+};
+
+public hook zeek_init() {
+    Spicy::register_protocol_analyzer(ELF::ELF, "elf", /application\/x-elf/);
+}

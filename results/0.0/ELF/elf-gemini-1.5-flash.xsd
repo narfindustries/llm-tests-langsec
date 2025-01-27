@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/elf_gemini"
+           xmlns="http://example.org/elf_gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="elf_gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:lengthKind="explicit" dfdl:length="16"/>
+        <xs:element name="data" type="xs:string" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="timestamp" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="checksum" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="flags" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

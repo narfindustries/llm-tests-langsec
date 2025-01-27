@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="PNGImageType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:initiator=""/>
+      <xs:element name="Chunks" type="ex:ChunkType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunkType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int" dfdl:length="4"/>
+      <xs:element name="Type" type="xs:string" dfdl:length="4"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      <xs:element name="CRC" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="PNGImage" type="ex:PNGImageType"/>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" encoding="UTF-8"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

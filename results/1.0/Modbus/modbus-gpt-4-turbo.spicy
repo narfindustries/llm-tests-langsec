@@ -1,0 +1,24 @@
+module Modbus;
+
+public type ExceptionFunction as unit {
+    funcCode: uint8;
+    errorCode: uint8;
+} &byte_order=big_endian;
+
+public type FunctionData as unit {
+    data: bytes &size=2;
+} &byte_order=big_endian;
+
+public type PDU is ExceptionFunction, FunctionData;
+
+public type ADU as unit {
+    transactionId: uint16;
+    protocolId: uint16;
+    length: uint16;
+    unitId: uint16;
+    payload: PDU;
+} &byte_order=big_endian;
+
+public type Main as unit {
+    adus: ADU[];
+} &byte_order=big_endian;

@@ -1,0 +1,27 @@
+module PNG;
+
+import spicy;
+
+public type PNG = unit {
+    magic: bytes &length=8 &check=magic == "\x89PNG\r\n\x1a\n";
+
+    chunks: Chunk[] &until=io.eof;
+};
+
+public type Chunk = unit {
+    length: uint32;
+    type: bytes &length=4;
+    data: bytes &length=length;
+    crc: uint32;
+
+    on %done {
+        if ( not check_crc() ) {
+            print "CRC check failed for chunk of type", type;
+        }
+    }
+
+    function check_crc() : bool {
+        local computed_crc = spicy::crc32(type + data);
+        return computed_crc == crc;
+    }
+};

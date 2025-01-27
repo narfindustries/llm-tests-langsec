@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/icmp"
+           xmlns:ex="http://example.com/icmp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:ICMPFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="UInt8">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="UInt16">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:complexType name="ICMPMessage">
+    <xs:sequence>
+      <xs:element name="Type" type="ex:UInt8" dfdl:length="1"/>
+      <xs:element name="Code" type="ex:UInt8" dfdl:length="1"/>
+      <xs:element name="Checksum" type="ex:UInt16" dfdl:length="2"/>
+      <xs:element name="RestOfHeader" type="ex:UInt16" dfdl:length="2"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ICMPMessage" type="ex:ICMPMessage">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:discriminator test="{ fn:exists(ex:Type) and ex:Type = 8 }"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:element name="ICMPFormat">
+    <xs:complexType>
+      <xs:attributeGroup>
+        <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+        <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
+        <xs:attribute name="encoding" type="xs:string" use="required" fixed="UTF-8"/>
+        <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
+        <xs:attribute name="lengthUnits" type="xs:string" use="required" fixed="bytes"/>
+      </xs:attributeGroup>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

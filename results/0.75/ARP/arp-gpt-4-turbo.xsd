@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:ex="http://example.com/arp">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="ex:arpGeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="EthernetFrame">
+        <xs:sequence>
+            <xs:element name="destinationMAC" type="xs:hexBinary" dfdl:length="6" dfdl:lengthKind="explicit"/>
+            <xs:element name="sourceMAC" type="xs:hexBinary" dfdl:length="6" dfdl:lengthKind="explicit"/>
+            <xs:element name="etherType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+            <xs:element name="payload" type="ex:ARPPacket" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ARPPacket">
+        <xs:sequence>
+            <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+            <xs:element name="protocolType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+            <xs:element name="hardwareSize" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+            <xs:element name="protocolSize" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+            <xs:element name="opcode" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+            <xs:element name="senderMAC" type="xs:hexBinary" dfdl:length="6" dfdl:lengthKind="explicit"/>
+            <xs:element name="senderIP" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            <xs:element name="targetMAC" type="xs:hexBinary" dfdl:length="6" dfdl:lengthKind="explicit"/>
+            <xs:element name="targetIP" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="EthernetFrame" type="ex:EthernetFrame"/>
+
+    <xs:simpleType name="MACAddress">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="6"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="IPAddress">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="4"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="arpGeneralFormat">
+                <dfdl:format byteOrder="bigEndian" 
+                             bitOrder="mostSignificantBitFirst"
+                             binaryNumberRep="binary"
+                             textNumberRep="standard"
+                             textBooleanRep="true|false"
+                             lengthKind="delimited"
+                             encoding="UTF-8" 
+                             escapeSchemeRef="ex:escapingScheme"/>
+            </dfdl:defineFormat>
+
+            <dfdl:defineEscapeScheme name="escapingScheme">
+                <dfdl:escapeScheme escapeKind="escapeCharacter" 
+                                   escapeCharacter="%"
+                                   escapeEscapeCharacter="%%"/>
+            </dfdl:defineEscapeScheme>
+        </xs:appinfo>
+    </xs:annotation>
+
+</xs:schema>

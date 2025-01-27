@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/Modbus"
+           xmlns:tns="http://example.com/Modbus">
+
+    <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+    <xs:element name="ModbusPacket" dfdl:lengthKind="explicit" dfdl:length="7">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionIdentifier" type="xs:short" dfdl:length="2" dfdl:encoding="binary, bigEndian"/>
+                <xs:element name="ProtocolIdentifier" type="xs:short" dfdl:length="2" dfdl:encoding="binary, bigEndian"/>
+                <xs:element name="LengthField" type="xs:short" dfdl:length="2" dfdl:encoding="binary, bigEndian"/>
+                <xs:element name="UnitIdentifier" type="xs:byte" dfdl:length="1"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="FunctionData">
+        <xs:complexType>
+            <xs:choice dfdl:choiceLengthKind="implicit">
+                <xs:element name="ReadCoilsResponse" type="tns:ReadCoilsResponse" dfdl:discriminator="{ ../tns:FunctionCode = 1 }"/>
+                <xs:element name="ReadDiscreteInputsResponse" type="tns:ReadDiscreteInputsResponse" dfdl:discriminator="{ ../tns:FunctionCode = 2 }"/>
+                <!-- Additional function data types can be added here -->
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="ReadCoilsResponse">
+        <xs:sequence>
+            <xs:element name="ByteCount" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="CoilStatus" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="!"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ReadDiscreteInputsResponse">
+        <xs:sequence>
+            <xs:element name="ByteCount" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="InputStatus" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="!"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

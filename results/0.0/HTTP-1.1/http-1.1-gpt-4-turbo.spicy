@@ -1,0 +1,57 @@
+module HTTP;
+
+import spicy;
+
+type HTTPVersion = unit {
+    major: uint8;
+    minor: uint8;
+    : parse {
+        self.major = 1;
+        self.minor = 1;
+    }
+};
+
+type RequestLine = unit {
+    method: bytes &until=b" ";
+    uri: bytes &until=b" ";
+    version: HTTPVersion;
+};
+
+type ResponseLine = unit {
+    version: HTTPVersion;
+    status_code: uint16;
+    reason_phrase: bytes &eod;
+};
+
+type Header = unit {
+    name: bytes &until=b":";
+    value: bytes &eod;
+};
+
+type Headers = unit {
+    headers: Header[] &eod;
+};
+
+type MessageBody = unit {
+    content: bytes &size=body_length;
+};
+
+public type HTTPRequest = unit {
+    request_line: RequestLine;
+    headers: Headers;
+    body: MessageBody &optional;
+};
+
+public type HTTPResponse = unit {
+    response_line: ResponseLine;
+    headers: Headers;
+    body: MessageBody &optional;
+};
+
+event http_request(c: connection, req: HTTPRequest) {
+    print fmt("HTTP Request: %s %s", req.request_line.method, req.request_line.uri);
+}
+
+event http_response(c: connection, res: HTTPResponse) {
+    print fmt("HTTP Response: %d %s", res.response_line.status_code, res.response_line.reason_phrase);
+}

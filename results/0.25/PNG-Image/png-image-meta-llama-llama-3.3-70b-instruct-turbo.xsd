@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/PNG-Image"
+           xmlns="http://example.com/PNG-Image"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="PNG-Image" dfdl:sequenceKind="unordered" dfdl:inputEncoding="ISO-8859-1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="magic-number" type="xs:hexBinary" dfdl:length="8" dfdl:promotionPolicy="drop"/>
+        <xs:element name="IHDR" type="IHDRType" dfdl:sequenceKind="explicit"/>
+        <xs:element name="IDAT" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="byte" dfdl:delimiter="[0x49 0x45 0x4e 0x44]"/>
+        <xs:element name="IEND" type="xs:hexBinary" dfdl:length="0" dfdl:promotionPolicy="drop"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="IHDRType">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedInt" dfdl:lengthKind="fixed" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="height" type="xs:unsignedInt" dfdl:lengthKind="fixed" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="bit-depth" type="xs:unsignedByte" dfdl:lengthKind="fixed" dfdl:length="1"/>
+      <xs:element name="color-type" type="xs:unsignedByte" dfdl:lengthKind="fixed" dfdl:length="1"/>
+      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:lengthKind="fixed" dfdl:length="1"/>
+      <xs:element name="filter-method" type="xs:unsignedByte" dfdl:lengthKind="fixed" dfdl:length="1"/>
+      <xs:element name="interlace-method" type="xs:unsignedByte" dfdl:lengthKind="fixed" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

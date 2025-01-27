@@ -1,0 +1,65 @@
+module DNS;
+
+import spicy;
+import zeek;
+
+type DNSHeader = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+type DNSQuestion = unit {
+    qname: bytes &until= (self.qname[-1] == 0);
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type DNSResourceRecord = unit {
+    name: bytes &until= (self.name[-1] == 0);
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size= rdlength;
+};
+
+type DNSMessage = unit {
+    header: DNSHeader;
+    questions: array[DNSQuestion] &length= header.qdcount;
+    answers: array[DNSResourceRecord] &length= header.ancount;
+    authorities: array[DNSResourceRecord] &length= header.nscount;
+    additionals: array[DNSResourceRecord] &length= header.arcount;
+};
+
+public type DNSAnalyzer = spicy::Analyzer {
+    .on %init {
+        print "DNS Analyzer initialized";
+    }
+
+    .on %done {
+        print "DNS Analyzer done";
+    }
+
+    .on %error {
+        print "DNS Analyzer encountered an error";
+    }
+
+    .on %parse {
+        local msg = parse_DNSMessage(self.input);
+        print fmt("Parsed DNS Message: ID=%d", msg.header.id);
+    }
+};
+
+export {
+    redef enum zeek::Analyzer::Tag += {
+        DNS_ANALYZER
+    };
+}
+
+event zeek_init() {
+    spicy::register_DNSAnalyzer(DNS_ANALYZER);
+}

@@ -1,0 +1,37 @@
+module TIFF;
+
+public type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    valueOffset: uint32;
+};
+
+public type IFD = unit {
+    entries: IFDEntry[] &eod;
+};
+
+public type TIFFHeader = unit {
+    endian: uint16;
+    magic: uint16;
+    offset: uint32;
+};
+
+public type File = unit {
+    header: TIFFHeader;
+    ifd: IFD @offset=header.offset;
+
+    on %init {
+        if (self.header.endian == 0x4949) {
+            self.byte_order = LITTLE;
+        } else if (self.header.endian == 0x4D4D) {
+            self.byte_order = BIG;
+        } else {
+            throw Error("Invalid TIFF endian indicator.");
+        }
+
+        if (self.header.magic != 42) {
+            throw Error("Invalid TIFF magic number.");
+        }
+    };
+};

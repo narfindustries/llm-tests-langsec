@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:j="http://example.com/jpeg"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="jpeg">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="jpgFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOI" type="j:SOIType" dfdl:occurs="1..1"/>
+        <xs:element name="APP0" type="j:APP0Type" dfdl:occurs="1..1"/>
+        <xs:element name="DQT" type="j:DQTType" dfdl:occurs="0..1" dfdl:optional="true"/>
+        <xs:element name="SOF0" type="j:SOF0Type" dfdl:occurs="1..1"/>
+        <xs:element name="DHT" type="j:DHTType" dfdl:occurs="0..1" dfdl:optional="true"/>
+        <xs:element name="DRI" type="j:DRIType" dfdl:occurs="0..1" dfdl:optional="true"/>
+        <xs:element name="SOS" type="j:SOSType" dfdl:occurs="1..1"/>
+        <xs:element name="EOI" type="j:EOIType" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SOIType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFD8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APP0Type">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFE0"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="16"/>
+      <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:encoding="UTF-8" dfdl:outputValue="JFIF"/>
+      <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
+      <xs:element name="densityUnits" type="xs:unsignedByte" dfdl:outputValue="1"/>
+      <xs:element name="xDensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
+      <xs:element name="yDensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
+      <xs:element name="thumbWidth" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="thumbHeight" type="xs:unsignedByte" dfdl:outputValue="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDB"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="132"/>
+      <xs:element name="precision" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="tableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="tableData" type="xs:hexBinary" dfdl:length="64" dfdl:byteOrder="bigEndian" dfdl:outputValue="000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFC0"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="17"/>
+      <xs:element name="precision" type="xs:unsignedByte" dfdl:outputValue="8"/>
+      <xs:element name="imageHeight" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="256"/>
+      <xs:element name="imageWidth" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="256"/>
+      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:outputValue="3"/>
+      <xs:element name="componentId" type="xs:unsignedByte" dfdl:outputValue="1"/>
+      <xs:element name="samplingFactors" type="xs:unsignedByte" dfdl:outputValue="1"/>
+      <xs:element name="quantizationTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFC4"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="162"/>
+      <xs:element name="tableClass" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="tableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="tableData" type="xs:hexBinary" dfdl:length="16" dfdl:byteOrder="bigEndian" dfdl:outputValue="00010011001010000111010010110001"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DRIType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDD"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="4"/>
+      <xs:element name="restartInterval" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDA"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="6"/>
+      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:outputValue="3"/>
+      <xs:element name="componentId" type="xs:unsignedByte" dfdl:outputValue="1"/>
+      <xs:element name="dcTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="acTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EOIType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="jpgFormat" type="binary" byteOrder="bigEndian" encoding=" none" />
+</xs:schema>

@@ -1,0 +1,76 @@
+module ZIP;
+
+public type FileHeader = unit {
+    signature: bytes &size=4;
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    modTime: uint16;
+    modDate: uint16;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileName: bytes &size=fileNameLength;
+    extraField: bytes &size=extraFieldLength;
+
+    on %done {
+        if (self.signature != b"PK\x03\x04") {
+            throw Error("Invalid file header signature.");
+        }
+    }
+};
+
+public type CentralDirectoryFileHeader = unit {
+    signature: bytes &size=4;
+    versionMadeBy: uint16;
+    versionNeededToExtract: uint16;
+    flags: uint16;
+    compressionMethod: uint16;
+    lastModFileTime: uint16;
+    lastModFileDate: uint16;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileCommentLength: uint16;
+    diskNumberStart: uint16;
+    internalFileAttributes: uint16;
+    externalFileAttributes: uint32;
+    relativeOffsetOfLocalHeader: uint32;
+    fileName: bytes &size=fileNameLength;
+    extraField: bytes &size=extraFieldLength;
+    fileComment: bytes &size=fileCommentLength;
+
+    on %done {
+        if (self.signature != b"PK\x01\x02") {
+            throw Error("Invalid central directory file header signature.");
+        }
+    }
+};
+
+public type EndOfCentralDirectoryRecord = unit {
+    signature: bytes &size=4;
+    numberOfThisDisk: uint16;
+    numberOfTheDiskWithTheStartOfTheCentralDirectory: uint16;
+    totalNumberOfEntriesInTheCentralDirectoryOnThisDisk: uint16;
+    totalNumberOfEntriesInTheCentralDirectory: uint16;
+    sizeOfTheCentralDirectory: uint32;
+    offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber: uint32;
+    zipFileCommentLength: uint16;
+    zipFileComment: bytes &size=zipFileCommentLength;
+
+    on %done {
+        if (self.signature != b"PK\x05\x06") {
+            throw Error("Invalid end of central directory record signature.");
+        }
+    }
+};
+
+public type ZIPArchive = unit {
+    files: FileHeader[] &eod;
+    centralDirectory: CentralDirectoryFileHeader[] &eod;
+    endOfCentralDir: EndOfCentralDirectoryRecord;
+};

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignment="1" 
+        alignmentUnits="bytes"
+        byteOrder="bigEndian"
+        encoding="UTF-8"
+        lengthKind="explicit"
+        lengthUnits="bytes"
+        occursCountKind="parsed"
+        representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ModbusFrame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SlaveAddress" type="xs:unsignedByte" 
+          dfdl:length="1"/>
+        <xs:element name="FunctionCode" type="xs:unsignedByte" 
+          dfdl:length="1"/>
+        <xs:element name="Data" type="xs:hexBinary" 
+          dfdl:lengthKind="explicit" 
+          dfdl:length="{ ../DataLength }"/>
+        <xs:element name="DataLength" type="xs:unsignedByte" 
+          dfdl:length="1"/>
+        <xs:element name="CRC" type="xs:unsignedShort" 
+          dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

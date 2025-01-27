@@ -1,0 +1,73 @@
+# Zeek Spicy specification for HTTP/1.1 protocol
+
+%header{
+    # Import necessary modules
+    @load base/protocols/http
+    @load base/protocols/tcp
+}
+
+%external{
+    # Define constants for HTTP methods
+    const http_methods = {
+        GET: 1,
+        POST: 2,
+        PUT: 3,
+        DELETE: 4,
+        HEAD: 5,
+        OPTIONS: 6,
+        CONNECT: 7,
+        PATCH: 8
+    };
+}
+
+%parser http-parser {
+    # Define the HTTP parser
+    state start {
+        # Start state
+        http_message = http_message();
+    }
+}
+
+%sieve http-sieve {
+    # Define the HTTP sieve
+    case http_message {
+        # Handle HTTP messages
+        http_request: http_request(),
+        http_response: http_response()
+    }
+}
+
+%type http_message {
+    # Define the HTTP message type
+    request: http_request,
+    response: http_response
+}
+
+%type http_request {
+    # Define the HTTP request type
+    method: uint8 &in http_methods,
+    uri: bytestring,
+    version: bytestring,
+    headers: http_header[] &length = until("\r\n\r\n"),
+    body: bytestring &length = until("\r\n\r\n") &optional
+}
+
+%type http_response {
+    # Define the HTTP response type
+    version: bytestring,
+    status_code: uint16,
+    reason_phrase: bytestring,
+    headers: http_header[] &length = until("\r\n\r\n"),
+    body: bytestring &length = until("\r\n\r\n") &optional
+}
+
+%type http_header {
+    # Define the HTTP header type
+    name: bytestring,
+    value: bytestring
+}
+
+%grammar http-grammar {
+    # Define the HTTP grammar
+    entry http-message: http-parser;
+}

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db"
+           xmlns:tns="http://example.com/sqlite3-db"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="sqlite3-db">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:database" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="database">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:page" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="page">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:header" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:cell" dfdl:occurs="0..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="page-type" type="xs:integer" dfdl:length="1"/>
+        <xs:element name="page-size" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="checksum" type="xs:integer" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="cell">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="payload-length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="payload" type="xs:hexBinary" dfdl:length="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="integer">
+    <xs:restriction base="xs:integer"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="hexBinary">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+</xs:schema>

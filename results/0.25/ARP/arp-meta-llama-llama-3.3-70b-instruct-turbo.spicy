@@ -1,0 +1,56 @@
+# ARP Spicy Specification
+unit ARP_PDU size 28 {
+  # Hardware Type
+  uint16 hardware_type = 0x0001;
+  
+  # Protocol Type
+  uint16 protocol_type = 0x0800;
+  
+  # Hardware Address Length
+  uint8 hardware_address_length = 0x06;
+  
+  # Protocol Address Length
+  uint8 protocol_address_length = 0x04;
+  
+  # Operation
+  uint16 operation = 0x0001; # Request or 0x0002 for Reply
+  
+  # Sender Hardware Address
+  byte[6] sender_hardware_address;
+  
+  # Sender Protocol Address
+  uint32 sender_protocol_address;
+  
+  # Target Hardware Address
+  byte[6] target_hardware_address;
+  
+  # Target Protocol Address
+  uint32 target_protocol_address;
+}
+
+unit ARP_Request size 28 {
+  include ARP_PDU;
+}
+
+unit ARP_Reply size 28 {
+  include ARP_PDU;
+  operation = 0x0002;
+}
+
+unit ARP_Packet size - {
+  condition = payload_size >= 28;
+  include ARP_PDU;
+}
+
+# Example Usage
+event zeek_init() {
+  # Enable ARP parsing for Spicy
+  Input::add_event(ARP_Packet, handle_arp_packet);
+}
+
+event handle_arp_packet(ARP_PDU: pdu) {
+  print fmt("Received ARP %s from %s with target %s",
+            pdu.operation == 1 ? "Request" : "Reply",
+            to_string(pdu.sender_hardware_address),
+            to_string(pdu.target_hardware_address));
+}

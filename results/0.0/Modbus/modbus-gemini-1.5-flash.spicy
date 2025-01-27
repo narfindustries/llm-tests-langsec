@@ -1,0 +1,75 @@
+#ifndef MODBUS_GEMINI_1_5_FLASH_SPICY
+#define MODBUS_GEMINI_1_5_FLASH_SPICY
+
+#include <stdint.h>
+
+// Define Modbus function codes
+enum modbus_function_code {
+    READ_COILS = 0x01,
+    READ_DISCRETE_INPUTS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    WRITE_SINGLE_COIL = 0x05,
+    WRITE_SINGLE_REGISTER = 0x06,
+    WRITE_MULTIPLE_COILS = 0x0F,
+    WRITE_MULTIPLE_REGISTERS = 0x10,
+    READ_EXCEPTION_STATUS = 0x07,
+    DIAGNOSTIC = 0x08,
+    GET_COM_EVENT_COUNTER = 0x0B,
+    GET_COM_EVENT_LOG = 0x0C,
+    REPORT_SLAVE_ID = 0x11,
+    READ_FILE_RECORD = 0x14,
+    WRITE_FILE_RECORD = 0x15,
+    MASK_WRITE_REGISTER = 0x16,
+    READ_WRITE_MULTIPLE_REGISTERS = 0x17,
+    READ_FIFO_QUEUE = 0x18,
+};
+
+
+// Modbus request structure
+struct modbus_request {
+    uint8_t slave_address;
+    uint8_t function_code;
+    uint16_t start_address;
+    uint16_t quantity;
+    uint16_t value; // For write functions
+};
+
+// Modbus response structure
+struct modbus_response {
+    uint8_t slave_address;
+    uint8_t function_code;
+    uint8_t byte_count;
+    uint8_t data[];
+};
+
+
+// Function to process Modbus requests
+function process_modbus_request(modbus_request req): modbus_response
+{
+    modbus_response resp;
+    resp.slave_address = req.slave_address;
+    resp.function_code = req.function_code;
+
+    switch (req.function_code) {
+        case READ_COILS:
+            // Implement read coils logic
+            break;
+        case READ_HOLDING_REGISTERS:
+            // Implement read holding registers logic
+            break;
+        case WRITE_SINGLE_COIL:
+            // Implement write single coil logic
+            break;
+        case WRITE_SINGLE_REGISTER:
+            // Implement write single register logic
+            break;
+        default:
+            // Handle unsupported function codes
+            break;
+    }
+
+    return resp;
+}
+
+#endif // MODBUS_GEMINI_1_5_FLASH_SPICY

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns:tns="http://example.com/zip">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:defaultFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="uint16">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:annotation>
+        <xs:appinfo>
+          <dfdl:format binaryNumberRep="binary" byteOrder="littleEndian"/>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="uint32">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:annotation>
+        <xs:appinfo>
+          <dfdl:format binaryNumberRep="binary" byteOrder="littleEndian"/>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="LocalFileHeader">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:initiator="0x04034b50"/>
+      <xs:element name="versionNeededToExtract" type="tns:uint16"/>
+      <xs:element name="generalPurposeBitFlag" type="tns:uint16"/>
+      <xs:element name="compressionMethod" type="tns:uint16"/>
+      <xs:element name="lastModFileTime" type="tns:uint16"/>
+      <xs:element name="lastModFileDate" type="tns:uint16"/>
+      <xs:element name="crc32" type="xs:unsignedInt"/>
+      <xs:element name="compressedSize" type="tns:uint32"/>
+      <xs:element name="uncompressedSize" type="tns:uint32"/>
+      <xs:element name="fileNameLength" type="tns:uint16"/>
+      <xs:element name="extraFieldLength" type="tns:uint16"/>
+      <xs:element name="fileName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:fileNameLength }"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:extraFieldLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CentralDirectoryFileHeader">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:initiator="0x02014b50"/>
+      <xs:element name="versionMadeBy" type="tns:uint16"/>
+      <xs:element name="versionNeededToExtract" type="tns:uint16"/>
+      <xs:element name="generalPurposeBitFlag" type="tns:uint16"/>
+      <xs:element name="compressionMethod" type="tns:uint16"/>
+      <xs:element name="lastModFileTime" type="tns:uint16"/>
+      <xs:element name="lastModFileDate" type="tns:uint16"/>
+      <xs:element name="crc32" type="xs:unsignedInt"/>
+      <xs:element name="compressedSize" type="tns:uint32"/>
+      <xs:element name="uncompressedSize" type="tns:uint32"/>
+      <xs:element name="fileNameLength" type="tns:uint16"/>
+      <xs:element name="extraFieldLength" type="tns:uint16"/>
+      <xs:element name="fileCommentLength" type="tns:uint16"/>
+      <xs:element name="diskNumberStart" type="tns:uint16"/>
+      <xs:element name="internalFileAttributes" type="tns:uint16"/>
+      <xs:element name="externalFileAttributes" type="xs:unsignedInt"/>
+      <xs:element name="relativeOffsetOfLocalHeader" type="tns:uint32"/>
+      <xs:element name="fileName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:fileNameLength }"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:extraFieldLength }"/>
+      <xs:element name="fileComment" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:fileCommentLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ZIPFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="localFileHeader" type="tns:LocalFileHeader" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="centralDirectoryFileHeader" type="tns:CentralDirectoryFileHeader" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:defineFormat name="defaultFormat">
+        <dfdl:format representation="binary" lengthKind="delimited" encoding="UTF-8" textPadKind="none" textTrimKind="none"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

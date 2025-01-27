@@ -1,0 +1,71 @@
+%include zeek/protocol
+
+module DNS;
+
+public type Message = unit {
+    header: Header;
+    queries: Query[];
+    answers: ResourceRecord[];
+    authorities: ResourceRecord[];
+    additionals: ResourceRecord[];
+
+    on %done { print self; }
+};
+
+type Header = unit {
+    id: uint16;
+    qr: uint1;
+    opcode: uint4;
+    aa: uint1;
+    tc: uint1;
+    rd: uint1;
+    ra: uint1;
+    z: uint3;
+    rcode: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+type Query = unit {
+    name: Name;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: Name;
+    type_: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+type Name = unit {
+    labels: Label[];
+};
+
+type Label = unit {
+    var compressed: bool = False;
+    var offset: uint16;
+    
+    : uint8 &parse(parse_label_length);
+
+    switch {
+        self.compressed -> : b"" { self.offset = $$ & 0x3fff; }
+        * -> label: bytes &size=$$;
+    };
+};
+
+function parse_label_length(data: bytes): uint8 {
+    local len = data[0];
+    if ((len & 0xc0) == 0xc0)
+        return 0;
+    return len;
+}
+
+on DNS::Message -> event dns_message($conn, self.header.id, self.header.qr, self.header.opcode,
+    self.header.aa, self.header.tc, self.header.rd, self.header.ra, self.header.rcode,
+    self.queries, self.answers, self.authorities, self.additionals);

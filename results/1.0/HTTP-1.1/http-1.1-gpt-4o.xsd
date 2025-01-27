@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema 
+    xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+    targetNamespace="http://example.com/http"
+    xmlns="http://example.com/http"
+    elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:httpFormat"/>
+            <dfdl:defineFormat name="httpFormat">
+                <dfdl:initiator>%#x0D;%#x0A;</dfdl:initiator> <!-- Carriage return + line feed -->
+                <dfdl:separator>%#x0D;%#x0A;</dfdl:separator>
+                <dfdl:terminator>%#x0D;%#x0A;</dfdl:terminator>
+                <dfdl:encoding>utf-8</dfdl:encoding>
+                <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="HTTPRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="RequestLine" type="tns:RequestLineType"/>
+                <xs:element name="HeaderFields" type="tns:HeaderFieldsType" maxOccurs="unbounded"/>
+                <xs:element name="Body" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="RequestLineType">
+        <xs:sequence dfdl:initiator="">
+            <xs:element name="Method" type="tns:HTTPMethodType"/>
+            <xs:element name="RequestURI" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:separator >&#x20;</dfdl:separator>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="HTTPVersion" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:initiator>HTTP/</dfdl:initiator>
+                        <dfdl:separator>&#x0D;&#x0A;</dfdl:separator>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="HTTPMethodType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="GET"/>
+            <xs:enumeration value="POST"/>
+            <xs:enumeration value="PUT"/>
+            <xs:enumeration value="DELETE"/>
+            <xs:enumeration value="HEAD"/>
+            <xs:enumeration value="OPTIONS"/>
+            <xs:enumeration value="TRACE"/>
+            <xs:enumeration value="CONNECT"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="HeaderFieldsType">
+        <xs:sequence dfdl:separator=": ">
+            <xs:element name="HeaderName" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:terminator>&#x3A;&#x20;</dfdl:terminator> <!-- Colon and space -->
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="HeaderValue" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:separator>&#x0D;&#x0A;</dfdl:separator>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

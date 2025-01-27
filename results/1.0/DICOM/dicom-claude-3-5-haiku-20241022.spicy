@@ -1,0 +1,38 @@
+module DICOM;
+
+import spicy;
+
+public type DICOM_Header = unit {
+    header_length: uint32;
+    file_meta_information_group_length: uint32;
+    transfer_syntax_uid: bytes &length=header_length - 4;
+    
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        if ( self.header_length < 4 || self.header_length > 1024 ) {
+            throw "Invalid DICOM header length";
+        }
+    }
+};
+
+public type DICOM_File = unit {
+    header: DICOM_Header;
+    payload: bytes &size=header.file_meta_information_group_length;
+
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        if ( self.payload.size() != self.header.file_meta_information_group_length ) {
+            throw "Payload length mismatch";
+        }
+    }
+};
+
+public type DICOM = unit {
+    file: DICOM_File;
+};

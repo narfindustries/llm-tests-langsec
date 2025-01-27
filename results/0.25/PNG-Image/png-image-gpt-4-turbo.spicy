@@ -1,0 +1,27 @@
+module PNG;
+
+import spicy;
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bitDepth: uint8;
+    colorType: uint8;
+    compressionMethod: uint8;
+    filterMethod: uint8;
+    interlaceMethod: uint8;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=this.length;
+    crc: uint32;
+};
+
+type PNGFile = unit {
+    signature: bytes &size=8;
+    chunks: Chunk[] &eod;
+} &byte-order=big;
+
+public type File = PNGFile;

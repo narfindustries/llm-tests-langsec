@@ -1,0 +1,70 @@
+#ifndef _MQTT_GEMINI_1_5_FLASH_SPICY_H_
+#define _MQTT_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/zeek-config.h>
+
+#ifdef HAVE_SPICY
+
+#include <zeek/plugin.h>
+#include <zeek/analyzer/protocol/mqtt.h>
+
+namespace Zeek {
+
+class MQTTGemini15Flash : public MQTT::Analyzer {
+ public:
+  MQTTGemini15Flash();
+  ~MQTTGemini15Flash() override;
+
+  void Init() override;
+  void Done() override;
+  void Analyze(const MQTT::Message& msg) override;
+
+ private:
+  // Add any necessary member variables here.
+};
+
+} // namespace Zeek
+
+#endif // HAVE_SPICY
+
+#endif // _MQTT_GEMINI_1_5_FLASH_SPICY_H_
+
+
+#ifdef HAVE_SPICY
+
+#include "mqtt-gemini-1.5-flash.h"
+
+namespace Zeek {
+
+MQTTGemini15Flash::MQTTGemini15Flash() : MQTT::Analyzer("mqtt-gemini-1.5-flash") {
+}
+
+MQTTGemini15Flash::~MQTTGemini15Flash() {
+}
+
+void MQTTGemini15Flash::Init() {
+  // Add initialization code here.
+}
+
+void MQTTGemini15Flash::Done() {
+  // Add cleanup code here.
+}
+
+void MQTTGemini15Flash::Analyze(const MQTT::Message& msg) {
+  // Add your analysis logic here.  This function will be called for each MQTT message.
+  // Access message contents using msg.topic, msg.payload, msg.qos, etc.
+  // Example:
+  // if (msg.topic == "/gemini/data") {
+  //   // Process Gemini data
+  // }
+}
+
+} // namespace Zeek
+
+extern "C" {
+  Zeek::Analyzer* Create_MQTTGemini15Flash() {
+    return new Zeek::MQTTGemini15Flash();
+  }
+}
+
+#endif // HAVE_SPICY

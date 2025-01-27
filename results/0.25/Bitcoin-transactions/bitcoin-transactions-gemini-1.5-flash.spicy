@@ -1,0 +1,83 @@
+#ifndef BITCOIN_TRANSACTIONS_GEMINI_1_H
+#define BITCOIN_TRANSACTIONS_GEMINI_1_H
+
+#include <stdint.h>
+
+typedef struct {
+    uint32_t version;
+    uint32_t inputs_count;
+    uint32_t outputs_count;
+    uint32_t lock_time;
+} bitcoin_transaction_header_t;
+
+typedef struct {
+    uint256 hash;
+    uint32_t index;
+    uint8_t script_sig_len;
+    uint8_t script_sig[255];
+    uint32_t sequence;
+} bitcoin_transaction_input_t;
+
+typedef struct {
+    uint64_t value;
+    uint8_t script_pubkey_len;
+    uint8_t script_pubkey[255];
+} bitcoin_transaction_output_t;
+
+typedef struct {
+    bitcoin_transaction_header_t header;
+    bitcoin_transaction_input_t inputs[255];
+    bitcoin_transaction_output_t outputs[255];
+} bitcoin_transaction_t;
+
+uint256 sha256(const uint8_t *data, size_t len);
+uint256 double_sha256(const uint8_t *data, size_t len);
+
+#endif
+
+
+#include "bitcoin_transactions_gemini_1.h"
+
+bitcoin_transaction_t parse_bitcoin_transaction(const uint8_t *data, size_t len) {
+    bitcoin_transaction_t transaction;
+    size_t offset = 0;
+
+    // Parse header
+    memcpy(&transaction.header.version, data + offset, sizeof(transaction.header.version)); offset += sizeof(transaction.header.version);
+    memcpy(&transaction.header.inputs_count, data + offset, sizeof(transaction.header.inputs_count)); offset += sizeof(transaction.header.inputs_count);
+    memcpy(&transaction.header.outputs_count, data + offset, sizeof(transaction.header.outputs_count)); offset += sizeof(transaction.header.outputs_count);
+    memcpy(&transaction.header.lock_time, data + offset, sizeof(transaction.header.lock_time)); offset += sizeof(transaction.header.lock_time);
+
+    // Parse inputs
+    for (uint32_t i = 0; i < transaction.header.inputs_count; i++) {
+        memcpy(&transaction.inputs[i].hash, data + offset, sizeof(transaction.inputs[i].hash)); offset += sizeof(transaction.inputs[i].hash);
+        memcpy(&transaction.inputs[i].index, data + offset, sizeof(transaction.inputs[i].index)); offset += sizeof(transaction.inputs[i].index);
+        memcpy(&transaction.inputs[i].script_sig_len, data + offset, sizeof(transaction.inputs[i].script_sig_len)); offset += sizeof(transaction.inputs[i].script_sig_len);
+        memcpy(transaction.inputs[i].script_sig, data + offset, transaction.inputs[i].script_sig_len); offset += transaction.inputs[i].script_sig_len;
+        memcpy(&transaction.inputs[i].sequence, data + offset, sizeof(transaction.inputs[i].sequence)); offset += sizeof(transaction.inputs[i].sequence);
+    }
+
+    // Parse outputs
+    for (uint32_t i = 0; i < transaction.header.outputs_count; i++) {
+        memcpy(&transaction.outputs[i].value, data + offset, sizeof(transaction.outputs[i].value)); offset += sizeof(transaction.outputs[i].value);
+        memcpy(&transaction.outputs[i].script_pubkey_len, data + offset, sizeof(transaction.outputs[i].script_pubkey_len)); offset += sizeof(transaction.outputs[i].script_pubkey_len);
+        memcpy(transaction.outputs[i].script_pubkey, data + offset, transaction.outputs[i].script_pubkey_len); offset += transaction.outputs[i].script_pubkey_len;
+    }
+
+    return transaction;
+}
+
+
+uint256 sha256(const uint8_t *data, size_t len) {
+    //Implementation omitted for brevity.  Replace with actual SHA256 implementation.
+    uint256 result = {0};
+    return result;
+}
+
+uint256 double_sha256(const uint8_t *data, size_t len) {
+    //Implementation omitted for brevity.  Replace with actual double SHA256 implementation.
+    uint256 result = {0};
+    return result;
+}
+
+typedef uint8_t uint256[32];

@@ -1,0 +1,122 @@
+%zeek
+
+# Import required modules
+@load base/protocols/elf
+
+# Define the ELF file structure
+module ELF;
+
+# Define the ELF file header
+type Elf32_Ehdr: record {
+    e_ident:       Elf32_Eident;
+    e_type:        uint16;
+    e_machine:     uint16;
+    e_version:     uint32;
+    e_entry:       uint32;
+    e_phoff:       uint32;
+    e_shoff:       uint32;
+    e_flags:       uint32;
+    e_ehsize:      uint16;
+    e_phentsize:   uint16;
+    e_phnum:       uint16;
+    e_shentsize:   uint16;
+    e_shnum:       uint16;
+    e_shstrndx:    uint16;
+} &byteorder=little-endian;
+
+# Define the ELF file section header
+type Elf32_Shdr: record {
+    sh_name:       uint32;
+    sh_type:       uint32;
+    sh_flags:      uint32;
+    sh_addr:       uint32;
+    sh_offset:     uint32;
+    sh_size:       uint32;
+    sh_link:       uint32;
+    sh_info:       uint32;
+    sh_addralign:  uint32;
+    sh_entsize:    uint32;
+} &byteorder=little-endian;
+
+# Define the ELF file program header
+type Elf32_Phdr: record {
+    p_type:        uint32;
+    p_offset:      uint32;
+    p_vaddr:       uint32;
+    p_paddr:       uint32;
+    p_filesz:      uint32;
+    p_memsz:       uint32;
+    p_flags:       uint32;
+    p_align:       uint32;
+} &byteorder=little-endian;
+
+# Define the ELF file identification
+type Elf32_Eident: record {
+    ei_mag:        bytes[4];
+    ei_class:      uint8;
+    ei_data:       uint8;
+    ei_version:    uint8;
+    ei_osabi:      uint8;
+    ei_abiversion: uint8;
+    ei_pad:        bytes[7];
+} &byteorder=little-endian;
+
+# Define the event handler for parsing ELF files
+event zeek_init() {
+    # Set the default parser for ELF files
+    Analyzer::register_for_ports(tcp, 0/elf);
+}
+
+event zeek_done() {
+    # Print the parsed ELF file information
+    print "ELF file parsed successfully";
+}
+
+# Define the ELF file parser
+module ELF_Parser {
+    # Parse the ELF file header
+    function parse_ehdr(header: Elf32_Ehdr): bool {
+        # Check the ELF file magic number
+        if (header$e_ident$ei_mag != "7f454c46") {
+            return false;
+        }
+
+        # Check the ELF file class
+        if (header$e_ident$ei_class != 1) {
+            return false;
+        }
+
+        # Check the ELF file data encoding
+        if (header$e_ident$ei_data != 1) {
+            return false;
+        }
+
+        return true;
+    }
+
+    # Parse the ELF file sections
+    function parse_shdrs(shdrs: vector of Elf32_Shdr): bool {
+        # Iterate through each section header
+        for (i in shdrs) {
+            # Check the section type
+            if (shdrs[i]$sh_type != 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    # Parse the ELF file programs
+    function parse_phdrs(phdrs: vector of Elf32_Phdr): bool {
+        # Iterate through each program header
+        for (i in phdrs) {
+            # Check the program type
+            if (phdrs[i]$p_type != 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:jpeg="urn:jpeg:1.0"
+    targetNamespace="urn:jpeg:1.0">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary" 
+                        byteOrder="bigEndian"
+                        binaryNumberRep="binary"
+                        alignment="1"
+                        alignmentUnits="bytes"
+                        lengthKind="explicit"
+                        lengthUnits="bytes"
+                        encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="jpeg">
+        <xs:complexType>
+            <xs:sequence>
+                <!-- SOI Marker -->
+                <xs:element name="soi" type="jpeg:markerType" fixed="0xFFD8"/>
+                
+                <!-- APP0 Segment -->
+                <xs:element name="app0" type="jpeg:app0Type"/>
+                
+                <!-- Other Segments -->
+                <xs:element name="segments" type="jpeg:segmentsType" minOccurs="0" maxOccurs="unbounded"/>
+                
+                <!-- EOI Marker -->
+                <xs:element name="eoi" type="jpeg:markerType" fixed="0xFFD9"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="markerType">
+        <xs:sequence>
+            <xs:element name="value" type="xs:hexBinary" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="app0Type">
+        <xs:sequence>
+            <xs:element name="marker" type="jpeg:markerType" fixed="0xFFE0"/>
+            <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="identifier" type="xs:string" dfdl:length="5" fixed="JFIF"/>
+            <xs:element name="version" type="xs:hexBinary" dfdl:length="2"/>
+            <xs:element name="units" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="xDensity" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="yDensity" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="xThumbnail" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="yThumbnail" type="xs:unsignedByte" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="segmentsType">
+        <xs:sequence>
+            <xs:element name="marker" type="jpeg:markerType"/>
+            <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="data" type="xs:hexBinary" 
+                       dfdl:lengthKind="expression"
+                       dfdl:lengthUnits="bytes"
+                       dfdl:length="{ ../length - 2 }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,57 @@
+module TIFF;
+
+import zeek;
+
+type TIFFHeader = unit {
+    endian: bytes &size=2;
+    magic_number: uint16;
+    if (endian == "\x49\x49") {
+        .byte_order = le;
+    } else {
+        .byte_order = be;
+    }
+    version: uint16;
+    offset: uint32;
+};
+
+type TIFFTag = unit {
+    tag_id: uint16;
+    data_type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+type TIFFDirectory = unit {
+    num_entries: uint16;
+    entries: array[num_entries] of TIFFTag;
+    next_ifd_offset: uint32;
+};
+
+type TIFFFile = unit {
+    header: TIFFHeader;
+    directories: array of TIFFDirectory {
+        next_ifd_offset != 0 => next_ifd_offset;
+    };
+};
+
+public type ParsedTIFF = TIFFFile;
+
+public event tiff_parsed(f: fa_file, tiff: ParsedTIFF);
+
+public hook zeek_init() {
+    Analyzer::register_for_mime_type(Analyzer::ANALYZER_TIFF, "image/tiff");
+}
+
+public type Analyzer = Analyzer::Base {
+    function done() : bool {
+        local tiff = parse_tiff();
+        if ( tiff ) {
+            event tiff_parsed(fa_file, tiff);
+        }
+        return true;
+    }
+
+    function parse_tiff() : ParsedTIFF {
+        return parse(ParsedTIFF, data);
+    }
+};

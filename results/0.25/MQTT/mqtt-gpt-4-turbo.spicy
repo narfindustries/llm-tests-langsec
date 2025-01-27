@@ -1,0 +1,98 @@
+module MQTT;
+
+import spicy;
+
+type ConnectFlags = unit {
+    reserved: bit;
+    cleanSession: bool;
+    willFlag: bool;
+    willQoS: uint2;
+    willRetain: bool;
+    passwordFlag: bool;
+    usernameFlag: bool;
+};
+
+type ConnectPayload = unit {
+    clientID: bytes &eod;
+    willTopic: bytes &optional(willFlag());
+    willMessage: bytes &optional(willFlag());
+    username: bytes &optional(usernameFlag());
+    password: bytes &optional(passwordFlag());
+};
+
+type Connect = unit {
+    protoName: bytes &size=4;
+    version: uint8;
+    flags: ConnectFlags;
+    keepAlive: uint16;
+    payload: ConnectPayload;
+};
+
+type ConnAckFlags = unit {
+    sessionPresent: bool;
+    reserved: bit &size=7;
+};
+
+type ConnAck = unit {
+    flags: ConnAckFlags;
+    returnCode: uint8;
+};
+
+type Publish = unit {
+    dupFlag: bool;
+    qosLevel: uint2;
+    retain: bool;
+    topicName: bytes &eod;
+    message: bytes &size=remaining_bytes();
+};
+
+type SubscribeTopic = unit {
+    topicFilter: bytes &eod;
+    qos: uint8;
+};
+
+type Subscribe = unit {
+    packetID: uint16;
+    topics: SubscribeTopic[] &eod;
+};
+
+type SubAck = unit {
+    packetID: uint16;
+    returnCodes: uint8[] &eod;
+};
+
+type Unsubscribe = unit {
+    packetID: uint16;
+    topics: bytes[] &eod;
+};
+
+type UnsubAck = unit {
+    packetID: uint16;
+};
+
+type PingReq = unit {};
+
+type PingResp = unit {};
+
+type Disconnect = unit {};
+
+public type MQTTMessage = unit {
+    messageType: uint4;
+    dupFlag: bool;
+    qosLevel: uint2;
+    retain: bool;
+    remainingLength: uint32;
+    contents: switch (messageType) {
+        1 -> connect: Connect;
+        2 -> connAck: ConnAck;
+        3 -> publish: Publish;
+        8 -> subscribe: Subscribe;
+        9 -> subAck: SubAck;
+        10 -> unsubscribe: Unsubscribe;
+        11 -> unsubAck: UnsubAck;
+        12 -> pingReq: PingReq;
+        13 -> pingResp: PingResp;
+        14 -> disconnect: Disconnect;
+        default -> data: bytes &size=remainingLength;
+    };
+} &byte_order=big;

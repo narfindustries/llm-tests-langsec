@@ -1,0 +1,58 @@
+#define ICMP_TYPE 8
+
+#define ICMP_CODE 0
+
+type ICMPudget = record {
+    type: uint8 = ICMP_TYPE;
+    code: uint8 = ICMP_CODE;
+    checksum: uint16;
+    identifier: uint16;
+    sequence_number: uint16;
+};
+
+type ICMP_Packet = record {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest: bytestring;
+};
+
+type ICMP_Meta = record {
+    icmp_type: uint8;
+    icmp_code: uint8;
+    icmp_identifier: uint16;
+    icmp_sequence_number: uint16;
+};
+
+field parser(i: bytestring): ICMP_Packet = 
+    (
+        # Match the type
+        match(i[0:1], uint8) as t,
+        
+        # Match the code
+        match(i[1:2], uint8) as c,
+        
+        # Match the checksum
+        match(i[2:4], uint16) as cs,
+        
+        # Match the rest of the packet
+        match(i[4:], bytestring) as r,
+        
+        ICMP_Packet(
+            t,
+            c,
+            cs,
+            r
+        )
+    );
+
+field parser_meta(i: bytestring): ICMP_Meta = 
+    (
+        match(i, ICMPudget) as m,
+        ICMP_Meta(
+            m.type,
+            m.code,
+            m.identifier,
+            m.sequence_number
+        )
+    );

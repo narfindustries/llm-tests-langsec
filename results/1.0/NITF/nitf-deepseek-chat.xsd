@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="generated/999999/1.0/NITF/nitf-deepseek-chat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NITFType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="Body" type="tns:BodyType" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="FileID" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+      <xs:element name="Version" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Message" type="tns:MessageType" dfdl:lengthKind="implicit" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MessageType">
+    <xs:sequence>
+      <xs:element name="Sender" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="Receiver" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="Content" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="100"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NITF" type="tns:NITFType"/>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="text" encoding="UTF-8" lengthKind="explicit" lengthUnits="bytes"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

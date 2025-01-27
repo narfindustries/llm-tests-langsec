@@ -1,0 +1,46 @@
+module PNG;
+
+import zeek;
+
+type PNGSignature = unit {
+    magic: bytes &length=8 &check=$magic == "\x89PNG\r\n\x1a\n";
+};
+
+type PNGChunk = unit {
+    length: uint32;
+    type: bytes &length=4;
+    data: bytes &length=length;
+    crc: uint32;
+
+    on %done {
+        if (crc != compute_crc32(type + data)) {
+            warn fmt("CRC mismatch in chunk type %s", type);
+        }
+    }
+
+    function compute_crc32(data: bytes): uint32 {
+        local crc = 0xffffffff;
+        for (local b: bytes in data) {
+            crc = crc32_table[(crc ^ b) & 0xff] ^ (crc >> 8);
+        }
+        return crc ^ 0xffffffff;
+    }
+
+    const crc32_table: vector of uint32 = {
+        0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, // first four entries
+        // ... (continue the CRC table initialization)
+    };
+};
+
+public type PNGImage = unit {
+    signature: PNGSignature;
+    chunks: [PNGChunk] &until=$chunk.type == "IEND";
+
+    on %done {
+        print fmt("Parsed PNG Image with %d chunks", len(chunks));
+    }
+};
+
+public export {
+    global PNGImage: function(input: parse::Input) -> PNG::PNGImage;
+}

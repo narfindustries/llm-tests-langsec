@@ -1,0 +1,55 @@
+module JPEG;
+
+public type SOF0 = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[num_components];
+};
+
+public type Component = unit {
+    id: uint8;
+    sampling: uint8;
+    qt: uint8;
+};
+
+public type SOI = unit {};
+
+public type EOI = unit {};
+
+public type APP0 = unit {
+    length: uint16;
+    identifier: bytes &size=5;
+    version: uint16;
+    units: uint8;
+    xdensity: uint16;
+    ydensity: uint16;
+    xthumbnail: uint8;
+    ythumbnail: uint8;
+    thumbnail: bytes &size=(xthumbnail * ythumbnail * 3);
+};
+
+public type JPEGFile = unit {
+    segments: Segment(self.isEOI())[];
+};
+
+public type Segment = unit(isEOI: function(): bool) -> (isEOI: bool) {
+    tag: uint16;
+    switch (tag) {
+        case 0xFFD8 -> _: SOI;
+        case 0xFFE0 -> app0: APP0;
+        case 0xFFC0 -> sof0: SOF0;
+        case 0xFFD9 -> _: EOI { isEOI = true; }
+        default -> _: SkipSegment;
+    };
+};
+
+public type SkipSegment = unit {
+    length: uint16;
+    data: bytes &size=(length - 2);
+};
+
+public function isEOI(): bool {
+    return false;
+}

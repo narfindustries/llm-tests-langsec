@@ -1,0 +1,33 @@
+module PNG;
+
+import spicy;
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=length;
+    crc: uint32;
+};
+
+type PNG = unit {
+    magic: bytes &size=8 &check=(magic == b"\x89PNG\r\n\x1a\n");
+    chunks: Chunk[] &until=(chunks[$].type == b"IEND");
+};
+
+public type PNGAnalyzer = unit {
+    png: PNG;
+} &analyzer;
+
+public hook zeek_init() {
+    Analyzer::register_for_ports(Analyzer::ANALYZER_PNG, { 80/tcp, 443/tcp });
+}

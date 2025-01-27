@@ -1,0 +1,21 @@
+module ICMP;
+
+public type ICMPMessage = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    payload: bytes &eod;
+    
+    on %init {
+        print "Initializing ICMP parsing...";
+    }
+
+    on %done {
+        print fmt("Parsed ICMP message: type=%d, code=%d", self.type, self.code);
+    }
+};
+
+event zeek_init() &priority=5
+{
+    print "Zeek module for ICMP loaded.";
+}

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:tns="http://example.com/dns">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:element name="DNSPacket" type="tns:DNSPacketType"/>
+
+  <xs:complexType name="DNSPacketType">
+    <xs:sequence>
+      <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="Flags" type="tns:FlagsType" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="Questions" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="AnswerRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="AuthorityRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="AdditionalRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="Queries" type="tns:QueryType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../tns:Questions }"/>
+      <xs:element name="Answers" type="tns:ResourceRecordType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../tns:AnswerRRs }" minOccurs="0"/>
+      <xs:element name="Authorities" type="tns:ResourceRecordType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../tns:AuthorityRRs }" minOccurs="0"/>
+      <xs:element name="Additionals" type="tns:ResourceRecordType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../tns:AdditionalRRs }" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="QR" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="Opcode" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="AA" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="TC" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="RD" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="RA" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="Z" type="xs:unsignedByte" dfdl:length="3" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="Rcode" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QueryType">
+    <xs:sequence>
+      <xs:element name="Name" type="tns:DomainNameType"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResourceRecordType">
+    <xs:sequence>
+      <xs:element name="Name" type="tns:DomainNameType"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
+      <xs:element name="DataLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="RData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:DataLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DomainNameType">
+    <xs:sequence dfdl:separator="." dfdl:separatorPosition="infix" dfdl:terminator="0">
+      <xs:element name="Label" type="xs:string" dfdl:lengthKind="delimited" dfdl:initiatedContent="yes" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

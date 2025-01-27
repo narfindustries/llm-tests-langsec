@@ -1,0 +1,44 @@
+module ARP;
+
+import spicy;
+
+public type Header = unit {
+    hw_type: uint16;
+    proto_type: uint16;
+    hw_size: uint8;
+    proto_size: uint8;
+    opcode: uint16;
+    sender_mac: bytes &size=6;
+    sender_ip: bytes &size=4;
+    target_mac: bytes &size=6;
+    target_ip: bytes &size=4;
+
+    on %done {
+        self.hw_type_str = "Ethernet" if self.hw_type == 1 else "<unknown>";
+        self.proto_type_str = "IPv4" if self.proto_type == 0x0800 else "<unknown>";
+        self.opcode_str = self.get_opcode_str(self.opcode);
+    }
+
+    var hw_type_str: string;
+    var proto_type_str: string;
+    var opcode_str: string;
+};
+
+function Header::get_opcode_str(code: uint16): string {
+    switch ( code ) {
+        case 1: return "Request";
+        case 2: return "Reply";
+        case 3: return "RARP Request";
+        case 4: return "RARP Reply";
+        case 5: return "DRARP Request";
+        case 6: return "DRARP Reply";
+        case 7: return "DRARP Error";
+        case 8: return "InARP Request";
+        case 9: return "InARP Reply";
+        default: return "<unknown>";
+    }
+}
+
+public type Packet = unit {
+    header: Header;
+};

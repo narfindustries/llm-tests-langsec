@@ -1,0 +1,43 @@
+module TIFF;
+
+import zeek;
+
+type TIFFHeader = unit {
+    endianness: uint16 &byteorder=endianness == 0x4949 ? "little" : "big";
+    magic: uint16 &assert=magic == 42;
+    ifd_offset: uint32;
+};
+
+type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+type IFD = unit {
+    entries: uint16;
+    ifd_entries: array[entries] of IFDEntry;
+    next_ifd_offset: uint32;
+};
+
+public type TIFFFile = unit {
+    header: TIFFHeader;
+    ifds: array of IFD &until=ifds[|-1].next_ifd_offset == 0;
+};
+
+public event tiff_parsed(f: TIFFFile);
+
+public function parse_tiff(data: bytes): TIFFFile {
+    return parse_TIFFFile(data);
+}
+
+hook zeek_init() {
+    local file = open("sample.tiff");
+    if (file) {
+        local data = file.read();
+        close(file);
+        local tiff = parse_tiff(data);
+        event tiff_parsed(tiff);
+    }
+}

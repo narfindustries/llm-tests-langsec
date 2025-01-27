@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/dns"
+           xmlns:dns="http://www.example.org/dns"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        representation="binary"
+        byteOrder="bigEndian"
+        alignment="1"
+        alignmentUnits="bytes"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressed"
+        documentFinalTerminatorCanBeMissing="yes"
+        occursCountKind="parsed"
+        textNumberCheckPolicy="strict"
+        textZeroRepresentation="0"
+        escapeSchemeRef=""
+        bitOrder="mostSignificantBitFirst"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="DNSPacket">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Header" type="dns:DNSHeader"/>
+        <xs:element name="Questions" type="dns:DNSQuestions"/>
+        <xs:element name="Answers" type="dns:DNSAnswers" minOccurs="0"/>
+        <xs:element name="Authority" type="dns:DNSAuthority" minOccurs="0"/>
+        <xs:element name="Additional" type="dns:DNSAdditional" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DNSHeader">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="Flags" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="QuestionCount" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="AnswerCount" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="AuthorityCount" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="AdditionalCount" type="xs:unsignedShort" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSQuestions">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Question" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="Name" type="dns:DNSDomainName"/>
+            <xs:element name="Type" type="xs:unsignedShort" dfdl:representation="binary"/>
+            <xs:element name="Class" type="xs:unsignedShort" dfdl:representation="binary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAnswers">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ResourceRecord" maxOccurs="unbounded" type="dns:DNSResourceRecord"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAuthority">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ResourceRecord" maxOccurs="unbounded" type="dns:DNSResourceRecord"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAdditional">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ResourceRecord" maxOccurs="unbounded" type="dns:DNSResourceRecord"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSResourceRecord">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Name" type="dns:DNSDomainName"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="RDLength" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="RData" type="xs:hexBinary" dfdl:lengthKind="explicit" 
+                  dfdl:length="{ ../RDLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSDomainName">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Labels" dfdl:occursCountKind="parsed" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="Length" type="xs:unsignedByte" dfdl:representation="binary"/>
+            <xs:element name="Label" type="xs:string" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="{ ../Length }"
+                        dfdl:encoding="ASCII"
+                        minOccurs="0" 
+                        maxOccurs="1"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ELF"
+           xmlns:tns="http://example.com/ELF"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="littleEndian" encoding="utf-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ELFFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Magic" type="tns:MagicType"/>
+                <xs:element name="Header" type="tns:HeaderType"/>
+                <xs:element name="Sections" type="tns:SectionsType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="MagicType">
+        <xs:restriction base="xs:string">
+            <xs:length value="4"/>
+            <xs:pattern value="\x7fELF"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="Class" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="Data" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="Version" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="OSABI" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="ABIVersion" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="Padding" type="xs:unsignedByte" dfdl:length="7"/>
+            <xs:element name="Type" type="xs:unsignedShort"/>
+            <xs:element name="Machine" type="xs:unsignedShort"/>
+            <xs:element name="Version2" type="xs:unsignedInt"/>
+            <xs:element name="EntryPoint" type="xs:unsignedInt"/>
+            <xs:element name="ProgramHeaderOffset" type="xs:unsignedInt"/>
+            <xs:element name="SectionHeaderOffset" type="xs:unsignedInt"/>
+            <xs:element name="Flags" type="xs:unsignedInt"/>
+            <xs:element name="HeaderSize" type="xs:unsignedShort"/>
+            <xs:element name="ProgramHeaderEntrySize" type="xs:unsignedShort"/>
+            <xs:element name="ProgramHeaderEntryCount" type="xs:unsignedShort"/>
+            <xs:element name="SectionHeaderEntrySize" type="xs:unsignedShort"/>
+            <xs:element name="SectionHeaderEntryCount" type="xs:unsignedShort"/>
+            <xs:element name="SectionHeaderStringIndex" type="xs:unsignedShort"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SectionsType">
+        <xs:sequence>
+            <xs:element name="SectionHeader" type="tns:SectionHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SectionHeaderType">
+        <xs:sequence>
+            <xs:element name="NameOffset" type="xs:unsignedInt"/>
+            <xs:element name="Type" type="xs:unsignedInt"/>
+            <xs:element name="Flags" type="xs:unsignedInt"/>
+            <xs:element name="Address" type="xs:unsignedInt"/>
+            <xs:element name="Offset" type="xs:unsignedInt"/>
+            <xs:element name="Size" type="xs:unsignedInt"/>
+            <xs:element name="Link" type="xs:unsignedInt"/>
+            <xs:element name="Info" type="xs:unsignedInt"/>
+            <xs:element name="AddressAlign" type="xs:unsignedInt"/>
+            <xs:element name="EntrySize" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

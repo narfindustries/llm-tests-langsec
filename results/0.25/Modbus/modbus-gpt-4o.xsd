@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ModbusFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="ModbusFormat"
+               byteOrder="bigEndian"
+               encoding="utf-8"
+               lengthKind="explicit"
+               lengthUnits="bytes"
+               occursCountKind="expression"
+               occursCount="{ ../count }"/>
+
+  <xs:element name="ModbusMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="ProtocolID" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="UnitID" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Data" type="tns:DataField" dfdl:length="{ ../Length - 2 }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DataField">
+    <xs:sequence>
+      <xs:element name="DataBytes" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

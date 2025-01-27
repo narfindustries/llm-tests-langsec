@@ -1,0 +1,83 @@
+module MQTT;
+
+import spicy;
+
+public type Packet = unit {
+    var fixed_header: FixedHeader;
+    var variable_header: VariableHeader(fixed_header.packet_type);
+    var payload: Payload(fixed_header.packet_type);
+
+    on %done { 
+        print "MQTT Packet Processed";
+    }
+};
+
+type FixedHeader = unit {
+    packet_type: bitfield(4) {
+        type: 0..3;
+        flags: 4..7;
+    };
+    remaining_length: variable_length_quantity;
+};
+
+type VariableHeader = unit(packet_type: uint8) {
+    switch (packet_type) {
+        0x1 -> connect_header: ConnectHeader;
+        0x2 -> connack_header: ConnAckHeader;
+        0x3 -> publish_header: PublishHeader;
+        _ -> skip;
+    }
+};
+
+type ConnectHeader = unit {
+    protocol_name: bytes(4);
+    protocol_version: uint8;
+    connect_flags: bitfield(8) {
+        username_flag: 7;
+        password_flag: 6;
+        will_retain: 5;
+        will_qos: 4..3;
+        will_flag: 2;
+        clean_session: 1;
+        reserved: 0;
+    };
+    keep_alive: uint16;
+};
+
+type ConnAckHeader = unit {
+    session_present: bool;
+    return_code: uint8;
+};
+
+type PublishHeader = unit {
+    topic_name: string;
+    packet_id: uint16;
+};
+
+type Payload = unit(packet_type: uint8) {
+    switch (packet_type) {
+        0x1 -> connect_payload: ConnectPayload;
+        0x3 -> publish_payload: bytes;
+        _ -> skip;
+    }
+};
+
+type ConnectPayload = unit {
+    client_id: string;
+    username: optional string;
+    password: optional string;
+};
+
+type variable_length_quantity = unit {
+    value: uint8 {
+        var result = 0;
+        var multiplier = 1;
+        while ( self > 127 ) {
+            result += (self & 0x7f) * multiplier;
+            multiplier *= 128;
+            self = input.read(1)[0];
+        }
+        result += self * multiplier;
+        return result;
+    }
+};

@@ -1,0 +1,59 @@
+#ifndef _SPICY_GEMINI_H_
+#define _SPICY_GEMINI_H_
+
+#include <stdint.h>
+
+// Define structures for Gemini data
+typedef struct {
+    uint32_t  timestamp;
+    uint16_t  source_port;
+    uint16_t  destination_port;
+    uint32_t  source_ip;
+    uint32_t  destination_ip;
+    uint8_t   protocol;
+    uint8_t   payload_length;
+    uint8_t   payload[255]; // Adjust size as needed.
+} gemini_packet_t;
+
+
+// Define a function to process a Gemini packet
+int process_gemini_packet(gemini_packet_t *packet);
+
+#endif
+
+
+#include "gemini.h"
+
+int process_gemini_packet(gemini_packet_t *packet) {
+    // Implement your Gemini packet processing logic here.
+    // Access the packet fields using the structure members (e.g., packet->timestamp).
+    // Add your logic to handle different Gemini protocols.
+
+
+    //Example: Print some data
+    printf("Timestamp: %u\n", packet->timestamp);
+    printf("Source IP: %u.%u.%u.%u\n", (packet->source_ip >> 24) & 0xFF, (packet->source_ip >> 16) & 0xFF, (packet->source_ip >> 8) & 0xFF, packet->source_ip & 0xFF);
+
+    return 0; // Indicate successful processing.
+}
+
+
+
+int main(){
+    gemini_packet_t my_packet;
+    // Initialize the packet with sample data
+
+    my_packet.timestamp = 1678886400;
+    my_packet.source_port = 8080;
+    my_packet.destination_port = 1984;
+    my_packet.source_ip = 0x0A000001; // 10.0.0.1
+    my_packet.destination_ip = 0x7F000001; // 127.0.0.1
+    my_packet.protocol = 6; // TCP
+    my_packet.payload_length = 10;
+    // Fill payload as needed
+
+
+    process_gemini_packet(&my_packet);
+
+    return 0;
+}

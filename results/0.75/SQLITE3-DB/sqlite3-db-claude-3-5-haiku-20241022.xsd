@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db"
+           xmlns:tns="http://example.com/sqlite3-db"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        lengthKind="delimited"
+        encoding="UTF-8"
+        separator=""
+        initiator=""
+        terminator=""
+        textNumberPattern="#0"
+        textNumberRounding="explicit"
+        textZonedSignStyle="asciiStandard"
+        textPadKind="none"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLiteDatabase" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="" dfdl:separatorPosition="prefix">
+        <xs:element name="Header" type="tns:DatabaseHeader" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Pages" type="tns:DatabasePages" minOccurs="1" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DatabaseHeader">
+    <xs:sequence dfdl:separator="" dfdl:separatorPosition="prefix">
+      <xs:element name="Magic" type="xs:string" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="16"/>
+      <xs:element name="PageSize" type="xs:unsignedShort" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="2"/>
+      <xs:element name="FileFormatVersion" type="xs:byte" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DatabasePages">
+    <xs:sequence dfdl:separator="" dfdl:separatorPosition="prefix">
+      <xs:element name="Page" type="tns:DatabasePage" 
+        minOccurs="1" 
+        maxOccurs="unbounded" 
+        dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DatabasePage">
+    <xs:sequence dfdl:separator="" dfdl:separatorPosition="prefix">
+      <xs:element name="PageType" type="xs:byte" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="1"/>
+      <xs:element name="PageContent" type="xs:hexBinary" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="{ ../PageSize }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

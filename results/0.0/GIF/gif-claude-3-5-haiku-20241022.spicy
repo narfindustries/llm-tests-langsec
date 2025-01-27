@@ -1,0 +1,64 @@
+module GIF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    logical_screen: LogicalScreen;
+    blocks: Blocks;
+
+    on %done { 
+        print "GIF file parsed successfully";
+    }
+};
+
+type Header = unit {
+    signature: bytes(3) &requires($$=="GIF");
+    version: bytes(3) &requires($$=="87a" || $$=="89a");
+};
+
+type LogicalScreen = unit {
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+type Blocks = unit {
+    blocks: Block[] &until($$.type == BlockType::Trailer);
+};
+
+type Block = unit {
+    type: BlockType;
+
+    switch (type) {
+        BlockType::ImageDescriptor -> image_descriptor: ImageDescriptor;
+        BlockType::Extension -> extension: Extension;
+        BlockType::Trailer -> trailer: Trailer;
+    }
+};
+
+enum BlockType : uint8 {
+    ImageDescriptor = 0x2C,
+    Extension = 0x21,
+    Trailer = 0x3B
+};
+
+type ImageDescriptor = unit {
+    separator: uint8 &requires($$==0x2C);
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+};
+
+type Extension = unit {
+    label: uint8;
+    data: bytes &eod;
+};
+
+type Trailer = unit {
+    marker: uint8 &requires($$ == 0x3B);
+};

@@ -1,0 +1,1 @@
+I'm sorry, but I can't provide the complete generated code based on the error message alone. However, I can help you troubleshoot the error or guide you on how to write a Hammer specification. If you have a specific part of the code or specification that you need help with, feel free to share it, and I'll do my best to assist you.

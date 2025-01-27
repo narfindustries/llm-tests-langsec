@@ -1,0 +1,77 @@
+module Modbus;
+
+public type ExceptionResponse = unit {
+    functionCode: uint8;
+    exceptionCode: uint8;
+} &byte_order=big_endian;
+
+public type ReadCoilsResponse = unit {
+    functionCode: uint8;
+    byteCount: uint8;
+    coilStatus: bytes &size=byteCount;
+} &byte_order=big_endian;
+
+public type ReadDiscreteInputsResponse = unit {
+    functionCode: uint8;
+    byteCount: uint8;
+    inputStatus: bytes &size=byteCount;
+} &byte_order=big_endian;
+
+public type ReadHoldingRegistersResponse = unit {
+    functionCode: uint8;
+    byteCount: uint8;
+    registerValues: bytes &size=byteCount;
+} &byte_order=big_endian;
+
+public type ReadInputRegistersResponse = unit {
+    functionCode: uint8;
+    byteCount: uint8;
+    registerValues: bytes &size=byteCount;
+} &byte_order=big_endian;
+
+public type WriteSingleCoilResponse = unit {
+    functionCode: uint8;
+    outputAddress: uint16;
+    outputValue: uint16;
+} &byte_order=big_endian;
+
+public type WriteSingleRegisterResponse = unit {
+    functionCode: uint8;
+    registerAddress: uint16;
+    registerValue: uint16;
+} &byte_order=big_endian;
+
+public type WriteMultipleCoilsResponse = unit {
+    functionCode: uint8;
+    startingAddress: uint16;
+    quantityOfOutputs: uint16;
+} &byte_order=big_endian;
+
+public type WriteMultipleRegistersResponse = unit {
+    functionCode: uint8;
+    startingAddress: uint16;
+    quantityOfRegisters: uint16;
+} &byte_order=big_endian;
+
+public type ModbusPDU = unit {
+    functionCode: uint8;
+    data: switch (self.functionCode) {
+        0x01 -> readCoilsResp: ReadCoilsResponse;
+        0x02 -> readDiscreteInputsResp: ReadDiscreteInputsResponse;
+        0x03 -> readHoldingRegistersResp: ReadHoldingRegistersResponse;
+        0x04 -> readInputRegistersResp: ReadInputRegistersResponse;
+        0x05 -> writeSingleCoilResp: WriteSingleCoilResponse;
+        0x06 -> writeSingleRegisterResp: WriteSingleRegisterResponse;
+        0x0F -> writeMultipleCoilsResp: WriteMultipleCoilsResponse;
+        0x10 -> writeMultipleRegistersResp: WriteMultipleRegistersResponse;
+        * -> exceptionResp: ExceptionResponse;
+    };
+} &byte_order=big_endian;
+
+public type ModbusADU = unit {
+    transactionId: uint16;
+    protocolId: uint16;
+    length: uint16;
+    unitId: uint8;
+    pdu: ModbusPDU;
+} &byte_order=big_endian;

@@ -1,0 +1,37 @@
+module ZIP;
+
+import zeek;
+
+type ZIPSignature = unit {
+    magic: bytes &length=4 &check=$magic == "\x50\x4B\x03\x04";
+};
+
+type ZIPFile = unit {
+    sig: ZIPSignature;
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    filename: string &length=filename_length;
+    extra_field: bytes &length=extra_field_length;
+    payload: bytes &length=compressed_size;
+};
+
+public type ZIPAnalyzer = unit {
+    file: ZIPFile;
+} &implements zeek.Analyzer;
+
+public function analyze_zip(data: bytes): bool {
+    local analyzer = ZIPAnalyzer(data);
+    return analyzer.file.sig.magic == "\x50\x4B\x03\x04";
+}
+
+event zeek_init() {
+    zeek.register_for_file("application/zip", analyze_zip);
+}

@@ -1,0 +1,51 @@
+# Zeek Spicy specification for DICOM metadata parsing
+
+%header {
+    # Import necessary modules
+    @load base/protocols/dicom
+}
+
+%config {
+    # Configure the parser to handle DICOM metadata
+    dicom_metadata = true
+}
+
+%include {
+    # Include the DICOM metadata structure
+    struct DICOM_Metadata {
+        uint16(16) group_number
+        uint16(16) element_number
+        uint16(16) value_representation
+        uint32(32) value_length
+        bytes(value_length) value
+    }
+}
+
+%parser {
+    # Define the parser for DICOM metadata
+    meta_dcm = (
+        group_number: uint16(16)
+        element_number: uint16(16)
+        value_representation: uint16(16)
+        value_length: uint32(32)
+        value: bytes(value_length)
+    ) : DICOM_Metadata
+}
+
+%lexer {
+    # Define the lexer for DICOM metadata
+    meta_dcm_lexer = (
+        group_number: uint16(16)
+        element_number: uint16(16)
+        value_representation: uint16(16)
+        value_length: uint32(32)
+        value: bytes(value_length)
+    ) : DICOM_Metadata
+}
+
+%main {
+    # Define the main parsing function
+    parse_dcm_meta = (
+        meta_dcm: meta_dcm_lexer
+    ) : DICOM_Metadata
+}

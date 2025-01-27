@@ -1,0 +1,44 @@
+module Network_Time_Protocol_Version_4;
+
+export {
+    type NTP_Packet = unit {
+        leap_indicator: uint8 &convert=static_cast<LeapIndicator>(_);
+        version: uint8 &convert=static_cast<Version>(_);
+        mode: uint8 &convert=static_cast<Mode>(_);
+        stratum: uint8;
+        poll: uint8;
+        precision: int8;
+        root_delay: uint32;
+        root_dispersion: uint32;
+        reference_id: uint32;
+        reference_timestamp: uint64;
+        origin_timestamp: uint64;
+        receive_timestamp: uint64;
+        transmit_timestamp: uint64;
+    };
+
+    type LeapIndicator = enum {
+        NO_WARNING = 0,
+        LAST_MINUTE_HAS_61_SECONDS = 1,
+        LAST_MINUTE_HAS_59_SECONDS = 2,
+        ALARM_CONDITION = 3,
+    };
+
+    type Version = enum {
+        VERSION_1 = 1,
+        VERSION_2 = 2,
+        VERSION_3 = 3,
+        VERSION_4 = 4,
+    };
+
+    type Mode = enum {
+        RESERVED = 0,
+        SYMMETRIC_ACTIVE = 1,
+        SYMMETRIC_PASSIVE = 2,
+        CLIENT = 3,
+        SERVER = 4,
+        BROADCAST = 5,
+        CONTROL_MESSAGE = 6,
+        PRIVATE_USE = 7,
+    };
+}

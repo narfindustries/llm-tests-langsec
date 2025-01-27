@@ -1,0 +1,25 @@
+module GIF;
+
+import spicy;
+
+public type Header = unit {
+    signature: bytes(3) &requires($$ == b"GIF");
+    version: bytes(3) &requires($$ == b"87a" || $$ == b"89a");
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+
+    var color_table_size: uint8 = (packed_fields & 0x07);
+    var has_color_table: bool = (packed_fields & 0x80) != 0;
+    var color_resolution: uint8 = ((packed_fields & 0x70) >> 4) + 1;
+
+    color_table: optional bytes(3 * (2 ** (color_table_size + 1))) if (has_color_table);
+};
+
+public type GIFFile = unit {
+    header: Header;
+    
+    %context;
+};

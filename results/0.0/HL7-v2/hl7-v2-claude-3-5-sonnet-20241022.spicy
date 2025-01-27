@@ -1,0 +1,32 @@
+module HL7;
+
+public type Message = unit {
+    segments: Segment[];
+} &eod;
+
+type Segment = unit {
+    : b"|";
+    segment_type: bytes &until(b"|");
+    fields: Field[];
+} &until($input.length() == 0 || *$input.offset() >= |$input|);
+
+type Field = unit {
+    field_content: bytes &until(b"|");
+    : b"|" if (!self.at_end());
+};
+
+function at_end(f: Field): bool {
+    return $input.length() == 0 || *$input.offset() >= |$input|;
+}
+
+on Message::%done {
+    print self;
+}
+
+on Segment::%done {
+    print self;
+}
+
+on Field::%done {
+    print self;
+}

@@ -1,0 +1,67 @@
+# Zeek Spicy Specification for GIF File Format
+
+# Import necessary modules
+%import basic
+
+# Define the GIF file format
+file-format gif {
+    magic = "GIF87a" / "GIF89a"
+    body = gif-header gif-logical-screen-descriptor
+           *(gif-color-table) *(gif-image)
+}
+
+# Define the GIF header
+type gif-header {
+    magic: bytestring(3) = "GIF"
+    version: bytestring(3)
+}
+
+# Define the GIF logical screen descriptor
+type gif-logical-screen-descriptor {
+    width: uint16be
+    height: uint16be
+    flags: uint8
+    aspect-ratio: uint8
+}
+
+# Define the GIF color table
+type gif-color-table {
+    size: uint8
+    entries: array(size) of rgb-triple
+}
+
+# Define the RGB triple
+type rgb-triple {
+    red: uint8
+    green: uint8
+    blue: uint8
+}
+
+# Define the GIF image
+type gif-image {
+    separator: uint8 = 0x2C
+    left: uint16be
+    top: uint16be
+    width: uint16be
+    height: uint16be
+    flags: uint8
+    code-size: uint8
+    data: dynamic(length = * )
+}
+
+# Define the GIF trailer
+type gif-trailer {
+    terminator: uint8 = 0x3B
+}
+
+# Define the GIF file
+type gif-file {
+    header: gif-header
+    logical-screen-descriptor: gif-logical-screen-descriptor
+    *(color-table: gif-color-table)
+    *(image: gif-image)
+    trailer: gif-trailer
+}
+
+# Define the condition for the GIF file format
+condition = magic == "GIF87a" || magic == "GIF89a"

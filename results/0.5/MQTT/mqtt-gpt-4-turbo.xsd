@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:mqttGeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="MQTTMessage" type="tns:MQTTMessageType"/>
+
+    <xs:complexType name="MQTTMessageType">
+        <xs:sequence>
+            <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+            <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+            <xs:element name="Payload" type="xs:hexBinary" minOccurs="0" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="FixedHeaderType">
+        <xs:sequence>
+            <xs:element name="MessageType" type="xs:int" dfdl:length="4" dfdl:lengthUnits="bits"/>
+            <xs:element name="DUPFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="QoSLevel" type="xs:int" dfdl:length="2" dfdl:lengthUnits="bits"/>
+            <xs:element name="Retain" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="RemainingLength" type="xs:int" dfdl:lengthKind="prefixed" dfdl:prefixIncludesPrefixLength="true"
+                         dfdl:prefixLengthType="xs:int" dfdl:lengthUnits="bytes"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="VariableHeaderType">
+        <xs:choice>
+            <xs:element name="ConnectFlags" type="tns:ConnectFlagsType"/>
+            <!-- Other specific variable headers per message type can be added here -->
+        </xs:choice>
+    </xs:complexType>
+
+    <xs:complexType name="ConnectFlagsType">
+        <xs:sequence>
+            <xs:element name="UsernameFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="PasswordFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillRetain" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillQoS" type="xs:int" dfdl:length="2" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="CleanSession" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="KeepAlive" type="xs:int" dfdl:length="16" dfdl:lengthUnits="bits"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="mqttGeneralFormat">
+        <xs:restriction base="dfdl:Format">
+            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+            <dfdl:bitOrder>mostSignificantBitFirst</dfdl:bitOrder>
+            <dfdl:representation>binary</dfdl:representation>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/elf-gemini" elementFormDefault="qualified" dfdl:representation="text" dfdl:textStandard="US-ASCII">
+
+  <xs:element name="elf-gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:length="1024" dfdl:occursCountKind="implicit" />
+        <xs:element name="data" type="DataType" dfdl:lengthKind="length" dfdl:lengthUnits="bytes" dfdl:length="{string-length(./header/length)}" dfdl:occursCountKind="implicit"/>
+        <xs:element name="footer" type="FooterType" dfdl:length="512" dfdl:occursCountKind="implicit" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer" dfdl:length="4" dfdl:textNumberPattern="9999" dfdl:alignment="right" dfdl:paddingCharacter="0" />
+      <xs:element name="version" type="xs:string" dfdl:length="10" dfdl:occursCountKind="implicit" />
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:format="yyyy-MM-dd HH:mm:ss" dfdl:occursCountKind="implicit" />
+      <xs:element name="id" type="xs:string" dfdl:length="32" dfdl:occursCountKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="record" type="RecordType" maxOccurs="unbounded" dfdl:separator=",," dfdl:terminator="EOF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:integer" dfdl:length="5" dfdl:textNumberPattern="99999" dfdl:alignment="right" dfdl:paddingCharacter="0"/>
+      <xs:element name="field3" type="xs:decimal" dfdl:length="8" dfdl:textNumberPattern="999999.99" dfdl:decimalSeparator="." dfdl:occursCountKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer" dfdl:length="8" dfdl:occursCountKind="implicit" />
+      <xs:element name="status" type="xs:string" dfdl:length="16" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

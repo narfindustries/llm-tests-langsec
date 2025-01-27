@@ -1,0 +1,59 @@
+#ifndef _JPEG_GEMINI_1_5_FLASH_SPICY_H_
+#define _JPEG_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <stdint.h>
+
+// Define data structures as needed based on the JPEG Gemini 1.5 Flash format
+
+typedef struct {
+    uint8_t marker;
+    uint16_t length;
+    // ... other fields as needed ...
+} JpegHeader;
+
+typedef struct {
+    uint8_t data[1024]; // Adjust size as needed
+    uint16_t length;
+} JpegData;
+
+
+// Function prototypes
+
+int decode_jpeg_gemini_1_5_flash(const uint8_t* data, size_t data_len, JpegData* output);
+
+// ... other functions as needed ...
+
+#endif // _JPEG_GEMINI_1_5_FLASH_SPICY_H_
+
+
+//Implementation file (jpeg-gemini-1.5-flash.spicy)
+
+#include "jpeg-gemini-1.5-flash.spicy.h"
+
+int decode_jpeg_gemini_1_5_flash(const uint8_t* data, size_t data_len, JpegData* output){
+    //Error Handling: Check for null pointers and insufficient data length.
+    if(data == NULL || output == NULL || data_len < sizeof(JpegHeader)){
+        return -1; // Indicate an error
+    }
+
+    //Parse the header
+    const JpegHeader* header = (const JpegHeader*)data;
+
+    //Error Handling: Check for valid header marker.  Replace 0xFF with the actual marker.
+    if(header->marker != 0xFF){
+        return -1; // Indicate an error
+    }
+
+    //Error Handling: Check if the header length is valid.
+    if(header->length > data_len){
+        return -1; // Indicate an error
+    }
+
+    //Copy the data (adjust as needed based on your actual format)
+    size_t data_to_copy = min(header->length, sizeof(output->data));
+    memcpy(output->data, data + sizeof(JpegHeader), data_to_copy);
+    output->length = data_to_copy;
+
+    return 0; // Indicate success
+}
+

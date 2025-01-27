@@ -1,0 +1,43 @@
+module DICOM;
+
+public type FileHeader = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    entries: Entry[];
+
+    on prefix {
+        if (self.prefix != b"DICM") {
+            throw Error("Not a valid DICOM file: missing 'DICM' prefix.");
+        }
+    }
+};
+
+public type Entry = unit {
+    tagGroup: uint16;
+    tagElement: uint16;
+    vr: bytes &size=2;
+    length: uint16;
+    value: switch (self.vr) {
+        case b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"TM", b"UI": String(self.length);
+        case b"US": uint16;
+        case b"UL": uint32;
+        case b"SS": int16;
+        case b"SL": int32;
+        case b"FL": real32;
+        case b"FD": real64;
+        case b"OB", b"OW", b"SQ", b"UN", b"UT": bytes &size=self.length;
+        default: bytes &size=self.length;
+    };
+
+    public type String = unit(len: uint16) {
+        str: bytes &size=len;
+        on str {
+            print "String value: ", self.str;
+        }
+    };
+};
+
+event zeek_init() &priority=5
+{
+    print "DICOM parser initialized.";
+}

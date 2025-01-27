@@ -1,0 +1,29 @@
+module TLSClientHello;
+
+import spicy;
+
+public type ClientHello = unit {
+    version: uint16;
+    random: bytes &size=32;
+    session_id_length: uint8;
+    session_id: bytes &size=session_id_length;
+    cipher_suites_length: uint16;
+    cipher_suites: bytes &size=cipher_suites_length;
+    compression_methods_length: uint8;
+    compression_methods: bytes &size=compression_methods_length;
+    extensions_length: uint16;
+    extensions: bytes &size=extensions_length;
+} &validate(version == 0x0301 || version == 0x0302 || version == 0x0303);
+
+public type TLSHandshake = unit {
+    handshake_type: uint8 &validate(handshake_type == 0x01);
+    length: uint24;
+    client_hello: ClientHello &parseFrom=input.limit(length);
+};
+
+public type TLSRecord = unit {
+    content_type: uint8 &validate(content_type == 0x16);
+    version: uint16 &validate(version == 0x0301 || version == 0x0302 || version == 0x0303);
+    length: uint16;
+    handshake: TLSHandshake &parseFrom=input.limit(length);
+};

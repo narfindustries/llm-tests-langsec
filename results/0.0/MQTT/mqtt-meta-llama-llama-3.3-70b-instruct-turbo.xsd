@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/MQTT"
+           xmlns:tns="http://example.com/MQTT"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="MQTT-DFDL.xsd"/>
+
+  <xs:element name="mqtt-message">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="mqtt-message-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns:header-type"/>
+        <xs:element name="payload" type="tns:payload-type"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="header-type">
+    <xs:sequence>
+      <xs:element name="message-type" type="xs:unsignedByte"/>
+      <xs:element name="dup" type="xs:unsignedByte"/>
+      <xs:element name="qos" type="xs:unsignedByte"/>
+      <xs:element name="retain" type="xs:unsignedByte"/>
+      <xs:element name="remaining-length" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="payload-type">
+    <xs:sequence>
+      <xs:element name="topic-name" type="xs:string"/>
+      <xs:element name="message-id" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="payload-data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:property name="encoding" value="UTF-8"/>
+        <dfdl:property name="byteOrder" value="bigEndian"/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format ref="mqtt-message-format">
+        <dfdl:property name="separator" value=" "/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

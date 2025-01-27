@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:ex="http://example.com/mqtt">
+
+    <xs:include schemaLocation="org.apache.daffodil.xsd"/>
+
+    <xs:complexType name="MQTT_Packet">
+        <xs:sequence>
+            <xs:element name="fixedHeader" type="ex:FixedHeader"/>
+            <xs:element name="variableHeader" type="ex:VariableHeader" minOccurs="0"/>
+            <xs:element name="payload" type="xs:hexBinary" dfdl:lengthKind="delimited" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="FixedHeader">
+        <xs:sequence>
+            <xs:element name="messageType" type="xs:byte" dfdl:inputValueCalc="{ $ex:variableHeader/messageType }">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:inputValueCalc="{ $MQTT_Packet/messageType }" />
+                        <dfdl:length kind="explicit" units="bits" value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="dupFlag" type="xs:boolean">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length kind="explicit" units="bits" value="1"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="qosLevel" type="xs:byte">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length kind="explicit" units="bits" value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="retain" type="xs:boolean">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length kind="explicit" units="bits" value="1"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ConnectFlags">
+        <xs:sequence>
+            <xs:element name="usernameFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:lengthUnits="bits"/>
+            <xs:element name="passwordFlag" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:lengthUnits="bits"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="VariableHeader">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="connectFlags" type="ex:ConnectFlags" dfdl:discriminator="{ ../fixedHeader/messageType = 1 }"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+    
+</xs:schema>

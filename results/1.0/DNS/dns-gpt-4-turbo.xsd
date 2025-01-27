@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:include schemaLocation="DFDLGeneralTypes.xsd"/>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="GeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="DNSPacket" type="DNSPacket"/>
+
+    <xs:complexType name="DNSPacket">
+        <xs:sequence>
+            <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="Flags" type="DNSFlags"/>
+            <xs:element name="Questions" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="AnswerRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="AuthorityRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="AdditionalRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="Queries" type="DNSQueries" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../Questions }"/>
+            <xs:element name="Answers" type="DNSResourceRecords" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../AnswerRRs }"/>
+            <xs:element name="Authorities" type="DNSResourceRecords" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../AuthorityRRs }"/>
+            <xs:element name="Additionals" type="DNSResourceRecords" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../AdditionalRRs }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DNSFlags">
+        <xs:sequence>
+            <xs:element name="QR" type="xs:boolean" dfdl:length="1" dfdl:initiator="bits(0)"/>
+            <xs:element name="Opcode" type="xs:unsignedByte" dfdl:length="4" dfdl:initiator="bits(1-4)"/>
+            <xs:element name="AA" type="xs:boolean" dfdl:length="1" dfdl:initiator="bits(5)"/>
+            <xs:element name="TC" type="xs:boolean" dfdl:length="1" dfdl:initiator="bits(6)"/>
+            <xs:element name="RD" type="xs:boolean" dfdl:length="1" dfdl:initiator="bits(7)"/>
+            <xs:element name="RA" type="xs:boolean" dfdl:length="1" dfdl:initiator="bits(8)"/>
+            <xs:element name="Z" type="xs:unsignedByte" dfdl:length="3" dfdl:initiator="bits(9-11)"/>
+            <xs:element name="RCODE" type="xs:unsignedByte" dfdl:length="4" dfdl:initiator="bits(12-15)"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="dfdl:format">
+            <dfdl:bitOrder="mostSignificantBitFirst"/>
+        </xs:attributeGroup>
+    </xs:complexType>
+
+    <xs:complexType name="DNSQueries">
+        <xs:sequence>
+            <xs:element name="QueryName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ASCII"
+                        dfdl:termination="codePoint=0"/>
+            <xs:element name="QueryType" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="QueryClass" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DNSResourceRecords">
+        <xs:sequence>
+            <xs:element name="RecordName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ASCII"
+                        dfdl:termination="codePoint=0"/>
+            <xs:element name="RecordType" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="RecordClass" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="TimeToLive" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="DataLength" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+            <xs:element name="RecordData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ .//DataLength }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

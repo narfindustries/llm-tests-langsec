@@ -1,0 +1,72 @@
+#ifndef _TIFF_GEMINI_1_5_FLASH_H_
+#define _TIFF_GEMINI_1_5_FLASH_H_
+
+#include <stdint.h>
+
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint8_t* data;
+} TiffImage;
+
+
+TiffImage* load_tiff(const char* filename);
+void free_tiff(TiffImage* image);
+
+#endif
+
+
+#include "tiff-gemini-1.5-flash.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+
+TiffImage* load_tiff(const char* filename) {
+    // Replace this with actual TIFF loading logic.  This is a placeholder.
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) {
+        perror("Error opening file");
+        return NULL;
+    }
+    //Simulate reading width and height
+    uint32_t width = 100;
+    uint32_t height = 100;
+    uint8_t* data = (uint8_t*)malloc(width * height * sizeof(uint8_t));
+    if (data == NULL) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return NULL;
+    }
+    fread(data, sizeof(uint8_t), width * height, file);
+    fclose(file);
+
+    TiffImage* image = (TiffImage*)malloc(sizeof(TiffImage));
+    if (image == NULL) {
+        perror("Memory allocation failed");
+        free(data);
+        return NULL;
+    }
+    image->width = width;
+    image->height = height;
+    image->data = data;
+    return image;
+}
+
+void free_tiff(TiffImage* image) {
+    if (image != NULL) {
+        free(image->data);
+        free(image);
+    }
+}
+
+
+int main() {
+    TiffImage* image = load_tiff("test.tiff");
+    if (image != NULL) {
+        printf("Loaded TIFF image: width=%u, height=%u\n", image->width, image->height);
+        free_tiff(image);
+    } else {
+        printf("Failed to load TIFF image.\n");
+    }
+    return 0;
+}

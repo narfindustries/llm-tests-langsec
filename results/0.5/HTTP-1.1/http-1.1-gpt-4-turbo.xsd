@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/http-1.1/"
+           xmlns:tns="http://example.com/dfdl/http-1.1/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:generalFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="RequestLine">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:encoding="ascii" dfdl:terminator=" "/>
+      <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:encoding="ascii" dfdl:terminator=" "/>
+      <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:encoding="ascii" dfdl:terminator="%LF;"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderField">
+    <xs:sequence>
+      <xs:element name="FieldName" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:encoding="ascii" dfdl:terminator=":"/>
+      <xs:element name="FieldValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:encoding="ascii" dfdl:terminator="%LF;"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="HTTPRequest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RequestLine" type="tns:RequestLine"/>
+        <xs:element name="HeaderFields" type="tns:HeaderField" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii" dfdl:terminator="%LF;%LF;"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:defineFormat name="generalFormat">
+    <dfdl:format representation="text"
+                  lengthKind="delimited"
+                  textStandardBase="10"
+                  textNumberRep="standard"
+                  textBooleanTrueRep="true"
+                  textBooleanFalseRep="false"
+                  binaryNumberRep="binary"
+                  byteOrder="bigEndian"
+                  encoding="utf-8"
+                  escapeSchemeRef="tns:escapeScheme"/>
+  </xs:defineFormat>
+
+  <xs:defineEscapeScheme name="escapeScheme">
+    <dfdl:escapeScheme escapeKind="escapeCharacter"
+                       escapeCharacter="%"
+                       escapeBlockStart="{"
+                       escapeBlockEnd="}"
+                       extraEscapedCharacters=" %LF; %CR;"/>
+  </xs:defineEscapeScheme>
+
+</xs:schema>

@@ -1,0 +1,89 @@
+module MQTT;
+
+import spicy;
+import zeek;
+
+public type MQTTMessage = unit {
+    fixed_header: FixedHeader;
+    variable_header: VariableHeader;
+    payload: Payload;
+
+    on %init {
+        print fmt("MQTT Message: %s", self);
+    }
+};
+
+type FixedHeader = unit {
+    byte1: uint8;
+    remaining_length: varint;
+
+    on %init {
+        print fmt("Fixed Header: byte1=%x, remaining_length=%d", byte1, remaining_length);
+    }
+};
+
+type VariableHeader = unit {
+    topic_name: string &length = topic_length;
+    packet_identifier: uint16;
+
+    topic_length: uint16 {
+        return self.topic_name.length();
+    }
+
+    on %init {
+        print fmt("Variable Header: topic_name=%s, packet_identifier=%d", topic_name, packet_identifier);
+    }
+};
+
+type Payload = unit {
+    message: string &restofdata;
+
+    on %init {
+        print fmt("Payload: message=%s", message);
+    }
+};
+
+type varint = unit {
+    value: uint32 {
+        let result = 0;
+        let multiplier = 1;
+        local byte: uint8;
+        repeat {
+            byte = parse_byte();
+            result += (byte & 127) * multiplier;
+            if (multiplier > 128 * 128 * 128) {
+                error("Malformed Remaining Length");
+            }
+            multiplier *= 128;
+        } until (byte & 128) == 0;
+        return result;
+    }
+};
+
+function parse_byte() : uint8 {
+    return %parse(uint8);
+}
+
+public module MQTTAnalyzer = global {
+    export {
+        type Info = record {
+            message: MQTTMessage;
+        };
+    }
+
+    event zeek_init() {
+        print "MQTT Analyzer Initialized";
+    }
+
+    hook zeek::Analyzer::register() {
+        zeek::Analyzer::register_for_protocol("mqtt", MQTTAnalyzer::Info);
+    }
+
+    event zeek::Analyzer::new_connection(c: connection) {
+        print fmt("New MQTT connection: %s", c$id);
+    }
+
+    event zeek::Analyzer::done(c: connection) {
+        print fmt("MQTT connection done: %s", c$id);
+    }
+};

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:tns="http://example.com/jpeg"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           dfdl:defaultBlockSize="8192">
+
+    <xs:include schemaLocation="dfdl4s.dfdl.xsd"/>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary"
+                         encoding="ISO-8859-1"
+                         lengthKind="explicit"
+                         lengthUnits="bytes"
+                         alignment="1"
+                         byteOrder="bigEndian"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="JPEGImage" type="tns:JPEGImageType"/>
+
+    <xs:complexType name="JPEGImageType">
+        <xs:sequence>
+            <xs:element name="SOI" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:alignment value="1"/>
+                        <dfdl:inputValueCalc>{ 0xFFD8 }</dfdl:inputValueCalc>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+
+            <xs:element name="Segments" type="tns:SegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+
+            <xs:element name="EOI" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:alignment value="1"/>
+                        <dfdl:inputValueCalc>{ 0xFFD9 }</dfdl:inputValueCalc>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SegmentsType">
+        <xs:sequence>
+            <xs:element name="Marker" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:alignment value="1"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Length" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="explicit"/>
+                        <dfdl:lengthUnits value="bytes"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $Length - 2 }">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthUnits value="bytes"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/dicom" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PatientName" type="xs:string" dfdl:length="64"/>
+        <xs:element name="PatientID" type="xs:string" dfdl:length="64"/>
+        <xs:element name="StudyDate" type="xs:date"/>
+        <xs:element name="StudyTime" type="xs:time"/>
+        <xs:element name="Modality" type="xs:string" dfdl:length="16"/>
+        <xs:element name="ImageType" type="xs:string" dfdl:length="16" maxOccurs="unbounded"/>
+        <xs:element name="PixelData" type="xs:base64Binary" dfdl:lengthKind="implicit" dfdl:lengthUnits="bytes"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="http://www.ogf.org/dfdl/dfdl-1.0/standard"/>
+    <dfdl:textStandardEncoding>UTF-8</dfdl:textStandardEncoding>
+    <dfdl:binaryStandardEncoding>binary</dfdl:binaryStandardEncoding>
+    <dfdl:representation>text</dfdl:representation>
+    <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+    <dfdl:occursCountKind>fixed</dfdl:occursCountKind>
+    <dfdl:separator>CRLF</dfdl:separator>
+  </dfdl:defineSchema>
+
+</xs:schema>

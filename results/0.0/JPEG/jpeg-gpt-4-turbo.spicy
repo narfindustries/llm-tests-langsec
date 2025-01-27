@@ -1,0 +1,46 @@
+module JPEG;
+
+public type SOF0 = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component(self.num_components)[];
+
+    public type Component = unit {
+        id: uint8;
+        sampling: uint8;
+        qt: uint8;
+    };
+};
+
+public type SOI = unit {};
+
+public type EOI = unit {};
+
+public type APP0 = unit {
+    length: uint16;
+    identifier: bytes &size=5;
+    version: uint16;
+    units: uint8;
+    xdensity: uint16;
+    ydensity: uint16;
+    xthumbnail: uint8;
+    ythumbnail: uint8;
+    thumbnail: bytes &size=(self.xthumbnail * self.ythumbnail * 3);
+};
+
+public type JPEGFile = unit {
+    segments: Segment(self)[];
+
+    public type Segment = unit(jpeg: JPEGFile) {
+        tag: uint16;
+        contents: switch (tag) {
+            0xFFD8 -> start_of_image: SOI;
+            0xFFE0 -> app0: APP0;
+            0xFFC0 -> sof0: SOF0;
+            0xFFD9 -> end_of_image: EOI;
+            * -> data: bytes &size=($input.length - $position);
+        };
+    };
+};

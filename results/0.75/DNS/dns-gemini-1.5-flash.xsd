@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/dns"
+           xmlns="http://example.org/dns"
+           elementFormDefault="qualified">
+
+  <xs:element name="dnsGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="records" type="recordsType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:length" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                  <dfdl:length value="1000"/>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:integer"/>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+    <xs:attribute ref="dfdl:lengthKind" use="required">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                <dfdl:lengthKind>explicit</dfdl:lengthKind>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:attribute>
+    <xs:attribute ref="dfdl:length" use="required">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                <dfdl:length value="20"/>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <xs:complexType name="recordsType">
+    <xs:sequence>
+      <xs:element name="record" type="recordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="dfdl:separator" use="required">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                <dfdl:separator>
+                    <dfdl:text separator="\n"/>
+                </dfdl:separator>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="type" type="xs:integer"/>
+      <xs:element name="ttl" type="xs:integer"/>
+      <xs:element name="data" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute ref="dfdl:separator" use="required">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                <dfdl:separator>
+                    <dfdl:text separator="\t"/>
+                </dfdl:separator>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+
+</xs:schema>

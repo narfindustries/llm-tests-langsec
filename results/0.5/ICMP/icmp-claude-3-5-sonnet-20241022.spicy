@@ -1,0 +1,49 @@
+module ICMP;
+
+public type Message = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    
+    switch ( self.type ) {
+        0 -> echo_reply: EchoMessage;
+        3 -> dest_unreachable: DestUnreachable;
+        8 -> echo_request: EchoMessage;
+        11 -> time_exceeded: TimeExceeded;
+        * -> : bytes &eod;
+    };
+
+    on %done {
+        self.checksum_verify();
+    }
+
+    function checksum_verify() {
+        local orig = self.checksum;
+        self.checksum = 0;
+        local computed = icmp_checksum(self);
+        self.checksum = orig;
+        
+        if ( orig != computed )
+            print "ICMP checksum mismatch", orig, computed;
+    }
+};
+
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    payload: bytes &eod;
+};
+
+type DestUnreachable = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+function icmp_checksum(msg: Message): uint16 {
+    return 0;  # Placeholder - actual checksum calculation would go here
+}

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="HL7v2MessageType">
+    <xs:sequence>
+      <xs:element name="MSH" type="ex:MSHSegmentType"/>
+      <xs:element name="Segments" type="ex:SegmentSequenceType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MSHSegmentType">
+    <xs:sequence>
+      <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1" dfdl:initiator="|"/>
+      <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4"/>
+      <xs:element name="SendingApplication" type="xs:string" dfdl:length="180"/>
+      <xs:element name="SendingFacility" type="xs:string" dfdl:length="180"/>
+      <xs:element name="ReceivingApplication" type="xs:string" dfdl:length="180"/>
+      <xs:element name="ReceivingFacility" type="xs:string" dfdl:length="180"/>
+      <xs:element name="DateTimeOfMessage" type="xs:string" dfdl:length="26"/>
+      <xs:element name="Security" type="xs:string" dfdl:length="40"/>
+      <xs:element name="MessageType" type="xs:string" dfdl:length="7"/>
+      <xs:element name="MessageControlID" type="xs:string" dfdl:length="20"/>
+      <xs:element name="ProcessingID" type="xs:string" dfdl:length="3"/>
+      <xs:element name="VersionID" type="xs:string" dfdl:length="60"/>
+      <xs:element name="SequenceNumber" type="xs:string" dfdl:length="15"/>
+      <xs:element name="ContinuationPointer" type="xs:string" dfdl:length="180"/>
+      <xs:element name="AcceptAcknowledgmentType" type="xs:string" dfdl:length="2"/>
+      <xs:element name="ApplicationAcknowledgmentType" type="xs:string" dfdl:length="2"/>
+      <xs:element name="CountryCode" type="xs:string" dfdl:length="3"/>
+      <xs:element name="CharacterSet" type="xs:string" dfdl:length="16"/>
+      <xs:element name="PrincipalLanguageOfMessage" type="xs:string" dfdl:length="3"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentSequenceType">
+    <xs:sequence>
+      <xs:element name="Segment" type="ex:SegmentType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:sequence>
+      <xs:element name="SegmentID" type="xs:string" dfdl:length="3"/>
+      <xs:element name="Fields" type="ex:FieldSequenceType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FieldSequenceType">
+    <xs:sequence>
+      <xs:element name="Field" type="xs:string" dfdl:length="1" dfdl:separator="^" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="HL7v2Message" type="ex:HL7v2MessageType"/>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format encoding="UTF-8" lengthKind="delimited" separator="&#xA;" separatorPosition="infix"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,46 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tns="http://example.com/tiff"
+           elementFormDefault="qualified"
+           dfdl:format="tiffFormat">
+
+  <dfdl:format ref="tns:tiffFormat"/>
+
+  <xs:include schemaLocation="tiffFormat.xsd"/>
+
+  <xs:element name="TIFF" type="tns:TIFFType"/>
+
+  <xs:complexType name="TIFFType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType" dfdl:occursCountKind="explicit" dfdl:occursCount="1"/>
+      <xs:element name="IFD" type="tns:IFDType" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:byteOrder="network"/>
+      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:byteOrder="network"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="NumDirEntries" type="xs:unsignedShort" dfdl:byteOrder="network"/>
+      <xs:element name="DirEntry" type="tns:DirEntryType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:byteOrder="network"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DirEntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:byteOrder="network"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:byteOrder="network"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:byteOrder="network"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:byteOrder="network"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

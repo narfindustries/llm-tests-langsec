@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:elf="urn:elf:1.0"
+    targetNamespace="urn:elf:1.0">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="implicit"
+                        occursCountKind="implicit"
+                        representation="binary"
+                        binaryNumberRep="binary"
+                        byteOrder="littleEndian"
+                        encodingErrorPolicy="replace"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ELFFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="magic" type="xs:hexBinary" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+                            <xs:element name="class" type="xs:unsignedByte"/>
+                            <xs:element name="data" type="xs:unsignedByte"/>
+                            <xs:element name="version" type="xs:unsignedByte"/>
+                            <xs:element name="osabi" type="xs:unsignedByte"/>
+                            <xs:element name="abiversion" type="xs:unsignedByte"/>
+                            <xs:element name="pad" type="xs:hexBinary" dfdl:length="7"/>
+                            <xs:element name="type" type="xs:unsignedShort"/>
+                            <xs:element name="machine" type="xs:unsignedShort"/>
+                            <xs:element name="version2" type="xs:unsignedInt"/>
+                            <xs:element name="entry" type="xs:unsignedInt"/>
+                            <xs:element name="phoff" type="xs:unsignedInt"/>
+                            <xs:element name="shoff" type="xs:unsignedInt"/>
+                            <xs:element name="flags" type="xs:unsignedInt"/>
+                            <xs:element name="ehsize" type="xs:unsignedShort"/>
+                            <xs:element name="phentsize" type="xs:unsignedShort"/>
+                            <xs:element name="phnum" type="xs:unsignedShort"/>
+                            <xs:element name="shentsize" type="xs:unsignedShort"/>
+                            <xs:element name="shnum" type="xs:unsignedShort"/>
+                            <xs:element name="shstrndx" type="xs:unsignedShort"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="ProgramHeaders" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="type" type="xs:unsignedInt"/>
+                            <xs:element name="offset" type="xs:unsignedInt"/>
+                            <xs:element name="vaddr" type="xs:unsignedInt"/>
+                            <xs:element name="paddr" type="xs:unsignedInt"/>
+                            <xs:element name="filesz" type="xs:unsignedInt"/>
+                            <xs:element name="memsz" type="xs:unsignedInt"/>
+                            <xs:element name="flags" type="xs:unsignedInt"/>
+                            <xs:element name="align" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="SectionHeaders" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="xs:unsignedInt"/>
+                            <xs:element name="type" type="xs:unsignedInt"/>
+                            <xs:element name="flags" type="xs:unsignedInt"/>
+                            <xs:element name="addr" type="xs:unsignedInt"/>
+                            <xs:element name="offset" type="xs:unsignedInt"/>
+                            <xs:element name="size" type="xs:unsignedInt"/>
+                            <xs:element name="link" type="xs:unsignedInt"/>
+                            <xs:element name="info" type="xs:unsignedInt"/>
+                            <xs:element name="addralign" type="xs:unsignedInt"/>
+                            <xs:element name="entsize" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

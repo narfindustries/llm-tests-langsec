@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ntp"
+           xmlns:ex="http://example.com/ntp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:commonFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="leapIndicator" type="xs:byte" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="versionNumber" type="xs:byte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="mode" type="xs:byte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NetworkTimeProtocolVersion4">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="flags" type="ex:FlagsType"/>
+        <xs:element name="rootDelay" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
+        <xs:element name="rootDispersion" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
+        <xs:element name="referenceIdentifier" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+        <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
+        <xs:element name="originateTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
+        <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
+        <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Common format settings used across elements -->
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:defineFormat name="commonFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     binaryNumberRepresentation="binary"
+                     bitOrder="mostSignificantBitFirst"
+                     encoding="utf-8"
+                     lengthKind="delimited"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

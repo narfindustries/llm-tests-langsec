@@ -1,0 +1,52 @@
+#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+
+#include <stdint.h>
+
+// Define data structures as needed based on the PNG image format and Gemini protocol
+
+// Example:  Assuming a simplified representation
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint8_t* data; // Raw pixel data
+} PngImage;
+
+typedef struct {
+    uint8_t* payload;
+    size_t payload_len;
+} GeminiPacket;
+
+// Function to process a Gemini packet containing a PNG image.
+//  Replace this with your actual image decoding and processing logic.
+PngImage process_gemini_png(GeminiPacket packet);
+
+// Function to handle potential errors during PNG processing
+int handle_png_error(const char* error_message);
+
+
+// Example Spicy function declaration. Replace with your actual logic.
+export int process_image(GeminiPacket packet) {
+    PngImage image;
+    int result = 0;
+
+    // Process the Gemini packet
+    image = process_gemini_png(packet);
+
+    // Check for errors
+    if (image.width == 0 || image.height == 0 || image.data == NULL) {
+        result = handle_png_error("Error decoding PNG image.");
+    } else {
+        // Process the image data here.  Example:  Write to disk, display, etc.
+        // ... image processing logic ...
+        // Example:  Free allocated memory
+        free(image.data);
+    }
+
+    return result;
+
+}
+
+
+#endif // PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+

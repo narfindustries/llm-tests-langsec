@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:tns="http://example.com/jpeg"
+           elementFormDefault="qualified"
+           dfdl:format="byteOrder='bigEndian'">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:JPEGFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="JPEGFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOI" type="tns:SOIType"/>
+        <xs:element name="Segments" type="tns:SegmentsType" maxOccurs="unbounded"/>
+        <xs:element name="EOI" type="tns:EOIType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SOIType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:outputValueCalc="'FFD8'"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EOIType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:outputValueCalc="'FFD9'"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length - 2}" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="JPEGFormat">
+    <dfdl:format byteOrder="bigEndian" encoding="utf-8"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

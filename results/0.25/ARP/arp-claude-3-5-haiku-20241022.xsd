@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:arp="http://example.com/arp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        leadingSkip="0"
+        trailingSkip="0"
+        textStringJustification="left"
+        textStringPadCharacter=" "
+        textTrimKind="none"
+        textPadKind="none"
+        representation="binary"
+        binaryNumberRep="binary"
+        byteOrder="bigEndian"
+        bitOrder="mostSignificantBitFirst"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARPPacket">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="HardwareType" type="arp:HardwareTypeType"/>
+        <xs:element name="ProtocolType" type="arp:ProtocolTypeType"/>
+        <xs:element name="HardwareAddressLength" type="arp:HardwareAddressLengthType"/>
+        <xs:element name="ProtocolAddressLength" type="arp:ProtocolAddressLengthType"/>
+        <xs:element name="Operation" type="arp:OperationType"/>
+        <xs:element name="SenderHardwareAddress" type="arp:MACAddressType"/>
+        <xs:element name="SenderProtocolAddress" type="arp:IPAddressType"/>
+        <xs:element name="TargetHardwareAddress" type="arp:MACAddressType"/>
+        <xs:element name="TargetProtocolAddress" type="arp:IPAddressType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="HardwareTypeType">
+    <xs:restriction base="xs:unsignedShort">
+      <dfdl:constraint dfdl:length="2" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ProtocolTypeType">
+    <xs:restriction base="xs:unsignedShort">
+      <dfdl:constraint dfdl:length="2" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HardwareAddressLengthType">
+    <xs:restriction base="xs:unsignedByte">
+      <dfdl:constraint dfdl:length="1" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ProtocolAddressLengthType">
+    <xs:restriction base="xs:unsignedByte">
+      <dfdl:constraint dfdl:length="1" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="OperationType">
+    <xs:restriction base="xs:unsignedShort">
+      <dfdl:constraint dfdl:length="2" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="MACAddressType">
+    <xs:restriction base="xs:hexBinary">
+      <dfdl:constraint dfdl:length="6" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="IPAddressType">
+    <xs:restriction base="xs:hexBinary">
+      <dfdl:constraint dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

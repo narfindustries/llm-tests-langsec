@@ -26,7 +26,17 @@ class Database:
         cursor.execute(f"INSERT INTO {table_name} (timestamp, llm, ddl, format, compiled, try, output_response) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(data.values()))
         self.conn.commit()
 
-    def get_compile_data(self, table_name: str):
+    def get_compile_data(self, table_name: str, llm: str, ddl: str, form: str):
         cursor = self.conn.cursor()
-        cursor.execute(f"SELECT llm, ddl, compiled, try FROM {table_name} LIMIT 10")
+        cursor.execute(f"SELECT format, try FROM {table_name} WHERE compiled = 'True' AND llm = ? AND ddl = ? AND format = ? ORDER BY timestamp DESC LIMIT 1", (llm, ddl, form))
+        return cursor.fetchall()
+    
+    def delete_tables(self):
+        cursor = self.conn.cursor()
+        cursor.execute(f"select name from sqlite_master where type='table'")
+        return cursor.fetchall()
+    
+    def delete_table_with_name(self, table_name):
+        cursor = self.conn.cursor()
+        cursor.execute(f"drop table {table_name}")
         return cursor.fetchall()

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/BitcoinTransactions"
+           xmlns:tns="http://example.com/BitcoinTransactions"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.dtd"/>
+
+  <xs:element name="bitcoinTransactions">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:BitcoinTransactionsFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:transaction" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="transaction">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:TransactionFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:integer"/>
+        <xs:element name="inputs" type="tns:TransactionInputs"/>
+        <xs:element name="outputs" type="tns:TransactionOutputs"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="TransactionInputs">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:TransactionInputsFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element ref="tns:input" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="input">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:InputFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="previousOutput" type="tns:PreviousOutput"/>
+        <xs:element name="script" type="xs:base64Binary"/>
+        <xs:element name="sequence" type="xs:integer"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PreviousOutput">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:PreviousOutputFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="transactionHash" type="xs:hexBinary"/>
+      <xs:element name="outputIndex" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TransactionOutputs">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:TransactionOutputsFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element ref="tns:output" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="output">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="tns:OutputFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="value" type="xs:integer"/>
+        <xs:element name="script" type="xs:base64Binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format name="BitcoinTransactionsFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="TransactionFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="TransactionInputsFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="InputFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="PreviousOutputFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="TransactionOutputsFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+  <dfdl:format name="OutputFormat" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="delimited"/>
+  </dfdl:format>
+
+</xs:schema>

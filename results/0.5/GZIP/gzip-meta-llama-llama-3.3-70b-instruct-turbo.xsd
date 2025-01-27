@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GZIP"
+           xmlns="http://example.com/GZIP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="GZIP">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element Minerals="true" representation="binary" lengthKind="delimited" length="31" />
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="GZIPHeaderType" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                    dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="10" />
+        <xs:element name="compressed" type="xs:base64Binary" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                    dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="delimited" dfdl:length="*"/>
+        <xs:element name="footer" type="GZIPFooterType" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                    dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="8" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="GZIPHeaderType">
+    <xs:sequence>
+      <xs:element name="id1" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+      <xs:element name="id2" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+      <xs:element name="cm" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+      <xs:element name="mtime" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="4" />
+      <xs:element name="xflags" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+      <xs:element name="os" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="1" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GZIPFooterType">
+    <xs:sequence>
+      <xs:element name="crc16" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="4" />
+      <xs:element name="isize" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:inputValueCalcucation="$input"
+                  dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:length="4" />
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

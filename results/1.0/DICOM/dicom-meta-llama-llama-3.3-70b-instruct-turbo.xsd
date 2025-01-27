@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DICOM"
+           xmlns="http://example.com/DICOM"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.dtd"/>
+
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Prefix" dfdl:occurs="1..1"/>
+        <xs:element ref="FileMetaInformationGroup" dfdl:occurs="1..1"/>
+        <xs:element ref="DataSet" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Prefix">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:encoding="hex"/>
+        <xs:element name="PrefixDictionaryItem" type="xs:string" dfdl:length="4" dfdl:encoding="ASCII"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="FileMetaInformationGroup">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="FileMetaInformationGroupLength" dfdl:occurs="1..1"/>
+        <xs:element ref="DataElement" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="FileMetaInformationGroupLength">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+        <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ASCII"/>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
+        <xs:element name="Value" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DataElement">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+        <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ASCII"/>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
+        <xs:element name="Value" type="xs:string" dfdl:length="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DataSet">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="DataElement" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

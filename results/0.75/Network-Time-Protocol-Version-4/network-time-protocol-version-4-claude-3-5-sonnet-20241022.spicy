@@ -1,0 +1,40 @@
+module Network-Time-Protocol-Version-4;
+
+public type Packet = unit {
+    li_vn_mode: uint8;
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: bytes &size=4;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    on li_vn_mode {
+        self.leap_indicator = (self.li_vn_mode & 0xC0) >> 6;
+        self.version = (self.li_vn_mode & 0x38) >> 3;
+        self.mode = self.li_vn_mode & 0x07;
+    }
+
+    var leap_indicator: uint8;
+    var version: uint8;
+    var mode: uint8;
+};
+
+on Packet -> event ntp::packet($packet_length,
+                             self.leap_indicator,
+                             self.version,
+                             self.mode,
+                             self.stratum,
+                             self.poll,
+                             self.precision,
+                             self.root_delay,
+                             self.root_dispersion,
+                             self.reference_id,
+                             self.reference_timestamp,
+                             self.originate_timestamp,
+                             self.receive_timestamp,
+                             self.transmit_timestamp);

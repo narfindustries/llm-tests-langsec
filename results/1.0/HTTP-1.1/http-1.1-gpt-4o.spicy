@@ -1,0 +1,77 @@
+module HTTP;
+
+import spicy;
+
+@export
+module HTTP {
+
+    public type Request = unit {
+        method: bytes &size=method_len;
+        raw_path: bytes &size=raw_path_len;
+        version_http: bytes &size=version_http_len;
+
+        on %init {
+            method_len = find_first(hdr, " ") - 0;
+            raw_path_len = find_first(hdr, " ", method_len + 1) - (method_len + 1);
+            version_http_len = find_first(hdr, "\r\n", method_len + raw_path_len + 2) - (method_len + raw_path_len + 2);
+        }
+
+        var method_len: uint64;
+        var raw_path_len: uint64;
+        var version_http_len: uint64;
+
+        on %done {
+            print(fmt("Method: %s", method));
+            print(fmt("Path: %s", raw_path));
+            print(fmt("Version: %s", version_http));
+        }
+    };
+
+    public type Header = unit {
+        headers: map[string, string] &restofdata;
+
+        on %restofdata {
+            local lines = split_string(be.headers_bytes, "\r\n", true);
+            for (line in lines) {
+                if ( line.empty() )
+                    break;
+
+                local name_value = split_string(line, ":", true);
+                if ( |name_value| >= 2 ) {
+                    local name = trim_sp(name_value[0]);
+                    local value = trim_sp(join(name_value[1+:], ":"));
+                    headers[name] = value;
+                }
+            }
+        }
+
+        var headers_bytes: bytes &restofdata;
+    };
+
+    public type Body = unit {
+        body_content: bytes &size=length &optional;
+        var length: uint64;
+    };
+
+    public type HTTPMessage = unit {
+        request: Request;
+        header: Header;
+        body: Body &depends=(header.headers["Content-Length"] ? (body.length = to_uint(header.headers["Content-Length"])) : false);
+    };
+
+    function to_uint(s: string): uint64 {
+        return to_integer(s) as uint64;
+    }
+
+    function trim_sp(s: string): string {
+        return ltrim_sp(rtrim_sp(s));
+    }
+
+    function ltrim_sp(s: string): string {
+        return sub_string(s, 0, find_first_not_of(s, " "));
+    }
+
+    function rtrim_sp(s: string): string {
+        return sub_string(s, find_last_not_of(s, " ") + 1);
+    }
+}

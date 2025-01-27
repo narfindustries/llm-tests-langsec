@@ -1,0 +1,55 @@
+module DNS;
+
+public type Message = unit {
+    header: Header;
+    queries: Query[];
+    answers: ResourceRecord[];
+    authorities: ResourceRecord[];
+    additionals: ResourceRecord[];
+};
+
+type Header = unit {
+    id: uint16;
+    qr: uint1;
+    opcode: uint4;
+    aa: uint1;
+    tc: uint1;
+    rd: uint1;
+    ra: uint1;
+    z: uint3;
+    rcode: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+
+    on %done {
+        self.queries.resize(self.qdcount);
+        self.answers.resize(self.ancount);
+        self.authorities.resize(self.nscount);
+        self.additionals.resize(self.arcount);
+    }
+};
+
+type Query = unit {
+    name: bytes &until=b"\x00";
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: bytes &until=b"\x00";
+    type_: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+public function parse_dns(data: bytes) : Message {
+    return Message(data);
+}
+
+on Message::%done {
+    print self;
+}

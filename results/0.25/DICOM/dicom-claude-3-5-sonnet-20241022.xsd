@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:local="http://example.com/ns/local"
+           targetNamespace="http://example.com/ns/local"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="dfdl:default" 
+                   representation="binary"
+                   byteOrder="bigEndian"
+                   binaryNumberRep="binary"
+                   lengthKind="implicit"
+                   encoding="UTF-8"
+                   initiator=""
+                   terminator=""
+                   separator=""
+                   ignoreCase="no"
+                   textNumberRep="standard"
+                   textStringJustification="left"
+                   textTrimKind="none"
+                   textPadKind="none"
+                   fillByte="%#r20"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="dicomFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+        <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        <xs:element name="dataSet" type="local:DataSetType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DataSetType">
+    <xs:sequence>
+      <xs:element name="element" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="tag" type="local:TagType"/>
+            <xs:element name="vr" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="value" type="xs:hexBinary" dfdl:lengthKind="expression" 
+                       dfdl:lengthUnits="bytes" dfdl:length="{../length}"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TagType">
+    <xs:sequence>
+      <xs:element name="group" type="xs:unsignedShort"/>
+      <xs:element name="element" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

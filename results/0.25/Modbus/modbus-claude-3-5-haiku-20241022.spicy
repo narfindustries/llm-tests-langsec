@@ -1,0 +1,43 @@
+module Modbus;
+
+import spicy;
+
+public type Message = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+
+    var payload_length = self.length - 2;
+
+    payload: bytes &size=payload_length;
+
+    on %done {
+        print self;
+    }
+};
+
+public type PDU = unit {
+    function_code: uint8;
+    data: bytes &size=(|self| - 1);
+};
+
+public type Request = unit {
+    header: Message;
+    pdu: PDU;
+};
+
+public type Response = unit {
+    header: Message;
+    pdu: PDU;
+};
+
+export function parse_modbus(data: bytes) : void {
+    try {
+        local msg = Message(data);
+    }
+    catch {
+        print "Parsing error";
+    }
+}

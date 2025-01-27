@@ -1,0 +1,59 @@
+module BitcoinTransactions;
+
+import spicy;
+
+type Transaction = unit {
+    version: uint32 &convert=spicy::to_int;
+    input_count: varint;
+    inputs: Input[input_count];
+    output_count: varint;
+    outputs: Output[output_count];
+    lock_time: uint32;
+};
+
+type Input = unit {
+    previous_output_hash: bytes &size=32;
+    previous_output_index: uint32;
+    script_length: varint;
+    script: bytes &size=script_length;
+    sequence: uint32;
+};
+
+type Output = unit {
+    value: uint64;
+    script_length: varint;
+    script: bytes &size=script_length;
+};
+
+type varint = unit {
+    value: uint64 &convert=spicy::to_int;
+    : switch (value) {
+        case 0xfd: uint16;
+        case 0xfe: uint32;
+        case 0xff: uint64;
+        default: uint8;
+    };
+};
+
+on Transaction::%done {
+    print "Transaction version: %d", self.version;
+    print "Input count: %d", self.input_count;
+    print "Output count: %d", self.output_count;
+    print "Lock time: %d", self.lock_time;
+}
+
+on Input::%done {
+    print "Previous output hash: %s", spicy::to_hex(self.previous_output_hash);
+    print "Previous output index: %d", self.previous_output_index;
+    print "Script length: %d", self.script_length;
+    print "Sequence: %d", self.sequence;
+}
+
+on Output::%done {
+    print "Value: %d", self.value;
+    print "Script length: %d", self.script_length;
+}
+
+on varint::%done {
+    print "Varint value: %d", self.value;
+}

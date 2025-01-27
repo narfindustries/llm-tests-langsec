@@ -1,0 +1,56 @@
+#ifndef _ICMP_GEMINI_1_5_FLASH_SPICY_H
+#define _ICMP_GEMINI_1_5_FLASH_SPICY_H
+
+#include <stdint.h>
+
+// Define structures for ICMP packets
+typedef struct {
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint16_t identifier;
+    uint16_t sequence_number;
+} icmp_header_t;
+
+typedef struct {
+    icmp_header_t icmp_header;
+    // Add any other necessary fields for your ICMP packet
+} icmp_packet_t;
+
+
+// Function to calculate ICMP checksum
+uint16_t calculate_icmp_checksum(const void* data, size_t len);
+
+// Function to process ICMP packets
+void process_icmp_packet(const icmp_packet_t* packet);
+
+
+//Example usage (replace with your actual implementation)
+uint16_t calculate_icmp_checksum(const void* data, size_t len) {
+  uint16_t* ptr = (uint16_t*)data;
+  uint32_t sum = 0;
+  int nleft = len;
+
+  while (nleft > 1) {
+    sum += *ptr++;
+    nleft -= 2;
+  }
+
+  if (nleft == 1) {
+    uint16_t u = 0;
+    *(uint8_t*)&u = *(uint8_t*)ptr;
+    sum += u;
+  }
+
+  sum = (sum >> 16) + (sum & 0xFFFF);
+  sum += (sum >> 16);
+  return ~sum;
+}
+
+void process_icmp_packet(const icmp_packet_t* packet) {
+  //Process the ICMP packet here.  This is a placeholder.
+  //Example:  Log the type and code.
+  //printf("ICMP Type: %u, Code: %u\n", packet->icmp_header.type, packet->icmp_header.code);
+}
+
+#endif // _ICMP_GEMINI_1_5_FLASH_SPICY_H

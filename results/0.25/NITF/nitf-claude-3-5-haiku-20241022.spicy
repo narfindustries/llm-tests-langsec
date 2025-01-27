@@ -1,0 +1,36 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires(self.magic == b"NITF");
+    version: bytes(2);
+    
+    subheader_length: bytes(6) &convert(spicy::parse_int($$, 10));
+    
+    : bytes(3); # Reserved space
+    
+    number_of_image_segments: bytes(3) &convert(spicy::parse_int($$, 10));
+    number_of_graphic_segments: bytes(3) &convert(spicy::parse_int($$, 10));
+    
+    parse_header: function() {
+        return self;
+    }
+};
+
+public type ImageSubheader = unit {
+    length: bytes(6) &convert(spicy::parse_int($$, 10));
+    image_type: bytes(2);
+    
+    width: bytes(5) &convert(spicy::parse_int($$, 10));
+    height: bytes(5) &convert(spicy::parse_int($$, 10));
+};
+
+public type File = unit {
+    header: Header;
+    image_subheaders: ImageSubheader[] &count(self.header.number_of_image_segments);
+    
+    parse_file: function() {
+        return self;
+    }
+};

@@ -1,0 +1,74 @@
+@header {
+  include "zeek/spicy/1.0/zeek-init.spicy";
+}
+
+type JPEG_Meta: record {
+  @parse_one_with {
+    id: uint16;
+    @advance id;
+  }
+  @if (id == 0xffe0) {
+    app0: App0;
+  } @else @if (id == 0xffe1) {
+    app1: App1;
+  } @else @if (id == 0xffe2) {
+    app2: App2;
+  } @else {
+    @skip 2;
+    data: byte[string];
+  }
+}
+
+type App0: record {
+  @parse_one_with {
+    id: uint16;
+    length: uint16;
+    @advance length;
+  }
+  @if (length >= 2) {
+    version: uint8[2];
+    units: uint8;
+    xdensity: uint16;
+    ydensity: uint16;
+    thumbnailx: uint8;
+    thumbnaily: uint8;
+  }
+}
+
+type App1: record {
+  @parse_one_with {
+    id: uint16;
+    length: uint16;
+    @advance length;
+  }
+  @if (length >= 2) {
+    identifier: string;
+    version: string;
+    units: uint8;
+    xdensity: uint16;
+    ydensity: uint16;
+    thumbnailx: uint8;
+    thumbnaily: uint8;
+  }
+}
+
+type App2: record {
+  @parse_one_with {
+    id: uint16;
+    length: uint16;
+    @advance length;
+  }
+  @if (length >= 2) {
+    identifier: string;
+    version: string;
+    units: uint8;
+    xdensity: uint16;
+    ydensity: uint16;
+    thumbnailx: uint8;
+    thumbnaily: uint8;
+  }
+}
+
+@on_parse {
+  JPEG_Meta();
+}

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:generalFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="FileHeader">
+    <xs:sequence>
+      <xs:element name="fileProfileName" type="xs:string" dfdl:length="4"/>
+      <xs:element name="fileVersion" type="xs:string" dfdl:length="5"/>
+      <xs:element name="complexityLevel" type="xs:string" dfdl:length="2"/>
+      <xs:element name="standardType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="originatingStationID" type="xs:string" dfdl:length="10"/>
+      <xs:element name="dateTime" type="xs:string" dfdl:length="14"/>
+      <xs:element name="fileTitle" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageSegment">
+    <xs:sequence>
+      <xs:element name="imageID" type="xs:string" dfdl:length="10"/>
+      <xs:element name="dateTime" type="xs:string" dfdl:length="14"/>
+      <xs:element name="targetID" type="xs:string" dfdl:length="17"/>
+      <xs:element name="imageTitle" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="fileHeader" type="tns:FileHeader"/>
+        <xs:element name="imageSegments" type="tns:ImageSegment" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="generalFormat">
+    <xs:complexType>
+      <xs:attributeGroup>
+        <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+        <xs:attribute name="textEncoding" type="xs:string" use="required" fixed="utf-8"/>
+        <xs:attribute name="textPadKind" type="xs:string" use="required" fixed="none"/>
+        <xs:attribute name="textTrimKind" type="xs:string" use="required" fixed="none"/>
+        <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
+        <xs:attribute name="representation" type="xs:string" use="required" fixed="text"/>
+      </xs:attributeGroup>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

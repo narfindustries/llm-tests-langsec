@@ -1,0 +1,28 @@
+module ZIP;
+
+import spicy;
+
+public type File = unit {
+    signature: bytes &size=4 
+        where $$ == b"PK\x03\x04" 
+        or $$ == b"PK\x05\x06"  # End of central directory
+        or $$ == b"PK\x07\x08"; # Spanned ZIP
+
+    version_needed: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+
+    filename: bytes &size=filename_length;
+    extra_field: bytes &size=extra_field_length;
+
+    on %done {
+        print self;
+    }
+}

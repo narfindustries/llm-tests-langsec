@@ -1,0 +1,45 @@
+module MQTT;
+
+public type Message = unit {
+    fixed_header: FixedHeader;
+    remaining_bytes: bytes &size=self.fixed_header.remaining_length;
+
+    on %done {
+        print self;
+    }
+};
+
+type FixedHeader = unit {
+    message_type: uint8;
+    flags: uint8;
+    remaining_length: VarInt;
+};
+
+type VarInt = unit {
+    var value: uint64;
+    var index: uint8;
+
+    : bytes &eod &chunked &parse-from=self.parse_varint;
+
+    on %init { self.value = 0; self.index = 0; }
+};
+
+function parse_varint(data: bytes): bool {
+    local byte = data[0];
+    local digit = byte & 0x7f;
+    self.value |= (digit << (7 * self.index));
+    self.index += 1;
+    return (byte & 0x80) == 0;
+}
+
+public function remaining_length(h: FixedHeader): uint64 {
+    return h.remaining_length.value;
+}
+
+on Message::%done {
+    print "Parsed MQTT message";
+}
+
+on Message::fixed_header {
+    print "Message Type:", self.message_type;
+}

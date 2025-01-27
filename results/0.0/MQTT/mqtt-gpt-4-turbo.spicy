@@ -1,0 +1,44 @@
+module MQTT;
+
+import spicy;
+
+type ConnectFlags = unit {
+    reserved: uint8 &size=1;
+    cleanSession: bool &size=1;
+    willFlag: bool &size=1;
+    willQoS: uint8 &size=2;
+    willRetain: bool &size=1;
+    passwordFlag: bool &size=1;
+    usernameFlag: bool &size=1;
+};
+
+type Connect = unit {
+    protoName: bytes &eod;
+    version: uint8;
+    flags: ConnectFlags;
+    keepAlive: uint16;
+    clientID: bytes &eod;
+    willTopic: bytes &eod if (self.flags.willFlag);
+    willMessage: bytes &eod if (self.flags.willFlag);
+    username: bytes &eod if (self.flags.usernameFlag);
+    password: bytes &eod if (self.flags.passwordFlag);
+};
+
+type Publish = unit {
+    topic: bytes &eod;
+    message: bytes &eod;
+};
+
+type Message = unit {
+    fixedHeader: uint8;
+    remainingLength: uint32;
+    payload: switch (self.fixedHeader & 0xF0) {
+        0x10 -> connect: Connect;
+        0x30 -> publish: Publish;
+        default -> raw: bytes &size=self.remainingLength;
+    };
+};
+
+public type MQTT_Protocol = unit {
+    messages: Message[] &eod;
+} &byte_order=big;

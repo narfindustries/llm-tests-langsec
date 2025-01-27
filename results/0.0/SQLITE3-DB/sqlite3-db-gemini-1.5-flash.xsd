@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/sqlite3db" elementFormDefault="qualified" version="1.0">
+
+  <xs:annotation>
+    <xs:documentation>DFDL Schema for SQLite3 Gemini 1.5 Flash Data</xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="sqlite3_db_gemini_1_5_flash">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="16"/>
+        <xs:element name="data_records" type="DataRecordsType" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
+    </xs:complexType>
+    <xs:unique name="unique_record_id">
+      <xs:selector xpath="data_records/data_record"/>
+      <xs:field xpath="@record_id"/>
+    </xs:unique>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="record_count" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:lengthKind="explicit" dfdl:length="12"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataRecordsType">
+    <xs:sequence>
+      <xs:element name="data_record" type="DataRecordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataRecordType">
+    <xs:sequence>
+      <xs:element name="record_id" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="field1" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:decimal" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:fractionDigits="2"/>
+      <xs:element name="field3" type="xs:boolean" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <!-- Add more fields as needed -->
+    </xs:sequence>
+    <xs:attribute name="record_id" type="xs:integer" use="required"/>
+  </xs:complexType>
+
+
+</xs:schema>

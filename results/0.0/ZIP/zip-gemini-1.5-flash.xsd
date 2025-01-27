@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/zipgemini"
+           xmlns="http://example.org/zipgemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="zipGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="records" type="RecordsType" dfdl:occursCountKind="zeroOrMore"/>
+        <xs:element name="trailer" type="TrailerType" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="2"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="recordId" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+      <xs:element name="creationDate" type="xs:date"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordsType">
+    <xs:sequence>
+      <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="field2" type="xs:integer"/>
+      <xs:element name="field3" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="recordCount" type="xs:integer"/>
+      <xs:element name="checksum" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:defineSchema>
+        <dfdl:format ref="http://www.ogf.org/dfdl/dfdl-1.0/formats/text"/>
+        <dfdl:textStandardEncoding>UTF-8</dfdl:textStandardEncoding>
+        <dfdl:separator separatorKind="newline"/>
+        <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+        <dfdl:encoding>UTF-8</dfdl:encoding>
+      </dfdl:defineSchema>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

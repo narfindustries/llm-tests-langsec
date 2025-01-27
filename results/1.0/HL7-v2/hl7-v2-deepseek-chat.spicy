@@ -1,0 +1,93 @@
+module HL7_v2;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    segments: Segment[];
+};
+
+type Header = unit {
+    field_separator: bytes &size=1;
+    encoding_characters: bytes &size=4;
+    sending_application: bytes &until=b"\x7c";
+    sending_facility: bytes &until=b"\x7c";
+    receiving_application: bytes &until=b"\x7c";
+    receiving_facility: bytes &until=b"\x7c";
+    date_time: bytes &until=b"\x7c";
+    security: bytes &until=b"\x7c";
+    message_type: bytes &until=b"\x7c";
+    message_control_id: bytes &until=b"\x7c";
+    processing_id: bytes &until=b"\x7c";
+    version_id: bytes &until=b"\x7c";
+    sequence_number: bytes &until=b"\x7c";
+    continuation_pointer: bytes &until=b"\x7c";
+    accept_acknowledgment_type: bytes &until=b"\x7c";
+    application_acknowledgment_type: bytes &until=b"\x7c";
+    country_code: bytes &until=b"\x7c";
+    character_set: bytes &until=b"\x7c";
+    principal_language: bytes &until=b"\x7c";
+    alternate_character_set: bytes &until=b"\x7c";
+};
+
+type Segment = unit {
+    segment_id: bytes &size=3;
+    fields: Field[];
+};
+
+type Field = unit {
+    components: Component[];
+};
+
+type Component = unit {
+    subcomponents: Subcomponent[];
+};
+
+type Subcomponent = unit {
+    value: bytes &until=b"\x7c" | b"\x5e" | b"\x26";
+};
+
+on Message::%init {
+    self.header = Header();
+    self.segments = [];
+}
+
+on Header::%init {
+    self.field_separator = b"";
+    self.encoding_characters = b"";
+    self.sending_application = b"";
+    self.sending_facility = b"";
+    self.receiving_application = b"";
+    self.receiving_facility = b"";
+    self.date_time = b"";
+    self.security = b"";
+    self.message_type = b"";
+    self.message_control_id = b"";
+    self.processing_id = b"";
+    self.version_id = b"";
+    self.sequence_number = b"";
+    self.continuation_pointer = b"";
+    self.accept_acknowledgment_type = b"";
+    self.application_acknowledgment_type = b"";
+    self.country_code = b"";
+    self.character_set = b"";
+    self.principal_language = b"";
+    self.alternate_character_set = b"";
+}
+
+on Segment::%init {
+    self.segment_id = b"";
+    self.fields = [];
+}
+
+on Field::%init {
+    self.components = [];
+}
+
+on Component::%init {
+    self.subcomponents = [];
+}
+
+on Subcomponent::%init {
+    self.value = b"";
+}

@@ -1,0 +1,45 @@
+module DICOM;
+
+import spicy;
+
+type FileMetaInformation = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    group_length: uint16;
+    version: uint16;
+    media_storage_sop_class_uid: bytes &size=64;
+    media_storage_sop_instance_uid: bytes &size=64;
+    transfer_syntax_uid: bytes &size=64;
+    implementation_class_uid: bytes &size=64;
+    implementation_version_name: bytes &size=16;
+    source_application_entity_title: bytes &size=16;
+    private_information_creator_uid: bytes &size=64;
+    private_information: bytes &size=128;
+};
+
+type DataSet = unit {
+    elements: Element[] &until=$element.tag == 0x0000 && $element.vr == "UL";
+};
+
+type Element = unit {
+    tag: uint16;
+    vr: bytes &size=2;
+    length: uint16;
+    value: bytes &size=length;
+};
+
+type DICOMFile = unit {
+    file_meta_information: FileMetaInformation;
+    data_set: DataSet;
+};
+
+on DICOMFile::%init {
+    self.file_meta_information = FileMetaInformation();
+    self.data_set = DataSet();
+}
+
+on DICOMFile::%done {
+    print "DICOM file parsed successfully";
+}
+
+export DICOMFile;

@@ -1,0 +1,34 @@
+module PNG;
+
+public type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bitDepth: uint8;
+    colorType: uint8;
+    compressionMethod: uint8;
+    filterMethod: uint8;
+    interlaceMethod: uint8;
+};
+
+public type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=this.length;
+    crc: uint32;
+};
+
+public type PNGFile = unit {
+    signature: bytes &size=8;
+    chunks: Chunk[] &eod;
+    
+    on %init {
+        if (self.signature != b"\x89PNG\r\n\x1a\n") {
+            throw Error("Invalid PNG signature");
+        }
+    }
+};
+
+event zeek_init() &priority=5
+{
+    print "Zeek module for parsing PNG files loaded.";
+}

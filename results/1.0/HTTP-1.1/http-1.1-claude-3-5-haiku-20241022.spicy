@@ -1,0 +1,57 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method: bytes;
+    space: bytes;
+    uri: bytes;
+    space2: bytes;
+    version: bytes &eod;
+
+    on %init {
+        self.method = b"";
+        self.uri = b"";
+        self.version = b"";
+    }
+
+    parsing_success = method == /GET|POST|HEAD|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH/ &&
+                      version == /HTTP\/1\.[01]/;
+};
+
+public type Response = unit {
+    version: bytes;
+    space: bytes;
+    status_code: bytes;
+    space2: bytes;
+    status_text: bytes &eod;
+
+    on %init {
+        self.version = b"";
+        self.status_code = b"";
+        self.status_text = b"";
+    }
+
+    parsing_success = version == /HTTP\/1\.[01]/ &&
+                      status_code == /\d{3}/;
+};
+
+public type Header = unit {
+    name: bytes;
+    b":";
+    value: bytes &eod;
+
+    on %init {
+        self.name = b"";
+        self.value = b"";
+    }
+};
+
+public type Message = unit {
+    headers: vector<Header>;
+    b"\r\n\r\n";
+
+    on %init {
+        self.headers = [];
+    }
+};

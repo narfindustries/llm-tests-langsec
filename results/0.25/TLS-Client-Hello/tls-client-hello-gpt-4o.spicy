@@ -1,0 +1,53 @@
+module TLSClientHello;
+
+import spicy;
+import zeek;
+
+public type ClientHello = unit {
+    record_version: uint16;
+    random: bytes &size=32;
+    session_id_length: uint8;
+    session_id: bytes &size=session_id_length;
+    cipher_suites_length: uint16;
+    cipher_suites: bytes &size=cipher_suites_length;
+    compression_methods_length: uint8;
+    compression_methods: bytes &size=compression_methods_length;
+    extensions_length: uint16;
+    extensions: bytes &size=extensions_length;
+};
+
+public type TLSRecord = unit {
+    content_type: uint8;
+    version: uint16;
+    length: uint16;
+    body: case content_type == 22 => Handshake;
+};
+
+public type Handshake = unit {
+    handshake_type: uint8;
+    length: uint24;
+    body: case handshake_type == 1 => ClientHello;
+};
+
+public global export {
+    event tls_client_hello(c: connection, version: uint16, random: bytes, session_id: bytes, cipher_suites: bytes, compression_methods: bytes, extensions: bytes);
+}
+
+public hook zeek_init() &priority=5 {
+    zeek::event tls_client_hello(c, version, random, session_id, cipher_suites, compression_methods, extensions);
+}
+
+public function process_tls_record(c: connection, record: TLSRecord) {
+    if (record.content_type == 22 && record.body?$handshake_type && record.body$handshake_type == 1) {
+        local client_hello = record.body$body;
+        event tls_client_hello(c, client_hello.record_version, client_hello.random, client_hello.session_id, client_hello.cipher_suites, client_hello.compression_methods, client_hello.extensions);
+    }
+}
+
+public type Analyzer = spicy::zeek::Analyzer {
+    .id = "TLSClientHello",
+    .protocol = spicy::zeek::Protocol::TCP,
+    .ports = [ 443/tcp ],
+    .parser = TLSRecord,
+    .process = process_tls_record,
+};

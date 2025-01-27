@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ICMP"
+           xmlns:tns="http://example.com/ICMP"
+           elementFormDefault="qualified">
+
+    <xs:include schemaLocation="some_common_types.xsd"/>
+
+    <dfdl:format ref="tns:generalFormat"
+                 encoding="ascii" lengthKind="explicit" lengthUnits="bytes"
+                 occursCountKind="implicit" alignment="1" representation="binary"/>
+
+    <xs:element name="ICMP_Packet">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Type" type="xs:unsignedByte"
+                            dfdl:length="1" dfdl:lengthUnits="bytes"/>
+                <xs:element name="Code" type="xs:unsignedByte"
+                            dfdl:length="1" dfdl:lengthUnits="bytes"/>
+                <xs:element name="Checksum" type="xs:unsignedShort"
+                            dfdl:length="2" dfdl:lengthUnits="bytes"
+                            dfdl:byteOrder="network"/>
+                <xs:element name="Rest_of_Header" type="RestOfHeaderType"
+                            dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="RestOfHeaderType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="4"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="Payload">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Data" minOccurs="0" maxOccurs="unbounded"
+                            type="xs:unsignedByte" dfdl:length="1"
+                            dfdl:lengthUnits="bytes"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

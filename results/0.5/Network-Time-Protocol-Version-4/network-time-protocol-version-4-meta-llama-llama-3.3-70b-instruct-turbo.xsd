@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
+           xmlns:tns="http://example.com/Network-Time-Protocol-Version-4"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdlacciones.xsd"/>
+
+  <xs:element name="NTPPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:headerType" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian"/>
+        <xs:element name="Timestamps" type="tns:timestampsType" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="Leap" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="2"/>
+      <xs:element name="Version" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="3"/>
+      <xs:element name="Mode" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="3"/>
+      <xs:element name="Poll" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="4"/>
+      <xs:element name="Precision" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="8"/>
+      <xs:element name="Delay" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="16"/>
+      <xs:element name="Dispersion" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="16"/>
+      <xs:element name="Identifier" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="32"/>
+      <xs:element name="ReferenceTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="timestampsType">
+    <xs:sequence>
+      <xs:element name="OriginTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+      <xs:element name="ReceiveTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+      <xs:element name="TransmitTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

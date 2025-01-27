@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://hl7.org/fhir/dfdl/HL7v2"
+           xmlns:hl7="http://hl7.org/fhir/dfdl/HL7v2">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator=""
+                  encoding="UTF-8" 
+                  alignmentUnits="bytes"
+                  alignment="1" 
+                  leadingSkip="0"
+                  trailingSkip="0"
+                  textTrimPolicy="none"
+                  escapeSchemeRef=""
+                  representation="text"
+                  occursCountKind="parsed"
+                  byteOrder="littleEndian"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HL7v2Message" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="\r">
+        <xs:element name="MSH" minOccurs="1" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="|">
+              <xs:element name="FieldSeparator" type="xs:string" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"/>
+              <xs:element name="EncodingCharacters" type="xs:string" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="4"/>
+              <xs:element name="SendingApplication" type="xs:string"/>
+              <xs:element name="SendingFacility" type="xs:string"/>
+              <xs:element name="ReceivingApplication" type="xs:string"/>
+              <xs:element name="ReceivingFacility" type="xs:string"/>
+              <xs:element name="DateTime" type="xs:dateTime"/>
+              <xs:element name="Security" type="xs:string" minOccurs="0"/>
+              <xs:element name="MessageType" type="xs:string"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="Segments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="|">
+              <xs:element name="SegmentName" type="xs:string" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="3"/>
+              <xs:element name="Fields" type="xs:string" 
+                          minOccurs="0" 
+                          maxOccurs="unbounded" 
+                          dfdl:separator="^"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

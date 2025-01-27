@@ -1,0 +1,39 @@
+#include <base64.zeek>
+
+function jpeg_decode(data: string) : string {
+    local decoded_data: string;
+    local base64_decoded: string;
+
+    # Attempt to decode the base64 encoded JPEG data.
+    base64_decoded = base64_decode(data);
+
+    # Check for decoding errors.  If decoding fails, return an error message.
+    if (base64_decoded == "") {
+        return "Base64 decoding failed";
+    }
+
+    #  Assume base64_decoded now contains raw JPEG bytes.  
+    #  Further processing (e.g., using external tools or libraries) would be needed here to actually decode the JPEG image.
+    #  This is a placeholder for that processing.  Replace this with actual JPEG decoding logic.
+    decoded_data = "JPEG data decoded (placeholder)";
+
+    return decoded_data;
+}
+
+
+event zeek_spicy_jpeg_decode(data: string) {
+    local decoded_jpeg: string;
+
+    decoded_jpeg = jpeg_decode(data);
+
+    if (decoded_jpeg != "JPEG data decoded (placeholder)") {
+        print "Error decoding JPEG: " + decoded_jpeg;
+    } else {
+        print "Decoded JPEG data successfully (placeholder)";
+    }
+}
+
+# Example usage (replace with your actual base64 encoded JPEG data)
+zeek_spicy_jpeg_decode(base64_encode("This is not a JPEG, it's a placeholder"));
+
+

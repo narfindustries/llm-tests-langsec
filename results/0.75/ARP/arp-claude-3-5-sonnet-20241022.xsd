@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:arp="urn:arp:1.0"
+    targetNamespace="urn:arp:1.0">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="implicit"
+                        representation="binary"
+                        binaryNumberRep="binary"
+                        byteOrder="bigEndian"
+                        occursCountKind="implicit"
+                        initiator="" 
+                        terminator=""
+                        leadingSkip="0"
+                        trailingSkip="0"
+                        textTrimKind="none"
+                        encoding="UTF-8"
+                        ignoreCase="no"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="arpPacket">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="hardwareType" type="xs:unsignedShort"/>
+                <xs:element name="protocolType" type="xs:unsignedShort"/>
+                <xs:element name="hardwareAddressLength" type="xs:unsignedByte"/>
+                <xs:element name="protocolAddressLength" type="xs:unsignedByte"/>
+                <xs:element name="operation" type="xs:unsignedShort"/>
+                <xs:element name="senderHardwareAddress">
+                    <xs:complexType>
+                        <xs:sequence dfdl:byteOrder="bigEndian">
+                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="6" minOccurs="6"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="senderProtocolAddress">
+                    <xs:complexType>
+                        <xs:sequence dfdl:byteOrder="bigEndian">
+                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="4" minOccurs="4"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="targetHardwareAddress">
+                    <xs:complexType>
+                        <xs:sequence dfdl:byteOrder="bigEndian">
+                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="6" minOccurs="6"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="targetProtocolAddress">
+                    <xs:complexType>
+                        <xs:sequence dfdl:byteOrder="bigEndian">
+                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="4" minOccurs="4"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="gzip-deepseek-chat">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="ex:gzipHeaderType"/>
+        <xs:element name="compressedData" type="xs:hexBinary"/>
+        <xs:element name="trailer" type="ex:gzipTrailerType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="gzipHeaderType">
+    <xs:sequence>
+      <xs:element name="magicNumber" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="flags" type="xs:unsignedByte"/>
+      <xs:element name="modificationTime" type="xs:unsignedInt"/>
+      <xs:element name="extraFlags" type="xs:unsignedByte"/>
+      <xs:element name="operatingSystem" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gzipTrailerType">
+    <xs:sequence>
+      <xs:element name="crc32" type="xs:unsignedInt"/>
+      <xs:element name="originalSize" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,96 @@
+# DNS Protocol Specification in Zeek Spicy Format
+
+%header {
+    # Import required modules
+    @load base/protocols/dns
+}
+
+%extern {
+    # Include necessary external dependencies
+    @load-such Packet::DNS
+}
+
+%include {
+    # Include common types and constants
+    const max_len = 1024;
+    type dns_msg = record {
+        id: uint16,
+        flags: uint16,
+        qdcount: uint16,
+        ancount: uint16,
+        nscount: uint16,
+        arcount: uint16,
+        questions: array of dns_question,
+        answers: array of dns_answer,
+        authorities: array of dns_answer,
+        additionals: array of dns_answer,
+    };
+
+    type dns_question = record {
+        name: string,
+        type: uint16,
+        class: uint16,
+    };
+
+    type dns_answer = record {
+        name: string,
+        type: uint16,
+        class: uint16,
+        ttl: uint32,
+        rdlength: uint16,
+        rdata: string,
+    };
+}
+
+%parser {
+    # Define parser for DNS message
+    dns_msg = (
+        id: uint16,
+        flags: uint16,
+        qdcount: uint16,
+        ancount: uint16,
+        nscount: uint16,
+        arcount: uint16,
+        questions: array of dns_question,
+        answers: array of dns_answer,
+        authorities: array of dns_answer,
+        additionals: array of dns_answer,
+    );
+}
+
+%lexer {
+    # Define lexer rules for DNS message
+    dns_msg: 
+        id: uint16(2),
+        flags: uint16(2),
+        qdcount: uint16(2),
+        ancount: uint16(2),
+        nscount: uint16(2),
+        arcount: uint16(2),
+        questions: array of dns_question,
+        answers: array of dns_answer,
+        authorities: array of dns_answer,
+        additionals: array of dns_answer;
+}
+
+%grammar {
+    # Define grammar rules for DNS message
+    dns_msg: 
+        id: uint16(2),
+        flags: uint16(2),
+        qdcount: uint16(2),
+        ancount: uint16(2),
+        nscount: uint16(2),
+        arcount: uint16(2),
+        questions: array of dns_question,
+        answers: array of dns_answer,
+        authorities: array of dns_answer,
+        additionals: array of dns_answer;
+}
+
+%code {
+    # Event handlers for DNS protocol
+    event dns_packet(c: connection, msg: dns_msg) {
+        # Handle DNS packet event
+    }
+}

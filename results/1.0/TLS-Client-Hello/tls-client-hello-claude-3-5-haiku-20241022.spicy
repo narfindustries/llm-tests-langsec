@@ -1,0 +1,39 @@
+module TLS;
+
+import spicy;
+
+public type ClientHello = unit {
+    record_type: uint8 = 0x01 always {
+        $$ == 0x01;
+    };
+
+    length: uint16;
+    
+    protocol_version: uint16 {
+        validate($$ == 0x0303 || $$ == 0x0302 || $$ == 0x0301);
+    };
+
+    random: bytes(32);
+
+    session_id_length: uint8;
+    session_id: bytes(session_id_length) if ( session_id_length > 0 );
+
+    cipher_suites_length: uint16;
+    cipher_suites: uint16[cipher_suites_length/2];
+
+    compression_methods_length: uint8;
+    compression_methods: uint8[compression_methods_length];
+
+    extensions_length: uint16;
+    extensions: Extensions;
+
+    type Extensions = unit {
+        extensions: Extension[];
+    };
+
+    type Extension = unit {
+        type_: uint16;
+        length: uint16;
+        data: bytes(length);
+    }
+}

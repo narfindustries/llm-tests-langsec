@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/dns" targetNamespace="http://example.org/dns" elementFormDefault="qualified">
+
+  <xs:element name="dns_gemini_1_5_flash">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns.headerType" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element name="records" type="tns.recordsType" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element name="trailer" type="tns.trailerType" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="record_count" type="xs:integer" dfdl:length="4" dfdl:binaryNumberRep="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="recordsType">
+    <xs:sequence>
+      <xs:element name="record" type="tns.recordType" maxOccurs="unbounded" dfdl:separator="," dfdl:occursCountKind="specified"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string" dfdl:length="255" dfdl:encoding="utf-8"/>
+      <xs:element name="ip_address" type="xs:string" dfdl:length="15" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="trailerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer" dfdl:length="4" dfdl:binaryNumberRep="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

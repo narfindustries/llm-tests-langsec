@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:jpeg="urn:jpeg:dfdl:schema"
+           targetNamespace="urn:jpeg:dfdl:schema"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary"
+                  encoding="ASCII"
+                  byteOrder="bigEndian"
+                  alignment="1"
+                  alignmentUnits="bytes"
+                  occursCountKind="parsed"
+                  initiator=""
+                  terminator=""
+                  separator=""
+                  separatorPosition="infix"
+                  separatorPolicy="suppressed"
+                  escapeSchemeRef=""
+                  textNumberPattern=""
+                  textNumberRep="standard"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="JPEG" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="SOI" type="jpeg:StartOfImageType"/>
+        <xs:element name="Segments" type="jpeg:SegmentsType"/>
+        <xs:element name="EOI" type="jpeg:EndOfImageType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="StartOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType" 
+                   dfdl:lengthKind="explicit" 
+                   dfdl:length="2" 
+                   dfdl:initiator="0xFF 0xD8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EndOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType"
+                   dfdl:lengthKind="explicit"
+                   dfdl:length="2"
+                   dfdl:initiator="0xFF 0xD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Segment" type="jpeg:SegmentType" 
+                   maxOccurs="unbounded" 
+                   dfdl:occursCountKind="parsed"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:sequence>
+      <xs:element name="SegmentMarker" type="jpeg:MarkerType"
+                   dfdl:lengthKind="explicit"
+                   dfdl:length="2"
+                   dfdl:initiator="0xFF"/>
+      <xs:element name="SegmentType" type="jpeg:MarkerType"
+                   dfdl:lengthKind="explicit"
+                   dfdl:length="1"/>
+      <xs:element name="SegmentLength" type="xs:unsignedShort"
+                   dfdl:lengthKind="explicit"
+                   dfdl:length="2"/>
+      <xs:element name="SegmentData" type="xs:hexBinary"
+                   dfdl:lengthKind="explicit"
+                   dfdl:length="{ ../SegmentLength - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="MarkerType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

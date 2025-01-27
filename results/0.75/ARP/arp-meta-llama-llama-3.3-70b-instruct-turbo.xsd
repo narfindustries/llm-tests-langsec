@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ARP"
+           xmlns="http://example.com/ARP"
+           elementFormDefault="qualified">
+  <xs:element name="arp">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+        <xs:element name="protocolType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+        <xs:element name="hardwareAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1"/>
+        <xs:element name="protocolAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1"/>
+        <xs:element name="operation" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+        <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="6"/>
+        <xs:element name="senderProtocolAddress" type="xs:unsignedInt" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="4"/>
+        <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="6"/>
+        <xs:element name="targetProtocolAddress" type="xs:unsignedInt" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

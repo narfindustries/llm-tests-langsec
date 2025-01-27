@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/network-time-protocol-version-4"
+           xmlns:ntp="http://www.example.org/network-time-protocol-version-4"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NTPPacketType">
+    <xs:sequence>
+      <xs:element name="LeapIndicator" type="xs:unsignedByte" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="VersionNumber" type="xs:unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="Poll" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="Precision" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="RootDelay" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="RootDispersion" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="ReferenceIdentifier" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:lengthKind="explicit"/>
+      <xs:element name="OriginateTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:lengthKind="explicit"/>
+      <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:lengthKind="explicit"/>
+      <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NTPPacket" type="ntp:NTPPacketType"/>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" alignmentUnits="bytes"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,57 @@
+# GZIP File Format Specification in Zeek Spicy
+
+type GzipFile = struct {
+    # GZIP file magic
+    magic: byte[2] = {0x1f, 0x8b};
+
+    # Compression method (always DEFLATE for GZIP)
+    compression_method: byte = 8;
+
+    # Flags
+    flags: byte;
+
+    # Modification time
+    modification_time: uint32;
+
+    # Extra flags
+    extra_flags: byte;
+
+    # Operating system
+    operating_system: byte;
+
+    # Optional extra field (variable length)
+    extra_field: byte[] = if (flags & 0x04) != 0 {
+        extra_len: uint16 = read uint16;
+        read byte[extra_len];
+    } else {
+        [];
+    };
+
+    # Optional file name (variable length, null-terminated)
+    file_name: string = if (flags & 0x08) != 0 {
+        read string (terminator: "\x00");
+    } else {
+        "";
+    };
+
+    # Optional comment (variable length, null-terminated)
+    comment: string = if (flags & 0x10) != 0 {
+        read string (terminator: "\x00");
+    } else {
+        "";
+    };
+
+    # Header CRC (optional)
+    header_crc: uint16 = if (flags & 0x02) != 0 {
+        read uint16;
+    } else {
+        0;
+    };
+
+    # Compressed data
+    compressed_data: byte[] = read until (at_end() || peek byte == 0x00);
+
+    # GZIP footer
+    crc32: uint32 = read uint32;
+    size: uint32 = read uint32;
+};

@@ -1,0 +1,78 @@
+module BitcoinTransactions;
+
+import zeek;
+
+export {
+    # Define a connection analyzer for Bitcoin transactions
+    type Analyzer = global;
+
+    # Event to be raised on successful parsing
+    event bitcoin_transaction(variant: uint8,
+                              inputs: vector of Input,
+                              outputs: vector of Output,
+                              lock_time: uint32);
+
+    type Input = record {
+        previous_output: bytes &length = 32; # Previous output transaction hash
+        index: uint32;                       # Index of the previous output
+        script: bytes &length = script_length; # Signature script
+        sequence: uint32;                    # Sequence number
+        script_length: uint32;               # Length of the script, varies per input
+    };
+
+    type Output = record {
+        value: uint64;                       # Amount in satoshis
+        pk_script_length: uint32;            # Length of the pk_script
+        pk_script: bytes &length = pk_script_length; # Public key script
+    };
+
+    # Define the unit for parsing Bitcoin transactions
+    type BitcoinTransactionUnit = unit {
+        // Transaction version
+        version: uint32;
+
+        // Number of transaction inputs
+        varint_inputs: uint8 &into = inputs_count;
+        inputs: [inputs_count]Input;
+
+        // Number of transaction outputs
+        varint_outputs: uint8 &into = outputs_count;
+        outputs: [outputs_count]Output;
+
+        // Lock time
+        lock_time: uint32;
+
+        on %done {
+            # Raise an event when parsing is done
+            zeek::bitcoin_transaction(variant, inputs, outputs, lock_time);
+        }
+    };
+
+    # The main unit
+    type Bitcoin = unit {
+        variant: uint8;
+
+        transaction: BitcoinTransactionUnit &if (variant == 0);
+
+        on %done {
+            if (variant == 0)
+                zeek::bitcoin_transaction(variant, transaction.inputs, transaction.outputs, transaction.lock_time);
+        }
+    };
+
+    # Define a connection analyzer
+    type BitcoinAnalyzer = zeek::session::Analyzer {
+        # The Spicy unit to parse messages
+        .unit = Bitcoin
+    };
+
+    # Register the analyzer for a specific TCP port, typically 8333 for Bitcoin
+    global bitcoin_analyzer: set[still] of BitcoinAnalyzer;
+}
+
+hook zeek_init() {
+    # Enable the analyzer by setting a variable
+    local bca = new BitcoinTransactions::BitcoinAnalyzer();
+    bca.flow = zeek::session::TCP;
+    BitcoinTransactions::bitcoin_analyzer += TCP::register_analyzer(bca);
+}

@@ -1,0 +1,56 @@
+# HTTP-1.1 parser for Zeek Spicy
+
+# Import required modules
+import Spicy
+
+# Define HTTP-1.1 parser
+module HTTP_1_1 {
+    # Define parser metadata
+    metadata {
+        name = "HTTP-1.1"
+        version = "1.1"
+        description = "Parser for HTTP-1.1 protocol"
+    }
+
+    # Define HTTP request and response structures
+    type Request = struct {
+        method: bytestring &length=4 &transcode=ascii,
+        uri: bytestring &length=(1..1024) &transcode=ascii,
+        http_version: bytestring &length=8 &transcode=ascii,
+        headers: array[Header] &length=(0..100),
+        body: bytestring &length=(0..1048576)
+    }
+
+    type Response = struct {
+        http_version: bytestring &length=8 &transcode=ascii,
+        status_code: uint16,
+        reason_phrase: bytestring &length=(1..1024) &transcode=ascii,
+        headers: array[Header] &length=(0..100),
+        body: bytestring &length=(0..1048576)
+    }
+
+    type Header = struct {
+        name: bytestring &length=(1..50) &transcode=ascii,
+        value: bytestring &length=(1..1024) &transcode=ascii
+    }
+
+    # Define parser for HTTP messages
+    parser parse_http_message() {
+        # Try to parse an HTTP request
+        try {
+            request: Request;
+            parse Request;
+            return request;
+        } catch(e) {
+            # If parsing a request fails, try to parse an HTTP response
+            try {
+                response: Response;
+                parse Response;
+                return response;
+            } catch(e) {
+                # If parsing a response fails, raise an error
+                throw e;
+            }
+        }
+    }
+}

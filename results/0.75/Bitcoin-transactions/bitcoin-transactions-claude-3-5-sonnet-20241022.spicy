@@ -1,0 +1,52 @@
+module Bitcoin;
+
+public type Transaction = unit {
+    version: uint32 le;
+    tx_in_count: varint;
+    tx_in: TxInput[tx_in_count.value];
+    tx_out_count: varint;
+    tx_out: TxOutput[tx_out_count.value];
+    lock_time: uint32 le;
+};
+
+type TxInput = unit {
+    previous_output: OutPoint;
+    script_length: varint;
+    signature_script: bytes &size=script_length.value;
+    sequence: uint32 le;
+};
+
+type TxOutput = unit {
+    value: uint64 le;
+    pk_script_length: varint;
+    pk_script: bytes &size=pk_script_length.value;
+};
+
+type OutPoint = unit {
+    hash: bytes &size=32;
+    index: uint32 le;
+};
+
+type varint = unit {
+    prefix: uint8 {
+        if ( self.prefix < 0xfd )
+            self.value = self.prefix;
+    }
+    
+    switch ( self.prefix ) {
+        0xfd -> value16: uint16 le {
+            self.value = self.value16;
+        }
+        0xfe -> value32: uint32 le {
+            self.value = self.value32;
+        }
+        0xff -> value64: uint64 le {
+            self.value = self.value64;
+        }
+    };
+
+    var value: uint64;
+};
+
+public function parse_bitcoin_transaction(data: bytes) : Transaction
+    { return parse<Transaction>(data); }

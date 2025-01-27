@@ -1,0 +1,38 @@
+module JPEG;
+
+import spicy;
+
+public type File = unit {
+    start: StartOfImage;
+    segments: Segments[];
+    end: EndOfImage;
+
+    on %init { self.segments = []; }
+};
+
+type StartOfImage = unit {
+    marker: bytes &size=2 where $$ == b"\xff\xd8";
+};
+
+type EndOfImage = unit {
+    marker: bytes &size=2 where $$ == b"\xff\xd9";
+};
+
+type Segments = unit {
+    marker: bytes &size=2;
+    length: uint16 if ( marker != b"\xff\xda" && marker != b"\xff\xd9" );
+    data: bytes &size=(marker == b"\xff\xda" ? 0 : length - 2) if ( marker != b"\xff\xd9" );
+
+    on %init {
+        switch ( marker ) {
+            case b"\xff\xc0": self.type = "SOF0 (Baseline DCT)";
+            case b"\xff\xc2": self.type = "SOF2 (Progressive DCT)";
+            case b"\xff\xdb": self.type = "DQT (Define Quantization Table)";
+            case b"\xff\xc4": self.type = "DHT (Define Huffman Table)";
+            case b"\xff\xda": self.type = "SOS (Start of Scan)";
+            default: self.type = "Unknown";
+        }
+    }
+
+    field type: string;
+};

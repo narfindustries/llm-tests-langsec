@@ -1,0 +1,76 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:tns="http://example.com/dns"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="GeneralFormat"
+               byteOrder="bigEndian"
+               lengthKind="explicit"
+               encoding="utf-8"
+               alignmentUnits="bytes"
+               />
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransactionID" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Flags" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Questions" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="AnswerRRs" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="AuthorityRRs" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="AdditionalRRs" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:property name="lengthKind" value="explicit" />
+              <dfdl:property name="length" value="2" />
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <!-- Add additional elements as needed for the DNS message structure -->
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

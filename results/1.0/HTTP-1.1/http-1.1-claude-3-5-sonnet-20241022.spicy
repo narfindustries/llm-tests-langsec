@@ -1,0 +1,48 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method:     /[A-Z]+/;
+    :          /[ ]+/;
+    uri:       /[^ \t\r\n]+/;
+    :          /[ ]+/;
+    version:   /HTTP\/[0-9.]+/;
+    :          /\r?\n/;
+    headers:   Header[];
+    :          /\r?\n/;
+    body:      Body;
+};
+
+type Header = unit {
+    name:      /[^:\r\n]+/;
+    :          /:/;
+    :          /[ ]*/;
+    value:     /[^\r\n]*/;
+    :          /\r?\n/;
+};
+
+type Body = unit {
+    content: bytes &eod;
+};
+
+public type Response = unit {
+    version:   /HTTP\/[0-9.]+/;
+    :          /[ ]+/;
+    status:    uint16;
+    :          /[ ]+/;
+    reason:    /[^\r\n]+/;
+    :          /\r?\n/;
+    headers:   Header[];
+    :          /\r?\n/;
+    body:      Body;
+};
+
+on Request::%init    { self.method_ = ""; }
+on Request::method   { self.method_ = $$; }
+
+on Response::%init   { self.status_ = 0; }
+on Response::status  { self.status_ = $$; }
+
+on Request    -> event HTTP::request($conn, self.method_, self.uri, self.version, self.headers);
+on Response   -> event HTTP::reply($conn, self.status_, self.reason, self.version, self.headers);

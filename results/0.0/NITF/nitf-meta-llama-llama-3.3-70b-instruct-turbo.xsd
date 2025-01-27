@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/NITF"
+           xmlns="http://example.com/NITF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="NITF.xsd"/>
+
+  <xs:element name="NITF">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="nitfFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="NITFHeader" dfdl:occurs="1..1"/>
+        <xs:element ref="NITFBody" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="NITFHeader">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="nitfHeaderFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="FileHeaderType" dfdl:occurs="1..1"/>
+        <xs:element name="ImageHeader" type="ImageHeaderType" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="NITFBody">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="nitfBodyFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Image" type="ImageType" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FileHeaderRecord" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageHeaderType">
+    <xs:sequence>
+      <xs:element name="ImageHeaderRecord" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageType">
+    <xs:sequence>
+      <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="explicit" dfdl:length="imageLength"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="imageLength" type="xs:integer" dfdl:occurs="1..1" dfdl:hidden="true"/>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:property name="encoding" value="ASCII"/>
+        <dfdl:property name="lineEnding" value="LF"/>
+        <dfdl:property name="byteOrder" value="bigEndian"/>
+      </dfdl:format>
+      <dfdl:format ref="nitfFormat" name="nitfFormat">
+        <dfdl:property name="encoding" value="ASCII"/>
+        <dfdl:property name="lineEnding" value="LF"/>
+        <dfdl:property name="byteOrder" value="bigEndian"/>
+      </dfdl:format>
+      <dfdl:format ref="nitfHeaderFormat" name="nitfHeaderFormat">
+        <dfdl:property name="encoding" value="ASCII"/>
+        <dfdl:property name="lineEnding" value="LF"/>
+        <dfdl:property name="byteOrder" value="bigEndian"/>
+      </dfdl:format>
+      <dfdl:format ref="nitfBodyFormat" name="nitfBodyFormat">
+        <dfdl:property name="encoding" value="ASCII"/>
+        <dfdl:property name="lineEnding" value="LF"/>
+        <dfdl:property name="byteOrder" value="bigEndian"/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

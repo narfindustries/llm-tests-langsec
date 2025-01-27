@@ -1,0 +1,15 @@
+module HTTP;
+
+export {
+    type HTTP_1_1 = unit {
+        : HeaderLine[] &eod;
+        on %done {
+            print self;
+        }
+    };
+
+    type HeaderLine = unit {
+        name: bytes &until=b":";
+        value: bytes &until=b"\r\n";
+    };
+}

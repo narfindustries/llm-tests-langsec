@@ -1,0 +1,83 @@
+module PNG_Image;
+
+export {
+        ## Record type to hold PNG file metadata
+        type png_metadata: record {
+                magic_number: uint32;
+                ihdr_length: uint32;
+                ihdr_cdtype: string;
+                ihdr_width: uint32;
+                ihdr_height: uint32;
+                ihdr_bit_depth: uint8;
+                ihdr_color_type: uint8;
+                ihdr_compression_method: uint8;
+                ihdr_filter_method: uint8;
+                ihdr_interlace_method: uint8;
+                idat_data: string;
+        };
+
+        ## Event to be raised when parsing PNG file
+        global png_image_parsed: event(png_metadata);
+}
+
+## Implementation of PNG parser in Zeek Spicy
+file PNG_Image_Parser is packet_contents(
+        seq(
+                magic_number == 0x89504E47,
+                parse_ihdr,
+                parse_idat,
+                parse_iend
+        )
+);
+
+## IHDR chunk parsing logic
+file parse_ihdr is seq(
+        ihdr_length == 13,
+        ihdr_cdtype == "IHDR",
+        parse_ihdr_data
+);
+
+## IHDR data parsing logic
+file parse_ihdr_data is struct(
+        ihdr_width: uint32,
+        ihdr_height: uint32,
+        ihdr_bit_depth: uint8,
+        ihdr_color_type: uint8,
+        ihdr_compression_method: uint8,
+        ihdr_filter_method: uint8,
+        ihdr_interlace_method: uint8,
+        crc32: uint32
+);
+
+## IDAT chunk parsing logic
+file parse_idat is seq(
+        idat_length: uint32,
+        idat_data: string &length=idat_length,
+        crc32: uint32
+);
+
+## IEND chunk parsing logic
+file parse_iend is seq(
+        iend_length == 0,
+        iend_cdtype == "IEND",
+        crc32: uint32
+);
+
+## On parse completion, raise png_image_parsed event
+event file_end(
+        png_image_parsed(
+                png_metadata(
+                        $ctx.magic_number,
+                        $ctx.ihdr_length,
+                        $ctx.ihdr_cdtype,
+                        $ctx.ihdr_width,
+                        $ctx.ihdr_height,
+                        $ctx.ihdr_bit_depth,
+                        $ctx.ihdr_color_type,
+                        $ctx.ihdr_compression_method,
+                        $ctx.ihdr_filter_method,
+                        $ctx.ihdr_interlace_method,
+                        $ctx.idat_data
+                )
+        )
+);

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/BitcoinTransactions"
+           xmlns:tns="http://example.com/BitcoinTransactions"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="bitcoinTransactions">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="tns:bitcoinTransaction" dfdl:occurs="1..*"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:element name="bitcoinTransaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:integer"/>
+        <xs:element name="lockTime" type="xs:integer"/>
+        <xs:element name="inputs" type="tns:inputSequence"/>
+        <xs:element name="outputs" type="tns:outputSequence"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="inputSequence">
+    <xs:sequence>
+      <xs:element name="input" type="tns:inputType" dfdl:occurs="1..*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="inputType">
+    <xs:sequence>
+      <xs:element name="previousOutput" type="tns:previousOutputType"/>
+      <xs:element name="scriptLength" type="xs:integer"/>
+      <xs:element name="scriptSignature" type="xs:hexBinary"/>
+      <xs:element name="sequence" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="previousOutputType">
+    <xs:sequence>
+      <xs:element name="transactionHash" type="xs:hexBinary"/>
+      <xs:element name="outputIndex" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="outputSequence">
+    <xs:sequence>
+      <xs:element name="output" type="tns:outputType" dfdl:occurs="1..*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="outputType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:integer"/>
+      <xs:element name="pkScriptLength" type="xs:integer"/>
+      <xs:element name="pkScript" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="bitcoinTransaction" type="tns:bitcoinTransaction" dfdl:sequenceKind="unordered" dfdl:ref="tns:bitcoinTransaction"/>
+</xs:schema>

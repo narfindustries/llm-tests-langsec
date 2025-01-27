@@ -1,0 +1,49 @@
+module NTP;
+
+import spicy;
+
+public type Packet = unit {
+    %byteorder = spicy::ByteOrder::Big;
+
+    leap_indicator   : bitfield(2) {
+        no_warning    = 0,
+        last_minute_61_sec = 1,
+        last_minute_59_sec = 2,
+        alarm_condition = 3
+    };
+
+    version         : bitfield(3);
+    mode           : bitfield(3) {
+        reserved        = 0,
+        symmetric_active = 1,
+        symmetric_passive = 2,
+        client          = 3,
+        server          = 4,
+        broadcast       = 5,
+        ntp_control     = 6,
+        private         = 7
+    };
+
+    stratum        : uint8;
+    poll_interval  : int8;
+    precision     : int8;
+
+    root_delay    : bytes(4);
+    root_dispersion : bytes(4);
+    reference_id   : bytes(4);
+
+    reference_time : bytes(8);
+    origin_time    : bytes(8);
+    receive_time   : bytes(8);
+    transmit_time  : bytes(8);
+
+    on %init {
+        self.version.width = 3;
+        self.mode.width = 3;
+        self.leap_indicator.width = 2;
+    }
+};
+
+public function parse_packet(data: bytes) : Packet {
+    return Packet(data);
+}

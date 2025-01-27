@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/MQTT"
+           xmlns="http://example.com/MQTT"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="MQTT-DFDL.xsd"/>
+
+  <xs:element name="MQTTMessage">
+    <xs:annotation>
+      <xs:documentation>MQTT Message</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="FixedHeader" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Fixed Header</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element ref="VariableHeader" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Variable Header</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element ref="Payload" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Payload</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="FixedHeader">
+    <xs:annotation>
+      <xs:documentation>Fixed Header</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MessageType" type="xs:unsignedByte" dfdl:length="4" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:documentation>Message Type</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="4" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:documentation>Flags</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:length="8" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:documentation>Remaining Length</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="VariableHeader">
+    <xs:annotation>
+      <xs:documentation>Variable Header</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="16" dfdl:byteOrder="bigEndian" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Packet Identifier</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Payload">
+    <xs:annotation>
+      <xs:documentation>Payload</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="fixed" dfdl:delimiter+="0x00" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Data</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

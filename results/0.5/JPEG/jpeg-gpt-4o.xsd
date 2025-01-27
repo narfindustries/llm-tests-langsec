@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:tns="http://example.com/jpeg"
+           elementFormDefault="qualified"
+           dfdl:formatRef="tns:JPEGFormat">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:JPEGFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:defineFormat name="JPEGFormat">
+    <dfdl:format byteOrder="bigEndian" encoding="utf-8"/>
+  </dfdl:defineFormat>
+
+  <xs:element name="JPEGImage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOIMarker" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="fn:exists(.) and . eq 0xFFD8" message="SOI marker must be 0xFFD8"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Segments" type="tns:Segment" maxOccurs="unbounded"/>
+        <xs:element name="EOIMarker" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="fn:exists(.) and . eq 0xFFD9" message="EOI marker must be 0xFFD9"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Segment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:unsignedShort"/>
+      <xs:element name="Length" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:lengthKind value="explicit"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Data" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:lengthKind value="explicit"/>
+            <dfdl:lengthUnits value="bytes"/>
+            <dfdl:length expression="{../Length - 2}"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

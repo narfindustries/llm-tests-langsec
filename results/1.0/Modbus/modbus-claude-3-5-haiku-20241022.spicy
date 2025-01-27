@@ -1,0 +1,66 @@
+module Modbus;
+
+import spicy;
+
+# Define a type representing the Modbus request/response header
+type Header = unit {
+    transaction_id: uint16;   # Transaction identifier
+    protocol_id: uint16;      # Protocol identifier (0 for Modbus)
+    length: uint16;           # Length of subsequent message
+    unit_id: uint8;           # Unit/Slave identifier
+
+    var payload_length: uint16 = self.length - 1;  # Length of payload excluding unit_id
+
+    : void($onParse = { 
+        if ( self.protocol_id != 0 ) {
+            throw "Invalid Modbus protocol identifier";
+        }
+    });
+};
+
+# Enumerate Modbus function codes
+type FunctionCode = enum {
+    READ_COILS = 0x01,
+    READ_DISCRETE_INPUTS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    WRITE_SINGLE_COIL = 0x05,
+    WRITE_SINGLE_REGISTER = 0x06,
+    WRITE_MULTIPLE_COILS = 0x0F,
+    WRITE_MULTIPLE_REGISTERS = 0x10
+};
+
+# Represent a complete Modbus PDU (Protocol Data Unit)
+type ModbusPDU = unit {
+    header: Header;
+    function: FunctionCode;
+
+    # Request fields
+    start_address: uint16;
+    quantity: uint16;
+
+    # Optional byte count for some function codes
+    byte_count: optional uint8;
+
+    # Payload data (register/coil values)
+    payload: bytes &length=self.header.payload_length - 4;  # Subtract function code and address/quantity
+
+    : void($onParse = {
+        if ( self.function in [
+            FunctionCode::READ_COILS,
+            FunctionCode::READ_DISCRETE_INPUTS,
+            FunctionCode::READ_HOLDING_REGISTERS,
+            FunctionCode::READ_INPUT_REGISTERS
+        ]) {
+            // Validate read request parameters
+            if ( self.quantity > 125 ) {
+                throw "Quantity exceeds maximum allowed";
+            }
+        }
+    });
+};
+
+# Parsing a complete Modbus message
+public type Message = unit {
+    message: ModbusPDU;
+};

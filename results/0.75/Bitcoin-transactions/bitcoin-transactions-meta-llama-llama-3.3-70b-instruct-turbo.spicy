@@ -1,0 +1,68 @@
+@header {
+    author = "Your Name"
+    description = "Bitcoin transaction parser"
+    version = "1.0"
+}
+
+type BitcoinTransaction = record {
+    version:   uint32,
+    num_inputs:   varint,
+    inputs:       array[num_inputs] of TxInput,
+    num_outputs:  varint,
+    outputs:      array[num_outputs] of TxOutput,
+    locktime:     uint32,
+};
+
+type TxInput = record {
+    prev_tx_hash:  bytestring[32],
+    prev_tx_out_index:  uint32,
+    script_len:   varint,
+    script:       bytestring[script_len],
+    sequence:     uint32,
+};
+
+type TxOutput = record {
+    value:    uint64,
+    script_len:  varint,
+    script:     bytestring[script_len],
+};
+
+type varint = int {
+    read = function(len: int): int {
+        if (len < 253) {
+            return len;
+        } else if (len == 253) {
+            return uint16;
+        } else if (len == 254) {
+            return uint32;
+        } else {
+            return uint64;
+        }
+    };
+};
+
+event bitcoin_transaction(tx: BitcoinTransaction)
+{
+    print("Bitcoin Transaction:");
+    print("  Version:", tx.version);
+    print("  Number of inputs:", tx.num_inputs);
+    for (i in tx.inputs) {
+        print("  Input", i, "prev tx hash:", tx.inputs[i].prev_tx_hash);
+        print("  Input", i, "prev tx out index:", tx.inputs[i].prev_tx_out_index);
+        print("  Input", i, "script len:", tx.inputs[i].script_len);
+        print("  Input", i, "script:", tx.inputs[i].script);
+        print("  Input", i, "sequence:", tx.inputs[i].sequence);
+    }
+    print("  Number of outputs:", tx.num_outputs);
+    for (i in tx.outputs) {
+        print("  Output", i, "value:", tx.outputs[i].value);
+        print("  Output", i, "script len:", tx.outputs[i].script_len);
+        print("  Output", i, "script:", tx.outputs[i].script);
+    }
+    print("  Locktime:", tx.locktime);
+}
+
+event zeek_init()
+{
+    Input::add_event([stream_id=0ImageButton, mode=Input::STREAM>rton], bitcoin_transaction);
+}

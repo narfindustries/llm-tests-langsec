@@ -1,0 +1,27 @@
+module ICMP;
+
+import spicy;
+
+export type ICMP_Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest_of_header: bytes &size=4;
+};
+
+export type ICMP_Echo = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    data: bytes &until=b"";
+};
+
+export type ICMP_Packet = unit {
+    header: ICMP_Header;
+    echo: ICMP_Echo if header.type == 8 || header.type == 0;
+};
+
+on ICMP_Packet::%done {
+    print "ICMP Packet: type=%d, code=%d, checksum=%d, identifier=%d, sequence_number=%d, data=%s",
+          self.header.type, self.header.code, self.header.checksum,
+          self.echo.identifier, self.echo.sequence_number, self.echo.data;
+}

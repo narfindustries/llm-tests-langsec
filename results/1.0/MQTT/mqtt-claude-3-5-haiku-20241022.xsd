@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/spec/dfdl/schema/annotate/7.0"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/spec/dfdl/schema/annotate/7.0">
+      <dfdl:format 
+        representation="binary"
+        byteOrder="bigEndian"
+        binaryNumberRadix="2"
+        binaryNumberRep="binary"
+        encoding="UTF-8"
+        fillByte="%#r00"
+        occursCountKind="implicit"
+        lengthKind="explicit"
+        lengthUnits="bits"
+        alignmentUnits="bits"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="MQTTPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PacketType" type="tns:PacketTypeEnum" dfdl:length="4"/>
+              <xs:element name="Flags" type="tns:FlagsType" dfdl:length="4"/>
+              <xs:element name="RemainingLength" type="tns:VariableLengthInteger"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="VariableHeader" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ProtocolName" type="tns:StringType" minOccurs="0"/>
+              <xs:element name="ProtocolVersion" type="xs:unsignedByte" minOccurs="0"/>
+              <xs:element name="ConnectFlags" type="xs:unsignedByte" minOccurs="0"/>
+              <xs:element name="KeepAlive" type="xs:unsignedShort" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Payload" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ClientIdentifier" type="tns:StringType" minOccurs="0"/>
+              <xs:element name="Topic" type="tns:StringType" minOccurs="0"/>
+              <xs:element name="Message" type="tns:MessageType" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="PacketTypeEnum">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1" dfdl:terminator="0"/> <!-- CONNECT -->
+      <xs:enumeration value="2" dfdl:terminator="0"/> <!-- CONNACK -->
+      <xs:enumeration value="3" dfdl:terminator="0"/> <!-- PUBLISH -->
+      <xs:enumeration value="4" dfdl:terminator="0"/> <!-- PUBACK -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="Flag" type="xs:unsignedByte" dfdl:length="1" maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableLengthInteger">
+    <xs:sequence>
+      <xs:element name="Digit" type="xs:unsignedByte" 
+                  dfdl:length="7" 
+                  dfdl:encode="binary"
+                  maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StringType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="16"/>
+      <xs:element name="Value" type="xs:string" dfdl:lengthKind="explicit" 
+                  dfdl:length="{ ../Length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MessageType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="16"/>
+      <xs:element name="Content" type="xs:string" dfdl:lengthKind="explicit" 
+                  dfdl:length="{ ../Length }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

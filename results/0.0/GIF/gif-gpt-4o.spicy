@@ -1,0 +1,74 @@
+module GIF;
+
+public type Header = unit {
+    magic: bytes &size=3 &check=$$ == "GIF";
+    version: bytes &size=3 &check=($$ == "87a" || $$ == "89a");
+};
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type ColorTable = unit {
+    colors: array of RGBColor;
+} &length_expr=3 * (1 << (packed_fields & 0b00000111) + 1);
+
+public type RGBColor = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ImageDescriptor = unit {
+    image_separator: uint8 &check=$$ == 0x2C;
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+};
+
+public type ImageData = unit {
+    lzw_minimum_code_size: uint8;
+    data_blocks: array of DataBlock;
+};
+
+public type DataBlock = unit {
+    size: uint8;
+    data: bytes &size=size;
+} &until=size == 0;
+
+public type Trailer = unit {
+    trailer: uint8 &check=$$ == 0x3B;
+};
+
+public type GIFFile = unit {
+    header: Header;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional<ColorTable> &if=logical_screen_descriptor.packed_fields & 0b10000000 != 0;
+    blocks: array of Block;
+    trailer: Trailer;
+};
+
+public type Block = unit {
+    block_type: uint8;
+    body: case block_type of {
+        0x2C -> ImageBlock;
+        0x21 -> ExtensionBlock;
+    };
+};
+
+public type ImageBlock = unit {
+    descriptor: ImageDescriptor;
+    local_color_table: optional<ColorTable> &if=descriptor.packed_fields & 0b10000000 != 0;
+    image_data: ImageData;
+};
+
+public type ExtensionBlock = unit {
+    label: uint8;
+    data: array of DataBlock;
+} &until=data[-1].size == 0;

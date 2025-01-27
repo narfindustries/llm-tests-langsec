@@ -1,0 +1,27 @@
+module ARP;
+
+import spicy;
+
+public type Message = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_size: uint8;
+    protocol_size: uint8;
+    operation: uint16;
+    sender_mac: bytes &size=6;
+    sender_ip: bytes &size=4;
+    target_mac: bytes &size=6;
+    target_ip: bytes &size=4;
+
+    on %done {
+        self.hardware_type = self.hardware_type;
+        self.protocol_type = self.protocol_type;
+        self.hardware_size = self.hardware_size;
+        self.protocol_size = self.protocol_size;
+        self.operation = self.operation;
+        self.sender_mac = self.sender_mac;
+        self.sender_ip = self.sender_ip;
+        self.target_mac = self.target_mac;
+        self.target_ip = self.target_ip;
+    }
+};

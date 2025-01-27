@@ -1,0 +1,21 @@
+module PNG;
+
+import spicy;
+
+type PNGMagic = unit {
+    magic: bytes &size=8;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=this.length;
+    crc: uint32;
+};
+
+type PNGFile = unit {
+    magic: PNGMagic;
+    chunks: Chunk[] &eod;
+};
+
+public type File = PNGFile;

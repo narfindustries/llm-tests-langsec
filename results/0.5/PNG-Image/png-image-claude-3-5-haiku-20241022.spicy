@@ -1,0 +1,26 @@
+module PNG;
+
+import spicy;
+
+public type Image = unit {
+    signature: bytes(8) &requires(self == b"\x89PNG\r\n\x1a\n");
+    
+    chunks: list<Chunk> &until($!);
+    
+    type Chunk = unit {
+        length: uint32;
+        chunk_type: bytes(4);
+        chunk_data: bytes(self.length) if (self.length > 0);
+        crc: uint32;
+    };
+};
+
+public function is_png(data: bytes) : bool {
+    try {
+        local img = parse Image(data);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}

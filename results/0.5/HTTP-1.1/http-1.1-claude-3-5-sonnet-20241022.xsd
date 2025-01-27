@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/http"
+    targetNamespace="http://example.com/http">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                encoding="UTF-8"
+                ignoreCase="no"
+                lengthKind="delimited"
+                lengthUnits="bytes"
+                occursCountKind="implicit"
+                separator=""
+                separatorSuppressionPolicy="anyEmpty"
+                separatorPosition="infix"
+                textNumberRep="standard"
+                textTrimKind="none"
+                initiator=""
+                terminator=""
+                leadingSkip="0"
+                trailingSkip="0"
+                truncateSpecifiedLengthString="no"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="http">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="request" type="local:RequestType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="RequestType">
+        <xs:sequence>
+            <xs:element name="requestLine">
+                <xs:complexType>
+                    <xs:sequence dfdl:separator=" ">
+                        <xs:element name="method" type="local:HttpMethod"/>
+                        <xs:element name="uri" type="xs:string"/>
+                        <xs:element name="version" type="local:HttpVersion"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="headers" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence dfdl:separator=": ">
+                        <xs:element name="name" type="xs:string"/>
+                        <xs:element name="value" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="body" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="HttpMethod">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="GET"/>
+            <xs:enumeration value="POST"/>
+            <xs:enumeration value="PUT"/>
+            <xs:enumeration value="DELETE"/>
+            <xs:enumeration value="HEAD"/>
+            <xs:enumeration value="OPTIONS"/>
+            <xs:enumeration value="TRACE"/>
+            <xs:enumeration value="CONNECT"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="HttpVersion">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="HTTP/1.0"/>
+            <xs:enumeration value="HTTP/1.1"/>
+            <xs:enumeration value="HTTP/2.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

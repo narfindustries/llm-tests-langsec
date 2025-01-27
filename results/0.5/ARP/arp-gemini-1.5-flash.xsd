@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/arp"
+           xmlns="http://example.org/arp"
+           elementFormDefault="qualified">
+
+  <xs:element name="arp_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="data" type="DataType" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="2"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="record" type="RecordType" dfdl:occursCountKind="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="field3" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="field4" type="xs:decimal" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:totalDigits="8" dfdl:fractionDigits="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,16 @@
+module JPEG;
+
+public type JPEG = unit {
+    marker: uint16;
+    length: uint16;
+    data: bytes &size = length - 2;
+} &until (marker == 0xFFD9);
+
+public type JPEGFile = unit {
+    magic: uint16 &assert(magic == 0xFFD8, "Not a JPEG file");
+    segments: array of JPEG;
+};
+
+public function parse_jpeg(data: bytes): JPEGFile {
+    return parse(data, JPEGFile);
+}

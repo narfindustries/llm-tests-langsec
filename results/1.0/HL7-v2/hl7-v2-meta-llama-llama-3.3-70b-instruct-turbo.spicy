@@ -1,0 +1,57 @@
+# This specification defines the structure of an HL7 v2 message.
+type HL7_V2_Message = record {
+    message: Message,
+} & byteorder=little-endian;
+
+# The message type defines the basic structure of an HL7 message.
+type Message = sequence {
+    segment: Segment,
+    while !segment_segment_terminator(segment),
+} & length=until(segment_segment_terminator);
+
+# The segment type represents a single segment in the message.
+type Segment = record {
+    name: SegmentName,
+    fields: Fields,
+} & length=name.length() + fields.length;
+
+# The segment name is always three characters long and identifies the segment type.
+type SegmentName = string(3) & encoding=ascii;
+
+# The segment fields are separated by the field separator (usually '|').
+type Fields = sequence {
+    field: Field,
+    while !field_segment_terminator(field),
+} & length=until(field_segment_terminator), separator='|';
+
+# A field is separated from the next field by the field separator.
+type Field = sequence {
+    component: Component,
+    while !component_field_separator(component),
+} & length=until(component_field_separator), separator='^';
+
+# A component is separated from the next component by the component separator.
+type Component = sequence {
+    subcomponent: Subcomponent,
+    while !subcomponent_component_separator(subcomponent),
+} & length=until(subcomponent_component_separator), separator='&';
+
+# A subcomponent is separated from the next subcomponent by the subcomponent separator.
+type Subcomponent = string & encoding=ascii;
+
+# Utility functions for determining the terminators.
+function segment_segment_terminator(segment: Segment): bool {
+    return segment.name == 'MSH' and segment.fields[0] == '\r';
+}
+
+function field_segment_terminator(field: Field): bool {
+    return field[0] == '\r';
+}
+
+function component_field_separator(component: Component): bool {
+    return component == '^';
+}
+
+function subcomponent_component_separator(subcomponent: Subcomponent): bool {
+    return subcomponent == '&';
+}

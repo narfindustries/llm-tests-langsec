@@ -1,0 +1,35 @@
+module HTTP::Spicy;
+
+import spicy;
+import zeek;
+
+public type HTTPMessage = unit {
+    method: string &size = 4;
+    uri: string &until=' ';
+    version: string &size = 8;
+    headers: list<Header> &until=method_is_end();
+    body: bytes &restofdata;
+
+    on %init {
+        print "HTTP Message Parsed: ", self.method;
+    }
+
+    function method_is_end() : bool {
+        return |self.headers| > 0 && self.headers[|self.headers|-1].name == "Content-Length";
+    }
+};
+
+public type Header = unit {
+    name: string &until=':';
+    value: string &until='\r\n';
+};
+
+public type HTTPParser = unit {
+    message: HTTPMessage;
+};
+
+public hook zeek_init() {
+    # Register protocol parser
+    local analyzer = Spicy::register_analyzer(HTTP::Spicy::HTTPParser, "HTTP", /http/i);
+    Spicy::enable_analyzer(analyzer);
+}

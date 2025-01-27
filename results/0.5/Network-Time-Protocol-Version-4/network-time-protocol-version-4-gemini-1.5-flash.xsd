@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/networkTimeProtocol" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="NetworkTimeProtocolVersion4">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="leapIndicator" type="dfdl:unsignedInteger" dfdl:length="1" dfdl:representation="binary"/>
+        <xs:element name="versionNumber" type="dfdl:unsignedInteger" dfdl:length="3" dfdl:representation="binary"/>
+        <xs:element name="mode" type="dfdl:unsignedInteger" dfdl:length="1" dfdl:representation="binary"/>
+        <xs:element name="stratum" type="dfdl:unsignedInteger" dfdl:length="1" dfdl:representation="binary"/>
+        <xs:element name="pollInterval" type="dfdl:unsignedInteger" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="precision" type="dfdl:signedInteger" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="rootDelay" type="dfdl:unsignedInteger" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="rootDispersion" type="dfdl:unsignedInteger" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="referenceID" type="dfdl:string" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="referenceTimestamp" type="dfdl:unsignedInteger" dfdl:length="8" dfdl:representation="binary"/>
+        <xs:element name="originateTimestamp" type="dfdl:unsignedInteger" dfdl:length="8" dfdl:representation="binary"/>
+        <xs:element name="receiveTimestamp" type="dfdl:unsignedInteger" dfdl:length="8" dfdl:representation="binary"/>
+        <xs:element name="transmitTimestamp" type="dfdl:unsignedInteger" dfdl:length="8" dfdl:representation="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="true"/>
+    <dfdl:textStandardEncoding utf8="true"/>
+    <dfdl:byteOrder bigEndian="true"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

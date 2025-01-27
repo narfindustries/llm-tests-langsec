@@ -1,0 +1,108 @@
+module MQTT;
+
+import spicy;
+
+type ConnectFlags = unit {
+    reserved:    bool &size=1;
+    clean_start: bool &size=1;
+    will_flag:   bool &size=1;
+    will_qos:    uint2;
+    will_retain: bool &size=1;
+    password_flag: bool &size=1;
+    username_flag: bool &size=1;
+} &size=8;
+
+type Connect = unit {
+    proto_name: bytes &size=4;
+    version:    uint8;
+    flags:      ConnectFlags;
+    keep_alive: uint16;
+    client_id:  bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+type ConnAckFlags = unit {
+    session_present: bool &size=1;
+    reserved: uint7;
+} &size=8;
+
+type ConnAck = unit {
+    flags:   ConnAckFlags;
+    code:    uint8;
+    
+    on %done {
+        print self;
+    }
+};
+
+type Publish = unit {
+    dup_flag:   bool &size=1;
+    qos:        uint2;
+    retain:     bool &size=1;
+    topic_len:  uint16;
+    topic:      bytes &size=self.topic_len;
+    packet_id:  optional<uint16> &if=(self.qos > 0);
+    payload:    bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+type Subscribe = unit {
+    packet_id: uint16;
+    payload:   bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+type SubAck = unit {
+    packet_id: uint16;
+    payload:   bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+type Unsubscribe = unit {
+    packet_id: uint16;
+    payload:   bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+type UnsubAck = unit {
+    packet_id: uint16;
+    
+    on %done {
+        print self;
+    }
+};
+
+public type MQTTMessage = unit {
+    control_type: uint4;
+    flags:        uint4;
+    remaining_len: uint16;
+    message: switch (self.control_type) {
+        1 -> connect: Connect;
+        2 -> connack: ConnAck;
+        3 -> publish: Publish;
+        8 -> subscribe: Subscribe;
+        9 -> suback: SubAck;
+        10 -> unsubscribe: Unsubscribe;
+        11 -> unsuback: UnsubAck;
+        * -> unknown: bytes &size=self.remaining_len;
+    };
+    
+    on %done {
+        print self;
+    }
+};

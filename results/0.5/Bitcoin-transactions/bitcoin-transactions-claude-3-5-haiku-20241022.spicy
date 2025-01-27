@@ -1,0 +1,30 @@
+module Bitcoin;
+
+import spicy;
+
+public type Transaction = unit {
+    version: uint32;
+    input_count: varuint;
+    inputs: Input[input_count];
+    output_count: varuint;
+    outputs: Output[output_count];
+    locktime: uint32;
+
+    type Input = unit {
+        prev_tx_hash: bytes(32);
+        prev_tx_output_index: uint32;
+        script_length: varuint;
+        script_sig: bytes(script_length);
+        sequence: uint32;
+    }
+
+    type Output = unit {
+        value: uint64;
+        script_length: varuint;
+        script_pubkey: bytes(script_length);
+    }
+}
+
+public function parse_transaction(data: bytes) : Transaction {
+    return Transaction(data);
+}

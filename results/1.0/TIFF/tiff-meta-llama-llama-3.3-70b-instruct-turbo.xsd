@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tns="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="tiff">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:header" minOccurs="1" maxOccurs="1" dfdl:occursCount="1"/>
+        <xs:element ref="tns:ifd" minOccurs="1" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ $header.imageLength }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
+        <xs:element name="magic" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
+        <xs:element name="ifdOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native"/>
+        <xs:element name="imageLength" type="xs:unsignedInt" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="native"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ifd">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="tag" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native" minOccurs="1" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ $..imageLength }"/>
+        <xs:element name="type" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
+        <xs:element name="components" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native"/>
+        <xs:element name="value" type="xs:string" dfdl:length="{ $components * 2 }" dfdl:encoding="utf-8" dfdl:byteOrder="native" minOccurs="0"/>
+        <xs:element name="offset" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

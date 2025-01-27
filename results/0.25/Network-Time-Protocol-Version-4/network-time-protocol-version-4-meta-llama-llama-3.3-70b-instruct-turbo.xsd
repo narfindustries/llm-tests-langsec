@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
+           xmlns:tns="http://example.com/Network-Time-Protocol-Version-4"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.ttf"/>
+
+  <xs:element name="ntpPacket" type="tns:ntpPacketType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1">
+    <xs:annotation>
+      <xs:documentation>NTP Packet</xs:documentation>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="ntpPacketType">
+    <xs:sequence>
+      <xs:element name="header" type="tns:headerType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="timestamp" type="tns:timestampType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="leap" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="2"/>
+      <xs:element name="version" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="3"/>
+      <xs:element name="mode" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="3"/>
+      <xs:element name="poll" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="8"/>
+      <xs:element name="precision" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="8"/>
+      <xs:element name="delay" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="16"/>
+      <xs:element name="dispersion" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="16"/>
+      <xs:element name="identifier" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="referenceTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="originateTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="receiveTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="transmitTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="timestampType">
+    <xs:sequence>
+      <xs:element name="seconds" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="fraction" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

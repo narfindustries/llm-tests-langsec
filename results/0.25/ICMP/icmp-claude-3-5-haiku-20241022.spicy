@@ -1,0 +1,25 @@
+module ICMP;
+
+import spicy;
+
+public type ICMP = unit {
+    header: Header;
+    payload: bytes &size=(self.header.total_length - 8);
+
+    type Header = unit {
+        type: uint8;
+        code: uint8;
+        checksum: uint16;
+        rest_of_header: bytes &size=4;
+
+        var total_length: uint16 = |self| + |payload|;
+    };
+};
+
+public function __load__() {
+    spicy::register_protocol_analyzer(
+        name = "icmp",
+        unit = ICMP,
+        ports = {}
+    );
+}

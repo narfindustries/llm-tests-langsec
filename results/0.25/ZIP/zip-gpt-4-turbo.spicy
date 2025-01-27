@@ -1,0 +1,60 @@
+module ZIP;
+
+import spicy;
+
+type LocalFileHeader = unit {
+    signature: bytes &size=4;
+    versionNeeded: uint16;
+    flags: uint16;
+    compressionMethod: uint16;
+    lastModFileTime: uint16;
+    lastModFileDate: uint16;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileName: bytes &size=self.fileNameLength;
+    extraField: bytes &size=self.extraFieldLength;
+};
+
+type CentralDirectoryFileHeader = unit {
+    signature: bytes &size=4;
+    versionMadeBy: uint16;
+    versionNeededToExtract: uint16;
+    generalPurposeBitFlag: uint16;
+    compressionMethod: uint16;
+    lastModFileTime: uint16;
+    lastModFileDate: uint16;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileCommentLength: uint16;
+    diskNumberStart: uint16;
+    internalFileAttributes: uint16;
+    externalFileAttributes: uint32;
+    relativeOffsetOfLocalHeader: uint32;
+    fileName: bytes &size=self.fileNameLength;
+    extraField: bytes &size=self.extraFieldLength;
+    fileComment: bytes &size=self.fileCommentLength;
+};
+
+type EndOfCentralDirectoryRecord = unit {
+    signature: bytes &size=4;
+    numberOfThisDisk: uint16;
+    diskWhereCentralDirectoryStarts: uint16;
+    numberOfCentralDirectoryRecordsOnThisDisk: uint16;
+    totalNumberOfCentralDirectoryRecords: uint16;
+    sizeOfCentralDirectory: uint32;
+    offsetOfStartOfCentralDirectory: uint32;
+    zipFileCommentLength: uint16;
+    zipFileComment: bytes &size=self.zipFileCommentLength;
+};
+
+type ZIPFile = unit {
+    files: LocalFileHeader[] &eod;
+    centralDirectory: CentralDirectoryFileHeader[] &eod;
+    endOfCentralDirectory: EndOfCentralDirectoryRecord;
+};

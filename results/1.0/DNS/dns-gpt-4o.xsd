@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" 
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+        targetNamespace="http://example.org/dns"
+        xmlns:tns="http://example.org/dns"
+        elementFormDefault="qualified">
+
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary" lengthKind="explicit" length="8" encoding="utf-8"/>
+        </appinfo>
+    </annotation>
+
+    <element name="DNSMessage">
+        <complexType>
+            <sequence>
+                <element name="Header" type="tns:HeaderType" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+                <element name="Question" type="tns:QuestionType" minOccurs="0" maxOccurs="unbounded"/>
+                <element name="Answer" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+                <element name="Authority" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+                <element name="Additional" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+            </sequence>
+        </complexType>
+    </element>
+
+    <complexType name="HeaderType">
+        <sequence>
+            <element name="ID" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="QR" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
+            <element name="Opcode" type="byte" dfdl:lengthKind="explicit" dfdl:length="{4}"/>
+            <element name="AA" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
+            <element name="TC" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
+            <element name="RD" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
+            <element name="RA" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
+            <element name="Z" type="byte" dfdl:lengthKind="explicit" dfdl:length="{3}"/>
+            <element name="RCode" type="byte" dfdl:lengthKind="explicit" dfdl:length="{4}"/>
+            <element name="QDCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="ANCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="NSCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="ARCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="QuestionType">
+        <sequence>
+            <element name="QName" type="tns:DomainNameType"/>
+            <element name="QType" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="QClass" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ResourceRecordType">
+        <sequence>
+            <element name="Name" type="tns:DomainNameType"/>
+            <element name="Type" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="Class" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="TTL" type="unsignedInt" dfdl:lengthKind="explicit" dfdl:length="{32}"/>
+            <element name="RDLength" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
+            <element name="RData" type="hexBinary" dfdl:occursCountKind="expression" dfdl:occursCount="{../RDLength}"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="DomainNameType">
+        <restriction base="string">
+            <dfdl:lengthKind value="delimited"/>
+            <dfdl:terminator value="\x00"/>
+        </restriction>
+    </simpleType>
+
+</schema>

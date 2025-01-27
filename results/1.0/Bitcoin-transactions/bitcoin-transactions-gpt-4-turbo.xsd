@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/bitcoin-transactions"
+           xmlns:tns="http://example.com/bitcoin-transactions">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/dfdl.xsd"/>
+
+  <xs:element name="TransactionRecord" type="tns:TransactionRecordType"/>
+
+  <xs:complexType name="TransactionRecordType">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:int" dfdl:length="4" dfdl:encoding="binary, little-endian"/>
+      <xs:element name="InputCount" type="tns:CompactSizeUInt" dfdl:occursCountKind="parsed"/>
+      <xs:element name="Inputs" type="tns:InputType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../InputCount }"/>
+      <xs:element name="OutputCount" type="tns:CompactSizeUInt" dfdl:occursCountKind="parsed"/>
+      <xs:element name="Outputs" type="tns:OutputType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../OutputCount }"/>
+      <xs:element name="LockTime" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary, little-endian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompactSizeUInt">
+    <xs:sequence>
+      <xs:element name="SizeMarker" type="xs:byte" dfdl:length="1" dfdl:encoding="binary"/>
+      <xs:choice>
+        <xs:sequence dfdl:choiceBranchKey="fd">
+          <xs:element name="Value" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary, little-endian"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="fe">
+          <xs:element name="Value" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary, little-endian"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="ff">
+          <xs:element name="Value" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="binary, little-endian"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element name="Value" type="xs:byte" dfdl:length="{ fn:if(fn:substring($SizeMarker, 1, 1) <= 'fc') then 1 else 0 }"/>
+        </xs:sequence>
+      </xs:choice>
+    </xs:sequence>
+    <xs:assert test="SizeMarker le hexBinary('fc') or (SizeMarker eq hexBinary('fd') and fn:data(Item[1]/Value) ge hexBinary('fd00')) or (SizeMarker eq hexBinary('fe') and fn:data(Item[2]/Value) ge hexBinary('10000000')) or (SizeMarker eq hexBinary('ff') and fn:data(Item[3]/Value) ge hexBinary('0000000100000000'))"/>
+  </xs:complexType>
+
+  <xs:complexType name="InputType">
+    <xs:sequence>
+      <xs:element name="PreviousOutputHash" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="PreviousOutputIndex" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary, little-endian"/>
+      <xs:element name="ScriptLength" type="tns:CompactSizeUInt" dfdl:occursCountKind="parsed"/>
+      <xs:element name="Script" type="xs:hexBinary" dfdl:length="{ ../ScriptLength/Value }"/>
+      <xs:element name="Sequence" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary, little-endian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OutputType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="binary, little-endian"/>
+      <xs:element name="ScriptLength" type="tns:CompactSizeUInt" dfdl:occursCountKind="parsed"/>
+      <xs:element name="Script" type="xs:hexBinary" dfdl:length="{ ../ScriptLength/Value }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

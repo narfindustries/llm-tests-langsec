@@ -1,0 +1,54 @@
+module DICOM;
+
+public type Message = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    
+    on %done {
+        if ( self.prefix != b"DICM" )
+            self.set_error("Invalid DICOM prefix");
+    }
+    
+    elements: Element[];
+};
+
+type Element = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: bytes &size=2;
+    length: uint16 if self.has_explicit_length();
+    length32: uint32 if ! self.has_explicit_length();
+    value: bytes &size=self.get_length();
+    
+    on %done {
+        print self.tag_group;
+        print self.tag_element;
+        print self.vr;
+        print self.get_length();
+    }
+    
+    var actual_length: uint32;
+    
+    function has_explicit_length(): bool {
+        return self.vr == b"OB" || self.vr == b"OW" || self.vr == b"OF" || 
+               self.vr == b"SQ" || self.vr == b"UN" || self.vr == b"UT";
+    }
+    
+    function get_length(): uint32 {
+        if ( self.has_explicit_length() )
+            return self.length32;
+        return self.length;
+    }
+};
+
+public type PDU = unit {
+    : Message;
+};
+
+on DICOM::Message::%done {
+    print "DICOM message processed";
+}
+
+on DICOM::Element::%done {
+    print "DICOM element processed";
+}

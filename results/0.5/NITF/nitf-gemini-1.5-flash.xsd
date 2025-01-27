@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/nitf"
+           xmlns="http://example.org/nitf"
+           elementFormDefault="qualified">
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="HeaderType"/>
+        <xs:element name="Body" type="BodyType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Title" type="xs:string"/>
+      <xs:element name="Date" type="xs:date"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Section" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+    <dfdl:textStandard ref="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+    <dfdl:lengthKind>delimited</dfdl:lengthKind>
+    <dfdl:encoding>UTF-8</dfdl:encoding>
+    <dfdl:separator>
+        <dfdl:separatorPosition>before</dfdl:separatorPosition>
+        <dfdl:separatorString> </dfdl:separatorString>
+    </dfdl:separator>
+  </dfdl:defineSchema>
+
+</xs:schema>

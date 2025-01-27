@@ -1,0 +1,42 @@
+module Bitcoin;
+
+public type BitcoinTransaction = unit {
+    version: int32;
+    input_count: varint;
+    inputs: BitcoinInput(self.input_count)[] &size=input_count;
+    output_count: varint;
+    outputs: BitcoinOutput(self.output_count)[] &size=output_count;
+    lock_time: uint32;
+};
+
+public type BitcoinInput = unit(count: uint64) {
+    previous_output: BitcoinOutpoint;
+    script_length: varint;
+    signature_script: bytes &size=self.script_length;
+    sequence: uint32;
+};
+
+public type BitcoinOutput = unit(count: uint64) {
+    value: uint64;
+    pubkey_script_length: varint;
+    pubkey_script: bytes &size=self.pubkey_script_length;
+};
+
+public type BitcoinOutpoint = unit {
+    hash: bytes &size=32;
+    index: uint32;
+};
+
+public type varint = unit {
+    value: uint64;
+    on %init {
+        self.value = 0;
+        local b: uint8;
+        local shift: uint = 0;
+        do {
+            b = self.&input.readBytes(1)[0];
+            self.value += (b & 0x7F) << shift;
+            shift += 7;
+        } while (b & 0x80 != 0);
+    }
+};

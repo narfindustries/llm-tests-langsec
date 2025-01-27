@@ -1,0 +1,48 @@
+#! /usr/bin/env zeek
+module DICOM;
+
+import spicy;
+
+type PDU = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    : if (prefix != b"DICM") { throw "Invalid DICOM prefix"; }
+
+    on %done { print self; }
+} &byteorder=spicy::ByteOrder::Little;
+
+type DataElement = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: bytes &size=2;
+    : if (! is_valid_vr(vr)) { throw "Invalid VR"; }
+    length: uint16;
+    value: bytes &size=self.length;
+    
+    on %done { print self; }
+};
+
+function is_valid_vr(vr: bytes): bool {
+    local valid_vrs = set(b"AE", b"AS", b"AT", b"CS", b"DA", b"DS", b"DT", b"FL", 
+                         b"FD", b"IS", b"LO", b"LT", b"OB", b"OF", b"OW", b"PN", 
+                         b"SH", b"SL", b"SQ", b"SS", b"ST", b"TM", b"UI", b"UL", 
+                         b"UN", b"US", b"UT");
+    return vr in valid_vrs;
+}
+
+type DicomMessage = unit {
+    pdu: PDU;
+    elements: DataElement[];
+    
+    on %done { print self; }
+};
+
+public type DCM = unit {
+    message: DicomMessage;
+    
+    on %done { print self; }
+};
+
+on DICOM::DCM::message -> event dicom_message($message);
+on DICOM::PDU -> event dicom_pdu($pdu);
+on DICOM::DataElement -> event dicom_element($element);

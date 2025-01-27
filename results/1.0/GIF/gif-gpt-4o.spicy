@@ -1,0 +1,50 @@
+module GIF;
+
+import spicy;
+
+public type LogicalScreenDescriptor = unit {
+    width:  uint16;
+    height: uint16;
+
+    flags: bitfield {
+        global_color_table_flag: bool @0,
+        color_resolution:        uint8 @1..3,
+        sort_flag:               bool @4,
+        global_color_table_size: uint8 @5..7
+    };
+
+    background_color_index: uint8;
+    pixel_aspect_ratio:     uint8;
+};
+
+public type Color = unit {
+    red:   uint8;
+    green: uint8;
+    blue:  uint8;
+};
+
+public type ColorTable = unit(length: uint) {
+    colors: Color[length];
+};
+
+public type GIFHeader = unit {
+    magic: string &length=3 &validate= (self.magic == "GIF");
+    version: string &length=3;
+};
+
+public type GIFFile = unit {
+    header: GIFHeader;
+    screen_descriptor: LogicalScreenDescriptor;
+
+    global_color_table: optional<ColorTable> &if (self.screen_descriptor.flags.global_color_table_flag) {
+        size = 3 * (2 ** (self.screen_descriptor.flags.global_color_table_size + 1))
+    };
+
+    # Placeholder for image data, extensions, etc.
+};
+
+public module Parser = spicy::Parser for GIFFile {
+    event parsed(g: GIFFile) {
+        print fmt("Parsed a GIF file: %s x %s", g.screen_descriptor.width, g.screen_descriptor.height);
+    }
+};

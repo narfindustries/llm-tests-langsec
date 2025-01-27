@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/nitf"
+        xmlns:tns="http://example.com/nitf"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
+
+    <dfdl:format ref="tns:nitfFormat"/>
+
+    <dfdl:defineFormat name="nitfFormat">
+        <dfdl:byteOrder value="bigEndian"/>
+        <dfdl:encoding value="UTF-8"/>
+        <dfdl:lengthKind value="explicit"/>
+        <dfdl:binaryNumberRep value="binary"/>
+        <dfdl:alignmentUnits value="bytes"/>
+    </dfdl:defineFormat>
+
+    <element name="NITF" type="tns:NITFType"/>
+
+    <complexType name="NITFType">
+        <sequence>
+            <element name="FileHeader" type="tns:FileHeaderType"/>
+            <element name="ImageSegment" type="tns:ImageSegmentType" maxOccurs="unbounded"/>
+            <element name="TextSegment" type="tns:TextSegmentType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="FileHeaderType">
+        <sequence>
+            <element name="FileType" type="string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            <element name="FileVersion" type="string" dfdl:length="5" dfdl:lengthKind="explicit"/>
+            <element name="ComplexityLevel" type="int" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <element name="SystemType" type="string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ImageSegmentType">
+        <sequence>
+            <element name="ImageId" type="string" dfdl:length="10" dfdl:lengthKind="explicit"/>
+            <element name="ImageDate" type="date" dfdl:length="8" dfdl:lengthKind="explicit" dfdl:calendarPattern="yyyyMMdd"/>
+            <element name="ImageSecurity" type="tns:SecurityType"/>
+            <element name="ImageData" type="hexBinary" dfdl:lengthKind="delimited"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="TextSegmentType">
+        <sequence>
+            <element name="TextId" type="string" dfdl:length="10" dfdl:lengthKind="explicit"/>
+            <element name="TextDate" type="date" dfdl:length="8" dfdl:lengthKind="explicit" dfdl:calendarPattern="yyyyMMdd"/>
+            <element name="TextSecurity" type="tns:SecurityType"/>
+            <element name="TextData" type="string" dfdl:lengthKind="delimited"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="SecurityType">
+        <sequence>
+            <element name="Classification" type="string" dfdl:length="1" dfdl:lengthKind="explicit"/>
+            <element name="ClassificationSystem" type="string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <element name="Codewords" type="string" dfdl:length="11" dfdl:lengthKind="explicit"/>
+        </sequence>
+    </complexType>
+
+</schema>

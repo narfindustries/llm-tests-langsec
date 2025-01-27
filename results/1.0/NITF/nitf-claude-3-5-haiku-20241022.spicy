@@ -1,0 +1,22 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires($$ == b"NITF");
+    version: bytes(2);
+    image_subheaders: uint16;
+    zero_segment: bytes(3);
+
+    : void {
+        // Ensure NITF magic number
+        if (self.magic != b"NITF") {
+            throw "Invalid NITF file format";
+        }
+    }
+}
+
+public type File = unit {
+    header: Header;
+    # Placeholder for image subheaders and data parsing
+}

@@ -1,0 +1,33 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires($$=="NITF");
+    version: bytes(2);
+    datetime: bytes(14);
+    reserved1: bytes(2);
+    file_header_length: bytes(3);
+    file_header_length_int: uint32 = parse_file_header_length(file_header_length);
+
+    method parse_file_header_length(length: bytes) -> uint32 {
+        return spicy::parse_int(length, spicy::ByteOrder::Network);
+    }
+
+    var parsed_length: uint32 = file_header_length_int;
+
+    : void &size(parsed_length);
+
+    on %done {
+        self.validate();
+    }
+
+    method validate() {
+        if ( magic != b"NITF" ) 
+            throw "Invalid NITF magic number";
+    }
+};
+
+public type File = unit {
+    header: Header;
+};

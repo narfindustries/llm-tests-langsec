@@ -1,0 +1,59 @@
+module HTTP;
+
+import spicy;
+import zeek;
+
+public type HTTPRequest = unit {
+    method: string &restofdata;
+    uri: string &restofdata;
+    version: string &restofdata;
+    headers: array of Header;
+    body: bytes &restofdata;
+
+    on %done {
+        print fmt("HTTP Request: %s %s %s", method, uri, version);
+    }
+};
+
+public type Header = unit {
+    name: string &until=":";
+    value: string &restofdata;
+
+    on %done {
+        print fmt("Header: %s: %s", name, value);
+    }
+};
+
+public type HTTPResponse = unit {
+    version: string &restofdata;
+    status_code: uint16;
+    reason_phrase: string &restofdata;
+    headers: array of Header;
+    body: bytes &restofdata;
+
+    on %done {
+        print fmt("HTTP Response: %s %d %s", version, status_code, reason_phrase);
+    }
+};
+
+public module Parser = spicy::Parser {
+    parse = /(?P<request>HTTP\/1\.[01] \S+ \S+\r\n(?:[^\r\n]+\r\n)*\r\n)/;
+    parse = /(?P<response>HTTP\/1\.[01] \d{3} \S+\r\n(?:[^\r\n]+\r\n)*\r\n)/;
+
+    on %done {
+        if (request) {
+            local req = HTTPRequest(request);
+            print fmt("Parsed HTTP Request: %s", req);
+        }
+        else if (response) {
+            local res = HTTPResponse(response);
+            print fmt("Parsed HTTP Response: %s", res);
+        }
+    }
+};
+
+public export {
+    function hook_zeek_init() {
+        print "HTTP Spicy parser initialized.";
+    }
+}

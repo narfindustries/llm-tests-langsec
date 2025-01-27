@@ -1,0 +1,122 @@
+module GIF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    logical_screen: LogicalScreen;
+    blocks: Blocks;
+
+    on %done { 
+        print "GIF file parsed successfully";
+    }
+};
+
+type Header = unit {
+    signature: bytes(3) &requires($$=="GIF");
+    version: bytes(3) &requires($$=="87a" || $$=="89a");
+};
+
+type LogicalScreen = unit {
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+type Blocks = unit {
+    blocks: Block[] &until($$.type == BlockType::Trailer);
+};
+
+type Block = unit {
+    type: BlockType;
+
+    switch (type) {
+        BlockType::ImageDescriptor -> image_descriptor: ImageDescriptor;
+        BlockType::Extension -> extension: Extension;
+        BlockType::Trailer -> trailer: Trailer;
+    }
+};
+
+type ImageDescriptor = unit {
+    separator: uint8 &requires($$==0x2C);
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    local_color_table: bytes &length=(2 ** ((packed_fields & 0b00000111) + 1)) * 3 
+        if ( packed_fields & 0b10000000 ) > 0;
+    image_data: ImageData;
+};
+
+type ImageData = unit {
+    lzw_code_size: uint8;
+    data_blocks: DataBlocks;
+};
+
+type DataBlocks = unit {
+    blocks: DataBlock[] &until($$.size == 0);
+};
+
+type DataBlock = unit {
+    size: uint8;
+    data: bytes &length=size;
+};
+
+type Extension = unit {
+    label: uint8;
+    data: ExtensionData;
+};
+
+type ExtensionData = unit {
+    switch ($$unit.label) {
+        0xF9 -> graphic_control: GraphicControlExtension;
+        0xFF -> application: ApplicationExtension;
+        0x01 -> plain_text: PlainTextExtension;
+        0xFE -> comment: CommentExtension;
+    }
+};
+
+type GraphicControlExtension = unit {
+    block_size: uint8 &requires($$==4);
+    packed_fields: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8 &requires($$==0);
+};
+
+type ApplicationExtension = unit {
+    block_size: uint8 &requires($$==11);
+    identifier: bytes(8);
+    authentication_code: bytes(3);
+    data_blocks: DataBlocks;
+};
+
+type PlainTextExtension = unit {
+    block_size: uint8 &requires($$==12);
+    text_grid_left: uint16;
+    text_grid_top: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    cell_width: uint8;
+    cell_height: uint8;
+    foreground_color_index: uint8;
+    background_color_index: uint8;
+    data_blocks: DataBlocks;
+};
+
+type CommentExtension = unit {
+    data_blocks: DataBlocks;
+};
+
+type Trailer = unit {
+    marker: uint8 &requires($$==0x3B);
+};
+
+enum BlockType {
+    ImageDescriptor = 0x2C,
+    Extension = 0xFF,
+    Trailer = 0x3B
+};

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="tiff">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" dfdl:occurs="1..1"/>
+        <xs:element ref="ifd" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="ascii"/>
+        <xs:element name="version" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ifd">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="count" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
+        <xs:element name="entries" dfdl:occurs="*">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="tag" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
+              <xs:element name="type" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
+              <xs:element name="count" type="xs:integer" dfdl:length="4" dfdl:encoding="integer-be"/>
+              <xs:element name="value" type="xs:integer" dfdl:length="4" dfdl:encoding="integer-be"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

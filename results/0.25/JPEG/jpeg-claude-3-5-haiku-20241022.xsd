@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:jpeg="http://example.com/jpeg">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        occursCountKind="parsed"
+        representation="binary"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="JPEGFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOI" type="jpeg:StartOfImageType"/>
+        <xs:element name="Segments" type="jpeg:SegmentsType"/>
+        <xs:element name="EOI" type="jpeg:EndOfImageType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="StartOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:assert testKind="pattern" testPattern="0xFF 0xD8"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EndOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:assert testKind="pattern" testPattern="0xFF 0xD9"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Segment" type="jpeg:SegmentType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType"/>
+      <xs:element name="Length" type="jpeg:LengthType"/>
+      <xs:element name="Data" type="jpeg:SegmentDataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="FF" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:assert testKind="pattern" testPattern="0xFF"/>
+            <dfdl:element lengthKind="explicit" lengthUnits="bytes" length="1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Code" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element lengthKind="explicit" lengthUnits="bytes" length="1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LengthType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element lengthKind="explicit" lengthUnits="bytes" length="2"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentDataType">
+    <xs:sequence>
+      <xs:element name="Bytes" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element lengthKind="delimited"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

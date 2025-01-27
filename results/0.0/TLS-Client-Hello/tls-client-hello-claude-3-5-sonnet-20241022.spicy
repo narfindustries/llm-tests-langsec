@@ -1,0 +1,71 @@
+module TLS_Client_Hello;
+
+import spicy;
+
+public type Version = unit {
+    major: uint8;
+    minor: uint8;
+};
+
+public type Random = unit {
+    gmt_unix_time: uint32;
+    random_bytes: bytes &size=28;
+};
+
+public type SessionID = unit {
+    length: uint8;
+    id: bytes &size=self.length if self.length > 0;
+};
+
+public type CipherSuite = unit {
+    data: bytes &size=2;
+};
+
+public type CipherSuites = unit {
+    length: uint16;
+    suites: CipherSuite[] &count=self.length/2;
+};
+
+public type CompressionMethod = unit {
+    method: uint8;
+};
+
+public type CompressionMethods = unit {
+    length: uint8;
+    methods: CompressionMethod[] &count=self.length;
+};
+
+public type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=self.length;
+};
+
+public type Extensions = unit {
+    length: uint16;
+    extensions: Extension[] &until=$input.length() == 0;
+};
+
+public type ClientHello = unit {
+    version: Version;
+    random: Random;
+    session_id: SessionID;
+    cipher_suites: CipherSuites;
+    compression_methods: CompressionMethods;
+    has_extensions: bool &parse(($input.length() > 0));
+    extensions: Extensions if self.has_extensions;
+
+    on %done {
+        print "Protocol Version:", self.version.major, ".", self.version.minor;
+        print "Session ID Length:", self.session_id.length;
+        print "Cipher Suites Length:", self.cipher_suites.length;
+        print "Compression Methods Length:", self.compression_methods.length;
+    }
+};
+
+public type Record = unit {
+    content_type: uint8;
+    version: Version;
+    length: uint16;
+    client_hello: ClientHello if (self.content_type == 0x16);
+};

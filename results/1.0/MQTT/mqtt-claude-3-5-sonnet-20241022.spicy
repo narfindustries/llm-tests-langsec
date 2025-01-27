@@ -1,0 +1,65 @@
+module MQTT;
+
+import spicy;
+
+public type MQTTMessage = unit {
+    fixed_header: FixedHeader;
+    var_header: VariableHeader if ( fixed_header.msg_type != 14 );
+    payload: bytes &eod;
+
+    on %done {
+        print self;
+    }
+};
+
+type FixedHeader = unit {
+    msg_type_flags: uint8;
+    remaining_length: VarInt;
+
+    var msg_type: uint8;
+    var flags: uint8;
+
+    on msg_type_flags {
+        self.msg_type = self.msg_type_flags >> 4;
+        self.flags = self.msg_type_flags & 0x0F;
+    }
+};
+
+type VarInt = unit {
+    var value: uint32;
+    var done: bool = False;
+
+    : bytes &until-including=$$.value <= 0x7F -> value {
+        local result: uint32 = 0;
+        local multiplier: uint32 = 1;
+
+        for ( b in self.value ) {
+            result += (b & 0x7F) * multiplier;
+            multiplier *= 128;
+            if ( (b & 0x80) == 0 )
+                break;
+        }
+
+        self.value = result;
+    }
+};
+
+type VariableHeader = unit {
+    protocol_name_length: uint16;
+    protocol_name: bytes &size=self.protocol_name_length if ( $$.fixed_header.msg_type == 1 );
+    protocol_level: uint8 if ( $$.fixed_header.msg_type == 1 );
+    connect_flags: uint8 if ( $$.fixed_header.msg_type == 1 );
+    keep_alive: uint16 if ( $$.fixed_header.msg_type == 1 );
+    
+    packet_id: uint16 if ( $$.fixed_header.msg_type in [2,3,4,5,6,7,8,9,10,11] );
+};
+
+public type Topic = unit {
+    length: uint16;
+    name: bytes &size=self.length;
+};
+
+public type TopicSubscription = unit {
+    topic: Topic;
+    qos: uint8;
+};

@@ -1,0 +1,37 @@
+module ICMP;
+
+import spicy;
+
+public type Message = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    
+    switch ( self.type ) {
+        0 -> echo_reply: EchoMessage;
+        3 -> dest_unreach: DestUnreachMessage;
+        8 -> echo_request: EchoMessage;
+        11 -> time_exceeded: TimeExceededMessage;
+        * -> : bytes &eod;
+    };
+};
+
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    payload: bytes &eod;
+};
+
+type DestUnreachMessage = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+type TimeExceededMessage = unit {
+    unused: uint32;
+    payload: bytes &eod;
+};
+
+on Message::%done {
+    print self;
+}

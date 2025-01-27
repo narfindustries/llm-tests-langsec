@@ -1,0 +1,50 @@
+#ifndef _SQLITE3_DB_H
+#define _SQLITE3_DB_H
+
+#include <zeek/zeek-config.h>
+
+#ifdef HAVE_SQLITE3
+
+#include <sqlite3.h>
+
+// Define your database schema and functions here.  This is a placeholder.
+//  You'll need to replace this with your actual schema and function definitions.
+
+
+// Example function to open the database.  Error handling is crucial!
+int open_db(const char* db_path, sqlite3** db){
+	int rc = sqlite3_open(db_path, db);
+    if ( rc ){
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(*db));
+        sqlite3_close(*db); //Close the database if failed
+        return 1; // Return an error code
+    }
+    return 0; // Return 0 to signify success
+}
+
+// Example function to execute an SQL query.  Error handling is crucial!
+int execute_query(sqlite3* db, const char* sql){
+    char* zErrMsg = 0;
+    int rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
+    if( rc!= SQLITE_OK ){
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        return 1;
+    }
+    return 0;
+}
+
+
+//Example function to close the database
+int close_db(sqlite3* db) {
+    int rc = sqlite3_close(db);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error closing database: %s\n", sqlite3_errmsg(db));
+        return 1; // Indicate an error
+    }
+    return 0; // Indicate success
+}
+
+#endif // HAVE_SQLITE3
+
+#endif // _SQLITE3_DB_H

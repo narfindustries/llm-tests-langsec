@@ -1,0 +1,26 @@
+module HL7_V2;
+
+public type HL7Message = unit {
+    delim_start: bytes &size = 3; # Assume the delimiter starts with MSH
+    segment: array of Segment
+        &until($input.eof())
+        &byteorder=big-endian;
+};
+
+public type Segment = unit {
+    id: string &length = 3;
+    rest: bytes &until("\r");
+};
+
+public global hl7_parser: function%(data: bytes &restofdata%): list<HL7Message> %};
+
+event spicy_parse_conn%(c: connection, msg: list<HL7Message>%) {
+    for (message in msg) {
+        print "Parsed HL7 Message:";
+        for (segment in message.segment) {
+            print fmt("Segment ID: %s", segment.id);
+            print fmt("Segment Data: %s", segment.rest);
+        }
+    }
+}
+

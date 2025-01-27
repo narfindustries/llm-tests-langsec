@@ -1,0 +1,56 @@
+module DNS;
+
+public type DNSMessage = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+
+    queries: array[q each qdcount] of DNSQuery;
+    answers: array[a each ancount] of DNSRecord;
+    authorities: array[n each nscount] of DNSRecord;
+    additionals: array[r each arcount] of DNSRecord;
+};
+
+type DNSQuery = unit {
+    qname: QueryName;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type QueryName = unit {
+    parts: array of QueryNameLabel;
+
+    : (parts.members != 0) & (parts.back().length == 0) {
+        length: uint8 { assert ($self$.length != 0, "Unexpected zero length for QNAME") };
+        name: bytes &length=length;
+
+        on set_name do {
+            // Ensure the parts array terminates with a zero-length label as per DNS standard.
+            if ( length == 0 ) {
+                break;
+            }
+        }
+    };
+};
+
+type QueryNameLabel = unit {
+    length: uint8;
+    label: bytes &length=length {
+        // Ensure this is a valid DNS label.
+        assert (length <= 63, "DNS label length exceeds 63 bytes");
+    };
+};
+
+type DNSRecord = unit {
+    rname: QueryName;
+    rtype: uint16;
+    rclass: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &length=rdlength;
+};
+
+public event dns_message(msg: DNSMessage);

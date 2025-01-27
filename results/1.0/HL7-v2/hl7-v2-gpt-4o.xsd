@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" 
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+        targetNamespace="http://example.com/HL7v2" 
+        xmlns:tns="http://example.com/HL7v2" 
+        elementFormDefault="qualified">
+
+    <dfdl:format ref="tns:HL7v2Format"/>
+    
+    <dfdl:defineFormat name="HL7v2Format">
+        <dfdl:sequenceSep>0x0D</dfdl:sequenceSep> <!-- Carrige return for segment separator -->
+        <dfdl:initiator>%ES;|</dfdl:initiator> <!-- Start of segment identifier -->
+        <dfdl:terminator>%ES;</dfdl:terminator> <!-- End of segment identifier -->
+        <dfdl:initiatedContent>true</dfdl:initiatedContent>
+        <dfdl:encoding>US-ASCII</dfdl:encoding>
+        <dfdl:lengthKind>delimited</dfdl:lengthKind>
+    </dfdl:defineFormat>
+
+    <element name="HL7Message">
+        <complexType>
+            <sequence dfdl:separator='|'>
+                <element name="MSH" type="tns:Segment"/>
+                <element name="Segments" minOccurs="0" maxOccurs="unbounded">
+                    <complexType>
+                        <sequence>
+                            <element name="Segment" type="tns:Segment"/>
+                        </sequence>
+                    </complexType>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+
+    <complexType name="Segment">
+        <sequence>
+            <element name="Field" type="string" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="delimited" dfdl:terminator='|'/>
+        </sequence>
+    </complexType>
+
+</schema>

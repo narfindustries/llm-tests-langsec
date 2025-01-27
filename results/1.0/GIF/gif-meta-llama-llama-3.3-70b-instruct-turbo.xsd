@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GIF"
+           xmlns="http://example.com/GIF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+
+  <xs:element name="GIF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" dfdl:occurs="1"/>
+        <xs:element ref="imageData" dfdl:occurs="1" dfdl:dependsOn="header"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="magicNumber" type="xs:hexBinary" dfdl:length="3" dfdl:encoding="utf-8"/>
+        <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="utf-8"/>
+        <xs:element name="width" type="xs:unsignedShort" dfdl:encoding="binary"/>
+        <xs:element name="height" type="xs:unsignedShort" dfdl:encoding="binary"/>
+        <xs:element name="flags" type="xs:unsignedByte" dfdl:encoding="binary"/>
+        <xs:element name="backgroundColor" type="xs:unsignedByte" dfdl:encoding="binary"/>
+        <xs:element name="aspectRatio" type="xs:unsignedByte" dfdl:encoding="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="imageData">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="pixelData" type="xs:hexBinary" dfdl:length="*" dfdl:encoding="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

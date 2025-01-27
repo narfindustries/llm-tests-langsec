@@ -1,0 +1,37 @@
+module TIFF;
+
+import spicy;
+
+public type TIFF_Header = unit {
+    ByteOrder: bytes &size=2;
+    Version: uint16;
+    IFDOffset: uint32;
+};
+
+public type IFD_Entry = unit {
+    Tag: uint16;
+    Type: uint16;
+    Count: uint32;
+    ValueOffset: uint32;
+};
+
+public type IFD = unit {
+    NumEntries: uint16;
+    Entries: IFD_Entry[] &size=NumEntries;
+    NextIFDOffset: uint32;
+};
+
+public type TIFF_File = unit {
+    Header: TIFF_Header;
+    IFDs: IFD[] &until($$.NextIFDOffset == 0);
+};
+
+on TIFF_File::%init {
+    if ( self.Header.ByteOrder == b"II" ) {
+        self.set_byte_order(BYTE_ORDER_LITTLE_ENDIAN);
+    } else if ( self.Header.ByteOrder == b"MM" ) {
+        self.set_byte_order(BYTE_ORDER_BIG_ENDIAN);
+    } else {
+        throw "Invalid byte order in TIFF header.";
+    }
+}

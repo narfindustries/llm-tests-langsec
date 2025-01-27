@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/elf-deepseek-chat"
+           targetNamespace="http://example.com/elf-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:ELFFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ELFHeaderType">
+    <xs:sequence>
+      <xs:element name="e_ident" type="ex:EIdentType" />
+      <xs:element name="e_type" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_version" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_entry" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EIdentType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary" dfdl:length="4" />
+      <xs:element name="class" type="xs:unsignedByte" />
+      <xs:element name="data" type="xs:unsignedByte" />
+      <xs:element name="version" type="xs:unsignedByte" />
+      <xs:element name="osabi" type="xs:unsignedByte" />
+      <xs:element name="abiversion" type="xs:unsignedByte" />
+      <xs:element name="pad" type="xs:hexBinary" dfdl:length="7" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ELF" type="ex:ELFHeaderType" />
+
+  <dfdl:defineFormat name="ELFFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" />
+  </dfdl:defineFormat>
+
+</xs:schema>

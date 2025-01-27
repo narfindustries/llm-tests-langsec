@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:tns="http://example.com/tiff"
+    targetNamespace="http://example.com/tiff">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthKind="implicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="tiff">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="byteOrder" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
+                            <xs:element name="magic" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
+                            <xs:element name="ifdOffset" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="ifd" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="numEntries" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
+                            <xs:element name="entry" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="tag" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
+                                        <xs:element name="type" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
+                                        <xs:element name="count" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
+                                        <xs:element name="valueOffset" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="nextIFDOffset" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

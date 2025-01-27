@@ -1,0 +1,87 @@
+module Bitcoin;
+
+import spicy;
+
+public type Transaction = unit {
+    # Transaction version
+    version: int32;
+    
+    # Input count (VarInt)
+    input_count: VarInt;
+    
+    # Transaction inputs
+    inputs: Input[self.input_count.value];
+    
+    # Output count (VarInt)
+    output_count: VarInt;
+    
+    # Transaction outputs
+    outputs: Output[self.output_count.value];
+    
+    # Lock time
+    lock_time: uint32;
+};
+
+type Input = unit {
+    # Previous transaction hash
+    prev_tx_hash: bytes &size=32;
+    
+    # Previous output index
+    prev_output_index: uint32;
+    
+    # Script length (VarInt)
+    script_length: VarInt;
+    
+    # Script
+    script: bytes &size=self.script_length.value;
+    
+    # Sequence number
+    sequence: uint32;
+};
+
+type Output = unit {
+    # Value in satoshis
+    value: uint64;
+    
+    # Script length (VarInt)
+    script_length: VarInt;
+    
+    # Script
+    script: bytes &size=self.script_length.value;
+};
+
+type VarInt = unit {
+    prefix: uint8;
+    
+    switch(self.prefix) {
+        0xfd -> value: uint16;
+        0xfe -> value: uint32;
+        0xff -> value: uint64;
+        *    -> value: uint8 { self.value = self.prefix; }
+    };
+};
+
+public function parse_transaction(data: bytes) : Transaction
+{
+    return Transaction(data);
+}
+
+on Transaction::version {
+    print "Transaction version:", self.version;
+}
+
+on Transaction::input_count {
+    print "Number of inputs:", self.input_count.value;
+}
+
+on Transaction::output_count {
+    print "Number of outputs:", self.output_count.value;
+}
+
+on Input::prev_tx_hash {
+    print "Previous transaction hash:", self.prev_tx_hash;
+}
+
+on Output::value {
+    print "Output value:", self.value;
+}

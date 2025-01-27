@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="gzip-deepseek-chat" type="ex:gzipType" dfdl:lengthKind="implicit"/>
+
+  <xs:complexType name="gzipType">
+    <xs:sequence>
+      <xs:element name="header" type="ex:headerType" dfdl:lengthKind="implicit"/>
+      <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      <xs:element name="trailer" type="ex:trailerType" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="id1" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="id2" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="os" type="xs:unsignedByte" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="trailerType">
+    <xs:sequence>
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

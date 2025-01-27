@@ -1,0 +1,42 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes &size=4;
+    version: uint8;
+    flags: uint8;
+    header_length: uint16;
+    data_length: uint32;
+};
+
+public type ImageSegment = unit {
+    segment_type: uint8;
+    segment_length: uint32;
+    data: bytes &size=segment_length;
+};
+
+public type NITF = unit {
+    header: Header;
+    segments: ImageSegment[] &until($input.eof());
+};
+
+on NITF::Header::%done {
+    print "NITF Header:";
+    print fmt("  Magic: %s", self.magic);
+    print fmt("  Version: %d", self.version);
+    print fmt("  Flags: %d", self.flags);
+    print fmt("  Header Length: %d", self.header_length);
+    print fmt("  Data Length: %d", self.data_length);
+}
+
+on NITF::ImageSegment::%done {
+    print "Image Segment:";
+    print fmt("  Segment Type: %d", self.segment_type);
+    print fmt("  Segment Length: %d", self.segment_length);
+    print fmt("  Data: %s", self.data);
+}
+
+on NITF::%done {
+    print "NITF File Parsed Successfully";
+}

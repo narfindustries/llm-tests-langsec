@@ -1,0 +1,47 @@
+module GZIP;
+
+public type Gzip = unit {
+    magic: bytes &size=2 &validate=magic == "|1f8b|";
+    compression_method: uint8 &validate=compression_method == 8;
+    flags: Flags;
+    mtime: uint32;
+    xflags: uint8;
+    os: uint8;
+
+    // Optional fields depending on flags
+    extra: Extra [flags.FEXTRA] ?;
+    name: Name [flags.FNAME] ?;
+    comment: Comment [flags.FCOMMENT] ?;
+    hcrc: uint16 [flags.FHCRC] ?;
+
+    compressed_data: bytes;
+
+    crc32: uint32;
+    isize: uint32;
+
+    on %done {
+        # Validating CRC and ISIZE can be done here if needed
+    }
+};
+
+type Flags = bitfield {
+    FTEXT = 0 : bool;
+    FHCRC = 1 : bool;
+    FEXTRA = 2 : bool;
+    FNAME = 3 : bool;
+    FCOMMENT = 4 : bool;
+    // Reserved bits
+};
+
+type Extra = unit {
+    length: uint16;
+    extra_field: bytes &size=length;
+};
+
+type Name = unit {
+    null_terminated_name: string &until="\0";
+};
+
+type Comment = unit {
+    null_terminated_comment: string &until="\0";
+};

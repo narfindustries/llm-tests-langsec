@@ -1,0 +1,26 @@
+module ARP;
+
+import spicy;
+
+public type Packet = unit {
+    hardware_type: uint16 be;
+    protocol_type: uint16 be;
+    hardware_size: uint8;
+    protocol_size: uint8;
+    opcode: uint16 be;
+    sender_mac: bytes(6);
+    sender_ip: bytes(4);
+    target_mac: bytes(6);
+    target_ip: bytes(4);
+
+    var is_request: bool = (opcode == 1);
+    var is_reply: bool = (opcode == 2);
+
+    on %done {
+        print self;
+    }
+};
+
+public type Parser = unit {
+    packet: Packet;
+};

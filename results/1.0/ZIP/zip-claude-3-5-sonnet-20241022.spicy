@@ -1,0 +1,108 @@
+#! /usr/bin/env zeek
+
+module ZIP;
+
+import spicy;
+
+type Header = unit {
+    signature: bytes &size=4;
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    filename: bytes &size=self.filename_length;
+    extra_field: bytes &size=self.extra_field_length;
+    
+    on signature {
+        if ( self.signature != b"PK\x03\x04" )
+            confirm_error("Invalid ZIP signature");
+    }
+};
+
+type LocalFileHeader = unit {
+    header: Header;
+    compressed_data: bytes &size=self.header.compressed_size;
+};
+
+type CentralDirectoryHeader = unit {
+    signature: bytes &size=4;
+    version_made_by: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    comment_length: uint16;
+    disk_number_start: uint16;
+    internal_attributes: uint16;
+    external_attributes: uint32;
+    relative_offset: uint32;
+    filename: bytes &size=self.filename_length;
+    extra_field: bytes &size=self.extra_field_length;
+    comment: bytes &size=self.comment_length;
+    
+    on signature {
+        if ( self.signature != b"PK\x01\x02" )
+            confirm_error("Invalid Central Directory signature");
+    }
+};
+
+type EndOfCentralDirectory = unit {
+    signature: bytes &size=4;
+    disk_number: uint16;
+    start_disk_number: uint16;
+    entries_on_disk: uint16;
+    total_entries: uint16;
+    directory_size: uint32;
+    directory_offset: uint32;
+    comment_length: uint16;
+    comment: bytes &size=self.comment_length;
+    
+    on signature {
+        if ( self.signature != b"PK\x05\x06" )
+            confirm_error("Invalid End of Central Directory signature");
+    }
+};
+
+public type ZIP = unit {
+    files: LocalFileHeader[];
+    central_directory: CentralDirectoryHeader[];
+    end_of_directory: EndOfCentralDirectory;
+};
+
+on ZIP::Header -> event zip_entry(
+    $signature: string,
+    $version: count,
+    $flags: count,
+    $compression: count,
+    $mod_time: count,
+    $mod_date: count,
+    $crc32: count,
+    $compressed_size: count,
+    $uncompressed_size: count,
+    $filename: string
+);
+
+on ZIP::CentralDirectoryHeader -> event zip_central_directory(
+    $filename: string,
+    $compressed_size: count,
+    $uncompressed_size: count,
+    $crc32: count
+);
+
+on ZIP::EndOfCentralDirectory -> event zip_end(
+    $total_entries: count,
+    $directory_size: count,
+    $directory_offset: count
+);

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3-db"
+           xmlns:tns="http://example.com/sqlite3-db">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="littleEndian"
+        alignment="1"
+        alignmentUnits="bytes"
+        fillByte="%#r00"
+        occursCountKind="parsed"
+        representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLiteDatabase">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:DatabaseHeader"/>
+        <xs:element name="Pages" type="tns:DatabasePages"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DatabaseHeader">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="MagicHeader" type="tns:MagicHeaderType"/>
+      <xs:element name="PageSize" type="tns:PageSizeType"/>
+      <xs:element name="FileFormatVersion" type="tns:FileFormatVersionType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MagicHeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:string" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="16"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageSizeType">
+    <xs:sequence>
+      <xs:element name="Size" type="xs:unsignedShort" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="2" 
+        dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileFormatVersionType">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:unsignedInt" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="4" 
+        dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DatabasePages">
+    <xs:sequence>
+      <xs:element name="Page" type="tns:PageType" 
+        dfdl:occursCountKind="parsed" 
+        dfdl:minOccurs="1" 
+        dfdl:maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="tns:PageHeaderType"/>
+      <xs:element name="PageContent" type="tns:PageContentType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="1"/>
+      <xs:element name="FreeBlockOffset" type="xs:unsignedShort" 
+        dfdl:lengthKind="explicit" 
+        dfdl:length="2" 
+        dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageContentType">
+    <xs:sequence>
+      <xs:element name="RawData" type="xs:hexBinary" 
+        dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,45 @@
+module SQLITE3_DB;
+
+import spicy;
+
+public type SQLite3Database = unit {
+    header: Header;
+    page_headers: Page[] &until($!.is_leaf);
+
+    type Header = unit {
+        magic_string: bytes &size=16 &requires=self == b"SQLite format 3\x00";
+        page_size: uint16 be;
+        write_version: uint8;
+        read_version: uint8;
+        reserved_space: uint8;
+        max_payload_fraction: uint8;
+        min_payload_fraction: uint8;
+        leaf_payload_fraction: uint8;
+        file_change_counter: uint32 be;
+        database_size_pages: uint32 be;
+        first_freelist_page: uint32 be;
+        total_freelist_pages: uint32 be;
+        schema_cookie: uint32 be;
+        schema_format: uint32 be;
+        suggested_cache_size: uint32 be;
+        text_encoding: uint32 be;
+        user_version: uint32 be;
+    };
+
+    type Page = unit {
+        type_flag: uint8;
+        is_leaf: bool = (type_flag & 0x08) != 0;
+        first_freeblock: uint16 be;
+        num_cells: uint16 be;
+        cell_content_start: uint16 be;
+        fragmented_free_bytes: uint8;
+
+        cells: Cell[num_cells];
+    };
+
+    type Cell = unit {
+        payload_size: uint32 &transient;
+        row_id: uint64 &transient;
+        payload: bytes &size=payload_size;
+    };
+};

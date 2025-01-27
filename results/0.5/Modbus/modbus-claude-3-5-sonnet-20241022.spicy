@@ -1,0 +1,53 @@
+module Modbus;
+
+import spicy;
+
+public type ModbusHeader = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    
+    on %done {
+        self.length_ = self.length;
+    }
+    
+    var length_: uint16;
+};
+
+public type ModbusCoilResponse = unit {
+    byte_count: uint8;
+    coil_status: bytes &size=self.byte_count;
+};
+
+public type ModbusReadHoldingRegistersResponse = unit {
+    byte_count: uint8;
+    register_values: bytes &size=self.byte_count;
+};
+
+public type ModbusWriteSingleCoilRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+public type ModbusWriteSingleRegisterRequest = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+public type ModbusErrorResponse = unit {
+    exception_code: uint8;
+};
+
+public type ModbusMessage = unit {
+    header: ModbusHeader;
+    
+    switch ( self.header.function_code ) {
+        0x01, 0x02 -> coil_response: ModbusCoilResponse;
+        0x03, 0x04 -> register_response: ModbusReadHoldingRegistersResponse;
+        0x05 -> write_coil: ModbusWriteSingleCoilRequest;
+        0x06 -> write_register: ModbusWriteSingleRegisterRequest;
+        0x81, 0x82, 0x83, 0x84, 0x85, 0x86 -> error: ModbusErrorResponse;
+    };
+};

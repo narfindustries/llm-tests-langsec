@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tiff="http://example.com/tiff">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format
+        alignment="1"
+        alignmentUnits="bytes"
+        byteOrder="bigEndian"
+        encoding="UTF-8"
+        escapeSchemeRef=""
+        fillByte="%#r20"
+        initiator=""
+        lengthKind="explicit"
+        lengthUnits="bytes"
+        occursCountKind="parsed"
+        separator=""
+        separatorPosition="infix"
+        separatorSuppressionPolicy="anyEmpty"
+        textNumberCheckPolicy="strict"
+        textNumberPattern=""
+        textNumberRounding="pattern"
+        textPadKind="none"
+        textStringJustification="left"
+        textTrimKind="none"
+        trailingBitPolicy="may"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Header" dfdl:lengthKind="explicit" dfdl:length="8">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ByteOrder" type="xs:string" dfdl:length="2"/>
+              <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2"/>
+              <xs:element name="Offset" type="xs:unsignedInt" dfdl:length="4"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="IFD" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="NumEntries" type="xs:unsignedShort" dfdl:length="2"/>
+              <xs:element name="Entries" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Entry" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2"/>
+                          <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2"/>
+                          <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4"/>
+                          <xs:element name="Value" type="xs:unsignedInt" dfdl:length="4"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageData" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PixelData" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

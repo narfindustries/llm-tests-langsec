@@ -1,0 +1,82 @@
+module MQTT;
+
+import spicy;
+
+public type Version = enum {
+    MQTT_3_1 = 0x03,
+    MQTT_3_1_1 = 0x04,
+    MQTT_5_0 = 0x05
+};
+
+public type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14
+};
+
+type FixedHeader = unit {
+    packet_type: uint8 &convert=PacketType(($$ & 0xF0) >> 4);
+    flags: uint8 &convert=($$ & 0x0F);
+    remaining_length: uint32[] &until($$ < 0x80);
+
+    on remaining_length {
+        local len: uint32 = 0;
+        local multiplier: uint32 = 1;
+        
+        for (i in self.remaining_length) {
+            len += (i & 0x7F) * multiplier;
+            multiplier *= 128;
+        }
+        
+        self.remaining_bytes = len;
+    }
+
+    var remaining_bytes: uint32;
+};
+
+public type Packet = unit {
+    header: FixedHeader;
+    payload: bytes &size=self.header.remaining_bytes;
+};
+
+type ConnectFlags = unit {
+    reserved: uint8 &convert=($$ & 0x01);
+    clean_session: uint8 &convert=(($$ & 0x02) >> 1);
+    will_flag: uint8 &convert=(($$ & 0x04) >> 2);
+    will_qos: uint8 &convert=(($$ & 0x18) >> 3);
+    will_retain: uint8 &convert=(($$ & 0x20) >> 5);
+    password_flag: uint8 &convert=(($$ & 0x40) >> 6);
+    username_flag: uint8 &convert=(($$ & 0x80) >> 7);
+};
+
+type ConnectPayload = unit {
+    protocol_name_length: uint16;
+    protocol_name: bytes &size=self.protocol_name_length;
+    protocol_version: uint8 &convert=Version($$);
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    client_id_length: uint16;
+    client_id: bytes &size=self.client_id_length;
+};
+
+type PublishPayload = unit {
+    topic_length: uint16;
+    topic: bytes &size=self.topic_length;
+    message_id: uint16 if (self.context.header.flags & 0x06) != 0;
+    message: bytes &eod;
+};
+
+on MQTT::Packet -> event mqtt_packet($packet);
+on MQTT::ConnectPayload -> event mqtt_connect($payload);
+on MQTT::PublishPayload -> event mqtt_publish($payload);

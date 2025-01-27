@@ -1,0 +1,27 @@
+module GZIP;
+
+import spicy;
+
+public type GZIP = unit {
+    magic1: uint8 &requires=0x1f;
+    magic2: uint8 &requires=0x8b;
+    cm: uint8 &requires=0x08;
+    flags: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+    
+    on %done {
+        print self;
+    }
+};
+
+on GZIP::GZIP -> event gzip_header(
+    $magic1: uint8,
+    $magic2: uint8,
+    $cm: uint8,
+    $flags: uint8,
+    $mtime: uint32,
+    $xfl: uint8,
+    $os: uint8
+);

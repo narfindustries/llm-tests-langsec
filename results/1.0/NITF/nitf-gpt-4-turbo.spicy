@@ -1,0 +1,65 @@
+module NITF;
+
+public type FILEHEADER = unit {
+    fhdr:               bytes &size=9;
+    fver:               bytes &size=2;
+    clevel:             bytes &size=2;
+    stype:              bytes &size=4;
+    ostat:              bytes &size=10;
+    title:              bytes &size=80;
+    fsclas:             bytes &size=1;
+    fsclasect:          bytes &size=2;
+    fscod:              bytes &size=40;
+    fsctlh:             bytes &size=40;
+    fsrel:              bytes &size=40;
+    fsdctp:             bytes &size=2;
+    fsdcdt:             bytes &size=8;
+    fsdcxm:             bytes &size=4;
+    fsdg:               bytes &size=1;
+    fsdgdt:             bytes &size=8;
+    fscltx:             bytes &size=43;
+    fscatp:             bytes &size=1;
+    fscaut:             bytes &size=40;
+    fscrsn:             bytes &size=1;
+    fssrdt:             bytes &size=8;
+    fsctln:             bytes &size<=15;
+
+    on %done {
+        print self;
+    }
+};
+
+public type IMAGEDATA = unit {
+    im:                  bytes &size=2;
+    iid1:                bytes &size=10;
+    idatl:               bytes &size=14;
+    target:              bytes &size=17;
+    iid2:                bytes &size=80;
+    isclas:              bytes &size=1;
+    isclasect:           bytes &size=2;
+    iscod:               bytes &size=11;
+    isctlh:              bytes &size=2;
+    isrel:               bytes &size=20;
+    isdctp:              bytes &size=2;
+    isdcdt:              bytes &size=8;
+    isdcxm:              bytes &size=1;
+    isdg:                bytes &size=1;
+    isdgdt:              bytes &size=8;
+    iscltx:              bytes &size=43;
+    iscatp:              bytes &size=1;
+    iscaut:              bytes &size=40;
+    iscrsn:              bytes &size=1;
+    issrdt:              bytes &size=8;
+    isctln:              bytes &size=15;
+    
+    row_data:            bytes &eod;
+
+    on %done {
+        print self;
+    }
+};
+
+public type NITFRecord = unit {
+    file_header: FILEHEADER;
+    image_section: IMAGEDATA;
+};

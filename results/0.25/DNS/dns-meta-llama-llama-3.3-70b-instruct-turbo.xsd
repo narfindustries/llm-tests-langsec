@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DNS"
+           xmlns="http://example.com/DNS"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.XSD"/>
+
+  <xs:element name="DNSMessage" type="DNSMessageType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:byteOrder="bigEndian" dfdl:binaryNumberRep="unsigned" dfdl:binaryFloatRep="IEEE754"/>
+
+  <xs:complexType name="DNSMessageType">
+    <xs:sequence>
+      <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="Flags" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DomainName" type="DomainNameType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:byteOrder="bigEndian" dfdl:binaryNumberRep="unsigned" dfdl:binaryFloatRep="IEEE754"/>
+
+  <xs:complexType name="DomainNameType">
+    <xs:sequence>
+      <xs:element name="Label" type="xs:string" dfdl:representation="text" dfdl:lengthKind="implicit" dfdl:terminator="." dfdl:encoding="ISO-8859-1" dfdl:maxLength="63" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

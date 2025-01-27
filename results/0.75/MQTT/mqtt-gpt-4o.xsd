@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema
+    xmlns="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    targetNamespace="http://example.com/mqtt"
+    xmlns:tns="http://example.com/mqtt"
+    elementFormDefault="qualified"
+    attributeFormDefault="unqualified">
+
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format
+                textNumberRep="standard"
+                encoding="UTF-8"
+                lengthKind="explicit"
+                byteOrder="bigEndian"/>
+        </appinfo>
+    </annotation>
+
+    <element name="mqttMessage">
+        <complexType>
+            <sequence>
+                <element name="fixedHeader" type="tns:FixedHeaderType"/>
+                <element name="variableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+                <element name="payload" type="tns:PayloadType" minOccurs="0"/>
+            </sequence>
+        </complexType>
+    </element>
+
+    <complexType name="FixedHeaderType">
+        <sequence>
+            <element name="controlPacketType" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="controlFlags" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="remainingLength" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:prefixLengthType value="8" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
+
+    <complexType name="VariableHeaderType">
+        <choice>
+            <element name="connect" type="tns:ConnectVariableHeaderType"/>
+            <element name="publish" type="tns:PublishVariableHeaderType"/>
+            <!-- Add other MQTT packet types as needed -->
+        </choice>
+    </complexType>
+    
+    <complexType name="ConnectVariableHeaderType">
+        <sequence>
+            <element name="protocolName" type="string">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="explicit"/>
+                        <dfdl:lengthUnits value="bytes"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="protocolLevel" type="unsignedByte"/>
+            <element name="connectFlags" type="unsignedByte"/>
+            <element name="keepAlive" type="unsignedShort"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PublishVariableHeaderType">
+        <sequence>
+            <element name="topicName" type="string">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="explicit"/>
+                        <dfdl:lengthUnits value="bytes"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="packetIdentifier" type="unsignedShort" minOccurs="0"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PayloadType">
+        <sequence>
+            <element name="data" type="hexBinary">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="implicit"/>
+                    </appinfo>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
+
+</schema>

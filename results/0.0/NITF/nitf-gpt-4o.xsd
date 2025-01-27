@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="GeneralFormat"
+               byteOrder="bigEndian"
+               encoding="utf-8"
+               lengthKind="explicit"
+               lengthUnits="bytes"
+               alignmentUnits="bytes"
+               occursCountKind="expression"
+               occursCount="1"/>
+
+  <xs:element name="NITF" type="tns:NITFType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:element dfdl:lengthKind="implicit"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="NITFType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+      <xs:element name="ImageSegment" type="tns:ImageSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="TextSegment" type="tns:TextSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FileType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="5"/>
+      <xs:element name="ComplexityLevel" type="xs:int" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageSegmentType">
+    <xs:sequence>
+      <xs:element name="ImageId" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TextSegmentType">
+    <xs:sequence>
+      <xs:element name="TextId" type="xs:string" dfdl:length="10"/>
+      <xs:element name="TextData" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

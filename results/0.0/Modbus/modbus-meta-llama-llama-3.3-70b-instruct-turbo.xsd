@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="modbus">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:transaction" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="transaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transactionId" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="protocolId" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="unitId" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="functionCode" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="data" type="tns:modbusData" dfdl:length="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="modbusData">
+    <xs:sequence>
+      <xs:element name="registerAddress" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="registerCount" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="registerValues" type="tns:registerValue" maxOccurs="unbounded" dfdl:occursCount="*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="registerValue">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="crc">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="crcValue" type="xs:unsignedShort" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

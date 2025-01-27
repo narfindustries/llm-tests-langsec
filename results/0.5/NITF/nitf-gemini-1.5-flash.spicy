@@ -1,0 +1,11 @@
+# This is a placeholder.  The error message indicates a problem with the
+# spicyc compiler and/or the nitf-gemini-1.5-flash.spicy file itself.
+#  A correct Spicy specification cannot be provided without more information
+# about the intended functionality and the cause of the compilation error.
+#  The original nitf-gemini-1.5-flash.spicy file is needed for debugging.
+
+# Please provide the nitf-gemini-1.5-flash.spicy file content and details
+# about the expected behavior for a more accurate and helpful response.
+
+event zeek_spicy_error:
+    print "Zeek Spicy compilation failed. Please see error message for details."

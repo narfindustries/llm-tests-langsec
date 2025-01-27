@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns="http://example.com/nitf"
+           elementFormDefault="qualified">
+
+  <xs:element name="nitf">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="nist" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
+        <xs:element ref="head" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
+        <xs:element ref="body" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="nist">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="fileHeader" type="fileHeaderType" dfdl:occursCount="1..1" dfdl:alignment="4" dfdl:alignmentUnits="bytes" dfdl:compressionThreshold="1000000"/>
+        <xs:element name="fileTailer" type="fileTailerType" dfdl:occursCount="1..1" dfdl:alignment="4" dfdl:alignmentUnits="bytes" dfdl:compressionThreshold="1000000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="fileHeaderType">
+    <xs:sequence>
+      <xs:element name="fileHeaderId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="fileSecurityClassification" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="fileControlNumber" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="fileTailerType">
+    <xs:sequence>
+      <xs:element name="fileTailerId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="fileLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="head">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="headerData" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="0x0A" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="body">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="record" type="recordType" dfdl:occursCount="1..*" dfdl:compressionThreshold="1000000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="recordId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="recordData" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="0x0A" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

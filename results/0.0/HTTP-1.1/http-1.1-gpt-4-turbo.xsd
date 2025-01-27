@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/http-1.1/"
+           xmlns:tns="http://example.com/dfdl/http-1.1/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:HTTPFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="newline">
+    <xs:restriction base="xs:string">
+      <xs:whiteSpace value="replace"/>
+      <xs:pattern value="[\r\n]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="RequestLine">
+    <xs:sequence>
+      <xs:element name="method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="version" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%WSP*;"/>
+      <xs:element name="CRLF" type="tns:newline"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderField">
+    <xs:sequence>
+      <xs:element name="fieldName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":"/>
+      <xs:element name="fieldValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%WSP*;"/>
+      <xs:element name="CRLF" type="tns:newline"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HTTPMessage">
+    <xs:sequence>
+      <xs:element name="RequestLine" type="tns:RequestLine"/>
+      <xs:element name="HeaderField" type="tns:HeaderField" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="CRLF" type="tns:newline"/>
+      <xs:element name="messageBody" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%WSP*;"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="HTTPMessage" type="tns:HTTPMessage"/>
+
+  <xs:element name="HTTPFormat">
+    <xs:complexType>
+      <xs:attributeGroup ref="dfdl:format"/>
+    </xs:complexType>
+    <xs:attributeGroup>
+      <xs:attribute name="textEncoding" type="xs:string" use="required" fixed="ascii"/>
+      <xs:attribute name="representation" type="xs:string" use="required" fixed="text"/>
+      <xs:attribute name="separator" type="xs:string" use="optional" fixed="%NL;"/>
+      <xs:attribute name="separatorSuppressionPolicy" type="xs:string" use="optional" fixed="never"/>
+      <xs:attribute name="ignoreCase" type="xs:boolean" use="optional" fixed="true"/>
+    </xs:attributeGroup>
+  </xs:element>
+
+</xs:schema>

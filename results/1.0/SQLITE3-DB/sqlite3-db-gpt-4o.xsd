@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="urn:example:sqlite3-db"
+           xmlns="urn:example:sqlite3-db"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           dfdl:encoding="utf-8">
+  
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary"
+                   byteOrder="network"
+                   lengthKind="explicit"
+                   alignmentUnits="bytes"
+                   lengthUnits="bytes"
+                   occursCountKind="expression"
+                   occursCount="{ ../numEntries }"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLite3Database">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="sqlite3:HeaderType"/>
+        <xs:element name="Page" type="sqlite3:PageType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicString" type="xs:string" dfdl:length="16"/>
+      <xs:element name="PageSize" type="xs:unsignedShort"/>
+      <xs:element name="FormatVersion" type="xs:unsignedByte"/>
+      <xs:element name="WriteVersion" type="xs:unsignedByte"/>
+      <xs:element name="ReserveSpace" type="xs:unsignedByte"/>
+      <xs:element name="MaxPayload" type="xs:unsignedShort"/>
+      <xs:element name="MinPayload" type="xs:unsignedShort"/>
+      <xs:element name="ChangeCounter" type="xs:unsignedInt"/>
+      <xs:element name="NumPages" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageType">
+    <xs:sequence>      
+      <xs:element name="PageHeader" type="sqlite3:PageHeaderType"/>
+      <xs:element name="Cell" type="sqlite3:CellType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageHeaderType">
+    <xs:sequence>
+      <xs:element name="FirstFreeblock" type="xs:unsignedShort"/>
+      <xs:element name="CellCount" type="xs:unsignedShort"/>
+      <xs:element name="CellContent" type="xs:unsignedShort"/>
+      <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellType">
+    <xs:sequence>
+      <xs:element name="Payload" type="xs:hexBinary" dfdl:length="{ ../PayloadLength }"/>
+      <xs:element name="RowID" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

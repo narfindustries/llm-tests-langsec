@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/ns/local"
+    xmlns:mbx="http://example.com/ns/modbus"
+    targetNamespace="http://example.com/ns/modbus">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="implicit"
+                        occursCountKind="implicit"
+                        representation="binary"
+                        binaryNumberRep="binary"
+                        byteOrder="bigEndian"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ModbusMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="TransactionID" type="xs:unsignedShort" 
+                                dfdl:lengthKind="explicit" dfdl:length="2"/>
+                            <xs:element name="ProtocolID" type="xs:unsignedShort" 
+                                dfdl:lengthKind="explicit" dfdl:length="2"/>
+                            <xs:element name="Length" type="xs:unsignedShort"
+                                dfdl:lengthKind="explicit" dfdl:length="2"/>
+                            <xs:element name="UnitID" type="xs:unsignedByte"
+                                dfdl:lengthKind="explicit" dfdl:length="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="FunctionCode" type="xs:unsignedByte"
+                    dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="Data">
+                    <xs:complexType>
+                        <xs:choice>
+                            <xs:element name="ReadCoilsRequest">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="StartingAddress" type="xs:unsignedShort"
+                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
+                                        <xs:element name="QuantityOfCoils" type="xs:unsignedShort"
+                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="ReadCoilsResponse">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="ByteCount" type="xs:unsignedByte"
+                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
+                                        <xs:element name="CoilStatus" type="xs:hexBinary"
+                                            dfdl:lengthKind="explicit" 
+                                            dfdl:lengthUnits="bytes"
+                                            dfdl:length="{ ../ByteCount }"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="ErrorResponse">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="ExceptionCode" type="xs:unsignedByte"
+                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:choice>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

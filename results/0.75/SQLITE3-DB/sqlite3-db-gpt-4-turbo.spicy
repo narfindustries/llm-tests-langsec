@@ -1,0 +1,46 @@
+module SQLite3;
+
+import spicy;
+
+type FileHeader = unit {
+    magic: bytes &size=16;
+    pageSize: uint16;
+    on condition { self.magic == b"SQLite format 3\0" };
+};
+
+type Record = unit {
+    length: uint32;
+    content: bytes &size=self.length;
+};
+
+type BTreePage = unit {
+    header: PageHeader;
+    cells: CellArray(self.header.numCells) &eod;
+};
+
+type PageHeader = unit {
+    pageType: uint8;
+    firstFreeBlock: uint16;
+    numCells: uint16;
+    cellContentOffset: uint16;
+    numFragmentedFreeBytes: uint8;
+};
+
+type Cell = unit {
+    leftChildPage: uint32;  # If table-interior or index-interior
+    rowid: uint64;  # If table-leaf
+    payload: Record;
+};
+
+type CellArray = unit(count: uint16) {
+    items: Cell[count];
+};
+
+type Database = unit {
+    header: FileHeader;
+    pages: BTreePage[] &eod;
+};
+
+public type SQLite3_DB = unit {
+    db: Database;
+} &byte_order=spicy::ByteOrder::Little;

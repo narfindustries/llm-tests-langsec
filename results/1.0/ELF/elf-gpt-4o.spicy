@@ -1,0 +1,40 @@
+module ELF;
+
+import spicy;
+import zeek;
+
+public type ELF = unit {
+    magic:  bytes &size=4 &check=$$ == | "\x7fELF"|;
+    class:  uint8;
+    data:   uint8;
+    version:uint8;
+    osabi:  uint8;
+    abiversion: uint8;
+    pad:    bytes &size=7;
+    etype:  uint16;
+    machine:uint16;
+    eversion: uint32;
+    entry:  uint64;
+    phoff:  uint64;
+    shoff:  uint64;
+    flags:  uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+};
+
+public type ELFParser = unit {
+    : ELF;
+};
+
+event spicy::ELF::parse%(c: connection, msg: ELF%) {
+    print "ELF file parsed";
+    print fmt("Magic number: %s", msg.magic);
+    print fmt("Class: %d", msg.class);
+    print fmt("Data: %d", msg.data);
+    print fmt("Version: %d", msg.version);
+    print fmt("OSABI: %d", msg.osabi);
+}

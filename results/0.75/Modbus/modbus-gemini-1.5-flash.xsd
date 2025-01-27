@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/modbus" elementFormDefault="qualified" dfdl:textStringJustification="left" dfdl:initiator="1">
+  <xs:element name="modbusGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" />
+        <xs:element name="data" type="DataType" maxOccurs="unbounded" />
+        <xs:element name="footer" type="FooterType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string" dfdl:length="4" dfdl:occursCountKind="fixed"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:lengthKind="implicit"/>
+      <xs:element name="value" type="xs:int" dfdl:length="2" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:int" dfdl:length="4" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+

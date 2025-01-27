@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom-deepseek-chat"
+           xmlns:ex="http://example.com/dicom-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:DICOMFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="DICOMFormat">
+    <xs:sequence>
+      <xs:element name="Header" type="ex:HeaderType" dfdl:lengthKind="implicit" />
+      <xs:element name="Data" type="ex:DataType" dfdl:lengthKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicNumber" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="Version" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="Reserved" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="ValueLength" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="Value" type="xs:hexBinary" dfdl:length="{ ../ValueLength }" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DICOM" type="ex:DICOMFormat" />
+
+</xs:schema>

@@ -1,0 +1,30 @@
+module JPEG;
+
+public type JPEG = unit {
+    marker: uint16 &convert=to_marker;
+    length: uint16 &if=has_length(marker);
+    data: bytes &length=length - 2 &if=has_length(marker);
+
+    on %init {
+        if ( marker != 0xFFD8 ) {
+            print("Not a valid JPEG file: missing SOI marker");
+            return;
+        }
+    }
+
+    on %done {
+        print("JPEG parsing completed.");
+    }
+
+    function to_marker(raw: uint16): uint16 {
+        return raw;
+    }
+
+    function has_length(marker: uint16): bool {
+        return marker != 0xFFD8 && marker != 0xFFD9;
+    }
+};
+
+public type JPEGFile = unit {
+    segments: vector of JPEG;
+};

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/nitf-deepseek-chat"
+           targetNamespace="http://example.com/nitf-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="nitf-deepseek-chat" type="ex:NITFDeepSeekChatType"/>
+
+  <xs:complexType name="NITFDeepSeekChatType">
+    <xs:sequence>
+      <xs:element name="header" type="ex:HeaderType"/>
+      <xs:element name="messages" type="ex:MessagesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string" dfdl:length="10" dfdl:encoding="UTF-8"/>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:length="20" dfdl:encoding="UTF-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MessagesType">
+    <xs:sequence>
+      <xs:element name="message" type="ex:MessageType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MessageType">
+    <xs:sequence>
+      <xs:element name="sender" type="xs:string" dfdl:length="50" dfdl:encoding="UTF-8"/>
+      <xs:element name="content" type="xs:string" dfdl:length="500" dfdl:encoding="UTF-8"/>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:length="20" dfdl:encoding="UTF-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format ref="ex:NITFDeepSeekChatType" encoding="UTF-8" lengthKind="explicit" separatorSuppressionPolicy="anyEmpty"/>
+
+</xs:schema>

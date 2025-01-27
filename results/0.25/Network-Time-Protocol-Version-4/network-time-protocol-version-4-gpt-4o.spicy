@@ -1,0 +1,43 @@
+module NTP;
+
+public type NTPMessage = unit {
+    li_vn_mode: uint8 {
+        doc = "Leap Indicator, Version Number, and Mode";
+    };
+    stratum: uint8 {
+        doc = "Stratum level of the local clock";
+    };
+    poll: int8 {
+        doc = "Maximum interval between successive messages";
+    };
+    precision: int8 {
+        doc = "Precision of the local clock";
+    };
+    root_delay: int32 {
+        doc = "Total round-trip delay to the primary reference source";
+    };
+    root_dispersion: int32 {
+        doc = "Maximum error relative to the primary reference source";
+    };
+    reference_id: uint32 {
+        doc = "Reference clock identifier";
+    };
+    reference_timestamp: uint64 {
+        doc = "Time when the system clock was last set or corrected";
+    };
+    originate_timestamp: uint64 {
+        doc = "Time at which the request departed the client for the server";
+    };
+    receive_timestamp: uint64 {
+        doc = "Time at which the request arrived at the server";
+    };
+    transmit_timestamp: uint64 {
+        doc = "Time at which the reply departed the server for the client";
+    };
+};
+
+public export {
+    type Protocol = unit {
+        message: NTPMessage;
+    };
+}

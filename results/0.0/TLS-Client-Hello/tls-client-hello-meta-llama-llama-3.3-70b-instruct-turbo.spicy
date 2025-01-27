@@ -1,0 +1,33 @@
+# TLS Client Hello specification in Zeek Spicy format
+
+%header {
+    import "zeek/spicy/standard/protocol/tls"
+}
+
+%proto tls {
+    %include "zeek/spicy/standard/protocol/tls/tls-protocol.spicy"
+
+    %msgtype client_hello = TLS_CLIENT_HELLO => {
+        %length = 1..65535;
+        record_version: uint16;
+        random: bytestring &length=32;
+        session_id: bytestring &length=0..32;
+        cipher_suites: vector[uint16] &length=2..2*65535;
+        compression_methods: vector[uint8] &length=1..255;
+    }
+}
+
+%defragmenter(tls) {
+    %length = :tls.message_length;
+}
+
+%parser(tls) {
+    while (length > 0) {
+        %ok = :tls.parse_message;
+        if (!%ok) {
+            %error = "Failed to parse TLS message";
+            break;
+        }
+        length -= :tls.message_length;
+    }
+}

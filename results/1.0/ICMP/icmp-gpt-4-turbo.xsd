@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/icmp"
+           xmlns:tns="http://example.com/icmp">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:defaultFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="ICMPMessage">
+        <xs:sequence>
+            <xs:element name="type" type="xs:byte" dfdl:length="1" />
+            <xs:element name="code" type="xs:byte" dfdl:length="1" />
+            <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" />
+            <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:initiator="fixed" minOccurs="0" />
+            <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:initiator="fixed" minOccurs="0" />
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="ICMPMessage" type="tns:ICMPMessage"/>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="defaultFormat">
+                <dfdl:format byteOrder="bigEndian"
+                             encoding="ASCII"
+                             binaryNumberRep="binary"
+                             bitOrder="mostSignificantBitFirst"
+                             lengthKind="explicit" />
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+</xs:schema>

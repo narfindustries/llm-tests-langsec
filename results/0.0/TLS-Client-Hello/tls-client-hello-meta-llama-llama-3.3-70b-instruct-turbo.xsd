@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/TLS-Client-Hello"
+           xmlns="http://example.com/TLS-Client-Hello"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="TLS-Client-Hello">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="binary"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="handshake-type" type="xs:unsignedByte" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="version" type="xs:unsignedShort" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="random" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="32">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="session-id" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="32">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="cipher-suites-length" type="xs:unsignedShort" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="cipher-suites" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="cipher-suites-length * 2">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="compression-methods-length" type="xs:unsignedByte" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="compression-methods" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="compression-methods-length">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="extensions-length" type="xs:unsignedShort" dfdl:representation="binary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="extensions" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="extensions-length">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder ref="bigEndian"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,39 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires(self.magic == b"NITF");
+    version: bytes(2);
+    
+    # File header fields
+    datetime: bytes(14);
+    reserved1: bytes(3);
+    file_header_length: bytes(6);
+    
+    # Image subheader information
+    num_image_segments: uint16;
+    
+    # Parse image segments
+    image_segments: list<ImageSegment>(self.num_image_segments);
+};
+
+public type ImageSegment = unit {
+    header: ImageHeader;
+    image_data: bytes(|self.header.image_length|);
+};
+
+public type ImageHeader = unit {
+    magic: bytes(2) &requires(self.magic == b"IM");
+    
+    # Image header details
+    image_length: uint32;
+    
+    # Additional image metadata
+    image_type: bytes(1);
+    image_classification: bytes(1);
+};
+
+public type Parser = unit {
+    file: Header;
+};

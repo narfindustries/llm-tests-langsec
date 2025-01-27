@@ -1,0 +1,47 @@
+@header {
+    type: "PNG-Image"
+}
+
+@onerow {
+    magic: /"\x89PNG\r\n\x1a\n"/
+}
+
+@onread {
+    if (!magic) {
+        @abort "Invalid PNG image"
+    }
+
+    ihdr: $uint32_BE
+    width: $uint32_BE
+    height: $uint32_BE
+    bit_depth: $uint8
+    color_type: $uint8
+    compression_method: $uint8
+    filter_method: $uint8
+    interlace_method: $uint8
+
+    if (compression_method != 0) {
+        @abort "Unsupported compression method"
+    }
+
+    if (filter_method != 0) {
+        @abort "Unsupported filter method"
+    }
+
+    if (interlace_method != 0 && interlace_method != 1) {
+        @abort "Unsupported interlace method"
+    }
+
+    crc: $uint32_BE
+
+    while (!@eof) {
+        chunk_type: $string(4)
+        chunk_length: $uint32_BE
+        chunk_data: $bytes(chunk_length)
+        chunk_crc: $uint32_BE
+
+        if (chunk_type == "IEND") {
+            break
+        }
+    }
+}

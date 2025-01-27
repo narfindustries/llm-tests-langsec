@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# ELF file format parser in Zeek Spicy
+#
+
+%external {
+    # Import the necessary modules
+    @load base/protocols/elf
+}
+
+%header {
+    # Define the ELF file header
+    elf_header: ELF_Header;
+}
+
+%header ELF_Header {
+    # e_ident (16 bytes)
+    e_ident_mag0: uint8;
+    e_ident_mag1: uint8;
+    e_ident_mag2: uint8;
+    e_ident_mag3: uint8;
+    e_ident_class: uint8;
+    e_ident_data: uint8;
+    e_ident_version: uint8;
+    e_ident_osabi: uint8;
+    e_ident_abiversion: uint8;
+    e_ident_pad: bytes[7];
+
+    # e_type (2 bytes)
+    e_type: uint16;
+
+    # e_machine (2 bytes)
+    e_machine: uint16;
+
+    # e_version (4 bytes)
+    e_version: uint32;
+
+    # e_entry (4 or 8 bytes)
+    e_entry: uint64;
+
+    # e_phoff (4 or 8 bytes)
+    e_phoff: uint64;
+
+    # e_shoff (4 or 8 bytes)
+    e_shoff: uint64;
+
+    # e_flags (4 bytes)
+    e_flags: uint32;
+
+    # e_ehsize (2 bytes)
+    e_ehsize: uint16;
+
+    # e_phentsize (2 bytes)
+    e_phentsize: uint16;
+
+    # e_phnum (2 bytes)
+    e_phnum: uint16;
+
+    # e_shentsize (2 bytes)
+    e_shentsize: uint16;
+
+    # e_shnum (2 bytes)
+    e_shnum: uint16;
+
+    # e_shstrndx (2 bytes)
+    e_shstrndx: uint16;
+}
+
+%body {
+    # Segment headers
+    if ( e_phoff != 0 ) {
+        phdrs: vector[uint16](e_phnum) of Program_Header;
+    }
+
+    # Section headers
+    if ( e_shoff != 0 ) {
+        shdrs: vector[uint16](e_shnum) of Section_Header;
+    }
+}
+
+%body Program_Header {
+    # p_type (4 bytes)
+    p_type: uint32;
+
+    # p_flags (4 bytes)
+    p_flags: uint32;
+
+    # p_offset (4 or 8 bytes)
+    p_offset: uint64;
+
+    # p_vaddr (4 or 8 bytes)
+    p_vaddr: uint64;
+
+    # p_paddr (4 or 8 bytes)
+    p_paddr: uint64;
+
+    # p_filesz (4 or 8 bytes)
+    p_filesz: uint64;
+
+    # p_memsz (4 or 8 bytes)
+    p_memsz: uint64;
+
+    # p_align (4 or 8 bytes)
+    p_align: uint64;
+}
+
+%body Section_Header {
+    # sh_name (4 bytes)
+    sh_name: uint32;
+
+    # sh_type (4 bytes)
+    sh_type: uint32;
+
+    # sh_flags (4 or 8 bytes)
+    sh_flags: uint64;
+
+    # sh_addr (4 or 8 bytes)
+    sh_addr: uint64;
+
+    # sh_offset (4 or 8 bytes)
+    sh_offset: uint64;
+
+    # sh_size (4 or 8 bytes)
+    sh_size: uint64;
+
+    # sh_link (4 bytes)
+    sh_link: uint32;
+
+    # sh_info (4 bytes)
+    sh_info: uint32;
+
+    # sh_addralign (4 or 8 bytes)
+    sh_addralign: uint64;
+
+    # sh_entsize (4 or 8 bytes)
+    sh_entsize: uint64;
+}

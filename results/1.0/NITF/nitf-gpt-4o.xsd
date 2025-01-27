@@ -1,0 +1,31 @@
+<dfdl:format
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    dfdl:defineFormats="formattedText"
+    dfdl:separatorPolicy="suppressed">
+    
+    <!-- Define any needed properties or namespaces -->
+    
+    <xsd:include schemaLocation="externalSchema.xsd"/>
+    
+    <dfdl:defineFormat name="formattedText">
+        <dfdl:initiator>initText</dfdl:initiator>
+        <dfdl:terminator>termText</dfdl:terminator>
+    </dfdl:defineFormat>
+    
+    <xsd:element name="RootElement">
+        <xsd:complexType>
+            <xsd:sequence>
+                <!-- Example element definition -->
+                <xsd:element name="exampleField" type="xsd:string">
+                    <dfdl:lengthKind value="explicit"/>
+                    <dfdl:length value="10"/>
+                </xsd:element>
+                <!-- Additional elements go here -->
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <!-- Define additional complex types, elements, and formats as needed -->
+
+</dfdl:format>

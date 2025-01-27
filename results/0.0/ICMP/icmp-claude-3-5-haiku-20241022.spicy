@@ -1,0 +1,39 @@
+module ICMP;
+
+import spicy;
+
+public type ICMP = unit {
+    type_code: bitfield(8) {
+        type:     0..7;
+        code:     8..15;
+    };
+
+    header: record {
+        type:       uint8;
+        code:       uint8;
+        checksum:   uint16;
+    };
+
+    echo_request: record {
+        identifier: uint16;
+        sequence:   uint16;
+    };
+
+    echo_reply: record {
+        identifier: uint16;
+        sequence:   uint16;
+    };
+
+    on %init {
+        self.type_code.type = self.header.type;
+        self.type_code.code = self.header.code;
+    }
+
+    parse_type: hook void() {
+        switch ( self.header.type ) {
+            8 -> self.echo_request = parse echo_request;
+            0 -> self.echo_reply = parse echo_reply;
+            default -> {};
+        }
+    }
+};

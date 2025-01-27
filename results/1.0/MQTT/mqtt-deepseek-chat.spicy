@@ -1,0 +1,82 @@
+module MQTT;
+
+import spicy;
+
+export type MQTTFixedHeader = unit {
+    type: uint8 &convert=(self & 0xF0) >> 4;
+    flags: uint8 &convert=self & 0x0F;
+    remaining_length: uint8 &convert=self & 0x7F;
+};
+
+export type MQTTPacket = unit {
+    header: MQTTFixedHeader;
+    payload: bytes &size=header.remaining_length;
+};
+
+export type MQTTConnect = unit {
+    protocol_name: bytes &size=2;
+    protocol_level: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
+    client_id: bytes &size=header.remaining_length - 6;
+};
+
+export type MQTTConnAck = unit {
+    session_present: uint8 &convert=(self & 0x01) != 0;
+    return_code: uint8;
+};
+
+export type MQTTPublish = unit {
+    topic_name: bytes &size=header.remaining_length;
+    packet_id: uint16;
+    payload: bytes &size=header.remaining_length - 2 - len(topic_name);
+};
+
+export type MQTTSubscribe = unit {
+    packet_id: uint16;
+    topic_filters: bytes &size=header.remaining_length - 2;
+};
+
+export type MQTTSubAck = unit {
+    packet_id: uint16;
+    return_codes: bytes &size=header.remaining_length - 2;
+};
+
+export type MQTTUnsubscribe = unit {
+    packet_id: uint16;
+    topic_filters: bytes &size=header.remaining_length - 2;
+};
+
+export type MQTTUnsubAck = unit {
+    packet_id: uint16;
+};
+
+export type MQTTPingReq = unit {};
+
+export type MQTTPingResp = unit {};
+
+export type MQTTDisconnect = unit {};
+
+export type MQTTMessage = unit {
+    switch (header.type) {
+        case 1: connect: MQTTConnect;
+        case 2: connack: MQTTConnAck;
+        case 3: publish: MQTTPublish;
+        case 4: puback: MQTTPacket;
+        case 5: pubrec: MQTTPacket;
+        case 6: pubrel: MQTTPacket;
+        case 7: pubcomp: MQTTPacket;
+        case 8: subscribe: MQTTSubscribe;
+        case 9: suback: MQTTSubAck;
+        case 10: unsubscribe: MQTTUnsubscribe;
+        case 11: unsuback: MQTTUnsubAck;
+        case 12: pingreq: MQTTPingReq;
+        case 13: pingresp: MQTTPingResp;
+        case 14: disconnect: MQTTDisconnect;
+        default: unknown: bytes &size=header.remaining_length;
+    }
+};
+
+export type MQTTStream = unit {
+    packets: MQTTMessage[];
+};

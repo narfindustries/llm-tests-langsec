@@ -1,0 +1,62 @@
+@header {{
+    author = "Meta Llama 3.3"
+    description = "HTTP/1.1 protocol parser"
+    version = "1.0"
+}}
+
+type HTTP_Request = record {{
+    method: bytestring(4);
+    space1: bytestring(1);
+    url: bytestring;
+    space2: bytestring(1);
+    http_version: bytestring(8);
+}};
+
+type HTTP_Response = record {{
+    http_version: bytestring(8);
+    space: bytestring(1);
+    status_code: uint16;
+    space2: bytestring(1);
+    reason_phrase: bytestring;
+}};
+
+type HTTP_Header = record {{
+    name: bytestring;
+    colon: bytestring(1);
+    space: bytestring(1);
+    value: bytestring;
+    crlf: bytestring(2);
+}};
+
+type HTTP_Message = record {{
+    request: HTTP_Request;
+    headers: array[HTTP_Header];
+    body: bytestring;
+}};
+
+parser P = {{
+    magic: bytestring(4) = "HTTP";
+
+    entry {{
+        message: HTTP_Message;
+    }}
+}};
+
+analyzer A = {{
+    entry {{
+        when P.message.request {{
+            print("Request method:", P.message.request.method);
+            print("Request URL:", P.message.request.url);
+            print("Request HTTP version:", P.message.request.http_version);
+        }};
+        when P.message.headers {{
+            for (header in P.message.headers) {{
+                print("Header name:", header.name);
+                print("Header value:", header.value);
+            }}
+        }};
+        when P.message.body {{
+            print("Body:", P.message.body);
+        }};
+    }}
+}};

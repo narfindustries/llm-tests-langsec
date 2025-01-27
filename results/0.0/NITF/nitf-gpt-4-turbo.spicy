@@ -1,0 +1,50 @@
+module NITF;
+
+public type FileHeader = unit {
+    fileType: /[A-Z0-9]{9}/;
+    complexFlag: /[C]/;
+    originStationID: /[A-Z0-9]{10}/;
+    fileDateTime: /[0-9]{14}/;
+    fileTitle: /[A-Z0-9 ]{80}/;
+    fileSecurity: /[A-Z]{1}/;
+    fileCopyNumber: /[0-9]{5}/;
+    fileNumOfCopys: /[0-9]{5}/;
+    encryption: /[0-9]{1}/;
+    fileBgColor: /[A-Z0-9]{3}/;
+    originatorName: /[A-Z0-9 ]{24}/;
+    originatorPhone: /[0-9]{18}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type ImageSegment = unit {
+    imageID: /[A-Z0-9]{10}/;
+    imageDateTime: /[0-9]{14}/;
+    targetID: /[A-Z0-9]{17}/;
+    imageTitle: /[A-Z0-9 ]{80}/;
+    imageSecurity: /[A-Z]{1}/;
+    encryption: /[0-9]{1}/;
+    imageFormat: /[A-Z]{2}/;
+    numBlocksPerRow: uint16;
+    numBlocksPerCol: uint16;
+    numPixelsPerBlockHorz: uint16;
+    numPixelsPerBlockVert: uint16;
+    numBitsPerPixel: uint16;
+    imageCompression: /[A-Z0-9]{2}/;
+    imageCompRate: /[A-Z0-9 ]{4}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type NITFFile = unit {
+    header: FileHeader;
+    imageSegments: ImageSegment[];
+
+    on %done {
+        print self;
+    }
+};

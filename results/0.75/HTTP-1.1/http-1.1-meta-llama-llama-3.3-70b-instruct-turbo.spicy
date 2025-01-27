@@ -1,0 +1,39 @@
+@header {
+  import "HTTP.pac"
+}
+
+type HTTP_Message = record {
+  request_line: Request_Line,
+  headers: Header*,
+  body: bytestring,
+};
+
+type Request_Line = record {
+  method: string(1..10),
+  request_uri: string(1..100),
+  http_version: string(1..10),
+};
+
+type Header = record {
+  name: string(1..50),
+  value: string(1..100),
+};
+
+refine type HTTP_Message += {
+  &request_line method == "GET" => {
+    body: bytestring &length=0,
+  };
+  &headers ~= {
+    name: "Host",
+    value: string(1..100),
+  };
+  &request_line http_version == "HTTP/1.1" => {
+    &headers ~= {
+      name: "Connection",
+      value: "close",
+    };
+  };
+};
+
+# Compiler commands and build settings
+# Compile with spicyc -j -o output_spicy/http-1/tmp.hlto http-1.1-meta-llama-llama-3.3-70b-instruct-turbo.spicy

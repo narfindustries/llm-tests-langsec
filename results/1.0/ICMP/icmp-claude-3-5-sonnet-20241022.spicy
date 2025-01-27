@@ -1,0 +1,50 @@
+module ICMP;
+
+import spicy;
+
+public type MessageTypes = enum {
+    ECHO_REPLY = 0,
+    DESTINATION_UNREACHABLE = 3,
+    SOURCE_QUENCH = 4,
+    REDIRECT = 5,
+    ECHO_REQUEST = 8,
+    TIME_EXCEEDED = 11,
+    PARAMETER_PROBLEM = 12,
+    TIMESTAMP = 13,
+    TIMESTAMP_REPLY = 14,
+    INFO_REQUEST = 15,
+    INFO_REPLY = 16
+};
+
+public type ICMP = unit {
+    type: uint8 &convert=MessageTypes($$);
+    code: uint8;
+    checksum: uint16;
+    
+    switch ( self.type ) {
+        MessageTypes::ECHO_REQUEST, MessageTypes::ECHO_REPLY -> echo: EchoMessage;
+        MessageTypes::TIME_EXCEEDED -> time_exceeded: TimeExceeded;
+        MessageTypes::DESTINATION_UNREACHABLE -> dest_unreachable: DestinationUnreachable;
+        * -> : bytes &eod;
+    };
+};
+
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    data: bytes &eod;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
+
+type DestinationUnreachable = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
+
+on ICMP::echo -> event icmp_echo($conn, self.identifier, self.sequence, self.data);
+on ICMP::time_exceeded -> event icmp_time_exceeded($conn, self.ip_header);
+on ICMP::dest_unreachable -> event icmp_destination_unreachable($conn, self.unused, self.ip_header);

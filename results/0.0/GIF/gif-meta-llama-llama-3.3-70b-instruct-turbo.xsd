@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GIF"
+           xmlns="http://example.com/GIF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="GIF">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="gifFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occurs="1..1"/>
+        <xs:element name="data" type="DataType" dfdl:occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="byte" dfdl:delimiter="00 3B"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="gifFormat" ref="gifSequence"/>
+  <dfdl:sequence name="gifSequence" ref="gifElement"/>
+  <dfdl:element name="gifElement" type="GIF" dfdl:occurs="1..1"/>
+
+</xs:schema>

@@ -1,0 +1,42 @@
+#version=2
+
+redef type ModbusAddress = uint16;
+
+redef type ModbusFunctionCode = uint8;
+
+event ModbusRequest(ModbusAddress unit_id, ModbusFunctionCode function_code, count:uint16, data:string) {
+  # This event represents a Modbus request.  
+  # unit_id:  The Modbus slave ID.
+  # function_code: The Modbus function code.
+  # count: The number of bytes expected in the response.
+  # data: The data payload of the Modbus request.
+}
+
+event ModbusResponse(ModbusAddress unit_id, ModbusFunctionCode function_code, status:uint8, data:string) {
+    # This event represents a Modbus response.
+    # unit_id: The Modbus slave ID.
+    # function_code: The Modbus function code.
+    # status: The Modbus response status (0x00 for success).
+    # data: The data payload of the Modbus response.
+}
+
+event ModbusException(ModbusAddress unit_id, ModbusFunctionCode function_code, exception_code:uint8) {
+    # This event represents a Modbus exception response.
+    # unit_id: The Modbus slave ID.
+    # function_code: The Modbus function code.
+    # exception_code: The Modbus exception code.
+}
+
+# Example usage (replace with your actual Modbus parsing logic)
+# This is a placeholder and needs to be adapted to your specific Modbus implementation.
+
+local modbus_data = "01 03 04 00 00 00 01 02"; # Example Modbus data
+local modbus_frame = split(modbus_data, " ");
+
+if (len(modbus_frame) > 3) {
+    ModbusRequest(uint16(modbus_frame[0]), uint8(modbus_frame[1]), uint16(modbus_frame[2]), join(modbus_frame[3:], " "));
+}
+
+# Add more sophisticated Modbus parsing here for different function codes
+# and error handling.  This example only handles one specific case.
+

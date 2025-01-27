@@ -1,0 +1,28 @@
+module NetworkTimeProtocol;
+
+public type NTPHeader = unit {
+    li: uint2;                 // Leap indicator
+    vn: uint2;                 // Version number
+    mode: uint2;               // Mode
+    stratum: uint8;            // Stratum
+    poll: int8;                // Poll interval
+    precision: int8;           // Precision
+
+    rootDelay: interval;       // Total round trip delay
+    rootDispersion: interval;  // Total dispersion
+
+    refID: uint32;             // Reference ID
+
+    refTimestamp: time;        // Reference Timestamp
+    origTimestamp: time;       // Originate Timestamp
+    recvTimestamp: time;       // Receive Timestamp
+    xmitTimestamp: time;       // Transmit Timestamp
+
+    on %done {
+        print self;
+    }
+};
+
+public type NTPMessage = unit {
+    header: NTPHeader;
+};

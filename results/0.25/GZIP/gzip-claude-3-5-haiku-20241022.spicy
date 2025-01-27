@@ -1,0 +1,37 @@
+module GZIP;
+
+import spicy;
+
+public type Compressor = unit {
+    magic: bytes(2) &requires { self == b"\x1f\x8b" };
+    compression_method: uint8 &requires { self == 8 };
+    flags: uint8;
+    mtime: uint32;
+    extra_flags: uint8;
+    os: uint8;
+
+    extra_data: optional bytes if (flags & 0x04) {
+        length: uint16;
+        data: bytes(length);
+    };
+
+    original_filename: optional string if (flags & 0x08) {
+        value: bytes &until b"\x00";
+    };
+
+    comment: optional string if (flags & 0x10) {
+        value: bytes &until b"\x00";
+    };
+
+    header_crc: optional uint16 if (flags & 0x02);
+
+    compressed_data: bytes;
+    crc32: uint32;
+    uncompressed_size: uint32;
+
+    on %done {
+        print "GZIP file parsed successfully";
+    }
+};
+
+public type GZIP = Compressor;

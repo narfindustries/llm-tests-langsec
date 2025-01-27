@@ -1,0 +1,66 @@
+#! /usr/bin/env zeek
+module ELF;
+
+type ElfHeader = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    endian: uint8;
+    version: uint8;
+    osabi: uint8;
+    abiversion: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on magic {
+        if ( self.magic != b"\x7fELF" )
+            confirm_error("Invalid ELF magic number");
+    }
+};
+
+type ProgramHeader = unit {
+    type: uint32;
+    flags: uint32;
+    offset: uint64;
+    vaddr: uint64;
+    paddr: uint64;
+    filesz: uint64;
+    memsz: uint64;
+    align: uint64;
+};
+
+type SectionHeader = unit {
+    name: uint32;
+    type: uint32;
+    flags: uint64;
+    addr: uint64;
+    offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    addralign: uint64;
+    entsize: uint64;
+};
+
+public type File = unit {
+    header: ElfHeader;
+    program_headers: ProgramHeader[header.phnum];
+    section_headers: SectionHeader[header.shnum];
+};
+
+on File::%done {
+    print fmt("ELF Analysis Complete. Found %d program headers and %d section headers", 
+              |self.program_headers|, 
+              |self.section_headers|);
+}

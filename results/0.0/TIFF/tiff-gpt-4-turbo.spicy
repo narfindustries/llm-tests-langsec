@@ -1,0 +1,37 @@
+module TIFF;
+
+public type ImageFileHeader = unit {
+    byteOrder: uint16;
+    magicNumber: uint16;
+    ifdOffset: uint32;
+
+    on %init {
+        if (self.byteOrder != 0x4949 && self.byteOrder != 0x4D4D)
+            throw Error("Invalid byte order mark.");
+        if (self.magicNumber != 42)
+            throw Error("Invalid TIFF magic number.");
+    }
+};
+
+public type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    valueOffset: uint32;
+};
+
+public type ImageFileDirectory = unit {
+    numEntries: uint16;
+    entries: IFDEntry[self.numEntries];
+    nextIFD: uint32;
+};
+
+public type TIFFFile = unit {
+    header: ImageFileHeader;
+    ifd: ImageFileDirectory @offset(header.ifdOffset);
+
+    on %done {
+        if (self.ifd.nextIFD != 0)
+            print "Warning: Multiple IFDs not fully supported.";
+    }
+};

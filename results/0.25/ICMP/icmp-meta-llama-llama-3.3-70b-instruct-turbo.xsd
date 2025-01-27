@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ICMP"
+           xmlns="http://example.com/ICMP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="icmp-meta-llama-llama-3">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="type" dfdl:occursCount="1"/>
+        <xs:element ref="code" dfdl:occursCount="1"/>
+        <xs:element ref="checksum" dfdl:occursCount="1"/>
+        <xs:element ref="identifier" dfdl:occursCount="1"/>
+        <xs:element ref="sequenceNumber" dfdl:occursCount="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="type" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
+  <xs:element name="code" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
+  <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
+  <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
+  <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
+
+  <xs:element name="icmp-data" dfdl:sequenceKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="icmp-meta-llama-llama-3" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,62 @@
+module BitcoinTransactions;
+
+import spicy
+
+public type BitcoinTransaction = unit {
+    magic_number: uint32;
+    block_size: uint32;
+    transactions: repeat(uint32) of Transaction;
+} &check(magic_number == 0xD9B4BEF9);
+
+type Transaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: repeat(input_count) of Input;
+    output_count: varint;
+    outputs: repeat(output_count) of Output;
+    lock_time: uint32;
+};
+
+type Input = unit {
+    previous_output: OutPoint;
+    script_length: varint;
+    script_sig: bytes &length=script_length;
+    sequence: uint32;
+};
+
+type OutPoint = unit {
+    hash: bytes &length=32;
+    index: uint32;
+};
+
+type Output = unit {
+    value: int64;
+    pk_script_length: varint;
+    pk_script: bytes &length=pk_script_length;
+};
+
+type varint = unit {
+    value: uint8 | uint16 | uint32 | uint64;
+} &parse-from-input {
+    local first_byte = self.input.peek<uint8>();
+    if ( first_byte < 0xfd )
+        self.value = self.input.read<uint8>();
+    else if ( first_byte == 0xfd ) {
+        self.input.advance(1);
+        self.value = self.input.read<uint16>();
+    }
+    else if ( first_byte == 0xfe ) {
+        self.input.advance(1);
+        self.value = self.input.read<uint32>();
+    }
+    else if ( first_byte == 0xff ) {
+        self.input.advance(1);
+        self.value = self.input.read<uint64>();
+    }
+};
+
+public module BitcoinTransactions::Parser = module {
+    public type Parser = unit {
+        : BitcoinTransaction;
+    };
+};

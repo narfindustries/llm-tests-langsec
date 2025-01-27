@@ -1,0 +1,37 @@
+module HL7;
+
+public type HL7Message = unit {
+    segments: list<HL7Segment> &until(eos);
+};
+
+public type HL7Segment = unit {
+    id: string &size=3;
+    fields: list<HL7Field> &until(eol);
+};
+
+public type HL7Field = unit {
+    value: string &until(any_of("|~\r\n"));
+};
+
+public function parse_hl7_message(data: bytes): HL7Message {
+    return HL7Message(data);
+}
+
+public event hl7_message_parsed(msg: HL7Message);
+
+public global hl7_analyzer: Analyzer = (
+    .init = function(c: connection) {
+        local analyzer = HL7::Analyzer(c);
+        c$add_protocol(analyzer);
+    }
+);
+
+public type Analyzer = unit {
+    on %init {
+        self.connection$start_event(hl7_message_parsed, self.parse_hl7_message);
+    }
+
+    on %done {
+        # Handle completion of analysis
+    }
+};

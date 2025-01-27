@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:tiff="urn:example:tiff"
+    targetNamespace="urn:example:tiff">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="littleEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthUnits="bytes"
+                lengthKind="implicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="tiffFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header" type="tiff:HeaderType"/>
+                <xs:element name="ifd" type="tiff:IFDType" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="byteOrder" type="xs:hexBinary" dfdl:length="2"/>
+            <xs:element name="magic" type="xs:unsignedShort" dfdl:representation="binary"/>
+            <xs:element name="ifdOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="IFDType">
+        <xs:sequence>
+            <xs:element name="numEntries" type="xs:unsignedShort" dfdl:representation="binary"/>
+            <xs:element name="entries" type="tiff:IFDEntryType" maxOccurs="unbounded"/>
+            <xs:element name="nextIFDOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="IFDEntryType">
+        <xs:sequence>
+            <xs:element name="tag" type="xs:unsignedShort" dfdl:representation="binary"/>
+            <xs:element name="type" type="xs:unsignedShort" dfdl:representation="binary"/>
+            <xs:element name="count" type="xs:unsignedInt" dfdl:representation="binary"/>
+            <xs:element name="valueOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

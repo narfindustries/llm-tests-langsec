@@ -1,0 +1,48 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    questions: list<Question> &until($input.eof());
+
+    var num_questions = |this.questions|;
+
+    type Header = unit {
+        id: uint16;
+        flags: Flags;
+        qdcount: uint16;
+        ancount: uint16;
+        nscount: uint16;
+        arcount: uint16;
+    };
+
+    type Flags = unit {
+        data: uint16;
+
+        var qr: bool = data[15:1] == 1;
+        var opcode: uint8 = (data[14:4] >> 11) & 0xf;
+        var aa: bool = (data[10:1] == 1);
+        var tc: bool = (data[9:1] == 1);
+        var rd: bool = (data[8:1] == 1);
+        var ra: bool = (data[7:1] == 1);
+        var z: uint8 = (data[6:3] >> 4) & 0x7;
+        var rcode: uint8 = data[3:4] & 0xf;
+    };
+
+    type Question = unit {
+        name: Name;
+        qtype: uint16;
+        qclass: uint16;
+    };
+
+    type Name = unit {
+        labels: list<Label> &until($input.look(1) == 0x00);
+        end: uint8 &requires(end == 0);
+
+        type Label = unit {
+            len: uint8 &requires(len < 64);
+            label: bytes &size=(len);
+        };
+    };
+};

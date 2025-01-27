@@ -1,0 +1,47 @@
+module Network-Time-Protocol-Version-4;
+
+import spicy;
+
+public type NTPv4 = unit {
+    li_vn_mode: bitfield(8) {
+        leap_indicator: 0..1;
+        version: 2..4;
+        mode: 5..7;
+    };
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: bytes &size=4;
+    reference_timestamp: uint64;
+    origin_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    on %done {
+        self.root_delay = self.root_delay;
+        self.root_dispersion = self.root_dispersion;
+    }
+};
+
+public type NTPControl = unit {
+    leap_indicator: uint8;
+    version_number: uint8;
+    mode: uint8;
+    response: uint8;
+    error: uint8;
+    more: uint8;
+    opcode: uint8;
+    sequence: uint16;
+    status: uint16;
+    association_id: uint16;
+    offset: uint16;
+    count: uint16;
+    data: bytes &size=self.count;
+};
+
+type NTPTimestamp = unit {
+    seconds: uint32;
+    fraction: uint32;
+};

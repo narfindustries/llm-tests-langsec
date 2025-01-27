@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/PNG-Image"
+    targetNamespace="http://example.com/PNG-Image">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                        lengthKind="explicit" 
+                        lengthUnits="bytes"
+                        occursCountKind="expression"
+                        representation="binary"
+                        byteOrder="bigEndian"
+                        binaryNumberRep="binary"
+                        encodingErrorPolicy="error"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="png">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="signature" type="local:SignatureType"/>
+                <xs:element name="chunks" type="local:ChunksType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="SignatureType">
+        <xs:sequence>
+            <xs:element name="pngSignature" type="xs:hexBinary" dfdl:length="8"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ChunksType">
+        <xs:sequence>
+            <xs:element name="chunk" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="length" type="xs:unsignedInt" dfdl:length="4"/>
+                        <xs:element name="type" type="xs:string" dfdl:length="4"/>
+                        <xs:element name="data" type="xs:hexBinary" 
+                                  dfdl:lengthKind="explicit"
+                                  dfdl:length="{../length}"/>
+                        <xs:element name="crc" type="xs:unsignedInt" dfdl:length="4"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

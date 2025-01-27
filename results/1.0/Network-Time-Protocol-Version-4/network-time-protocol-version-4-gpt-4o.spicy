@@ -1,0 +1,58 @@
+module NetworkTimeProtocol;
+
+public type NTPRequest = unit {
+    leap_indicator: uint8 = (first_byte & 0xC0) >> 6;
+    version_number: uint8 = (first_byte & 0x38) >> 3;
+    mode: uint8 = first_byte & 0x07;
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: int32;
+    root_dispersion: int32;
+    reference_id: bytes &size = 4;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    on %init {
+        print fmt("NTP Packet - Leap Indicator: %d, Version: %d, Mode: %d", 
+                    leap_indicator, version_number, mode);
+    }
+
+    first_byte: uint8;
+};
+
+public type NTPResponse = unit {
+    leap_indicator: uint8 = (first_byte & 0xC0) >> 6;
+    version_number: uint8 = (first_byte & 0x38) >> 3;
+    mode: uint8 = first_byte & 0x07;
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: int32;
+    root_dispersion: int32;
+    reference_id: bytes &size = 4;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    on %init {
+        print fmt("NTP Packet - Leap Indicator: %d, Version: %d, Mode: %d", 
+                    leap_indicator, version_number, mode);
+    }
+
+    first_byte: uint8;
+};
+
+public type NTP = unit {
+    variant: case np.is_request of {
+        true  -> request: NTPRequest,
+        false -> response: NTPResponse
+    };
+
+    np: uint8 &size = 1;
+} &let {
+    is_request: bool = (np & 0x07) == 3  # Assuming '3' is the request mode.
+};

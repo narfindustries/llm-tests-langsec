@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ntp"
+           xmlns:tns="http://example.com/ntp"
+           elementFormDefault="qualified"
+           dfdl:format="true"
+           xmlns:ntp="http://example.com/ntp"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ dfdl.xsd">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ntpFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="uint8_t">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="uint32_t">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:element name="NetworkTimeProtocol">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="flags" type="ntp:uint8_t" dfdl:length="8" dfdl:lengthUnits="bits"/>
+        <xs:element name="stratum" type="ntp:uint8_t"/>
+        <xs:element name="poll" type="ntp:uint8_t"/>
+        <xs:element name="precision" type="ntp:uint8_t"/>
+        <xs:element name="rootDelay" type="ntp:uint32_t"/>
+        <xs:element name="rootDispersion" type="ntp:uint32_t"/>
+        <xs:element name="referenceId" type="ntp:uint32_t"/>
+        <xs:element name="referenceTimestamp" type="ntp:uint32_t"/>
+        <xs:element name="originateTimestamp" type="ntp:uint32_t"/>
+        <xs:element name="receiveTimestamp" type="ntp:uint32_t"/>
+        <xs:element name="transmitTimestamp" type="ntp:uint32_t"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:defineFormat name="ntpFormat">
+    <dfdl:format 
+      lengthKind="explicit" 
+      lengthUnits="bytes" 
+      byteOrder="bigEndian" 
+      encoding="ascii"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

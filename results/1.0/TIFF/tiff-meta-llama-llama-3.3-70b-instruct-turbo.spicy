@@ -1,0 +1,31 @@
+# Define the TIFF file format
+file_format tiff {
+  magic "\x49\x49\x2a\x00" | "\x4d\x4d\x00\x2a";
+
+  # TIFF header
+  struct tiff_header {
+    uint16( little, 2 ) byte_order;
+    uint16( little, 2 ) tiff_version;
+    uint32( little, 4 ) ifd_offset;
+  }
+
+  # IFD (Image File Directory)
+  struct ifd {
+    uint16( little, 2 ) num_entries;
+    array ifd_entries of ifd_entry {
+      repeat num_entries;
+    }
+    uint32( little, 4 ) next_ifd_offset;
+  }
+
+  # IFD Entry
+  struct ifd_entry {
+    uint16( little, 2 ) tag;
+    uint16( little, 2 ) type;
+    uint32( little, 4 ) count;
+    uint32( little, 4 ) value_offset;
+  }
+
+  # Main parser
+  main == tiff_header -> ifd;
+}

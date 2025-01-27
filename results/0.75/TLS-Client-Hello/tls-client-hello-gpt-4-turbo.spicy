@@ -1,0 +1,52 @@
+module TLS;
+
+import spicy;
+
+type ProtocolVersion = unit {
+    major: uint8;
+    minor: uint8;
+};
+
+type Random = unit {
+    gmt_unix_time: uint32;
+    random_bytes: bytes &size=28;
+};
+
+type SessionID = unit {
+    length: uint8;
+    session_id: bytes &size=this.length;
+};
+
+type CipherSuites = unit {
+    length: uint16;
+    suites: uint16[] &size=(this.length / 2);
+};
+
+type CompressionMethods = unit {
+    length: uint8;
+    methods: uint8[] &size=this.length;
+};
+
+type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=this.length;
+};
+
+type Extensions = unit {
+    length: uint16;
+    extensions: Extension[] &eod;
+};
+
+public type ClientHello = unit {
+    version: ProtocolVersion;
+    random: Random;
+    session_id: SessionID;
+    cipher_suites: CipherSuites;
+    compression_methods: CompressionMethods;
+    extensions: Extensions &optional;
+};
+
+event zeek_init() &priority=-5 {
+    print "Zeek module for parsing TLS Client Hello loaded.";
+}

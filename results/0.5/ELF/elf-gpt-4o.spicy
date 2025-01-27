@@ -1,0 +1,74 @@
+module ELF;
+
+import spicy;
+import hilti;
+
+public type ELFHeader = unit {
+    magic: bytes &length=4 &check=(magic == |0x7f, 0x45, 0x4c, 0x46|);
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    os_abi: uint8;
+    abi_version: uint8;
+    padding: bytes &length=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+};
+
+public type ELFFile = unit {
+    header: ELFHeader;
+    body: bytes &restofdata;
+};
+
+public module ELFAnalyzer = {
+    export {
+        type Info = record {
+            class: uint8;
+            data: uint8;
+            version: uint8;
+            os_abi: uint8;
+            abi_version: uint8;
+            type: uint16;
+            machine: uint16;
+            entry: uint64;
+        };
+    }
+
+    hook spicy::on_start() {
+        print "Starting ELF analysis";
+    }
+
+    hook spicy::on_done() {
+        print "Finished ELF analysis";
+    }
+
+    function parse_elf(hdr: ELFHeader): Info {
+        return Info(
+            class=hdr.class,
+            data=hdr.data,
+            version=hdr.version,
+            os_abi=hdr.os_abi,
+            abi_version=hdr.abi_version,
+            type=hdr.type,
+            machine=hdr.machine,
+            entry=hdr.entry
+        );
+    }
+
+    on %ELF::ELFFile &priority=10 {
+        local info = parse_elf(self.header);
+        print fmt("ELF Info: class=%d, data=%d, version=%d, os_abi=%d, abi_version=%d, type=%d, machine=%d, entry=%x",
+                  info$class, info$data, info$version, info$os_abi, info$abi_version, info$type, info$machine, info$entry);
+    }
+}

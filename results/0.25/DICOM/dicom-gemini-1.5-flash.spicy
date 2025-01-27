@@ -1,0 +1,49 @@
+#ifndef _DICOM_GEMINI_1_5_FLASH_SPICY_H_
+#define _DICOM_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/zeek-config.h>
+
+#ifdef HAVE_SPICY
+
+// This is a placeholder.  The actual implementation would need to be
+// provided based on the DICOM standard and the specific requirements
+// of the "gemini-1.5-flash" device.  The error message suggests a
+// compilation problem with the Spicy code, not a problem with the
+// Zeek interface.  This example demonstrates a basic structure.
+
+
+// Define data structures to represent DICOM data elements as needed.
+typedef struct {
+    uint32_t patientID;
+    string patientName;
+    // ... other relevant DICOM attributes ...
+} DicomData;
+
+
+// Function to read DICOM data from the device.  Error handling is crucial.
+DicomData read_dicom_data(string device_path);
+
+
+// Function to process the DICOM data.  This is where your specific
+// logic for handling the "gemini-1.5-flash" device would go.
+void process_dicom_data(DicomData data);
+
+
+// Example Zeek script using the Spicy interface.
+event zeek_init()
+{
+    // Replace with your actual device path.
+    string device_path = "/dev/dicom_gemini_1_5_flash"; 
+
+    DicomData dicom_data = read_dicom_data(device_path);
+    if ( dicom_data.patientID != 0 ) { // Check for errors in read_dicom_data
+        process_dicom_data(dicom_data);
+    } else {
+        print("Error reading DICOM data from device.");
+    }
+}
+
+
+#endif // HAVE_SPICY
+
+#endif // _DICOM_GEMINI_1_5_FLASH_SPICY_H_

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/jpeg" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="jpeg_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:occurs="1"/>
+        <xs:element name="APP0" type="xs:hexBinary" dfdl:length="16" dfdl:occurs="1"/>
+        <xs:element name="DQT" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="68" dfdl:occurs="1"/>
+        <xs:element name="SOF0" type="xs:hexBinary" dfdl:length="17" dfdl:occurs="1"/>
+        <xs:element name="DHT" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="138" dfdl:occurs="1"/>
+        <xs:element name="scanData" type="xs:hexBinary" dfdl:lengthKind="variable" dfdl:terminator="FFD9" dfdl:occurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:simpleType name="hexBinaryLength">
+    <xs:restriction base="xs:hexBinary">
+      <xs:maxLength value="1024"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>
+

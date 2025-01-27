@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/pngImage"
+           xmlns="http://example.org/pngImage"
+           elementFormDefault="qualified">
+
+  <xs:element name="pngImage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="height" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
+

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ZIP"
+           xmlns="http://example.com/ZIP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="zip-file">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="zipFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="local-file-header" maxOccurs="unbounded"/>
+        <xs:element ref="central-directory-header" maxOccurs="unbounded"/>
+        <xs:element ref="end-of-central-directory-record" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="local-file-header">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="localFileHeaderFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="binary"/>
+        <xs:element name="version-needed" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="flags" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="compression-method" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="last-modified-time" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="last-modified-date" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="crc-32" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="compressed-size" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="uncompressed-size" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="filename-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="extra-field-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="filename" type="xs:string" dfdl:length="filename-length" dfdl:encoding="UTF-8"/>
+        <xs:element name="extra-field" type="xs:hexBinary" dfdl:length="extra-field-length" dfdl:encoding="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="central-directory-header">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="centralDirectoryHeaderFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="binary"/>
+        <xs:element name="version-made-by" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="version-needed" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="flags" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="compression-method" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="last-modified-time" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="last-modified-date" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="crc-32" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="compressed-size" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="uncompressed-size" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="filename-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="extra-field-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="file-comment-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="disk-number-start" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="internal-attributes" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="external-attributes" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="local-header-offset" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="filename" type="xs:string" dfdl:length="filename-length" dfdl:encoding="UTF-8"/>
+        <xs:element name="extra-field" type="xs:hexBinary" dfdl:length="extra-field-length" dfdl:encoding="binary"/>
+        <xs:element name="file-comment" type="xs:string" dfdl:length="file-comment-length" dfdl:encoding="UTF-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="end-of-central-directory-record">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="endOfCentralDirectoryRecordFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="binary"/>
+        <xs:element name="number-of-this-disk" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="number-of-the-disk-with-the-start-of-the-central-directory" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="total-number-of-entries-in-the-central-directory-on-this-disk" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="total-number-of-entries-in-the-central-directory" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="size-of-the-central-directory" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="offset-of-the-start-of-the-central-directory" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="bigEndian"/>
+        <xs:element name="zipfile-comment-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="zipfile-comment" type="xs:string" dfdl:length="zipfile-comment-length" dfdl:encoding="UTF-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format ref="zipFormat" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format name="zipFormat" type="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <dfdl:format name="localFileHeaderFormat" type="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <dfdl:format name="centralDirectoryHeaderFormat" type="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <dfdl:format name="endOfCentralDirectoryRecordFormat" type="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

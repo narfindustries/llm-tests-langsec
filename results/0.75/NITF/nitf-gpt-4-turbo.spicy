@@ -1,0 +1,61 @@
+module NITF;
+
+public type FileHeader = unit {
+    fileTypeID: /[A-Z0-9]{9}/;
+    complexLevel: uint8;
+    systemType: /[A-Z0-9]{4}/;
+    originStationID: /[A-Z0-9]{10}/;
+    fileDateTime: /[0-9]{14}/;
+    fileTitle: /[A-Z0-9]{80}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type ImageSegment = unit {
+    imageID: /[A-Z0-9]{10}/;
+    dateTime: /[0-9]{14}/;
+    targetID: /[A-Z0-9 ]{17}/;
+    imageTitle: /[A-Z0-9 ]{80}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type TextSegment = unit {
+    textID: /[A-Z0-9]{7}/;
+    dateTime: /[0-9]{14}/;
+    textTitle: /[A-Z0-9 ]{80}/;
+    textFormat: /[A-Z0-9]{3}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type DataSegment = unit {
+    dataID: /[A-Z0-9]{5}/;
+    encrypted: uint8;
+    dataFormat: /[A-Z0-9]{3}/;
+
+    on %done {
+        print self;
+    }
+};
+
+public type NITFFile = unit {
+    header: FileHeader;
+    images: ImageSegment[];
+    texts: TextSegment[];
+    data: DataSegment[];
+
+    on %done {
+        print self;
+    }
+};
+
+event zeek_init() {
+    print "Zeek NITF parser loaded";
+}

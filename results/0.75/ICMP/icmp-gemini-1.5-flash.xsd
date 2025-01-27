@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/icmp"
+           xmlns="http://example.org/icmp"
+           elementFormDefault="qualified">
+
+  <xs:element name="icmpGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="payload" type="xs:string" dfdl:length="1024"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+      <xs:element name="type" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+      <xs:element name="code" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+      <xs:element name="checksum" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
+      <xs:element name="identifier" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
+      <xs:element name="sequenceNumber" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="true" byteOrder="bigEndian"/>
+    <dfdl:representation representation="text"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

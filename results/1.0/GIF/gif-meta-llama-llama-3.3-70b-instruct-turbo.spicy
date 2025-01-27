@@ -1,0 +1,54 @@
+# Zeek Spicy specification for GIF file format
+
+%header {
+    magic: uint32 = 0x47494638;
+}
+
+%type GIF: uint8[] = {
+    header: Header,
+    logical_screen_descriptor: LogicalScreenDescriptor,
+    *data: Data
+};
+
+%type Header: uint8[] = {
+    signature: bytestring(3) = "GIF",
+    version: bytestring(3)
+};
+
+%type LogicalScreenDescriptor: uint8[] = {
+    width: uint16,
+    height: uint16,
+    flags: uint8,
+    background_color_index: uint8,
+    pixel_aspect_ratio: uint8
+};
+
+%type Data: uint8[] = {
+    label: uint8,
+    data: uint8[]
+};
+
+%type GraphicControlExtension: uint8[] = {
+    size: uint8,
+    flags: uint8,
+    delay_time: uint16,
+    transparent_color_index: uint8,
+    terminator: uint8 = 0
+};
+
+%type ImageDescriptor: uint8[] = {
+    left: uint16,
+    top: uint16,
+    width: uint16,
+    height: uint16,
+    flags: uint8
+};
+
+%type LocalColorTable: uint8[] = {
+    *colors: uint8[3]
+};
+
+%type PixelData: uint8[] = {
+    min_code_size: uint8,
+    *codes: uint8[]
+};

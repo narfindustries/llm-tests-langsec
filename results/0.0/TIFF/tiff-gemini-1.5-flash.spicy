@@ -1,0 +1,36 @@
+#ifndef _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+#define _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/analyzer/protocol/http.zeek>
+
+global TIFF_Gemini_1_5_Flash_Count : count;
+
+event zeek_init()
+{
+    TIFF_Gemini_1_5_Flash_Count = 0;
+}
+
+function is_tiff_gemini_1_5_flash(data: string) : bool
+{
+    // Implement your TIFF Gemini 1.5 Flash detection logic here.
+    // This is a placeholder, replace with actual detection.
+    return contains(data, "TIFF") and contains(data, "Gemini") and contains(data, "1.5") and contains(data, "Flash");
+}
+
+event http_request(http_request_t r)
+{
+    if (is_tiff_gemini_1_5_flash(r->body)) {
+        TIFF_Gemini_1_5_Flash_Count++;
+        print fmt("Detected TIFF Gemini 1.5 Flash in HTTP request: %s", r->id);
+    }
+}
+
+event http_response(http_response_t r)
+{
+    if (is_tiff_gemini_1_5_flash(r->body)) {
+        TIFF_Gemini_1_5_Flash_Count++;
+        print fmt("Detected TIFF Gemini 1.5 Flash in HTTP response: %s", r->id);
+    }
+}
+
+#endif

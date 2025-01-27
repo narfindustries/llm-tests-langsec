@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/ns/local"
+    targetNamespace="http://example.com/ns/local"
+    elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" lengthKind="delimited" 
+                representation="binary" binaryNumberRep="binary"
+                byteOrder="bigEndian" encoding="utf-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ModbusFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionID" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" dfdl:length="2"/>
+                <xs:element name="ProtocolID" type="xs:unsignedShort"
+                    dfdl:lengthKind="explicit" dfdl:length="2"/>
+                <xs:element name="Length" type="xs:unsignedShort"
+                    dfdl:lengthKind="explicit" dfdl:length="2"/>
+                <xs:element name="UnitID" type="xs:unsignedByte"
+                    dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="FunctionCode" type="xs:unsignedByte"
+                    dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="Data">
+                    <xs:complexType>
+                        <xs:choice>
+                            <xs:element name="Request">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="StartingAddress" type="xs:unsignedShort"
+                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
+                                        <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"
+                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="Response">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="ByteCount" type="xs:unsignedByte"
+                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
+                                        <xs:element name="RegisterValues">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:ref="local:ref">
+                                                    <xs:element name="Register" type="xs:unsignedShort"
+                                                        dfdl:lengthKind="explicit" dfdl:length="2"
+                                                        minOccurs="0" maxOccurs="unbounded"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="ErrorResponse">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="ErrorCode" type="xs:unsignedByte"
+                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:choice>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

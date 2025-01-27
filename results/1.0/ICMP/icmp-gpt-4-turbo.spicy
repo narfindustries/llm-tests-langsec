@@ -1,0 +1,35 @@
+module ICMP;
+
+public type ICMPMessage = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+
+    switch (self.type) {
+        # Type 8: Echo Request
+        # Type 0: Echo Reply
+        on (8, 0) -> body: ICMPEcho;
+
+        # Default case for other types, we ignore for now
+        on * -> : void;
+    };
+
+    on %done {
+        print "ICMP Message Type:", self.type;
+        print "ICMP Message Code:", self.code;
+        print "ICMP Checksum:", self.checksum;
+    }
+};
+
+public type ICMPEcho = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+
+    data: bytes &size=($context.length - 4);
+
+    on %done {
+        print "Echo Identifier:", self.identifier;
+        print "Echo Sequence Number:", self.sequenceNumber;
+        print "Echo Payload Size:", |self.data|;
+    }
+};

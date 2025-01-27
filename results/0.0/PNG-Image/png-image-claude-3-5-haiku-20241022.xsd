@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        representation="binary"
+        occursCountKind="parsed"
+        textNumberPattern="#0"
+        textNumberCheckPolicy="strict"
+        textZonedSignStyle="asciiSignSeparated"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="PNGImage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="tns:SignatureType"/>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="Chunks" type="tns:ChunksType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SignatureType">
+    <xs:sequence>
+      <xs:element name="SignatureByte">
+        <xs:simpleType>
+          <xs:restriction base="xs:hexBinary">
+            <xs:length value="8" fixed="true"/>
+            <xs:pattern value="89504E470D0A1A0A"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Length">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedInt">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="4294967295"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ChunkType" type="xs:string" fixed="IHDR"/>
+      <xs:element name="Width" type="xs:unsignedInt"/>
+      <xs:element name="Height" type="xs:unsignedInt"/>
+      <xs:element name="BitDepth" type="xs:unsignedByte"/>
+      <xs:element name="ColorType" type="xs:unsignedByte"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+      <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+      <xs:element name="CRC" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunksType">
+    <xs:sequence>
+      <xs:element name="Chunk" minOccurs="1" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Length" type="xs:unsignedInt"/>
+            <xs:element name="ChunkType" type="xs:string"/>
+            <xs:element name="ChunkData" type="xs:hexBinary"/>
+            <xs:element name="CRC" type="xs:unsignedInt"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

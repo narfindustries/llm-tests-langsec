@@ -1,0 +1,33 @@
+module GZIP;
+
+import spicy;
+import zeek;
+
+public type GZIP = unit {
+    magic: bytes &length=2 &check=$$ == | 0x1f, 0x8b |;
+    compression_method: uint8 &check=($$ == 8);
+    flags: uint8;
+    mtime: uint32;
+    extra_flags: uint8;
+    os: uint8;
+    extra: bytes &length=extra_length &if=(flags & 0x04) != 0;
+    extra_length: uint16 &convert=to_host_order &if=(flags & 0x04) != 0;
+    name: string &until="\x00" &if=(flags & 0x08) != 0;
+    comment: string &until="\x00" &if=(flags & 0x10) != 0;
+    hcrc: uint16 &convert=to_host_order &if=(flags & 0x02) != 0;
+    compressed_data: bytes &until=io::eod;
+    crc32: uint32 &convert=to_host_order;
+    isize: uint32 &convert=to_host_order;
+} &byte_order=le;
+
+public type GZIPAnalyzer = unit {
+    : GZIP {
+        on %done {
+            print fmt("GZIP file parsed: mtime=%d, os=%d", self.mtime, self.os);
+        }
+    }
+};
+
+public hook zeek_init() {
+    Spicy::register_analyzer("GZIP", GZIPAnalyzer);
+}

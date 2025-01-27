@@ -1,0 +1,48 @@
+module Modbus;
+
+type ModbusRequest = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    payload: bytes &size = length - 2;
+};
+
+type ModbusResponse = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    payload: bytes &size = length - 2;
+};
+
+public type ModbusMessage = unit {
+    request: optional<ModbusRequest>;
+    response: optional<ModbusResponse>;
+
+    on %parse {
+        if ( $transaction_id != 0 and $protocol_id == 0x0000 ) {
+            if ( $unit_id in resort context().request_ports() &&
+                 $function_code in resort context().request_codes() ) {
+                self.request = ModbusRequest;
+            }
+            else if ( $unit_id in resort context().response_ports() &&
+                      $function_code in resort context().response_codes() ) {
+                self.response = ModbusResponse;
+            }
+        }
+        else {
+            warn "Invalid Modbus protocol header";
+        }
+    }
+};
+
+module ModbusAnalyzer;
+
+import Modbus;
+
+hook zeek_init() &priority = 5 {
+    Analyzer::register_for_ports(Analyzer::ANALYZER_EXAMPLE, { 502/tcp });
+}

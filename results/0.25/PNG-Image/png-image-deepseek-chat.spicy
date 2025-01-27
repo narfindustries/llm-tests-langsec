@@ -1,0 +1,46 @@
+module PNG;
+
+import spicy;
+
+public type PNG_File = unit {
+    magic: bytes &size=8;
+    chunks: Chunk[] &until=$input.size() == 0;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=length;
+    crc: uint32;
+};
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+} &convert=Chunk &requires(type == "IHDR");
+
+type IDAT = unit {
+    data: bytes &size=length;
+} &convert=Chunk &requires(type == "IDAT");
+
+type IEND = unit {
+} &convert=Chunk &requires(type == "IEND");
+
+on PNG_File::%init {
+    self.magic = b"\x89PNG\r\n\x1a\n";
+}
+
+on Chunk::%init {
+    if (self.type == "IHDR") {
+        self.data = IHDR(self.data);
+    } else if (self.type == "IDAT") {
+        self.data = IDAT(self.data);
+    } else if (self.type == "IEND") {
+        self.data = IEND(self.data);
+    }
+}

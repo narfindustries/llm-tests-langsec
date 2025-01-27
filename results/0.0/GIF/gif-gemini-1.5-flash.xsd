@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty">
+  <xs:element name="gif">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="6"/>
+        <xs:element name="logicalScreenDescriptor" type="LogicalScreenDescriptorType" dfdl:lengthKind="explicit" dfdl:length="7"/>
+        <xs:element name="globalColorTable" minOccurs="0" maxOccurs="1" type="GlobalColorTableType"/>
+        <xs:element name="imageDescriptor" type="ImageDescriptorType" dfdl:occursCountKind="implicit"/>
+        <xs:element name="imageData" type="ImageDataType" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="HeaderType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GlobalColorTableType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageDescriptorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageDataType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+</xs:schema>

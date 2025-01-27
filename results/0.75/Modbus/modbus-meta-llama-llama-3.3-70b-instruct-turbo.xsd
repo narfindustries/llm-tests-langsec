@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/modbus"
+           xmlns:modbus="http://example.com/modbus"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="modbus">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="modbus:transaction" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="transaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transactionIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="protocolIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="length" type="xs:unsignedShort"/>
+        <xs:element name="unitIdentifier" type="xs:unsignedByte"/>
+        <xs:element name="functionCode" type="xs:unsignedByte"/>
+        <xs:element name="data" type="modbus:dataType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="coilStatus" type="xs:unsignedInt" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="inputStatus" type="xs:unsignedInt" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="registerValue" type="xs:unsignedInt" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="exceptionResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="functionCode" type="xs:unsignedByte"/>
+        <xs:element name="exceptionCode" type="xs:unsignedByte"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+               separator="" 
+               terminator=""/>
+
+  <dfdl:element ref="modbus:modbus" dfdl:occurs="1..1">
+    <dfdl:element ref="modbus:transaction" dfdl:occurs="1..*">
+      <dfdl:element ref="modbus:transactionIdentifier" dfdl:outputPadding="0" dfdl:Occurs="1..1" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+      <dfdl:element ref="modbus:protocolIdentifier" dfdl:outputPadding="0" dfdl:Occurs="1..1" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+      <dfdl:element ref="modbus:length" dfdl:outputPadding="0" dfdl:Occurs="1..1" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+      <dfdl:element ref="modbus:unitIdentifier" dfdl:outputPadding="0" dfdl:Occurs="1..1" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="1"/>
+      <dfdl:element ref="modbus:functionCode" dfdl:outputPadding="0" dfdl:Occurs="1..1" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="1"/>
+      <dfdl:element ref="modbus:data" dfdl:outputPadding="0" dfdl:Occurs="1..1">
+        <dfdl:element ref="modbus:coilStatus" dfdl:outputPadding="0" dfdl:Occurs="0..*" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+        <dfdl:element ref="modbus:inputStatus" dfdl:outputPadding="0" dfdl:Occurs="0..*" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+        <dfdl:element ref="modbus:registerValue" dfdl:outputPadding="0" dfdl:Occurs="0..*" dfdl:binaryNumberRep="binary" dfdl:binaryNumberSize="2"/>
+      </dfdl:element>
+    </dfdl:element>
+  </dfdl:element>
+
+</xs:schema>

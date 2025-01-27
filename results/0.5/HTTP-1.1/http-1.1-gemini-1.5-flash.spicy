@@ -1,0 +1,21 @@
+#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+
+event http_1_1_gemini_1_5_flash_event(http::HTTP_Request, gemini::Gemini_Request, flash::Flash_Request) {
+    // Add your logic here to handle HTTP 1.1, Gemini 1.5, and Flash requests simultaneously.
+    // This event will trigger whenever a request matches the criteria of all three protocols.
+    // You can access the fields of each request object using the dot notation.
+    // For example, to access the URI of the HTTP request, you would use http_request.URI.
+    // Ensure proper error handling and logging are included.
+    // Consider using a switch statement or if-else blocks for more complex logic.
+
+    print("HTTP 1.1 Request: ", http_request);
+    print("Gemini 1.5 Request: ", gemini_request);
+    print("Flash Request: ", flash_request);
+
+    // Example: Log the combination of protocols detected
+    log_info("Detected HTTP 1.1, Gemini 1.5, and Flash requests simultaneously.");
+
+}
+
+#endif

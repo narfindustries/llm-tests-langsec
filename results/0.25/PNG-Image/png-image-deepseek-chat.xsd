@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:PNGFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="PNGFileType">
+    <xs:sequence>
+      <xs:element name="PNGHeader" type="ex:PNGHeaderType"/>
+      <xs:element name="Chunks" type="ex:ChunksType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PNGHeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunksType">
+    <xs:sequence>
+      <xs:element name="Chunk" type="ex:ChunkType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunkType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="Type" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length}" dfdl:lengthKind="explicit"/>
+      <xs:element name="CRC" type="xs:hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="PNGFile" type="ex:PNGFileType"/>
+
+  <dfdl:defineFormat name="PNGFormat">
+    <dfdl:format encoding="UTF-8" byteOrder="bigEndian" alignment="1"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

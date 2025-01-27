@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DICOM"
+           xmlns:ex="http://example.com/DICOM">
+
+  <xs:include schemaLocation="DICOMBaseTypes.xsd"/>
+
+  <xs:element name="File" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="ex:BinaryData" dfdl:length="128" dfdl:lengthUnits="bytes"/>
+        <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        <xs:element name="DataElements" type="ex:DataElementsType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DataElementsType">
+    <xs:sequence dfdl:occursCountKind="parsed">
+      <xs:element name="DataElement" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Tag" type="ex:TagType"/>
+            <xs:element name="VR" type="ex:VRType"/>
+            <xs:element name="Length" type="ex:LengthType"/>
+            <xs:element name="Value" type="ex:ValueType" dfdl:inputValueCalc="{if (ex:Length eq 0) then '' else fn:substring-after(../ex:Length, ' ')}"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="TagType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="VRType">
+    <xs:restriction base="xs:string">
+      <xs:length value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LengthType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ValueType">
+    <xs:restriction base="xs:string">
+      <xs:whiteSpace value="preserve"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BinaryData">
+    <xs:restriction base="xs:base64Binary"/>
+  </xs:simpleType>
+
+</xs:schema>

@@ -1,0 +1,51 @@
+module HL7v2;
+
+import spicy;
+
+public type Message = unit {
+    : bytes "\x0b";  # Start of message marker
+    message_type: bytes(4) &convert=$$.decode("ASCII");
+    : bytes "\x1c";  # End of message marker
+    : bytes "\x0d";  # Carriage return
+
+    var segments: list<Segment>;
+
+    sync {
+        segments = [];
+        local save_pos = $$.position();
+        while ( ! $$.eof() ) {
+            try {
+                local seg = Segment(input=input.sub(save_pos));
+                segments.push_back(seg);
+                save_pos = $$.position();
+            }
+            catch { 
+                break;
+            }
+        }
+    }
+};
+
+type Segment = unit {
+    segment_type: bytes(3) &convert=$$.decode("ASCII");
+    fields: list<Field> = [];
+
+    sync {
+        local field_start = $$.position();
+        local current_field = Field(input=input.sub(field_start));
+        while ( current_field.value != b"" ) {
+            fields.push_back(current_field);
+            field_start = $$.position();
+            current_field = Field(input=input.sub(field_start));
+        }
+    }
+};
+
+type Field = unit {
+    value: bytes &until=b"|" &convert=$$.decode("ASCII");
+    : bytes(1) if ( value != b"" );
+};
+
+public type Parser = unit {
+    message: Message;
+};

@@ -1,0 +1,39 @@
+module ELF;
+
+import spicy;
+import zeek;
+
+public type ELF = unit {
+    magic: bytes &length=4 &check=$$ == "\x7fELF";
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    os_abi: uint8;
+    abi_version: uint8;
+    pad: bytes &length=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+};
+
+public type ELFParser = unit {
+    : ELF {
+        on %done {
+            print fmt("Parsed ELF file: class=%d, data=%d, version=%d", $.class, $.data, $.version);
+        }
+    }
+};
+
+public hook zeek_init() {
+    Spicy::register_parser(ELFParser, /application\/x-elf/, "ELF");
+}

@@ -1,0 +1,51 @@
+module Modbus;
+
+import spicy;
+
+type ModbusHeader = unit {
+    transactionID: uint16;
+    protocolID: uint16;
+    length: uint16;
+    unitID: uint8;
+};
+
+type ModbusADU = unit {
+    header: ModbusHeader;
+    pdu: bytes &size=self.header.length - 1;
+};
+
+public type ModbusPDU = unit {
+    function: uint8;
+    data: switch (self.function) {
+        1 -> { coilStatus: /[01]*/; }
+        2 -> { discreteInputs: /[01]*/; }
+        3 -> { holdingRegisters: /[\x00-\xff]{2}*/; }
+        4 -> { inputRegisters: /[\x00-\xff]{2}*/; }
+        5 -> { writeSingleCoil: /[\x00-\xff]{4}/; }
+        6 -> { writeSingleRegister: /[\x00-\xff]{4}/; }
+        15 -> { writeMultipleCoils: ModbusWriteMultipleCoils; }
+        16 -> { writeMultipleRegisters: ModbusWriteMultipleRegisters; }
+        _ -> { rawData: bytes &eod; }
+    };
+};
+
+type ModbusWriteMultipleCoils = unit {
+    startingAddress: uint16;
+    quantityOfOutputs: uint16;
+    byteCount: uint8;
+    outputValue: bytes &size=this.byteCount;
+};
+
+type ModbusWriteMultipleRegisters = unit {
+    startingAddress: uint16;
+    quantityOfRegisters: uint16;
+    byteCount: uint8;
+    registerValues: bytes &size=this.byteCount;
+};
+
+public type Main = unit {
+    adu: ModbusADU;
+    on %done {
+        print self.adu;
+    }
+};

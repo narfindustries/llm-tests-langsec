@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/TLS-Client-Hello"
+           xmlns:tns="http://example.com/TLS-Client-Hello"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation=" dfdltypes.xsd "/>
+
+  <xs:element name="TLS-Client-Hello" type="tns:TLS-Client-HelloType" dfdl: messageType="TLS-Client-Hello" dfdl:representation="binary" dfdl:sequenceKind="ordered" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+
+  <xs:complexType name="TLS-Client-HelloType">
+    <xs:sequence>
+      <xs:element name="record-layer-version" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="record-layer-length" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="handshake-type" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="handshake-length" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="handshake-version" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="random" type="xs:hexBinary" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="session-id" type="xs:hexBinary" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="cipher-suite" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="compression-method" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

@@ -1,0 +1,46 @@
+module TIFF;
+
+import Base;
+import FileAnalysis;
+import FileTypes;
+
+public type TIFFType = unit {
+    endianness: uint16;
+    magic_number: uint16;
+
+    if endianness == 0x4949 {
+        on %byte-order = littleendian;
+    }
+    else if endianness == 0x4D4D {
+        on %byte-order = bigendian;
+    }
+    else {
+        error("Invalid TIFF endianness");
+    }
+
+    if magic_number != 42 {
+        error("Invalid TIFF magic number");
+    }
+
+    offset: uint32;
+
+    %on-parse {
+        if ( endianness != 0x4949 && endianness != 0x4D4D )
+            return;
+
+        if ( magic_number != 42 )
+            return;
+
+        FileTypes::register("tiff");
+    }
+};
+
+export {
+    # Define the analyzer for the TIFF format
+    redef FileTypes::Matchers += {
+        /TIFF/ = {
+            magic = "\x49\x49\x2a\x00" | "\x4D\x4D\x00\x2a",
+            type = TIFFType
+        }
+    };
+}

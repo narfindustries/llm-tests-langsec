@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tns="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="=dfdl.xsd"/>
+
+  <xs:element name="tiff">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:header"/>
+        <xs:element ref="tns:ifd" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="byteOrder" type="xs:string" dfdl:length="2"/>
+        <xs:element name="magic" type="xs:integer" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ifd">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="tag" type="xs:string" dfdl:length="2"/>
+        <xs:element name="type" type="xs:string" dfdl:length="2"/>
+        <xs:element name="count" type="xs:integer" dfdl:length="4"/>
+        <xs:element name="value" type="xs:string" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="tiff-metadata">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:imageWidth" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:imageLength" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:bitsPerSample" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:compression" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:photometricInterpretation" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:orientation" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:samplesPerPixel" dfdl:occurs="1..1"/>
+        <xs:element ref="tns:planarConfiguration" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:ycbCrSubSampling" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:ycbCrPositioning" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:xResolution" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:yResolution" dfdl:occurs="0..1"/>
+        <xs:element ref="tns:resolutionUnit" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="imageWidth" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="imageLength" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="bitsPerSample" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="compression" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="photometricInterpretation" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="orientation" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="samplesPerPixel" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="planarConfiguration" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="ycbCrSubSampling" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="ycbCrPositioning" type="xs:integer" dfdl:length="2"/>
+  <xs:element name="xResolution" type="xs:integer" dfdl:length="4"/>
+  <xs:element name="yResolution" type="xs:integer" dfdl:length="4"/>
+  <xs:element name="resolutionUnit" type="xs:integer" dfdl:length="2"/>
+
+  <dfdl:formatием>
+    <dfdl:property name="byteOrder" value="littleEndian"/>
+    <dfdl:property name="encoding" value="UTF-8"/>
+  </dfdl:formatием>
+
+</xs:schema>

@@ -1,0 +1,47 @@
+module JPEG;
+
+import spicy;
+
+public type File = unit {
+    start_marker: StartMarker;
+    segments: Segment[] while( !self.is_done );
+
+    var is_done: bool = false;
+
+    on segments foreach {
+        if ( $item.type == SegmentType::EOI ) {
+            self.is_done = true;
+        }
+    }
+};
+
+type StartMarker = unit {
+    magic: bytes(2) where $$ == b"\xff\xd8";
+};
+
+type Segment = unit {
+    marker: Marker;
+    length: uint16 if ( marker.type != SegmentType::SOI && 
+                        marker.type != SegmentType::EOI );
+    payload: bytes(self.length - 2) if ( marker.type != SegmentType::SOI && 
+                                         marker.type != SegmentType::EOI );
+
+    var type: SegmentType = marker.type;
+};
+
+type Marker = unit {
+    prefix: bytes(1) where $$ == b"\xff";
+    type: SegmentType;
+};
+
+enum SegmentType {
+    SOI = 0xd8,   # Start of Image
+    EOI = 0xd9,   # End of Image
+    APP0 = 0xe0,  # JFIF segment
+    APP1 = 0xe1,  # Exif segment
+    SOF0 = 0xc0,  # Start of Frame (Baseline DCT)
+    DHT = 0xc4,   # Define Huffman Table
+    DQT = 0xdb,   # Define Quantization Table
+    DRI = 0xdd,   # Define Restart Interval
+    SOS = 0xda    # Start of Scan
+};

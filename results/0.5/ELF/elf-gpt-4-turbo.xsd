@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/elf"
+           xmlns:ex="http://example.com/elf">
+
+  <xs:include schemaLocation="DFDLBaseTypes.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:elfFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="FileHeader">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="hex" dfdl:initiator="0x7f 'ELF'"/>
+      <xs:element name="class" type="xs:byte" dfdl:enumeration="{'00': 'None', '01': '32-bit', '02': '64-bit'}"/>
+      <xs:element name="data" type="xs:byte" dfdl:enumeration="{'00': 'None', '01': 'Little Endian', '02': 'Big Endian'}"/>
+      <xs:element name="version" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="osABI" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="ABIVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="pad" type="xs:hexBinary" dfdl:length="7" dfdl:initiator="0x00"/>
+      <xs:element name="type" type="xs:short" dfdl:length="2"/>
+      <xs:element name="machine" type="xs:short" dfdl:length="2"/>
+      <xs:element name="version" type="xs:int" dfdl:length="4"/>
+      <xs:element name="entry" type="xs:long" dfdl:length="8" dfdl:outputValueCalc="{ xs:long(0) }"/>
+      <xs:element name="phoff" type="xs:long" dfdl:length="8"/>
+      <xs:element name="shoff" type="xs:long" dfdl:length="8"/>
+      <xs:element name="flags" type="xs:int" dfdl:length="4"/>
+      <xs:element name="ehsize" type="xs:short" dfdl:length="2"/>
+      <xs:element name="phentsize" type="xs:short" dfdl:length="2"/>
+      <xs:element name="phnum" type="xs:short" dfdl:length="2"/>
+      <xs:element name="shentsize" type="xs:short" dfdl:length="2"/>
+      <xs:element name="shnum" type="xs:short" dfdl:length="2"/>
+      <xs:element name="shstrndx" type="xs:short" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ELF" type="ex:FileHeader"/>
+
+</xs:schema>

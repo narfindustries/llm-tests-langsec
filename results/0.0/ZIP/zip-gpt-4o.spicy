@@ -1,0 +1,34 @@
+module ZIP;
+
+import spicy;
+import zeek;
+
+public type ZIPFile = unit {
+    signature: bytes &size=4 &check=$$ == |0x50, 0x4B, 0x03, 0x04|, # PK signature for ZIP files
+    version: uint16,
+    flags: uint16,
+    compression: uint16,
+    mod_time: uint16,
+    mod_date: uint16,
+    crc32: uint32,
+    compressed_size: uint32,
+    uncompressed_size: uint32,
+    filename_length: uint16,
+    extra_field_length: uint16,
+    filename: bytes &size=filename_length,
+    extra_field: bytes &size=extra_field_length,
+    data: bytes &size=compressed_size
+};
+
+public type ZIPAnalyzer = unit {
+    : ZIPFile {
+        on %done {
+            print fmt("ZIP file: version=%d, flags=%d, compression=%d, mod_time=%d, mod_date=%d, crc32=%x, compressed_size=%d, uncompressed_size=%d, filename=%s",
+                      $.version, $.flags, $.compression, $.mod_time, $.mod_date, $.crc32, $.compressed_size, $.uncompressed_size, $.filename);
+        }
+    }
+};
+
+public hook zeek_init() {
+    zeek.register_for_file_analysis("ZIP", ZIPAnalyzer);
+}

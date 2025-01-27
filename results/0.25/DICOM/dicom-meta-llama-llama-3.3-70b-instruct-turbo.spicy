@@ -1,0 +1,111 @@
+# Zeek Spicy Specification for DICOM
+
+@load base/protocols/dicom
+
+module DICOM;
+
+export {
+    redef enum Log::ID += { LOG_DICOM };
+
+    type Info: record {
+        ts: time         &log;
+        uid: string      &log;
+        message_type: string &log;
+        transfer_syntax: string &log;
+        data: string     &log;
+    };
+}
+
+event zeek_init() {
+    Log::create_stream(DICOM::LOG_DICOM, [$columns=Info, $ev=log_dcm]);
+}
+
+event log_dcm(info: Info) {
+    Log::write(DICOM::LOG_DICOM, info);
+}
+
+# DICOM Message Type
+const msg_types: table[string] of string = {
+    ["0000,1000"] = "Command Group Length",
+    ["0000,1001"] = "Affected SOP Class UID",
+    ["0000,1002"] = "Requested SOP Class UID",
+    ["0000,1003"] = "Priority",
+    ["0000,1004"] = "Command Data Set Type",
+    ["0000,1005"] = "Affected Instance UID",
+    ["0000,1006"] = "Requested Instance UID",
+    ["0000,1007"] = "Move Originator Application Entity Title",
+    ["0000,1008"] = "Move Originator Message ID",
+    ["0000,1009"] = "Data Set Type",
+    ["0000,1010"] = "Status",
+    ["0000,1011"] = "Offending Element",
+} &default="Unknown";
+
+# DICOM Transfer Syntax
+const transfer_syntaxes: table[string] of string = {
+    ["1.2.840.10008.1.2"] = "Implicit VR Little Endian",
+    ["1.2.840.10008.1.2.1"] = "Explicit VR Little Endian",
+    ["1.2.840.10008.1.2.2"] = "Implicit VR Big Endian",
+} &default="Unknown";
+
+# DICOM UID
+function parse_dicom_uid(uid: string): string
+{
+    local parts: vector of string;
+    local result: string;
+
+    parts = split_string_all(uid, ".");
+    result = "";
+    for (i in parts)
+    {
+        if (i == 0)
+            result = parts[i];
+        else
+            result += "." + parts[i];
+    }
+    return result;
+}
+
+# Event Handler for DICOM Messages
+event dhcp_message(c: connection, msg_is_orig: bool, msg: DHCP::Message)
+{
+    # not implemented, you probably need a different event handler
+}
+
+event tcp_packet(c: connection, is_orig: bool, seq: count, ack: count, len: count, contents: string)
+{
+    if (c$service != "dicom")
+        return;
+
+    local Slav: string;
+    local type_pos: count;
+    local uid_pos: count;
+    local data_pos: count;
+    local message_type: string;
+    local transfer_syntax: string;
+    local data: string;
+
+    # Check for DICOM Message
+    if (contents[0:2] == "\x28\x00")
+    {
+        Slav = contents;
+        type_pos = find_string(Slav, "0000,1000", 10);
+        uid_pos = find_string(Slav, "0000,1002", 10);
+        data_pos = find_string(Slav, "fffe,e000", 10);
+        if (type_pos != -1 && uid_pos != -1 && data_pos != -1)
+        {
+            message_type = msg_types[Slav[10:type_pos-1]];
+            transfer_syntax = transfer_syntaxes[parse_dicom_uid(Slav[uid_pos+8:uid_pos+43])];
+            data = Slav[data_pos:len];
+
+            local info: Info = [
+                $ts = network_time(),
+                $uid = parse_dicom_uid(Slav[uid_pos+8:uid_pos+43]),
+                $message_type = message_type,
+                $transfer_syntax = transfer_syntax,
+                $data = data,
+            ];
+
+            Log::write(DICOM::LOG_DICOM, info);
+        }
+    }
+}

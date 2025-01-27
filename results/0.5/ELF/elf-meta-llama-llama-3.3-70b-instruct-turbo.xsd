@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ELF"
+           xmlns="http://example.com/ELF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="daf:daffodilorean.tdml#daf:/tdml/tdml.xsd"/>
+
+  <xs:element name="elfFile" type="ElfFileType" dfdl:sequenceKind="element"/>
+  <xs:complexType name="ElfFileType">
+    <xs:sequence>
+      <xs:element name="header" type="ElfHeaderType"/>
+      <xs:element name="programHeaders" type="ProgramHeadersType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="sections" type="SectionsType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ElfHeaderType">
+    <xs:sequence>
+      <xs:element name="ident" type="ElfIdentType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="machine" type="xs:unsignedShort"/>
+      <xs:element name="version" type="xs:unsignedInt"/>
+      <xs:element name="entry" type="xs:unsignedLong"/>
+      <xs:element name="phoff" type="xs:unsignedLong"/>
+      <xs:element name="shoff" type="xs:unsignedLong"/>
+      <xs:element name="flags" type="xs:unsignedInt"/>
+      <xs:element name="ehsize" type="xs:unsignedShort"/>
+      <xs:element name="phentsize" type="xs:unsignedShort"/>
+      <xs:element name="phnum" type="xs:unsignedShort"/>
+      <xs:element name="shentsize" type="xs:unsignedShort"/>
+      <xs:element name="shnum" type="xs:unsignedShort"/>
+      <xs:element name="shstrndx" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ElfIdentType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="class" type="xs:unsignedByte"/>
+      <xs:element name="data" type="xs:unsignedByte"/>
+      <xs:element name="version" type="xs:unsignedByte"/>
+      <xs:element name="osabi" type="xs:unsignedByte"/>
+      <xs:element name="abiversion" type="xs:unsignedByte"/>
+      <xs:element name="pad" type="xs:hexBinary" dfdl:length="7" dfdl:byteOrder="big"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProgramHeadersType">
+    <xs:sequence>
+      <xs:element name="header" type="ProgramHeaderType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProgramHeaderType">
+    <xs:sequence>
+      <xs:element name="type" type="xs:unsignedInt"/>
+      <xs:element name="offset" type="xs:unsignedLong"/>
+      <xs:element name="vaddr" type="xs:unsignedLong"/>
+      <xs:element name="paddr" type="xs:unsignedLong"/>
+      <xs:element name="filesz" type="xs:unsignedLong"/>
+      <xs:element name="memsz" type="xs:unsignedLong"/>
+      <xs:element name="flags" type="xs:unsignedLong"/>
+      <xs:element name="align" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SectionsType">
+    <xs:sequence>
+      <xs:element name="section" type="SectionType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SectionType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter='\"'/>
+      <xs:element name="type" type="xs:unsignedInt"/>
+      <xs:element name="flags" type="xs:unsignedLong"/>
+      <xs:element name="addr" type="xs:unsignedLong"/>
+      <xs:element name="offset" type="xs:unsignedLong"/>
+      <xs:element name="size" type="xs:unsignedLong"/>
+      <xs:element name="link" type="xs:unsignedInt"/>
+      <xs:element name="info" type="xs:unsignedInt"/>
+      <xs:element name="addralign" type="xs:unsignedLong"/>
+      <xs:element name="entsize" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

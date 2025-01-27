@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:SQLiteBaseFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLite3Database" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII" dfdl:terminator="%%">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:assert test="{ fn:contains(., 'SQLite format 3') }"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="Page" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PageHeader" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="base64"/>
+              <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="base64"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:defineFormat name="SQLiteBaseFormat">
+    <dfdl:format byteOrder="bigEndian"
+                 representation="binary"
+                 lengthKind="delimited"
+                 encoding="UTF-8"
+                 bitOrder="mostSignificantBitFirst"/>
+  </xs:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,39 @@
+module TIFF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    entries: Entries;
+
+    var byte_order: bool;
+
+    on %init { self.byte_order = false; }
+};
+
+type Header = unit {
+    magic: bytes(2) &requires($$=="II" || $$=="MM");
+    version: uint16 &requires($$==42);
+
+    first_ifd_offset: uint32;
+
+    on %init {
+        self.$.file.byte_order = (magic == b"II");
+    }
+};
+
+type Entries = unit {
+    num_entries: uint16;
+    entry: Entry[num_entries];
+};
+
+type Entry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_or_offset: uint32;
+};
+
+public type Parser = unit {
+    file: File;
+};

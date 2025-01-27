@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:ex="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http.xsd"/>
+
+  <xs:element name="httpRequest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ex:requestLine" dfdl:OccursCount="1..1"/>
+        <xs:element ref="ex:headers" dfdl:OccursCount="0..1"/>
+        <xs:element ref="ex:body" dfdl:OccursCount="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="requestLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="method" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
+        <xs:element name="requestUri" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
+        <xs:element name="httpVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="name" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=":"/>
+              <xs:element name="value" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="body" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n\r\n">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:element name="content" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="response">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ex:statusLine" dfdl:OccursCount="1..1"/>
+        <xs:element ref="ex:headers" dfdl:OccursCount="0..1"/>
+        <xs:element ref="ex:body" dfdl:OccursCount="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="statusLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="httpVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
+        <xs:element name="statusCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
+        <xs:element name="reasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

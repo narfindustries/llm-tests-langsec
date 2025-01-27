@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:mqtt="urn:mqtt:dfdl:1.0"
+           targetNamespace="urn:mqtt:dfdl:1.0">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        occursCountKind="parsed"
+        representation="binary"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="MQTTMessage" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" dfdl:lengthKind="explicit" dfdl:length="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PacketType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
+              <xs:element name="Flags" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="RemainingLength" type="xs:unsignedByte" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+        <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

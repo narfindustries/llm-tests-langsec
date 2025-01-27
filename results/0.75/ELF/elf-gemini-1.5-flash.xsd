@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/elf_gemini"
+           xmlns="http://example.org/elf_gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="elf_gemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="data" type="dataType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="footer" type="footerType" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="record" type="recordType" dfdl:occursCountKind="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="recordType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:integer"/>
+      <xs:element name="field2" type="xs:string" dfdl:lengthKind="delimited" dfdl:lengthUnits="characters" dfdl:terminator=", "/>
+      <xs:element name="field3" type="xs:float"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="footerType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="true" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes" representation="text"/>
+    <dfdl:textLengthKind value="explicit"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

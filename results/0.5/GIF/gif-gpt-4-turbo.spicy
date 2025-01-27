@@ -1,0 +1,61 @@
+module GIF;
+
+public type LogicalScreenDescriptor = unit {
+    canvasWidth: uint16;
+    canvasHeight: uint16;
+    packedFields: uint8;
+    backgroundColorIndex: uint8;
+    pixelAspectRatio: uint8;
+};
+
+public type GlobalColorTable = unit {
+    entries: vector<ColorTableEntry> &size=globalColorTableSize();
+};
+
+type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ImageDescriptor = unit {
+    leftPosition: uint16;
+    topPosition: uint16;
+    width: uint16;
+    height: uint16;
+    packedFields: uint8;
+};
+
+public type ImageData = unit {
+    lzwMinimumCodeSize: uint8;
+    dataBlocks: DataBlock+;
+};
+
+type DataBlock = unit {
+    blockSize: uint8;
+    blockData: bytes &size=this.blockSize;
+};
+
+public type GIFFile = unit {
+    header: bytes &size=6;
+    logicalScreen: LogicalScreenDescriptor;
+    globalColorTable: GlobalColorTable &if=hasGlobalColorTable();
+    imageDescriptor: ImageDescriptor;
+    imageData: ImageData;
+
+    on %init {
+        print "Initializing GIF parsing";
+    }
+
+    on %done {
+        print "Finished parsing GIF";
+    }
+
+    function hasGlobalColorTable() : bool {
+        return (this.logicalScreen.packedFields & 0x80) != 0;
+    }
+
+    function globalColorTableSize() : uint16 {
+        return (1 << ((this.logicalScreen.packedFields & 0x07) + 1)) * 3;
+    }
+};

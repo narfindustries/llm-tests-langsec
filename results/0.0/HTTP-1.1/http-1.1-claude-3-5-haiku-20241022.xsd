@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/HTTP-1.1"
+           xmlns:http="http://www.example.org/HTTP-1.1">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator="" 
+                   encoding="UTF-8" 
+                   representation="text"
+                   occursCountKind="parsed"
+                   textNumberPattern="#0"
+                   textNumberRoundingMode="roundUp"
+                   textZonedSignStyle="asciiSignSeparated"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="\r\n">
+        <xs:element name="RequestLine" type="http:RequestLineType"/>
+        <xs:element name="Headers" type="http:HeadersType"/>
+        <xs:element name="Body" type="http:BodyType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="RequestLineType">
+    <xs:sequence dfdl:separator=" ">
+      <xs:element name="Method" type="xs:string" 
+                   dfdl:pattern="(GET|POST|PUT|DELETE|HEAD|OPTIONS|TRACE|CONNECT)"/>
+      <xs:element name="URI" type="xs:string"/>
+      <xs:element name="HTTPVersion" type="xs:string" 
+                   dfdl:pattern="HTTP/1\.[01]"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="Header" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator=": ">
+            <xs:element name="Name" type="xs:string"/>
+            <xs:element name="Value" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Content" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

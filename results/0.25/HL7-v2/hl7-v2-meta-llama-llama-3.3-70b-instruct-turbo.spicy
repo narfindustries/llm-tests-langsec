@@ -1,0 +1,67 @@
+# File: hl7-v2.spicy
+
+%description =
+  """
+  This is a parser for HL7 version 2 messages.
+  """
+
+%header =
+  """
+  parser HL7_V2 GetMessage(const u_char* msg) {
+  """
+
+%footer =
+  """
+  return msg;
+  }
+  """
+
+%include "hl7-v2-message.spicy"
+
+type Segment = record {
+  segment_id: bytestring(3),
+  fields: SegmentField[~],
+};
+
+type SegmentField = record {
+  components: bytestring[~],
+};
+
+type HL7Message = record {
+  segments: Segment[~],
+};
+
+%compiler = "zeek"
+
+type HL7MessageMessage = record {
+  header: Segment,
+  body: Segment[~],
+  footer: Segment,
+};
+
+type Message = record {
+  msg: HL7MessageMessage,
+};
+
+GetMessage = function(msg: const u_char*): Message {
+  local msg_len: int = |msg|;
+  local ret_msg: Message;
+  
+  if (msg_len < 7) {
+    # Lack of enough input to process
+    return ret_msg;
+  }
+  
+  ret_msg$msg<header> = Segment(
+    segment_id = bytestring(3, @extract(msg, 0, 3)),
+    fields = SegmentField[1](SegmentField(components = bytestring(@extract(msg, 4, msg_len - 7)))),
+  );
+  
+  ret_msg$msg<body> = Segment[0];
+  ret_msg$msg<footer> = Segment(
+    segment_id = bytestring(3, @extract(msg, msg_len - 3, 3)),
+    fields = SegmentField[1](SegmentField(components = bytestring(""))),
+  );
+  
+  return ret_msg;
+};

@@ -1,0 +1,50 @@
+#ifndef _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+#define _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/analyzer/protocol/spicy.h>
+
+namespace zeek::analyzer::protocol {
+
+class TIFFGemini1_5Flash : public Spicy {
+ public:
+  TIFFGemini1_5Flash();
+  ~TIFFGemini1_5Flash() override;
+
+  // Add your Spicy methods here...  
+  //  e.g.,  bool check_header(const uint8_t* data, size_t len) override;
+  //        void dissect(const uint8_t* data, size_t len) override;
+  //        etc.
+};
+
+
+} // namespace zeek::analyzer::protocol
+
+#endif // _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+
+// tiff-gemini-1.5-flash.spicy
+
+#include "tiff-gemini-1.5-flash.h"
+
+namespace zeek::analyzer::protocol {
+
+TIFFGemini1_5Flash::TIFFGemini1_5Flash() {
+  // Add your initialization code here
+}
+
+TIFFGemini1_5Flash::~TIFFGemini1_5Flash() {
+  // Add your cleanup code here
+}
+
+//Implement your Spicy methods here...
+bool TIFFGemini1_5Flash::check_header(const uint8_t* data, size_t len) {
+  // Check if the data matches the expected header of your TIFF Gemini 1.5 Flash protocol.
+  // Return true if it matches, false otherwise.
+  return false; // Replace with your actual header check
+}
+
+void TIFFGemini1_5Flash::dissect(const uint8_t* data, size_t len) {
+  // Implement your protocol dissection logic here.
+  // Use the Zeek API to extract relevant information and create events.
+}
+
+} // namespace zeek::analyzer::protocol

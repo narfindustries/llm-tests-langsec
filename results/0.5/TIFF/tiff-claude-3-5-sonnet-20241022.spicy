@@ -1,0 +1,45 @@
+module TIFF;
+
+public type File = unit {
+    header: Header;
+    ifds: IFD[];
+};
+
+type Header = unit {
+    byte_order: bytes &size=2;
+    version: uint16;
+    first_ifd_offset: uint32;
+
+    on %done {
+        if ( self.byte_order != b"II" && self.byte_order != b"MM" )
+            throw "invalid byte order";
+        if ( self.version != 42 )
+            throw "invalid TIFF version";
+    }
+};
+
+type IFD = unit {
+    entry_count: uint16;
+    entries: Entry[self.entry_count];
+    next_ifd_offset: uint32;
+};
+
+type Entry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+on File::%done {
+    print "TIFF parsing complete";
+}
+
+on Entry::%done {
+    print fmt("Tag: %d, Type: %d, Count: %d", self.tag, self.type, self.count);
+}
+
+public function parse_tiff(data: bytes) : bool {
+    local f = File(data);
+    return True;
+}

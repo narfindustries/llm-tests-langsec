@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:gif="http://example.com/gif">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        leadingSkip="0"
+        trailingSkip="0"
+        textTrimKind="none"
+        initiatedContent="no"
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        representation="binary"
+        occursCountKind="parsed"
+        textNumberRep="standard"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GIF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" dfdl:lengthKind="explicit" dfdl:length="6">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="3"/>
+              <xs:element name="Version" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="3"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="LogicalScreenDescriptor" dfdl:lengthKind="explicit" dfdl:length="7">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="Height" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="BackgroundColorIndex" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="PixelAspectRatio" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ColorTable" minOccurs="0" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ColorEntry" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Red" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                    <xs:element name="Green" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                    <xs:element name="Blue" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageDescriptor" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageSeparator" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="Left" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="Top" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="Width" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="Height" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageData" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="LZWMinCodeSize" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="DataBlocks" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Block" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="BlockSize" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                          <xs:element name="BlockData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../BlockSize}"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Trailer" dfdl:lengthKind="explicit" dfdl:length="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="EndOfFile" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

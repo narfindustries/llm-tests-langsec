@@ -1,0 +1,40 @@
+module HL7;
+
+public type MSHSegment = unit {
+    fieldSep: bytes &size=1;
+    encodingChars: bytes &size=4;
+    sendingApplication: bytes &eod;
+    sendingFacility: bytes &eod;
+    receivingApplication: bytes &eod;
+    receivingFacility: bytes &eod;
+    date: bytes &eod;
+    security: bytes &eod;
+    messageType: bytes &eod;
+    messageControlId: bytes &eod;
+    processingId: bytes &eod;
+    versionId: bytes &eod;
+    sequenceNumber: bytes &eod;
+    continuationPointer: bytes &eod;
+    acceptAckType: bytes &eod;
+    applicationAckType: bytes &eod;
+    countryCode: bytes &eod;
+    characterSet: bytes &eod;
+    
+    on %done {
+        print self;
+    }
+};
+
+public type Segment = unit {
+    id: bytes &size=3;
+    fields: bytes &eod;
+};
+
+public type Message = unit {
+    segments: Segment[] &until=($$ == b"\x1c\r");
+};
+
+public type HL7Message = unit {
+    msh: MSHSegment;
+    message: Message;
+};

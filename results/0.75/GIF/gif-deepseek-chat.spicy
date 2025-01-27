@@ -1,0 +1,85 @@
+module GIF;
+
+import spicy;
+
+public type GIFHeader = unit {
+    magic: bytes &size=3;
+    version: bytes &size=3;
+};
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type GlobalColorTable = unit {
+    entries: ColorTableEntry[] &until($input.size() == 0);
+};
+
+public type ImageDescriptor = unit {
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+};
+
+public type LocalColorTable = unit {
+    entries: ColorTableEntry[] &until($input.size() == 0);
+};
+
+public type ImageData = unit {
+    lzw_minimum_code_size: uint8;
+    data: bytes &eod;
+};
+
+public type GIFTrailer = unit {
+    trailer: uint8;
+};
+
+public type GIF = unit {
+    header: GIFHeader;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: GlobalColorTable &if(self.logical_screen_descriptor.packed & 0x80);
+    image_descriptor: ImageDescriptor;
+    local_color_table: LocalColorTable &if(self.image_descriptor.packed & 0x80);
+    image_data: ImageData;
+    trailer: GIFTrailer;
+};
+
+on GIF::header %{
+    print "GIF Header:", self.magic, self.version;
+%}
+
+on GIF::logical_screen_descriptor %{
+    print "Logical Screen Descriptor:", self.width, self.height, self.packed, self.background_color_index, self.pixel_aspect_ratio;
+%}
+
+on GIF::global_color_table %{
+    print "Global Color Table:", self.entries;
+%}
+
+on GIF::image_descriptor %{
+    print "Image Descriptor:", self.left_position, self.top_position, self.width, self.height, self.packed;
+%}
+
+on GIF::local_color_table %{
+    print "Local Color Table:", self.entries;
+%}
+
+on GIF::image_data %{
+    print "Image Data:", self.lzw_minimum_code_size, self.data;
+%}
+
+on GIF::trailer %{
+    print "GIF Trailer:", self.trailer;
+%}

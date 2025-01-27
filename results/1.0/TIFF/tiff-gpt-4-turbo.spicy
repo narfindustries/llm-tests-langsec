@@ -1,0 +1,45 @@
+module TIFF;
+
+public type ImageFileDirectoryEntry = unit {
+    tag: uint16;
+    type: uint16;
+    length: uint32;
+    valueOffset: bytes &size=4;
+
+    on %done {
+        if (self.type == 2) {  # ASCII type
+            print self.valueOffset;
+        }
+    }
+};
+
+public type ImageFileDirectory = unit {
+    entries: ImageFileDirectoryEntry[] &eod;
+};
+
+public type TIFFHeader = unit {
+    byteOrder: uint16;
+    magicNumber: uint16;
+    offsetIFD: uint32;
+
+    on %init {
+        if (self.byteOrder != 0x4949 && self.byteOrder != 0x4D4D) {
+            throw Error("Unsupported byte order.");
+        }
+
+        if (self.magicNumber != 42) {
+            throw Error("Invalid TIFF magic number; expecting 42.");
+        }
+    }
+
+    on %done {
+        if (self.offsetIFD != 0) {
+            self.$context.connect(self.offsetIFD, ImageFileDirectory);
+        }
+    }
+};
+
+public type TIFFFile = unit {
+    header: TIFFHeader;
+    directories: ImageFileDirectory[] &until($$.eof());
+};

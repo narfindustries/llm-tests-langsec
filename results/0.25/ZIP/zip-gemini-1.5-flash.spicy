@@ -1,0 +1,17 @@
+#ifndef __ZIP_GEMINI_1_5_FLASH_SPICY__
+#define __ZIP_GEMINI_1_5_FLASH_SPICY__
+
+#include <zeek/analyzer/protocol/http.zeek>
+
+event zeek_http_request(conn, http_req) {
+    if (http_req.method == "POST" && http_req.uri contains "/flash") {
+        // Add your logic here to handle the POST request to /flash
+        // This is where you would parse the data and check for malicious content.
+        // Example: Check for specific keywords or patterns in the request body.
+        if (http_req.body contains "malicious_keyword") {
+            alert("Malicious Flash content detected!");
+        }
+    }
+}
+
+#endif

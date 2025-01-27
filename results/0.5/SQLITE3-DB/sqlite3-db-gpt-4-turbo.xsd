@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3"
+           xmlns:tns="http://example.com/sqlite3">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:element name="SQLite3Database" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="Body" type="tns:BodyType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII"/>
+      <xs:element name="PageSize" type="xs:int" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="WriteVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="ReadVersion" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="ReservedSpace" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="MaxPayload" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="MinPayload" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="LeafPayload" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="ChangeCounter" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="InHeaderDBSize" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="WriteVersionNumber" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ReadVersionNumber" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ReservedBytes" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

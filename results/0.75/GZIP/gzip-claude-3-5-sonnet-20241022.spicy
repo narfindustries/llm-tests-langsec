@@ -1,0 +1,43 @@
+module GZIP;
+
+import spicy;
+
+public type GZIP = unit {
+    magic1: uint8 &requires = 0x1f;
+    magic2: uint8 &requires = 0x8b;
+    compression_method: uint8 &requires = 0x08;  # DEFLATE
+    flags: uint8;
+    timestamp: uint32 be;
+    extra_flags: uint8;
+    os: uint8;
+
+    # Optional fields based on flags
+    on flags & 0x04 -> {
+        extra_length: uint16;
+        extra_data: bytes &size=self.extra_length;
+    }
+
+    on flags & 0x08 -> {
+        filename: bytes &until=b"\x00";
+    }
+
+    on flags & 0x10 -> {
+        comment: bytes &until=b"\x00";
+    }
+
+    on flags & 0x02 -> {
+        crc16: uint16;
+    }
+
+    compressed_data: bytes &eod;
+
+    on %done {
+        print "GZIP Header Parsed";
+    }
+};
+
+# Protocol analyzer
+public analyzer GZIP over TCP:
+    parse with GZIP;
+
+on GZIP::GZIP -> event gzip_message($conn, self);

@@ -1,0 +1,28 @@
+module GZIP;
+
+export {
+    type GzipFile = unit {
+        # Gzip header fields.
+        magic: bytes &assert ($$ == |0x1f8b|);
+        compression: uint8 &check_eq(compression, 8) &byte-order=little;
+        flags: uint8;
+        mtime: uint32 &byte-order=little;
+        extra_flags: uint8;
+        os: uint8;
+        extra: bytes &length=extra_length &if (flags & 4) != 0;
+        filename: bytes &until=0 &if (flags & 8) != 0;
+        comment: bytes &until=0 &if (flags & 16) != 0;
+        header_crc: uint16 &byte-order=little &if (flags & 2) != 0;
+        
+        # Compressed data block.
+        compressed_data: bytes;
+
+        # CRC32 and isize footer fields.
+        crc32: uint32 &byte-order=little &check_eq(crc32, calc_crc32());
+        isize: uint32 &byte-order=little;
+
+        extra_length: uint16 &byte-order=little &if (flags & 4) != 0;
+    };
+
+    function calc_crc32(): uint32;
+}

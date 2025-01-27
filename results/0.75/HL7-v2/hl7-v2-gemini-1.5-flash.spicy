@@ -1,0 +1,27 @@
+#ifndef HL7_V2_GEMINI_1_5_FLASH_SPICY
+#define HL7_V2_GEMINI_1_5_FLASH_SPICY
+
+event hl7_v2_gemini_1_5_flash {
+    #include "hl7-v2.zeek"
+
+    global $hl7_v2_gemini_1_5_flash_count = 0
+
+    # Add any necessary fields or logic here based on your specific requirements
+
+    # Example:  Extract relevant fields from the parsed HL7 message
+    msg_field MSGHDR_MSH_1(string):  hl7_msg.MSH[1]; // Extract Sending Application
+    msg_field MSGHDR_MSH_2(string):  hl7_msg.MSH[2]; // Extract Sending Facility
+    msg_field MSGHDR_MSH_3(string):  hl7_msg.MSH[3]; // Extract Receiving Application
+    msg_field MSGHDR_MSH_4(string):  hl7_msg.MSH[4]; // Extract Receiving Facility
+    msg_field MSGHDR_MSH_9(string):  hl7_msg.MSH[9]; // Extract Message Date/Time
+
+    # Example: Increment counter for each message processed
+    $hl7_v2_gemini_1_5_flash_count += 1;
+
+    # Example: Log relevant information
+    print fmt("Processed HL7 v2 Gemini 1.5 Flash message: %s", hl7_msg.raw);
+
+
+}
+
+#endif

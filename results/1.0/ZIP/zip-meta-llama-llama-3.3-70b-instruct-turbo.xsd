@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ZIP"
+           xmlns="http://example.com/ZIP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="zip-file">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:formatrefs>
+          <dfdl:format ref="zip-format"/>
+        </dfdl:formatrefs>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="local-file-header" type="local-file-headerType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="local-file-headerType">
+    <xs:sequence>
+      <xs:element name="local-file-header-signature" type="xs:hexBinary" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="version-needed-to-extract" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="general-purpose-bit-flag" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="compression-method" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="last-modification-time" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="last-modification-date" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="crc-32" type="xs:int" dfdl:byteOrder="little"/>
+      <xs:element name="compressed-size" type="xs:int" dfdl:byteOrder="little"/>
+      <xs:element name="uncompressed-size" type="xs:int" dfdl:byteOrder="little"/>
+      <xs:element name="file-name-length" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="extra-field-length" type="xs:short" dfdl:byteOrder="little"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="zip-format" ref="zip-binary-format"/>
+
+  <dfdl:binaryFormat name="zip-binary-format" encoding="iso-8859-1" byteOrder="big" distribution="http://www.ogf.org/dfdl/dfdl-1.0/distribution/standard"/>
+</xs:schema>

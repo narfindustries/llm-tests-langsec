@@ -1,0 +1,58 @@
+# Zeek Spicy specification for Modbus protocol
+
+# Import necessary modules
+import builtins
+import zeek
+
+# Define the Modbus protocol
+protocol modbus {
+    # Define the layers
+    layer meta {
+        # Define the metadata fields
+        uint8(unit_id) = 1;
+        uint8(function_code) = 2;
+        uint16(address) = 3;
+        uint16(quantity) = 4;
+    }
+
+    layer ll {
+        # Define the link layer fields
+        uint8(transaction_id) = 1;
+        uint8(protocol_id) = 2;
+        uint16(length) = 3;
+    }
+
+    layer data {
+        # Define the data fields
+        bytes(data) = 4;
+    }
+}
+
+# Define the analyzer for the Modbus protocol
+analyzer modbus {
+    # Define the protocol layers
+    layer meta: Modbus::meta = meta;
+    layer ll: Modbus::ll = ll;
+    layer data: Modbus::data = data;
+
+    # Define the decoding steps
+    step decode_meta {
+        # Decode the metadata fields
+        uint8(unit_id);
+        uint8(function_code);
+        uint16(address);
+        uint16(quantity);
+    }
+
+    step decode_ll {
+        # Decode the link layer fields
+        uint8(transaction_id);
+        uint8(protocol_id);
+        uint16(length);
+    }
+
+    step decode_data {
+        # Decode the data fields
+        bytes(data);
+    }
+}

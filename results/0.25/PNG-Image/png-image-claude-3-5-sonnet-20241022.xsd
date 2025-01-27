@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/PNG"
+    targetNamespace="http://example.com/PNG">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthKind="implicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="png">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="signature" type="local:SignatureType"/>
+                <xs:element name="chunks" type="local:ChunksType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="SignatureType">
+        <xs:sequence>
+            <xs:element name="pngSignature" type="xs:hexBinary" dfdl:length="8" 
+                       dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ChunksType">
+        <xs:sequence>
+            <xs:element name="chunk" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="length" type="xs:unsignedInt" 
+                                  dfdl:lengthKind="implicit"/>
+                        <xs:element name="type" type="xs:string" 
+                                  dfdl:lengthKind="explicit" dfdl:length="4"/>
+                        <xs:element name="data" type="xs:hexBinary"
+                                  dfdl:lengthKind="explicit" 
+                                  dfdl:lengthRef="{ ../length }"/>
+                        <xs:element name="crc" type="xs:unsignedInt"
+                                  dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

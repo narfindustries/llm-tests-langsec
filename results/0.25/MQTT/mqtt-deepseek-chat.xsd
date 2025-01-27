@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/mqtt-deepseek-chat"
+           targetNamespace="http://example.com/mqtt-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:MQTTFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="MQTTMessageType">
+    <xs:sequence>
+      <xs:element name="header" type="ex:MQTTHeaderType"/>
+      <xs:element name="payload" type="xs:string" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MQTTHeaderType">
+    <xs:sequence>
+      <xs:element name="messageType" type="xs:byte" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="flags" type="xs:byte" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="remainingLength" type="xs:int" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="MQTTMessage" type="ex:MQTTMessageType"/>
+
+  <dfdl:defineFormat name="MQTTFormat">
+    <dfdl:format encoding="UTF-8" byteOrder="bigEndian" lengthKind="explicit"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

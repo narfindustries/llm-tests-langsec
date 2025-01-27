@@ -1,0 +1,61 @@
+module GIF;
+
+import spicy;
+
+public type GIFHeader = unit {
+    magic: bytes &size=3;
+    version: bytes &size=3;
+};
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type GlobalColorTable = unit {
+    entries: ColorTableEntry[] &until=($input.size() == 0);
+};
+
+public type ImageDescriptor = unit {
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+};
+
+public type LocalColorTable = unit {
+    entries: ColorTableEntry[] &until=($input.size() == 0);
+};
+
+public type ImageData = unit {
+    lzw_minimum_code_size: uint8;
+    data: bytes &until=($input.size() == 0);
+};
+
+public type GIFTrailer = unit {
+    trailer: uint8;
+};
+
+public type GIF = unit {
+    header: GIFHeader;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: GlobalColorTable &if(self.logical_screen_descriptor.packed & 0x80);
+    image_descriptor: ImageDescriptor;
+    local_color_table: LocalColorTable &if(self.image_descriptor.packed & 0x80);
+    image_data: ImageData;
+    trailer: GIFTrailer;
+};
+
+on GIF::%done {
+    print "GIF parsing completed successfully.";
+}

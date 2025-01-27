@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gzip"
+           xmlns="http://example.com/gzip"
+           elementFormDefault="qualified"
+           dfdl:formatRef="http://www.ogf.org/dfdl/dfdl-1.0/formatRef">
+  
+  <xs:include schemaLocation="path/to/dfdl-core.xsd"/>
+
+  <dfdl:format ref="dfdl:GeneralFormat" byteOrder="bigEndian" encoding="utf-8"/>
+
+  <xs:element name="gzip">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType"/>
+        <xs:element name="compressedData" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+        <xs:element name="footer" type="FooterType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="id1" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="id2" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      <xs:element name="os" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="inputSize" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

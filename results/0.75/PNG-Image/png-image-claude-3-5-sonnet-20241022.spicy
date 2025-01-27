@@ -1,0 +1,47 @@
+module PNG-Image;
+
+import spicy;
+
+public type PNG_File = unit {
+    signature: bytes &size=8 &requires=($$ == b"\x89PNG\x0d\x0a\x1a\x0a");
+    chunks: PNG_Chunk[];
+
+    on %done {
+        print "PNG parsing completed";
+    }
+};
+
+type PNG_Chunk = unit {
+    length: uint32 &byte-order=BigEndian;
+    type: bytes &size=4;
+    data: bytes &size=self.length;
+    crc: bytes &size=4;
+
+    on %done {
+        print fmt("Chunk Type: %s, Length: %d", self.type, self.length);
+    }
+};
+
+public type IHDR = unit {
+    width: uint32 &byte-order=BigEndian;
+    height: uint32 &byte-order=BigEndian;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression: uint8;
+    filter: uint8;
+    interlace: uint8;
+
+    on %done {
+        print fmt("Image dimensions: %dx%d", self.width, self.height);
+        print fmt("Bit depth: %d", self.bit_depth);
+        print fmt("Color type: %d", self.color_type);
+    }
+};
+
+on PNG_File::%init {
+    print "Starting PNG file analysis";
+}
+
+on PNG_File::%error {
+    print "Error parsing PNG file";
+}

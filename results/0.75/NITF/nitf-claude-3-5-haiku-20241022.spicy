@@ -1,0 +1,35 @@
+module NITF;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires(self.magic == b"NITF");
+    version: bytes(2);
+    reserved1: bytes(10);
+    num_image_segments: uint16;
+    num_graphic_segments: uint16;
+    num_text_segments: uint16;
+    num_data_segments: uint16;
+
+    on %done {
+        print fmt("NITF Header parsed: Version %s, Segments [Images: %d, Graphics: %d, Text: %d, Data: %d]", 
+            self.version, 
+            self.num_image_segments, 
+            self.num_graphic_segments, 
+            self.num_text_segments, 
+            self.num_data_segments
+        );
+    }
+};
+
+public type File = unit {
+    header: Header;
+    
+    on %done {
+        print "NITF file parsed successfully";
+    }
+};
+
+export type NITF = unit {
+    file: File;
+};

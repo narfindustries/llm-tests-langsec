@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/png-image" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty">
+  <xs:element name="pngImage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="8" dfdl:occursCount="1"/>
+        <xs:element name="width" type="xs:unsignedInt" dfdl:length="4" dfdl:occursCount="1"/>
+        <xs:element name="height" type="xs:unsignedInt" dfdl:length="4" dfdl:occursCount="1"/>
+        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="unbounded" dfdl:occursCount="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+

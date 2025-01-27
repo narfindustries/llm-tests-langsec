@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:jpeg="http://example.com/jpeg">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        occursCountKind="parsed"
+        representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="JPEG" type="jpeg:JPEGType"/>
+
+  <xs:complexType name="JPEGType">
+    <xs:sequence>
+      <xs:element name="SOI" type="jpeg:StartOfImageType"/>
+      <xs:element name="Segments" type="jpeg:SegmentsType"/>
+      <xs:element name="EOI" type="jpeg:EndOfImageType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StartOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType" fixed="0xFFD8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EndOfImageType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType" fixed="0xFFD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Segment" type="jpeg:SegmentType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType"/>
+      <xs:element name="Length" type="jpeg:LengthType"/>
+      <xs:element name="Data" type="jpeg:DataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="MarkerType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:minLength value="2"/>
+      <xs:maxLength value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="LengthType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="Bytes" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

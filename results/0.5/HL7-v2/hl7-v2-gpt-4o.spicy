@@ -1,0 +1,53 @@
+module HL7v2;
+
+import spicy;
+import hilti;
+
+public type HL7v2Message = unit {
+    header: Header,
+    segments: list<Segment>,
+};
+
+public type Header = unit {
+    field_separator: uint8 &requires=$$ == "|",
+    encoding_characters: string &length=4,
+    sending_application: string &until="\r" &optional,
+    sending_facility: string &until="\r" &optional,
+    receiving_application: string &until="\r" &optional,
+    receiving_facility: string &until="\r" &optional,
+    datetime_of_message: string &until="\r" &optional,
+    security: string &until="\r" &optional,
+    message_type: string &until="\r",
+    message_control_id: string &until="\r" &optional,
+    processing_id: string &until="\r" &optional,
+    version_id: string &until="\r",
+};
+
+public type Segment = unit {
+    id: string &length=3,
+    fields: list<string> &until="\r",
+};
+
+public module Parser = {
+    export {
+        type ParsedMessage = unit {
+            message: HL7v2Message,
+        };
+
+        hook spicy::Parser::define() {
+            self.add_type("HL7v2Message", HL7v2Message);
+        }
+    }
+};
+
+public module Analyzer = {
+    export {
+        type HL7v2Analyzer = unit {
+            parsed_message: Parser::ParsedMessage,
+        };
+
+        hook hilti::Analyzer::define() {
+            self.add_type("HL7v2Analyzer", HL7v2Analyzer);
+        }
+    }
+};

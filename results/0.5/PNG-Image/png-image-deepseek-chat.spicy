@@ -1,0 +1,50 @@
+module PNG;
+
+import spicy;
+
+type PNG_Header = unit {
+    magic: bytes &size=8;
+    ihdr: IHDR_Chunk;
+    chunks: Chunk[] &until($input.size() == 0);
+};
+
+type IHDR_Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+    crc: uint32;
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=length;
+    crc: uint32;
+};
+
+type PNG_File = unit {
+    header: PNG_Header;
+};
+
+on PNG_File::%init {
+    if ( self.header.magic != b"\x89PNG\r\n\x1a\n" )
+        throw FormatError("Invalid PNG magic number");
+}
+
+on IHDR_Chunk::%init {
+    if ( self.type != b"IHDR" )
+        throw FormatError("Expected IHDR chunk");
+}
+
+on Chunk::%init {
+    if ( self.type == b"IEND" )
+        break;
+}
+
+export PNG_File;

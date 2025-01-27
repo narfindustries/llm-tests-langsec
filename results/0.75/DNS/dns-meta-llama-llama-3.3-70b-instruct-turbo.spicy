@@ -1,0 +1,41 @@
+# DNS Protocol Specification
+
+type DNSMessage = record {
+  id: uint16,
+  flags: uint16,
+  qdcount: uint16,
+  ancount: uint16,
+  nscount: uint16,
+  arcount: uint16,
+} & byte[flags & 0xff00 == 0x0100 ? 4 : 0];
+
+type DNSQuestion = record {
+  name: bytestring & length == (next.uint8 + 1),
+  type: uint16,
+  class: uint16,
+};
+
+type DNSAnswer = record {
+  name: uint16,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytestring & length == rdlength,
+};
+
+type DNSHeader = record {
+  message: DNSMessage,
+};
+
+type DNSBody = record {
+  questions: array of DNSQuestion & length == message.qdcount,
+  answers: array of DNSAnswer & length == message.ancount,
+  authority: array of DNSAnswer & length == message.nscount,
+  additional: array of DNSAnswer & length == message.arcount,
+};
+
+type DNS = record {
+  header: DNSHeader,
+  body: DNSBody,
+};

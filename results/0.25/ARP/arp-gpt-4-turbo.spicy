@@ -1,0 +1,18 @@
+module ARP;
+
+public type ARP_Header = unit {
+    htype: uint16;   # Hardware type
+    ptype: uint16;   # Protocol type
+    hlen:  uint8;    # Hardware address length
+    plen:  uint8;    # Protocol address length
+    oper:  uint16;   # Operation (1=request, 2=reply)
+
+    sha:   bytes &size=6;  # Sender hardware address
+    spa:   bytes &size=4;  # Sender protocol address
+    tha:   bytes &size=6;  # Target hardware address
+    tpa:   bytes &size=4;  # Target protocol address
+
+    on %done {
+        print self;
+    }
+};

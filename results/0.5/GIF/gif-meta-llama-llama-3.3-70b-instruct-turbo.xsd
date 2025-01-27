@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           targetNamespace="http://example.com/GIF"
+           xmlns="http://example.com/GIF"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/xml-schema/dfdl-xsd.xml"
+           dfdl:inputEncoding="utf-8"
+           dfdl:outputEncoding="utf-8">
+
+  <xs:element name="GIF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Header" dfdl:occurs="1..1"/>
+        <xs:element ref="LogicalScreenDescriptor" dfdl:occurs="1..1"/>
+        <xs:element ref="GlobalColorTable" dfdl:occurs="0..1"/>
+        <xs:element ref="Image" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="xs:string" dfdl:length="3" dfdl:encoding="utf-8"/>
+        <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:encoding="utf-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="LogicalScreenDescriptor">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Width" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="Height" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:bitOrder>mostSignificantBitFirst</dfdl:bitOrder>
+              <dfdl:bitPosition>0</dfdl:bitPosition>
+              <dfdl:bitLength>1</dfdl:bitLength>
+              <dfdl:encoding>packed</dfdl:encoding>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="BackgroundColorIndex" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian"/>
+        <xs:element name="PixelAspectRatio" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="GlobalColorTable">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Entry" type="xs:unsignedByte" dfdl:length="3" dfdl:encoding="bigEndian" dfdl:occurs="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Image">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Descriptor" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian"/>
+        <xs:element name="Left" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="Top" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="Width" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="Height" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+        <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:bitOrder>mostSignificantBitFirst</dfdl:bitOrder>
+              <dfdl:bitPosition>0</dfdl:bitPosition>
+              <dfdl:bitLength>1</dfdl:bitLength>
+              <dfdl:encoding>packed</dfdl:encoding>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Data" type="xs:unsignedByte" dfdl:length="*" dfdl:encoding="bigEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

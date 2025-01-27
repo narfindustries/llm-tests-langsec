@@ -1,0 +1,13 @@
+#ifndef DNS_GEMINI_1_H
+#define DNS_GEMINI_1_H
+
+#include "zeek/packet-analysis.bif"
+
+global dns_gemini_1_count: count;
+
+event dns_gemini_1(p: packet)
+	{
+	dns_gemini_1_count++;
+	}
+
+#endif

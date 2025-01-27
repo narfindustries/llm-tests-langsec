@@ -1,0 +1,65 @@
+module HTTP;
+
+import spicy;
+
+type Headers = unit {
+    fields: HeaderEntry[] &eod;
+};
+
+type HeaderEntry = unit {
+    name: bytes &until=b":";
+    _: b":";
+    value: bytes &until=b"\r\n";
+    _: b"\r\n";
+};
+
+type Request = unit {
+    method: bytes &until=b" ";
+    _: b" ";
+    uri: bytes &until=b" ";
+    _: b" ";
+    version: bytes &until=b"\r\n";
+    _: b"\r\n";
+    headers: Headers;
+    body: bytes &size=body_size();
+    
+    function body_size(): uint64 {
+        local content_length = b"0";
+        for (h in self.headers.fields) {
+            if (h.name == b"Content-Length") {
+                content_length = h.value;
+                break;
+            }
+        }
+        return to_uint(content_length);
+    }
+};
+
+type Response = unit {
+    version: bytes &until=b" ";
+    _: b" ";
+    status_code: bytes &until=b" ";
+    _: b" ";
+    status_message: bytes &until=b"\r\n";
+    _: b"\r\n";
+    headers: Headers;
+    body: bytes &size=body_size();
+    
+    function body_size(): uint64 {
+        local content_length = b"0";
+        for (h in self.headers.fields) {
+            if (h.name == b"Content-Length") {
+                content_length = h.value;
+                break;
+            }
+        }
+        return to_uint(content_length);
+    }
+};
+
+public type HTTP_Protocol = unit {
+    conn: connection &requires=subtype<stream>;
+    is_orig: bool;
+    request: Request &requires=$conn.is_orig;
+    response: Response &requires=!$conn.is_orig;
+};

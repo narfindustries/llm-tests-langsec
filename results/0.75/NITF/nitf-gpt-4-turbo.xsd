@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    targetNamespace="http://example.com/nitf"
+    xmlns:tns="http://example.com/nitf">
+
+    <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+
+    <xs:element name="NITF">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+                <xs:element name="ImageSegments" type="tns:ImageSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="TextSegments" type="tns:TextSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="DataExtensionSegments" type="tns:DataExtensionSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="FileHeaderType">
+        <xs:sequence>
+            <xs:element name="FileProfileName" type="xs:string" dfdl:length="4"/>
+            <xs:element name="FileVersion" type="xs:string" dfdl:length="5"/>
+            <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="2"/>
+            <xs:element name="StandardType" type="xs:string" dfdl:length="4"/>
+            <xs:element name="OriginatingStationID" type="xs:string" dfdl:length="10"/>
+            <xs:element name="FileDateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
+            <xs:element name="FileTitle" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=";" dfdl:initiator="TITLE=" dfdl:encoding="ascii" dfdl:trimKind="both"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ImageSegmentsType">
+        <xs:sequence>
+            <xs:element name="ImageSubheader" type="tns:ImageSubheaderType"/>
+            <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ImageSubheader/ImageDataLength }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ImageSubheaderType">
+        <xs:sequence>
+            <xs:element name="ImageID" type="xs:string" dfdl:length="10"/>
+            <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
+            <xs:element name="TargetID" type="xs:string" dfdl:length="17"/>
+            <xs:element name="Title" type="xs:string" dfdl:length="80"/>
+            <xs:element name="SecurityClassification" type="xs:string" dfdl:length="2"/>
+            <xs:element name="ImageDataLength" type="xs:int" dfdl:length="10"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="TextSegmentsType">
+        <xs:sequence>
+            <xs:element name="TextSubheader" type="tns:TextSubheaderType"/>
+            <xs:element name="TextData" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../TextSubheader/TextDataLength }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="TextSubheaderType">
+        <xs:sequence>
+            <xs:element name="TextID" type="xs:string" dfdl:length="7"/>
+            <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
+            <xs:element name="TextTitle" type="xs:string" dfdl:length="80"/>
+            <xs:element name="TextDataLength" type="xs:int" dfdl:length="5"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DataExtensionSegmentsType">
+        <xs:sequence>
+            <xs:element name="DESSubheader" type="tns:DESSubheaderType"/>
+            <xs:element name="DESData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../DESSubheader/DESDataLength }"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DESSubheaderType">
+        <xs:sequence>
+            <xs:element name="DESID" type="xs:string" dfdl:length="25"/>
+            <xs:element name="DESVersion" type="xs:string" dfdl:length="2"/>
+            <xs:element name="DESDataLength" type="xs:int" dfdl:length="10"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

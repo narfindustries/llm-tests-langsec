@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/icmp"
+           xmlns:ex="http://example.com/icmp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:commonFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:include schemaLocation="DFDLCommonFormat.xsd"/>
+
+  <xs:element name="ICMPMessage" type="ex:ICMPMessageType"/>
+
+  <xs:complexType name="ICMPMessageType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Code" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:lengthPattern="\r\n"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="IPv4Address">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(\d{1,3}\.){3}\d{1,3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IPv4Packet">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="IHL" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="TypeOfService" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="TotalLength" type="xs:int" dfdl:length="2" dfdl:textNumberPattern="#####"/>
+      <xs:element name="Identification" type="xs:int" dfdl:length="2" dfdl:textNumberPattern="#####"/>
+      <xs:element name="Flags" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="FragmentOffset" type="xs:int" dfdl:length="2" dfdl:textNumberPattern="#####"/>
+      <xs:element name="TimeToLive" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="Protocol" type="xs:int" dfdl:length="1" dfdl:textNumberPattern="###"/>
+      <xs:element name="HeaderChecksum" type="xs:int" dfdl:length="2" dfdl:textNumberPattern="#####"/>
+      <xs:element name="SourceAddress" type="ex:IPv4Address" dfdl:length="15"/>
+      <xs:element name="DestinationAddress" type="ex:IPv4Address" dfdl:length="15"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

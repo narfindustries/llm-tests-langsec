@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http-1.1-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
+
+  <xs:element name="http">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element represents="http"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="request" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="response" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="request">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element represents="request"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="requestLine" type="xs:string"/>
+        <xs:element name="headers" type="headerType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="body" type="xs:base64Binary" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="response">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element represents="response"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="statusLine" type="xs:string"/>
+        <xs:element name="headers" type="headerType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="body" type="xs:base64Binary" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element represents="header"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="parseError" type="xs:string"/>
+
+</xs:schema>

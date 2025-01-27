@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/mqtt_gemini"
+           xmlns="http://example.org/mqtt_gemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="mqttGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="payload" type="payloadType"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:occurs"/>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string">
+        <xs:annotation>
+          <xs:documentation>Version number</xs:documentation>
+        </xs:annotation>
+        <xs:attribute ref="dfdl:length" use="required">
+          <xs:annotation>
+            <xs:documentation>Fixed length of 2 bytes</xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:element>
+      <xs:element name="messageType" type="xs:integer">
+          <xs:attribute ref="dfdl:length" use="required">
+              <xs:annotation>
+                  <xs:documentation>Fixed length of 1 byte</xs:documentation>
+              </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+    <xs:attribute ref="dfdl:occurs" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="payloadType">
+      <xs:sequence>
+          <xs:element name="deviceId" type="xs:string">
+              <xs:attribute ref="dfdl:length" use="required">
+                  <xs:annotation>
+                      <xs:documentation>Variable length, depends on the content</xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
+          </xs:element>
+          <xs:element name="data" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+              <xs:attribute ref="dfdl:length" use="required">
+                  <xs:annotation>
+                      <xs:documentation>Variable length, depends on the content.  Allows multiple occurrences</xs:documentation>
+                  </xs:annotation>
+              </xs:attribute>
+          </xs:element>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:occurs" use="required"/>
+  </xs:complexType>
+
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineSchemaVersion scv="1.0"/>
+      <dfdl:format binary="true" byteOrder="bigEndian"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

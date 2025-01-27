@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://apache.org/dfdl/"
+        targetNamespace="http://example.com/tls"
+        xmlns:tns="http://example.com/tls"
+        elementFormDefault="qualified">
+
+  <dfdl:format name="GeneralFormat" byteOrder="bigEndian" lengthUnits="bytes" byteAligned="yes"/>
+
+  <element name="ClientHello">
+    <complexType>
+      <sequence dfdl:initiator="%x16" dfdl:terminator="%x00">
+        <element name="HandshakeType" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x01 }"/>
+        <element name="Length" type="xsd:unsignedInt" dfdl:length="3" dfdl:lengthUnits="bytes"/>
+        <element name="Version" type="xsd:unsignedShort" dfdl:length="2"/>
+        <element name="Random" type="xsd:hexBinary" dfdl:length="32"/>
+        <element name="SessionIDLength" type="xsd:unsignedByte" dfdl:length="1"/>
+        <element name="SessionID" type="xsd:hexBinary" dfdl:length="{ ../SessionIDLength }" minOccurs="0"/>
+        <element name="CipherSuitesLength" type="xsd:unsignedShort" dfdl:length="2"/>
+        <element name="CipherSuites" type="xsd:hexBinary" dfdl:length="{ ../CipherSuitesLength }"/>
+        <element name="CompressionMethodsLength" type="xsd:unsignedByte" dfdl:length="1"/>
+        <element name="CompressionMethods" type="xsd:hexBinary" dfdl:length="{ ../CompressionMethodsLength }"/>
+        <element name="ExtensionsLength" type="xsd:unsignedShort" dfdl:length="2"/>
+        <element name="Extensions" type="xsd:hexBinary" dfdl:length="{ ../ExtensionsLength }" minOccurs="0"/>
+      </sequence>
+    </complexType>
+  </element>
+
+</schema>

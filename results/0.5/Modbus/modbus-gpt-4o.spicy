@@ -1,0 +1,62 @@
+module Modbus;
+
+public type ModbusRequest = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    data: bytes &size = length - 2;
+};
+
+public type ModbusResponse = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    data: bytes &size = length - 2;
+};
+
+public type ModbusMessage = unit {
+    request: ModbusRequest | &if (self.is_request());
+    response: ModbusResponse | &if (!self.is_request());
+
+    on %init {
+        if (request.function_code == 0 || response.function_code == 0)
+            error("Invalid function code");
+    }
+
+    function is_request(): bool {
+        return context().direction == connection::ORIG;
+    }
+};
+
+public type ModbusProtocol = unit {
+    message: ModbusMessage;
+};
+
+public module ModbusAnalyzer = plugin {
+    hook Plugin::Configuration() {
+        enable_analyzer("Modbus");
+    }
+
+    event connection_state_remove(c: connection) &priority=5 {
+        if (c$service == "modbus") {
+            print fmt("Modbus connection finished: %s", c$id);
+        }
+    }
+};
+
+public export {
+    redef enum Analyzer::Tag += {
+        ANLYZR_MODBUS
+    };
+}
+
+public type ModbusAnalyzer = Analyzer {
+    .tag = ANLYZR_MODBUS,
+    .name = "Modbus",
+    .parser = ModbusProtocol,
+    .ports = { 502/tcp }
+};

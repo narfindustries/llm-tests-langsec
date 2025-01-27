@@ -1,0 +1,77 @@
+module GIF;
+
+public type LogicalScreenDescriptor = unit {
+    canvasWidth: uint16;
+    canvasHeight: uint16;
+    packedFields: uint8;
+    backgroundColorIndex: uint8;
+    pixelAspectRatio: uint8;
+};
+
+public type GlobalColorTable = unit {
+    size: uint16;
+    entries: vector<ColorTableEntry> &length=size;
+};
+
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ImageDescriptor = unit {
+    leftPosition: uint16;
+    topPosition: uint16;
+    width: uint16;
+    height: uint16;
+    packedFields: uint8;
+};
+
+public type ImageData = unit {
+    lzwMinimumCodeSize: uint8;
+    dataBlocks: bytes &eod;
+};
+
+public type GraphicControlExtension = unit {
+    blockSize: uint8;
+    packedFields: uint8;
+    delayTime: uint16;
+    transparentColorIndex: uint8;
+    terminator: uint8;
+};
+
+public type ApplicationExtension = unit {
+    blockSize: uint8;
+    applicationIdentifier: bytes &size=8;
+    applicationAuthCode: bytes &size=3;
+    data: bytes &eod;
+};
+
+public type CommentExtension = unit {
+    data: bytes &eod;
+};
+
+public type Block = unit {
+    introducer: uint8;
+    label: uint8;
+    content: switch (self.label) {
+        0xF9 -> graphicControl: GraphicControlExtension;
+        0xFE -> comment: CommentExtension;
+        0xFF -> application: ApplicationExtension;
+        0x2C -> image: ImageDescriptor &requires=($$ == 0x2C) -> ImageData;
+        * -> unknown: bytes &eod;
+    };
+};
+
+public type Trailer = unit {
+    terminator: uint8;
+};
+
+public type GIFFile = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+    logicalScreen: LogicalScreenDescriptor;
+    globalColorTable: GlobalColorTable &requires=(self.logicalScreen.packedFields & 0x80 != 0);
+    blocks: Block[] &until($$.introducer == 0x3B);
+    trailer: Trailer;
+};

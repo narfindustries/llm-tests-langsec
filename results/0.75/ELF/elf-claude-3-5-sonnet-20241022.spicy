@@ -1,0 +1,53 @@
+module ELF;
+
+public type File = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    osabi: uint8;
+    abiversion: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+
+    on %init {
+        if (self.magic != b"\x7fELF") {
+            throw "invalid ELF magic";
+        }
+    }
+};
+
+on File::%done {
+    print "ELF Header:";
+    print fmt("  Magic: %s", self.magic);
+    print fmt("  Class: %d", self.class);
+    print fmt("  Data: %d", self.data);
+    print fmt("  Version: %d", self.version);
+    print fmt("  OS/ABI: %d", self.osabi);
+    print fmt("  ABI Version: %d", self.abiversion);
+    print fmt("  Type: %d", self.type);
+    print fmt("  Machine: %d", self.machine);
+    print fmt("  Version: %d", self.version2);
+    print fmt("  Entry point address: 0x%x", self.entry);
+    print fmt("  Start of program headers: %d", self.phoff);
+    print fmt("  Start of section headers: %d", self.shoff);
+    print fmt("  Flags: 0x%x", self.flags);
+    print fmt("  Size of this header: %d", self.ehsize);
+    print fmt("  Size of program headers: %d", self.phentsize);
+    print fmt("  Number of program headers: %d", self.phnum);
+    print fmt("  Size of section headers: %d", self.shentsize);
+    print fmt("  Number of section headers: %d", self.shnum);
+    print fmt("  Section header string table index: %d", self.shstrndx);
+}

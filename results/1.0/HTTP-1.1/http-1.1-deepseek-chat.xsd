@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="HTTP-1.1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RequestLine" dfdl:lengthKind="delimited">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Headers" dfdl:lengthKind="delimited">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Header" maxOccurs="unbounded" dfdl:lengthKind="delimited">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited"/>
+                    <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:format ref="ex:HTTP-1.1-Format"/>
+
+  <dfdl:defineFormat name="HTTP-1.1-Format">
+    <dfdl:format separator="" initiator="" terminator="" encoding="UTF-8" lengthKind="delimited" sequenceKind="ordered"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

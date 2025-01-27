@@ -1,0 +1,39 @@
+module ZIP;
+
+export {
+    public type File = unit {
+        magic: /[P|K][K|W][\x03|\x05|\x07][\x04|\x06|\x08]/;
+        files: FileEntry[] &eod;
+    };
+
+    type FileEntry = unit {
+        version_needed: uint16;
+        flags: uint16;
+        compression_method: uint16;
+        file_mod_time: uint16;
+        file_mod_date: uint16;
+        crc32: uint32;
+        compressed_size: uint32;
+        uncompressed_size: uint32;
+        file_name_len: uint16;
+        extra_field_len: uint16;
+        file_name: bytes &size=file_name_len;
+        extra_field: bytes &size=extra_field_len;
+        file_data: switch (self.compression_method) {
+            case 0 -> UncompressedData(self.compressed_size);
+            case 8 -> CompressedData(self.compressed_size);
+        };
+        
+        on %done {
+            print "Processed file entry: ", self.file_name;
+        }
+    };
+
+    type UncompressedData = unit(size: uint32) {
+        data: bytes &size=size;
+    };
+
+    type CompressedData = unit(size: uint32) {
+        data: bytes &size=size;
+    };
+}

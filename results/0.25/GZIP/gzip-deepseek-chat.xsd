@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/dfdl"
+           targetNamespace="http://example.com/dfdl"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="GZIPType">
+    <xs:sequence>
+      <xs:element name="ID1" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="ID2" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="ModificationTime" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="ExtraFlags" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="OperatingSystem" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="ExtraField" dfdl:lengthKind="implicit">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="XLEN" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="XData" type="xs:hexBinary" dfdl:length="{../XLEN}" dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="FileName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%#x00;"/>
+      <xs:element name="Comment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%#x00;"/>
+      <xs:element name="CRC16" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="CompressedData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      <xs:element name="CRC32" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="ISize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="GZIP" type="ex:GZIPType"/>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="littleEndian" alignmentUnits="bytes"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

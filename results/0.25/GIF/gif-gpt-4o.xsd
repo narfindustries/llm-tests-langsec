@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:tns="http://example.com/gif"
+           elementFormDefault="qualified"
+           dfdl:format="http://www.ogf.org/dfdl/dfdl-1.0/format.xsd">
+
+  <dfdl:format ref="tns:gifFormat"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:gifFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="GIFHeader">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:lengthUnits="bytes" dfdl:encoding="ascii"/>
+      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:lengthUnits="bytes" dfdl:encoding="ascii"/>
+      <xs:element name="logicalScreenWidth" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="logicalScreenHeight" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="packedFields" type="xs:unsignedByte"/>
+      <xs:element name="backgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="pixelAspectRatio" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="GIF" type="tns:GIFHeader"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="gifFormat">
+        <dfdl:byteOrder value="littleEndian"/>
+        <dfdl:encoding value="ascii"/>
+        <dfdl:lengthKind value="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

@@ -1,0 +1,99 @@
+# MQTT Protocol Specification in Zeek Spicy format
+
+%header {
+    import Frameworks
+}
+
+%config {
+    # MQTT protocol configuration
+    const protocol_name = "MQTT"
+    const protocol_version = 3.1
+}
+
+%layer mqtt {
+    # MQTT layer specification
+    type MQTT_Message = record {
+        msg_type: uint8,
+        dup: bool,
+        qos: uint8,
+        retain: bool,
+        remaining_length: uint32,
+        payload: bytestring &length=remaining_length,
+    };
+
+    # MQTT message types
+    const MSG_CONNECT = 1;
+    const MSG_CONNACK = 2;
+    const MSG_PUBLISH = 3;
+    const MSG_PUBACK = 4;
+    const MSG_PUBREC = 5;
+    const MSG_PUBREL = 6;
+    const MSG_PUBCOMP = 7;
+    const MSG_SUBSCRIBE = 8;
+    const MSG_SUBACK = 9;
+    const MSG_UNSUBSCRIBE = 10;
+    const MSG_UNSUBACK = 11;
+    const MSG_PINGREQ = 12;
+    const MSG_PINGRESP = 13;
+    const MSG_DISCONNECT = 14;
+
+    # MQTT message type mapping
+    type msg_type_map = table[uint8] of string = {
+        [MSG_CONNECT] = "CONNECT",
+        [MSG_CONNACK] = "CONNACK",
+        [MSG_PUBLISH] = "PUBLISH",
+        [MSG_PUBACK] = "PUBACK",
+        [MSG_PUBREC] = "PUBREC",
+        [MSG_PUBREL] = "PUBREL",
+        [MSG_PUBCOMP] = "PUBCOMP",
+        [MSG_SUBSCRIBE] = "SUBSCRIBE",
+        [MSG_SUBACK] = "SUBACK",
+        [MSG_UNSUBSCRIBE] = "UNSUBSCRIBE",
+        [MSG_UNSUBACK] = "UNSUBACK",
+        [MSG_PINGREQ] = "PINGREQ",
+        [MSG_PINGRESP] = "PINGRESP",
+        [MSG_DISCONNECT] = "DISCONNECT",
+    };
+
+    # MQTT message parsing
+    function parse_mqtt_message(msg: bytestring): MQTT_Message {
+        local msg_type = msg[0] >> 4;
+        local dup = (msg[0] & 0x08) != 0;
+        local qos = (msg[0] & 0x06) >> 1;
+        local retain = (msg[0] & 0x01) != 0;
+        local remaining_length = 0;
+        local payload = "";
+
+        # Parse remaining length
+        local multiplier = 1;
+        local i = 1;
+        while (i < |msg|) {
+            local byte = msg[i];
+            remaining_length += (byte & 0x7F) * multiplier;
+            if ((byte & 0x80) == 0) {
+                break;
+            }
+            multiplier *= 128;
+            i++;
+        }
+
+        # Parse payload
+        payload = msg[1 + i:|msg| - (1 + i)];
+
+        return MQTT_Message($msg_type=msg_type, $dup=dup, $qos=qos, $retain=retain, $remaining_length=remaining_length, $payload=payload);
+    }
+}
+
+%parser mqtt_parser {
+    # MQTT parser specification
+    local msg: bytestring;
+    local mqtt_msg: MQTT_Message;
+
+    # Parse MQTT message
+    msg = input;
+    mqtt_msg = parse_mqtt_message(msg);
+
+    # Log parsed MQTT message
+    Frameworks::log_info(fmt("Parsed MQTT message: type=%s, dup=%s, qos=%s, retain=%s, remaining_length=%d, payload=%s",
+                             msg_type_map[mqtt_msg=msg_type], mqtt_msg=dup, mqtt_msg=qos, mqtt_msg=retain, mqtt_msg=remaining_length, mqtt_msg=payload));
+}

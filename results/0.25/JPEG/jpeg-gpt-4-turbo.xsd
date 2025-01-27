@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg-gpt-4-turbo"
+           xmlns:tns="http://example.com/jpeg-gpt-4-turbo">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="JPEGFile">
+    <xs:sequence>
+      <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
+      <xs:element name="segments" type="tns:Segment" dfdl:occursCountKind="parsed" dfdl:occursStopValue="-1"/>
+      <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:terminator="0xFFD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Segment">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ . - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="JPEGFile" type="tns:JPEGFile"/>
+
+</xs:schema>

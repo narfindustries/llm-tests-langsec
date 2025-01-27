@@ -1,0 +1,86 @@
+%include zeek/spicy/file-analyzer
+
+module GIF;
+
+public type File = unit {
+    header: Header;
+    blocks: Block[] &until($input.at_end());
+};
+
+type Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color: uint8;
+    aspect_ratio: uint8;
+
+    on %done {
+        self.has_global_color_table = (self.packed & 0x80) != 0;
+        self.color_resolution = ((self.packed & 0x70) >> 4) + 1;
+        self.global_color_table_size = self.has_global_color_table ? 1 << ((self.packed & 0x07) + 1) : 0;
+    }
+
+    var has_global_color_table: bool;
+    var color_resolution: uint8;
+    var global_color_table_size: uint64;
+};
+
+type Block = unit {
+    switch ( self.block_type ) {
+        0x2c -> image_descriptor: ImageDescriptor;
+        0x21 -> extension: Extension;
+        0x3b -> trailer: void;
+    } &requires(self.block_type);
+
+    var block_type: uint8;
+
+    on %init {
+        self.block_type = $input.look_ahead(0);
+    }
+};
+
+type ImageDescriptor = unit {
+    introducer: uint8;
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    
+    : bytes &size=self.local_color_table_size &if(self.has_local_color_table);
+    : SubBlocks;
+
+    on %init {
+        self.has_local_color_table = (self.packed & 0x80) != 0;
+        self.local_color_table_size = self.has_local_color_table ? 3 * (1 << ((self.packed & 0x07) + 1)) : 0;
+    }
+
+    var has_local_color_table: bool;
+    var local_color_table_size: uint64;
+};
+
+type Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    : SubBlocks;
+};
+
+type SubBlocks = unit {
+    blocks: SubBlock[] &until($$.size == 0);
+};
+
+type SubBlock = unit {
+    size: uint8;
+    data: bytes &size=self.size;
+};
+
+on File::Header::%done {
+    if ( self.signature != b"GIF" )
+        self.confirm_error("invalid GIF signature");
+}
+
+public function file_analyzer_gif_spicy_file_analyzer(file_analyzer_t handle): bool {
+    return true;
+}

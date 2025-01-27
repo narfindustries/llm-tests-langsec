@@ -1,0 +1,104 @@
+module JPEG;
+
+import spicy;
+
+public type JPEG = unit {
+    magic: bytes &size=2 &convert="JPEG" &requires=$ == b"\xFF\xD8";
+    segments: Segment[] &until($.type == 0xD9);
+};
+
+type Segment = unit {
+    marker: uint8 &convert="SegmentMarker" &requires=$ == 0xFF;
+    type: uint8;
+    length: uint16 &if=$type != 0xD8 && $type != 0xD9;
+    data: bytes &size=$length - 2 &if=$type != 0xD8 && $type != 0xD9;
+};
+
+type SegmentMarker = enum {
+    SOI  = 0xD8,
+    EOI  = 0xD9,
+    APP0 = 0xE0,
+    APP1 = 0xE1,
+    APP2 = 0xE2,
+    APP3 = 0xE3,
+    APP4 = 0xE4,
+    APP5 = 0xE5,
+    APP6 = 0xE6,
+    APP7 = 0xE7,
+    APP8 = 0xE8,
+    APP9 = 0xE9,
+    APPA = 0xEA,
+    APPB = 0xEB,
+    APPC = 0xEC,
+    APPD = 0xED,
+    APPE = 0xEE,
+    APPF = 0xEF,
+    SOF0 = 0xC0,
+    SOF1 = 0xC1,
+    SOF2 = 0xC2,
+    SOF3 = 0xC3,
+    SOF5 = 0xC5,
+    SOF6 = 0xC6,
+    SOF7 = 0xC7,
+    SOF9 = 0xC9,
+    SOF10 = 0xCA,
+    SOF11 = 0xCB,
+    SOF13 = 0xCD,
+    SOF14 = 0xCE,
+    SOF15 = 0xCF,
+    DHT  = 0xC4,
+    DAC  = 0xCC,
+    RST0 = 0xD0,
+    RST1 = 0xD1,
+    RST2 = 0xD2,
+    RST3 = 0xD3,
+    RST4 = 0xD4,
+    RST5 = 0xD5,
+    RST6 = 0xD6,
+    RST7 = 0xD7,
+    SOI  = 0xD8,
+    EOI  = 0xD9,
+    SOS  = 0xDA,
+    DQT  = 0xDB,
+    DNL  = 0xDC,
+    DRI  = 0xDD,
+    DHP  = 0xDE,
+    EXP  = 0xDF,
+    APP0 = 0xE0,
+    APP1 = 0xE1,
+    APP2 = 0xE2,
+    APP3 = 0xE3,
+    APP4 = 0xE4,
+    APP5 = 0xE5,
+    APP6 = 0xE6,
+    APP7 = 0xE7,
+    APP8 = 0xE8,
+    APP9 = 0xE9,
+    APPA = 0xEA,
+    APPB = 0xEB,
+    APPC = 0xEC,
+    APPD = 0xED,
+    APPE = 0xEE,
+    APPF = 0xEF,
+    JPG0 = 0xF0,
+    JPG1 = 0xF1,
+    JPG2 = 0xF2,
+    JPG3 = 0xF3,
+    JPG4 = 0xF4,
+    JPG5 = 0xF5,
+    JPG6 = 0xF6,
+    JPG7 = 0xF7,
+    JPG8 = 0xF8,
+    JPG9 = 0xF9,
+    JPGA = 0xFA,
+    JPGB = 0xFB,
+    JPGC = 0xFC,
+    JPGD = 0xFD,
+    COM  = 0xFE,
+};
+
+on JPEG::Segment::%done {
+    if ( self.type == 0xDA ) {
+        print "Start of Scan (SOS) segment found";
+    }
+}

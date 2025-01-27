@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ICMP"
+           xmlns:tns="http://example.com/ICMP"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.dtd"/>
+
+  <xs:element name="icmp">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="tns:icmp-type"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="icmp-type">
+    <xs:sequence>
+      <xs:element name="type" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="code" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="checksum" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="identifier" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="icmp-header">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="tns:icmp-header-type" dfdl:OccursCount="1..1"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="icmp-header-type">
+    <xs:sequence>
+      <xs:element name="type" type="xs:unsignedByte" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
+      <xs:element name="code" type="xs:unsignedByte" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
+      <xs:element name="checksum" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="icmp-data">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="tns:icmp-data-type" dfdl:OccursCount="1..1"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="icmp-data-type">
+    <xs:sequence>
+      <xs:element name="identifier" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
+      <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,61 @@
+module TLS_Client_Hello;
+
+public type Version = struct {
+    major: uint8;
+    minor: uint8;
+};
+
+public type Random = struct {
+    gmt_unix_time: uint32;
+    random_bytes: bytes &size=28;
+};
+
+public type SessionID = struct {
+    length: uint8;
+    id: bytes &size=self.length if self.length > 0;
+};
+
+public type CipherSuite = struct {
+    data: bytes &size=2;
+};
+
+public type CipherSuites = struct {
+    length: uint16;
+    cipher_suites: CipherSuite[] &count = self.length/2;
+};
+
+public type CompressionMethod = struct {
+    method: uint8;
+};
+
+public type CompressionMethods = struct {
+    length: uint8;
+    methods: CompressionMethod[] &count=self.length;
+};
+
+public type Extension = struct {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=self.length;
+};
+
+public type Extensions = struct {
+    length: uint16;
+    extensions: Extension[] &until=$input.length() == 0;
+};
+
+public type ClientHello = struct {
+    version: Version;
+    random: Random;
+    session_id: SessionID;
+    cipher_suites: CipherSuites;
+    compression_methods: CompressionMethods;
+    extensions: Extensions if $input.length() > 0;
+} &byteorder=BigEndian;
+
+public type Record = struct {
+    content_type: uint8;
+    version: Version;
+    length: uint16;
+    client_hello: ClientHello if self.content_type == 22;
+} &byteorder=BigEndian;

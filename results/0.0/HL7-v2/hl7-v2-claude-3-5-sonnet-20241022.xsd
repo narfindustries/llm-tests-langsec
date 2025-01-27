@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/HL7"
+    targetNamespace="http://example.com/HL7">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" 
+                lengthKind="delimited" 
+                encoding="UTF-8"
+                initiator="" 
+                terminator="" 
+                separator=""
+                ignoreCase="no"
+                separatorSuppressionPolicy="anyEmpty"
+                separatorPosition="infix"
+                documentFinalTerminatorCanBeMissing="yes"
+                occursCountKind="parsed"
+                nilValueDelimiterPolicy="none"
+                textNumberRep="standard"
+                textStringJustification="left"
+                textTrimKind="none"
+                textPadKind="none"
+                escapeSchemeRef=""/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="HL7Message">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Segment" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Field" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Component" maxOccurs="unbounded">
+                                            <xs:complexType>
+                                                <xs:sequence>
+                                                    <xs:element name="SubComponent" type="xs:string" maxOccurs="unbounded"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="name" type="xs:string"/>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="HL7Format">
+                <dfdl:format ref="local:HL7Format"
+                    separator="|"
+                    terminator="&#13;&#10;"
+                    initiator=""
+                    lengthKind="delimited"
+                    encoding="UTF-8"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+</xs:schema>

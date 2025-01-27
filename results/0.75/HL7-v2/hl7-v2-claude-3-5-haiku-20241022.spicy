@@ -1,0 +1,38 @@
+module HL7;
+
+import spicy;
+
+public type Message = unit {
+    segments: list<Segment>;
+};
+
+public type Segment = unit {
+    name: bytes;
+    separator: bytes = "|";
+    fields: list<Field> = [];
+
+    parse %{
+        auto name_match = context.input().match(r"[A-Z]{3}");
+        if (!name_match) {
+            return false;
+        }
+        self->name = name_match.str();
+        self->fields = context.parseAll<Field>();
+    %}
+};
+
+public type Field = unit {
+    value: bytes;
+    
+    parse %{
+        self->value = context.input().match(r"[^|]*").str();
+    %}
+};
+
+public type Parser = unit {
+    message: Message;
+    
+    parse %{
+        self->message = context.parseAll<Message>();
+    %}
+};

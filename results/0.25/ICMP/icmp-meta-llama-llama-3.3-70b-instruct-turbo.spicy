@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2023 Meta Platforms, Inc.
+# SPDX-FileContributor: Your Name
+# SPDX-License-Identifier: Apache-2.0
+
+%header {
+    import icmp Grades
+}
+
+%impl {
+
+    function meta_grades_ICMP.llama_3_final_opts(u: uint16): icmp Grades::meta_grades_ICMP {
+        var ret_val: icmp Grades::meta_grades_ICMP;
+
+        # Machine generated, do not edit.
+        return ret_val;
+    }
+}
+
+%init {
+
+}

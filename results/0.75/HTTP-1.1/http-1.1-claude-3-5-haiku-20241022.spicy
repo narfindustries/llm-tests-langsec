@@ -1,0 +1,42 @@
+module HTTP;
+
+import spicy;
+
+public type Request = unit {
+    method: bytes;
+    sp1: bytes &size=1;
+    uri: bytes;
+    sp2: bytes &size=1;
+    version: bytes;
+    eol: bytes &size=2;
+
+    method_str: string = method.string();
+    uri_str: string = uri.string();
+    version_str: string = version.string();
+
+    on %done {
+        print self;
+    }
+};
+
+public type Response = unit {
+    version: bytes;
+    sp1: bytes &size=1;
+    status_code: bytes;
+    sp2: bytes &size=1;
+    status_msg: bytes;
+    eol: bytes &size=2;
+
+    version_str: string = version.string();
+    status_code_str: string = status_code.string();
+    status_msg_str: string = status_msg.string();
+
+    on %done {
+        print self;
+    }
+};
+
+public type Message = unit {
+    request: Request;
+    response: Response;
+};

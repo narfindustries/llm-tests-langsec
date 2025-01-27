@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/zipgemini"
+           xmlns="http://example.org/zipgemini"
+           elementFormDefault="qualified">
+
+  <xs:element name="zipGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="data" type="DataType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="trailer" type="TrailerType" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="recordType" type="xs:string" dfdl:length="1"/>
+      <xs:element name="version" type="xs:string" dfdl:length="2"/>
+    </xs:sequence>
+    <xs:attribute name="recordLength" type="xs:integer" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="dataField1" type="xs:string" dfdl:length="50"/>
+      <xs:element name="dataField2" type="xs:integer" dfdl:length="10"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="recordType" type="xs:string" dfdl:length="1"/>
+      <xs:element name="checksum" type="xs:integer" dfdl:length="10"/>
+    </xs:sequence>
+    <xs:attribute name="recordLength" type="xs:integer" use="required"/>
+  </xs:complexType>
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="false" encoding="UTF-8"
+                 lengthKind="delimited"
+                 lengthUnits="bytes"
+                 separator="|"
+                 textTerminator="CRLF"/>
+    <dfdl:layout alignment="left"/>
+  </dfdl:defineSchema>
+</xs:schema>
+

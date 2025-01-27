@@ -1,0 +1,50 @@
+%include zeek;
+
+module TIFF;
+
+type TIFFHeader = unit {
+    byte_order: bytes &size=2;
+    version: uint16;
+    first_ifd_offset: uint32;
+
+    on %init {
+        if ( self.byte_order != b"II" && self.byte_order != b"MM" ) {
+            self.set_error("Invalid byte order");
+            return;
+        }
+    }
+};
+
+type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+type IFD = unit {
+    entry_count: uint16;
+    entries: IFDEntry[self.entry_count];
+    next_ifd_offset: uint32;
+};
+
+public type TIFF = unit {
+    header: TIFFHeader;
+    ifd: IFD;
+} &byteorder=both;
+
+on TIFF::header %error {
+    zeek::confirm_error(self);
+}
+
+on TIFF::ifd %error {
+    zeek::confirm_error(self);
+}
+
+on TIFF::%error {
+    zeek::confirm_error(self);
+}
+
+on TIFF::%done {
+    zeek::confirm_done();
+}

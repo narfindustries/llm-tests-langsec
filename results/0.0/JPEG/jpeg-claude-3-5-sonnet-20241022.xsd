@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:local="http://example.com/jpeg"
+    targetNamespace="http://example.com/jpeg">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignment="1" alignmentUnits="bytes"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthKind="implicit"
+                encoding="UTF-8"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="jpeg">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="segment" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
+                            <xs:element name="length" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
+                            <xs:element name="data" type="xs:hexBinary" 
+                                dfdl:lengthKind="explicit"
+                                dfdl:length="{ xs:unsignedInt(../length) - 2 }"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

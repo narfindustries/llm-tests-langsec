@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:ice="urn:icmp:1.0"
+    targetNamespace="urn:icmp:1.0"
+    elementFormDefault="qualified">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" 
+                binaryNumberRep="binary"
+                representation="binary"
+                occursCountKind="implicit"
+                lengthUnits="bytes"
+                alignment="1"
+                alignmentUnits="bytes"
+                trailingSkipRegion="0"
+                leadingSkipRegion="0"
+                textPadKind="none"
+                encoding="UTF-8"
+                ignoreCase="no"
+                initiator="" 
+                terminator=""
+                separator=""
+                textBidi="no"
+                floating="IEEE"
+                sequenceKind="ordered"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ICMP">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="type" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="code" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="checksum" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+                <xs:element name="restOfHeader" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+                <xs:element name="payload" type="xs:hexBinary" dfdl:lengthKind="remainder"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

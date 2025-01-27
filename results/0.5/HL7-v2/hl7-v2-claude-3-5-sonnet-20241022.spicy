@@ -1,0 +1,52 @@
+module HL7;
+
+public type Message = unit {
+    : MsgStart;
+    segments: Segment[] &eod;
+};
+
+type MsgStart = unit {
+    : /\x0b/;
+};
+
+type Segment = unit {
+    segment_type: bytes &until=b"|";
+    fields: Field[] &until=b"\r";
+    : /\r\n?/;
+
+    on %done {
+        if ( self.segment_type == b"MSH" ) {
+            self.fields.push_back(Field(b"|"));
+        }
+    }
+};
+
+type Field = unit {
+    : RepeatField[] &until=b"|";
+    : /\|/;
+};
+
+type RepeatField = unit {
+    components: Component[] &until=b"~";
+    : /~?/;
+};
+
+type Component = unit {
+    subcomponents: SubComponent[] &until=b"^";
+    : /\^?/;
+};
+
+type SubComponent = unit {
+    value: bytes &until=/[\|\^~&\r]/;
+};
+
+public function parse_HL7%(data: bytes%) : Message
+    { return Message(data); }
+
+on Message::%done {
+    print "HL7 Message parsed";
+}
+
+on Segment::%done {
+    print "Segment Type:", self.segment_type;
+}

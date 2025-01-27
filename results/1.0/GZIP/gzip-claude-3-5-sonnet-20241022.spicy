@@ -1,0 +1,36 @@
+%include zeek;
+
+module GZIP;
+
+import spicy;
+
+public type GzipHeader = unit {
+    magic1: uint8 &requires(magic1 == 0x1f);
+    magic2: uint8 &requires(magic2 == 0x8b);
+    cm: uint8;
+    flg: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+    
+    on cm {
+        if ( self.cm != 8 )
+            self.set_error("Unknown compression method");
+    }
+
+    switch ( self.flg ) {
+        0x00 -> : void;
+        * -> : void { self.set_error("Unsupported flags"); }
+    }
+};
+
+public type GzipFile = unit {
+    header: GzipHeader;
+    data: bytes &eod;
+
+    on %done {
+        zeek::confirm_protocol();
+    }
+};
+
+on GZIP::GzipFile -> event gzip_file($file_id: string, $header: GzipHeader, $data: bytes);

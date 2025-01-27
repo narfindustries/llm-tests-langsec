@@ -1,0 +1,35 @@
+# Spicy specification for DICOM metadata
+%header {
+  import "zeek/spicy/standard/dicom.types"
+}
+
+%spicy -name DICOM::Metadata -transport DICOM::Types:: associates -base-types {
+
+  # Define DICOM metadata structure
+  module DICOM::Metadata {
+    %doc "DICOM metadata structure"
+
+   -export {
+      # Group 0002: File Meta Information
+      meta_info: DICOM::Types::Element[
+        id=0x00020001, # FileMetaInformationGroupLength
+        id=0x00020002, # FileMetaInformationVersion
+        id=0x00020003, # MediaStorageSOPInstanceUID
+        id=0x00020010, # TransferSyntaxUID
+        id=0x00020012, # ImplementationClassUID
+      ],
+
+      # Group 0008: Identify Image
+      identify_image: DICOM::Types::Element[
+        id=0x00080010, # RecognitionCode
+        id=0x00080016, # SOPClassUID
+        id=0x00080018, # SOPInstanceUID
+        id=0x00080020, # StudyDate
+        id=0x00080030, # StudyTime
+      ]
+    }
+  }
+}
+
+%footer {
+}

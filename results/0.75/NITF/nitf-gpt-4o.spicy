@@ -1,0 +1,79 @@
+module NITF;
+
+public type NITFFile = unit {
+    file_header: FileHeader,
+    image_segments: array of ImageSegment,
+    data_extension_segments: array of DataExtensionSegment,
+    reserved_extension_segments: array of ReservedExtensionSegment,
+    user_defined_header_data_extension_segments: array of UserDefinedHeaderDataExtensionSegment,
+    extended_header_data_segments: array of ExtendedHeaderDataSegment
+} &requires (file_header.num_image_segments == image_segments.size())
+  &requires (file_header.num_data_extension_segments == data_extension_segments.size())
+  &requires (file_header.num_reserved_extension_segments == reserved_extension_segments.size())
+  &requires (file_header.num_user_defined_header_data_extension_segments == user_defined_header_data_extension_segments.size())
+  &requires (file_header.num_extended_header_data_segments == extended_header_data_segments.size());
+
+type FileHeader = unit {
+    file_type: string &length = 4 &validate ($$ == "NITF"),
+    version: string &length = 5,
+    complexity_level: string &length = 2,
+    system_type: string &length = 4,
+    origin_station_id: string &length = 10,
+    file_date_time: string &length = 14,
+    file_title: string &length = 80,
+    num_image_segments: uint32,
+    num_data_extension_segments: uint32,
+    num_reserved_extension_segments: uint32,
+    num_user_defined_header_data_extension_segments: uint32,
+    num_extended_header_data_segments: uint32
+};
+
+type ImageSegment = unit {
+    header: ImageSegmentHeader,
+    data: bytes &length = header.data_length
+};
+
+type ImageSegmentHeader = unit {
+    data_length: uint32,
+    image_id: string &length = 10
+};
+
+type DataExtensionSegment = unit {
+    header: DataExtensionHeader,
+    data: bytes &length = header.data_length
+};
+
+type DataExtensionHeader = unit {
+    data_length: uint32,
+    data_id: string &length = 10
+};
+
+type ReservedExtensionSegment = unit {
+    header: ReservedExtensionHeader,
+    data: bytes &length = header.data_length
+};
+
+type ReservedExtensionHeader = unit {
+    data_length: uint32,
+    reserved_id: string &length = 10
+};
+
+type UserDefinedHeaderDataExtensionSegment = unit {
+    header: UserDefinedHeaderDataExtensionHeader,
+    data: bytes &length = header.data_length
+};
+
+type UserDefinedHeaderDataExtensionHeader = unit {
+    data_length: uint32,
+    user_header_id: string &length = 10
+};
+
+type ExtendedHeaderDataSegment = unit {
+    header: ExtendedHeaderDataHeader,
+    data: bytes &length = header.data_length
+};
+
+type ExtendedHeaderDataHeader = unit {
+    data_length: uint32,
+    extended_header_id: string &length = 10
+};

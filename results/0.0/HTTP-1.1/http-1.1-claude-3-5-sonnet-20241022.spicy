@@ -1,0 +1,40 @@
+module HTTP;
+
+import spicy;
+
+public type HTTP = unit {
+    request: Request;
+    response: Response;
+};
+
+type Request = unit {
+    method: bytes &until-including(b" ");
+    uri: bytes &until-including(b" ");
+    version: bytes &until-including(b"\r\n");
+    headers: Header[] &until(b"\r\n");
+    on %done { print self; }
+};
+
+type Response = unit {
+    version: bytes &until-including(b" ");
+    status: uint16 &until-including(b" ");
+    reason: bytes &until-including(b"\r\n");
+    headers: Header[] &until(b"\r\n");
+    body: bytes &eod;
+    on %done { print self; }
+};
+
+type Header = unit {
+    name: bytes &until-including(b":");
+    : bytes &until-including(b" ");
+    value: bytes &until-including(b"\r\n");
+};
+
+on HTTP::%done {
+    print self;
+}
+
+public function parse_http(data: bytes) : HTTP
+{
+    return HTTP(data);
+}

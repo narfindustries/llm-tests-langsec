@@ -1,0 +1,133 @@
+module MQTT;
+
+type MQTTMessage = unit {
+    fixed_header: FixedHeader;
+    variable_header_and_payload: case fixed_header.packet_type of {
+        1    => Connect;
+        2    => ConnAck;
+        3    => Publish;
+        4    => PubAck;
+        5    => PubRec;
+        6    => PubRel;
+        7    => PubComp;
+        8    => Subscribe;
+        9    => SubAck;
+        10   => Unsubscribe;
+        11   => UnsubAck;
+        12   => PingReq;
+        13   => PingResp;
+        14   => Disconnect;
+        15   => Auth;
+        default => &unknown_data;
+    };
+};
+
+type FixedHeader = unit {
+    packet_type: uint8 &bits(4);
+    flags: uint8 &bits(4);
+    remaining_length: varint;
+};
+
+type Connect = unit {
+    protocol_name: length_prefixed_string;
+    protocol_level: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
+    client_id: length_prefixed_string;
+    will_topic: optional<length_prefixed_string> &if (connect_flags & 0x04 != 0);
+    will_message: optional<length_prefixed_string> &if (connect_flags & 0x04 != 0);
+    username: optional<length_prefixed_string> &if (connect_flags & 0x80 != 0);
+    password: optional<length_prefixed_string> &if (connect_flags & 0x40 != 0);
+};
+
+type ConnAck = unit {
+    connect_ack_flags: uint8;
+    connect_reason_code: uint8;
+};
+
+type Publish = unit {
+    topic_name: length_prefixed_string;
+    packet_id: optional<uint16> &if (fixed_header.flags & 0x06 != 0);
+    payload: bytes &restofdata;
+};
+
+type PubAck = unit {
+    packet_id: uint16;
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+};
+
+type PubRec = unit {
+    packet_id: uint16;
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+};
+
+type PubRel = unit {
+    packet_id: uint16;
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+};
+
+type PubComp = unit {
+    packet_id: uint16;
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+};
+
+type Subscribe = unit {
+    packet_id: uint16;
+    topic_filters: array of TopicFilter;
+};
+
+type SubAck = unit {
+    packet_id: uint16;
+    return_codes: array of uint8;
+};
+
+type Unsubscribe = unit {
+    packet_id: uint16;
+    topic_filters: array of length_prefixed_string;
+};
+
+type UnsubAck = unit {
+    packet_id: uint16;
+    reason_codes: array of uint8;
+};
+
+type PingReq = unit { };
+
+type PingResp = unit { };
+
+type Disconnect = unit {
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+};
+
+type Auth = unit {
+    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+    properties: optional<bytes> &if (fixed_header.remaining_length > 1);
+};
+
+type TopicFilter = unit {
+    topic_filter: length_prefixed_string;
+    qos: uint8;
+};
+
+type length_prefixed_string = unit {
+    length: uint16;
+    value: string &length=length;
+};
+
+type varint = unit {
+    value: uint8;
+    next: optional<varint> &if (value & 0x80 != 0);
+} &byteorder=bigendian {
+    function to_uint: uint64 {
+        local result = 0u: uint64;
+        local shift = 0: uint64;
+        local v = self;
+        while ( v?$next ) {
+            result |= (v.value & 0x7f) << shift;
+            shift += 7;
+            v = v.next;
+        }
+        result |= (v.value & 0x7f) << shift;
+        return result;
+    }
+};

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:tns="http://example.com/mqtt"
+           elementFormDefault="qualified"
+           dfdl:format="byteOrder='bigEndian', lengthKind='explicit', byteOrderRuntimeByteOrder='bigEndian'
+                        encoding='UTF-8', lengthUnits='bytes'">
+
+  <xs:element name="MQTT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+        <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+        <xs:element name="Payload" type="tns:PayloadType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="ControlPacketType" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="RemainingLength" type="xs:unsignedInt">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/"><dfdl:property name="length" value="{expression=> tns:calcRemainingLength}" /></xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:sequence>
+      <!-- Define variable header elements based on MQTT packet type -->
+      <xs:element name="VariableHeaderData" type="xs:hexBinary" dfdl:lengthKind="explicit"
+                  dfdl:length="{expression=>tns:calcVariableHeaderLength}" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PayloadType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit"
+                  dfdl:length="{expression=>tns:calcPayloadLength}" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineVariable name="calcRemainingLength" type="xs:unsignedInt" external="false"/>
+      <dfdl:defineVariable name="calcVariableHeaderLength" type="xs:unsignedInt" external="false"/>
+      <dfdl:defineVariable name="calcPayloadLength" type="xs:unsignedInt" external="false"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

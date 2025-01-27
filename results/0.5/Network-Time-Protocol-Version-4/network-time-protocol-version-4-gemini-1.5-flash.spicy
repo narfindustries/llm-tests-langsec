@@ -1,0 +1,20 @@
+#ifndef _NETWORK_TIME_PROTOCOL_VERSION_4_H
+#define _NETWORK_TIME_PROTOCOL_VERSION_4_H
+
+#include <zeek/analyzer/protocol/ntp.h>
+
+#define NTP_VERSION 4
+
+event ntp_version_4_packet(uint8[4] data)
+{
+	// Check for NTP version 4
+	if (data[0] >> 6 == NTP_VERSION) {
+		// Process NTP packet
+		ntp_packet pkt = decode_ntp_packet(data);
+		// Add your custom logic here to handle NTP version 4 packets
+		// Example: Log the timestamp
+		print("NTPv4 Packet Received: Timestamp = ", pkt.timestamp);
+	}
+}
+
+#endif

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/Bitcoin-transactions"
+           xmlns:tns="http://example.com/Bitcoin-transactions"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="bitcoin-transactions">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+          <dfdl:occurs dfdl:count="*"/>
+        </dfdl:element>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:transaction" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="transaction">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+          <dfdl:occurs dfdl:count="*"/>
+        </dfdl:element>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:integer">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="num-inputs" type="xs:integer">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1" dfdl:lengthKind="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="inputs" type="tns:input-array" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+                <dfdl:occurs dfdl:countRef="tns:num-inputs"/>
+              </dfdl:element>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="num-outputs" type="xs:integer">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1" dfdl:lengthKind="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="outputs" type="tns:output-array" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+                <dfdl:occurs dfdl:countRef="tns:num-outputs"/>
+              </dfdl:element>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="lock-time" type="xs:integer">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="input-array">
+    <xs:sequence>
+      <xs:element name="input" type="tns:input" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="input">
+    <xs:sequence>
+      <xs:element name="previous-output" type="tns:output">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+              <dfdl:occurs dfdl:count="*"/>
+            </dfdl:element>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="script-length" type="xs:integer">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1" dfdl:lengthKind="explicit"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="script" type="xs:base64Binary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+              <dfdl:occurs dfdl:countRef="tns:script-length"/>
+            </dfdl:element>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="sequence" type="xs:integer">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="4" dfdl:lengthKind="explicit"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="output-array">
+    <xs:sequence>
+      <xs:element name="output" type="tns:output" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="output">
+    <xs:sequence>
+      <xs:element name="value" type="xs:integer">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="8" dfdl:lengthKind="explicit"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="script-length" type="xs:integer">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="1" dfdl:lengthKind="explicit"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="script" type="xs:base64Binary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:element dfdl:representation="binary" dfdl:byteOrder="bigEndian">
+              <dfdl:occurs dfdl:countRef="tns:script-length"/>
+            </dfdl:element>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

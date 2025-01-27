@@ -1,0 +1,71 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    questions: Question[header.qdcount];
+    answers: ResourceRecord[header.ancount];
+    authorities: ResourceRecord[header.nscount];
+    additionals: ResourceRecord[header.arcount];
+};
+
+type Header = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+
+    on flags {
+        self.qr = (self.flags & 0x8000) != 0;
+        self.opcode = (self.flags & 0x7800) >> 11;
+        self.aa = (self.flags & 0x0400) != 0;
+        self.tc = (self.flags & 0x0200) != 0;
+        self.rd = (self.flags & 0x0100) != 0;
+        self.ra = (self.flags & 0x0080) != 0;
+        self.rcode = (self.flags & 0x000F);
+    }
+
+    var qr: bool;
+    var opcode: uint8;
+    var aa: bool;
+    var tc: bool;
+    var rd: bool;
+    var ra: bool;
+    var rcode: uint8;
+};
+
+type Question = unit {
+    name: Name;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: Name;
+    type_: uint16;
+    class_: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+type Name = unit {
+    labels: Label[];
+} &until($$.labels[-1].length == 0);
+
+type Label = unit {
+    length: uint8;
+    label: bytes &size=self.length if self.length > 0;
+};
+
+public function name_to_string(n: Name): string {
+    local parts: vector<string>;
+    for ( label in n.labels ) {
+        if ( label.length > 0 )
+            parts.push_back(label.label);
+    }
+    return join(parts, ".");
+}

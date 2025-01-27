@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ntp"
+           xmlns:tns="http://example.com/ntp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:generalFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="fourBits">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:maxInclusive value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="leapIndicator" type="tns:fourBits" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="versionNumber" type="tns:fourBits" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="mode" type="tns:fourBits" dfdl:length="3" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NetworkTimeProtocol">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="flags" type="tns:FlagsType"/>
+        <xs:element name="rootDelay" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        <xs:element name="rootDispersion" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        <xs:element name="referenceIdentifier" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
+        <xs:element name="originateTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
+        <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
+        <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="generalFormat">
+    <xs:complexType>
+      <xs:attributeGroup ref="dfdl:format"/>
+      <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+      <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
+      <xs:attribute name="binaryNumberRep" type="xs:string" use="required" fixed="binary"/>
+      <xs:attribute name="textNumberRep" type="xs:string" use="required" fixed="standard"/>
+      <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

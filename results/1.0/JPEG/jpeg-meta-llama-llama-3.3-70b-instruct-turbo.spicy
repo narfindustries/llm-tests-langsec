@@ -1,0 +1,85 @@
+# JPEG File Format Parser
+
+file JPEG {
+    magic = /\xff\xd8\xff/
+
+    struct SOI {
+        uint8[2] marker = /\xff\xd8/
+    }
+
+    struct APP0 {
+        uint8[2] marker = /\xff\xe0/
+        uint16 length
+        uint8[5] identifier = "JFIF\0"
+        uint8 version_major
+        uint8 version_minor
+        uint8 units
+        uint16 density_x
+        uint16 density_y
+        uint8 thumbnail_x
+        uint8 thumbnail_y
+    }
+
+    struct DQT {
+        uint8[2] marker = /\xff\db/
+        uint16 length
+        uint8 precision
+        uint8 table_id
+        uint64 coefficients[64]
+    }
+
+    struct SOF0 {
+        uint8[2] marker = /\xff\xc0/
+        uint16 length
+        uint8 precision
+        uint16 height
+        uint16 width
+        uint8 components
+        struct Component {
+            uint8 id
+            uint8 sampling_factor
+            uint8 quantization_table_id
+        } components[components]
+    }
+
+    struct DHT {
+        uint8[2] marker = /\xff\xc4/
+        uint16 length
+        uint8 table_class
+        uint8 table_id
+        uint64 codes[256]
+    }
+
+    struct SOS {
+        uint8[2] marker = /\xffxda/
+        uint16 length
+        uint8 components
+        struct ScanComponent {
+            uint8 id
+            uint8 dc_table_id
+            uint8 ac_table_id
+        } components[components]
+        uint8 spectral_selection_start
+        uint8 spectral_selection_end
+        uint8 successive_approximation
+    }
+
+    seq {
+        s: SOI
+        loop {
+            marker: uint8[2]
+            if marker == /\xff\xd9/, break
+            length: uint16
+            case marker {
+                /\xff\xe0/: APP0
+                /\xff\db/: DQT
+                /\xff\xc0/: SOF0
+                /\xff\xc4/: DHT
+                /\xff\xd8/: SOI
+                /\xff\xd9/: break
+                /\xff\xda/: SOS
+                else: uint8[length - 2]
+            }
+        }
+    }
+}

@@ -1,0 +1,62 @@
+#ifndef _HL7_V2_GEMINI_1_H_
+#define _HL7_V2_GEMINI_1_H_
+
+#include <zeek/analyzer/protocol/hl7/hl7.zeek>
+
+global HL7::HL7_v2_Message hl7_v2_gemini_1_msg;
+
+event hl7_v2_gemini_1_message(HL7::HL7_v2_Message msg)
+{
+    hl7_v2_gemini_1_msg = msg;
+
+    // Add your specific HL7 v2 Gemini 1 message processing logic here.
+    // Example: Extract specific fields and create events based on their values.
+
+    // Example: Extract Patient ID
+    string patient_id = msg.get_field("PID-3.1");
+    if (patient_id != "") {
+        event_patient_id(patient_id);
+    }
+
+    // Example: Extract Order ID
+    string order_id = msg.get_field("ORC-1.1");
+    if (order_id != "") {
+        event_order_id(order_id);
+    }
+
+    // Add more field extractions and event creations as needed.
+}
+
+event event_patient_id(string patient_id)
+{
+    print("Patient ID: ", patient_id);
+    // Add your logic to process the patient ID.
+}
+
+event event_order_id(string order_id)
+{
+    print("Order ID: ", order_id);
+    // Add your logic to process the order ID.
+}
+
+#endif // _HL7_V2_GEMINI_1_H_
+
+
+#ifndef _HL7_V2_GEMINI_1_5_FLASH_H_
+#define _HL7_V2_GEMINI_1_5_FLASH_H_
+
+#include <zeek/analyzer/protocol/hl7/hl7.zeek>
+#include "hl7-v2-gemini-1.zeek"
+
+event hl7_v2_gemini_1_5_flash_message(HL7::HL7_v2_Message msg)
+{
+    // Check if the message is a Gemini 1.5 Flash message.  This requires
+    // knowledge of the specific message structure and identifiers.  Replace
+    // this with your actual check.
+    if (msg.get_field("MSH-9.1") == "GEMINI_1.5_FLASH") {
+        hl7_v2_gemini_1_message(msg);
+    }
+}
+
+#endif // _HL7_V2_GEMINI_1_5_FLASH_H_
+

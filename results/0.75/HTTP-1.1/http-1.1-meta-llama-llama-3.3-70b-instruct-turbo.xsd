@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HTTP-1.1"
+           xmlns:tns="http://example.com/HTTP-1.1"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           dfdl:.BindingStyle="Implicit"
+           dfdl:parseUnparsedBytes="false">
+
+  <xs:include schemaLocation="http.xsd"/>
+
+  <xs:element name="HTTP-1.1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:Request-Line" minOccurs="1" maxOccurs="1" dfdl:OccursCount="1"/>
+        <xs:element ref="tns:General-Headers" minOccurs="0" maxOccurs="unbounded" dfdl:OccursCountKind="implicit"/>
+        <xs:element ref="tns:Request-Headers" minOccurs="0" maxOccurs="unbounded" dfdl:OccursCountKind="implicit"/>
+        <xs:element ref="tns:Entity-Header" minOccurs="0" maxOccurs="unbounded" dfdl:OccursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Request-Line">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter '/')
+        <xs:element name="Request-URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=' '>
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:constant>HTTP/1.1</dfdl:constant>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="HTTP-Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'>
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:constant>HTTP/1.1</dfdl:constant>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="General-Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Cache-Control" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Connection" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Date" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Pragma" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Trailer" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Transfer-Encoding" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Upgrade" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Via" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Warning" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Request-Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Accept" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Accept-Charset" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Accept-Encoding" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Accept-Language" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Authorization" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Expect" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="From" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Host" type="xs:string" minOccurs="1" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="If-Match" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="If-Modified-Since" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="If-None-Match" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="If-Range" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="If-Unmodified-Since" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Max-Forwards" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Proxy-Authorization" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Range" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Referer" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="TE" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="User-Agent" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Entity-Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Allow" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Encoding" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Language" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Length" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Location" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-MD5" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Range" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Content-Type" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Expires" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+        <xs:element name="Last-Modified" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:delimiter='\r\n'/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

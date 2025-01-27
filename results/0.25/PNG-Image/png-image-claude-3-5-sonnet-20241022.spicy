@@ -1,0 +1,28 @@
+module PNG-Image;
+
+import spicy;
+
+public type PNG = unit {
+    signature: bytes &size=8;
+    chunks: Chunk[];
+} &requires=check_signature;
+
+type Chunk = unit {
+    length: uint32 &byte-order=BigEndian;
+    type: bytes &size=4;
+    data: bytes &size=self.length;
+    crc: uint32 &byte-order=BigEndian;
+};
+
+function check_signature(data: bytes): bool {
+    return data == b"\x89PNG\r\n\x1a\n";
+}
+
+on PNG::PNG -> event PNG::file_ready($file);
+
+public function process_png(data: bytes) {
+    local png = PNG(data);
+    return png;
+}
+
+@zeek-event PNG::file_ready[signature: bytes];

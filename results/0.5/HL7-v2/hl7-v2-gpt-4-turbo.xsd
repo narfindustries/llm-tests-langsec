@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7-v2"
+           xmlns:ex="http://example.com/HL7-v2">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:HL7BaseFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="HL7Message">
+    <xs:sequence>
+      <xs:element name="Segment" type="ex:Segment" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Segment">
+    <xs:sequence>
+      <xs:element name="Field" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|" dfdl:escapeScheme="ex:HL7EscapeScheme"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="HL7EscapeScheme">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="\F\"/>
+      <xs:enumeration value="\S\"/>
+      <xs:enumeration value="\T\"/>
+      <xs:enumeration value="\R\"/>
+      <xs:enumeration value="\E\"/>
+      <xs:enumeration value="\X\"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="HL7BaseFormat">
+        <dfdl:format textEncoding="ascii"
+                     lengthKind="delimited"
+                     representation="text"
+                     ignoreCase="no"
+                     binaryNumberRep="binary"
+                     byteOrder="bigEndian"
+                     escapeSchemeRef="ex:HL7EscapeScheme"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tls-client-hello"
+           xmlns:tns="http://example.com/tls-client-hello"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        separator=""
+        separatorPosition="prefix"
+        separatorSuppressionPolicy="never"
+        escapeCharacter=""
+        representation="binary"
+        byteOrder="bigEndian"
+        encoding="utf-8"
+        fillByte="0"
+        initiatedContent="no"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TLSClientHello">
+    <xs:complexType>
+      <xs:sequence dfdl:byteOrder="bigEndian">
+        <xs:element name="ContentType" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="ProtocolVersion" type="tns:ProtocolVersionType"/>
+        <xs:element name="Length" type="xs:unsignedShort"/>
+        <xs:element name="HandshakeType" type="xs:unsignedByte"/>
+        <xs:element name="HandshakeLength" type="tns:ThreeByteLength"/>
+        <xs:element name="ClientVersion" type="tns:ProtocolVersionType"/>
+        <xs:element name="Random" type="tns:RandomType"/>
+        <xs:element name="SessionIDLength" type="xs:unsignedByte"/>
+        <xs:element name="SessionID" type="xs:hexBinary" dfdl:length="{ ../tns:SessionIDLength }"/>
+        <xs:element name="CipherSuitesLength" type="xs:unsignedShort"/>
+        <xs:element name="CipherSuites" type="xs:hexBinary" dfdl:length="{ ../tns:CipherSuitesLength }"/>
+        <xs:element name="CompressionMethodsLength" type="xs:unsignedByte"/>
+        <xs:element name="CompressionMethods" type="xs:hexBinary" dfdl:length="{ ../tns:CompressionMethodsLength }"/>
+        <xs:element name="ExtensionsLength" type="xs:unsignedShort"/>
+        <xs:element name="Extensions" type="xs:hexBinary" dfdl:length="{ ../tns:ExtensionsLength }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ProtocolVersionType">
+    <xs:sequence>
+      <xs:element name="Major" type="xs:unsignedByte"/>
+      <xs:element name="Minor" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RandomType">
+    <xs:sequence>
+      <xs:element name="Timestamp" type="xs:unsignedInt"/>
+      <xs:element name="RandomBytes" type="xs:hexBinary" dfdl:length="28"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ThreeByteLength">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="16777215"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

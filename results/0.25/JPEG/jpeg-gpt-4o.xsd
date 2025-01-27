@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:tns="http://example.com/jpeg"
+           elementFormDefault="qualified"
+           dfdl:format="byteOrder='bigEndian'">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:JPEGFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="JPEGFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SOI" type="tns:SOIType"/>
+                <xs:element name="Segments" type="tns:SegmentsType" maxOccurs="unbounded"/>
+                <xs:element name="EOI" type="tns:EOIType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="SOIType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="2"/>
+            <xs:pattern value="FFD8"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="EOIType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="2"/>
+            <xs:pattern value="FFD9"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="SegmentsType">
+        <xs:sequence>
+            <xs:element name="Marker" type="tns:MarkerType"/>
+            <xs:element name="Length" type="xs:unsignedShort"/>
+            <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../Length - 2}"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="MarkerType">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="2"/>
+            <xs:pattern value="FF[A-F0-9]{2}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <dfdl:defineFormat name="JPEGFormat">
+        <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ISO-8859-1"/>
+    </dfdl:defineFormat>
+
+</xs:schema>

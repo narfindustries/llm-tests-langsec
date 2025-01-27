@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/sqlite3-db"
+           xmlns="http://example.org/sqlite3-db"
+           elementFormDefault="qualified">
+
+  <xs:element name="sqlite3-db-gemini-1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="100"/>
+        <xs:element name="data" type="DataType" dfdl:separator="," dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
+      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
+      <xs:element name="field3" type="xs:date" dfdl:length="10"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:integer" dfdl:length="5"/>
+      <xs:element name="name" type="xs:string" dfdl:length="50"/>
+      <xs:element name="value" type="xs:decimal" dfdl:length="10" dfdl:textNumberPattern="9999999999"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

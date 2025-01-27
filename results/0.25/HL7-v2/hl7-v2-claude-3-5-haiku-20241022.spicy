@@ -1,0 +1,49 @@
+module HL7;
+
+import spicy;
+
+public type Message = unit {
+    segments: list<Segment> &until($input.eof());
+
+    var segment_count: uint64 = 0;
+
+    on segments {
+        self.segment_count = |segments|;
+    }
+};
+
+public type Segment = unit {
+    name: bytes &size=3;
+    separator: bytes &size=1 = b"|";
+    fields: Fields;
+
+    var segment_type: bytes = name;
+};
+
+type Fields = unit {
+    fields: list<Field> &separator=b"|";
+};
+
+type Field = unit {
+    value: bytes &convert=spicy::decode_utf8(value);
+};
+
+public type MSH = unit {
+    name: bytes &size=3 = b"MSH";
+    separator1: bytes &size=1 = b"|";
+    encoding_chars: bytes &size=4;
+    separator2: bytes &size=1 = b"|";
+    sending_app: bytes;
+    separator3: bytes &size=1 = b"|";
+    sending_facility: bytes;
+    separator4: bytes &size=1 = b"|";
+    receiving_app: bytes;
+    separator5: bytes &size=1 = b"|";
+    receiving_facility: bytes;
+    separator6: bytes &size=1 = b"|";
+    timestamp: bytes;
+    separator7: bytes &size=1 = b"|";
+    security: bytes;
+    separator8: bytes &size=1 = b"|";
+    message_type: bytes;
+};

@@ -1,0 +1,29 @@
+module PNG;
+
+import spicy;
+
+public type Image = unit {
+    signature: bytes = b"\x89PNG\r\n\x1a\n";
+    
+    chunks: Chunk[] while ($!.is_iend());
+
+    type Chunk = unit {
+        length: uint32;
+        type: bytes(4);
+        data: bytes(self.length) if (self.type != b"IEND");
+        crc: uint32;
+
+        method is_iend(): bool {
+            return self.type == b"IEND";
+        }
+    };
+};
+
+public function is_png(data: bytes) : bool {
+    try {
+        local img = PNG::Image(data);
+        return true;
+    } catch { 
+        return false;
+    }
+}

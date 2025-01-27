@@ -1,0 +1,60 @@
+module ELF;
+
+import spicy;
+
+type Header = unit {
+    magic: bytes &size=4;
+    class: uint8;
+    data: uint8;
+    version: uint8;
+    os_abi: uint8;
+    abi_version: uint8;
+    pad: bytes &size=7;
+    type: uint16;
+    machine: uint16;
+    version2: uint32;
+    entry: uint64;
+    phoff: uint64;
+    shoff: uint64;
+    flags: uint32;
+    ehsize: uint16;
+    phentsize: uint16;
+    phnum: uint16;
+    shentsize: uint16;
+    shnum: uint16;
+    shstrndx: uint16;
+};
+
+type ProgramHeader = unit {
+    type: uint32;
+    flags: uint32;
+    offset: uint64;
+    vaddr: uint64;
+    paddr: uint64;
+    filesz: uint64;
+    memsz: uint64;
+    align: uint64;
+};
+
+type SectionHeader = unit {
+    name: uint32;
+    type: uint32;
+    flags: uint64;
+    addr: uint64;
+    offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    addralign: uint64;
+    entsize: uint64;
+};
+
+type ELF = unit {
+    header: Header;
+    program_headers: ProgramHeader[] &size=header.phnum;
+    section_headers: SectionHeader[] &size=header.shnum;
+};
+
+on ELF::header -> event elf_header($conn, self.magic, self.class, self.data, self.version, self.os_abi, self.abi_version, self.type, self.machine, self.version2, self.entry, self.phoff, self.shoff, self.flags, self.ehsize, self.phentsize, self.phnum, self.shentsize, self.shnum, self.shstrndx);
+on ELF::program_headers -> event elf_program_header($conn, self.type, self.flags, self.offset, self.vaddr, self.paddr, self.filesz, self.memsz, self.align);
+on ELF::section_headers -> event elf_section_header($conn, self.name, self.type, self.flags, self.addr, self.offset, self.size, self.link, self.info, self.addralign, self.entsize);

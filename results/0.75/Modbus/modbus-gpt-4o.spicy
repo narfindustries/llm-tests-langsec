@@ -1,0 +1,67 @@
+module Modbus;
+
+import spicy;
+import zeek;
+
+export {
+
+    type ModbusRequest = unit {
+        transaction_id: uint16;
+        protocol_id: uint16;
+        length: uint16;
+        unit_id: uint8;
+        function_code: uint8;
+        data: bytes &restofdata;
+    };
+
+    type ModbusResponse = unit {
+        transaction_id: uint16;
+        protocol_id: uint16;
+        length: uint16;
+        unit_id: uint8;
+        function_code: uint8;
+        data: bytes &restofdata;
+    };
+
+    type ModbusAnalyzer = spicy::Analyzer {
+        .request: ModbusRequest,
+        .response: ModbusResponse
+    };
+}
+
+module Modbus::Events;
+
+export {
+    event modbus_request(c: connection, trans_id: uint16, proto_id: uint16, unit_id: uint8, func_code: uint8, data: bytes);
+    event modbus_response(c: connection, trans_id: uint16, proto_id: uint16, unit_id: uint8, func_code: uint8, data: bytes);
+}
+
+module Modbus::Implementation;
+
+hook spicy::Analyzer::configure() &priority=5 {
+    self.skip = false;
+}
+
+hook ModbusAnalyzer::parse_request() {
+    event Modbus::Events::modbus_request(self.flow.src, self.request.transaction_id, self.request.protocol_id, self.request.unit_id, self.request.function_code, self.request.data);
+}
+
+hook ModbusAnalyzer::parse_response() {
+    event Modbus::Events::modbus_response(self.flow.dst, self.response.transaction_id, self.response.protocol_id, self.response.unit_id, self.response.function_code, self.response.data);
+}
+
+module Modbus::Main;
+
+public export {
+    redef enum zeek::Analyzer::Tag += {
+        ANLYZR_MODBUS
+    };
+}
+
+redef zeek::analyzer_mgr += {
+    ["Modbus"] = [$name="Modbus", $analyzer=Modbus::Implementation::ModbusAnalyzer]
+};
+
+event zeek_init() {
+    Analyzer::register_for_ports(Analyzer::ANLYZR_MODBUS, [502/tcp]);
+}

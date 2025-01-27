@@ -1,0 +1,19 @@
+#ifndef BITCOIN_TRANSACTIONS_GEMINI_1_5_FLASH_SPICY
+#define BITCOIN_TRANSACTIONS_GEMINI_1_5_FLASH_SPICY
+
+function bitcoin_transaction_parser(data: string) : record {
+	version: uint32;
+	inputs: vector of record {
+		prev_out_hash: string;
+		prev_out_index: uint32;
+		script_sig: string;
+		sequence: uint32;
+	};
+	outputs: vector of record {
+		value: uint64;
+		script_pubkey: string;
+	};
+	lock_time: uint32;
+}
+
+#endif

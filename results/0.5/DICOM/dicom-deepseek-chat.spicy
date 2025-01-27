@@ -1,0 +1,22 @@
+module DICOM;
+
+import spicy;
+
+public type File = unit {
+    magic: bytes &size=128 &convert="DICOM";
+    preamble: bytes &size=128;
+    prefix: bytes &size=4 &convert="DICM";
+    elements: Element[] &until($input.eof());
+};
+
+type Element = unit {
+    group: uint16;
+    element: uint16;
+    vr: bytes &size=2;
+    length: uint16;
+    value: bytes &size=length;
+};
+
+on File::%done {
+    print "DICOM file parsed successfully";
+}

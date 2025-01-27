@@ -1,0 +1,90 @@
+#ifndef _NETWORK_TIME_PROTOCOL_VERSION_4_H_
+#define _NETWORK_TIME_PROTOCOL_VERSION_4_H_
+
+#include <zeek/zeek.h>
+
+typedef enum {
+    NTP_PACKET_TYPE_REQUEST = 0x00,
+    NTP_PACKET_TYPE_RESPONSE = 0x10
+} ntp_packet_type_t;
+
+
+typedef struct {
+    uint8_t leap;
+    uint8_t version;
+    uint8_t mode;
+    uint8_t stratum;
+    int32_t poll;
+    int32_t precision;
+    uint64_t root_delay;
+    uint64_t root_dispersion;
+    uint32_t reference_id;
+    uint64_t reference_timestamp;
+    uint64_t originate_timestamp;
+    uint64_t receive_timestamp;
+    uint64_t transmit_timestamp;
+} ntp_packet_t;
+
+// Function to parse NTP packet
+int parse_ntp_packet(const string &data, ntp_packet_t &packet);
+
+// Function to generate NTP packet
+string generate_ntp_packet(const ntp_packet_t &packet);
+
+#endif
+
+#include "network-time-protocol-version-4.h"
+
+int parse_ntp_packet(const string &data, ntp_packet_t &packet) {
+    if (data.len() < 48) {
+        return -1; // Packet too short
+    }
+
+    // Assuming network byte order
+    packet.leap = (uint8_t) data[0] >> 6;
+    packet.version = (uint8_t) ((data[0] >> 3) & 0x07);
+    packet.mode = (uint8_t) (data[0] & 0x07);
+    packet.stratum = data[1];
+    packet.poll = (int32_t) ntohs(data[2] << 8 | data[3]); // Assuming int32
+    packet.precision = (int32_t) ntohs(data[4] << 8 | data[5]); // Assuming int32
+
+    // uint64_t needs special handling
+    packet.root_delay = ntohll((uint64_t)((data[6] << 56) | (data[7] << 48) | (data[8] << 40) | (data[9] << 32) | (data[10] << 24) | (data[11] << 16) | (data[12] << 8) | data[13]));
+    packet.root_dispersion = ntohll((uint64_t)((data[14] << 56) | (data[15] << 48) | (data[16] << 40) | (data[17] << 32) | (data[18] << 24) | (data[19] << 16) | (data[20] << 8) | data[21]));
+    packet.reference_id = ntohl((uint32_t)((data[22] << 24) | (data[23] << 16) | (data[24] << 8) | data[25]));
+
+    // uint64_t needs special handling
+    packet.reference_timestamp = ntohll((uint64_t)((data[26] << 56) | (data[27] << 48) | (data[28] << 40) | (data[29] << 32) | (data[30] << 24) | (data[31] << 16) | (data[32] << 8) | data[33]));
+    packet.originate_timestamp = ntohll((uint64_t)((data[34] << 56) | (data[35] << 48) | (data[36] << 40) | (data[37] << 32) | (data[38] << 24) | (data[39] << 16) | (data[40] << 8) | data[41]));
+    packet.receive_timestamp = ntohll((uint64_t)((data[42] << 56) | (data[43] << 48) | (data[44] << 40) | (data[45] << 32) | (data[46] << 24) | (data[47] << 16) | (data[48] << 8) | data[49]));
+    packet.transmit_timestamp = ntohll((uint64_t)((data[50] << 56) | (data[51] << 48) | (data[52] << 40) | (data[53] << 32) | (data[54] << 24) | (data[55] << 16) | (data[56] << 8) | data[57]));
+
+    return 0;
+}
+
+string generate_ntp_packet(const ntp_packet_t &packet) {
+    string data = "";
+    data += (uint8_t)((packet.leap << 6) | (packet.version << 3) | packet.mode);
+    data += packet.stratum;
+    data += htonl(packet.poll);
+    data += htonl(packet.precision);
+    data += htonll(packet.root_delay);
+    data += htonll(packet.root_dispersion);
+    data += htonl(packet.reference_id);
+    data += htonll(packet.reference_timestamp);
+    data += htonll(packet.originate_timestamp);
+    data += htonll(packet.receive_timestamp);
+    data += htonll(packet.transmit_timestamp);
+    return data;
+
+}
+
+event zeek_init() {
+    // Example usage
+    ntp_packet_t packet;
+    string test_packet = "\x1b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    if (parse_ntp_packet(test_packet, packet) == 0) {
+        //Process packet.
+    }
+}
+

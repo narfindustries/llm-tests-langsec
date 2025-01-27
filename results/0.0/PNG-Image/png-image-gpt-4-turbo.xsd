@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/png"
+           xmlns:tns="http://example.com/png">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:generalFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="eightBitType">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:complexType name="IHDRChunk">
+    <xs:sequence>
+      <xs:element name="width" type="xs:int" dfdl:length="4" dfdl:encoding="binary"/>
+      <xs:element name="height" type="xs:int" dfdl:length="4" dfdl:encoding="binary"/>
+      <xs:element name="bitDepth" type="tns:eightBitType" dfdl:length="1"/>
+      <xs:element name="colorType" type="tns:eightBitType" dfdl:length="1"/>
+      <xs:element name="compressionMethod" type="tns:eightBitType" dfdl:length="1"/>
+      <xs:element name="filterMethod" type="tns:eightBitType" dfdl:length="1"/>
+      <xs:element name="interlaceMethod" type="tns:eightBitType" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Chunk">
+    <xs:sequence>
+      <xs:element name="length" type="xs:int" dfdl:length="4" dfdl:encoding="binary"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../length }"/>
+      <xs:element name="crc" type="xs:int" dfdl:length="4" dfdl:encoding="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="PNG">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="8"/>
+        <xs:element name="IHDR" type="tns:IHDRChunk"/>
+        <xs:element name="chunks" type="tns:Chunk" dfdl:occursCountKind="expression" dfdl:occursCount="{ fn:count(../IHDR) }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:defineFormat name="generalFormat">
+    <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                 representation="binary" lengthKind="delimited"/>
+  </xs:defineFormat>
+
+</xs:schema>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gzip"
+           xmlns:tns="http://example.com/gzip"
+           elementFormDefault="qualified"
+           dfdl:format="true"
+           dfdl:byteOrder="bigEndian"
+           dfdl:encoding="utf-8">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:defaultFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="gzip">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="id1" type="xs:unsignedByte" dfdl:length="1" dfdl:inputValueCalc="{ 0x1F }"/>
+        <xs:element name="id2" type="xs:unsignedByte" dfdl:length="1" dfdl:inputValueCalc="{ 0x8B }"/>
+        <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="os" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="extraField" type="xs:hexBinary" minOccurs="0" dfdl:lengthKind="explicit" dfdl:length="{ if (flags & 0x04) != 0 then 2 else 0 }"/>
+        <xs:element name="fileName" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited" dfdl:terminator="{ 0x00 }" dfdl:encoding="utf-8"/>
+        <xs:element name="comment" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited" dfdl:terminator="{ 0x00 }" dfdl:encoding="utf-8"/>
+        <xs:element name="crc16" type="xs:unsignedShort" minOccurs="0" dfdl:length="2" dfdl:inputValueCalc="{ if (flags & 0x02) != 0 then fn:crc16(0x0000, 'crc16', 'ISO-3309', '0x1021', '0xFFFF', false, false) else 0 }"/>
+        <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="isize" type="xs:unsignedInt" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <dfdl:defineFormat name="defaultFormat">
+    <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

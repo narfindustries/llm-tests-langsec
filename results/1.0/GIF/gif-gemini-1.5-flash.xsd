@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" xmlns:tns="http://example.org/gif">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:dfdlVersion>1.0</dfdl:dfdlVersion>
+      <dfdl:format ref="tns:GIFFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="gifGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns:HeaderType">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:length kind="implicit" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="imageData" type="xs:base64Binary">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:length kind="implicit" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="footer" type="tns:FooterType">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:length kind="implicit" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:length length="3" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:integer">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:length length="4" lengthUnits="bytes"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="GIFFormat">
+    <xs:sequence/>
+    <xs:attribute name="encoding" type="xs:string" use="required" fixed="UTF-8"/>
+    <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
+    <xs:attribute name="separator" type="xs:string" use="required" fixed="\n"/>
+  </xs:complexType>
+</xs:schema>

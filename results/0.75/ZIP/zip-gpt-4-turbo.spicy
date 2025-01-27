@@ -1,0 +1,59 @@
+module ZIP;
+
+public type CentralDirEndRecord = unit {
+    signature: uint32;
+    disk_num: uint16;
+    disk_num_dir: uint16;
+    dir_entries_disk: uint16;
+    dir_entries_total: uint16;
+    dir_size: uint32;
+    dir_offset: uint32;
+    comment_len: uint16;
+    comment: bytes &size=comment_len;
+};
+
+public type CentralDirEntry = unit {
+    signature: uint32;
+    version_made: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    comp_size: uint32;
+    uncomp_size: uint32;
+    name_len: uint16;
+    extra_len: uint16;
+    comment_len: uint16;
+    disk_start: uint16;
+    internal_attr: uint16;
+    external_attr: uint32;
+    local_header_offset: uint32;
+    name: bytes &size=name_len;
+    extra: bytes &size=extra_len;
+    comment: bytes &size=comment_len;
+};
+
+public type LocalFileHeader = unit {
+    signature: uint32;
+    version_needed: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    comp_size: uint32;
+    uncomp_size: uint32;
+    name_len: uint16;
+    extra_len: uint16;
+    name: bytes &size=name_len;
+    extra: bytes &size=extra_len;
+    data: bytes &size=comp_size;
+};
+
+public type ZIPArchive = unit {
+    files: LocalFileHeader[] &eod;
+    central_directory: CentralDirEntry[] &until($$.length() == $.files.length());
+    end_central_dir_record: CentralDirEndRecord;
+};

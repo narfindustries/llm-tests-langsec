@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7-v2"
+           xmlns:ex="http://example.com/HL7-v2">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:HL7BaseFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:include schemaLocation="HL7BaseTypes.xsd"/>
+
+  <xs:complexType name="HL7Message">
+    <xs:sequence>
+      <xs:element name="Segment" type="ex:Segment" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Segment">
+    <xs:sequence>
+      <xs:element name="Field" type="ex:Field" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Field">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="separator" type="xs:string" use="required" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="HL7Message" type="ex:HL7Message"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="HL7BaseFormat">
+        <dfdl:format textEncoding="ascii"
+                     lengthKind="delimited"
+                     representation="text"
+                     separatorSuppressionPolicy="never"
+                     ignoreCase="yes"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

@@ -1,0 +1,46 @@
+module HTTP;
+
+import spicy;
+
+public type Message = unit {
+    method: bytes;
+    uri: bytes;
+    version: bytes;
+    headers: Headers;
+    body: bytes &eod;
+
+    on %init {
+        self.method = b"";
+        self.uri = b"";
+        self.version = b"";
+    }
+
+    parse Header = unit {
+        name: bytes &until b":";
+        _ : bytes &until b"\r\n";
+        
+        on %done {
+            local normalized_name = to_lower(name);
+            if ( normalized_name == b"content-length" ) {
+                # Potential content length tracking
+            }
+        }
+    }
+
+    type Headers = vector<Header>;
+
+    parsing {
+        method = /[A-Z]+/ &convert str;
+        _ : b" ";
+        uri = /[^ ]+/ &convert str;
+        _ : b" ";
+        version = /HTTP\/[0-9.]+/ &convert str;
+        _ : b"\r\n";
+        headers = repeat Header until b"\r\n\r\n";
+        body = /.*/;
+    }
+};
+
+public function to_lower(b: bytes) : bytes {
+    return bytes(b.lower());
+}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/TLS"
+           xmlns="http://example.com/TLS"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="TLSClientHello">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:element dfdl:ref="TLSClientHello"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="type" type="xs:unsignedByte" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="type" dfdl:outputValueCalculator="1"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="version" dfdl:outputValueCalculator="0x0303"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="length" dfdl:outputValueCalculator="43"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="sessionId" type="xs:hexBinary" dfdl:length="32" dfdl:byteOrder="bigEndian">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="sessionId" dfdl:outputValueCalculator="00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="cipherSuites" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="explicit" dfdl:occurs="{2}">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="cipherSuites" dfdl:outputValueCalculator="0x0005 0x0004"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="compressionMethods" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="explicit" dfdl:occurs="{1}">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element dfdl:ref="compressionMethods" dfdl:outputValueCalculator="0x00"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

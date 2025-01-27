@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/TLS-Client-Hello"
+           xmlns="http://example.com/TLS-Client-Hello"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="tls-client-hello">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format xs:type=" GibraltaraversableFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="record-layer" type="record-layerType" dfdl:Occurs="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="record-layerType">
+    <xs:sequence>
+      <xs:element name="content-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8"/>
+      <xs:element name="handshake" type="handshakeType" dfdl:length="*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="versionType">
+    <xs:sequence>
+      <xs:element name="major" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="minor" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="handshakeType">
+    <xs:sequence>
+      <xs:element name="handshake-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:length="3" dfdl:encoding="utf-8"/>
+      <xs:element name="client-version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
+      <xs:element name="random" type="xs:unsignedByte" dfdl:length="32" dfdl:encoding="utf-8"/>
+      <xs:element name="session-id" type="xs:unsignedByte" dfdl:length="*"/>
+      <xs:element name="cipher-suites" type="cipher-suitesType" dfdl:length="*"/>
+      <xs:element name="compression-methods" type="compression-methodsType" dfdl:length="*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="cipher-suitesType">
+    <xs:sequence>
+      <xs:element name="cipher-suite" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="compression-methodsType">
+    <xs:sequence>
+      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:defineFormat name="GibraltaraversableFormat" type="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

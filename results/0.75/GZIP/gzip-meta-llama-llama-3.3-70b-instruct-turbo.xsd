@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GZIP"
+           xmlns="http://example.com/GZIP"
+           elementFormDefault="qualified">
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+  <xs:element name="GZIP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="gzip-header" minOccurs="1" maxOccurs="1" dfdl:occursCount="1"/>
+        <xs:element ref="compressed-data" minOccurs="1" maxOccurs="1" dfdl:occursCount="1"/>
+        <xs:element ref="gzip-footer" minOccurs="1" maxOccurs="1" dfdl:occursCount="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="gzip-header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="id1" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="id2" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="cm" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="flags" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="mtime" type="xs:integer" dfdl:length="4" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="xflags" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="os" type="xs:hexBinary" dfdl:length="1" dfdl:encoding="binary" dfdl:representation="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="compressed-data">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="*" dfdl:encoding="binary" dfdl:representation="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="gzip-footer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="crc16" type="xs:integer" dfdl:length="2" dfdl:encoding="binary" dfdl:representation="binary"/>
+        <xs:element name="isize" type="xs:integer" dfdl:length="4" dfdl:encoding="binary" dfdl:representation="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

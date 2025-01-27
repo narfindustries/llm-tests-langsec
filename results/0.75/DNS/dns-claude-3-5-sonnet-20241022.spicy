@@ -1,0 +1,80 @@
+module DNS;
+
+import spicy;
+
+public type Message = unit {
+    header: Header;
+    questions: Question[header.qdcount];
+    answers: ResourceRecord[header.ancount];
+    authorities: ResourceRecord[header.nscount];
+    additionals: ResourceRecord[header.arcount];
+};
+
+type Header = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+    
+    on %done {
+        self.qr = (self.flags >> 15) & 0x1;
+        self.opcode = (self.flags >> 11) & 0xF;
+        self.aa = (self.flags >> 10) & 0x1;
+        self.tc = (self.flags >> 9) & 0x1;
+        self.rd = (self.flags >> 8) & 0x1;
+        self.ra = (self.flags >> 7) & 0x1;
+        self.z = (self.flags >> 4) & 0x7;
+        self.rcode = self.flags & 0xF;
+    }
+    
+    var qr: uint8;
+    var opcode: uint8;
+    var aa: uint8;
+    var tc: uint8;
+    var rd: uint8;
+    var ra: uint8;
+    var z: uint8;
+    var rcode: uint8;
+};
+
+type Question = unit {
+    name: Name;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: Name;
+    type_: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=self.rdlength;
+};
+
+type Name = unit {
+    labels: Label[];
+    
+    on %done {
+        local parts: vector<string>;
+        for ( label in self.labels ) {
+            parts.push_back(label.name);
+        }
+        self.name = join(parts, ".");
+    }
+    
+    var name: string;
+};
+
+type Label = unit {
+    : uint8 &requires=($$ <= 63) &convert=cast<uint8>($$);
+    name: bytes &size=$$;
+} &until-including=($$ == 0);
+
+public function parse_message(msg: Message) {
+    # Process parsed message
+}
+
+on DNS::Message -> event dns_message(self);

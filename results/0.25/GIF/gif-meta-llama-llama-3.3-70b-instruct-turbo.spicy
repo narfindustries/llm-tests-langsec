@@ -1,0 +1,78 @@
+# gif-parser.spicy
+
+@header {
+  include "base/types.zeek";
+  include "base/enum.zeek";
+}
+
+type Log = record {
+  filename: string;
+  version: string;
+  width: uint16;
+  height: uint16;
+  cols: uint8;
+  bg_color: uint8;
+  aspect_ratio: uint8;
+};
+
+type GifHeader = record {
+  sig: string(3);
+  ver: string(3);
+};
+
+type LogicalScreenDescriptor = record {
+  width: uint16;
+  height: uint16;
+  packed_fields: uint8;
+  bg_color: uint8;
+  aspect_ratio: uint8;
+};
+
+type ColorTable = array of uint8[3];
+
+type ImageDescriptor = record {
+  left: uint16;
+  top: uint16;
+  width: uint16;
+  height: uint16;
+  packed_fields: uint8;
+};
+
+type LocalColorTable = array of uint8[3];
+
+type PixelData = array of uint8;
+
+type Trailer = record {
+  trailer: uint8;
+};
+
+type Gif = record {
+  header: GifHeader;
+  lsd: LogicalScreenDescriptor;
+  gct: ColorTable;
+  images: array of record {
+    id: ImageDescriptor;
+    lct: LocalColorTable;
+    data: PixelData;
+  };
+  trailer: Trailer;
+};
+
+hook LOG_GIF_RECORD(log: Log) {
+  print("Filename:", log.filename);
+  print("Version:", log.version);
+  print("Width:", log.width);
+  print("Height:", log.height);
+  print("Cols:", log.cols);
+  print("BG Color:", log.bg_color);
+  print("Aspect Ratio:", log.aspect_ratio);
+}
+
+event zeek_init() {
+  local l = Log($filename = "test.gif", $version = "89a", $width = 100, $height = 100, $cols = 256, $bg_color = 0, $aspect_ratio = 0);
+  LOG_GIF_RECORD(l);
+}
+
+event zeek_done() {
+  print("Done.");
+}

@@ -1,0 +1,49 @@
+module TIFF;
+
+public type Header = unit {
+    byte_order: bytes &size=2;
+    version: uint16;
+    ifd_offset: uint32;
+
+    on %init {
+        if ( self.byte_order != b"II" && self.byte_order != b"MM" ) {
+            self.set_input_error("invalid byte order");
+        }
+    }
+};
+
+type IFD_Entry = unit {
+    tag: uint16;
+    data_type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+type IFD = unit {
+    entry_count: uint16;
+    entries: IFD_Entry[self.entry_count];
+    next_ifd_offset: uint32;
+};
+
+public type File = unit {
+    header: Header;
+    ifd: IFD;
+};
+
+on File::header {
+    print "TIFF Header:";
+    print fmt("  Byte Order: %s", self.header.byte_order);
+    print fmt("  Version: %d", self.header.version);
+    print fmt("  IFD Offset: %d", self.header.ifd_offset);
+}
+
+on File::ifd {
+    print "IFD:";
+    print fmt("  Entry Count: %d", self.ifd.entry_count);
+    print fmt("  Next IFD Offset: %d", self.ifd.next_ifd_offset);
+    
+    for ( entry in self.ifd.entries ) {
+        print fmt("  Entry - Tag: %d, Type: %d, Count: %d, Value/Offset: %d",
+            entry.tag, entry.data_type, entry.count, entry.value_offset);
+    }
+}

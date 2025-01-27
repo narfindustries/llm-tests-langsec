@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/http"
+           xmlns:tns="http://example.com/http"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:HTTPFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <dfdl:format name="HTTPFormat"
+                 byteOrder="bigEndian"
+                 encoding="utf-8"
+                 lengthKind="explicit"
+                 lengthUnits="bytes"
+                 textNumberRep="standard"
+                 textStandardBase="10"/>
+
+    <xs:element name="HTTPMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="StartLine" type="tns:StartLineType"/>
+                <xs:element name="Headers" type="tns:HeadersType"/>
+                <xs:element name="Body" type="tns:BodyType" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="StartLineType">
+        <xs:sequence>
+            <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+            <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+            <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="&#x0A;"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="HeadersType">
+        <xs:sequence dfdl:separator="&#x0D;&#x0A;">
+            <xs:element name="Header" type="tns:HeaderType" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:assert test="fn:ends-with(., '&#x0D;&#x0A;')" message="Headers must end with CRLF"/>
+    </xs:complexType>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=": "/>
+            <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=""/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="BodyType">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="length" type="xs:int" use="optional"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,45 @@
+#ifndef __SPICY_JPEG_GEMINI_H__
+#define __SPICY_JPEG_GEMINI_H__
+
+#include <stdint.h>
+
+typedef struct {
+  uint8_t* data;
+  size_t size;
+} jpeg_image_t;
+
+jpeg_image_t jpeg_decode(const uint8_t* data, size_t size);
+void jpeg_encode(const jpeg_image_t* image, uint8_t** output, size_t* output_size);
+
+#endif //__SPICY_JPEG_GEMINI_H__
+
+
+#include "jpeg_gemini.h"
+#include <stdlib.h>
+#include <string.h>
+
+// Placeholder implementation.  Replace with actual JPEG decoding/encoding logic.
+jpeg_image_t jpeg_decode(const uint8_t* data, size_t size) {
+  jpeg_image_t img;
+  img.data = (uint8_t*)malloc(size);
+  if (img.data == NULL) {
+    // Handle memory allocation failure appropriately (e.g., return an error code)
+    img.size = 0;
+    return img;
+  }
+  memcpy(img.data, data, size);
+  img.size = size;
+  return img;
+}
+
+void jpeg_encode(const jpeg_image_t* image, uint8_t** output, size_t* output_size) {
+  *output = (uint8_t*)malloc(image->size);
+  if (*output == NULL) {
+    // Handle memory allocation failure appropriately
+    *output_size = 0;
+    return;
+  }
+  memcpy(*output, image->data, image->size);
+  *output_size = image->size;
+}
+

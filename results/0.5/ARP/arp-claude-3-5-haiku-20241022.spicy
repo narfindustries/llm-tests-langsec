@@ -1,0 +1,26 @@
+module ARP;
+
+import spicy;
+
+public type PDU = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_size: uint8;
+    protocol_size: uint8;
+    opcode: uint16;
+    sender_mac: bytes(6);
+    sender_ip: bytes(4);
+    target_mac: bytes(6);
+    target_ip: bytes(4);
+
+    on %done {
+        print self;
+    }
+};
+
+public type Frame = unit {
+    dst_mac: bytes(6);
+    src_mac: bytes(6);
+    ethertype: uint16 where ($$ == 0x0806);
+    payload: PDU;
+};

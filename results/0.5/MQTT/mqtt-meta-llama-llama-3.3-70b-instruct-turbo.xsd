@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/MQTT"
+           xmlns:tns="http://example.com/MQTT"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="MQTT-primitives.xsd"/>
+
+  <xs:element name="MQTT">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="tns:ControlPacket" dfdl:occurs="1..*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ControlPacket">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" type="tns:FixedHeaderType" dfdl:occurs="1"/>
+        <xs:element name="VariableHeader" type="tns:VariableHeaderType" dfdl:occurs="0..1"/>
+        <xs:element name="Payload" type="tns:PayloadType" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="MessageType" type="tns:MessageTypeType" dfdl:occurs="1"/>
+      <xs:element name="Flags" type="tns:FlagsType" dfdl:occurs="1"/>
+      <xs:element name="Reserved" type="tns:ReservedType" dfdl:occurs="1"/>
+      <xs:element name="QoS" type="tns:QoSType" dfdl:occurs="1"/>
+      <xs:element name="Dup" type="tns:DupType" dfdl:occurs="1"/>
+      <xs:element name="Retain" type="tns:RetainType" dfdl:occurs="1"/>
+      <xs:element name="RemainingLength" type="tns:RemainingLengthType" dfdl:occurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="tns:PacketIdentifierType" dfdl:occurs="0..1"/>
+      <xs:element name="Properties" type="tns:PropertiesType" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PayloadType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="Data" type="xs:base64Binary" dfdl:occurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="MessageTypeType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FlagsType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ReservedType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="QoSType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DupType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RetainType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RemainingLengthType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PacketIdentifierType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="Property" type="tns:PropertyType" dfdl:occurs="0..*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertyType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:representation>binary</dfdl:representation>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="Identifier" type="tns:PropertyIdentifierType" dfdl:occurs="1"/>
+      <xs:element name="Value" type="tns:PropertyValueType" dfdl:occurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="PropertyIdentifierType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="38"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PropertyValueType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="1024"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

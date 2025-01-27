@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/tiff"
+           xmlns="http://example.org/tiff"
+           elementFormDefault="qualified">
+
+  <xs:element name="tiff_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <!--  Add your DFDL elements here.  Example below.  Adapt to your actual TIFF structure -->
+        <xs:element name="ImageWidth" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ImageHeight" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="BitsPerSample" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="Compression" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

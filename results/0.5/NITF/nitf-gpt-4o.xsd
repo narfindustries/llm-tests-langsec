@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:nitfFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:format name="nitfFormat" lengthKind="explicit" encoding="UTF-8" alignmentUnits="bytes"/>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns:HeaderType"/>
+        <xs:element name="body" type="tns:BodyType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="fileType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="version" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="complexity" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="system" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="9"/>
+      <xs:element name="originator" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="14"/>
+      <xs:element name="dateTime" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="14"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="content" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="variable" dfdl:lengthPattern="[0-9]+"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

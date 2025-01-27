@@ -1,0 +1,73 @@
+# ZIP file format specification in Zeek Spicy
+
+@header {
+    type: zip
+    version: 1.0
+}
+
+type zip_file {
+    local_file_header: local_file_header
+    file_data: bytes(local_file_header.compressed_size)
+    data_descriptor: data_descriptor?
+    central_directory: central_directory
+}
+
+type local_file_header {
+    signature: uint32(0x04034b50)
+    version: uint16
+    flags: uint16
+    compression_method: uint16
+    last_modification_time: uint16
+    last_modification_date: uint16
+    crc32: uint32
+    compressed_size: uint32
+    uncompressed_size: uint32
+    filename_length: uint16
+    extra_field_length: uint16
+    filename: string(filename_length)
+    extra_field: bytes(extra_field_length)
+}
+
+type data_descriptor {
+    signature: uint32(0x08074b50)
+    crc32: uint32
+    compressed_size: uint32
+    uncompressed_size: uint32
+}
+
+type central_directory {
+    signature: uint32(0x02014b50)
+    version: uint16
+    version_needed: uint16
+    flags: uint16
+    compression_method: uint16
+    last_modification_time: uint16
+    last_modification_date: uint16
+    crc32: uint32
+    compressed_size: uint32
+    uncompressed_size: uint32
+    filename_length: uint16
+    extra_field_length: uint16
+    file_comment_length: uint16
+    disk_number: uint16
+    internal_attributes: uint16
+    external_attributes: uint32
+    local_header_offset: uint32
+    filename: string(filename_length)
+    extra_field: bytes(extra_field_length)
+    file_comment: string(file_comment_length)
+}
+
+type end_of_central_directory {
+    signature: uint32(0x06054b50)
+    disk_number: uint16
+    central_directory_disk_number: uint16
+    central_directory_disk_entries: uint16
+    total_central_directory_entries: uint16
+    central_directory_size: uint32
+    central_directory_offset: uint32
+    comment_length: uint16
+    comment: string(comment_length)
+}
+
+identifier = zip_file

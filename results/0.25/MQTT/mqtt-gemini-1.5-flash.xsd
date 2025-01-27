@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/mqtt" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+  <xs:element name="mqtt_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="payload" type="PayloadType" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="exactlyOne"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="message_id" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="timestamp" type="xs:dateTime" dfdl:length="16" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PayloadType">
+    <xs:sequence>
+      <xs:element name="sensor_data" type="SensorDataType" dfdl:occursCountKind="exactlyOne"/>
+      <xs:element name="status" type="xs:string" dfdl:length="1" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SensorDataType">
+    <xs:sequence>
+      <xs:element name="temperature" type="xs:float" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="ieee754"/>
+      <xs:element name="humidity" type="xs:float" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="ieee754"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

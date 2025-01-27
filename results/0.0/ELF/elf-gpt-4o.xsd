@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ELF"
+           xmlns:tns="http://example.com/ELF"
+           elementFormDefault="qualified"
+           dfdl:format="byteOrder='bigEndian'">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ELFFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ELFFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ELFHeader" type="tns:ELFHeaderType"/>
+        <xs:element name="ProgramHeaders" type="tns:ProgramHeaderType" maxOccurs="unbounded"/>
+        <xs:element name="SectionHeaders" type="tns:SectionHeaderType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ELFHeaderType">
+    <xs:sequence>
+      <xs:element name="Magic" type="xs:hexBinary" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Class" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Data" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Version" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+      <xs:element name="OSABI" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+      <xs:element name="ABIVersion" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Padding" type="xs:hexBinary" dfdl:length="7" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Machine" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Version2" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="EntryPoint" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="ProgramHeaderOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="SectionHeaderOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Flags" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="HeaderSize" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="ProgramHeaderEntrySize" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="ProgramHeaderCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="SectionHeaderEntrySize" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="SectionHeaderCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="StringTableIndex" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProgramHeaderType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Offset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="VirtualAddress" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="PhysicalAddress" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="FileSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="MemorySize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Flags" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Align" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SectionHeaderType">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Type" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Flags" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Address" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Offset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Size" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Link" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Info" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="AddressAlign" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="EntrySize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:defineFormat name="ELFFormat">
+    <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

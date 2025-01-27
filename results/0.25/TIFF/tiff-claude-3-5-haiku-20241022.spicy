@@ -1,0 +1,38 @@
+module TIFF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    entries: Entries;
+
+    var byte_order: bool;
+
+    on %init {
+        self.byte_order = false;
+    }
+};
+
+type Header = unit {
+    magic: bytes(2) &requires($$=="II" || $$=="MM");
+    version: uint16 &requires($$==42);
+
+    var is_little_endian: bool;
+
+    on %init {
+        self.is_little_endian = (self.magic == "II");
+    }
+};
+
+type Entries = unit {
+    num_entries: uint16(self.is_little_endian);
+    ifd_entries: IFDEntry[self.num_entries];
+    next_ifd: uint32(self.is_little_endian) &optional;
+};
+
+type IFDEntry = unit {
+    tag: uint16(self.is_little_endian);
+    type_field: uint16(self.is_little_endian);
+    count: uint32(self.is_little_endian);
+    value_or_offset: uint32(self.is_little_endian);
+};

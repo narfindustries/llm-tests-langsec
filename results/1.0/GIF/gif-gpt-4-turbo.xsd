@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="gifFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:simpleType name="byte">
+        <xs:restriction base="xs:unsignedByte"/>
+    </xs:simpleType>
+
+    <dfdl:defineFormat name="gifFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     encoding="ascii"
+                     bitOrder="mostSignificantBitFirst"
+                     alignmentUnits="bytes"
+                     alignment="1"/>
+    </dfdl:defineFormat>
+
+    <xs:complexType name="Header">
+        <xs:sequence>
+            <xs:element name="signature" type="xs:string" dfdl:length="3"/>
+            <xs:element name="version" type="xs:string" dfdl:length="3"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LogicalScreenDescriptor">
+        <xs:sequence>
+            <xs:element name="width" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="height" type="xs:unsignedShort" dfdl:length="2"/>
+            <xs:element name="packedFields" type="byte"/>
+            <xs:element name="backgroundColorIndex" type="byte"/>
+            <xs:element name="pixelAspectRatio" type="byte"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="GIF">
+        <xs:sequence>
+            <xs:element name="header" type="tns:Header"/>
+            <xs:element name="logicalScreen" type="tns:LogicalScreenDescriptor"/>
+            <!-- Extend this type with blocks like ImageBlock, ExtensionBlock, etc. -->
+            <!-- Work in progress for the mentioned GIF blocks -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="GIFFile" type="tns:GIF">
+        <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:format ref="gifFormat"/>
+            </xs:appinfo>
+        </xs:annotation>
+    </xs:element>
+
+</xs:schema>

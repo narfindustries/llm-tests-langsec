@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DNS"
+           xmlns:tns="http://example.com/DNS"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dns-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:DNSHeader" dfdl:OccursCount="1..1"/>
+        <xs:element name="Question" type="tns:DNSQuestion" dfdl:OccursCount="1..1" dfdl:sequenceKind="unordered"/>
+        <xs:element name="Answer" type="tns:DNSAnswer" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
+        <xs:element name="Authority" type="tns:DNSAuthority" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
+        <xs:element name="Additional" type="tns:DNSAdditional" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DNSHeader">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="Flags" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSQuestion">
+    <xs:sequence>
+      <xs:element name="QNAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
+      <xs:element name="QTYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="QCLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAnswer">
+    <xs:sequence>
+      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
+      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAuthority">
+    <xs:sequence>
+      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
+      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSAdditional">
+    <xs:sequence>
+      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
+      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

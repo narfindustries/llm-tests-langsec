@@ -1,0 +1,19 @@
+#ifndef _DICOM_GEMINI_1_5_FLASH_SPICY_H_
+#define _DICOM_GEMINI_1_5_FLASH_SPICY_H_
+
+#include <zeek/analyzer/protocol/dicom.zeek>
+
+event dicom_gemini_1_5_flash_event(DICOM_Message msg)
+{
+    // Check for specific DICOM attributes indicative of Gemini 1.5 flash functionality.
+    //  Replace with actual attribute checks based on your DICOM specification.
+    if (msg["(0008,0018)"].str() == "1.5" && msg["(0010,0010)"].str() != "") {
+        // Log relevant information from the DICOM message.
+        print fmt("Gemini 1.5 Flash detected: %s", msg.id);
+    }
+}
+
+global dicom_gemini_1_5_flash_analyzer = new Analyzer("dicom-gemini-1.5-flash");
+dicom_gemini_1_5_flash_analyzer->add_event(dicom_gemini_1_5_flash_event);
+
+#endif

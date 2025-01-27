@@ -1,0 +1,26 @@
+module HL7;
+
+import spicy;
+import zeek;
+
+public type HL7Message = unit {
+    segments: list<HL7Segment> &until(eos);
+};
+
+public type HL7Segment = unit {
+    id: string &size = 3;
+    content: bytes &until(eol);
+};
+
+public type HL7Parser = unit {
+    message: HL7Message;
+} &implements zeek::Parser;
+
+public function parse_hl7_message(data: bytes): HL7Message {
+    return HL7Message(data);
+}
+
+public event zeek_init() {
+    local parser = HL7Parser();
+    zeek::register_parser("HL7", parser);
+}

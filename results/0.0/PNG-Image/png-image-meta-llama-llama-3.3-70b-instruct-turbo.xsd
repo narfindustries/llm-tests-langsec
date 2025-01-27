@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/PNG-Image"
+           xmlns="http://example.com/PNG-Image"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="png-image-meta">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="png-image-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="utf-8"/>
+        <xs:element name="ihdr" type="ihdr-type" dfdl:encoding="utf-8"/>
+        <xs:element name="idat" type="xs:hexBinary" dfdl:length="*" dfdl:encoding="utf-8"/>
+        <xs:element name="iend" type="xs:hexBinary" dfdl:length="12" dfdl:encoding="utf-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ihdr-type">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="big-endian"/>
+      <xs:element name="height" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="big-endian"/>
+      <xs:element name="bit-depth" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="color-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="filter-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="interlace-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="png-image-format" type="binary" binaryEncoding="big-endian" representation="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+  </dfdl:format>
+
+</xs:schema>

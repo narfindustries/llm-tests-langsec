@@ -1,0 +1,24 @@
+module JPEG;
+
+public type Marker is enum {
+    SOI = 0xD8FF,  // Start Of Image
+    EOI = 0xD9FF,  // End Of Image
+    SOF0 = 0xC0FF, // Start Of Frame (Baseline JPEG)
+    DHT = 0xC4FF,  // Define Huffman Table
+    DQT = 0xDBFF,  // Define Quantization Table
+    SOS = 0xDAFF   // Start Of Scan
+};
+
+public type Segment is unit {
+    marker: Marker;
+    length: uint16;
+    data: bytes &size=this.length-2;
+};
+
+public type Image is unit {
+    segments: Segment[] &until($$.marker == Marker::EOI);
+};
+
+public type File is unit {
+    main: Image;
+};

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:arp="http://example.com/arp"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiator=""
+        terminator=""
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressed"
+        encoding="UTF-8"
+        representation="binary"
+        occursCountKind="parsed"
+        byteOrder="bigEndian"
+        binaryNumberRep="binary"
+        escapeSchemeRef=""
+        textNumberRep="standard"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARPPacket">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="hardwareType" type="xs:unsignedShort" 
+          dfdl:representation="binary"
+          dfdl:binaryNumberRep="binary"
+          dfdl:length="16" />
+        
+        <xs:element name="protocolType" type="xs:unsignedShort"
+          dfdl:representation="binary"
+          dfdl:binaryNumberRep="binary"
+          dfdl:length="16" />
+        
+        <xs:element name="hardwareAddressLength" type="xs:unsignedByte"
+          dfdl:representation="binary"
+          dfdl:length="8" />
+        
+        <xs:element name="protocolAddressLength" type="xs:unsignedByte"
+          dfdl:representation="binary"
+          dfdl:length="8" />
+        
+        <xs:element name="opCode" type="xs:unsignedShort"
+          dfdl:representation="binary"
+          dfdl:binaryNumberRep="binary"
+          dfdl:length="16" />
+        
+        <xs:element name="senderMacAddress" type="arp:MacAddress" />
+        
+        <xs:element name="senderIPAddress" type="arp:IPAddress" />
+        
+        <xs:element name="targetMacAddress" type="arp:MacAddress" />
+        
+        <xs:element name="targetIPAddress" type="arp:IPAddress" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MacAddress">
+    <xs:sequence dfdl:separator=":">
+      <xs:element name="byte" type="xs:hexBinary" 
+        dfdl:representation="binary"
+        dfdl:length="8"
+        dfdl:occursCount="6" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IPAddress">
+    <xs:sequence dfdl:separator=".">
+      <xs:element name="byte" type="xs:unsignedByte"
+        dfdl:representation="binary"
+        dfdl:length="8"
+        dfdl:occursCount="4" />
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

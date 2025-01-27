@@ -1,0 +1,52 @@
+#ifndef DNS_GEMINI_1_H
+#define DNS_GEMINI_1_H
+
+#include <zeek/analyzer/protocol/dns.h>
+
+global dns_gemini_1_count : count;
+
+event dns_gemini_1_event(dns_query_msg q)
+	{
+	  dns_gemini_1_count++;
+	  // Add your custom logic here to handle Gemini DNS queries.
+	  // Example: Log the query details.
+	  print fmt("Gemini DNS query detected: %s", q);
+	}
+
+#endif
+
+#ifndef DNS_GEMINI_1_5_FLASH_H
+#define DNS_GEMINI_1_5_FLASH_H
+
+#include <zeek/analyzer/protocol/dns.h>
+
+global dns_gemini_1_5_flash_count : count;
+
+event dns_gemini_1_5_flash_event(dns_query_msg q)
+	{
+	  dns_gemini_1_5_flash_count++;
+	  // Add your custom logic here to handle Gemini DNS queries with flash.
+	  // Example: Log the query details.
+	  print fmt("Gemini DNS query with flash detected: %s", q);
+	}
+
+#endif
+
+#ifndef MAIN_H
+#define MAIN_H
+
+#include "dns_gemini_1.h"
+#include "dns_gemini_1_5_flash.h"
+
+// Example usage of the events.  Replace with your actual logic.
+event zeek::dns::query_done(dns_query_msg q)
+	{
+	  if (q.qname == "gemini.example.com") {
+		dns_gemini_1_event(q);
+	  }
+	  if (q.qname == "flash.gemini.example.com") {
+		dns_gemini_1_5_flash_event(q);
+	  }
+	}
+
+#endif

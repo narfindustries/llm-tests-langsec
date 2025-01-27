@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/http-1.1/"
+           xmlns:tns="http://example.com/dfdl/http-1.1/">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:HTTPFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="HTTPRequest">
+        <xs:sequence>
+            <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
+            <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
+            <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator="%LF;"/>
+            <xs:element name="Headers" type="tns:HeadersType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%LF;" dfdl:representation="text"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="HeadersType">
+        <xs:sequence>
+            <xs:element name="Header" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:simpleContent>
+                        <xs:extension base="xs:string">
+                            <xs:attribute name="name" type="xs:string"/>
+                            <xs:attribute name="value" type="xs:string"/>
+                        </xs:extension>
+                    </xs:simpleContent>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="HTTP-Request" type="tns:HTTPRequest"/>
+
+    <xs:element name="HTTP-Response" type="tns:HTTPResponse"/>
+
+    <xs:complexType name="HTTPResponse">
+        <xs:sequence>
+            <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
+            <xs:element name="StatusCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
+            <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator="%LF;"/>
+            <xs:element name="Headers" type="tns:HeadersType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%LF;" dfdl:representation="text"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="HTTPFormat">
+        <xs:restriction base="dfdl:SimpleType">
+            <dfdl:encoding>ASCII</dfdl:encoding>
+            <dfdl:textBidi="no"/>
+            <dfdl:binaryNumberRep="binary"/>
+            <dfdl:byteOrder="bigEndian"/>
+            <dfdl:bitOrder="mostSignificantBitFirst"/>
+            <dfdl:alignmentUnits="bytes"/>
+            <dfdl:alignment="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

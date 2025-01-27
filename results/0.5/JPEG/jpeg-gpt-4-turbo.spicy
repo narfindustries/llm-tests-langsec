@@ -1,0 +1,11 @@
+module JPEG;
+
+public type Segment = unit {
+    marker: uint16;
+    len:    uint16 if (self.marker & 0xFF00) == 0xFF00 && self.marker != 0xFFD9;
+    data:   bytes &size=self.len-2 if self.len > 2;
+};
+
+public type File = unit {
+    segments: Segment[] &until($$.marker == 0xFFD9);
+};

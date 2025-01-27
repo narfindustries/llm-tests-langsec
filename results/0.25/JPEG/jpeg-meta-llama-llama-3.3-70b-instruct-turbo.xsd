@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:xs2="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://example.com/jpeg"
+           xmlns="http://example.com/jpeg"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="jpeg" type="JpegType" dfdl:representation="binary" dfdl:encoding="iso-8859-1">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format representation="binary" encoding="iso-8859-1"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="JpegType">
+    <xs:sequence>
+      <xs:element name="soi" type="xs:hexBinary" fixed="FFD8" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="app0" type="App0Type" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="app1" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimKey="#x00#xFF" dfdl:delimOccurs="1..1" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="other" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimKey="#xFF" dfdl:delimOccurs="*" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="eoi" type="xs:hexBinary" fixed="FFD9" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="App0Type">
+    <xs:sequence>
+      <xs:element name="identifier" type="xs:hexBinary" fixed="FFE0" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="length" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="version" type="xs:byte" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="units" type="xs:byte" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="x-density" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="y-density" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

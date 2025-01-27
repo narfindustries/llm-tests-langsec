@@ -1,0 +1,40 @@
+module BitcoinTransactions;
+
+import spicy;
+
+public type BitcoinTransaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: array[input_count] of Input;
+    output_count: varint;
+    outputs: array[output_count] of Output;
+    lock_time: uint32;
+};
+
+type Input = unit {
+    previous_output: Outpoint;
+    script_length: varint;
+    script_sig: bytes &length=script_length;
+    sequence: uint32;
+};
+
+type Outpoint = unit {
+    txid: bytes &length=32;
+    index: uint32;
+};
+
+type Output = unit {
+    value: uint64;
+    pk_script_length: varint;
+    pk_script: bytes &length=pk_script_length;
+};
+
+type varint = uint8 &check=(self == 0xfd ? size(self.bytes) >= 3 : self == 0xfe ? size(self.bytes) >= 5 : self == 0xff ? size(self.bytes) >= 9 : true);
+
+public module Parser = spicy::Unit {
+    public function parse(input: bytes): (BitcoinTransaction) &throws {
+        local t: BitcoinTransaction;
+        t = parse BitcoinTransaction(input);
+        return t;
+    };
+};

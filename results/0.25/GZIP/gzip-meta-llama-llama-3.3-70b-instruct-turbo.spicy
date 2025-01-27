@@ -1,0 +1,90 @@
+# Define a module for the GZIP file format
+module GZIP;
+
+# Import necessary modules
+export {
+    redef enum Compress::Algorithm += { GZIP };
+}
+
+# Define the structure of the GZIP file format
+type Gzip_Filename: string &length=ends(0x00);
+
+type Gzip_Header = record {
+    id1: uint8;
+    id2: uint8;
+    cm: uint8;
+    flags: uint8;
+    mtime: uint32;
+    xflags: uint8;
+    os: uint8;
+};
+
+type Gzip_Footer = record {
+    crc16: uint16;
+    isize: uint32;
+};
+
+type Gzip_Content = record {
+    header: Gzip_Header;
+    filename: Gzip_Filename;
+    data: string;
+    footer: Gzip_Footer;
+};
+
+# Define the parser for the GZIP file format
+function parse_gzip(data: string): Gzip_Content
+    %{
+    auto header = Gzip_Header();
+    auto footer = Gzip_Footer();
+    auto filename = Gzip_Filename();
+    auto content = Gzip_Content();
+
+    // Parse the GZIP header
+    if ( data->size() < 10 ) {
+        return content;
+    }
+    header.id1 = *data++;
+    header.id2 = *data++;
+    header.cm = *data++;
+    header.flags = *data++;
+    header.mtime = (*data++) + ((*data++) << 8) + ((*data++) << 16) + ((*data++) << 24);
+    header.xflags = *data++;
+    header.os = *data++;
+
+    // Parse the GZIP filename
+    while ( *data != 0x00 ) {
+        filename += *data++;
+    }
+    data++;
+
+    // Parse the GZIP data
+    content.data = "";
+    while ( data->size() >= 8 ) {
+        content.data += *data++;
+    }
+
+    // Parse the GZIP footer
+    if ( data->size() >= 8 ) {
+        footer.crc16 = (*data++) + ((*data++) << 8);
+        footer.isize = (*data++) + ((*data++) << 8) + ((*data++) << 16) + ((*data++) << 24);
+    }
+
+    // Construct the GZIP content
+    content.header = header;
+    content.filename = filename;
+    content.footer = footer;
+
+    return content;
+    %}
+
+# Define the event handler for the GZIP file format
+event zeek_init() &priority=5
+    %{
+    auto new_compression = Compress::Algorithm::GZIP;
+    Compress::add_algorithm(new_compression, parse_gzip);
+    %}
+
+event zeek_done() &priority=5
+    %{
+    Compress::remove_algorithm(Compress::Algorithm::GZIP);
+    %}

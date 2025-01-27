@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns:tns="http://example.com/zip">
+
+  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format byteOrder="bigEndian" 
+                 binaryNumberRep="binary" 
+                 bitOrder="mostSignificantBitFirst" 
+                 encoding="UTF-8" 
+                 textBooleanPadCharacter="%SP;" 
+                 initiationTerminatorScheme="none"/>
+  </dfdl:defineFormat>
+
+  <xs:complexType name="FileHeader">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="version" type="xs:int" dfdl:length="2"/>
+      <xs:element name="bitFlag" type="xs:int" dfdl:length="2"/>
+      <xs:element name="compression" type="xs:int" dfdl:length="2"/>
+      <xs:element name="mtime" type="xs:int" dfdl:length="4"/>
+      <xs:element name="crc32" type="xs:int" dfdl:length="4"/>
+      <xs:element name="compressedSize" type="xs:int" dfdl:length="4"/>
+      <xs:element name="uncompressedSize" type="xs:int" dfdl:length="4"/>
+      <xs:element name="filenameLength" type="xs:int" dfdl:length="2"/>
+      <xs:element name="extraFieldLength" type="xs:int" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileData">
+    <xs:sequence>
+      <xs:element name="filename" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:FileHeader/filenameLength }"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:FileHeader/extraFieldLength }"/>
+      <xs:element name="fileContent" type="xs:base64Binary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:FileHeader/compressedSize }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EndOfCentralDirectoryRecord">
+    <xs:sequence>
+      <xs:element name="diskNumber" type="xs:int" dfdl:length="2"/>
+      <xs:element name="diskStart" type="xs:int" dfdl:length="2"/>
+      <xs:element name="numberOfRecords" type="xs:int" dfdl:length="2"/>
+      <xs:element name="totalRecords" type="xs:int" dfdl:length="2"/>
+      <xs:element name="sizeOfCentralDirectory" type="xs:int" dfdl:length="4"/>
+      <xs:element name="offsetOfCentralDirectory" type="xs:int" dfdl:length="4"/>
+      <xs:element name="zipFileCommentLength" type="xs:int" dfdl:length="2"/>
+      <xs:element name="zipFileComment" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ .//zipFileCommentLength }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ZipArchive">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="tns:FileHeader"/>
+        <xs:element name="FileData" type="tns:FileData"/>
+        <xs:element name="EndOfCentralDirectoryRecord" type="tns:EndOfCentralDirectoryRecord"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

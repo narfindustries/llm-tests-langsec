@@ -1,0 +1,57 @@
+module DICOM;
+
+public type FileHeader = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    tags: Tag[];
+
+    on prefix {
+        if (self.prefix != b"DICM") {
+            throw ParseError("Invalid DICOM file prefix");
+        }
+    }
+};
+
+public type Tag = unit {
+    group: uint16;
+    element: uint16;
+    vr: bytes &size=2;
+    length: uint16;
+    value: switch (self.vr) {
+        b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"TM", b"UI" -> bytes &size=self.length;
+        b"SQ" -> TagSequence &eager &size=self.length;
+        b"OB", b"OW", b"UN" -> bytes &size=self.length;
+        b"AT", b"FL", b"FD", b"SL", b"SS", b"UL", b"US" -> numericValue(self.vr, self.length);
+        * -> bytes &size=self.length;
+    };
+
+    on vr {
+        if (!/^([A-Z][A-Z])$/.match(self.vr)) {
+            throw ParseError("Invalid DICOM VR (Value Representation)");
+        }
+    }
+};
+
+public type TagSequence = unit {
+    items: Tag[];
+
+    on items {
+        print @("Tag sequence with", |self.items|, "items");
+    }
+};
+
+public function numericValue(vr: bytes, len: uint16): unit {
+    switch (vr) {
+        b"AT" -> uint16;
+        b"FL" -> real32;
+        b"FD" -> real64;
+        b"SL" -> int32;
+        b"SS" -> int16;
+        b"UL" -> uint32;
+        b"US" -> uint16;
+    }
+};
+
+event zeek_init() {
+    print("Zeek DICOM Parsing Module Initialized");
+}

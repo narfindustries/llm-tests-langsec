@@ -1,0 +1,87 @@
+module Modbus;
+
+import spicy;
+
+public type Function = enum {
+    READ_COILS = 0x01,
+    READ_DISCRETE_INPUTS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    WRITE_SINGLE_COIL = 0x05,
+    WRITE_SINGLE_REGISTER = 0x06,
+    WRITE_MULTIPLE_COILS = 0x0F,
+    WRITE_MULTIPLE_REGISTERS = 0x10
+};
+
+type Header = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+type Request = unit {
+    function_code: uint8 &convert=Function($$);
+    switch ( self.function_code ) {
+        Function::READ_COILS,
+        Function::READ_DISCRETE_INPUTS,
+        Function::READ_HOLDING_REGISTERS,
+        Function::READ_INPUT_REGISTERS -> read_request: ReadRequest;
+        Function::WRITE_SINGLE_COIL,
+        Function::WRITE_SINGLE_REGISTER -> write_single_request: WriteSingleRequest;
+        Function::WRITE_MULTIPLE_COILS,
+        Function::WRITE_MULTIPLE_REGISTERS -> write_multiple_request: WriteMultipleRequest;
+    };
+};
+
+type ReadRequest = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+type WriteSingleRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteMultipleRequest = unit {
+    starting_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type Response = unit {
+    function_code: uint8 &convert=Function($$);
+    switch ( self.function_code ) {
+        Function::READ_COILS,
+        Function::READ_DISCRETE_INPUTS,
+        Function::READ_HOLDING_REGISTERS,
+        Function::READ_INPUT_REGISTERS -> read_response: ReadResponse;
+        Function::WRITE_SINGLE_COIL,
+        Function::WRITE_SINGLE_REGISTER -> write_single_response: WriteSingleResponse;
+        Function::WRITE_MULTIPLE_COILS,
+        Function::WRITE_MULTIPLE_REGISTERS -> write_multiple_response: WriteMultipleResponse;
+    };
+};
+
+type ReadResponse = unit {
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type WriteSingleResponse = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteMultipleResponse = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+public type ModbusPacket = unit {
+    header: Header;
+    data: Request if (header.protocol_id == 0x0000)
+          else Response;
+};

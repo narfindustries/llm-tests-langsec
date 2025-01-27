@@ -1,0 +1,62 @@
+module HL7_v2;
+
+import spicy;
+
+type HL7_Message = unit {
+    segment: Segment[];
+};
+
+type Segment = unit {
+    fields: Field[];
+    separator: /\\x0D/;
+};
+
+type Field = unit {
+    components: Component[];
+    separator: /\\x7C/;
+};
+
+type Component = unit {
+    subcomponents: Subcomponent[];
+    separator: /\\x5E/;
+};
+
+type Subcomponent = unit {
+    value: /[^\\x7C\\x5E\\x0D]*/;
+};
+
+on HL7_Message::%init {
+    self.segment = [];
+}
+
+on Segment::%init {
+    self.fields = [];
+}
+
+on Field::%init {
+    self.components = [];
+}
+
+on Component::%init {
+    self.subcomponents = [];
+}
+
+on HL7_Message::%done {
+    print self;
+}
+
+on Segment::%done {
+    print self;
+}
+
+on Field::%done {
+    print self;
+}
+
+on Component::%done {
+    print self;
+}
+
+on Subcomponent::%done {
+    print self;
+}

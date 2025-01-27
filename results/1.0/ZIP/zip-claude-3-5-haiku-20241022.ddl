@@ -1,0 +1,1 @@
+I'll wait for you to share the details of the previous specification and error before generating a new version. Could you paste the previous Daedalus specification that resulted in the compilation error?

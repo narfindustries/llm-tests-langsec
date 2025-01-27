@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/modbus"
+           xmlns="http://example.org/modbus"
+           elementFormDefault="qualified">
+
+  <xs:element name="modbusGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType"/>
+        <xs:element name="data" type="DataType" maxOccurs="unbounded"/>
+        <xs:element name="footer" type="FooterType"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+        <xs:annotation>
+          <xs:documentation>Specifies lengthKind as 'lengthDelimited'</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:length" use="required">
+        <xs:annotation>
+          <xs:documentation>Specifies the length of the entire message.  Needs to be determined from the data.  Example:  Replace with correct length expression.</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:string">
+          <xs:attribute ref="dfdl:length" use="required">
+            <xs:annotation>
+              <xs:documentation>e.g., 4</xs:documentation>
+            </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+      <xs:element name="timestamp" type="xs:dateTime">
+          <xs:attribute ref="dfdl:textPattern" use="required">
+            <xs:annotation>
+              <xs:documentation>e.g., "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}</xs:documentation>
+            </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="deviceId" type="xs:int">
+          <xs:attribute ref="dfdl:binaryLength" use="required">
+            <xs:annotation>
+              <xs:documentation>e.g., 2</xs:documentation>
+            </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+      <xs:element name="dataValue" type="xs:int">
+          <xs:attribute ref="dfdl:binaryLength" use="required">
+            <xs:annotation>
+              <xs:documentation>e.g., 2</xs:documentation>
+            </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="checksum" type="xs:int">
+          <xs:attribute ref="dfdl:binaryLength" use="required">
+            <xs:annotation>
+              <xs:documentation>e.g., 2</xs:documentation>
+            </xs:annotation>
+          </xs:attribute>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

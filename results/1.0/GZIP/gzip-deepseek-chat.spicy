@@ -1,0 +1,32 @@
+module GZIP;
+
+import spicy;
+
+public type GZIP_Header = unit {
+    magic: bytes &size=2 &convert=0x1f8b;
+    compression_method: uint8;
+    flags: uint8;
+    modification_time: uint32;
+    extra_flags: uint8;
+    os_type: uint8;
+};
+
+public type GZIP_Extra = unit {
+    xlen: uint16;
+    extra_field: bytes &size=xlen;
+};
+
+public type GZIP_File = unit {
+    header: GZIP_Header;
+    extra: optional<GZIP_Extra> &if=self.header.flags & 0x04;
+    filename: optional<bytes> &until=b"\x00" &if=self.header.flags & 0x08;
+    comment: optional<bytes> &until=b"\x00" &if=self.header.flags & 0x10;
+    crc16: optional<uint16> &if=self.header.flags & 0x02;
+    compressed_data: bytes &until=b"\x00\x00\x00\x00";
+    crc32: uint32;
+    original_size: uint32;
+};
+
+on GZIP_File::%done {
+    print "GZIP file processed successfully";
+}

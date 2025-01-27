@@ -1,0 +1,67 @@
+module HTTP;
+
+import spicy;
+
+public type HTTP = unit {
+    request: Request;
+    response: Response;
+};
+
+type Request = unit {
+    method: bytes &until-including(b" ");
+    uri: bytes &until-including(b" ");
+    version: bytes &until-including(b"\r\n");
+    headers: Headers;
+    body: Body;
+
+    on %done {
+        self.method = trim(self.method);
+        self.uri = trim(self.uri);
+        self.version = trim(self.version);
+    }
+};
+
+type Response = unit {
+    version: bytes &until-including(b" ");
+    status_code: bytes &until-including(b" ");
+    status_msg: bytes &until-including(b"\r\n");
+    headers: Headers;
+    body: Body;
+
+    on %done {
+        self.version = trim(self.version);
+        self.status_code = trim(self.status_code);
+        self.status_msg = trim(self.status_msg);
+    }
+};
+
+type Headers = unit {
+    : (Header &until(b"\r\n\r\n"))[];
+};
+
+type Header = unit {
+    name: bytes &until-including(b":");
+    value: bytes &until-including(b"\r\n");
+
+    on %done {
+        self.name = trim(self.name);
+        self.value = trim(self.value);
+    }
+};
+
+type Body = unit {
+    content: bytes &eod;
+};
+
+function trim(b: bytes): bytes {
+    local start = 0;
+    local end = |b|;
+
+    while ( start < end && (b[start] == 0x20 || b[start] == 0x09 || b[start] == 0x0d || b[start] == 0x0a) )
+        ++start;
+
+    while ( end > start && (b[end-1] == 0x20 || b[end-1] == 0x09 || b[end-1] == 0x0d || b[end-1] == 0x0a) )
+        --end;
+
+    return b[start:end];
+}

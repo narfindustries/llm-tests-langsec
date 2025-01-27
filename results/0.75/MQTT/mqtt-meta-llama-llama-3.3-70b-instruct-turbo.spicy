@@ -1,0 +1,114 @@
+# MQTT Zeek Spicy Specification
+
+type mqtt_message = record {
+    header: mqtt_header,
+    body: mqtt_body,
+};
+
+type mqtt_header = record {
+    fixed_header: mqtt_fixed_header,
+    variable_header: mqtt_variable_header,
+};
+
+type mqtt_fixed_header = record {
+    msg_type: uint4,
+    dup: uint1,
+    qos: uint2,
+    retain: uint1,
+    remaining_length: uint16,
+};
+
+type mqtt_variable_header = record {
+    topic_name: bytestring,
+    packet_identifier: uint16,
+};
+
+type mqtt_body = record {
+    payload: bytestring,
+};
+
+type mqtt_connect_variable_header = record {
+    protocol_name: bytestring,
+    protocol_level: uint8,
+    connect_flags: uint8,
+    keep_alive: uint16,
+};
+
+type mqtt_connect_body = record {
+    client_id: bytestring,
+    will_topic: bytestring,
+    will_message: bytestring,
+    username: bytestring,
+    password: bytestring,
+};
+
+type mqtt_connack_variable_header = record {
+    session_present: uint1,
+    return_code: uint8,
+};
+
+type mqtt_publish_body = record {
+    topic_name: bytestring,
+    message: bytestring,
+};
+
+type mqtt_puback_variable_header = record {
+    packet_identifier: uint16,
+};
+
+type mqtt_pubrec_variable_header = record {
+    packet_identifier: uint16,
+};
+
+type mqtt_pubrel_variable_header = record {
+    packet_identifier: uint16,
+};
+
+type mqtt_pubcomp_variable_header = record {
+    packet_identifier: uint16,
+};
+
+type mqtt_subscribe_variable_header = record {
+    packet_identifier: uint16,
+    topic_filters: vector[mqtt_topic_filter],
+};
+
+type mqtt_topic_filter = record {
+    topic: bytestring,
+    qos: uint8,
+};
+
+type mqtt_suback_variable_header = record {
+    packet_identifier: uint16,
+    return_codes: vector[uint8],
+};
+
+type mqtt_unsubscribe_variable_header = record {
+    packet_identifier: uint16,
+    topic_filters: vector[bytestring],
+};
+
+type mqtt_unsuback_variable_header = record {
+    packet_identifier: uint16,
+};
+
+type mqtt_pingreq_body = empty;
+
+type mqtt_pingresp_body = empty;
+
+type mqtt_disconnect_body = record {
+    reason_code: uint8,
+    session_expiration_interval: uint32,
+};
+
+analyzer MQTT_Analyzer with Arms {
+    mz: MZ_MQTT.arm() = MZ_MQTT( 
+        header_lengths = 
+            case msg_type: uint4 in 
+                $1 == 1 -> 2,
+                $1 == 3 -> 2,
+                $1 == 8 -> 2,
+                $1 == 13 -> 2
+            ),
+    );
+}

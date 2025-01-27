@@ -1,0 +1,34 @@
+# Zeek Spicy Specification for DICOM Meta Data
+
+type DicomMeta = record {
+    # Group 0002: File Meta Information
+    file_meta: FileMeta,
+
+    # Group 0008: Identifying Information
+    identifying_info: IdentifyingInfo,
+};
+
+type FileMeta = record {
+    transfer_syntax_uid: string(64),
+    media_storage_sop_instance_uid: string(64),
+    implementation_class_uid: string(64),
+    transfer_syntax_version: uint16,
+};
+
+type IdentifyingInfo = record {
+    media_storage_sop_instance_uid: string(64),
+    transfer_syntax_uid: string(64),
+    implementation_class_uid: string(64),
+    specific_character_set: string(32),
+    image_type: string(64),
+    recognition_code: string(16),
+    instance_creation_date: string(8),
+    instance_creation_time: string(6),
+    instance_creator_uid: string(64),
+};
+
+event zeek:: hdc startPoint(DicomMeta &meta) {
+    print("Found DICOM meta data:");
+    print("File Meta:", meta.file_meta);
+    print("Identifying Info:", meta.identifying_info);
+}

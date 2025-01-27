@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/TLS-Client-Hello"
+           xmlns:tns="http://example.com/dfdl/TLS-Client-Hello">
+
+  <xs:include schemaLocation="DFDLGeneralTypes.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="TLSClientHello">
+    <xs:sequence>
+      <xs:element name="ContentType" type="tns:ContentType" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="Version" type="tns:ProtocolVersion" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="HandshakeType" type="tns:HandshakeType" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="HandshakeLength" type="xs:unsignedInt" dfdl:length="3" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="HandshakeVersion" type="tns:ProtocolVersion" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Random" type="xs:hexBinary" dfdl:length="32" dfdl:lengthKind="explicit"/>
+      <xs:element name="SessionIDLength" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="SessionID" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      <xs:element name="CipherSuitesLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="CipherSuites" type="tns:CipherSuites" dfdl:lengthKind="implicit"/>
+      <xs:element name="CompressionMethodsLength" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="CompressionMethods" type="tns:CompressionMethods" dfdl:lengthKind="implicit"/>
+      <xs:element name="ExtensionsLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Extensions" type="tns:Extensions" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="TLSClientHello" type="tns:TLSClientHello"/>
+
+</xs:schema>

@@ -1,0 +1,41 @@
+module TIFF;
+
+import spicy;
+import std::bytes;
+
+public type File = unit {
+    header: Header;
+    entries: Entries;
+
+    var byte_order: uint8 = 0;
+
+    on %init {
+        self.byte_order = 0;
+    }
+};
+
+type Header = unit {
+    magic: bytes(2) &requires(self.magic == b"II" || self.magic == b"MM");
+    version: uint16;
+    ifd_offset: uint32;
+};
+
+type Entries = unit {
+    num_entries: uint16;
+    entries: Entry[self.num_entries];
+};
+
+type Entry = unit {
+    tag: uint16;
+    field_type: uint16;
+    count: uint32;
+    value_or_offset: uint32;
+};
+
+type ImageData = unit {
+    data: bytes &eod;
+};
+
+public function is_tiff(f: File) : bool {
+    return f.header.magic == b"II" || f.header.magic == b"MM";
+}

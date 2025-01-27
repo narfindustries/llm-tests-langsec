@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/elf"
+           xmlns:ex="http://example.com/elf">
+
+  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+
+  <xs:complexType name="ElfHeader">
+    <xs:sequence>
+      <xs:element name="e_ident" type="ex:EIdent" dfdl:length="16" />
+      <xs:element name="e_type" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_version" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_entry" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EIdent">
+    <xs:sequence>
+      <xs:element name="ei_mag" type="xs:byte" dfdl:length="4" dfdl:initiatedContent="true"/>
+      <xs:element name="ei_class" type="xs:byte" dfdl:representation="binary"/>
+      <xs:element name="ei_data" type="xs:byte" dfdl:representation="binary"/>
+      <xs:element name="ei_version" type="xs:byte" dfdl:representation="binary"/>
+      <xs:element name="ei_osabi" type="xs:byte" dfdl:representation="binary"/>
+      <xs:element name="ei_abiversion" type="xs:byte" dfdl:representation="binary"/>
+      <xs:element name="ei_pad" type="xs:byte" dfdl:length="7" dfdl:initiatedContent="true"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ElfFile" type="ex:ElfHeader" dfdl:byteOrder="littleEndian"/>
+
+</xs:schema>

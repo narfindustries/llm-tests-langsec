@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="ex:GeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:complexType name="DICOMFile">
+        <xs:sequence>
+            <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+            <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            <xs:element name="elements" type="DICOMElement" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DICOMElement">
+        <xs:sequence>
+            <xs:element name="tagGroup" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="tagElement" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="vr" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="length" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            <xs:element name="value" type="xs:hexBinary" dfdl:length="{ ../length }" dfdl:lengthKind="explicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="DICOM" type="DICOMFile"/>
+
+</xs:schema>

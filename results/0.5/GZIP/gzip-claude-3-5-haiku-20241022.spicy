@@ -1,0 +1,45 @@
+module GZIP;
+
+import spicy;
+
+public type Compressor = unit {
+    magic: bytes(2) &requires($$=="H4");
+    compression_method: uint8 &requires($$==8);
+    flags: uint8;
+    mtime: uint32;
+    extra_flags: uint8;
+    os: uint8;
+
+    compression_blocks: CompressedData;
+
+    var trailer_crc32: uint32;
+    var trailer_size: uint32;
+
+    trailer_crc32 = bytes(4);
+    trailer_size = bytes(4);
+
+    : void {
+        if ( self.flags & 0x04 ) {
+            var extra_len: uint16 = bytes(2);
+            skip extra_len;
+        }
+
+        if ( self.flags & 0x08 ) {
+            while ( bytes(1) != b"\x00" ) {}
+        }
+
+        if ( self.flags & 0x10 ) {
+            while ( bytes(1) != b"\x00" ) {}
+        }
+
+        if ( self.flags & 0x02 ) {
+            skip 2;
+        }
+    }
+};
+
+type CompressedData = unit {
+    data: bytes &eod;
+};
+
+public type GZIP = Compressor;

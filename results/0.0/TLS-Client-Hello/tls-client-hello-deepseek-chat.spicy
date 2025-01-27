@@ -1,0 +1,44 @@
+module TLS_Client_Hello;
+
+export {
+    type Version = record {
+        major: uint8;
+        minor: uint8;
+    };
+
+    type Random = bytes &size=32;
+
+    type SessionID = bytes &size=32;
+
+    type CipherSuite = uint16;
+
+    type CompressionMethod = uint8;
+
+    type Extension = record {
+        type: uint16;
+        length: uint16;
+        data: bytes &size=length;
+    };
+
+    type ClientHello = record {
+        version: Version;
+        random: Random;
+        session_id: SessionID;
+        cipher_suites: bytes &size=2;
+        cipher_suites_list: CipherSuite[] &size=cipher_suites;
+        compression_methods: bytes &size=1;
+        compression_methods_list: CompressionMethod[] &size=compression_methods;
+        extensions: bytes &size=2;
+        extensions_list: Extension[] &size=extensions;
+    };
+
+    public type TLS_Client_Hello = record {
+        handshake_type: uint8;
+        length: uint24;
+        client_hello: ClientHello;
+    };
+}
+
+on TLS_Client_Hello::%done {
+    print self;
+}

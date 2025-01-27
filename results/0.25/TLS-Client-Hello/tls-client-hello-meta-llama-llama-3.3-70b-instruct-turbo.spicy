@@ -1,0 +1,25 @@
+# TLS Client Hello Message
+type TLS_Client_Hello = record {
+  /* Record Layer */
+  content_type: uint8 = 0x14, # Handshake Message
+  version: uint16 = 0x0303, # TLS Version 1.2
+  length: uint16 = 0x000d, # Message Length (includes handshake headers)
+  
+  /* Handshake Layer */
+  handshake_type: uint8 = 0x01, # Client Hello
+  handshake_length: uint24 = 0x00000d, # Handshake Length (includes handshake headers)
+  handshake_version: uint16 = 0x0303, # TLS Version 1.2
+  
+  /* Client Hello */
+  random: bytes = "abcdefabcdefab", # Client Random
+  session_id_length: uint8 = 0x00, # Session ID Length (empty)
+  session_id: bytes = "", # Session ID (empty)
+  cipher_suites_length: uint16 = 0x0002, # Cipher Suites Length
+  cipher_suites: array[uint16] = [0x0005], # Cipher Suites (TLS_RSA_WITH_RC4_128_SHA)
+  compression_methods_length: uint8 = 0x01, # Compression Methods Length
+  compression_methods: array[uint8] = [0x00] # Compression Methods (Null)
+};
+
+# Main Spicy Definition
+module main;
+type main = TLS_Client_Hello;

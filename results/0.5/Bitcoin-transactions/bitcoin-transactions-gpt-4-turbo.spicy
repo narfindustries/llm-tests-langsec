@@ -1,0 +1,57 @@
+module Bitcoin;
+
+public type BitcoinHeader = unit {
+    magic: uint32;
+    command: bytes &size=12;
+    length: uint32;
+    checksum: bytes &size=4;
+};
+
+public type TxIn = unit {
+    previous_output: bytes &size=32;
+    prev_index: uint32;
+    script_length: varint;
+    script: bytes &size=script_length;
+    sequence: uint32;
+};
+
+public type TxOut = unit {
+    value: uint64;
+    script_length: varint;
+    script: bytes &size=script_length;
+};
+
+public type Transaction = unit {
+    version: uint32;
+    in_count: varint;
+    inputs: TxIn[] &size=in_count;
+    out_count: varint;
+    outputs: TxOut[] &size=out_count;
+    lock_time: uint32;
+};
+
+public type Block = unit {
+    header: BitcoinHeader;
+    tx_count: varint;
+    transactions: Transaction[] &size=tx_count;
+};
+
+public type VarInt = unit {
+    length: uint8;
+    value: switch (length) {
+        case 0xFD: uint16;
+        case 0xFE: uint32;
+        case 0xFF: uint64;
+        default: uint8(length);
+    };
+};
+
+event zeek_init() &priority=5
+{
+    print fmt("Zeek module for Bitcoin protocol loaded.");
+}
+
+event bitcoin_transaction(tx: Transaction)
+{
+    print fmt("Transaction detected: Version %d, Inputs: %d, Outputs: %d", tx.version, |tx.inputs|, |tx.outputs|);
+}

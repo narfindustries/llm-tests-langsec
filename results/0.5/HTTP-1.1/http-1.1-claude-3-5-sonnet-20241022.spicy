@@ -1,0 +1,49 @@
+module HTTP;
+
+import spicy;
+
+public type HTTP = unit {
+    request: Request;
+    response: Response;
+};
+
+type Request = unit {
+    method: bytes &until(b" ");
+    uri: bytes &until(b" ");
+    version: bytes &until(b"\r\n");
+    headers: Header[];
+    body: Body;
+
+    on %done {
+        print "Request processed";
+    }
+};
+
+type Response = unit {
+    version: bytes &until(b" ");
+    status_code: uint16 &until(b" ");
+    status_msg: bytes &until(b"\r\n");
+    headers: Header[];
+    body: Body;
+
+    on %done {
+        print "Response processed";
+    }
+};
+
+type Header = unit {
+    name: bytes &until(b":");
+    : bytes &until(b" ");  # Skip whitespace
+    value: bytes &until(b"\r\n");
+};
+
+type Body = unit {
+    content: bytes &eod;
+};
+
+on HTTP::%done {
+    print "HTTP transaction complete";
+}
+
+public function parse_http(data: bytes) : HTTP
+    %context = "HTTP";

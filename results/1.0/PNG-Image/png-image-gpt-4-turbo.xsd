@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/PNG"
+           xmlns:tns="http://example.com/PNG">
+
+  <!-- Define a simple type for PNG chunks -->
+  <xs:simpleType name="FourCC">
+    <xs:restriction base="xs:string">
+      <xs:length value="4" />
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- PNG file format -->
+  <xs:element name="PNG" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- PNG file signature -->
+        <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="hex" dfdl:initiator="0x89504E470D0A1A0A"/>
+
+        <!-- Multiple chunks -->
+        <xs:element name="Chunks" type="tns:Chunk" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  
+  <!-- Chunk schema -->
+  <xs:complexType name="Chunk">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Type" type="tns:FourCC" dfdl:encoding="ascii"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../tns:Length}"/>
+      <xs:element name="CRC" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+</xs:schema>

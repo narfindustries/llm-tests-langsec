@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/NITF"
+           xmlns="http://example.com/NITF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="nitf-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
+
+  <xs:element name="NITF">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format scheme="binary" ref="binary-NITF"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="NITFHeader" type="NITFHeaderType" dfdl:OccursCount="1..1"/>
+        <xs:element name="NITFBody" type="NITFBodyType" dfdl:OccursCount="1..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="NITFHeaderType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="FileHeaderType" dfdl:OccursCount="1..1"/>
+      <xs:element name="TREHeader" type="TREHeaderType" dfdl:OccursCount="0..1"/>
+      <xs:element name="DataExtensions" type="DataExtensionsType" dfdl:OccursCount="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FileHeaderField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TREHeaderType">
+    <xs:sequence>
+      <xs:element name="TREHeaderField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataExtensionsType">
+    <xs:sequence>
+      <xs:element name="DataExtensionField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NITFBodyType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:base64Binary" dfdl:OccursCount="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format xs:Scheme="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" Name="binary-NITF">
+    <dfdl:property name="representation" value="binary"/>
+    <dfdl:property name="byteOrder" value="bigEndian"/>
+    <dfdl:property name="endianness" value="bigEndian"/>
+  </dfdl:format>
+
+</xs:schema>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gif"
+           xmlns="http://example.org/gif"
+           elementFormDefault="qualified">
+
+  <xs:element name="gif_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="image_data" type="xs:base64Binary" dfdl:length="1024" dfdl:occursCountKind="exactlyOne"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="exactlyOne"/>
+    </xs:complexType>
+    <dfdl:element dfdl:lengthKind="implicit"/>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedInt" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="height" type="xs:unsignedInt" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="palette" type="xs:hexBinary" dfdl:length="768" dfdl:representation="binary"/>
+    </xs:sequence>
+    <dfdl:complexType dfdl:lengthKind="implicit"/>
+  </xs:complexType>
+
+</xs:schema>

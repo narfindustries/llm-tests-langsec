@@ -1,0 +1,22 @@
+unit network_time_protocol_version_4 "Network Time Protocol Version 4" "0.25";
+
+type NTPHeader = record {
+  leap: uint8[2];
+  version: uint8[3];
+  mode: uint8[3];
+  poll: uint8;
+  precision: uint8;
+};
+
+type NTPPacket = record {
+  header: NTPHeader;
+  delay: uint32;
+  dispersion: uint32;
+  identifier: uint32;
+  reference_timestamp: uint64;
+  originate_timestamp: uint64;
+  receive_timestamp: uint64;
+  transmit_timestamp: uint64;
+};
+
+pattern ntp_packet = NTPPacket;

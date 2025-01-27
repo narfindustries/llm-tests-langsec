@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/hl7-v2"
+           xmlns="http://example.com/hl7-v2"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="hl7-v2 můž-dfdl.xsd"/>
+
+  <xs:element name="HL7-v2-message">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format>
+          <dfdl:binaryColumnLength>4</dfdl:binaryColumnLength>
+        </dfdl:format>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MSH" type="MSH_Segment"/>
+        <xs:element name="EVN" type="EVN_Segment" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="PID" type="PID_Segment" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="PV1" type="PV1_Segment" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MSH_Segment">
+    <xs:sequence>
+      <xs:element name="MSH.1" type="xs:string" dfdl:length="3"/>
+      <xs:element name="MSH.2" type="xs:string" dfdl:length="1"/>
+      <xs:element name="MSH.3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.4" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.5" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.6" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.7" type="xs:string" dfdl:length="26"/>
+      <xs:element name="MSH.8" type="xs:string" dfdl:length="10"/>
+      <xs:element name="MSH.9" type="xs:string" dfdl:length="80"/>
+      <xs:element name="MSH.10" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.11" type="xs:string" dfdl:length="20"/>
+      <xs:element name="MSH.12" type="xs:string" dfdl:length="12"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EVN_Segment">
+    <xs:sequence>
+      <xs:element name="EVN.1" type="xs:string" dfdl:length="4"/>
+      <xs:element name="EVN.2" type="xs:string" dfdl:length="26"/>
+      <xs:element name="EVN.3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="EVN.4" type="xs:string" dfdl:length="20"/>
+      <xs:element name="EVN.5" type="xs:string" dfdl:length="20"/>
+      <xs:element name="EVN.6" type="xs:string" dfdl:length="10"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PID_Segment">
+    <xs:sequence>
+      <xs:element name="PID.1" type="xs:string" dfdl:length="4"/>
+      <xs:element name="PID.2" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PID.3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PID.4" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PID.5" type="xs:string" dfdl:length="50"/>
+      <xs:element name="PID.6" type="xs:string" dfdl:length="50"/>
+      <xs:element name="PID.7" type="xs:string" dfdl:length="26"/>
+      <xs:element name="PID.8" type="xs:string" dfdl:length="1"/>
+      <xs:element name="PID.9" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PID.10" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PID.11" type="xs:string" dfdl:length="50"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PV1_Segment">
+    <xs:sequence>
+      <xs:element name="PV1.1" type="xs:string" dfdl:length="4"/>
+      <xs:element name="PV1.2" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PV1.3" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PV1.4" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PV1.5" type="xs:string" dfdl:length="50"/>
+      <xs:element name="PV1.6" type="xs:string" dfdl:length="50"/>
+      <xs:element name="PV1.7" type="xs:string" dfdl:length="26"/>
+      <xs:element name="PV1.8" type="xs:string" dfdl:length="1"/>
+      <xs:element name="PV1.9" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PV1.10" type="xs:string" dfdl:length="20"/>
+      <xs:element name="PV1.11" type="xs:string" dfdl:length="50"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

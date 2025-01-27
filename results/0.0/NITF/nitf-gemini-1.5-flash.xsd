@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/nitf"
+           xmlns="http://example.org/nitf"
+           elementFormDefault="qualified">
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="head" type="HeadType"/>
+        <xs:element name="body" type="BodyType"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeadType">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string" dfdl:length="100"/>
+      <!-- Add other head elements as needed -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BodyType">
+    <xs:sequence>
+      <xs:element name="bodyText" type="xs:string" dfdl:lengthKind="unbounded"/>
+      <!-- Add other body elements as needed -->
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
+

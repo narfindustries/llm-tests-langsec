@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+  xmlns:gzip="http://example.com/gzip"
+  targetNamespace="http://example.com/gzip"
+  elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="gzip:GZIPFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:include schemaLocation="org/apache/daffodil/section2/schema_types.dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" alignmentUnits="bytes" binaryNumberRep="binary"
+        byteOrder="littleEndian" representation="binary"
+        lengthUnits="bytes" occursCountKind="implicit"
+        encoding="UTF-8" initiator="" terminator="" 
+        textNumberRep="standard" ignoreCase="no"
+        textPadKind="none" trailingSkip="0" leadingSkip="0"
+        truncateSpecifiedLengthString="no" escapeSchemeRef=""
+        separator="" separatorSuppressionPolicy="anyEmpty"
+        sequenceKind="ordered" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="gzipFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="magicNumber" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+              <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="1"/>
+              <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
+              <xs:element name="mtime" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="xfl" type="xs:unsignedByte" dfdl:length="1"/>
+              <xs:element name="os" type="xs:unsignedByte" dfdl:length="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        <xs:element name="trailer">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="isize" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="GZIPFormat">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:defineFormat>
+          <dfdl:format alignment="1" alignmentUnits="bytes" binaryNumberRep="binary"
+            byteOrder="littleEndian" representation="binary"
+            lengthUnits="bytes" occursCountKind="implicit"
+            encoding="UTF-8" initiator="" terminator="" 
+            textNumberRep="standard" ignoreCase="no"
+            textPadKind="none" trailingSkip="0" leadingSkip="0"
+            truncateSpecifiedLengthString="no" escapeSchemeRef=""
+            separator="" separatorSuppressionPolicy="anyEmpty"
+            sequenceKind="ordered" />
+        </dfdl:defineFormat>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+</xs:schema>

@@ -1,0 +1,39 @@
+module DICOM;
+
+public type Message = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    
+    on %done {
+        if ( self.prefix != b"DICM" )
+            self.set_error("Invalid DICOM prefix");
+    }
+    
+    elements: DataElement[];
+};
+
+type DataElement = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: bytes &size=2 if (self.tag_group != 0xFFFE);
+    length: uint32;
+    value: bytes &size=self.length;
+
+    on %done {
+        if ( self.tag_group == 0xFFFE && self.tag_element == 0xE000 )
+            self.set_error("Item Delimiter not supported");
+    }
+};
+
+on DICOM::Message -> event dicom_message(
+    self.preamble,
+    self.prefix,
+    |self.elements|
+);
+
+on DICOM::DataElement -> event dicom_element(
+    self.tag_group,
+    self.tag_element,
+    self.vr,
+    self.value
+);

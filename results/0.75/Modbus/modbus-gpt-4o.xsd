@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="urn:modbus"
+           xmlns:tns="urn:modbus">
+
+  <xs:include schemaLocation="modbusCommon.xsd"/>
+
+  <dfdl:format ref="tns:modbusFormat"
+               lengthKind="explicit"
+               encoding="ISO-8859-1"
+               byteOrder="bigEndian"
+               alignmentUnits="8"/>
+
+  <xs:element name="ModbusMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="transactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="protocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="unitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        <xs:element name="functionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        <xs:element name="data" type="tns:ModbusData" dfdl:length="{tns:getDataLength(length)}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ModbusData">
+    <xs:sequence>
+      <xs:element name="coilStatus" type="tns:CoilStatus" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="inputStatus" type="tns:InputStatus" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="holdingRegister" type="tns:HoldingRegister" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="inputRegister" type="tns:InputRegister" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="CoilStatus">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="InputStatus">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HoldingRegister">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="InputRegister">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <dfdl:function name="getDataLength" outputType="xs:unsignedShort">
+    <dfdl:arg name="length" type="xs:unsignedShort"/>
+    <dfdl:body>
+      <dfdl:expr>length - 6</dfdl:expr>
+    </dfdl:body>
+  </dfdl:function>
+
+</xs:schema>

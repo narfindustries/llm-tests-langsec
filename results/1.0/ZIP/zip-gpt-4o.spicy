@@ -1,0 +1,68 @@
+module ZIP;
+
+import spicy;
+import hilti;
+
+public type LocalFileHeader = unit {
+    signature: bstring &size=4 &check== "\x50\x4b\x03\x04"; # PK.. signature
+    version: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    file_mod_time: uint16;
+    file_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_name: string &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
+    compressed_data: bytes &size=compressed_size;
+};
+
+public type CentralDirectoryFileHeader = unit {
+    signature: bstring &size=4 &check== "\x50\x4b\x01\x02"; # PK..
+    version_made_by: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    file_mod_time: uint16;
+    file_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number_start: uint16;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
+    relative_offset_local_header: uint32;
+    file_name: string &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
+    file_comment: string &size=file_comment_length;
+};
+
+public type EndOfCentralDirectoryRecord = unit {
+    signature: bstring &size=4 &check== "\x50\x4b\x05\x06"; # PK..
+    disk_number: uint16;
+    central_directory_start_disk: uint16;
+    number_of_central_directory_records_disk: uint16;
+    total_number_of_central_directory_records: uint16;
+    central_directory_size: uint32;
+    central_directory_offset: uint32;
+    comment_length: uint16;
+    comment: string &size=comment_length;
+};
+
+public type ZIPArchive = unit {
+    local_file_headers: vector of LocalFileHeader;
+    central_directory_headers: vector of CentralDirectoryFileHeader &until=$input.at_end;
+    end_of_central_directory_record: EndOfCentralDirectoryRecord;
+
+    on %done {
+        if ( end_of_central_directory_record.total_number_of_central_directory_records != central_directory_headers.size() ) {
+            throw hilti::ParseError("Mismatch in central directory records count");
+        }
+    }
+};

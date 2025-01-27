@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    targetNamespace="urn:dns"
+    xmlns:dns="urn:dns">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="dfdl:default" representation="binary"
+                binaryNumberRep="binary"
+                byteOrder="bigEndian"
+                alignmentUnits="bits"
+                lengthUnits="bits"
+                lengthKind="implicit"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="dnsMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="header">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="id" type="xs:unsignedShort"/>
+                            <xs:element name="flags" type="xs:unsignedShort"/>
+                            <xs:element name="questionCount" type="xs:unsignedShort"/>
+                            <xs:element name="answerCount" type="xs:unsignedShort"/>
+                            <xs:element name="authorityCount" type="xs:unsignedShort"/>
+                            <xs:element name="additionalCount" type="xs:unsignedShort"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="question" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="dns:domainNameType"/>
+                            <xs:element name="type" type="xs:unsignedShort"/>
+                            <xs:element name="class" type="xs:unsignedShort"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="answer" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="name" type="dns:domainNameType"/>
+                            <xs:element name="type" type="xs:unsignedShort"/>
+                            <xs:element name="class" type="xs:unsignedShort"/>
+                            <xs:element name="ttl" type="xs:unsignedInt"/>
+                            <xs:element name="rdLength" type="xs:unsignedShort"/>
+                            <xs:element name="rdata" type="xs:hexBinary" dfdl:length="{ ../rdLength * 8 }"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="domainNameType">
+        <xs:sequence>
+            <xs:element name="label" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="length" type="xs:unsignedByte"/>
+                        <xs:element name="text" type="xs:string" 
+                            dfdl:length="{ ../length * 8 }"
+                            dfdl:encoding="ascii"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="terminator" type="xs:unsignedByte" fixed="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

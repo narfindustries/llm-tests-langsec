@@ -1,0 +1,44 @@
+module HL7;
+
+public type Message = unit {
+    segments: Segment[]                &until($input.length() == 0);
+};
+
+type Segment = unit {
+    segment_type: bytes &until(b"|");
+    fields: Field[]    &until($input.eof() || /[\r\n]/.match($input));
+    
+    on %done {
+        if ( self.segment_type == b"MSH" )
+            self.fields.push_back(Field(b"|"));
+    }
+} &until-including(/[\r\n]/);
+
+type Field = unit {
+    var value: bytes;
+    : bytes &until(b"|") &convert=$$ -> self.value;
+};
+
+on Message::%done {
+    for ( segment in self.segments ) {
+        if ( segment.segment_type == b"MSH" ) {
+            print fmt("Message Header Found");
+            print fmt("Field count: %d", |segment.fields|);
+            for ( i in range(|segment.fields|) ) {
+                print fmt("Field %d: %s", i, segment.fields[i].value);
+            }
+        }
+    }
+}
+
+type Version = unit {
+    version: bytes &until-including(/[\r\n]/);
+};
+
+public function parse_version(data: bytes): Version {
+    return parse<Version>(data);
+}
+
+public function parse_message(data: bytes): Message {
+    return parse<Message>(data);
+}

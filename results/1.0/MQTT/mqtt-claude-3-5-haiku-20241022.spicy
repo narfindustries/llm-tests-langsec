@@ -1,0 +1,44 @@
+module MQTT;
+
+import spicy;
+
+public type Packet = unit {
+    %byteorder = spicy::ByteOrder::Little;
+
+    var fixed_header: FixedHeader;
+    var variable_header: VariableHeader;
+    var payload: bytes &optional;
+
+    : void {
+        self.fixed_header = fixed_header;
+        self.variable_header = variable_header;
+        
+        if ( fixed_header.remaining_length > 0 ) {
+            self.payload = bytes(fixed_header.remaining_length);
+        }
+    }
+
+    type FixedHeader = unit {
+        packet_type: bitfield(8) {
+            type: 4 [+0];
+            flags: 4 [+4];
+        };
+        
+        remaining_length: varint;
+    }
+
+    type VariableHeader = unit {
+        protocol_name: bytes(6) &requires( self == b"MQTT" );
+        protocol_version: uint8;
+        connect_flags: bitfield(8) {
+            username_flag: 1 [+7];
+            password_flag: 1 [+6];
+            will_retain: 1 [+5];
+            will_qos: 2 [+3];
+            will_flag: 1 [+2];
+            clean_session: 1 [+1];
+            reserved: 1 [+0];
+        };
+        keep_alive: uint16;
+    }
+}

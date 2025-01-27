@@ -1,0 +1,167 @@
+# NITF (National Imagery Transmission Format) Meta Segment
+type NITF_META 1 {
+  # File Header
+  file-header: NITF_FILE_HEADER;
+
+  # File Header Extension (optional)
+  file-header-extension: optional NITF_FILE_HEADER_EXTENSION;
+
+  # Image Header
+  image-header: NITF_IMAGE_HEADER;
+
+  # Image Header Extension (optional)
+  image-header-extension: optional NITF_IMAGE_HEADER_EXTENSION;
+
+  # Data Extension Header (optional)
+  data-extension-header: optional NITF_DATA_EXTENSION_HEADER;
+
+  # Data Extension (optional)
+  data-extension: optional NITF_DATA_EXTENSION;
+
+  # Graphics Segment (optional)
+  graphics-segment: optional NITF_GRAPHICS_SEGMENT;
+
+  # Text Segment (optional)
+  text-segment: optional NITF_TEXT_SEGMENT;
+
+  # Label Segment (optional)
+  label-segment: optional NITF_LABEL_SEGMENT;
+
+  # Reserved Extension (optional)
+  reserved-extension: optional NITF_RESERVED_EXTENSION;
+}
+
+# NITF File Header
+type NITF_FILE_HEADER 1 {
+  # File Header Length (9 bytes)
+  file-header-length: uint32 be;
+
+  # File Format (4 bytes)
+  file-format: string(4) ascii;
+
+  # File Version (2 bytes)
+  file-version: uint16 be;
+
+  # Type Source (25 bytes)
+  type-source: string(25) ascii;
+
+  # File Time (14 bytes)
+  file-time: string(14) ascii;
+
+  # Classification (1 byte)
+  classification: uint8;
+
+  # Release Instructions (20 bytes)
+  release-instructions: string(20) ascii;
+
+  # File Title (80 bytes)
+  file-title: string(80) ascii;
+}
+
+# NITF File Header Extension
+type NITF_FILE_HEADER_EXTENSION 1 {
+  # File Header Extension Length (4 bytes)
+  file-header-extension-length: uint32 be;
+
+  # Extension Data (variable length)
+  extension-data: bytes(file-header-extension-length - 4);
+}
+
+# NITF Image Header
+type NITF_IMAGE_HEADER 1 {
+  # Image Header Length (10 bytes)
+  image-header-length: uint32 be;
+
+  # Image ID (25 bytes)
+  image-id: string(25) ascii;
+
+  # Image Date and Time (14 bytes)
+  image-date-time: string(14) ascii;
+
+  # Target ID (17 bytes)
+  target-id: string(17) ascii;
+
+  # File Part Type (2 bytes)
+  file-part-type: uint16 be;
+
+  # File Security Classification (1 byte)
+  file-security-classification: uint8;
+
+  # File Copy Number (2 bytes)
+  file-copy-number: uint16 be;
+
+  # File Number (6 bytes)
+  file-number: string(6) ascii;
+
+  # Total File Copies (2 bytes)
+  total-file-copies: uint16 be;
+
+  # File Security Information (11 bytes)
+  file-security-information: bytes(11);
+}
+
+# NITF Image Header Extension
+type NITF_IMAGE_HEADER_EXTENSION 1 {
+  # Image Header Extension Length (4 bytes)
+  image-header-extension-length: uint32 be;
+
+  # Extension Data (variable length)
+  extension-data: bytes(image-header-extension-length - 4);
+}
+
+# NITF Data Extension Header
+type NITF_DATA_EXTENSION_HEADER 1 {
+  # Data Extension Header Length (4 bytes)
+  data-extension-header-length: uint32 be;
+
+  # Data Extension Type (2 bytes)
+  data-extension-type: uint16 be;
+
+  # Data Extension ID (25 bytes)
+  data-extension-id: string(25) ascii;
+}
+
+# NITF Data Extension
+type NITF_DATA_EXTENSION 1 {
+  # Data Extension Length (4 bytes)
+  data-extension-length: uint32 be;
+
+  # Data Extension Data (variable length)
+  data-extension-data: bytes(data-extension-length - 4);
+}
+
+# NITF Graphics Segment
+type NITF_GRAPHICS_SEGMENT 1 {
+  # Graphics Segment Length (4 bytes)
+  graphics-segment-length: uint32 be;
+
+  # Graphics Data (variable length)
+  graphics-data: bytes(graphics-segment-length - 4);
+}
+
+# NITF Text Segment
+type NITF_TEXT_SEGMENT 1 {
+  # Text Segment Length (4 bytes)
+  text-segment-length: uint32 be;
+
+  # Text Data (variable length)
+  text-data: bytes(text-segment-length - 4);
+}
+
+# NITF Label Segment
+type NITF_LABEL_SEGMENT 1 {
+  # Label Segment Length (4 bytes)
+  label-segment-length: uint32 be;
+
+  # Label Data (variable length)
+  label-data: bytes(label-segment-length - 4);
+}
+
+# NITF Reserved Extension
+type NITF_RESERVED_EXTENSION 1 {
+  # Reserved Extension Length (4 bytes)
+  reserved-extension-length: uint32 be;
+
+  # Reserved Data (variable length)
+  reserved-data: bytes(reserved-extension-length - 4);
+}

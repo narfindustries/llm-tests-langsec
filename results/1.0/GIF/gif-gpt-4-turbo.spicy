@@ -1,0 +1,75 @@
+module GIF;
+
+import spicy;
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packedFields: uint8;
+    bgColorIndex: uint8;
+    pixelAspectRatio: uint8;
+};
+
+public type GlobalColorTable = unit {
+    entryCount: uint16;
+    colors: ColorEntry[] &size=entryCount;
+};
+
+public type ColorEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ImageDescriptor = unit {
+    leftPosition: uint16;
+    topPosition: uint16;
+    width: uint16;
+    height: uint16;
+    packedFields: uint8;
+};
+
+public type ImageData = unit {
+    lzwMinCodeSize: uint8;
+    dataBlocks: bytes &eod;
+};
+
+public type GIFFile = unit {
+    header: bytes &size=6;
+    lsd: LogicalScreenDescriptor;
+    gct: GlobalColorTable &if=(self.lsd.packedFields & 0x80 != 0);
+    frames: Frame[] &eod;
+};
+
+public type Frame = unit {
+    imageDesc: ImageDescriptor;
+    localColorTable: GlobalColorTable &if=(self.imageDesc.packedFields & 0x80 != 0);
+    imageData: ImageData;
+};
+
+public type Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    blockSize: uint8;
+    data: bytes &size=this.blockSize;
+};
+
+public type Trailer = unit {
+    marker: uint8;
+};
+
+public type ExtensionsAndFrame = unit {
+    extensions: Extension[];
+    terminator: uint8 &requires=($$ == 0x3B);
+    done: Hook @priority=1 @on-leave {
+        print "Parsing completed"; 
+    };
+};
+
+event zeek_init() {
+    print "GIF parser initialized.";
+}
+
+event spicy_file_done(f: GIFFile) {
+    print fmt("Parsed GIF: %dx%d", f.lsd.width, f.lsd.height);
+}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/modbus" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty" dfdl:lengthUnits="bytes">
+
+  <xs:element name="modbusGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="12"/>
+        <xs:element name="data" type="DataType" dfdl:lengthKind="delimited" dfdl:terminator="0x0D0A"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="field1" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="field2" type="xs:unsignedByte" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="field3" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="field4" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="dataRecord" type="DataRecordType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataRecordType">
+    <xs:sequence>
+      <xs:element name="deviceId" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="value" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

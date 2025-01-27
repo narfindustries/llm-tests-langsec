@@ -1,0 +1,43 @@
+module HTTP;
+
+import spicy;
+import zeek;
+
+public type HTTPRequest = unit {
+    method: string &size = 4;
+    space1: bytes &size = 1 &assert($$ == " ");
+    uri: string &until = (|c| c == 0x20);
+    space2: bytes &size = 1 &assert($$ == " ");
+    version: string &size = 8 &assert($$ == "HTTP/1.1");
+    crlf: bytes &size = 2 &assert($$ == "\r\n");
+    headers: vector of HTTPHeader;
+    crlf_end: bytes &size = 2 &assert($$ == "\r\n");
+};
+
+public type HTTPHeader = unit {
+    name: string &until = (|c| c == 0x3A) &convert = to_upper;
+    colon: bytes &size = 1 &assert($$ == ":");
+    space: bytes &size = 1 &assert($$ == " ");
+    value: string &until = (|c| c == 0x0D);
+    crlf: bytes &size = 2 &assert($$ == "\r\n");
+};
+
+public type HTTPResponse = unit {
+    version: string &size = 8 &assert($$ == "HTTP/1.1");
+    space1: bytes &size = 1 &assert($$ == " ");
+    status_code: uint16 &byteorder = big;
+    space2: bytes &size = 1 &assert($$ == " ");
+    reason_phrase: string &until = (|c| c == 0x0D);
+    crlf: bytes &size = 2 &assert($$ == "\r\n");
+    headers: vector of HTTPHeader;
+    crlf_end: bytes &size = 2 &assert($$ == "\r\n");
+};
+
+public type HTTPMessage = unit {
+    request: HTTPRequest | HTTPResponse;
+};
+
+public hook zeek_init() {
+    spicy::register_parser(HTTP::HTTPRequest, /http-request/, HTTP::HTTPMessage);
+    spicy::register_parser(HTTP::HTTPResponse, /http-response/, HTTP::HTTPMessage);
+}

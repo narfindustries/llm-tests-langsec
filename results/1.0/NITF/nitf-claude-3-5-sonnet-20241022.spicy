@@ -1,0 +1,50 @@
+module NITF;
+
+import spicy;
+
+public type File = unit {
+    header: FileHeader;
+    image_segments: Image[] &count = header.num_images;
+};
+
+type FileHeader = unit {
+    magic: bytes &size=9;
+    complex_level: bytes &size=2;
+    system_type: bytes &size=4;
+    originating_station: bytes &size=10;
+    datetime: bytes &size=14;
+    title: bytes &size=80;
+    security_class: bytes &size=1;
+    copy_number: bytes &size=5;
+    num_copies: bytes &size=5;
+    encryption: bytes &size=1;
+    message_type: bytes &size=1;
+    file_length: uint32 &byte-order=spicy::ByteOrder::Big;
+    header_length: uint32 &byte-order=spicy::ByteOrder::Big;
+    num_images: uint16 &byte-order=spicy::ByteOrder::Big;
+};
+
+type Image = unit {
+    im: ImageSubheader;
+    pixels: bytes &size=self.im.data_length;
+};
+
+type ImageSubheader = unit {
+    im_id: bytes &size=2;
+    date_time: bytes &size=14; 
+    target_id: bytes &size=17;
+    title: bytes &size=80;
+    security_class: bytes &size=1;
+    encryption: bytes &size=1;
+    image_source: bytes &size=42;
+    num_sig_rows: uint32 &byte-order=spicy::ByteOrder::Big;
+    num_sig_cols: uint32 &byte-order=spicy::ByteOrder::Big;
+    pixel_type: bytes &size=3;
+    comp_type: bytes &size=2;
+    display_level: bytes &size=1;
+    attachment_level: bytes &size=1;
+    data_length: uint32 &byte-order=spicy::ByteOrder::Big;
+};
+
+on File::header -> event NITF::file_header($file, self.magic, self.title);
+on Image -> event NITF::image_segment($file, self.im.title, self.im.num_sig_rows, self.im.num_sig_cols);

@@ -1,0 +1,55 @@
+#ifndef _SPICY_GEMINI_H_
+#define _SPICY_GEMINI_H_
+
+#include <stdint.h>
+
+typedef uint32_t u32;
+typedef uint16_t u16;
+typedef uint8_t u8;
+
+// Define structures as needed based on the Gemini protocol
+
+// Example structure (replace with actual Gemini structure)
+typedef struct {
+    u8  opcode;
+    u16 length;
+    u8  data[1024]; // Adjust size as needed
+} gemini_packet;
+
+
+// Function prototypes (replace with actual Gemini functions)
+
+// Example function (replace with actual Gemini function)
+int process_gemini_packet(gemini_packet* pkt);
+
+
+#endif // _SPICY_GEMINI_H_
+
+
+#include "gemini.h"
+
+// Spicy code to process Gemini packets
+
+int main() {
+    gemini_packet pkt;
+    // ... code to receive Gemini packets ...
+    int result = process_gemini_packet(&pkt);
+    // ... code to handle the result ...
+    return 0;
+}
+
+int process_gemini_packet(gemini_packet* pkt) {
+    // ... code to process the Gemini packet ...
+    switch (pkt->opcode) {
+        case 0x01: // Example opcode
+            // ... handle opcode 0x01 ...
+            break;
+        case 0x02: // Example opcode
+            // ... handle opcode 0x02 ...
+            break;
+        default:
+            // ... handle unknown opcode ...
+            break;
+    }
+    return 0;
+}

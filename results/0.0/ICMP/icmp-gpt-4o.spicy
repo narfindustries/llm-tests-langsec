@@ -1,0 +1,43 @@
+module ICMP;
+
+import spicy;
+import zeek;
+
+public type ICMPMessage = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest_of_header: bytes &restof;
+} &byte_order=bigendian;
+
+public type ICMPAnalyzer = spicy::Analyzer {
+    .configure = {
+        .ports = [],
+        .mime_types = [],
+        .protocols = [spicy::Protocol::ICMP]
+    };
+
+    on %init {
+        print "ICMP Analyzer initialized";
+    }
+
+    on %done {
+        print "ICMP Analyzer done";
+    }
+
+    on %error {
+        print "ICMP Analyzer encountered an error";
+    }
+
+    on spicy::analyzer::ICMP::ICMPMessage(msg: ICMPMessage) {
+        print fmt("ICMP Message: type=%d, code=%d, checksum=%d", msg.type, msg.code, msg.checksum);
+    }
+};
+
+public export {
+    redef enum zeek::Analyzer::Tag += {
+        ANICMP
+    };
+
+    type ANICMP = ICMPAnalyzer &priority=5 &name="ICMP";
+}

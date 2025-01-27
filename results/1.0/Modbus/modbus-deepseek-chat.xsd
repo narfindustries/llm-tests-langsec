@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018"
+           targetNamespace="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="daf:Daffodil" encoding="UTF-8" byteOrder="bigEndian" alignmentUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="modbus-deepseek-chat">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transactionId" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="protocolId" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="unitId" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="functionCode" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{ ../length - 2 }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

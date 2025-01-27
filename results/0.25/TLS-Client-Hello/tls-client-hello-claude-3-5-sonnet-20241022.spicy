@@ -1,0 +1,42 @@
+module TLS;
+
+public type ClientHello = unit {
+    record_type: uint8;
+    version: uint16;
+    length: uint16;
+    msg_type: uint8;
+    handshake_length: uint24;
+    protocol_version: uint16;
+    random: bytes &size=32;
+    session_id_length: uint8;
+    session_id: bytes &size=self.session_id_length;
+    cipher_suites_length: uint16;
+    cipher_suites: bytes &size=self.cipher_suites_length;
+    compression_methods_length: uint8;
+    compression_methods: bytes &size=self.compression_methods_length;
+    has_extensions: bool = (self.handshake_length > 
+        (self.session_id_length + self.cipher_suites_length + 
+         self.compression_methods_length + 38));
+    extensions_length: uint16 if (self.has_extensions);
+    extensions: bytes &size=self.extensions_length if (self.has_extensions);
+
+    on %done {
+        print "Record Type:", self.record_type;
+        print "Version:", self.version;
+        print "Length:", self.length;
+        print "Message Type:", self.msg_type;
+        print "Handshake Length:", self.handshake_length;
+        print "Protocol Version:", self.protocol_version;
+        print "Random:", self.random;
+        print "Session ID Length:", self.session_id_length;
+        print "Session ID:", self.session_id;
+        print "Cipher Suites Length:", self.cipher_suites_length;
+        print "Cipher Suites:", self.cipher_suites;
+        print "Compression Methods Length:", self.compression_methods_length;
+        print "Compression Methods:", self.compression_methods;
+        if (self.has_extensions) {
+            print "Extensions Length:", self.extensions_length;
+            print "Extensions:", self.extensions;
+        }
+    }
+};

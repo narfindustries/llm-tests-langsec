@@ -1,0 +1,42 @@
+module JPEG;
+
+public type JPEG = unit {
+    magic: bytes &validate = (self.magic == "\xff\xd8");
+
+    segments: vector of Segment {
+        while ( not eos() )
+    };
+};
+
+public type Segment = unit {
+    marker: uint16 &byteorder=be;
+
+    length_and_data: LengthAndData(marker) 
+        &size = length_data_size(marker);
+
+    on %done {
+        if ( marker == 0xffd9 ) {
+            # EOI marker, end of image
+            break;
+        }
+    }
+};
+
+function length_data_size(marker: uint16): uint64 {
+    if ( marker in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } ) {
+        # Markers without length field
+        return 0;
+    }
+    else {
+        # Length is stored in the two bytes after the marker
+        return 2 + uint16 &byteorder=be;
+    }
+}
+
+public type LengthAndData = unit (marker: uint16) {
+    length: uint16 &byteorder=be 
+        &if ( marker not in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } );
+
+    data: bytes &restofdata 
+        &if ( marker not in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } );
+};

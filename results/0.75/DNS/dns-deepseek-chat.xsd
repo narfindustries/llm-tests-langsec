@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns-deepseek-chat"
+           xmlns="http://example.com/dns-deepseek-chat"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="DNSMessageType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:DNSHeaderType" />
+      <xs:element name="Question" type="tns:DNSQuestionType" />
+      <xs:element name="Answer" type="tns:DNSResourceRecordType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="Authority" type="tns:DNSResourceRecordType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element name="Additional" type="tns:DNSResourceRecordType" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSHeaderType">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Flags" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="QDCount" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="ANCount" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="NSCount" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="ARCount" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSQuestionType">
+    <xs:sequence>
+      <xs:element name="QName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%#x00;" />
+      <xs:element name="QType" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="QClass" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNSResourceRecordType">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%#x00;" />
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Class" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" />
+      <xs:element name="RDLength" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+      <xs:element name="RData" type="xs:hexBinary" dfdl:length="{ ../RDLength }" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DNSMessage" type="tns:DNSMessageType" />
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format representation="binary" byteOrder="bigEndian" />
+  </dfdl:defineFormat>
+
+</xs:schema>

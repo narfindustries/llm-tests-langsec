@@ -1,0 +1,32 @@
+Here's a complete, fixed Zeek Spicy specification for Bitcoin transactions:
+
+module Bitcoin;
+
+import spicy;
+
+public type Transaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: Input[input_count.value];
+    output_count: varint;
+    outputs: Output[output_count.value];
+    locktime: uint32;
+
+    type Input = unit {
+        previous_tx_hash: bytes(32);
+        previous_output_index: uint32;
+        script_length: varint;
+        script_sig: bytes(script_length.value);
+        sequence_number: uint32;
+    };
+
+    type Output = unit {
+        value: uint64;
+        script_length: varint;
+        script_pubkey: bytes(script_length.value);
+    };
+};
+
+public type BitcoinTransactionFile = unit {
+    transactions: Transaction[] &until($input.end);
+};

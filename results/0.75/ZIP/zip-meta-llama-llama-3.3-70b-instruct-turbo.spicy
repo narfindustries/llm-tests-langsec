@@ -1,0 +1,204 @@
+# Define the ZIP file format
+type Zip_File = record {
+    # Local file header
+    local_header: Local_Header;
+
+    # File data
+    file_data: bytestring;
+
+    # Data descriptor (optional)
+    data_descriptor: Data_Descriptor;
+};
+
+# Define the local file header
+type Local_Header = record {
+    # Magic number
+    magic: uint16 = 0x04034b50;
+
+    # Version needed to extract
+    version: uint16;
+
+    # General purpose bit flags
+    flags: uint16;
+
+    # Compression method
+    compression: uint16;
+
+    # Last modification time
+    modification_time: uint16;
+
+    # Last modification date
+    modification_date: uint16;
+
+    # CRC-32
+    crc: uint32;
+
+    # Compressed size
+    compressed_size: uint32;
+
+    # Uncompressed size
+    uncompressed_size: uint32;
+
+    # File name length
+    file_name_length: uint16;
+
+    # Extra field length
+    extra_field_length: uint16;
+
+    # File name
+    file_name: bytestring = read_bytes(file_name_length);
+
+    # Extra field
+    extra_field: bytestring = read_bytes(extra_field_length);
+};
+
+# Define the data descriptor
+type Data_Descriptor = record {
+    # CRC-32
+    crc: uint32;
+
+    # Compressed size
+    compressed_size: uint32;
+
+    # Uncompressed size
+    uncompressed_size: uint32;
+};
+
+# Define the central directory file header
+type Central_Directory_File_Header = record {
+    # Magic number
+    magic: uint32 = 0x02014b50;
+
+    # Version made by
+    version_made_by: uint16;
+
+    # Version needed to extract
+    version_needed_to_extract: uint16;
+
+    # General purpose bit flags
+    flags: uint16;
+
+    # Compression method
+    compression: uint16;
+
+    # Last modification time
+    modification_time: uint16;
+
+    # Last modification date
+    modification_date: uint16;
+
+    # CRC-32
+    crc: uint32;
+
+    # Compressed size
+    compressed_size: uint32;
+
+    # Uncompressed size
+    uncompressed_size: uint32;
+
+    # File name length
+    file_name_length: uint16;
+
+    # Extra field length
+    extra_field_length: uint16;
+
+    # File comment length
+    file_comment_length: uint16;
+
+    # Disk number where file starts
+    disk_number: uint16;
+
+    # Internal file attributes
+    internal_file_attributes: uint16;
+
+    # External file attributes
+    external_file_attributes: uint32;
+
+    # Relative offset of local file header
+    relative_offset: uint32;
+
+    # File name
+    file_name: bytestring = read_bytes(file_name_length);
+
+    # Extra field
+    extra_field: bytestring = read_bytes(extra_field_length);
+
+    # File comment
+    file_comment: bytestring = read_bytes(file_comment_length);
+};
+
+# Define the end of central directory record
+type End_Of_Central_Directory_Record = record {
+    # Magic number
+    magic: uint32 = 0x06054b50;
+
+    # Number of this disk
+    disk_number: uint16;
+
+    # Disk where central directory starts
+    central_directory_disk: uint16;
+
+    # Number of entries in central directory on this disk
+    entries_on_disk: uint16;
+
+    # Total number of entries in central directory
+    total_entries: uint16;
+
+    # Size of central directory
+    central_directory_size: uint32;
+
+    # Offset of start of central directory
+    central_directory_offset: uint32;
+
+    # Comment length
+    comment_length: uint16;
+
+    # Comment
+    comment: bytestring = read_bytes(comment_length);
+};
+
+# Define the ZIP file parser
+type Zip_Parser = record {
+    # Central directory file headers
+    central_directory_file_headers: array[Central_Directory_File_Header];
+
+    # End of central directory record
+    end_of_central_directory_record: End_Of_Central_Directory_Record;
+};
+
+# Define the ZIP file analyzer
+analyzer Zip_Analyzer {
+    # Analyze the ZIP file
+    function analyze(zip_file: Zip_File): Zip_Parser {
+        # Parse the central directory file headers
+        central_directory_file_headers = array();
+        for (i = 0; i < length(zip_file.local_header.file_name); i++) {
+            central_directory_file_header = parse_cdfh(zip_file.local_header.file_name[i]);
+            add(central_directory_file_headers, central_directory_file_header);
+        }
+
+        # Parse the end of central directory record
+        end_of_central_directory_record = parse_eocdr(zip_file.file_data);
+
+        # Return the ZIP file parser
+        return zip_parser(central_directory_file_headers, end_of_central_directory_record);
+    }
+};
+
+# Define the parse_cdfh function
+function parse_cdfh(file_name: bytestring): Central_Directory_File_Header {
+    # Read the central directory file header
+    cdfh = Central_Directory_File_Header;
+    read(cdfh);
+
+    return cdfh;
+}
+
+# Define the parse_eocdr function
+function parse_eocdr(file_data: bytestring): End_Of_Central_Directory_Record {
+    # Read the end of central directory record
+    eocdr = End_Of_Central_Directory_Record;
+    read(eocdr);
+
+    return eocdr;
+}

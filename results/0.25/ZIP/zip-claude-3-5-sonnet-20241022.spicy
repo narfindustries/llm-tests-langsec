@@ -1,0 +1,32 @@
+module ZIP;
+
+public type File = unit {
+    signatures: list<Signature>;
+} &size=4096;
+
+type Signature = unit {
+    magic: bytes &size=4;
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    filename: bytes &size=self.filename_length;
+    extra_field: bytes &size=self.extra_field_length;
+    compressed_data: bytes &size=self.compressed_size;
+} &requires=(self.magic == b"PK\x03\x04");
+
+on File::%done {
+    print self;
+}
+
+on Signature::%done {
+    print "Found ZIP entry:", self.filename;
+    print "Compressed size:", self.compressed_size;
+    print "Uncompressed size:", self.uncompressed_size;
+}

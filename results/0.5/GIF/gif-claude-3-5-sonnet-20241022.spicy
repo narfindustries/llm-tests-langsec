@@ -1,0 +1,89 @@
+module GIF;
+
+public type Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+    
+    on %done {
+        if ( self.signature != b"GIF" )
+            self.reject("Invalid GIF signature");
+    }
+};
+
+type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+    
+    var has_global_color_table: bool;
+    var color_table_size: uint64;
+    
+    on %init {
+        self.has_global_color_table = (self.packed & 0x80) != 0;
+        self.color_table_size = self.has_global_color_table ? 3 * (1 << ((self.packed & 0x07) + 1)) : 0;
+    }
+};
+
+type ColorTable = unit {
+    entries: bytes &size=self.size;
+    
+    var size: uint64;
+};
+
+type GraphicControlExtension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8 &requires=0xf9;
+    block_size: uint8 &requires=0x04;
+    packed: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8 &requires=0x00;
+};
+
+type ImageDescriptor = unit {
+    separator: uint8 &requires=0x2c;
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+};
+
+type ImageData = unit {
+    lzw_minimum_code_size: uint8;
+    blocks: SubBlock[];
+};
+
+type SubBlock = unit {
+    size: uint8;
+    data: bytes &size=self.size;
+};
+
+type Extension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8;
+    switch ( self.label ) {
+        0xf9 -> graphic_control: GraphicControlExtension;
+        * -> other: bytes &eod;
+    };
+};
+
+type Block = unit {
+    switch ( look_ahead(1) ) {
+        0x2c -> image: ImageDescriptor;
+        0x21 -> extension: Extension;
+        0x3b -> trailer: uint8 &requires=0x3b;
+        * -> : void;
+    };
+};
+
+public type File = unit {
+    header: Header;
+    screen: LogicalScreenDescriptor;
+    global_color_table: ColorTable if ( self.screen.has_global_color_table ) {
+        self.global_color_table.size = self.screen.color_table_size;
+    }
+    blocks: Block[] &until-including($input.at_end());
+};

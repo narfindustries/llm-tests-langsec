@@ -1,0 +1,32 @@
+module NITF;
+
+export {
+    type Info = unit {
+        file_header: Header;
+        files: [File] &length = file_header.file_count;
+    };
+
+    type Header = unit {
+        magic: bytes &size = 4 &convert = to_magic_format;
+
+        file_count: uint32;
+    };
+
+    type File = unit {
+        name: string &restofdata &decode = decode_utf8;
+        size: uint32;
+        data: bytes &restofdata &size = size;
+    };
+
+    function to_magic_format(input: bytes) : string {
+        local magic_string: string = "NTF";
+        if (input[0] == 0x4E && input[1] == 0x54 && input[2] == 0x46) {
+            return magic_string;
+        }
+        return "<invalid magic>";
+    }
+
+    function decode_utf8(input: bytes) : string {
+        return input.decode_as_utf8();
+    }
+}

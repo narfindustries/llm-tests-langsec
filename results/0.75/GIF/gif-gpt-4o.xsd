@@ -1,0 +1,105 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/ns/gif"
+        xmlns:tns="http://example.com/ns/gif"
+        elementFormDefault="qualified">
+
+    <dfdl:format ref="tns:GIFFormat"/>
+
+    <dfdl:defineFormat name="GIFFormat">
+        <dfdl:byteOrder value="bigEndian"/>
+        <dfdl:encoding value="ascii"/>
+        <dfdl:lengthKind value="explicit"/>
+    </dfdl:defineFormat>
+
+    <element name="GIF" type="tns:GIFType"/>
+
+    <complexType name="GIFType">
+        <sequence>
+            <element name="Header" type="tns:HeaderType"/>
+            <element name="LogicalScreenDescriptor" type="tns:LogicalScreenDescriptorType"/>
+            <element name="ColorTable" type="tns:ColorTableType" minOccurs="0" maxOccurs="1"/>
+            <element name="ImageData" type="tns:ImageDataType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="Trailer" type="tns:TrailerType"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="HeaderType">
+        <sequence>
+            <element name="Signature" type="tns:SignatureType"/>
+            <element name="Version" type="tns:VersionType"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="SignatureType">
+        <restriction base="xs:string">
+            <length value="3"/>
+            <pattern value="GIF"/>
+        </restriction>
+    </simpleType>
+
+    <simpleType name="VersionType">
+        <restriction base="xs:string">
+            <length value="3"/>
+            <pattern value="(87a|89a)"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="LogicalScreenDescriptorType">
+        <sequence>
+            <element name="LogicalScreenWidth" type="xs:unsignedShort"/>
+            <element name="LogicalScreenHeight" type="xs:unsignedShort"/>
+            <element name="PackedFields" type="tns:PackedFieldsType"/>
+            <element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+            <element name="PixelAspectRatio" type="xs:unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="PackedFieldsType">
+        <restriction base="xs:unsignedByte">
+            <pattern value="[0-9]{1,3}"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="ColorTableType">
+        <sequence>
+            <element name="Color" type="tns:ColorType" minOccurs="0" maxOccurs="256"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ColorType">
+        <sequence>
+            <element name="Red" type="xs:unsignedByte"/>
+            <element name="Green" type="xs:unsignedByte"/>
+            <element name="Blue" type="xs:unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ImageDataType">
+        <sequence>
+            <element name="ImageSeparator" type="xs:unsignedByte" fixed="0x2C"/>
+            <element name="ImageLeftPosition" type="xs:unsignedShort"/>
+            <element name="ImageTopPosition" type="xs:unsignedShort"/>
+            <element name="ImageWidth" type="xs:unsignedShort"/>
+            <element name="ImageHeight" type="xs:unsignedShort"/>
+            <element name="ImagePackedFields" type="tns:PackedFieldsType"/>
+            <element name="LocalColorTable" type="tns:ColorTableType" minOccurs="0" maxOccurs="1"/>
+            <element name="LZWMinimumCodeSize" type="xs:unsignedByte"/>
+            <element name="ImageDataBlock" type="tns:ImageDataBlockType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ImageDataBlockType">
+        <sequence>
+            <element name="BlockSize" type="xs:unsignedByte"/>
+            <element name="BlockData" type="xs:hexBinary" dfdl:length="{../BlockSize}"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="TrailerType">
+        <sequence>
+            <element name="Trailer" type="xs:unsignedByte" fixed="0x3B"/>
+        </sequence>
+    </complexType>
+
+</schema>

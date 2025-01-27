@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:tns="http://example.com/dns"
+           elementFormDefault="qualified"
+           dfdl:format="tns:defaultFormat">
+
+  <dfdl:format ref="tns:defaultFormat"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:defaultFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="dnsMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transactionID" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="flags" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="questions" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="answerRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="authorityRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="additionalRRs" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        <xs:element name="queries" type="tns:queriesType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="answers" type="tns:resourceRecordsType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="authorities" type="tns:resourceRecordsType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="additionals" type="tns:resourceRecordsType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="queriesType">
+    <xs:sequence>
+      <xs:element name="qName" type="tns:domainNameType"/>
+      <xs:element name="qType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="qClass" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="resourceRecordsType">
+    <xs:sequence>
+      <xs:element name="name" type="tns:domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="class" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="ttl" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="rdLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="rData" type="xs:hexBinary" dfdl:length="{../rdLength}" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="domainNameType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <dfdl:defineFormat name="defaultFormat">
+    <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit" occursCountKind="expression"/>
+  </dfdl:defineFormat>
+
+</xs:schema>

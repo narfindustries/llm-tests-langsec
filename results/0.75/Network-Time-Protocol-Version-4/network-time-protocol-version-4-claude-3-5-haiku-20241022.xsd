@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="urn:network-time-protocol-v4"
+           xmlns:ntp="urn:network-time-protocol-v4">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" alignmentUnits="bytes" 
+                   byteOrder="bigEndian" 
+                   encoding="UTF-8" 
+                   fillByte="%x00"
+                   occursCountKind="implicit"
+                   representation="binary"
+                   textNumberPattern="#0"
+                   textNumberRep="standard"
+                   textZonedSignStyle="legacyPlus"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NTPPacket" dfdl:lengthKind="explicit" dfdl:length="48">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LiVnMode" type="xs:unsignedByte" 
+                    dfdl:lengthBits="8" 
+                    dfdl:representation="binary"/>
+        <xs:element name="Stratum" type="xs:unsignedByte" 
+                    dfdl:lengthBits="8" 
+                    dfdl:representation="binary"/>
+        <xs:element name="PollInterval" type="xs:byte" 
+                    dfdl:lengthBits="8" 
+                    dfdl:representation="binary"/>
+        <xs:element name="Precision" type="xs:byte" 
+                    dfdl:lengthBits="8" 
+                    dfdl:representation="binary"/>
+        <xs:element name="RootDelay" type="xs:int" 
+                    dfdl:lengthBits="32" 
+                    dfdl:representation="binary"/>
+        <xs:element name="RootDispersion" type="xs:int" 
+                    dfdl:lengthBits="32" 
+                    dfdl:representation="binary"/>
+        <xs:element name="ReferenceIdentifier" type="xs:string" 
+                    dfdl:lengthBits="32" 
+                    dfdl:representation="binary"/>
+        <xs:element name="ReferenceTimestamp" type="xs:double" 
+                    dfdl:lengthBits="64" 
+                    dfdl:representation="binary"/>
+        <xs:element name="OriginTimestamp" type="xs:double" 
+                    dfdl:lengthBits="64" 
+                    dfdl:representation="binary"/>
+        <xs:element name="ReceiveTimestamp" type="xs:double" 
+                    dfdl:lengthBits="64" 
+                    dfdl:representation="binary"/>
+        <xs:element name="TransmitTimestamp" type="xs:double" 
+                    dfdl:lengthBits="64" 
+                    dfdl:representation="binary"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

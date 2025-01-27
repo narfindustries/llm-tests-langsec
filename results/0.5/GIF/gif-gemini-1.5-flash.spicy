@@ -1,0 +1,64 @@
+#ifndef GIF_GEMINI_1_5_FLASH_SPICY
+#define GIF_GEMINI_1_5_FLASH_SPICY
+
+#include <stdint.h>
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+
+//  Error handling omitted for brevity;  replace with appropriate error handling in a real implementation.
+
+
+//  Assume necessary structs and functions from other parts of the system are available.
+
+struct GifHeader {
+    u8 sig[3];
+    u8 version[3];
+    u16 width;
+    u16 height;
+    u8 flags;
+    u8 backgroundColorIndex;
+    u8 aspectRatio;
+};
+
+struct GifImageDescriptor {
+    u8 left;
+    u8 top;
+    u16 width;
+    u16 height;
+    u8 flags;
+    u8 localColorTableFlag;
+    u8 interlaceFlag;
+    u8 sortFlag;
+    u8 sizeOfLocalColorTable;
+};
+
+struct GifColorTableEntry {
+    u8 red;
+    u8 green;
+    u8 blue;
+};
+
+// Placeholder for actual image data decoding.  Replace with proper implementation.
+bool decode_gif_image(const u8* data, size_t len,  //Input GIF data
+                      u8* output_image, size_t output_size); //Output decoded image data
+
+
+bool process_gif(const u8* gif_data, size_t gif_data_len, u8* output_image, size_t output_image_size) {
+    //  Basic GIF parsing - expand as needed.  Error handling omitted for brevity.
+    const GifHeader* header = (const GifHeader*)gif_data;
+
+    if (strncmp((const char*)header->sig, "GIF", 3) != 0) return false;
+
+    //Process header information
+
+
+    // Placeholder for iterating through image descriptors and decoding each image.
+    // Replace with actual GIF parsing logic.
+    bool success = decode_gif_image(gif_data, gif_data_len, output_image, output_image_size);
+    return success;
+}
+
+
+#endif // GIF_GEMINI_1_5_FLASH_SPICY

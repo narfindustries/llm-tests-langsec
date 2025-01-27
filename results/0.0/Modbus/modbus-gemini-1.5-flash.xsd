@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/modbus"
+           xmlns="http://example.org/modbus"
+           elementFormDefault="qualified">
+
+  <xs:element name="ModbusGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="HeaderType"/>
+        <xs:element name="Data" type="DataType" maxOccurs="unbounded"/>
+        <xs:element name="Footer" type="FooterType"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:length" use="required">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:length>1024</dfdl:length>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:string">
+          <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                  <dfdl:length>4</dfdl:length>
+              </xs:appinfo>
+          </xs:annotation>
+      </xs:element>
+      <xs:element name="Timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="SensorID" type="xs:int"/>
+      <xs:element name="Value" type="xs:float"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FooterType">
+    <xs:sequence>
+      <xs:element name="Checksum" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,74 @@
+module GIF;
+
+import spicy;
+
+public type File = unit {
+    header: Header;
+    logical_screen: LogicalScreen;
+    blocks: Blocks;
+
+    on %done { 
+        print "GIF file parsed successfully";
+    }
+};
+
+type Header = unit {
+    signature: bytes(3) ~ "GIF";
+    version: bytes(3) ~ /87a|89a/;
+};
+
+type LogicalScreen = unit {
+    width: uint16;
+    height: uint16;
+    packed_field: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+type Blocks = unit {
+    blocks: Block[] while( !input.eof() );
+};
+
+type Block = unit {
+    switch {
+        -> Trailer if ( input.lookahead(1)[0] == 0x3b );
+        -> ImageDescriptor if ( input.lookahead(1)[0] == 0x2c );
+        -> ExtensionBlock;
+    };
+};
+
+type Trailer = unit {
+    trailer: bytes(1) ~ "\x3b";
+};
+
+type ImageDescriptor = unit {
+    separator: bytes(1) ~ "\x2c";
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed_field: uint8;
+    local_color_table: bytes if ( (packed_field & 0x80) > 0 );
+    image_data: ImageData;
+};
+
+type ImageData = unit {
+    lzw_min_code_size: uint8;
+    data_blocks: DataSubBlocks;
+};
+
+type DataSubBlocks = unit {
+    blocks: DataBlock[] while( input.lookahead(1)[0] != 0 );
+    terminator: bytes(1) ~ "\x00";
+};
+
+type DataBlock = unit {
+    size: uint8;
+    data: bytes(size);
+};
+
+type ExtensionBlock = unit {
+    extension_introducer: bytes(1) ~ "\x21";
+    extension_type: uint8;
+    data_blocks: DataSubBlocks;
+};

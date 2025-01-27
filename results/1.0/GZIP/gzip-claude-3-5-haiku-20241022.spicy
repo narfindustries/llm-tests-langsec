@@ -1,0 +1,44 @@
+module GZIP;
+
+import spicy;
+
+public type Compression = enum {
+    STORED = 0,
+    COMPRESSED = 1,
+    PACKED = 2,
+    LZWED = 3,
+};
+
+public type Header = unit {
+    magic: bytes(2) &requires(self.magic == b"\x1f\x8b");
+    compression: uint8 &requires(self.compression == 8);
+    flags: uint8;
+    mtime: uint32;
+    extra_flags: uint8;
+    os: uint8;
+
+    fn is_valid_compression() : bool {
+        return self.compression == 8;
+    }
+};
+
+public type GzipFile = unit {
+    header: Header;
+    payload: bytes &size=(0 - self.header.flags);
+    footer: Footer;
+};
+
+public type Footer = unit {
+    crc32: uint32;
+    size: uint32;
+};
+
+public type Flags = unit {
+    text: bool;
+    header_crc: bool;
+    extra: bool;
+    name: bool;
+    comment: bool;
+    reserved1: bool;
+    reserved2: bool;
+};

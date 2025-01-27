@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+    xmlns:dicom="urn:dicom:schema:20241022"
+    targetNamespace="urn:dicom:schema:20241022">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="dicom:DicomFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:defineFormat name="DicomFormat">
+        <dfdl:format alignment="1" 
+            lengthKind="implicit" 
+            encoding="UTF-8" 
+            byteOrder="bigEndian"
+            binaryNumberRep="binary"
+            occursCountKind="implicit"/>
+    </xs:defineFormat>
+
+    <xs:element name="DicomFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+                <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+                <xs:element name="DataElements" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Tag">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Group" type="xs:unsignedShort"/>
+                                        <xs:element name="Element" type="xs:unsignedShort"/>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+                            <xs:element name="Length" type="xs:unsignedInt"/>
+                            <xs:element name="Value" type="xs:hexBinary" 
+                                      dfdl:lengthKind="explicit" 
+                                      dfdl:lengthRef="Length"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="VRType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="AE"/>
+            <xs:enumeration value="AS"/>
+            <xs:enumeration value="AT"/>
+            <xs:enumeration value="CS"/>
+            <xs:enumeration value="DA"/>
+            <xs:enumeration value="DS"/>
+            <xs:enumeration value="DT"/>
+            <xs:enumeration value="FL"/>
+            <xs:enumeration value="FD"/>
+            <xs:enumeration value="IS"/>
+            <xs:enumeration value="LO"/>
+            <xs:enumeration value="LT"/>
+            <xs:enumeration value="OB"/>
+            <xs:enumeration value="OD"/>
+            <xs:enumeration value="OF"/>
+            <xs:enumeration value="OW"/>
+            <xs:enumeration value="PN"/>
+            <xs:enumeration value="SH"/>
+            <xs:enumeration value="SL"/>
+            <xs:enumeration value="SQ"/>
+            <xs:enumeration value="SS"/>
+            <xs:enumeration value="ST"/>
+            <xs:enumeration value="TM"/>
+            <xs:enumeration value="UI"/>
+            <xs:enumeration value="UL"/>
+            <xs:enumeration value="UN"/>
+            <xs:enumeration value="US"/>
+            <xs:enumeration value="UT"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

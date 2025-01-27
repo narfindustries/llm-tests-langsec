@@ -1,0 +1,48 @@
+# ARP (Address Resolution Protocol) Spicy specification
+
+# Module and type definition
+module ARP;
+
+type ARP_Packet = record {
+  # Hardware type (16 bits)
+  hw_type:        uint16;
+  # Protocol type (16 bits)
+  proto_type:     uint16;
+  # Hardware address length (8 bits)
+  hw_addr_len:    uint8;
+  # Protocol address length (8 bits)
+  proto_addr_len: uint8;
+  # Operation (16 bits)
+  op:             uint16;
+  # Sender hardware address (variable length)
+  sender_hw_addr: bytestring &length = hw_addr_len;
+  # Sender protocol address (variable length)
+  sender_proto_addr: bytestring &length = proto_addr_len;
+  # Target hardware address (variable length)
+  target_hw_addr: bytestring &length = hw_addr_len;
+  # Target protocol address (variable length)
+  target_proto_addr: bytestring &length = proto_addr_len;
+};
+
+#-Type alias
+type ARP_Frame = ARP_Packet;
+
+# Event definition
+event arp_request (
+  $msg: ARP_Packet
+);
+
+event arp_reply (
+  $msg: ARP_Packet
+);
+
+event unknown_arp_op (
+  $msg: ARP_Packet
+);
+
+# Parsing logic
+parser parser_arp = ARP_Packet() <<
+  {
+    #-parser returns parsed packets of type ARP_Frame
+    return ARP_Frame();
+  };

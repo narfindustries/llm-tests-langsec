@@ -1,0 +1,28 @@
+module DICOM;
+
+import spicy;
+
+public type Header = unit {
+    preamble: bytes(128);
+    magic_number: bytes(4) &requires($$=="DICM");
+
+    : void { 
+        validate(self.magic_number == b"DICM", "Invalid DICOM file signature");
+    }
+}
+
+public type Element = unit {
+    tag: bytes(4);
+    vr: bytes(2);
+    length: uint32;
+    data: bytes(self.length) if ( self.length < 65536 );
+}
+
+public type File = unit {
+    header: Header;
+    elements: Element[] &until($input.is_eof());
+}
+
+public function parse(f: File) {
+    return f;
+}

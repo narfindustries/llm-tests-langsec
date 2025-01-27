@@ -1,0 +1,69 @@
+# Define the GZIP file format
+file format gzip {
+  # Magic number for GZIP files
+  magic = 0x1f 0x8b;
+
+  # Compression method (always 8 for DEFLATE)
+  compression_method = uint8 == 8;
+
+  # Flags
+  flags = uint8;
+
+  # Modification time
+  modification_time = uint32;
+
+  # Extra flags
+  extra_flags = uint8;
+
+  # Operating system
+  operating_system = uint8;
+
+  # Header CRC (optional)
+  header_crc = uint16, if flags & 0x02 != 0;
+
+  # Extra field (optional)
+  extra_field = bytes, if flags & 0x04 != 0;
+
+  # Filename (optional)
+  filename = string, if flags & 0x08 != 0;
+
+  # Comment (optional)
+  comment = string, if flags & 0x10 != 0;
+
+  # Compressed data
+  compressed_data = bytes, until eof;
+
+  # Footer CRC
+  footer_crc = uint32;
+
+  # Uncompressed size
+  uncompressed_size = uint32;
+}
+
+# Define the GZIP parser
+parser gzip_parser {
+  # Parse the GZIP file format
+  parse file format gzip;
+}
+
+# Define the GZIP event
+event gzip_event {
+  # Trigger on GZIP file detection
+  when file format gzip;
+  # Log the GZIP file metadata
+  log {
+    magic: magic,
+    compression_method: compression_method,
+    flags: flags,
+    modification_time: modification_time,
+    extra_flags: extra_flags,
+    operating_system: operating_system,
+    header_crc: header_crc,
+    extra_field: extra_field,
+    filename: filename,
+    comment: comment,
+    compressed_data: compressed_data,
+    footer_crc: footer_crc,
+    uncompressed_size: uncompressed_size,
+  };
+}

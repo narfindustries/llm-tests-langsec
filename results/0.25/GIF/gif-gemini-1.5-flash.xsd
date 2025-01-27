@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gif"
+           xmlns="http://example.org/gif"
+           elementFormDefault="qualified">
+
+  <xs:element name="gif_gemini_1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="6"/>
+        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="gif_signature" type="xs:string" dfdl:length="3" dfdl:textStringJustification="left"/>
+      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:textStringJustification="left"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/DNS"
+           xmlns="http://example.com/DNS"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl.dtd"/>
+
+  <xs:element name="DNSMessage">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="dns-format"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="HeaderType"/>
+        <xs:element name="question" type="QuestionType" maxOccurs="unbounded"/>
+        <xs:element name="answer" type="AnswerType" maxOccurs="unbounded" minOccurs="0"/>
+        <xs:element name="authority" type="AuthorityType" maxOccurs="unbounded" minOccurs="0"/>
+        <xs:element name="additional" type="AdditionalType" maxOccurs="unbounded" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:unsignedShort"/>
+      <xs:element name="flags" type="FlagsType"/>
+      <xs:element name="qdcnt" type="xs:unsignedShort"/>
+      <xs:element name="ancnt" type="xs:unsignedShort"/>
+      <xs:element name="nsccnt" type="xs:unsignedShort"/>
+      <xs:element name="arccnt" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="qr" type="xs:boolean"/>
+      <xs:element name="opcode" type="xs:unsignedByte"/>
+      <xs:element name="aa" type="xs:boolean"/>
+      <xs:element name="tc" type="xs:boolean"/>
+      <xs:element name="rd" type="xs:boolean"/>
+      <xs:element name="ra" type="xs:boolean"/>
+      <xs:element name="z" type="xs:unsignedByte"/>
+      <xs:element name="rcode" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuestionType">
+    <xs:sequence>
+      <xs:element name="qname" type="DomainNameType"/>
+      <xs:element name="qtype" type="xs:unsignedShort"/>
+      <xs:element name="qclass" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AnswerType">
+    <xs:sequence>
+      <xs:element name="name" type="DomainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AuthorityType">
+    <xs:sequence>
+      <xs:element name="name" type="DomainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AdditionalType">
+    <xs:sequence>
+      <xs:element name="name" type="DomainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DomainNameType">
+    <xs:sequence>
+      <xs:element name="label" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:property name="encoding" value="bigEndian"/>
+        <dfdl:property name="representation" value="binary"/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>

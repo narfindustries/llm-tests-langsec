@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           elementFormDefault="qualified"
+           targetNamespace="http://example.org/BitcoinTransactions"
+           xmlns="http://example.org/BitcoinTransactions">
+
+  <xs:include schemaLocation="daffodil-config.xsd"/>
+
+  <xs:element name="BitcoinTransactions">
+    <xs:complexType>
+      <xs:sequence dfdl:lengthKind="implicit">
+        <xs:element name="transaction" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:lengthKind="explicit" dfdl:encoding="utf-8">
+              <xs:element name="transactionID" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="delimited"/>
+                    <dfdl:terminator value=":"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="timestamp" type="xs:dateTime">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="explicit"/>
+                    <dfdl:length value="20"/>
+                    <dfdl:calendarPattern value="yyyy-MM-dd'T'HH:mm:ss"/>
+                    <dfdl:endianness value="little"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="sender" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="delimited"/>
+                    <dfdl:terminator value=":"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="recipient" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="delimited"/>
+                    <dfdl:terminator value=":"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="amount" type="xs:decimal">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="explicit"/>
+                    <dfdl:length value="10"/>
+                    <dfdl:textNumberRep value="standard"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

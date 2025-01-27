@@ -1,0 +1,89 @@
+#ifndef _MODBUS_GEMINI_H
+#define _MODBUS_GEMINI_H
+
+#include <stdint.h>
+
+// Define Modbus function codes
+enum modbus_function_code {
+    READ_COILS = 1,
+    READ_DISCRETE_INPUTS = 2,
+    READ_HOLDING_REGISTERS = 3,
+    READ_INPUT_REGISTERS = 4,
+    WRITE_SINGLE_COIL = 5,
+    WRITE_SINGLE_REGISTER = 6,
+    WRITE_MULTIPLE_COILS = 15,
+    WRITE_MULTIPLE_REGISTERS = 16,
+    READ_FIFO_QUEUE = 20,
+    READ_FILE_RECORD = 21
+};
+
+// Modbus data structures
+typedef struct {
+    uint8_t function_code;
+    uint16_t start_address;
+    uint16_t quantity;
+    uint8_t data[255]; // Adjust size as needed
+} modbus_read_request;
+
+typedef struct {
+    uint8_t function_code;
+    uint16_t start_address;
+    uint16_t value;
+} modbus_write_single_request;
+
+typedef struct {
+    uint8_t function_code;
+    uint16_t start_address;
+    uint16_t quantity;
+    uint8_t byte_count;
+    uint8_t data[255]; // Adjust size as needed
+} modbus_write_multiple_request;
+
+typedef struct {
+    uint8_t function_code;
+    uint8_t data[255]; // Adjust size as needed
+} modbus_read_response;
+
+
+// Function prototypes (replace with your actual implementations)
+int modbus_read(const modbus_read_request* request, modbus_read_response* response);
+int modbus_write_single(const modbus_write_single_request* request);
+int modbus_write_multiple(const modbus_write_multiple_request* request);
+
+#endif //_MODBUS_GEMINI_H
+
+
+// Example usage (replace with your actual code)
+
+int main() {
+    modbus_read_request read_req;
+    modbus_read_response read_resp;
+    modbus_write_single_request write_single_req;
+
+
+    read_req.function_code = READ_HOLDING_REGISTERS;
+    read_req.start_address = 0;
+    read_req.quantity = 10;
+
+    int result = modbus_read(&read_req, &read_resp);
+
+    if (result == 0) {
+        // Process read_resp.data
+    } else {
+        // Handle error
+    }
+
+    write_single_req.function_code = WRITE_SINGLE_REGISTER;
+    write_single_req.start_address = 100;
+    write_single_req.value = 1234;
+
+    result = modbus_write_single(&write_single_req);
+
+    if (result == 0) {
+        // Success
+    } else {
+        // Handle error
+    }
+
+    return 0;
+}

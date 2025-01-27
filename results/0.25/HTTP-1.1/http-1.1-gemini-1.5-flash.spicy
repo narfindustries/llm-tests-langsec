@@ -1,0 +1,31 @@
+#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+
+#include <http>
+#include <gemini>
+
+event http_request_start(http_request_t req) {
+    // Add your logic here to handle HTTP requests
+    // Example: Log the request method and URI
+    print fmt("HTTP Request: %s %s", req.method, req.uri);
+}
+
+event http_response_start(http_response_t resp) {
+    // Add your logic here to handle HTTP responses
+    // Example: Log the response status code
+    print fmt("HTTP Response: %d", resp.status_code);
+}
+
+event gemini_request_start(gemini_request_t req) {
+    // Add your logic here to handle Gemini requests
+    // Example: Log the request URI
+    print fmt("Gemini Request: %s", req.uri);
+}
+
+event gemini_response_start(gemini_response_t resp) {
+    // Add your logic here to handle Gemini responses
+    // Example: Log the response status code
+    print fmt("Gemini Response: %d", resp.status_code);
+}
+
+#endif // HTTP_1_1_GEMINI_1_5_FLASH_SPICY

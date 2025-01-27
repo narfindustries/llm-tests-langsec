@@ -1,0 +1,40 @@
+module ZIP;
+
+import spicy;
+
+public type Header = unit {
+    magic: bytes(4) &requires=($$ == b"PK\x03\x04");
+    version: uint16;
+    flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    filename: bytes(self.filename_length);
+    extra_field: bytes(self.extra_field_length);
+
+    on %done {
+        print "ZIP Header parsed";
+    }
+};
+
+public type File = unit {
+    header: Header;
+    data: bytes &size=self.header.compressed_size;
+
+    on %done {
+        print "ZIP File parsed";
+    }
+};
+
+public type Archive = unit {
+    files: vector<File>;
+
+    on %done {
+        print "ZIP Archive parsed";
+    }
+};

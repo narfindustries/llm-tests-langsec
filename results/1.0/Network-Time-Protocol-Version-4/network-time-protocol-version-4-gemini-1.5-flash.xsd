@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/networkTimeProtocol"
+           xmlns:tns="http://example.org/networkTimeProtocol"
+           elementFormDefault="qualified">
+
+  <xs:element name="NetworkTimeProtocolVersion4">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="leapIndicator" type="tns:LeapIndicatorType" dfdl:length="1"/>
+        <xs:element name="versionNumber" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="mode" type="tns:ModeType" dfdl:length="1"/>
+        <xs:element name="stratum" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="pollInterval" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="precision" type="xs:byte" dfdl:length="1"/>
+        <xs:element name="rootDelay" type="tns:RootDelayType" dfdl:length="4"/>
+        <xs:element name="rootDispersion" type="tns:RootDispersionType" dfdl:length="4"/>
+        <xs:element name="referenceID" type="tns:ReferenceIDType" dfdl:length="4"/>
+        <xs:element name="referenceTimestamp" type="tns:TimestampType" dfdl:length="8"/>
+        <xs:element name="originateTimestamp" type="tns:TimestampType" dfdl:length="8"/>
+        <xs:element name="receiveTimestamp" type="tns:TimestampType" dfdl:length="8"/>
+        <xs:element name="transmitTimestamp" type="tns:TimestampType" dfdl:length="8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="LeapIndicatorType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ModeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RootDelayType">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:pattern value="\d{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RootDispersionType">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:pattern value="\d{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+
+  <xs:simpleType name="ReferenceIDType">
+    <xs:restriction base="xs:string">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="TimestampType">
+    <xs:restriction base="xs:unsignedLong">
+        <xs:pattern value="\d{8}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+
+  <dfdl:defineSchema>
+    <dfdl:format binary="true" byteOrder="bigEndian" lengthKind="explicit"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/mqtt"
+           xmlns="http://example.org/mqtt"
+           elementFormDefault="qualified">
+
+  <xs:element name="mqttGemini">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="payload" type="payloadType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="messageId" type="xs:string" dfdl:length="4"/>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="payloadType">
+    <xs:sequence>
+      <xs:element name="topic" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=","/>
+      <xs:element name="data" type="xs:base64Binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

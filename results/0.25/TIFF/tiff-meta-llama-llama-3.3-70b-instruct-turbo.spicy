@@ -1,0 +1,72 @@
+# Define a module for the TIFF file format
+module Tiff;
+
+# Define the TIFF header
+type TiffHeader: record {
+    byte_order: uint8[2];
+    tiff_magic: uint16;
+    if_offset: uint32;
+} &byteorder=bigEndian;
+
+# Define the TIFF IFD (Image File Directory)
+type TiffIfd: record {
+    entry_count: uint16;
+    entries: TiffIfdEntry[entry_count];
+    next_ifd_offset: uint32;
+};
+
+# Define a single TIFF IFD entry
+type TiffIfdEntry: record {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value: bytestring &length=count;
+};
+
+# Define the main parsing logic
+event zeek_init() {
+    # Register the TIFF parser
+    Analyzer::register_for_ports(tcp, 0/0, Tiff::parser);
+}
+
+event Tiff::parser(connection: Connection, data: string) {
+    # Parse the TIFF header
+    local header: TiffHeader;
+    header = TiffHeader($data=data);
+
+    # Check if the data is a valid TIFF file
+    if (header$tiff_magic != 0x002A) {
+        return;
+    }
+
+    # Parse the TIFF IFD
+    local ifd: TiffIfd;
+    ifd = TiffIfd($data=subbytes(data, header$if_offset));
+
+    # Process each IFD entry
+    for (entry in ifd$entries) {
+        # Handle different types of IFD entries
+        switch (entry$type) {
+            case 1: # BYTE
+                local byte_value: uint8;
+                byte_value = uint8($data=entry$value);
+                print fmt("BYTE value: %d", byte_value);
+                break;
+            case 2: # ASCII
+                local ascii_value: string;
+                ascii_value = string($data=entry$value);
+                print fmt("ASCII value: %s", ascii_value);
+                break;
+            case 3: # SHORT
+                local short_value: uint16;
+                short_value = uint16($data=entry$value);
+                print fmt("SHORT value: %d", short_value);
+                break;
+            case 4: # LONG
+                local long_value: uint32;
+                long_value = uint32($data=entry$value);
+                print fmt("LONG value: %d", long_value);
+                break;
+        }
+    }
+}

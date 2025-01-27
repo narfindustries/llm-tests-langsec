@@ -1,0 +1,67 @@
+module NITF;
+
+public type Message = unit {
+    : FileHeader;
+    : DataContent;
+};
+
+type FileHeader = unit {
+    fhdr: bytes &size=4;
+    fver: bytes &size=2;
+    clevel: bytes &size=2;
+    stype: bytes &size=4;
+    ostaid: bytes &size=10;
+    dtime: bytes &size=14;
+    srno: bytes &size=10;
+    hsec: bytes &size=3;
+    locsig: bytes &size=1;
+    encryp: bytes &size=1;
+    fbkgc: bytes &size=3;
+    oname: bytes &size=24;
+    ophone: bytes &size=18;
+};
+
+type DataContent = unit {
+    : DataHeader;
+    : DataBody;
+};
+
+type DataHeader = unit {
+    dlen: bytes &size=8;
+    dver: bytes &size=2;
+    srce: bytes &size=10;
+    dtime: bytes &size=14;
+    srno: bytes &size=10;
+    hsec: bytes &size=3;
+    locsig: bytes &size=1;
+    encryp: bytes &size=1;
+    dedsig: bytes &size=1;
+    sid: bytes &size=10;
+    stype: bytes &size=4;
+    dclas: bytes &size=1;
+    dcont: bytes &size=2;
+    dcaut: bytes &size=20;
+    dstat: bytes &size=7;
+    dtg: bytes &size=8;
+    dedat: bytes &size=6;
+    dcxm: bytes &size=4;
+    ddwg: bytes &size=6;
+    dmsgt: bytes &size=3;
+    dccrm: bytes &size=3;
+    dnum: bytes &size=4;
+    dgenl: bytes &size=3;
+    dgnl: bytes &size=4;
+    dref: bytes &size=12;
+    dkey: bytes &size=20;
+    dcmt: bytes &size=12;
+    dsn: bytes &size=1;
+    ddate: bytes &size=8;
+    dfil: bytes &size=4;
+    dgeo: bytes &size=4;
+    daid: bytes &size=10;
+    dcls: bytes &size=3;
+};
+
+type DataBody = unit {
+    body: bytes &eod;
+};

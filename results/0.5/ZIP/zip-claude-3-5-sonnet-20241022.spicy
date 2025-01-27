@@ -1,0 +1,81 @@
+module ZIP;
+
+public type File = unit {
+    var record_count: uint64;
+    
+    : LocalFileHeader[];
+    
+    on %done {
+        self.record_count = |self.LocalFileHeader|;
+    }
+};
+
+type LocalFileHeader = unit {
+    signature: bytes &size=4;
+    version: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_length: uint16;
+    filename: bytes &size=self.filename_length;
+    extra: bytes &size=self.extra_length;
+    compressed_data: bytes &size=self.compressed_size;
+    
+    on %init {
+        if (self.signature != b"PK\x03\x04") {
+            self.signature = b"PK\x03\x04";
+        }
+    }
+};
+
+public type EndOfCentralDirectory = unit {
+    signature: bytes &size=4;
+    disk_number: uint16;
+    disk_with_cd: uint16;
+    disk_entries: uint16;
+    total_entries: uint16;
+    cd_size: uint32;
+    cd_offset: uint32;
+    comment_length: uint16;
+    comment: bytes &size=self.comment_length;
+    
+    on %init {
+        if (self.signature != b"PK\x05\x06") {
+            self.signature = b"PK\x05\x06";
+        }
+    }
+};
+
+public type CentralDirectoryHeader = unit {
+    signature: bytes &size=4;
+    version_made: uint16;
+    version_needed: uint16;
+    flags: uint16;
+    compression: uint16;
+    mod_time: uint16;
+    mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_length: uint16;
+    comment_length: uint16;
+    disk_number: uint16;
+    internal_attrs: uint16;
+    external_attrs: uint32;
+    local_header_offset: uint32;
+    filename: bytes &size=self.filename_length;
+    extra: bytes &size=self.extra_length;
+    comment: bytes &size=self.comment_length;
+    
+    on %init {
+        if (self.signature != b"PK\x01\x02") {
+            self.signature = b"PK\x01\x02";
+        }
+    }
+};

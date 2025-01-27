@@ -1,0 +1,78 @@
+# ARP Spicy Specification
+
+%header {
+    import Frameworks
+}
+
+%layer ARP {
+    # ARP Header
+    uint16 opcode:8;
+    uint16 htype:16;
+    uint16 ptype:16;
+    uint8  hlen:8;
+    uint8  plen:8;
+    uint8  src_mac[6];
+    uint32 src_ip:32;
+    uint8  dst_mac[6];
+    uint32 dst_ip:32;
+
+    # ARP Opcodes
+    const ARP_REQUEST = 1;
+    const ARP_REPLY   = 2;
+
+    # ARP Hardware Types
+    const ETHERNET = 1;
+
+    # ARP Protocol Types
+    const IPv4 = 0x0800;
+
+    # Conditionals
+    condition opcode == ARP_REQUEST;
+    condition opcode == ARP_REPLY;
+    condition htype == ETHERNET;
+    condition ptype == IPv4;
+
+    # Fields
+    field src_mac: bytestring &length=6;
+    field src_ip:  ip_addr &length=4;
+    field dst_mac: bytestring &length=6;
+    field dst_ip:  ip_addr &length=4;
+
+    # Types
+    type bytestring = uint8[];
+    type ip_addr    = uint32;
+}
+
+%parser ARP {
+    # ARP Parser
+    arp: ARP;
+
+    # Conditionals
+    condition arp.opcode == ARP_REQUEST;
+    condition arp.opcode == ARP_REPLY;
+    condition arp.htype == ETHERNET;
+    condition arp.ptype == IPv4;
+
+    # Events
+    event arp_request(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
+        = /arp.opcode == ARP_REQUEST/;
+    event arp_reply(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
+        = /arp.opcode == ARP_REPLY/;
+}
+
+%protocol ARP {
+    # ARP Protocol
+    p: ARP;
+
+    # Conditionals
+    condition p.opcode == ARP_REQUEST;
+    condition p.opcode == ARP_REPLY;
+    condition p.htype == ETHERNET;
+    condition p.ptype == IPv4;
+
+    # Events
+    event arp_request(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
+        = /p.opcode == ARP_REQUEST/;
+    event arp_reply(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
+        = /p.opcode == ARP_REPLY/;
+}

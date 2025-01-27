@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/jpeg"
+           xmlns="http://example.org/jpeg"
+           elementFormDefault="qualified">
+
+  <xs:element name="jpegImage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:textString="FF D8"/>
+        <xs:element name="APP0" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="14" dfdl:textString="FF E0 00 10 4A 46 49 46 00 01 01 00 00 60"/>
+        <xs:element name="DQT" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="67"/>
+        <xs:element name="SOF0" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="17"/>
+        <xs:element name="DHT" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="134"/>
+        <xs:element name="DDS" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="10"/>
+        <xs:element name="scan_data" type="xs:hexBinary" dfdl:lengthKind="unbounded"/>
+        <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:textString="FF D9"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

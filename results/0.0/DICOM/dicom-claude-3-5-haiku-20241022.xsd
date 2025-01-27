@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://dicom.nema.org/DICOM/2020/DFDL"
+           xmlns:dicom="http://dicom.nema.org/DICOM/2020/DFDL"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        separator=""
+        initiator=""
+        terminator=""
+        encoding="UTF-8"
+        byteOrder="bigEndian"
+        representation="binary"
+        occursCountKind="parsed"
+        textNumberPattern="#0"
+        textNumberRoundingMode="roundUp"
+        textZeroRepresentation="0"
+        escapeSchemeRef=""
+        alignment="1"
+        alignmentUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="DicomFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Preamble" type="xs:hexBinary" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="128"/>
+              <xs:element name="DicomPrefix" type="xs:string" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="4"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="DataSet" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DataElements" dfdl:lengthKind="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Tag" type="xs:hexBinary" 
+                                dfdl:lengthKind="explicit" 
+                                dfdl:length="4"/>
+                    <xs:element name="VR" type="xs:string" 
+                                dfdl:lengthKind="explicit" 
+                                dfdl:length="2"/>
+                    <xs:element name="Length" type="xs:unsignedInt" 
+                                dfdl:lengthKind="explicit" 
+                                dfdl:length="2"/>
+                    <xs:element name="Value" type="xs:hexBinary" 
+                                dfdl:lengthKind="explicit" 
+                                dfdl:length="{ ../Length }"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

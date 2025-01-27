@@ -1,0 +1,37 @@
+module TLS_Client_Hello;
+
+import spicy;
+import zeek;
+
+export type TLSClientHello = unit {
+    record_type: uint8;
+    version: uint16;
+    length: uint16;
+    handshake_type: uint8;
+    handshake_length: uint24;
+    client_version: uint16;
+    random: bytes &size=32;
+    session_id_length: uint8;
+    session_id: bytes &size=session_id_length;
+    cipher_suites_length: uint16;
+    cipher_suites: bytes &size=cipher_suites_length;
+    compression_methods_length: uint8;
+    compression_methods: bytes &size=compression_methods_length;
+    extensions_length: uint16;
+    extensions: bytes &size=extensions_length;
+};
+
+on TLSClientHello::%done {
+    zeek::event("tls_client_hello", 
+                self.record_type, 
+                self.version, 
+                self.length, 
+                self.handshake_type, 
+                self.handshake_length, 
+                self.client_version, 
+                self.random, 
+                self.session_id, 
+                self.cipher_suites, 
+                self.compression_methods, 
+                self.extensions);
+}

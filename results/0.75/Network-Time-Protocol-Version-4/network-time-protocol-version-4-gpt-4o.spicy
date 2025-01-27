@@ -1,0 +1,91 @@
+module NetworkTimeProtocol;
+
+import spicy
+
+public type NTP = unit {
+    li_vn_mode: uint8 {
+        is_lazy = true
+    };
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: int32;
+    root_dispersion: int32;
+    reference_id: uint32;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+} &endian=big;
+
+public type NTP_Header = unit {
+    ntp: NTP;
+};
+
+public module Parser = spicy::export {
+    public type NTPParser = unit {
+        ntp_header: NTP_Header;
+
+        on %done {
+            event ntp_packet_parsed(self.ntp_header.ntp);
+        }
+    };
+
+    public event ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP);
+};
+
+public module Analyzer = spicy::export {
+    public type NTPAnalyzer = spicy::Analyzer::UnitAnalyzer {
+        .anon = spicy::Analyzer::UnitAnalyzer::parameter {
+            unit = Parser::NTPParser
+        };
+
+        on ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP) {
+            # Add custom handling for the parsed NTP packet here
+        }
+    };
+};
+
+public export {
+    redef enum Log::ID += {
+        LOG_NTP
+    };
+
+    type Info: record {
+        ts: time &log;
+        uid: string &log;
+        id: conn_id &log;
+        li_vn_mode: count &log;
+        stratum: count &log;
+        poll: count &log;
+        precision: count &log;
+        root_delay: count &log;
+        root_dispersion: count &log;
+        reference_id: count &log;
+        reference_timestamp: time &log;
+        originate_timestamp: time &log;
+        receive_timestamp: time &log;
+        transmit_timestamp: time &log;
+    };
+
+    global log_ntp: event(ntp: NetworkTimeProtocol::NTP, c: connection);
+
+    event ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP, c: connection) {
+        Log::write(LOG_NTP, Info(
+            ts = network_time(),
+            uid = c$uid,
+            id = c$id,
+            li_vn_mode = ntp.li_vn_mode,
+            stratum = ntp.stratum,
+            poll = ntp.poll,
+            precision = ntp.precision,
+            root_delay = ntp.root_delay,
+            root_dispersion = ntp.root_dispersion,
+            reference_id = ntp.reference_id,
+            reference_timestamp = ntp.reference_timestamp,
+            originate_timestamp = ntp.originate_timestamp,
+            receive_timestamp = ntp.receive_timestamp,
+            transmit_timestamp = ntp.transmit_timestamp
+        ));
+    }
+};

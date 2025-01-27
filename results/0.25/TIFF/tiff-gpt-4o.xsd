@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns="http://example.com/tiff"
+           elementFormDefault="qualified"
+           dfdl:formatRef="tns:TIFFFormat">
+  
+  <dfdl:format name="TIFFFormat" ref="tns:BaseFormat" lengthKind="explicit" byteOrder="bigEndian" encoding="UTF-8"/>
+  
+  <xs:include schemaLocation="baseFormat.xsd"/>
+  
+  <xs:element name="TIFFFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="NumDirectoryEntries" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="DirectoryEntry" type="tns:DirectoryEntryType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="DirectoryEntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

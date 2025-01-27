@@ -1,0 +1,57 @@
+module NITF;
+
+public type Message = unit {
+    file_header: FileHeader;
+    image_segments: ImageSegment[];
+};
+
+type FileHeader = unit {
+    file_profile_name: bytes &size=4;
+    file_version: bytes &size=5;
+    complexity_level: bytes &size=2;
+    standard_type: bytes &size=4;
+    originating_station_id: bytes &size=10;
+    date_time: bytes &size=14;
+    file_title: bytes &size=80;
+    security_class: bytes &size=1;
+    copy_number: bytes &size=5;
+    num_image_segments: uint16 &convert=cast<uint16>($$);
+    
+    on %done {
+        self.num_image_segments = cast<uint16>(self.num_image_segments);
+    }
+};
+
+type ImageSegment = unit {
+    im: bytes &size=2;
+    image_id: bytes &size=10;
+    date_time: bytes &size=14;
+    target_id: bytes &size=17;
+    image_title: bytes &size=80;
+    image_security_class: bytes &size=1;
+    encryption: bytes &size=1;
+    image_source: bytes &size=42;
+    num_sig_rows: uint32;
+    num_sig_cols: uint32;
+    pixel_value_type: bytes &size=3;
+    image_representation: bytes &size=8;
+    image_category: bytes &size=8;
+    actual_bits_per_pixel: uint8;
+    pixel_justification: bytes &size=1;
+    image_coord_system: bytes &size=1;
+    image_geo_loc: bytes &size=60;
+    num_comments: uint8;
+    image_compression: bytes &size=2;
+    compression_rate: bytes &size=4;
+    
+    on %done {
+        self.num_sig_rows = cast<uint32>(self.num_sig_rows);
+        self.num_sig_cols = cast<uint32>(self.num_sig_cols);
+        self.actual_bits_per_pixel = cast<uint8>(self.actual_bits_per_pixel);
+        self.num_comments = cast<uint8>(self.num_comments);
+    }
+};
+
+on Message::%done {
+    print self;
+}

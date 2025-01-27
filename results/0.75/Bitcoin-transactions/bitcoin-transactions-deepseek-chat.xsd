@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/bitcoin-transactions"
+           xmlns:btc="http://example.com/bitcoin-transactions"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="TransactionType">
+    <xs:sequence>
+      <xs:element name="version" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="inputCount" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="inputs" type="btc:InputType" maxOccurs="unbounded" />
+      <xs:element name="outputCount" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="outputs" type="btc:OutputType" maxOccurs="unbounded" />
+      <xs:element name="lockTime" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="InputType">
+    <xs:sequence>
+      <xs:element name="previousOutputHash" type="xs:hexBinary" dfdl:length="32" dfdl:lengthKind="explicit" />
+      <xs:element name="previousOutputIndex" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="scriptSig" type="xs:hexBinary" dfdl:length="{../scriptLength}" dfdl:lengthKind="explicit" />
+      <xs:element name="sequence" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OutputType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit" />
+      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="scriptPubKey" type="xs:hexBinary" dfdl:length="{../scriptLength}" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="BitcoinTransaction" type="btc:TransactionType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:defineFormat name="GeneralFormat">
+          <dfdl:format representation="binary" byteOrder="bigEndian" />
+        </dfdl:defineFormat>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+</xs:schema>

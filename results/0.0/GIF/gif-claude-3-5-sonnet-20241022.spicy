@@ -1,0 +1,120 @@
+module GIF;
+
+public type Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+    
+    on %done {
+        if ( self.signature != b"GIF" )
+            self.reject("Invalid GIF signature");
+    }
+};
+
+type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+type ColorTableEntry = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
+type ColorTable = unit {
+    entries: ColorTableEntry[] &count=self.size;
+    
+    var size: uint64;
+};
+
+type ImageDescriptor = unit {
+    separator: uint8;
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    packed: uint8;
+};
+
+type GraphicControlExtension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    packed: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8;
+};
+
+type ApplicationExtension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    identifier: bytes &size=8;
+    auth_code: bytes &size=3;
+    data: bytes &eod;
+};
+
+type CommentExtension = unit {
+    introducer: uint8;
+    label: uint8;
+    data: bytes &eod;
+};
+
+type PlainTextExtension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    left: uint16;
+    top: uint16;
+    width: uint16;
+    height: uint16;
+    cell_width: uint8;
+    cell_height: uint8;
+    fg_color: uint8;
+    bg_color: uint8;
+    data: bytes &eod;
+};
+
+type ImageData = unit {
+    lzw_min_code_size: uint8;
+    blocks: bytes &eod;
+};
+
+public type File = unit {
+    header: Header;
+    screen: LogicalScreenDescriptor;
+    global_color_table: ColorTable if (self.screen.packed & 0x80) {
+        self.global_color_table.size = 2 << (self.screen.packed & 0x07);
+    }
+    
+    blocks: Block[] &until-including($$.block_type == 0x3B);
+};
+
+type Block = unit {
+    var block_type: uint8;
+    
+    : switch(self.block_type) {
+        0x2C -> image_descriptor: ImageDescriptor;
+        0x21 -> extension: Extension;
+        0x3B -> terminator: uint8;
+    };
+    
+    on %init {
+        self.block_type = self.input().offset(0);
+    }
+};
+
+type Extension = unit {
+    label: uint8;
+    
+    : switch(self.label) {
+        0xF9 -> graphic_control: GraphicControlExtension;
+        0xFF -> application: ApplicationExtension;
+        0xFE -> comment: CommentExtension;
+        0x01 -> plain_text: PlainTextExtension;
+    };
+};

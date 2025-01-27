@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/GIF"
+           xmlns="http://example.com/GIF"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
+
+  <xs:element name="gif">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="gifFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="headerType" dfdl:occurs="1..1"/>
+        <xs:element name="logicalScreen" type="logicalScreenType" dfdl:occurs="1..1"/>
+        <xs:element name="data" type="dataType" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="logicalScreenType">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+      <xs:element name="height" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="backgroundColor" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="pixelAspectRatio" type="xs:unsignedByte" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dataType">
+    <xs:sequence>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="gifFormat" ref="gifFormat"/>
+  <dfdl:format name="gifFormat" type="binary" representation="binary" lengthKind="explicit" encoding="binary">
+    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
+    <dfdl:property name="dfdl:elementKind" value="simple"/>
+    <dfdl:property name="dfdl:encoding" value="binary"/>
+  </dfdl:format>
+
+</xs:schema>

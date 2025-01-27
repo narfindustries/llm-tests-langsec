@@ -1,0 +1,19 @@
+module JPEG;
+
+import spicy;
+
+public type JPEG_File = unit {
+    magic: bytes &size=2 &convert="JPEG" &requires=$ == b"\xFF\xD8";
+    segments: JPEG_Segment[] &until($.type == 0xD9);
+};
+
+type JPEG_Segment = unit {
+    marker: uint8 &convert="JPEG Marker" &requires=$ == 0xFF;
+    type: uint8;
+    length: uint16 &if=$type != 0xD8 && $type != 0xD9;
+    data: bytes &size=$length - 2 &if=$type != 0xD8 && $type != 0xD9;
+};
+
+on JPEG_File::%done {
+    print "JPEG file parsed successfully";
+}

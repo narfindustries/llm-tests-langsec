@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/nitf"
+           xmlns:nitf="http://www.example.org/nitf"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator=""
+                  leadingSkip="0" trailingSkip="0"
+                  textStringJustification="left"
+                  textStringPadCharacter=" "
+                  textTrimKind="none"
+                  textPadKind="none"
+                  encoding="UTF-8"
+                  representation="text"
+                  occursCountKind="parsed"
+                  escapeSchemeRef=""
+                  byteOrder="bigEndian"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="nitf" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="title" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
+              <xs:element name="date" type="xs:date" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="content" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,75 @@
+# Zeek Spicy specification for Modbus protocol
+
+%header {
+    # Import necessary modules
+    @load base/protocols/modbus
+}
+
+%config {
+    # Define the protocol and its properties
+    protocol = "modbus"
+    port = 1700/tcp
+}
+
+%include {
+    # Include the Modbus protocol definition
+    base/protocols/modbus/modbus.pac
+}
+
+%parser {
+    # Define the parser for the Modbus protocol
+    modbus_message = 
+        ( 
+            # Modbus message header
+            header: Modbus::Header, 
+            # Modbus message body
+            body: Modbus::Body 
+        );
+}
+
+%lexer {
+    # Define the lexer for the Modbus protocol
+    modbus_token = 
+        ( 
+            # Modbus token
+            token: Modbus::Token 
+        );
+}
+
+%node {
+    # Define the node for the Modbus protocol
+    modbus_node = 
+        ( 
+            # Modbus node
+            node: Modbus::Node 
+        );
+}
+
+%event {
+    # Define the events for the Modbus protocol
+    modbus_event = 
+        ( 
+            # Modbus event
+            event: Modbus::Event 
+        );
+}
+
+%handler {
+    # Define the handler for the Modbus protocol
+    modbus_handler = 
+        ( 
+            # Modbus handler
+            handler: Modbus::Handler 
+        );
+}
+
+%main {
+    # Define the main function for the Modbus protocol
+    main = 
+        ( 
+            # Initialize the Modbus protocol
+            init: Modbus::Init, 
+            # Parse the Modbus message
+            parse: Modbus::Parse 
+        );
+}

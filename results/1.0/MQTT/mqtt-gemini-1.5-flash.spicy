@@ -1,0 +1,25 @@
+#ifndef MQTT_GEMINI_1_5_FLASH_SPICY_H
+#define MQTT_GEMINI_1_5_FLASH_SPICY_H
+
+#include <zeek/packet.h>
+
+event mqtt_gemini_1_5_flash_event(packet p) {
+    // Add your Zeek Spicy code here to parse the MQTT packets.
+    // This is a placeholder.  You'll need to replace this
+    // with code that actually parses the MQTT protocol.
+
+    // Example: Check for the MQTT CONNECT packet
+    if (p.len > 2 && p.data[0] == 0x10) {
+        // Process CONNECT packet
+        // ... your code here ...
+        print("MQTT CONNECT packet detected");
+    } else if (p.len > 2 && p.data[0] == 0x04) {
+        // Process PUBLISH packet
+        // ... your code here ...
+        print("MQTT PUBLISH packet detected");
+    }
+}
+
+
+#endif // MQTT_GEMINI_1_5_FLASH_SPICY_H
+

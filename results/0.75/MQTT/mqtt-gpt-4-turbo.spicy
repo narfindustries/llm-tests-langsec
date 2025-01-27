@@ -1,0 +1,44 @@
+module MQTT;
+
+import spicy;
+
+type ConnectFlags = unit {
+    reserved:   uint8 &size=1;
+    cleanStart: bool &size=1;
+    willFlag:   bool &size=1;
+    willQoS:    uint8 &size=2;
+    willRetain: bool &size=1;
+    password:   bool &size=1;
+    username:   bool &size=1;
+};
+
+type ConnectVariableHeader = unit {
+    protocolName:       bytes &eod;
+    protocolLevel:      uint8;
+    connectFlags:       ConnectFlags;
+    keepAlive:          uint16;
+};
+
+type ConnectPayload = unit {
+    clientID:           bytes &eod;
+    willTopic:          bytes &eod if(self.connectFlags.willFlag);
+    willMessage:        bytes &eod if(self.connectFlags.willFlag);
+    username:           bytes &eod if(self.connectFlags.username);
+    password:           bytes &eod if(self.connectFlags.password);
+};
+
+type ConnectPacket = unit {
+    variableHeader:     ConnectVariableHeader;
+    payload:            ConnectPayload;
+};
+
+type MQTTRecord = unit {
+    controlPacketType:  uint4;
+    flags:              uint4;
+    remainingLength:    uint16;
+    connectPacket:      ConnectPacket;
+};
+
+public type MQTTStream = unit {
+    records:            MQTTRecord[] &eod;
+} &byte_order=big;

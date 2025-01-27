@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:ex="http://example.com/arp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="ex:defaultFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:simpleType name="UInt8">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="UInt16">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <dfdl:defineFormat name="defaultFormat">
+    <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                 encoding="UTF-8" lengthKind="explicit"/>
+  </dfdl:defineFormat>
+
+  <xs:complexType name="ARP_Packet">
+    <xs:sequence>
+      <xs:element name="hardwareType" type="ex:UInt16" dfdl:length="2"/>
+      <xs:element name="protocolType" type="ex:UInt16" dfdl:length="2"/>
+      <xs:element name="hardwareSize" type="ex:UInt8" dfdl:length="1"/>
+      <xs:element name="protocolSize" type="ex:UInt8" dfdl:length="1"/>
+      <xs:element name="opcode" type="ex:UInt16" dfdl:length="2"/>
+      <xs:element name="senderMAC" type="xs:hexBinary" dfdl:length="6"/>
+      <xs:element name="senderIP" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="targetMAC" type="xs:hexBinary" dfdl:length="6"/>
+      <xs:element name="targetIP" type="xs:hexBinary" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

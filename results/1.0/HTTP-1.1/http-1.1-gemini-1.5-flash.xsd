@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/http-1.1" targetNamespace="http://example.org/http-1.1" elementFormDefault="qualified" dfdl:version="1.0">
+
+  <xs:element name="http-1.1">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" type="tns:headerType" minOccurs="1" maxOccurs="unbounded"/>
+        <xs:element name="body" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+    </xs:complexType>
+    <xs:unique name="header_unique">
+      <xs:selector xpath="header"/>
+      <xs:field xpath="@name"/>
+    </xs:unique>
+  </xs:element>
+
+  <xs:complexType name="headerType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="value" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <dfdl:defineSchema dfdl:initiator="true">
+    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="characters" representation="text" separator=""/>
+    <dfdl:textStandard dfdl:textStandard="unknown"/>
+    <dfdl:sequence groupDelimiter="" lengthKind="delimited"/>
+  </dfdl:defineSchema>
+
+</xs:schema>

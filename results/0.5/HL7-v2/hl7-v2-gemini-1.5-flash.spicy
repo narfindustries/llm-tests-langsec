@@ -1,0 +1,50 @@
+#ifndef HL7_V2_GEMINI_1_5_FLASH_SPICY
+#define HL7_V2_GEMINI_1_5_FLASH_SPICY
+
+#include "hl7-v2.zeek"
+
+event hl7_v2_gemini_1_5_flash_message(msg: HL7_V2_Message) {
+    // Add your custom logic here to process the HL7 v2 message.
+    // Access message fields using msg.MSH.Field1, etc.
+    // Example: print the message type
+    print("Message Type: ", msg.MSH.Field9);
+}
+
+global hl7_v2_gemini_1_5_flash_connection: connection;
+
+event connection_established(conn: connection) {
+    hl7_v2_gemini_1_5_flash_connection = conn;
+}
+
+event connection_closed(conn: connection) {
+    if (conn == hl7_v2_gemini_1_5_flash_connection) {
+        hl7_v2_gemini_1_5_flash_connection = undef;
+    }
+}
+
+
+event http_request(conn: connection, method: string, uri: string, headers: table[string], body: string) {
+    if (conn == hl7_v2_gemini_1_5_flash_connection) {
+        // Handle HTTP requests associated with the HL7 connection.
+    }
+}
+
+event http_response(conn: connection, code: int, headers: table[string], body: string) {
+    if (conn == hl7_v2_gemini_1_5_flash_connection) {
+        // Handle HTTP responses associated with the HL7 connection.
+    }
+}
+
+event data(conn: connection, data: string) {
+    if (conn == hl7_v2_gemini_1_5_flash_connection) {
+        try {
+            msg := parse_hl7_v2(data);
+            hl7_v2_gemini_1_5_flash_message(msg);
+        } catch (e: error) {
+            print("Error parsing HL7 v2 message: ", e);
+        }
+    }
+}
+
+
+#endif

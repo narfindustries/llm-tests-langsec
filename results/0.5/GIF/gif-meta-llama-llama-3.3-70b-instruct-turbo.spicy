@@ -1,0 +1,41 @@
+# Import necessary modules
+%import basic
+
+# Define the GIF file format
+file Gif {
+  # Signature
+  magic: uint16 = 0x4749;
+  version: string(3);
+
+  # Logical Screen Descriptor
+  width: uint16;
+  height: uint16;
+  flags: uint8;
+  bg_color: uint8;
+  aspect: uint8;
+
+  # Global Color Table
+  gct: array(uint8, 768);
+
+  # Image Data
+  images: array(Image);
+}
+
+# Define the Image structure
+type Image {
+  # Image Separator
+  separator: uint8 = 0x2C;
+
+  # Image Descriptor
+  left: uint16;
+  top: uint16;
+  width: uint16;
+  height: uint16;
+  flags: uint8;
+
+  # Local Color Table
+  lct: array(uint8, 768);
+
+  # Image Data
+  data: array(uint8, width * height);
+}

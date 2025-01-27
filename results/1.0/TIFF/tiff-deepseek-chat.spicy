@@ -1,0 +1,33 @@
+module TIFF;
+
+import spicy;
+
+type TIFFHeader = unit {
+    magic: bytes &size=2;
+    version: uint16;
+    offset: uint32;
+};
+
+type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value: uint32;
+};
+
+type IFD = unit {
+    num_entries: uint16;
+    entries: IFDEntry[] &size=num_entries;
+    next_ifd_offset: uint32;
+};
+
+type TIFFFile = unit {
+    header: TIFFHeader;
+    ifds: IFD[] &until($$.next_ifd_offset == 0);
+};
+
+on TIFFFile::%done {
+    print "Parsed TIFF file successfully!";
+}
+
+export TIFFFile;

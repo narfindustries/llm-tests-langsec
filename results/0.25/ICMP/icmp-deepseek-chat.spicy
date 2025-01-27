@@ -1,0 +1,29 @@
+module ICMP;
+
+import spicy;
+
+public type ICMP_Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest_of_header: bytes &size=4;
+};
+
+public type ICMP_Echo = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    data: bytes &until=$input.size();
+};
+
+public type ICMP_Packet = unit {
+    header: ICMP_Header;
+    echo: ICMP_Echo if header.type == 8 || header.type == 0;
+};
+
+on ICMP_Packet::%done {
+    if ( self.header.type == 8 ) {
+        print "ICMP Echo Request";
+    } else if ( self.header.type == 0 ) {
+        print "ICMP Echo Reply";
+    }
+}

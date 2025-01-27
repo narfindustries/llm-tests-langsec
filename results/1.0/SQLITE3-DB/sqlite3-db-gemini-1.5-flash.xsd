@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/sqlite3-db"
+           xmlns="http://example.org/sqlite3-db"
+           elementFormDefault="qualified">
+
+  <xs:element name="sqlite3-db-gemini-1">
+    <xs:complexType>
+      <xs:sequence>
+        <!--  Add your actual DFDL elements here.  The error message doesn't provide enough
+             information to construct the schema. You need to provide the structure of 
+             your SQLite3 DB data as it maps to XML.  Example below is illustrative only. -->
+        <xs:element name="database" type="DatabaseType" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DatabaseType">
+    <xs:sequence>
+      <xs:element name="table" type="TableType" maxOccurs="unbounded" dfdl:separator=", "/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TableType">
+    <xs:sequence>
+        <xs:element name="tableName" type="xs:string" dfdl:length="255"/>
+        <xs:element name="row" type="RowType" maxOccurs="unbounded" dfdl:separator="|" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RowType">
+    <xs:sequence>
+        <xs:element name="column" type="xs:string" maxOccurs="unbounded" dfdl:separator=","/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
+

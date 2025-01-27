@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+           elementFormDefault="qualified">
+
+  <xs:include schemaLocation="dfdl-general.xsd"/>
+  <xs:include schemaLocation="dfdl-binary.xsd"/>
+
+  <xs:element name="ELF_Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="e_ident" type="xs:hexBinary" dfdl:length="16" dfdl:lengthKind="explicit"/>
+        <xs:element name="e_type" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_machine" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_version" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_entry" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_flags" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Program_Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="p_type" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_offset" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_vaddr" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_paddr" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_filesz" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_memsz" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_flags" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="p_align" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Section_Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="sh_name" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_type" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_flags" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_addr" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_offset" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_size" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_link" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_info" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_addralign" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="sh_entsize" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ELF_File">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ELF_Header"/>
+        <xs:element ref="Program_Header" maxOccurs="unbounded"/>
+        <xs:element ref="Section_Header" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

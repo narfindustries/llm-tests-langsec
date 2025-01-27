@@ -1,0 +1,154 @@
+# MQTT Protocol Specification in Zeek Spicy format
+
+%header{
+    import zeek.*;
+    import zeek/spicy/protocol/mqtt;
+}
+
+%proto mqtt {
+    %include binpac::mqtt::MQTT_Packet;
+
+    %unit_size(1);
+    %big_endian();
+
+    function get_packet(): MQTT_Packet
+        %{
+            return mqtt::get_mqtt_packet();
+        %}
+
+    # MQTT Control Packet Type
+    type MQTT_Control_Packet_Type = enum {
+        RESERVED                = 0,
+        CONNECT                 = 1,
+        CONNACK                 = 2,
+        PUBLISH                 = 3,
+        PUBACK                  = 4,
+        PUBREC                  = 5,
+        PUBREL                  = 6,
+        PUBCOMP                 = 7,
+        SUBSCRIBE               = 8,
+        SUBACK                  = 9,
+        UNSUBSCRIBE             = 10,
+        UNSUBACK                = 11,
+        PINGREQ                 = 12,
+        PINGRESP                = 13,
+        DISCONNECT              = 14
+    };
+
+    # MQTT Connect Flags
+    type MQTT_Connect_Flags = struct {
+        username:              bool;
+        password:              bool;
+        will_retain:           bool;
+        will_qos:              uint3;
+        will_flag:             bool;
+        clean_session:         bool;
+    };
+
+    # MQTT Connect Packet
+    type MQTT_Connect = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint16;
+        protocol_name:         string(6);
+        protocol_version:      uint8;
+        connect_flags:         MQTT_Connect_Flags;
+        keep_alive:            uint16;
+        client_id:             string;
+        will_topic:            string;
+        will_message:          string;
+        username:              string;
+        password:              string;
+    };
+
+    # MQTT Connack Packet
+    type MQTT_Connack = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        connect_return_code:   uint8;
+        session_present:       bool;
+    };
+
+    # MQTT Publish Packet
+    type MQTT_Publish = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint16;
+        topic_name:            string;
+        packet_id:             uint16;
+        payload:               string;
+    };
+
+    # MQTT Puback Packet
+    type MQTT_Puback = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+    };
+
+    # MQTT Pubrec Packet
+    type MQTT_Pubrec = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+    };
+
+    # MQTT Pubrel Packet
+    type MQTT_Pubrel = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+    };
+
+    # MQTT Pubcomp Packet
+    type MQTT_Pubcomp = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+    };
+
+    # MQTT Subscribe Packet
+    type MQTT_Subscribe = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint16;
+        packet_id:             uint16;
+        topic_filter:          string;
+        qos:                   uint8;
+    };
+
+    # MQTT Suback Packet
+    type MQTT_Suback = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+        return_code:           uint8;
+    };
+
+    # MQTT Unsubscribe Packet
+    type MQTT_Unsubscribe = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint16;
+        packet_id:             uint16;
+        topic_filter:          string;
+    };
+
+    # MQTT Unsuback Packet
+    type MQTT_Unsuback = struct {
+        header:                MQTT_Control_Packet_Type;
+        remaining_length:      uint8;
+        packet_id:             uint16;
+    };
+
+    # MQTT Pingreq Packet
+    type MQTT_Pingreq = struct {
+        header:                MQTT_Control_Packet_Type;
+    };
+
+    # MQTT Pingresp Packet
+    type MQTT_Pingresp = struct {
+        header:                MQTT_Control_Packet_Type;
+    };
+
+    # MQTT Disconnect Packet
+    type MQTT_Disconnect = struct {
+        header:                MQTT_Control_Packet_Type;
+    };
+}

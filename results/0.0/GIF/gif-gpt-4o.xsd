@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:tns="http://example.com/gif"
+           elementFormDefault="qualified"
+           dfdl:format="tns:gifFormat">
+
+  <dfdl:format ref="tns:gifFormat"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format
+        lengthKind="explicit"
+        byteOrder="bigEndian"
+        encoding="ascii"
+        alignmentUnits="bytes"
+        occursCountKind="expression"
+        occursCount="{ ../blockSize }"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GIF" type="tns:GIFType"/>
+
+  <xs:complexType name="GIFType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType"/>
+      <xs:element name="LogicalScreenDescriptor" type="tns:LogicalScreenDescriptorType"/>
+      <xs:element name="GlobalColorTable" type="tns:ColorTableType" minOccurs="0"/>
+      <xs:element name="Data" type="tns:DataType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:string" dfdl:length="3" dfdl:encoding="ascii"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:encoding="ascii"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:sequence>
+      <xs:element name="LogicalScreenWidth" type="xs:unsignedShort" dfdl:length="16"/>
+      <xs:element name="LogicalScreenHeight" type="xs:unsignedShort" dfdl:length="16"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:length="8"/>
+      <xs:element name="BackgroundColorIndex" type="xs:unsignedByte" dfdl:length="8"/>
+      <xs:element name="PixelAspectRatio" type="xs:unsignedByte" dfdl:length="8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableType">
+    <xs:sequence>
+      <xs:element name="Color" type="tns:ColorType" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte" dfdl:length="8"/>
+      <xs:element name="Green" type="xs:unsignedByte" dfdl:length="8"/>
+      <xs:element name="Blue" type="xs:unsignedByte" dfdl:length="8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataType">
+    <xs:sequence>
+      <xs:element name="BlockSize" type="xs:unsignedByte" dfdl:length="8"/>
+      <xs:element name="BlockData" type="xs:unsignedByte" dfdl:length="{ ../BlockSize * 8 }" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="gifFormat">
+        <dfdl:format
+          lengthKind="explicit"
+          byteOrder="bigEndian"
+          encoding="ascii"
+          alignmentUnits="bytes"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+</xs:schema>
