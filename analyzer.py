@@ -1,0 +1,170 @@
+import sys
+import json
+from db import Database
+from LLMFormatGeneration import LLMFormatGeneration
+    
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib
+
+class Analyzer:
+    def __init__(self, dbname: str) -> None:
+        self.dbname = dbname
+        self.db = Database(dbname)
+        
+    def extract_rq1_overall_table(self, formats, ddls, llms) -> None:
+        """
+        This will extract the entire table for one temperature setting.
+        We need to post process this data to extract True or False per format, ddl, and model.
+        """
+        print(llms)
+        cur_time = "999999"
+        temperatures = ["0_0", "0_25", "0_5", "0_75", "1_0"]
+        colors = [
+            sns.light_palette("seagreen"),
+            sns.light_palette("skyblue"),
+            sns.light_palette("coral"),
+            sns.light_palette("lavender"),
+            sns.light_palette("gold"),
+            sns.light_palette("teal"),
+            sns.light_palette("teal"),
+        ]
+        for index, ddl in enumerate(ddls):
+            per_ddl_list = []
+            for form in formats:
+                count_list = []
+                for llm in llms:
+                    count = 0
+                    for temperature in temperatures:
+                        tablename = f"t_{str(temperature).replace('.', '_')}_{str(cur_time)}"
+                        # This only returns a list of successful compiles per format, ddl, and model.
+                        result = self.db.get_compile_data(tablename, llm, ddl, form)
+                        if len(result) > 0:
+                            count+= 1
+                    count_list.append(count)
+                per_ddl_list.append(count_list)
+            # print(per_ddl_list)
+            self.generate_heatmap(np.array(per_ddl_list), ddl, colors[index])
+                    #count_list.append(f"\\cellcolor{{{count}}} {count}")
+            # print(options["lookup"][form] + "& " + " & ".join(count_list), end='')
+            # print("\\\\")
+        # print("\\hline")
+
+    def generate_heatmap(self, data, ddl: str, color):
+
+        # Create a custom green colormap
+        cmap = color
+
+        # Add labels and title
+        row_labels = [
+        "PNG", "JPEG", "GIF", "TIFF", "DICOM", "NITF", "ELF", "ZIP", "GZIP", "SQLITE3",
+        "NTP", "Bitcoin", "Modbus", "ARP", "MQTT", "HTTP/1.1", "TLS Hello", "ICMP", "DNS", "HL7 v2"
+        ]
+        column_labels = [
+            "$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"
+        ]
+        # Plot the heatmap
+        plt.rcParams["font.family"] = "Times New Roman"
+        plt.figure(figsize=(3, 8))
+        plt.tick_params(axis="x", which="both", bottom=False, top=True, labeltop=True, labelbottom=False)
+        sns.heatmap(data, cmap=cmap, annot=True, fmt="d", vmin=0, vmax=5, linewidths=0.5, linecolor="black",
+            xticklabels=column_labels,
+            yticklabels=row_labels, cbar=False)
+        plt.xticks(ha="center")
+        plt.title(ddl)
+
+        filename = f"figs/{ddl}.png"
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
+        print(f"Heatmap saved to '{filename}'")
+    
+    def generate_line_graph(self, llms, ddl: str, format: str) -> None:
+        """
+        # Formats: 
+        # ARP for Kaitai Struct
+        # ARP for Rust Nom
+        X Axis is going to be Temperature Values
+        Y Axis is Lines of Code
+        One line each per LLM model
+        """
+        llm_data = self.db.get_lines_of_code(llms, ddl, format)
+        print(llm_data)
+        temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
+        markers = ["o", "s", "D", "^", "v", "p", "*"]
+
+        # Plotting the data
+        plt.figure(figsize=(10, 6))
+        plt.rcParams["font.family"] = "Times New Roman"
+
+        for index, (llm, values) in enumerate(llm_data.items()):
+            plt.plot(temperatures, values, marker=markers[index], label=llm)
+
+        # Chart formatting
+        plt.title(f"ARP Parsers Generated in {ddl}", fontsize=16)
+        plt.xlabel("Temperature", fontsize=14)
+        plt.ylabel("Lines of Code", fontsize=14)
+        plt.xticks(temperatures)
+        plt.legend(title="LLMs", fontsize=12)
+        plt.grid(True, linestyle='--', alpha=0.6)
+
+        # Display the chart
+        plt.tight_layout()
+        plt.savefig(f'rq-1-{ddl}.png', dpi=300, bbox_inches="tight")
+
+    def generate_bar_chart_for_temperatures(self, llms):
+        """
+        This will generate a bar chart for each LLM model showing the number of successful compiles per temperature.
+        """
+        temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
+        total_array = []
+        for llm in llms:
+            total_compiled = []
+            for temperature in temperatures:
+                tablename = f"t_{str(temperature).replace('.', '_')}_999999"
+                list_of_compiled = set(self.db.get_number_of_compiled(tablename, llm)) # Remove duplicates
+                percentage = (len(list_of_compiled)/(20*7))*100 
+                total_compiled.append(percentage)
+            total_array.append(total_compiled)
+        print(total_array)
+        
+        # Setting up the bar chart
+        bar_width = 0.15
+        x = np.arange(len(llms))
+        data = np.array(total_array)
+
+        font_style = {'font.family': 'Times New Roman'}
+
+        with matplotlib.pyplot.style.context(font_style):
+            fig, ax = plt.subplots(figsize=(8, 8))
+
+            colors = plt.cm.viridis(np.linspace(0, 1, len(temperatures)))
+            plt.rcParams["font.family"] = "Times New Roman"
+
+            for i, (temp, color) in enumerate(zip(temperatures, colors)):
+                bars = ax.bar(x + i * bar_width, data[:, i], width=bar_width, label=temp, color=color)
+                ax.bar_label(bars, fmt='%.0f', padding=3, fontsize=10)
+
+            # Chart customization
+            ax.set_xlabel('LLMs', fontsize=14)
+            ax.set_ylabel('Compilation Percentage (%)', fontsize=14)
+            ax.set_title('Compilation Percentage of LLMs at Different Temperature Settings', fontsize=16)
+            ax.set_xticks(x + bar_width * 2)
+                
+            labels = ["$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"]
+            ax.set_xticklabels(labels, fontsize=12)
+            ax.legend(title="Temperature", fontsize=10)
+
+            plt.tight_layout()
+            plt.savefig(f'figs/bar.png', dpi=300, bbox_inches="tight")
+
+dbname = "test.db"
+options = json.loads(open("options.json").read())
+
+llms = LLMFormatGeneration(0).llms.keys()
+analyzer = Analyzer(dbname)
+ddls = list(options["DDLs"].keys())
+
+analyzer.extract_rq1_overall_table(options["file-formats"] | options["network-protocols"], ddls, llms)
+analyzer.generate_line_graph(llms, "Kaitai Struct", "ARP")
+analyzer.generate_line_graph(llms, "Rust Nom", "ARP")
+analyzer.generate_bar_chart_for_temperatures(llms)
