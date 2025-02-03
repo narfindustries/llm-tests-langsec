@@ -2,17 +2,18 @@ import sys
 import json
 from db import Database
 from LLMFormatGeneration import LLMFormatGeneration
-    
+
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
 
+
 class Analyzer:
     def __init__(self, dbname: str) -> None:
         self.dbname = dbname
         self.db = Database(dbname)
-        
+
     def extract_rq1_overall_table(self, formats, ddls, llms) -> None:
         """
         This will extract the entire table for one temperature setting.
@@ -37,16 +38,18 @@ class Analyzer:
                 for llm in llms:
                     count = 0
                     for temperature in temperatures:
-                        tablename = f"t_{str(temperature).replace('.', '_')}_{str(cur_time)}"
+                        tablename = (
+                            f"t_{str(temperature).replace('.', '_')}_{str(cur_time)}"
+                        )
                         # This only returns a list of successful compiles per format, ddl, and model.
                         result = self.db.get_compile_data(tablename, llm, ddl, form)
                         if len(result) > 0:
-                            count+= 1
+                            count += 1
                     count_list.append(count)
                 per_ddl_list.append(count_list)
             # print(per_ddl_list)
             self.generate_heatmap(np.array(per_ddl_list), ddl, colors[index])
-                    #count_list.append(f"\\cellcolor{{{count}}} {count}")
+            # count_list.append(f"\\cellcolor{{{count}}} {count}")
             # print(options["lookup"][form] + "& " + " & ".join(count_list), end='')
             # print("\\\\")
         # print("\\hline")
@@ -58,29 +61,62 @@ class Analyzer:
 
         # Add labels and title
         row_labels = [
-        "PNG", "JPEG", "GIF", "TIFF", "DICOM", "NITF", "ELF", "ZIP", "GZIP", "SQLITE3",
-        "NTP", "Bitcoin", "Modbus", "ARP", "MQTT", "HTTP/1.1", "TLS Hello", "ICMP", "DNS", "HL7 v2"
+            "PNG",
+            "JPEG",
+            "GIF",
+            "TIFF",
+            "DICOM",
+            "NITF",
+            "ELF",
+            "ZIP",
+            "GZIP",
+            "SQLITE3",
+            "NTP",
+            "Bitcoin",
+            "Modbus",
+            "ARP",
+            "MQTT",
+            "HTTP/1.1",
+            "TLS Hello",
+            "ICMP",
+            "DNS",
+            "HL7 v2",
         ]
-        column_labels = [
-            "$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"
-        ]
+        column_labels = ["$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"]
         # Plot the heatmap
         plt.rcParams["font.family"] = "Times New Roman"
         plt.figure(figsize=(3, 8))
-        plt.tick_params(axis="x", which="both", bottom=False, top=True, labeltop=True, labelbottom=False)
-        sns.heatmap(data, cmap=cmap, annot=True, fmt="d", vmin=0, vmax=5, linewidths=0.5, linecolor="black",
+        plt.tick_params(
+            axis="x",
+            which="both",
+            bottom=False,
+            top=True,
+            labeltop=True,
+            labelbottom=False,
+        )
+        sns.heatmap(
+            data,
+            cmap=cmap,
+            annot=True,
+            fmt="d",
+            vmin=0,
+            vmax=5,
+            linewidths=0.5,
+            linecolor="black",
             xticklabels=column_labels,
-            yticklabels=row_labels, cbar=False)
+            yticklabels=row_labels,
+            cbar=False,
+        )
         plt.xticks(ha="center")
         plt.title(ddl)
 
-        filename = f"figs/{ddl}.png"
+        filename = f"figs/heatmaps/{ddl}.png"
         plt.savefig(filename, dpi=300, bbox_inches="tight")
         print(f"Heatmap saved to '{filename}'")
-    
+
     def generate_line_graph(self, llms, ddl: str, format: str) -> None:
         """
-        # Formats: 
+        # Formats:
         # ARP for Kaitai Struct
         # ARP for Rust Nom
         X Axis is going to be Temperature Values
@@ -105,11 +141,11 @@ class Analyzer:
         plt.ylabel("Lines of Code", fontsize=14)
         plt.xticks(temperatures)
         plt.legend(title="LLMs", fontsize=12)
-        plt.grid(True, linestyle='--', alpha=0.6)
+        plt.grid(True, linestyle="--", alpha=0.6)
 
         # Display the chart
         plt.tight_layout()
-        plt.savefig(f'rq-1-{ddl}.png', dpi=300, bbox_inches="tight")
+        plt.savefig(f"rq-1-{ddl}.png", dpi=300, bbox_inches="tight")
 
     def generate_bar_chart_for_temperatures(self, llms):
         """
@@ -121,18 +157,20 @@ class Analyzer:
             total_compiled = []
             for temperature in temperatures:
                 tablename = f"t_{str(temperature).replace('.', '_')}_999999"
-                list_of_compiled = set(self.db.get_number_of_compiled(tablename, llm)) # Remove duplicates
-                percentage = (len(list_of_compiled)/(20*7))*100 
+                list_of_compiled = set(
+                    self.db.get_number_of_compiled(tablename, llm)
+                )  # Remove duplicates
+                percentage = (len(list_of_compiled) / (20 * 7)) * 100
                 total_compiled.append(percentage)
             total_array.append(total_compiled)
         print(total_array)
-        
+
         # Setting up the bar chart
         bar_width = 0.15
         x = np.arange(len(llms))
         data = np.array(total_array)
 
-        font_style = {'font.family': 'Times New Roman'}
+        font_style = {"font.family": "Times New Roman"}
 
         with matplotlib.pyplot.style.context(font_style):
             fig, ax = plt.subplots(figsize=(8, 8))
@@ -141,30 +179,74 @@ class Analyzer:
             plt.rcParams["font.family"] = "Times New Roman"
 
             for i, (temp, color) in enumerate(zip(temperatures, colors)):
-                bars = ax.bar(x + i * bar_width, data[:, i], width=bar_width, label=temp, color=color)
-                ax.bar_label(bars, fmt='%.0f', padding=3, fontsize=10)
+                bars = ax.bar(
+                    x + i * bar_width,
+                    data[:, i],
+                    width=bar_width,
+                    label=temp,
+                    color=color,
+                )
+                ax.bar_label(bars, fmt="%.0f", padding=3, fontsize=10)
 
             # Chart customization
-            ax.set_xlabel('LLMs', fontsize=14)
-            ax.set_ylabel('Compilation Percentage (%)', fontsize=14)
-            ax.set_title('Compilation Percentage of LLMs at Different Temperature Settings', fontsize=16)
+            ax.set_xlabel("LLMs", fontsize=14)
+            ax.set_ylabel("Compilation Percentage (%)", fontsize=14)
+            ax.set_title(
+                "Compilation Percentage of LLMs at Different Temperature Settings",
+                fontsize=16,
+            )
             ax.set_xticks(x + bar_width * 2)
-                
+
+            print(llms)
             labels = ["$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"]
             ax.set_xticklabels(labels, fontsize=12)
             ax.legend(title="Temperature", fontsize=10)
 
             plt.tight_layout()
-            plt.savefig(f'figs/bar.png', dpi=300, bbox_inches="tight")
+            plt.savefig(f"figs/bar.png", dpi=300, bbox_inches="tight")
+
+    def generate_table_number_tries(self, llms):
+        """
+        Just going to do this for Hammer and Kaitai Struct
+        Total & Try 0 & Try 1 & Try 2 & Try 3
+        """
+        labels = ["Kaitai Struct", "Hammer"]
+        llm_labels = ["$G$", "$G_4$", "$G_O$", "$C_S$", "$C_H$", "$D$", "$L$"]
+        for index, llm in enumerate(llms):
+            table = self.db.measure_num_tries("Kaitai Struct", llm)
+            print(
+                f"{llm_labels[index]} & {len(table['total'])} & {len(table[0])} & {len(table[1])} & {len(table[2])} & {len(table[3])} & ",
+                end="",
+            )
+            table = self.db.measure_num_tries("Hammer", llm)
+            print(
+                f"{len(table['total'])} & {len(table[0])} & {len(table[1])} & {len(table[2])} & {len(table[3])} \\\\"
+            )
+
+    def generate_diff(self):
+        import difflib
+
+        # Read the contents of both files
+        [file1_lines, file2_lines] = self.db.compute_diff()
+
+        # Generate the diff
+        diff = difflib.unified_diff(file1_lines, file2_lines, lineterm="")
+
+        # Format the diff output
+        for line in diff:
+            print(line)
+
 
 dbname = "test.db"
 options = json.loads(open("options.json").read())
 
-llms = LLMFormatGeneration(0).llms.keys()
+llms = list(LLMFormatGeneration(0).llms.keys())
 analyzer = Analyzer(dbname)
 ddls = list(options["DDLs"].keys())
 
-analyzer.extract_rq1_overall_table(options["file-formats"] | options["network-protocols"], ddls, llms)
-analyzer.generate_line_graph(llms, "Kaitai Struct", "ARP")
-analyzer.generate_line_graph(llms, "Rust Nom", "ARP")
-analyzer.generate_bar_chart_for_temperatures(llms)
+# analyzer.extract_rq1_overall_table(options["file-formats"] | options["network-protocols"], ddls, llms)
+# analyzer.generate_line_graph(llms, "Kaitai Struct", "ARP")
+# analyzer.generate_line_graph(llms, "Rust Nom", "ARP")
+# analyzer.generate_bar_chart_for_temperatures(llms)
+# analyzer.generate_table_number_tries(llms)
+# analyzer.generate_diff()
