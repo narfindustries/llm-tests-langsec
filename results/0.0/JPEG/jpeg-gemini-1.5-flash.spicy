@@ -1,59 +1,53 @@
-#ifndef _JPEG_GEMINI_1_5_FLASH_SPICY_H_
-#define _JPEG_GEMINI_1_5_FLASH_SPICY_H_
+module JPEG;
 
-#include <stdint.h>
+type jpeg_marker = enum { SOI, APP0, APP1, APP2, APP3, APP4, APP5, APP6, APP7, APP8, APP9, APPA, APPB, APPC, APPD, APPE, APPF, DQT, DHT, DRI, SOS, DNL, DHP, DAC, RST0, RST1, RST2, RST3, RST4, RST5, RST6, RST7, COM, EOI };
 
-// Define data structures as needed based on the JPEG Gemini 1.5 Flash format
+type jpeg_app_data = record {
+    marker: jpeg_marker;
+    data: bytes;
+};
 
-typedef struct {
-    uint8_t marker;
-    uint16_t length;
-    // ... other fields as needed ...
-} JpegHeader;
+type jpeg_dqt_data = record {
+    precision: uint8;
+    quantization_table: vector[uint16];
+};
 
-typedef struct {
-    uint8_t data[1024]; // Adjust size as needed
-    uint16_t length;
-} JpegData;
+type jpeg_dht_data = record {
+    table_class: enum { DC, AC };
+    table_id: uint8;
+    huffman_codes: vector[uint16];
+};
 
+type jpeg_dri_data = record {
+    restart_interval: uint16;
+};
 
-// Function prototypes
+type jpeg_sos_data = record {
+    number_of_components: uint8;
+    component_selector: vector[record {
+        component_id: uint8;
+        dc_huffman_table_id: uint8;
+        ac_huffman_table_id: uint8;
+    }];
+};
 
-int decode_jpeg_gemini_1_5_flash(const uint8_t* data, size_t data_len, JpegData* output);
+type jpeg_com_data = record {
+    comment: string;
+};
 
-// ... other functions as needed ...
+type jpeg_segment = union {
+    app_data: jpeg_app_data;
+    dqt_data: jpeg_dqt_data;
+    dht_data: jpeg_dht_data;
+    dri_data: jpeg_dri_data;
+    sos_data: jpeg_sos_data;
+    com_data: jpeg_com_data;
+    soi: empty;
+    eoi: empty;
+    rst: empty;
+    unknown: bytes;
+};
 
-#endif // _JPEG_GEMINI_1_5_FLASH_SPICY_H_
-
-
-//Implementation file (jpeg-gemini-1.5-flash.spicy)
-
-#include "jpeg-gemini-1.5-flash.spicy.h"
-
-int decode_jpeg_gemini_1_5_flash(const uint8_t* data, size_t data_len, JpegData* output){
-    //Error Handling: Check for null pointers and insufficient data length.
-    if(data == NULL || output == NULL || data_len < sizeof(JpegHeader)){
-        return -1; // Indicate an error
-    }
-
-    //Parse the header
-    const JpegHeader* header = (const JpegHeader*)data;
-
-    //Error Handling: Check for valid header marker.  Replace 0xFF with the actual marker.
-    if(header->marker != 0xFF){
-        return -1; // Indicate an error
-    }
-
-    //Error Handling: Check if the header length is valid.
-    if(header->length > data_len){
-        return -1; // Indicate an error
-    }
-
-    //Copy the data (adjust as needed based on your actual format)
-    size_t data_to_copy = min(header->length, sizeof(output->data));
-    memcpy(output->data, data + sizeof(JpegHeader), data_to_copy);
-    output->length = data_to_copy;
-
-    return 0; // Indicate success
-}
-
+type jpeg_file = record {
+    segments: vector[jpeg_segment];
+};

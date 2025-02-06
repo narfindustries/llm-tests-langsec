@@ -1,48 +1,111 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema"
-        targetNamespace="http://example.com/zip"
-        xmlns:xs="http://www.w3.org/2001/XMLSchema"
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
-    <annotation>
-        <appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="dfdl:GeneralFormat"/>
-        </appinfo>
-    </annotation>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/zip"
+           xmlns:tns="http://example.com/zip"
+           elementFormDefault="qualified">
 
-    <complexType name="ZIPFileType">
-        <sequence>
-            <element name="localFileHeader" type="LocalFileHeaderType" maxOccurs="unbounded"/>
-        </sequence>
-    </complexType>
+  <!-- DFDL format definition applicable to the entire schema -->
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format lengthKind="explicit" lengthUnits="bytes" textNumberRep="standard" documentFinalTerminatorCanBeMissing="yes" encoding="ISO-8859-1"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <complexType name="LocalFileHeaderType">
-        <annotation>
-            <appinfo source="http://www.ogf.org/dfdl/">
-                <dfdl:format byteOrder="littleEndian" lengthUnits="bytes"/>
-            </appinfo>
-        </annotation>
-        <sequence>
-            <element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-            <element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-            <element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-            <element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-            <element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
-            <element name="fileName" type="xs:string" dfdl:length="{../fileNameLength}" dfdl:lengthUnits="bytes" dfdl:encoding="utf-8"/>
-            <element name="extraField" type="xs:hexBinary" dfdl:length="{../extraFieldLength}" dfdl:lengthUnits="bytes"/>
-        </sequence>
-    </complexType>
+  <!-- Local File Header -->
+  <xs:element name="LocalFileHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:inputValueCalc="{ fn:parse-int('04034b50', 16) }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileName" type="xs:string" dfdl:length="{ ../fileNameLength }" dfdl:encoding="UTF-8"/>
+        <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{ ../extraFieldLength }" dfdl:encoding="ISO-8859-1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-    <element name="ZIPFile" type="ZIPFileType">
-        <annotation>
-            <appinfo source="http://www.ogf.org/dfdl/">
-                <dfdl:format ref="dfdl:GeneralFormat" lengthKind="implicit"/>
-            </appinfo>
-        </annotation>
-    </element>
-</schema>
+  <!-- Central Directory File Header -->
+  <xs:element name="CentralDirectoryFileHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:inputValueCalc="{ fn:parse-int('02014b50', 16) }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="versionMadeBy" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="generalPurposeBitFlag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="compressionMethod" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="lastModFileTime" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="lastModFileDate" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="compressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="uncompressedSize" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileNameLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileCommentLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="diskNumberStart" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="internalFileAttributes" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="externalFileAttributes" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="relativeOffsetOfLocalHeader" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileName" type="xs:string" dfdl:length="{ ../fileNameLength }" dfdl:encoding="UTF-8"/>
+        <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{ ../extraFieldLength }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="fileComment" type="xs:string" dfdl:length="{ ../fileCommentLength }" dfdl:encoding="UTF-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- End of Central Directory Record -->
+  <xs:element name="EndOfCentralDirectoryRecord">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:inputValueCalc="{ fn:parse-int('06054b50', 16) }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="numberOfThisDisk" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="diskWhereCentralDirectoryStarts" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="numberOfCentralDirectoryRecordsOnThisDisk" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="totalNumberOfCentralDirectoryRecords" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="sizeOfCentralDirectory" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="offsetOfStartOfCentralDirectory" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="zipFileCommentLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="zipFileComment" type="xs:string" dfdl:length="{ ../zipFileCommentLength }" dfdl:encoding="UTF-8"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Zip64 End of Central Directory Record -->
+  <xs:element name="Zip64EndOfCentralDirectoryRecord" nillable="true">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:inputValueCalc="{ fn:parse-int('06064b50', 16) }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="sizeOfZip64EndOfCentralDirectoryRecord" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="versionMadeBy" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="versionNeededToExtract" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="numberOfThisDisk" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="diskWhereCentralDirectoryStarts" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="numberOfCentralDirectoryRecordsOnThisDisk" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="totalNumberOfCentralDirectoryRecords" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="sizeOfCentralDirectory" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="offsetOfStartOfCentralDirectory" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Zip64 End of Central Directory Locator -->
+  <xs:element name="Zip64EndOfCentralDirectoryLocator" nillable="true">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="xs:unsignedInt" dfdl:length="4" dfdl:inputValueCalc="{ fn:parse-int('07064b50', 16) }" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="diskNumberStart" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="relativeOffsetOfZip64EndOfCentralDirectory" type="xs:unsignedLong" dfdl:length="8" dfdl:encoding="ISO-8859-1"/>
+        <xs:element name="totalNumberOfDisks" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="ISO-8859-1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

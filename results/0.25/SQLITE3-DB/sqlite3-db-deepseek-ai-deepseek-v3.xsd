@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/sqlite" xmlns:tns="http://example.com/sqlite">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="UTF-8" representation="binary" lengthKind="explicit" sequenceKind="ordered" initiatedContent="no" leadingSkip="0" floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLiteDB">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:SQLiteHeader"/>
+        <xs:element name="Pages" type="tns:SQLitePages"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SQLiteHeader">
+    <xs:sequence>
+      <xs:element name="MagicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII"/>
+      <xs:element name="PageSize" type="xs:unsignedShort"/>
+      <xs:element name="WriteVersion" type="xs:unsignedByte"/>
+      <xs:element name

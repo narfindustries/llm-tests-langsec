@@ -1,64 +1,101 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/http-1.1/"
-           xmlns:tns="http://example.com/dfdl/http-1.1/">
+           targetNamespace="http://example.com/dfdl/http1.1"
+           xmlns:tns="http://example.com/dfdl/http1.1">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:HTTPFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:HTTPFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:complexType name="HTTPRequest">
-        <xs:sequence>
-            <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
-            <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
-            <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator="%LF;"/>
-            <xs:element name="Headers" type="tns:HeadersType" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%LF;" dfdl:representation="text"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xs:element name="HTTPMessage" type="tns:HTTPMessageType"/>
 
-    <xs:complexType name="HeadersType">
-        <xs:sequence>
-            <xs:element name="Header" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:simpleContent>
-                        <xs:extension base="xs:string">
-                            <xs:attribute name="name" type="xs:string"/>
-                            <xs:attribute name="value" type="xs:string"/>
-                        </xs:extension>
-                    </xs:simpleContent>
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
+  <xs:complexType name="HTTPMessageType">
+    <xs:sequence>
+      <xs:element name="StartLine" type="tns:StartLineType"/>
+      <xs:element name="Headers" type="tns:HeadersType"/>
+      <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <xs:element name="HTTP-Request" type="tns:HTTPRequest"/>
+  <xs:complexType name="StartLineType">
+    <xs:choice>
+      <xs:element name="RequestLine" type="tns:RequestLineType"/>
+      <xs:element name="StatusLine" type="tns:StatusLineType"/>
+    </xs:choice>
+  </xs:complexType>
 
-    <xs:element name="HTTP-Response" type="tns:HTTPResponse"/>
+  <xs:complexType name="RequestLineType">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <xs:complexType name="HTTPResponse">
-        <xs:sequence>
-            <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
-            <xs:element name="StatusCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator=" "/>
-            <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left" dfdl:terminator="%LF;"/>
-            <xs:element name="Headers" type="tns:HeadersType" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%LF;" dfdl:representation="text"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xs:complexType name="StatusLineType">
+    <xs:sequence>
+      <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="StatusCode" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <xs:simpleType name="HTTPFormat">
-        <xs:restriction base="dfdl:SimpleType">
-            <dfdl:encoding>ASCII</dfdl:encoding>
-            <dfdl:textBidi="no"/>
-            <dfdl:binaryNumberRep="binary"/>
-            <dfdl:byteOrder="bigEndian"/>
-            <dfdl:bitOrder="mostSignificantBitFirst"/>
-            <dfdl:alignmentUnits="bytes"/>
-            <dfdl:alignment="1"/>
-        </xs:restriction>
-    </xs:simpleType>
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="Header" maxOccurs="unbounded" type="tns:HeaderType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="FieldName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="FieldValue" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="HTTPFormat">
+    <xs:restriction base="dfdl:Format">
+      <dfdl:format representation="text"
+                   textStandardBase="10"
+                   textNumberRep="standard"
+                   textBooleanTrueRep="true"
+                   textBooleanFalseRep="false"
+                   textStringJustification="left"
+                   textNumberJustification="left"
+                   textNumberCheckPolicy="lax"
+                   textNumberRounding="pattern"
+                   textNumberRoundingMode="roundHalfEven"
+                   textNumberRoundingIncrement="1"
+                   textCalendarPatternKind="implicit"
+                   textCalendarCheckPolicy="lax"
+                   textCalendarTimeZone="UTC"
+                   textCalendarFirstDayOfWeek="Sunday"
+                   textCalendarDaysInFirstWeek="4"
+                   textPadKind="none"
+                   textStringPadCharacter="%SP;"
+                   textPadCharacter="%SP;"
+                   textBooleanPadCharacter="%SP;"
+                   textNumberPadCharacter="%SP;"
+                   textCalendarPadCharacter="%SP;"
+                   textJustificationTrim="none"
+                   textBidiTextDirection="ltr"
+                   textByteOrder="bigEndian"
+                   textEncoding="utf-8"
+                   textOutputMinLength="0"
+                   textOutputNewLine="%LF;"
+                   textLeadingSkip="0"
+                   textTrailingSkip="0"
+                   textNumberPattern="#,###.##"
+                   textCalendarPatternKind="explicit"
+                   textCalendarPattern="yyyy-MM-dd'T'HH:mm:ss"
+                   textCalendarTimeZone="UTC"
+                   textCalendarFirstDayOfWeek="Sunday"
+                   textCalendarDaysInFirstWeek="4"
+                   textCalendarCheckPolicy="lax"
+                   textCalendarTimeZone="UTC"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

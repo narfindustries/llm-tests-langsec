@@ -1,48 +1,25 @@
-module Bitcoin.Transactions {
-  import DAEDALUS::Bit;
-  import DAEDALUS::Num;
+BitcoinTransaction = struct {
+  version : uint32,
+  inputs : array<Input>(varint),
+  outputs : array<Output>(varint),
+  locktime : uint32
+};
 
-  type uint32 = Num::uint(32, Num::BE);
-  type uint64 = Num::uint(64, Num::BE);
-  type var_int = Num::varint();
+Input = struct {
+  prevTxHash : bytes[32],
+  outputIndex : uint32,
+  scriptSig : bytes(varint),
+  sequence : uint32
+};
 
-  type tx_in = struct {
-    previous_output : struct {
-      hash  : Bit::bytes(32);
-      index : uint32;
-    };
-    script_length : var_int;
-    script : Bit::bytes(script_length);
-    sequence : uint32;
-  };
+Output = struct {
+  value : uint64,
+  scriptPubKey : bytes(varint)
+};
 
-  type tx_out = struct {
-    value : uint64;
-    script_length : var_int;
-    script : Bit::bytes(script_length);
-  };
-
-  type transaction = struct {
-    version : uint32;
-    in_count : var_int;
-    inputs : [tx_in](in_count);
-    out_count : var_int;
-    outputs : [tx_out](out_count);
-    lock_time : uint32;
-  };
-
-  type block = struct {
-    magic_number : uint32;
-    block_size : uint32;
-    version : uint32;
-    prev_block : Bit::bytes(32);
-    merkle_root : Bit::bytes(32);
-    timestamp : uint32;
-    bits : uint32;
-    nonce : uint32;
-    txn_count : var_int;
-    txns : [transaction](txn_count);
-  };
-
-  type file = [block](_);
-}
+varint = union {
+  uint8 : uint8 when value < 0xFD,
+  uint16 : uint16 when value == 0xFD,
+  uint32 : uint32 when value == 0xFE,
+  uint64 : uint64 when value == 0xFF
+};

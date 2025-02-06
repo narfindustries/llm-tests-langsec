@@ -5,37 +5,35 @@ meta:
 
 seq:
   - id: sections
-    type: pk_section
-    repeat: eos
-
+    type: section
+    repeat: until
+    repeat-until: _.signature == 0x06054b50
+    
 types:
-  pk_section:
+  section:
     seq:
-      - id: magic
-        contents: [0x50, 0x4B]
-      - id: section_type
-        type: u2
+      - id: signature
+        type: u4
       - id: body
         type:
-          switch-on: section_type
+          switch-on: signature
           cases:
-            0x0403: central_dir_entry
-            0x0201: local_file
-            0x0605: end_of_central_dir
-            0x0606: zip64_end_of_central_dir
-            0x0706: zip64_end_of_central_dir_locator
+            0x04034b50: local_file
+            0x02014b50: central_dir_entry
+            0x06054b50: end_of_central_dir
 
   local_file:
     seq:
-      - id: version
+      - id: version_needed
         type: u2
       - id: flags
         type: u2
       - id: compression_method
         type: u2
-      - id: file_mod_time
+        enum: compression
+      - id: last_mod_time
         type: u2
-      - id: file_mod_date
+      - id: last_mod_date
         type: u2
       - id: crc32
         type: u4
@@ -45,14 +43,14 @@ types:
         type: u4
       - id: file_name_len
         type: u2
-      - id: extra_len
+      - id: extra_field_len
         type: u2
       - id: file_name
         type: str
         size: file_name_len
         encoding: UTF-8
-      - id: extra
-        size: extra_len
+      - id: extra_field
+        size: extra_field_len
       - id: body
         size: compressed_size
 
@@ -66,9 +64,10 @@ types:
         type: u2
       - id: compression_method
         type: u2
-      - id: file_mod_time
+        enum: compression
+      - id: last_mod_time
         type: u2
-      - id: file_mod_date
+      - id: last_mod_date
         type: u2
       - id: crc32
         type: u4
@@ -78,9 +77,9 @@ types:
         type: u4
       - id: file_name_len
         type: u2
-      - id: extra_len
+      - id: extra_field_len
         type: u2
-      - id: comment_len
+      - id: file_comment_len
         type: u2
       - id: disk_number_start
         type: u2
@@ -94,26 +93,26 @@ types:
         type: str
         size: file_name_len
         encoding: UTF-8
-      - id: extra
-        size: extra_len
-      - id: comment
+      - id: extra_field
+        size: extra_field_len
+      - id: file_comment
         type: str
-        size: comment_len
+        size: file_comment_len
         encoding: UTF-8
 
   end_of_central_dir:
     seq:
       - id: disk_number
         type: u2
-      - id: disk_start
+      - id: disk_cd_start
         type: u2
-      - id: qty_central_dir_entries_on_disk
+      - id: num_entries_disk
         type: u2
-      - id: qty_central_dir_entries_total
+      - id: num_entries_total
         type: u2
-      - id: central_dir_size
+      - id: cd_size
         type: u4
-      - id: central_dir_offset
+      - id: cd_offset
         type: u4
       - id: comment_len
         type: u2
@@ -122,34 +121,39 @@ types:
         size: comment_len
         encoding: UTF-8
 
-  zip64_end_of_central_dir:
+  extra_field:
     seq:
-      - id: record_size
-        type: u8
-      - id: version_made_by
+      - id: header_id
         type: u2
-      - id: version_needed
+      - id: data_size
         type: u2
-      - id: disk_number
-        type: u4
-      - id: disk_start
-        type: u4
-      - id: qty_central_dir_entries_on_disk
-        type: u8
-      - id: qty_central_dir_entries_total
-        type: u8
-      - id: central_dir_size
-        type: u8
-      - id: central_dir_offset
-        type: u8
-      - id: extensible_data
-        size: record_size - 44
+      - id: data
+        size: data_size
 
-  zip64_end_of_central_dir_locator:
-    seq:
-      - id: disk_number_with_zip64_end_of_central_dir
-        type: u4
-      - id: zip64_end_of_central_dir_offset
-        type: u8
-      - id: number_of_disks
-        type: u4
+enums:
+  compression:
+    0: none
+    1: shrunk
+    2: reduced_1
+    3: reduced_2
+    4: reduced_3
+    5: reduced_4
+    6: imploded
+    8: deflated
+    9: enhanced_deflated
+    10: pkware_dcl_imploded
+    12: bzip2
+    14: lzma
+    18: ibm_terse
+    19: ibm_lz77
+    
+  flags:
+    0x0001: encrypted
+    0x0002: compression_option1
+    0x0004: compression_option2
+    0x0008: data_descriptor
+    0x0010: enhanced_deflation
+    0x0020: compressed_patched
+    0x0040: strong_encryption
+    0x0800: utf8
+    0x2000: mask_header_values

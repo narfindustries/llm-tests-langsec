@@ -4,88 +4,73 @@
 #include <string.h>
 #include <hammer/hammer.h>
 
-// ELF Header Structures
 typedef struct {
-    uint8_t e_ident[16];
-    uint16_t e_type;
-    uint16_t e_machine;
-    uint32_t e_version;
-    uint64_t e_entry;
-    uint64_t e_phoff;
-    uint64_t e_shoff;
-    uint32_t e_flags;
-    uint16_t e_ehsize;
-    uint16_t e_phentsize;
-    uint16_t e_phnum;
-    uint16_t e_shentsize;
-    uint16_t e_shnum;
-    uint16_t e_shstrndx;
-} Elf64_Ehdr;
+    uint8_t magic[4];
+    uint8_t class;
+    uint8_t data_encoding;
+    uint8_t version;
+    uint8_t os_abi;
+    uint8_t abi_version;
+    uint8_t padding[7];
+} ElfIdentStruct;
 
-// Hammer parser definitions
-static HParser *elf_magic_number;
-static HParser *elf_class;
-static HParser *elf_data_encoding;
-static HParser *elf_version;
-static HParser *elf_abi;
-static HParser *elf_abi_version;
-static HParser *elf_pad;
-static HParser *elf_type;
-static HParser *elf_machine;
-static HParser *elf_header_parser;
+typedef struct {
+    ElfIdentStruct ident;
+    uint16_t type;
+    uint16_t machine;
+    uint32_t elf_version;
+    uint64_t entry_point;
+    uint64_t program_header_offset;
+    uint64_t section_header_offset;
+    uint32_t flags;
+    uint16_t header_size;
+    uint16_t program_header_entry_size;
+    uint16_t program_header_num;
+    uint16_t section_header_entry_size;
+    uint16_t section_header_num;
+    uint16_t section_header_string_index;
+} ElfHeader;
 
-// Initialize Hammer parsers
-void init_elf_parsers() {
-    elf_magic_number = h_token("\x7fELF", 4);
-    elf_class = h_choice(
-        h_token("\x01", 1),  // 32-bit
-        h_token("\x02", 1),  // 64-bit
-        NULL
-    );
-    elf_data_encoding = h_choice(
-        h_token("\x01", 1),  // Little endian
-        h_token("\x02", 1),  // Big endian
-        NULL
-    );
-    elf_version = h_token("\x01", 1);
-    elf_abi = h_uint8();
-    elf_abi_version = h_uint8();
-    elf_pad = h_repeat_n(h_uint8(), 7);
-    elf_type = h_uint16();
-    elf_machine = h_uint16();
-
-    elf_header_parser = h_sequence(
-        elf_magic_number,
-        elf_class,
-        elf_data_encoding,
-        elf_version,
-        elf_abi,
-        elf_abi_version,
-        elf_pad,
-        elf_type,
-        elf_machine,
-        h_uint32(),  // e_version
-        h_uint64(),  // e_entry
-        h_uint64(),  // e_phoff
-        h_uint64(),  // e_shoff
-        h_uint32(),  // e_flags
-        h_uint16(),  // e_ehsize
-        h_uint16(),  // e_phentsize
-        h_uint16(),  // e_phnum
-        h_uint16(),  // e_shentsize
-        h_uint16(),  // e_shnum
-        h_uint16(),  // e_shstrndx
+HParser* parse_elf_ident(void) {
+    return h_sequence(
+        h_literal("\x7F""ELF"),
+        h_int_range(h_end_p(), 0, 2),  // Class
+        h_int_range(h_end_p(), 0, 2),  // Data Encoding
+        h_int_range(h_end_p(), 0, 1),  // Version
+        h_int_range(h_end_p(), 0, 255),  // OS ABI
+        h_int_range(h_end_p(), 0, 255),  // ABI Version
+        h_repeat_n(h_int_range(h_end_p(), 0, 255), 7),  // Padding
         NULL
     );
 }
 
-int main(int argc, char *argv[]) {
+HParser* parse_elf_header(void) {
+    return h_sequence(
+        parse_elf_ident(),
+        h_int_range(h_end_p(), 0, 4),  // Type
+        h_int_range(h_end_p(), 0, 65535),  // Machine
+        h_int_range(h_end_p(), 0, UINT32_MAX),  // ELF Version
+        h_int_range(h_end_p(), 0, UINT64_MAX),  // Entry Point
+        h_int_range(h_end_p(), 0, UINT64_MAX),  // Program Header Offset
+        h_int_range(h_end_p(), 0, UINT64_MAX),  // Section Header Offset
+        h_int_range(h_end_p(), 0, UINT32_MAX),  // Flags
+        h_int_range(h_end_p(), 0, 65535),  // Header Size
+        h_int_range(h_end_p(), 0, 65535),  // Program Header Entry Size
+        h_int_range(h_end_p(), 0, 65535),  // Program Header Number
+        h_int_range(h_end_p(), 0, 65535),  // Section Header Entry Size
+        h_int_range(h_end_p(), 0, 65535),  // Section Header Number
+        h_int_range(h_end_p(), 0, 65535),  // Section Header String Index
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "rb");
+    FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Error opening file");
         return 1;
@@ -95,32 +80,32 @@ int main(int argc, char *argv[]) {
     long file_size = ftell(file);
     rewind(file);
 
-    uint8_t *buffer = malloc(file_size);
+    uint8_t* buffer = malloc(file_size);
     if (!buffer) {
         perror("Memory allocation error");
         fclose(file);
         return 1;
     }
 
-    size_t read_size = fread(buffer, 1, file_size, file);
-    fclose(file);
-
-    if (read_size != file_size) {
+    if (fread(buffer, 1, file_size, file) != file_size) {
         perror("File read error");
         free(buffer);
+        fclose(file);
         return 1;
     }
+    fclose(file);
 
-    init_elf_parsers();
+    HParser* parser = parse_elf_header();
+    HParseResult* result = h_parse(parser, buffer, file_size);
 
-    HParseResult *result = h_parse(elf_header_parser, buffer, read_size);
     if (result && result->ast) {
         printf("ELF file parsed successfully\n");
         h_parse_result_free(result);
     } else {
-        printf("ELF file parsing failed\n");
+        printf("ELF parsing failed\n");
     }
 
     free(buffer);
+    h_parser_free(parser);
     return 0;
 }

@@ -1,70 +1,124 @@
-type Byte = [0..255]
-
-type DnsName = String
-
-enum OpCode {
-    Query = 0,
-    IQuery = 1,
-    Status = 2,
-    Notify = 4,
-    Update = 5
-}
-
-enum RCode {
-    NoError = 0,
-    FormatError = 1,
-    ServerFailure = 2,
-    NameError = 3,
-    NotImplemented = 4,
-    Refused = 5
-}
-
-enum RecordType {
-    A = 1,
-    NS = 2,
-    CNAME = 5,
-    SOA = 6,
-    PTR = 12,
-    MX = 15,
-    TXT = 16,
-    AAAA = 28
-}
-
-struct DnsHeader {
-    id: [0..65535],
-    qr: bool,
-    opcode: OpCode,
-    aa: bool,
-    tc: bool,
-    rd: bool,
-    ra: bool,
-    z: [0..7],
-    rcode: RCode,
-    qdcount: [0..65535],
-    ancount: [0..65535], 
-    nscount: [0..65535],
-    arcount: [0..65535]
-}
-
-struct DnsQuestion {
-    qname: DnsName,
-    qtype: RecordType,
-    qclass: [0..65535]
-}
-
-struct ResourceRecord {
-    name: DnsName,
-    type: RecordType,
-    class: [0..65535],
-    ttl: [0..4294967295],
-    rdlength: [0..65535],
-    rdata: [Byte]
-}
-
-struct DnsMessage {
-    header: DnsHeader,
-    questions: [DnsQuestion],
-    answers: [ResourceRecord],
-    authority: [ResourceRecord],
-    additional: [ResourceRecord]
+type DnsMessage = {
+  header: {
+    transaction_id: u16,
+    flags: u16,
+    question_count: u16,
+    answer_count: u16,
+    authority_count: u16,
+    additional_count: u16
+  },
+  questions: [
+    {
+      name: [
+        {
+          length: u8,
+          data: bytes(length)
+        }
+      ],
+      type: u16,
+      class: u16
+    }
+  ] if question_count > 0,
+  answers: [
+    {
+      name: [
+        {
+          length: u8,
+          data: bytes(length)
+        }
+      ],
+      type: u16,
+      class: u16,
+      ttl: s32,
+      rdlength: u16,
+      rdata: 
+        if type == 1 then bytes(4)
+        else if type == 2 then [{ length: u8, data: bytes(length) }]
+        else if type == 5 then [{ length: u8, data: bytes(length) }]
+        else if type == 6 then {
+          primary_ns: [{ length: u8, data: bytes(length) }],
+          responsible_mailbox: [{ length: u8, data: bytes(length) }],
+          serial: u32,
+          refresh: s32,
+          retry: s32,
+          expire: s32,
+          minimum: u32
+        }
+        else if type == 12 then [{ length: u8, data: bytes(length) }]
+        else if type == 15 then {
+          preference: u16,
+          exchange: [{ length: u8, data: bytes(length) }]
+        }
+        else if type == 28 then bytes(16)
+        else bytes(rdlength)
+    }
+  ] if answer_count > 0,
+  authorities: [
+    {
+      name: [
+        {
+          length: u8,
+          data: bytes(length)
+        }
+      ],
+      type: u16,
+      class: u16,
+      ttl: s32,
+      rdlength: u16,
+      rdata: 
+        if type == 1 then bytes(4)
+        else if type == 2 then [{ length: u8, data: bytes(length) }]
+        else if type == 5 then [{ length: u8, data: bytes(length) }]
+        else if type == 6 then {
+          primary_ns: [{ length: u8, data: bytes(length) }],
+          responsible_mailbox: [{ length: u8, data: bytes(length) }],
+          serial: u32,
+          refresh: s32,
+          retry: s32,
+          expire: s32,
+          minimum: u32
+        }
+        else if type == 12 then [{ length: u8, data: bytes(length) }]
+        else if type == 15 then {
+          preference: u16,
+          exchange: [{ length: u8, data: bytes(length) }]
+        }
+        else if type == 28 then bytes(16)
+        else bytes(rdlength)
+    }
+  ] if authority_count > 0,
+  additionals: [
+    {
+      name: [
+        {
+          length: u8,
+          data: bytes(length)
+        }
+      ],
+      type: u16,
+      class: u16,
+      ttl: s32,
+      rdlength: u16,
+      rdata: 
+        if type == 1 then bytes(4)
+        else if type == 2 then [{ length: u8, data: bytes(length) }]
+        else if type == 5 then [{ length: u8, data: bytes(length) }]
+        else if type == 6 then {
+          primary_ns: [{ length: u8, data: bytes(length) }],
+          responsible_mailbox: [{ length: u8, data: bytes(length) }],
+          serial: u32,
+          refresh: s32,
+          retry: s32,
+          expire: s32,
+          minimum: u32
+        }
+        else if type == 12 then [{ length: u8, data: bytes(length) }]
+        else if type == 15 then {
+          preference: u16,
+          exchange: [{ length: u8, data: bytes(length) }]
+        }
+        else if type == 28 then bytes(16)
+        else bytes(rdlength)
+    }
+  ] if additional_count > 0
 }

@@ -1,53 +1,32 @@
-// Daedalus specification for GZIP format
-
-@format("gzip")
-struct Gzip {
-    Header header;
-    CompressedData compressedData;
-    Footer footer;
-}
-
-struct Header {
-    uint8 id1; // ID1 should be 0x1F
-    uint8 id2; // ID2 should be 0x8B
-    uint8 compressionMethod; // Compression method (8 = deflate)
-    Flags flags;
-    uint32 mtime; // Modification time
-    uint8 extraFlags; // Extra flags
-    uint8 os; // Operating system
-    if (flags.fextra) {
-        ExtraField extraField;
-    }
-    if (flags.fname) {
-        string fileName;
-    }
-    if (flags.fcomment) {
-        string comment;
-    }
-    if (flags.fhcrc) {
-        uint16 headerCrc16;
-    }
-}
-
-struct Flags {
-    uint8 reserved:3;
-    uint8 fhcrc:1; // Header CRC16 present
-    uint8 fextra:1; // Extra field present
-    uint8 fname:1; // Original file name present
-    uint8 fcomment:1; // File comment present
-    uint8 ftext:1; // File is ASCII text
-}
-
-struct ExtraField {
-    uint16 xlen; // Length of the extra field
-    uint8[xlen] data; // Extra field data
-}
-
-struct CompressedData {
-    uint8[] data; // Compressed data
-}
-
-struct Footer {
-    uint32 crc32; // CRC32 of the uncompressed data
-    uint32 isize; // Input size modulo 2^32
+GZIP : STRUCTURE := {
+    id1 : UINT8 { assert = $ = 0x1F },
+    id2 : UINT8 { assert = $ = 0x8B },
+    cm : UINT8 { assert = $ = 0x08 }, // Compression Method: DEFLATE
+    flg : BITFIELD UINT8 := {
+        ftext : 1,
+        fhcrc : 1,
+        fextra : 1,
+        fname : 1,
+        fcomment : 1,
+        reserved : 3 { assert = $ = 0 }
+    },
+    mtime : UINT32, // Modification Time
+    xfl : UINT8, // Extra Flags
+    os : UINT8, // Operating System
+    extra_field : OPTIONAL STRUCTURE := IF(flg.fextra = 1) {
+        extra_length : UINT16,
+        extra_data : SEQUENCE OF UINT8(extra_length)
+    },
+    original_file_name : OPTIONAL STRING := IF(flg.fname = 1) {
+        name : STRING(ASCII, TERMINATED BY 0x00)
+    },
+    file_comment : OPTIONAL STRING := IF(flg.fcomment = 1) {
+        comment : STRING(ASCII, TERMINATED BY 0x00)
+    },
+    header_crc16 : OPTIONAL UINT16 := IF(flg.fhcrc = 1) {
+        crc16 : UINT16
+    },
+    compressed_data : SEQUENCE OF UINT8, // Compressed Data
+    crc32 : UINT32, // CRC32 of uncompressed data
+    isize : UINT32 // Size of uncompressed data modulo 2^32
 }

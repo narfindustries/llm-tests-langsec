@@ -1,174 +1,168 @@
 meta:
   id: elf
-  title: ELF (Executable and Linkable Format) file format
-  file-extension: 
-    - elf
-    - o
-    - so
-  license: MIT
-  endian: be
+  title: ELF (Executable and Linkable Format)
+  endian: 
+    switch-on: header.e_ident.ei_data
+    cases:
+      1: le
+      2: be
 
 seq:
   - id: header
     type: elf_header
-  - id: program_headers
-    type: program_header
-    repeat: expr
-    repeat-expr: header.program_header_num
-  - id: section_headers
-    type: section_header
-    repeat: expr
-    repeat-expr: header.section_header_num
 
 types:
   elf_header:
     seq:
+      - id: e_ident
+        type: ident_struct
+      - id: e_type
+        type: u2
+        enum: elf_object_type
+      - id: e_machine
+        type: u2
+        enum: elf_machine
+      - id: e_version
+        type: u4
+        enum: elf_version
+      - id: e_entry
+        type: u8
+      - id: e_phoff
+        type: u8
+      - id: e_shoff
+        type: u8
+      - id: e_flags
+        type: u4
+      - id: e_ehsize
+        type: u2
+      - id: e_phentsize
+        type: u2
+      - id: e_phnum
+        type: u2
+      - id: e_shentsize
+        type: u2
+      - id: e_shnum
+        type: u2
+      - id: e_shstrndx
+        type: u2
+
+  ident_struct:
+    seq:
       - id: magic
-        contents: [0x7F, 0x45, 0x4C, 0x46]
-      - id: class
+        contents: [0x7f, 0x45, 0x4c, 0x46]
+      - id: ei_class
         type: u1
         enum: elf_class
-      - id: data_encoding
+      - id: ei_data
         type: u1
-        enum: data_encoding
-      - id: version
+        enum: elf_data_encoding
+      - id: ei_version
         type: u1
-      - id: os_abi
+        enum: elf_version
+      - id: ei_osabi
         type: u1
-        enum: os_abi
-      - id: abi_version
+        enum: elf_os_abi
+      - id: ei_abiversion
         type: u1
-      - id: padding
+      - id: ei_pad
         size: 7
-      - id: type
-        type: u2
-        enum: obj_type
-      - id: machine
-        type: u2
-        enum: arch
-      - id: version2
-        type: u4
-      - id: entry_point
-        type: u8
-      - id: program_header_offset
-        type: u8
-      - id: section_header_offset
-        type: u8
-      - id: flags
-        type: u4
-      - id: header_size
-        type: u2
-      - id: program_header_size
-        type: u2
-      - id: program_header_num
-        type: u2
-      - id: section_header_size
-        type: u2
-      - id: section_header_num
-        type: u2
-      - id: section_header_str_index
-        type: u2
 
   program_header:
     seq:
-      - id: type
+      - id: p_type
         type: u4
-        enum: segment_type
-      - id: flags
+        enum: elf_p_type
+      - id: p_flags
         type: u4
-      - id: offset
+      - id: p_offset
         type: u8
-      - id: vaddr
+      - id: p_vaddr
         type: u8
-      - id: paddr
+      - id: p_paddr
         type: u8
-      - id: file_size
+      - id: p_filesz
         type: u8
-      - id: mem_size
+      - id: p_memsz
         type: u8
-      - id: align
+      - id: p_align
         type: u8
 
   section_header:
     seq:
-      - id: name_offset
+      - id: sh_name
         type: u4
-      - id: type
+      - id: sh_type
         type: u4
-        enum: section_type
-      - id: flags
+        enum: elf_sh_type
+      - id: sh_flags
         type: u8
-      - id: addr
+      - id: sh_addr
         type: u8
-      - id: offset
+      - id: sh_offset
         type: u8
-      - id: size
+      - id: sh_size
         type: u8
-      - id: link
+      - id: sh_link
         type: u4
-      - id: info
+      - id: sh_info
         type: u4
-      - id: addr_align
+      - id: sh_addralign
         type: u8
-      - id: entry_size
+      - id: sh_entsize
         type: u8
 
 enums:
   elf_class:
-    1: class_32
-    2: class_64
+    0: elfclassnone
+    1: elfclass32
+    2: elfclass64
 
-  data_encoding:
-    1: little_endian
-    2: big_endian
+  elf_data_encoding:
+    0: elfdatanone
+    1: elfdata2lsb
+    2: elfdata2msb
 
-  os_abi:
-    0: system_v
-    1: hp_ux
-    2: netbsd
-    3: linux
-    6: solaris
-    7: aix
-    8: irix
-    9: freebsd
-    0x0C: openbsd
+  elf_version:
+    0: ev_none
+    1: ev_current
 
-  obj_type:
-    1: relocatable
-    2: executable
-    3: shared
-    4: core
+  elf_os_abi:
+    0: elfosabi_sysv
+    3: elfosabi_linux
 
-  arch:
-    2: sparc
-    3: x86
-    8: mips
-    0x14: powerpc
-    0x28: arm
-    0x2A: superh
-    0x32: ia_64
-    0x3E: x86_64
-    0xB7: aarch64
+  elf_object_type:
+    0: et_none
+    1: et_rel
+    2: et_exec
+    3: et_dyn
+    4: et_core
 
-  segment_type:
-    0: null_type
-    1: load
-    2: dynamic
-    3: interp
-    4: note
-    5: shlib
-    6: phdr
-    7: tls
+  elf_machine:
+    0: em_none
+    2: em_sparc
+    3: em_386
+    8: em_mips
+    62: em_x86_64
 
-  section_type:
-    0: null
-    1: progbits
-    2: symtab
-    3: strtab
-    4: rela
-    5: hash
-    6: dynamic
-    7: note
-    8: nobits
-    9: rel
-    11: dynsym
+  elf_p_type:
+    0: pt_null
+    1: pt_load
+    2: pt_dynamic
+    3: pt_interp
+    4: pt_note
+    5: pt_shlib
+    6: pt_phdr
+
+  elf_sh_type:
+    0: sht_null
+    1: sht_progbits
+    2: sht_symtab
+    3: sht_strtab
+    4: sht_rela
+    5: sht_hash
+    6: sht_dynamic
+    7: sht_note
+    8: sht_nobits
+    9: sht_rel
+    10: sht_shlib
+    11: sht_dynsym

@@ -1,74 +1,94 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <hammer/hammer.h>
 
-// Define the structure of a Bitcoin transaction input
-static HParser *bitcoin_input() {
-    return h_sequence(
-        h_bytes(32), // Transaction Hash
-        h_uint32(),  // Output Index
-        h_len_value(h_uint16(), h_bytes), // Script (with length prefix)
-        h_uint32(),  // Sequence
-        NULL
-    );
+// Parser for a variable length integer (VarInt)
+static HParser *varint() {
+    return h_choice(h_int64(), h_int32(), h_int16(), h_int8(), NULL);
 }
 
-// Define the structure of a Bitcoin transaction output
-static HParser *bitcoin_output() {
-    return h_sequence(
-        h_uint64(),  // Value in Satoshis
-        h_len_value(h_uint16(), h_bytes), // Script (with length prefix)
-        NULL
-    );
+// Parser for a transaction input
+static HParser *tx_input() {
+    HParser *prev_tx_hash = h_bits(256, false);
+    HParser *prev_tx_index = h_bits(32, false);
+    HParser *script_length = varint();
+    HParser *script_sig = h_length_value(script_length, h_uint8());
+    HParser *sequence = h_bits(32, false);
+
+    return h_sequence(prev_tx_hash, prev_tx_index, script_length, script_sig, sequence, NULL);
 }
 
-// Define the structure of a Bitcoin transaction
-static HParser *bitcoin_transaction() {
-    return h_sequence(
-        h_uint32(),  // Version
-        h_len_value(h_varint(), bitcoin_input), // Inputs
-        h_len_value(h_varint(), bitcoin_output), // Outputs
-        h_uint32(),  // Locktime
-        NULL
-    );
+// Parser for a transaction output
+static HParser *tx_output() {
+    HParser *value = h_bits(64, false);
+    HParser *script_length = varint();
+    HParser *script_pubkey = h_length_value(script_length, h_uint8());
+
+    return h_sequence(value, script_length, script_pubkey, NULL);
 }
 
+// Parser for a Bitcoin transaction
+static HParser *bitcoin_tx() {
+    HParser *version = h_bits(32, false);
+    HParser *input_count = varint();
+    HParser *inputs = h_many(tx_input());
+    HParser *output_count = varint();
+    HParser *outputs = h_many(tx_output());
+    HParser *lock_time = h_bits(32, false);
+
+    return h_sequence(version, input_count, inputs, output_count, outputs, lock_time, NULL);
+}
+
+// Main function to parse a Bitcoin transaction from a binary file
 int main(int argc, char **argv) {
-    HParser *btc_parser = bitcoin_transaction();
-    uint8_t *input_data;
-    size_t input_size;
-    HParseResult *result;
-
-    // Read input data from stdin or a file
-    if (argc > 1) {
-        FILE *f = fopen(argv[1], "rb");
-        if (!f) {
-            fprintf(stderr, "Failed to open file %s\n", argv[1]);
-            return 1;
-        }
-        fseek(f, 0, SEEK_END);
-        input_size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        input_data = malloc(input_size);
-        fread(input_data, 1, input_size, f);
-        fclose(f);
-    } else {
-        fprintf(stderr, "Usage: %s <bitcoin_transaction_file>\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary transaction file>\n", argv[0]);
         return 1;
     }
 
-    // Parse the input data
-    result = h_parse(btc_parser, input_data, input_size);
-    if (result) {
-        printf("Bitcoin transaction parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
-    } else {
-        fprintf(stderr, "Failed to parse Bitcoin transaction.\n");
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
     }
 
-    free(input_data);
-    h_parser_free(btc_parser);
+    // Seek to the end of the file to determine the file size
+    fseek(file, 0, SEEK_END);
+    size_t length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read the entire file into a buffer
+    uint8_t *buffer = malloc(length);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, length, file) != length) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    // Create a parser for a Bitcoin transaction
+    HParser *parser = bitcoin_tx();
+    HParseResult *result = h_parse(parser, buffer, length);
+
+    if (result) {
+        printf("Transaction parsed successfully.\n");
+        h_pprint(stdout, result->ast, 0, 0);
+    } else {
+        printf("Failed to parse transaction.\n");
+    }
+
+    // Clean up
+    h_parse_result_free(result);
+    h_free_parser(parser);
+    free(buffer);
+
     return 0;
 }

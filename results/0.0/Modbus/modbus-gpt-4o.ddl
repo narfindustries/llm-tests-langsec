@@ -1,91 +1,68 @@
-module Modbus
+namespace Modbus
 
-type ModbusPDU = 
-    | ReadCoilsRequest
-    | ReadCoilsResponse
-    | WriteSingleCoilRequest
-    | WriteSingleCoilResponse
-    | WriteMultipleCoilsRequest
-    | WriteMultipleCoilsResponse
-    | ReadHoldingRegistersRequest
-    | ReadHoldingRegistersResponse
-    | WriteSingleRegisterRequest
-    | WriteSingleRegisterResponse
-    | WriteMultipleRegistersRequest
-    | WriteMultipleRegistersResponse
+// Modbus TCP/IP ADU
+struct ModbusTCP
+    uint16 transaction_id
+    uint16 protocol_id
+    uint16 length
+    uint8 unit_id
+    ModbusPDU pdu
+end struct
 
-type ReadCoilsRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x01 }
-    startingAddress: uint16
-    quantityOfCoils: uint16
-}
+// Modbus RTU Frame
+struct ModbusRTU
+    uint8 address
+    ModbusPDU pdu
+    uint16 crc
+end struct
 
-type ReadCoilsResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x01 }
-    byteCount: uint8
-    coilStatus: bytes(byteCount)
-}
+// Modbus ASCII Frame
+struct ModbusASCII
+    char start = ':'
+    uint8 address
+    ModbusPDU pdu
+    uint8 lrc
+    char[2] end = "\r\n"
+end struct
 
-type WriteSingleCoilRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x05 }
-    outputAddress: uint16
-    outputValue: uint16
-}
+// Modbus PDU
+struct ModbusPDU
+    uint8 function_code
+    Data data
+end struct
 
-type WriteSingleCoilResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x05 }
-    outputAddress: uint16
-    outputValue: uint16
-}
+// Data field varies based on function code
+union Data
+    // Read Coils, Read Discrete Inputs, Read Holding Registers, Read Input Registers
+    struct ReadRequest
+        uint16 start_address
+        uint16 quantity
+    end struct if (pdu.function_code in [0x01, 0x02, 0x03, 0x04])
 
-type WriteMultipleCoilsRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x0F }
-    startingAddress: uint16
-    quantityOfOutputs: uint16
-    byteCount: uint8
-    outputValues: bytes(byteCount)
-}
+    // Write Single Coil, Write Single Register
+    struct WriteSingleRequest
+        uint16 address
+        uint16 value
+    end struct if (pdu.function_code in [0x05, 0x06])
 
-type WriteMultipleCoilsResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x0F }
-    startingAddress: uint16
-    quantityOfOutputs: uint16
-}
+    // Write Multiple Coils, Write Multiple Registers
+    struct WriteMultipleRequest
+        uint16 start_address
+        uint16 quantity
+        uint8 byte_count
+        uint8[] values
+    end struct if (pdu.function_code in [0x0F, 0x10])
 
-type ReadHoldingRegistersRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x03 }
-    startingAddress: uint16
-    quantityOfRegisters: uint16
-}
+    // Report Slave ID
+    struct ReportSlaveID
+        uint8 byte_count
+        uint8[] data
+    end struct if (pdu.function_code == 0x11)
 
-type ReadHoldingRegistersResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x03 }
-    byteCount: uint8
-    registerValues: bytes(byteCount)
-}
+    // Default case for other function codes
+    struct DefaultData
+        uint8[] raw_data
+    end struct if (pdu.function_code not in [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x0F, 0x10, 0x11])
+end union
 
-type WriteSingleRegisterRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x06 }
-    registerAddress: uint16
-    registerValue: uint16
-}
-
-type WriteSingleRegisterResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x06 }
-    registerAddress: uint16
-    registerValue: uint16
-}
-
-type WriteMultipleRegistersRequest = struct {
-    functionCode: uint8 { assert functionCode == 0x10 }
-    startingAddress: uint16
-    quantityOfRegisters: uint16
-    byteCount: uint8
-    registerValues: bytes(byteCount)
-}
-
-type WriteMultipleRegistersResponse = struct {
-    functionCode: uint8 { assert functionCode == 0x10 }
-    startingAddress: uint16
-    quantityOfRegisters: uint16
-}
+end namespace

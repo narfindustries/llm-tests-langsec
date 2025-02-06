@@ -1,8 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::{many0, many1},
-    number::complete::{be_u16, be_u32, be_u8},
+    bytes::complete::{take},
+    combinator::{map},
+    multi::{many1},
+    number::complete::{be_u16, be_u32},
     IResult,
 };
 use std::{
@@ -11,110 +11,105 @@ use std::{
     io::{BufReader, Read},
 };
 
-#[derive(Debug)]
-enum TiffByteOrder {
-    LittleEndian,
-    BigEndian,
-}
-
-#[derive(Debug)]
-enum TiffFieldType {
+#[derive(Debug, Clone)]
+enum TagType {
     Byte,
     Ascii,
     Short,
     Long,
     Rational,
-    Sbyte,
+    SByte,
     Undefined,
-    Sshort,
-    Slong,
-    Srational,
+    SShort,
+    SLong,
     Float,
     Double,
 }
 
-#[derive(Debug)]
-struct TiffField {
-    tag: u16,
-    field_type: TiffFieldType,
+#[derive(Debug, Clone)]
+struct Tag {
+    number: u16,
+    tag_type: TagType,
     count: u32,
-    value: Vec<u8>,
+    value_offset: u32,
 }
 
-#[derive(Debug)]
-struct TiffIfd {
+#[derive(Debug, Clone)]
+struct Ifd {
     num_entries: u16,
-    fields: Vec<TiffField>,
-    next_ifd_offset: Option<u32>,
+    tags: Vec<Tag>,
+    next_ifd_offset: u32,
 }
 
-fn parse_tiff_byte_order(input: &[u8]) -> IResult<&[u8], TiffByteOrder> {
-    alt((tag("II\0\0"), tag("MM\0\0")))(input).map(|(input, byte_order)| {
-        let byte_order = match byte_order {
-            b"II\0\0" => TiffByteOrder::LittleEndian,
-            b"MM\0\0" => TiffByteOrder::BigEndian,
-            _ => unreachable!(),
-        };
-        (input, byte_order)
-    })
+#[derive(Debug, Clone)]
+struct Tiff {
+    byte_order: [u8; 2],
+    magic_number: u16,
+    ifd_offset: u32,
+    ifds: Vec<Ifd>,
 }
 
-fn parse_tiff_field_type(input: &[u8], byte_order: TiffByteOrder) -> IResult<&[u8], TiffFieldType> {
-    match byte_order {
-        TiffByteOrder::LittleEndian => map(be_u16, |field_type| match field_type {
-            1 => TiffFieldType::Byte,
-            2 => TiffFieldType::Ascii,
-            3 => TiffFieldType::Short,
-            4 => TiffFieldType::Long,
-            5 => TiffFieldType::Rational,
-            6 => TiffFieldType::Sbyte,
-            7 => TiffFieldType::Undefined,
-            8 => TiffFieldType::Sshort,
-            9 => TiffFieldType::Slong,
-            10 => TiffFieldType::Srational,
-            11 => TiffFieldType::Float,
-            12 => TiffFieldType::Double,
-            _ => panic!("Invalid field type"),
-        })(input),
-        TiffByteOrder::BigEndian => map(be_u16, |field_type| match field_type {
-            1 => TiffFieldType::Byte,
-            2 => TiffFieldType::Ascii,
-            3 => TiffFieldType::Short,
-            4 => TiffFieldType::Long,
-            5 => TiffFieldType::Rational,
-            6 => TiffFieldType::Sbyte,
-            7 => TiffFieldType::Undefined,
-            8 => TiffFieldType::Sshort,
-            9 => TiffFieldType::Slong,
-            10 => TiffFieldType::Srational,
-            11 => TiffFieldType::Float,
-            12 => TiffFieldType::Double,
-            _ => panic!("Invalid field type"),
-        })(input),
-    }
+fn parse_byte_order(input: &[u8]) -> IResult<&[u8], [u8; 2]> {
+    map(take(2usize), |x: &[u8]| {
+        let mut arr = [0u8; 2];
+        arr.copy_from_slice(x);
+        arr
+    })(input)
 }
 
-fn parse_tiff_field(input: &[u8], byte_order: TiffByteOrder) -> IResult<&[u8], TiffField> {
-    let (input, tag) = be_u16(input)?;
-    let (input, field_type) = parse_tiff_field_type(input, byte_order)?;
+fn parse_magic_number(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n| n)(input)
+}
+
+fn parse_ifd_offset(input: &[u8]) -> IResult<&[u8], u32> {
+    map(be_u32, |n| n)(input)
+}
+
+fn parse_tag_type(input: &[u8]) -> IResult<&[u8], TagType> {
+    map(be_u16, |n| match n {
+        1 => TagType::Byte,
+        2 => TagType::Ascii,
+        3 => TagType::Short,
+        4 => TagType::Long,
+        5 => TagType::Rational,
+        6 => TagType::SByte,
+        7 => TagType::Undefined,
+        8 => TagType::SShort,
+        9 => TagType::SLong,
+        10 => TagType::Float,
+        11 => TagType::Double,
+        _ => panic!("Invalid tag type"),
+    })(input)
+}
+
+fn parse_tag(input: &[u8]) -> IResult<&[u8], Tag> {
+    let (input, number) = be_u16(input)?;
+    let (input, tag_type) = parse_tag_type(input)?;
     let (input, count) = be_u32(input)?;
-    let (input, value) = take(4)(input)?;
-    Ok((input, TiffField { tag, field_type, count, value: value.to_vec() }))
+    let (input, value_offset) = be_u32(input)?;
+    Ok((input, Tag { number, tag_type, count, value_offset }))
 }
 
-fn parse_tiff_ifd(input: &[u8], byte_order: TiffByteOrder) -> IResult<&[u8], TiffIfd> {
+fn parse_ifd(input: &[u8]) -> IResult<&[u8], Ifd> {
     let (input, num_entries) = be_u16(input)?;
-    let (input, fields) = many1(|input| parse_tiff_field(input, byte_order))(input)?;
-    let (input, next_ifd_offset) = map_opt(be_u32, |offset| if offset == 0 { None } else { Some(offset) })(input)?;
-    Ok((input, TiffIfd { num_entries, fields, next_ifd_offset }))
+    let (input, tags) = many1(parse_tag)(input)?;
+    let (input, next_ifd_offset) = be_u32(input)?;
+    Ok((input, Ifd { num_entries, tags, next_ifd_offset }))
 }
 
-fn parse_tiff(input: &[u8]) -> IResult<&[u8], (TiffByteOrder, TiffIfd)> {
-    let (input, byte_order) = parse_tiff_byte_order(input)?;
-    let (input, _) = be_u16(input)?; // magic number
-    let (input, ifd_offset) = be_u32(input)?;
-    let (input, ifd) = parse_tiff_ifd(&input[ifd_offset as usize..], byte_order)?;
-    Ok((input, (byte_order, ifd)))
+fn parse_tiff(input: &[u8]) -> IResult<&[u8], Tiff> {
+    let (input, byte_order) = parse_byte_order(input)?;
+    let (input, magic_number) = parse_magic_number(input)?;
+    let (input, ifd_offset) = parse_ifd_offset(input)?;
+    let mut ifds = Vec::new();
+    let mut current_ifd_offset = ifd_offset;
+    while current_ifd_offset != 0 {
+        let ifd_input = &input[current_ifd_offset as usize..];
+        let (_ifd_input, ifd) = parse_ifd(ifd_input)?;
+        ifds.push(ifd.clone());
+        current_ifd_offset = ifd.next_ifd_offset;
+    }
+    Ok((input, Tiff { byte_order, magic_number, ifd_offset, ifds }))
 }
 
 fn main() {
@@ -126,7 +121,6 @@ fn main() {
     let mut reader = BufReader::new(file);
     let mut input = Vec::new();
     reader.read_to_end(&mut input).unwrap();
-    let (_, (byte_order, ifd)) = parse_tiff(&input).unwrap();
-    println!("Byte order: {:?}", byte_order);
-    println!("IFD: {:?}", ifd);
+    let (_input, tiff) = parse_tiff(&input).unwrap();
+    println!("{:?}", tiff);
 }

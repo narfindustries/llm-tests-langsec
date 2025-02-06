@@ -5,20 +5,115 @@
            xmlns="http://example.org/gif"
            elementFormDefault="qualified">
 
-  <xs:element name="gif_gemini_1">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="6"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element name="Signature" type="SignatureType"/>
+        <xs:element name="LogicalScreenDescriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="xs:unsignedShort"/>
+              <xs:element name="Height" type="xs:unsignedShort"/>
+              <xs:element name="PackedFields" type="PackedFieldsType"/>
+              <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+              <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element ref="GlobalColorTable" minOccurs="0"/>
+        <xs:element ref="ImageDescriptor" minOccurs="1" maxOccurs="unbounded"/>
+        <xs:element ref="ExtensionBlock" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Trailer" type="TrailerType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="SignatureType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:integer" fixed="6" use="required"/>
+        <xs:attribute name="fixedValue" type="xs:string" fixed="GIF89a" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="PackedFieldsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedByte">
+        <xs:attribute name="globalColorTableFlag" type="xs:boolean" use="required"/>
+        <xs:attribute name="colorResolution" type="xs:unsignedByte" use="required"/>
+        <xs:attribute name="sortFlag" type="xs:boolean" use="required"/>
+        <xs:attribute name="sizeOfGlobalColorTable" type="xs:unsignedByte" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="GlobalColorTable" type="GlobalColorTableType"/>
+  <xs:complexType name="GlobalColorTableType">
     <xs:sequence>
-      <xs:element name="gif_signature" type="xs:string" dfdl:length="3" dfdl:textStringJustification="left"/>
-      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:textStringJustification="left"/>
+      <xs:element name="ColorEntry" type="ColorEntryType" maxOccurs="unbounded"/>
     </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorEntryType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ImageDescriptor" type="ImageDescriptorType"/>
+  <xs:complexType name="ImageDescriptorType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="ImageSeparatorType"/>
+      <xs:element name="ImageLeftPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageTopPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+      <xs:element name="ImageHeight" type="xs:unsignedShort"/>
+      <xs:element name="PackedFields" type="ImagePackedFieldsType"/>
+      <xs:element ref="LocalColorTable" minOccurs="0"/>
+      <xs:element name="ImageData" type="xs:base64Binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="LocalColorTable" type="GlobalColorTableType"/>
+  <xs:complexType name="ImageSeparatorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:integer" fixed="1" use="required"/>
+        <xs:attribute name="fixedValue" type="xs:string" fixed="," use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ImagePackedFieldsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedByte">
+        <xs:attribute name="localColorTableFlag" type="xs:boolean" use="required"/>
+        <xs:attribute name="interlaceFlag" type="xs:boolean" use="required"/>
+        <xs:attribute name="sortFlag" type="xs:boolean" use="required"/>
+        <xs:attribute name="sizeOfLocalColorTable" type="xs:unsignedByte" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="ExtensionBlock" type="ExtensionBlockType"/>
+  <xs:complexType name="ExtensionBlockType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:unsignedByte"/>
+      <xs:element name="ExtensionLabel" type="xs:unsignedByte"/>
+      <xs:element name="ExtensionData" type="xs:base64Binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:integer" fixed="1" use="required"/>
+        <xs:attribute name="fixedValue" type="xs:string" fixed=";" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
 
 </xs:schema>

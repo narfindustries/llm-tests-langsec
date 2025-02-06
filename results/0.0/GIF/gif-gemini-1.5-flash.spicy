@@ -1,37 +1,51 @@
-#ifndef GIF_GEMINI_1_5_FLASH_SPICY
-#define GIF_GEMINI_1_5_FLASH_SPICY
+module GIF;
 
-#include <stdint.h>
-
-// Define data structures as needed based on the GIF format and your requirements.  This is a placeholder.
-typedef struct {
-    uint8_t* data;
-    size_t size;
-} GIFData;
-
-
-// Function to process GIF data.  Replace this with your actual GIF processing logic.
-GIFData process_gif(const uint8_t* gif_data, size_t gif_size) {
-    GIFData result;
-    result.data = NULL; // Placeholder:  Allocate and populate result.data here.
-    result.size = 0;    // Placeholder:  Set result.size appropriately.
-    return result;
+type GIF {
+    signature: string[8] = "GIF89a";
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional GCT;
+    image_descriptors: ImageDescriptor*;
+    extensions: Extension*;
+    trailer: byte = 0x3B;
 }
 
-
-// Example usage within a Zeek script (replace with your actual Zeek integration)
-event zeek_main() {
-    // ... your Zeek code to obtain the GIF data ...
-    uint8_t* gif_data = (uint8_t*)malloc(1024); // Placeholder: Replace with actual GIF data acquisition
-    size_t gif_size = 1024; // Placeholder: Replace with actual GIF data size
-
-    GIFData processed_gif = process_gif(gif_data, gif_size);
-
-    // ... your Zeek code to handle the processed GIF data ...
-    if (processed_gif.data != NULL) {
-        free(processed_gif.data);
-    }
-    free(gif_data);
+type LogicalScreenDescriptor {
+    width: uint16;
+    height: uint16;
+    packed_fields: byte;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
 }
 
-#endif // GIF_GEMINI_1_5_FLASH_SPICY
+type GCT {
+    entries: record { red: uint8; green: uint8; blue: uint8; }[];
+}
+
+type ImageDescriptor {
+    image_separator: byte = 0x2C;
+    image_descriptor: ImageDescriptorData;
+    local_color_table: optional LCT;
+    image_data: ImageData;
+}
+
+type ImageDescriptorData {
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: byte;
+}
+
+type LCT {
+    entries: record { red: uint8; green: uint8; blue: uint8; }[];
+}
+
+type ImageData {
+    data: bytes;
+}
+
+type Extension {
+    extension_introducer: byte = 0x21;
+    extension_label: byte;
+    extension_data: bytes;
+}

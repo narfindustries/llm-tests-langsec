@@ -3,118 +3,117 @@ module GIF;
 public type Header = unit {
     signature: bytes &size=3;
     version: bytes &size=3;
-    
-    on %done {
-        if ( self.signature != b"GIF" )
-            self.reject("Invalid GIF signature");
-    }
 };
 
 type LogicalScreenDescriptor = unit {
     width: uint16;
     height: uint16;
-    packed: uint8;
+    packed: bitfield(8) {
+        global_color_table_flag: 0;
+        color_resolution: 1..3;
+        sort_flag: 4;
+        size_global_color_table: 5..7;
+    };
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
+    : GlobalColorTable if (self.packed.global_color_table_flag == 1);
 };
 
-type ColorTableEntry = unit {
-    r: uint8;
-    g: uint8;
-    b: uint8;
-};
-
-type ColorTable = unit {
-    entries: ColorTableEntry[] &count=self.size;
-    
-    var size: uint64;
+type GlobalColorTable = unit {
+    colors: bytes &size=3 &eod;
 };
 
 type ImageDescriptor = unit {
-    separator: uint8;
+    separator: uint8 &requires=(self.separator == 0x2C);
     left: uint16;
     top: uint16;
     width: uint16;
     height: uint16;
-    packed: uint8;
+    packed: bitfield(8) {
+        local_color_table_flag: 0;
+        interlace_flag: 1;
+        sort_flag: 2;
+        reserved: 3..4;
+        size_local_color_table: 5..7;
+    };
+    : LocalColorTable if (self.packed.local_color_table_flag == 1);
 };
 
-type GraphicControlExtension = unit {
-    introducer: uint8;
-    label: uint8;
-    block_size: uint8;
-    packed: uint8;
+type LocalColorTable = unit {
+    colors: bytes &size=3 &eod;
+};
+
+type GraphicsControlExtension = unit {
+    introducer: uint8 &requires=(self.introducer == 0x21);
+    label: uint8 &requires=(self.label == 0xF9);
+    block_size: uint8 &requires=(self.block_size == 4);
+    packed: bitfield(8) {
+        reserved: 0..2;
+        disposal_method: 3..5;
+        user_input_flag: 6;
+        transparent_color_flag: 7;
+    };
     delay_time: uint16;
     transparent_color_index: uint8;
-    terminator: uint8;
-};
-
-type ApplicationExtension = unit {
-    introducer: uint8;
-    label: uint8;
-    block_size: uint8;
-    identifier: bytes &size=8;
-    auth_code: bytes &size=3;
-    data: bytes &eod;
+    terminator: uint8 &requires=(self.terminator == 0x00);
 };
 
 type CommentExtension = unit {
-    introducer: uint8;
-    label: uint8;
-    data: bytes &eod;
+    introducer: uint8 &requires=(self.introducer == 0x21);
+    label: uint8 &requires=(self.label == 0xFE);
+    data: bytes &until=0x00;
 };
 
 type PlainTextExtension = unit {
-    introducer: uint8;
-    label: uint8;
-    block_size: uint8;
+    introducer: uint8 &requires=(self.introducer == 0x21);
+    label: uint8 &requires=(self.label == 0x01);
+    block_size: uint8 &requires=(self.block_size == 12);
     left: uint16;
     top: uint16;
     width: uint16;
     height: uint16;
     cell_width: uint8;
     cell_height: uint8;
-    fg_color: uint8;
-    bg_color: uint8;
-    data: bytes &eod;
+    foreground_color: uint8;
+    background_color: uint8;
+    data: bytes &until=0x00;
+};
+
+type ApplicationExtension = unit {
+    introducer: uint8 &requires=(self.introducer == 0x21);
+    label: uint8 &requires=(self.label == 0xFF);
+    block_size: uint8 &requires=(self.block_size == 11);
+    identifier: bytes &size=8;
+    auth_code: bytes &size=3;
+    data: bytes &until=0x00;
 };
 
 type ImageData = unit {
     lzw_min_code_size: uint8;
-    blocks: bytes &eod;
-};
-
-public type File = unit {
-    header: Header;
-    screen: LogicalScreenDescriptor;
-    global_color_table: ColorTable if (self.screen.packed & 0x80) {
-        self.global_color_table.size = 2 << (self.screen.packed & 0x07);
-    }
-    
-    blocks: Block[] &until-including($$.block_type == 0x3B);
+    data: bytes &until=0x00;
 };
 
 type Block = unit {
-    var block_type: uint8;
-    
-    : switch(self.block_type) {
+    code: uint8;
+    switch (self.code) {
         0x2C -> image_descriptor: ImageDescriptor;
         0x21 -> extension: Extension;
-        0x3B -> terminator: uint8;
+        0x3B -> : void;
     };
-    
-    on %init {
-        self.block_type = self.input().offset(0);
-    }
 };
 
 type Extension = unit {
     label: uint8;
-    
-    : switch(self.label) {
-        0xF9 -> graphic_control: GraphicControlExtension;
-        0xFF -> application: ApplicationExtension;
+    switch (self.label) {
+        0xF9 -> graphics_control: GraphicsControlExtension;
         0xFE -> comment: CommentExtension;
         0x01 -> plain_text: PlainTextExtension;
+        0xFF -> application: ApplicationExtension;
     };
+};
+
+public type GIF = unit {
+    header: Header;
+    screen: LogicalScreenDescriptor;
+    blocks: Block[] &while(true);
 };

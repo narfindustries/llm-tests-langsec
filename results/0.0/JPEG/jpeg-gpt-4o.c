@@ -1,67 +1,96 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
 HParser *create_jpeg_parser() {
     // Define JPEG markers
     HParser *marker = h_choice(
-        h_uint8_val(0xD8), // SOI
-        h_uint8_val(0xD9), // EOI
-        h_uint8_val(0xDA), // SOS
-        h_uint8_val(0xDB), // DQT
-        h_uint8_val(0xC0), // SOF0
-        h_uint8_val(0xC4), // DHT
-        h_uint8_val(0xDD), // DRI
-        h_uint8_val(0xFE), // COM
+        h_token("\xFF\xD8", 2), // SOI
+        h_token("\xFF\xD9", 2), // EOI
+        h_token("\xFF\xDB", 2), // DQT
+        h_token("\xFF\xC0", 2), // SOF0
+        h_token("\xFF\xC4", 2), // DHT
+        h_token("\xFF\xDA", 2), // SOS
+        h_token("\xFF\xDD", 2), // DRI
+        h_choice(
+            h_token("\xFF\xE0", 2), h_token("\xFF\xE1", 2),
+            h_token("\xFF\xE2", 2), h_token("\xFF\xE3", 2),
+            h_token("\xFF\xE4", 2), h_token("\xFF\xE5", 2),
+            h_token("\xFF\xE6", 2), h_token("\xFF\xE7", 2),
+            h_token("\xFF\xE8", 2), h_token("\xFF\xE9", 2),
+            h_token("\xFF\xEA", 2), h_token("\xFF\xEB", 2),
+            h_token("\xFF\xEC", 2), h_token("\xFF\xED", 2),
+            h_token("\xFF\xEE", 2), h_token("\xFF\xEF", 2),
+            NULL
+        ), // APPn
+        h_token("\xFF\xFE", 2), // COM
+        h_choice(
+            h_token("\xFF\xD0", 2), h_token("\xFF\xD1", 2),
+            h_token("\xFF\xD2", 2), h_token("\xFF\xD3", 2),
+            h_token("\xFF\xD4", 2), h_token("\xFF\xD5", 2),
+            h_token("\xFF\xD6", 2), h_token("\xFF\xD7", 2),
+            NULL
+        ), // RSTn
         NULL
     );
 
-    // Define length-prefixed segment
+    // Define length-prefixed segments
     HParser *length_prefixed_segment = h_sequence(
-        h_uint16_be(), // Length of the segment
-        h_data(h_length_value(h_uint16_be(), -2)), // Segment data
+        marker,
+        h_length_value(h_uint16(), h_uint8()),
         NULL
     );
 
-    // Define JPEG segment
-    HParser *segment = h_sequence(
-        h_uint8_val(0xFF), // Marker prefix
-        marker,            // Marker type
-        h_optional(length_prefixed_segment), // Optional length-prefixed segment
-        NULL
-    );
-
-    // Define JPEG file structure
+    // Define JPEG structure
     HParser *jpeg_parser = h_sequence(
-        h_uint8_val(0xFF), // Start of Image (SOI) marker prefix
-        h_uint8_val(0xD8), // SOI marker
-        h_many(segment),   // Multiple segments
-        h_uint8_val(0xFF), // End of Image (EOI) marker prefix
-        h_uint8_val(0xD9), // EOI marker
+        h_token("\xFF\xD8", 2), // SOI
+        h_many(length_prefixed_segment),
+        h_token("\xFF\xD9", 2), // EOI
         NULL
     );
 
     return jpeg_parser;
 }
 
-int main(int argc, char **argv) {
-    HParser *jpeg_parser = create_jpeg_parser();
-    HParseResult *result;
-    const uint8_t *data;
-    size_t length;
-
-    // Load JPEG data from file or other source
-    // data = ...;
-    // length = ...;
-
-    // Parse the JPEG data
-    result = h_parse(jpeg_parser, data, length);
-
-    if (result) {
-        printf("JPEG parsed successfully.\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse JPEG.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(file_size);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, file_size, file);
+    fclose(file);
+
+    HParser *jpeg_parser = create_jpeg_parser();
+    HParseResult *result = h_parse(jpeg_parser, data, file_size);
+
+    if (result->ast) {
+        printf("JPEG file parsed successfully.\n");
+        h_ast_print(result->ast, stdout);
+    } else {
+        printf("Failed to parse JPEG file.\n");
+    }
+
+    h_parse_result_free(result);
     h_parser_free(jpeg_parser);
-    return 0;
+    free(data);
+
+    return EXIT_SUCCESS;
 }

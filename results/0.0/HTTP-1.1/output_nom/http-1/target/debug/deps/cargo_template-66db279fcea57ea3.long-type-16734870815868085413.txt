@@ -1,0 +1,2 @@
+for<'a> fn(&'a [u8]) -> Result<(&'a [u8], HttpResponse), nom::Err<nom::error::Error<&'a [u8]>>> {parse_response}
+(for<'a> fn(&'a [u8]) -> Result<(&'a [u8], HttpRequest), nom::Err<nom::error::Error<&'a [u8]>>> {parse_request}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], HttpResponse), nom::Err<nom::error::Error<&'a [u8]>>> {parse_response})

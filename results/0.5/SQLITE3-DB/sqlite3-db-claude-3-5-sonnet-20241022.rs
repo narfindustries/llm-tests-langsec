@@ -1,10 +1,6 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::many0,
-    number::complete::{be_i8, be_u16, be_u32, be_u64, be_u8},
-    sequence::tuple,
+    bytes::complete::take,
+    number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
 use std::env;
@@ -12,17 +8,17 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct SQLite3Header {
-    magic_header: [u8; 16],
+struct SqliteHeader {
+    magic: [u8; 16],
     page_size: u16,
     write_version: u8,
     read_version: u8,
     reserved_space: u8,
-    max_fraction: u8,
-    min_fraction: u8,
-    leaf_payload: u8,
+    max_payload_fraction: u8,
+    min_payload_fraction: u8,
+    leaf_payload_fraction: u8,
     file_change_counter: u32,
-    database_size: u32,
+    db_size_pages: u32,
     first_freelist_trunk: u32,
     freelist_pages: u32,
     schema_cookie: u32,
@@ -31,87 +27,95 @@ struct SQLite3Header {
     largest_root_page: u32,
     text_encoding: u32,
     user_version: u32,
-    incremental_vacuum: u32,
-    application_id: u32,
+    vacuum_mode: u32,
+    app_id: u32,
     reserved: [u8; 20],
-    version_valid_for: u32,
+    version_valid: u32,
     sqlite_version: u32,
 }
 
 #[derive(Debug)]
-struct BTreePage {
-    page_type: u8,
-    first_freeblock: u16,
-    cell_count: u16,
-    cell_content_start: u16,
-    fragmented_free_bytes: u8,
-    cells: Vec<Cell>,
+enum PageType {
+    InteriorIndex,
+    InteriorTable,
+    LeafIndex,
+    LeafTable,
+    Overflow,
 }
 
 #[derive(Debug)]
-enum Cell {
-    InteriorIndexCell {
-        left_child_page: u32,
-        payload_size: u64,
-        payload: Vec<u8>,
-        child_page: u32,
-    },
-    InteriorTableCell {
-        left_child_page: u32,
-        row_id: u64,
-        child_page: u32,
-    },
-    LeafIndexCell {
-        payload_size: u64,
-        payload: Vec<u8>,
-    },
-    LeafTableCell {
-        payload_size: u64,
-        row_id: u64,
-        payload: Vec<u8>,
-    },
+struct BTreePageHeader {
+    page_type: PageType,
+    first_freeblock: u16,
+    cell_count: u16,
+    cell_content_offset: u16,
+    fragmented_free_bytes: u8,
+    right_child: Option<u32>,
 }
 
 fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
-    let (input, first) = be_u8(input)?;
-    if first & 0x80 == 0 {
-        return Ok((input, first as u64));
-    }
-    let (input, second) = be_u8(input)?;
-    if first & 0x40 == 0 {
-        return Ok((input, ((first & 0x7f) as u64) << 7 | second as u64));
-    }
-    let mut result: u64 = ((first & 0x3f) as u64) << 14 | (second as u64) << 7;
-    let mut shift = 21;
-    let mut current = input;
+    let mut result: u64 = 0;
+    let mut shift = 0;
+    let mut remaining = input;
     
-    for _ in 0..7 {
-        let (remaining, byte) = be_u8(current)?;
-        result |= (byte as u64) << shift;
+    for _ in 0..9 {
+        let (rest, byte) = be_u8(remaining)?;
+        remaining = rest;
+        
+        result |= ((byte & 0x7F) as u64) << shift;
         if byte & 0x80 == 0 {
             return Ok((remaining, result));
         }
         shift += 7;
-        current = remaining;
     }
     
-    let (remaining, byte) = be_u8(current)?;
+    let (rest, byte) = be_u8(remaining)?;
     result |= (byte as u64) << shift;
-    Ok((remaining, result))
+    Ok((rest, result))
 }
 
-fn parse_sqlite_header(input: &[u8]) -> IResult<&[u8], SQLite3Header> {
-    let (input, (
-        magic_header,
+fn parse_sqlite_header(input: &[u8]) -> IResult<&[u8], SqliteHeader> {
+    let (input, magic) = take(16usize)(input)?;
+    let (input, page_size) = be_u16(input)?;
+    let (input, write_version) = be_u8(input)?;
+    let (input, read_version) = be_u8(input)?;
+    let (input, reserved_space) = be_u8(input)?;
+    let (input, max_payload_fraction) = be_u8(input)?;
+    let (input, min_payload_fraction) = be_u8(input)?;
+    let (input, leaf_payload_fraction) = be_u8(input)?;
+    let (input, file_change_counter) = be_u32(input)?;
+    let (input, db_size_pages) = be_u32(input)?;
+    let (input, first_freelist_trunk) = be_u32(input)?;
+    let (input, freelist_pages) = be_u32(input)?;
+    let (input, schema_cookie) = be_u32(input)?;
+    let (input, schema_format) = be_u32(input)?;
+    let (input, page_cache_size) = be_u32(input)?;
+    let (input, largest_root_page) = be_u32(input)?;
+    let (input, text_encoding) = be_u32(input)?;
+    let (input, user_version) = be_u32(input)?;
+    let (input, vacuum_mode) = be_u32(input)?;
+    let (input, app_id) = be_u32(input)?;
+    let (input, reserved) = take(20usize)(input)?;
+    let (input, version_valid) = be_u32(input)?;
+    let (input, sqlite_version) = be_u32(input)?;
+
+    let mut magic_arr = [0u8; 16];
+    magic_arr.copy_from_slice(magic);
+    
+    let mut reserved_arr = [0u8; 20];
+    reserved_arr.copy_from_slice(reserved);
+
+    Ok((input, SqliteHeader {
+        magic: magic_arr,
         page_size,
         write_version,
         read_version,
         reserved_space,
-        max_fraction,
-        min_fraction,
-        leaf_payload,
+        max_payload_fraction,
+        min_payload_fraction,
+        leaf_payload_fraction,
         file_change_counter,
-        database_size,
+        db_size_pages,
         first_freelist_trunk,
         freelist_pages,
         schema_cookie,
@@ -120,193 +124,71 @@ fn parse_sqlite_header(input: &[u8]) -> IResult<&[u8], SQLite3Header> {
         largest_root_page,
         text_encoding,
         user_version,
-        incremental_vacuum,
-        application_id,
-        reserved,
-        version_valid_for,
-        sqlite_version,
-    )) = tuple((
-        take(16usize),
-        be_u16,
-        be_u8,
-        be_u8,
-        be_u8,
-        be_u8,
-        be_u8,
-        be_u8,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-        take(20usize),
-        be_u32,
-        be_u32,
-    ))(input)?;
-
-    let mut magic = [0u8; 16];
-    magic.copy_from_slice(magic_header);
-    let mut res = [0u8; 20];
-    res.copy_from_slice(reserved);
-
-    Ok((input, SQLite3Header {
-        magic_header: magic,
-        page_size,
-        write_version,
-        read_version,
-        reserved_space,
-        max_fraction,
-        min_fraction,
-        leaf_payload,
-        file_change_counter,
-        database_size,
-        first_freelist_trunk,
-        freelist_pages,
-        schema_cookie,
-        schema_format,
-        page_cache_size,
-        largest_root_page,
-        text_encoding,
-        user_version,
-        incremental_vacuum,
-        application_id,
-        reserved: res,
-        version_valid_for,
+        vacuum_mode,
+        app_id,
+        reserved: reserved_arr,
+        version_valid,
         sqlite_version,
     }))
 }
 
-fn parse_btree_page(input: &[u8]) -> IResult<&[u8], BTreePage> {
-    let (input, (
+fn parse_btree_page_header(input: &[u8]) -> IResult<&[u8], BTreePageHeader> {
+    let (input, page_type_byte) = be_u8(input)?;
+    let page_type = match page_type_byte {
+        2 => PageType::InteriorIndex,
+        5 => PageType::InteriorTable,
+        10 => PageType::LeafIndex,
+        13 => PageType::LeafTable,
+        _ => return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
+    };
+
+    let (input, first_freeblock) = be_u16(input)?;
+    let (input, cell_count) = be_u16(input)?;
+    let (input, cell_content_offset) = be_u16(input)?;
+    let (input, fragmented_free_bytes) = be_u8(input)?;
+
+    let (input, right_child) = match page_type {
+        PageType::InteriorIndex | PageType::InteriorTable => {
+            let (input, val) = be_u32(input)?;
+            (input, Some(val))
+        },
+        _ => (input, None),
+    };
+
+    Ok((input, BTreePageHeader {
         page_type,
         first_freeblock,
         cell_count,
-        cell_content_start,
+        cell_content_offset,
         fragmented_free_bytes,
-    )) = tuple((
-        be_u8,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u8,
-    ))(input)?;
-
-    let (input, cells) = many0(parse_cell)(input)?;
-
-    Ok((input, BTreePage {
-        page_type,
-        first_freeblock,
-        cell_count,
-        cell_content_start,
-        fragmented_free_bytes,
-        cells,
+        right_child,
     }))
 }
 
-fn parse_cell(input: &[u8]) -> IResult<&[u8], Cell> {
-    alt((
-        parse_interior_index_cell,
-        parse_interior_table_cell,
-        parse_leaf_index_cell,
-        parse_leaf_table_cell,
-    ))(input)
-}
-
-fn parse_interior_index_cell(input: &[u8]) -> IResult<&[u8], Cell> {
-    let (input, (
-        left_child_page,
-        payload_size,
-        payload,
-        child_page,
-    )) = tuple((
-        be_u32,
-        parse_varint,
-        take(0usize), // This should be adjusted based on payload_size
-        be_u32,
-    ))(input)?;
-
-    Ok((input, Cell::InteriorIndexCell {
-        left_child_page,
-        payload_size,
-        payload: payload.to_vec(),
-        child_page,
-    }))
-}
-
-fn parse_interior_table_cell(input: &[u8]) -> IResult<&[u8], Cell> {
-    let (input, (
-        left_child_page,
-        row_id,
-        child_page,
-    )) = tuple((
-        be_u32,
-        parse_varint,
-        be_u32,
-    ))(input)?;
-
-    Ok((input, Cell::InteriorTableCell {
-        left_child_page,
-        row_id,
-        child_page,
-    }))
-}
-
-fn parse_leaf_index_cell(input: &[u8]) -> IResult<&[u8], Cell> {
-    let (input, payload_size) = parse_varint(input)?;
-    let (input, payload) = take(payload_size as usize)(input)?;
-
-    Ok((input, Cell::LeafIndexCell {
-        payload_size,
-        payload: payload.to_vec(),
-    }))
-}
-
-fn parse_leaf_table_cell(input: &[u8]) -> IResult<&[u8], Cell> {
-    let (input, (
-        payload_size,
-        row_id,
-        payload,
-    )) = tuple((
-        parse_varint,
-        parse_varint,
-        take(0usize), // This should be adjusted based on payload_size
-    ))(input)?;
-
-    Ok((input, Cell::LeafTableCell {
-        payload_size,
-        row_id,
-        payload: payload.to_vec(),
-    }))
-}
-
-fn main() -> std::io::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <sqlite_file>", args[0]);
-        std::process::exit(1);
+        return;
     }
 
-    let mut file = File::open(&args[1])?;
+    let mut file = File::open(&args[1]).expect("Failed to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_sqlite_header(&buffer) {
         Ok((remaining, header)) => {
-            println!("SQLite Header: {:?}", header);
-            match parse_btree_page(remaining) {
-                Ok((_, page)) => println!("First B-tree page: {:?}", page),
-                Err(e) => eprintln!("Error parsing B-tree page: {:?}", e),
+            println!("SQLite Header: {:#?}", header);
+            
+            if !remaining.is_empty() {
+                match parse_btree_page_header(remaining) {
+                    Ok((_, page_header)) => {
+                        println!("First Page Header: {:#?}", page_header);
+                    },
+                    Err(e) => eprintln!("Error parsing page header: {:?}", e),
+                }
             }
-        }
-        Err(e) => eprintln!("Error parsing header: {:?}", e),
+        },
+        Err(e) => eprintln!("Error parsing SQLite header: {:?}", e),
     }
-
-    Ok(())
 }

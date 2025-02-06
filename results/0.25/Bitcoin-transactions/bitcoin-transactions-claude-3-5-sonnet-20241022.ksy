@@ -1,23 +1,35 @@
 meta:
   id: bitcoin_transaction
-  file-extension: bin
+  title: Bitcoin Transaction
+  file-extension: btc
   endian: le
 
 seq:
   - id: version
     type: u4
+  - id: is_segwit
+    type: u1
+    if: version >= 2
+  - id: flag
+    type: u1
+    if: is_segwit == 1
   - id: input_count
     type: varint
   - id: inputs
-    type: transaction_input
+    type: tx_in
     repeat: expr
-    repeat-expr: input_count.value
+    repeat-expr: input_count.final_value
   - id: output_count
     type: varint
   - id: outputs
-    type: transaction_output
+    type: tx_out
     repeat: expr
-    repeat-expr: output_count.value
+    repeat-expr: output_count.final_value
+  - id: witness_data
+    type: witness
+    repeat: expr
+    repeat-expr: input_count.final_value
+    if: is_segwit == 1
   - id: lock_time
     type: u4
 
@@ -26,44 +38,64 @@ types:
     seq:
       - id: prefix
         type: u1
-      - id: value
-        type:
-          switch-on: prefix
-          cases:
-            0xfd: u2
-            0xfe: u4
-            0xff: u8
+      - id: value_u2
+        type: u2
+        if: prefix == 0xfd
+      - id: value_u4
+        type: u4
+        if: prefix == 0xfe
+      - id: value_u8
+        type: u8
+        if: prefix == 0xff
     instances:
-      value:
-        value: |
+      final_value:
+        value: >-
           prefix < 0xfd ? prefix : 
-          prefix == 0xfd ? _root._io.read_u2le : 
-          prefix == 0xfe ? _root._io.read_u4le :
-          _root._io.read_u8le
+          prefix == 0xfd ? value_u2 :
+          prefix == 0xfe ? value_u4 :
+          value_u8
 
-  transaction_input:
+  tx_in:
     seq:
-      - id: previous_output
-        type: outpoint
-      - id: script_length
+      - id: previous_tx_hash
+        size: 32
+      - id: previous_tx_index
+        type: u4
+      - id: script_sig_length
         type: varint
       - id: script_sig
-        size: script_length.value
+        size: script_sig_length.final_value
       - id: sequence
         type: u4
 
-  transaction_output:
+  tx_out:
     seq:
       - id: value
         type: u8
-      - id: script_length
+      - id: script_pubkey_length
         type: varint
       - id: script_pubkey
-        size: script_length.value
+        size: script_pubkey_length.final_value
 
-  outpoint:
+  witness:
     seq:
-      - id: hash
-        size: 32
-      - id: index
-        type: u4
+      - id: witness_count
+        type: varint
+      - id: items
+        type: witness_item
+        repeat: expr
+        repeat-expr: witness_count.final_value
+
+  witness_item:
+    seq:
+      - id: size
+        type: varint
+      - id: data
+        size: size.final_value
+
+enums:
+  sighash_type:
+    1: all
+    2: none
+    3: single
+    0x80: anyone_can_pay

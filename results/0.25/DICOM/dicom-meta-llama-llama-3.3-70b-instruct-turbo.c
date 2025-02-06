@@ -1,104 +1,221 @@
+#include <hammer/hammer.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 
-// DICOM Meta Information
+#define HAMMER_NO_MAIN
+#define HAMMER_NO_PARSE_ERROR
+
+typedef enum {
+    DICOM_TRANSFER_SYNTAX_EXPLICIT_LITTLE_ENDIAN,
+    DICOM_TRANSFER_SYNTAX_EXPLICIT_BIG_ENDIAN,
+    DICOM_TRANSFER_SYNTAX_IMPLICIT_LITTLE_ENDIAN,
+} dicom_transfer_syntax_t;
+
 typedef struct {
     uint16_t group;
     uint16_t element;
+} dicom_tag_t;
+
+typedef struct {
+    dicom_tag_t tag;
     uint32_t vr;
     uint32_t length;
-} DicomMeta;
+    uint8_t* value;
+} dicom_data_element_t;
 
-// Tag
 typedef struct {
-    uint16_t group;
-    uint16_t element;
-} Tag;
-
-// VR
-typedef enum {
-    UL = 0x00420055,
-    SL = 0x00420053,
-    FL = 0x00420046,
-    FD = 0x00420044,
-    UI = 0x00490055,
-    OB = 0x0042004f,
-    SQ = 0x00480053,
-    UN = 0x004e004f,
-    SH = 0x00480053,
-    SS = 0x00480053,
-    LO = 0x004c004f,
-    LT = 0x004c0054,
-    ST = 0x00530054,
-    PN = 0x0050004e,
-    AE = 0x00410045,
-    CS = 0x00430053,
-    UI_32 = 0x00550049,
-    UR = 0x00550052,
-    AT = 0x00410054,
-    DA = 0x00440041,
-    TM = 0x0054004d,
-    DT = 0x00440054,
-    AS = 0x00410053,
-    IS = 0x00490053
-} VR;
-
-// Data Element
-typedef struct {
-    Tag tag;
-    VR vr;
+    dicom_tag_t tag;
     uint32_t length;
     uint8_t* value;
-} DataElement;
+} dicom_item_t;
 
-// DICOM File
 typedef struct {
-    uint32_t preamble;
-    uint16_t prefix;
-    uint32_t transferSyntax;
-    DataElement* meta;
-} DicomFile;
+    dicom_tag_t tag;
+    uint32_t length;
+    dicom_item_t* items;
+} dicom_sequence_t;
 
-// Function to parse DICOM file
-DicomFile parseDicomFile(uint8_t* data, uint32_t length) {
-    DicomFile file;
-    file.preamble = *(uint32_t*)(data);
-    file.prefix = *(uint16_t*)(data + 4);
-    file.transferSyntax = *(uint32_t*)(data + 6);
-    
-    // Parse meta information
-    uint8_t* meta = data + 10;
-    file.meta = (DataElement*)malloc(sizeof(DataElement));
-    file.meta->tag.group = *(uint16_t*)(meta);
-    file.meta->tag.element = *(uint16_t*)(meta + 2);
-    file.meta->vr = *(uint32_t*)(meta + 4);
-    file.meta->length = *(uint32_t*)(meta + 8);
-    file.meta->value = (uint8_t*)malloc(file.meta->length);
-    memcpy(file.meta->value, meta + 12, file.meta->length);
-    
-    return file;
+typedef struct {
+    dicom_tag_t tag;
+    uint32_t length;
+    dicom_data_element_t* data_elements;
+} dicom_dataset_t;
+
+typedef struct {
+    dicom_transfer_syntax_t transfer_syntax;
+    dicom_dataset_t* dataset;
+} dicom_file_t;
+
+void* hammer_parser_dicom_file(void* input, size_t* size) {
+    dicom_file_t* dicom_file = malloc(sizeof(dicom_file_t));
+    dicom_file->transfer_syntax = *(dicom_transfer_syntax_t*)input;
+    input += sizeof(dicom_transfer_syntax_t);
+    *size -= sizeof(dicom_transfer_syntax_t);
+
+    dicom_file->dataset = malloc(sizeof(dicom_dataset_t));
+    dicom_file->dataset->tag.group = 0x0002;
+    dicom_file->dataset->tag.element = 0x0000;
+    dicom_file->dataset->length = 0;
+    dicom_file->dataset->data_elements = NULL;
+
+    while (*size > 0) {
+        dicom_data_element_t* data_element = malloc(sizeof(dicom_data_element_t));
+        data_element->tag.group = *(uint16_t*)input;
+        input += sizeof(uint16_t);
+        *size -= sizeof(uint16_t);
+        data_element->tag.element = *(uint16_t*)input;
+        input += sizeof(uint16_t);
+        *size -= sizeof(uint16_t);
+        data_element->vr = *(uint32_t*)input;
+        input += sizeof(uint32_t);
+        *size -= sizeof(uint32_t);
+        data_element->length = *(uint32_t*)input;
+        input += sizeof(uint32_t);
+        *size -= sizeof(uint32_t);
+        data_element->value = malloc(data_element->length);
+        memcpy(data_element->value, input, data_element->length);
+        input += data_element->length;
+        *size -= data_element->length;
+
+        dicom_file->dataset->length++;
+        dicom_file->dataset->data_elements = realloc(dicom_file->dataset->data_elements, dicom_file->dataset->length * sizeof(dicom_data_element_t));
+        dicom_file->dataset->data_elements[dicom_file->dataset->length - 1] = *data_element;
+        free(data_element);
+    }
+
+    return dicom_file;
 }
 
-int main() {
-    // Example usage:
-    uint8_t data[] = {
-        0x44, 0x49, 0x43, 0x4d, // Preamble
-        0x10, 0x00, // Prefix
-        0x01, 0x02, 0x03, 0x00, // Transfer syntax
-        0x02, 0x00, 0x10, 0x00, // Group and element of first meta
-        0x55, 0x4c, 0x00, 0x00, // VR (UL)
-        0x00, 0x00, 0x00, 0x04, // Length
-        0x01, 0x02, 0x03, 0x04  // Value
-    };
-    
-    DicomFile file = parseDicomFile(data, sizeof(data));
-    
-    // Do something with the parsed DICOM file...
-    
-    // Clean up
-    free(file.meta->value);
-    free(file.meta);
-    
+void* hammer_parser_dicom_data_element(void* input, size_t* size) {
+    dicom_data_element_t* data_element = malloc(sizeof(dicom_data_element_t));
+    data_element->tag.group = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    data_element->tag.element = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    data_element->vr = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    *size -= sizeof(uint32_t);
+    data_element->length = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    *size -= sizeof(uint32_t);
+    data_element->value = malloc(data_element->length);
+    memcpy(data_element->value, input, data_element->length);
+    input += data_element->length;
+    *size -= data_element->length;
+
+    return data_element;
+}
+
+void* hammer_parser_dicom_item(void* input, size_t* size) {
+    dicom_item_t* item = malloc(sizeof(dicom_item_t));
+    item->tag.group = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    item->tag.element = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    item->length = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    *size -= sizeof(uint32_t);
+    item->value = malloc(item->length);
+    memcpy(item->value, input, item->length);
+    input += item->length;
+    *size -= item->length;
+
+    return item;
+}
+
+void* hammer_parser_dicom_sequence(void* input, size_t* size) {
+    dicom_sequence_t* sequence = malloc(sizeof(dicom_sequence_t));
+    sequence->tag.group = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    sequence->tag.element = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    *size -= sizeof(uint16_t);
+    sequence->length = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    *size -= sizeof(uint32_t);
+    sequence->items = NULL;
+
+    while (*size > 0) {
+        dicom_item_t* item = hammer_parser_dicom_item(input, size);
+        sequence->length++;
+        sequence->items = realloc(sequence->items, sequence->length * sizeof(dicom_item_t));
+        sequence->items[sequence->length - 1] = *item;
+        free(item);
+    }
+
+    return sequence;
+}
+
+void* hammer_parser_dicom_dataset(void* input, size_t* size) {
+    dicom_dataset_t* dataset = malloc(sizeof(dicom_dataset_t));
+    dataset->tag.group = 0x0002;
+    dataset->tag.element = 0x0000;
+    dataset->length = 0;
+    dataset->data_elements = NULL;
+
+    while (*size > 0) {
+        dicom_data_element_t* data_element = hammer_parser_dicom_data_element(input, size);
+        dataset->length++;
+        dataset->data_elements = realloc(dataset->data_elements, dataset->length * sizeof(dicom_data_element_t));
+        dataset->data_elements[dataset->length - 1] = *data_element;
+        free(data_element);
+    }
+
+    return dataset;
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <dicom_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        printf("Error allocating memory\n");
+        return 1;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    size_t size = file_size;
+    dicom_file_t* dicom_file = hammer_parser_dicom_file(buffer, &size);
+    if (!dicom_file) {
+        printf("Error parsing DICOM file\n");
+        return 1;
+    }
+
+    printf("DICOM File:\n");
+    printf("  Transfer Syntax: %d\n", dicom_file->transfer_syntax);
+    printf("  Dataset:\n");
+    for (int i = 0; i < dicom_file->dataset->length; i++) {
+        dicom_data_element_t* data_element = &dicom_file->dataset->data_elements[i];
+        printf("    Tag: %04X%04X\n", data_element->tag.group, data_element->tag.element);
+        printf("    VR: %04X\n", data_element->vr);
+        printf("    Length: %d\n", data_element->length);
+        printf("    Value: %s\n", data_element->value);
+    }
+
+    free(buffer);
+    free(dicom_file->dataset->data_elements);
+    free(dicom_file->dataset);
+    free(dicom_file);
+
     return 0;
 }

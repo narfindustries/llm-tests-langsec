@@ -4,43 +4,64 @@ meta:
   file-extension: gz
   xref:
     rfc: 1952
-  license: MIT
-  endian: little
+  license: CC0-1.0
+  endian: le
 
 seq:
-  - id: magic
-    contents: [0x1f, 0x8b]
+  - id: id1
+    type: u1
+    valid: 0x1F
+  - id: id2
+    type: u1
+    valid: 0x8B
   - id: compression_method
     type: u1
-    enum: compression_methods
+    valid: 0x08
   - id: flags
-    type: u1
-    enum: flags
-  - id: mod_time
+    type: flags
+  - id: mtime
     type: u4
   - id: extra_flags
     type: u1
   - id: os
     type: u1
-    enum: oses
   - id: extra
     type: extra_field
-    if: flags.has_extra
-  - id: name
+    if: flags.fextra
+  - id: original_file_name
     type: strz
     encoding: UTF-8
-    if: flags.has_name
-  - id: comment
+    if: flags.fname
+  - id: file_comment
     type: strz
     encoding: UTF-8
-    if: flags.has_comment
+    if: flags.fcomment
   - id: header_crc16
     type: u2
-    if: flags.has_header_crc
-  - id: body
-    size-eos: true
+    if: flags.fhcrc
+  - id: compressed_data
+    size: _io.size - _io.pos - 8
+  - id: crc32
+    type: u4
+  - id: isize
+    type: u4
 
 types:
+  flags:
+    seq:
+      - id: ftext
+        type: b1
+      - id: fhcrc
+        type: b1
+      - id: fextra
+        type: b1
+      - id: fname
+        type: b1
+      - id: fcomment
+        type: b1
+      - id: reserved
+        type: b3
+
   extra_field:
     seq:
       - id: subfields
@@ -55,32 +76,3 @@ types:
         type: u2
       - id: data
         size: len_data
-
-enums:
-  compression_methods:
-    deflate: 8
-
-  flags:
-    0: reserved
-    1: has_text
-    2: has_header_crc
-    4: has_extra
-    8: has_name
-    16: has_comment
-
-  oses:
-    0: fat
-    1: amiga
-    2: vms
-    3: unix
-    4: vm_cms
-    5: atari_tos
-    6: hpfs
-    7: macintosh
-    8: z_system
-    9: cp_m
-    10: tops_20
-    11: ntfs
-    12: qdos
-    13: acorn_riscos
-    255: unknown

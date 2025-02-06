@@ -1,47 +1,36 @@
 module GZIP;
 
-public type Gzip = unit {
-    magic: bytes &size=2 &validate=magic == "|1f8b|";
-    compression_method: uint8 &validate=compression_method == 8;
-    flags: Flags;
+public type GZIP = unit {
+    id1: uint8 &check(id1 == 0x1f);
+    id2: uint8 &check(id2 == 0x8b);
+    cm: uint8 &check(cm == 0x08);
+    flg: Flags;
     mtime: uint32;
-    xflags: uint8;
+    xfl: uint8;
     os: uint8;
-
-    // Optional fields depending on flags
-    extra: Extra [flags.FEXTRA] ?;
-    name: Name [flags.FNAME] ?;
-    comment: Comment [flags.FCOMMENT] ?;
-    hcrc: uint16 [flags.FHCRC] ?;
-
-    compressed_data: bytes;
-
+    extra: ExtraField[] &if (flg.fextra);
+    fname: bytes &if (flg.fname) &terminator=0x00;
+    fcomment: bytes &if (flg.fcomment) &terminator=0x00;
+    fhcrc: uint16 &if (flg.fhcrc);
+    compressed_data: bytes &until(eod());
     crc32: uint32;
     isize: uint32;
-
+    
     on %done {
-        # Validating CRC and ISIZE can be done here if needed
+        print fmt("GZIP File: OS=%d, Compressed Data Length=%d", os, compressed_data.length());
     }
 };
 
-type Flags = bitfield {
-    FTEXT = 0 : bool;
-    FHCRC = 1 : bool;
-    FEXTRA = 2 : bool;
-    FNAME = 3 : bool;
-    FCOMMENT = 4 : bool;
-    // Reserved bits
+type Flags = bitfield : uint8 {
+    ftext = 0,
+    fhcrc = 1,
+    fextra = 2,
+    fname = 3,
+    fcomment = 4
 };
 
-type Extra = unit {
-    length: uint16;
-    extra_field: bytes &size=length;
-};
-
-type Name = unit {
-    null_terminated_name: string &until="\0";
-};
-
-type Comment = unit {
-    null_terminated_comment: string &until="\0";
+type ExtraField = unit {
+    subfield_id: uint16;
+    subfield_len: uint16;
+    data: bytes &length=subfield_len;
 };

@@ -1,29 +1,22 @@
-#version=2
+module bitcoin_transaction;
 
-global bitcoin_transactions_gemini_1: count
+type txin = record {
+    prevout: record {
+        hash: bytes[32];
+        index: uint32;
+    };
+    scriptSig: bytes;
+    sequence: uint32;
+};
 
-event bitcoin_transaction(transaction_id: string, amount: double, from: string, to: string) {
-    bitcoin_transactions_gemini_1 += 1;
-    # Log the transaction details
-    log_message("Transaction ID: " + transaction_id +
-                ", Amount: " + amount +
-                ", From: " + from +
-                ", To: " + to)
-}
+type txout = record {
+    value: uint64;
+    scriptPubKey: bytes;
+};
 
-# Example usage:  (Replace with your actual data source)
-event process_data() {
-  bitcoin_transaction("tx123", 1.5, "alice@example.com", "bob@example.com");
-  bitcoin_transaction("tx456", 0.75, "charlie@example.com", "dave@example.com");
-}
-
-# This section is designed to manage and display the overall transaction count
-event print_summary() {
-  log_message("Total Bitcoin Transactions (Gemini 1): " + bitcoin_transactions_gemini_1);
-}
-
-# The following section ensures the summary is printed at the end of the script execution
-@script_end {
-  print_summary();
-}
-
+type transaction = record {
+    version: uint32;
+    inputs: vector of txin;
+    outputs: vector of txout;
+    locktime: uint32;
+};

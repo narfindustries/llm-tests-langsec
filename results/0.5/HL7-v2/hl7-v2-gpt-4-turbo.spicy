@@ -1,48 +1,19 @@
 module HL7;
 
-public type MSH = unit {
-    field_sep: bytes &size=1;
-    encoding_chars: bytes &size=4;
-    sending_app: bytes &eod;
-    sending_facility: bytes &eod;
-    receiving_app: bytes &eod;
-    receiving_facility: bytes &eod;
-    date_time: bytes &eod;
-    security: bytes &eod;
-    message_type: bytes &eod;
-    message_control_id: bytes &eod;
-    processing_id: bytes &eod;
-    version_id: bytes &eod;
-    sequence_number: bytes &eod;
-    continuation_pointer: bytes &eod;
-    accept_ack_type: bytes &eod;
-    application_ack_type: bytes &eod;
-    country_code: bytes &eod;
-    character_set: bytes &eod;
-    principal_language: bytes &eod;
-    on "&on_done" = {
-        print self;
-    };
+import spicy;
+
+type Field = unit {
+    data: bytes &eod;
 };
 
-public type HL7Message = unit {
-    segments: Segment(self)[] &eod;
+type Segment = unit {
+    fields: Field[] &eod;
 };
 
-type Segment = unit(parent: HL7Message) {
-    seg_type: bytes &size=3;
-    contents: switch (self.seg_type) {
-        case "MSH": MSH;
-        default: bytes &eod;
-    };
-    on "&on_done" = {
-        print self;
-    };
+public type Message = unit {
+    segments: Segment[] &eod;
 };
 
-public type HL7Stream = unit {
-    messages: HL7Message[];
-    on "&on_done" = {
-        print self;
-    };
+public type File = unit {
+    messages: Message[] &eod;
 };

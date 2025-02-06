@@ -1,46 +1,102 @@
 module HL7;
 
 public type MSH = unit {
-    field_sep: bytes &size=1;
-    encoding_chars: bytes &size=4;
-    sending_application: bytes &until=b"|";
-    sending_facility: bytes &until=b"|";
-    receiving_application: bytes &until=b"|";
-    receiving_facility: bytes &until=b"|";
-    date_time: bytes &until=b"|";
+    fieldSeparator: bytes &size=1;
+    encodingChars: bytes &size=4;
+    sendingApp: bytes &until=b"|";
+    sendingFacility: bytes &until=b"|";
+    receivingApp: bytes &until=b"|";
+    receivingFacility: bytes &until=b"|";
+    date: bytes &until=b"|";
     security: bytes &until=b"|";
-    message_type: bytes &until=b"|";
-    message_control_id: bytes &until=b"|";
-    processing_id: bytes &until=b"|";
-    version_id: bytes &until=b"|";
-    sequence_number: bytes &until=b"|";
-    continuation_pointer: bytes &until=b"|";
-    accept_ack_type: bytes &until=b"|";
-    application_ack_type: bytes &until=b"|";
-    country_code: bytes &until=b"|";
-    character_set: bytes &until=b"|";
-    principal_language_of_message: bytes &until=b"|";
-    alt_character_set_handling_scheme: bytes &until=b"|";
-    message_profile_identifier: bytes &until=b"|";
-    on "&eod" { self.confirm(); }
+    messageType: bytes &until=b"|";
+    messageControlID: bytes &until=b"|";
+    processingID: bytes &until=b"|";
+    versionID: bytes &until=b"|";
+    sequenceNumber: bytes &until=b"|";
+    continuationPointer: bytes &until=b"|";
+    acceptAcknowledgmentType: bytes &until=b"|";
+    applicationAcknowledgmentType: bytes &until=b"|";
+    countryCode: bytes &until=b"|";
+    characterSet: bytes &until=b"|";
+    principalLanguageOfMessage: bytes &until=b"|";
+};
+
+public type PID = unit {
+    setID: bytes &until=b"|";
+    patientID: bytes &until=b"|";
+    patientIdentifierList: bytes &until=b"|";
+    altPatientID: bytes &until=b"|";
+    patientName: bytes &until=b"|";
+    motherMaidenName: bytes &until=b"|";
+    dob: bytes &until=b"|";
+    sex: bytes &until=b"|";
+    patientAlias: bytes &until=b"|";
+    race: bytes &until=b"|";
+    patientAddress: bytes &until=b"|";
+    countryCode: bytes &until=b"|";
+    phoneHome: bytes &until=b"|";
+    phoneBusiness: bytes &until=b"|";
+    primaryLanguage: bytes &until=b"|";
+    maritalStatus: bytes &until=b"|";
+    religion: bytes &until=b"|";
+    patientAccountNumber: bytes &until=b"|";
+    ssn: bytes &until=b"|";
+    driverLicenseNumber: bytes &until=b"|";
+    motherIdentifier: bytes &until=b"|";
+    ethnicGroup: bytes &until=b"|";
+    birthPlace: bytes &until=b"|";
+    multipleBirthIndicator: bytes &until=b"|";
+    birthOrder: bytes &until=b"|";
+    citizenship: bytes &until=b"|";
+    veteransMilitaryStatus: bytes &until=b"|";
+    nationality: bytes &until=b"|";
+    deathDateAndTime: bytes &until=b"|";
+    deathIndicator: bytes &until=b"|";
+};
+
+public type OBX = unit {
+    setID: bytes &until=b"|";
+    valueType: bytes &until=b"|";
+    observationIdentifier: bytes &until=b"|";
+    observationSubID: bytes &until=b"|";
+    observationValue: bytes &until=b"|";
+    units: bytes &until=b"|";
+    referencesRange: bytes &until=b"|";
+    interpretationCodes: bytes &until=b"|";
+    probability: bytes &until=b"|";
+    natureOfAbnormalTest: bytes &until=b"|";
+    observationResultStatus: bytes &until=b"|";
+    dateLastObsNormalValues: bytes &until=b"|";
+    userDefinedAccessChecks: bytes &until=b"|";
+    datetimeOfTheObservation: bytes &until=b"|";
+    producerID: bytes &until=b"|";
+    responsibleObserver: bytes &until=b"|";
+    observationMethod: bytes &until=b"|";
+    equipmentInstanceIdentifier: bytes &until=b"|";
+    datetimeOfTheAnalysis: bytes &until=b"|";
 };
 
 public type HL7Message = unit {
-    segments: Segment(self)[] &eod;
+    segments: Segment[] &eod;
 };
 
-public type Segment = unit(parent: HL7Message) {
-    seg_type: bytes &size=3;
-    fields: switch (self.seg_type) {
-        case b"MSH": MSH;
-        default: bytes &rest;
+public type Segment = unit(referrer: HL7Message) {
+    data: switch referrer.segType() {
+        "MSH": MSH;
+        "PID": PID;
+        "OBX": OBX;
+        default: bytes &until=b"\r";
     };
+
+    function segType(): string {
+        if (self.data.size() >= 3)
+            return string(self.data[:3]);
+        else
+            return "";
+    }
 };
 
-public type HL7v2 = unit {
-    messages: HL7Message[] &eod;
+public type File = unit {
+    messages: HL7Message[];
 };
-
-event zeek_init() {
-    print "Zeek module HL7 initialized.";
-}

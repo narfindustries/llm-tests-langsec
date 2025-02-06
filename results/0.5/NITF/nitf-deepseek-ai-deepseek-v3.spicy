@@ -1,0 +1,87 @@
+module NITF;
+
+public type FileHeader = unit {
+    FHDR: bytes &size=39;
+    CLEVEL: bytes &size=1;
+    STYPE: bytes &size=4;
+    OSTAID: bytes &size=10;
+    FTITLE: bytes &size=80;
+    FSCLAS: bytes &size=1;
+    FSCODE: bytes &size=2;
+    FSCTLH: bytes &size=2;
+    FSREL: bytes &size=20;
+    FSDCTP: bytes &size=2;
+    FSDCDT: bytes &size=8;
+    FSDCXM: bytes &size=4;
+    FSDG: bytes &size=8;
+    FSDGDT: bytes &size=8;
+    FSCLTX: bytes &size=43;
+    FSCOP: bytes &size=5;
+    FSCPYS: bytes &size=5;
+};
+
+public type ImageSegment = unit {
+    IM: bytes &size=1;
+    ISORCE: bytes &size=42;
+    NROWS: bytes &size=8;
+    NCOLS: bytes &size=8;
+    PVTYPE: bytes &size=3;
+    IREP: bytes &size=8;
+    ICAT: bytes &size=8;
+    ABPP: bytes &size=2;
+    PJUST: bytes &size=1;
+    ICORDS: bytes &size=1;
+    IGEOLO: bytes &size=60;
+    NICOM: bytes &size=1;
+    IC: bytes &size=80;
+};
+
+public type GraphicSegment = unit {
+    SXSHDL: uint32;
+    SXSHD: bytes &size=SXSHDL;
+    SODATL: uint32;
+    SODATA: bytes &size=SODATL;
+};
+
+public type TextSegment = unit {
+    TXSHDL: uint32;
+    TXSHD: bytes &size=TXSHDL;
+    TXTAL: uint32;
+    TXT: bytes &size=TXTAL;
+};
+
+public type DataExtensionSegment = unit {
+    DESHDL: uint32;
+    DESHD: bytes &size=DESHDL;
+    DESSHL: uint32;
+    DESSH: bytes &size=DESSHL;
+    DESDATA: bytes &size=999999;
+};
+
+public type ReservedExtensionSegment = unit {
+    RESHDL: uint32;
+    RESHD: bytes &size=RESHDL;
+    RESDATL: uint32;
+    RESDATA: bytes &size=RESDATL;
+};
+
+public type UserDefinedHeader = unit {
+    UDHDL: uint32;
+    UDHD: bytes &size=UDHDL;
+};
+
+public type ExtendedSubheader = unit {
+    XSHDL: uint32;
+    XSHD: bytes &size=XSHDL;
+};
+
+public type NITF = unit {
+    header: FileHeader;
+    image_segments: ImageSegment[] &until=$$.length == 0;
+    graphic_segments: GraphicSegment[] &until=$$.length == 0;
+    text_segments: TextSegment[] &until=$$.length == 0;
+    data_extension_segments: DataExtensionSegment[] &until=$$.length == 0;
+    reserved_extension_segments: ReservedExtensionSegment[] &until=$$.length == 0;
+    user_defined_headers: UserDefinedHeader[] &until=$$.length == 0;
+    extended_subheaders: ExtendedSubheader[] &until=$$.length == 0;
+};

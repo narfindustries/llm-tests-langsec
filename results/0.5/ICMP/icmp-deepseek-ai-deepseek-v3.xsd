@@ -1,0 +1,44 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://www.example.com/icmp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="GeneralFormat">
+        <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMP">
+    <xs:complexType>
+      <xs:sequence dfdl:lengthKind="explicit">
+        <xs:element name="Type" type="xs:unsignedByte"/>
+        <xs:element name="Code" type="xs:unsignedByte"/>
+        <xs:element name="Checksum" type="xs:unsignedShort"/>
+        <xs:choice>
+          <xs:sequence dfdl:choiceBranchKey="0,8,13,14,15,16">
+            <xs:element name="Identifier" type="xs:unsignedShort"/>
+            <xs:element name="SequenceNumber" type="xs:unsignedShort"/>
+          </xs:sequence>
+          <xs:sequence dfdl:choiceBranchKey="3,4,5,11,12">
+            <xs:element name="Unused" type="xs:unsignedInt"/>
+          </xs:sequence>
+          <xs:sequence dfdl:choiceBranchKey="5">
+            <xs:element name="GatewayInternetAddress" type="xs:unsignedInt"/>
+          </xs:sequence>
+          <xs:sequence dfdl:choiceBranchKey="12">
+            <xs:element name="Pointer" type="xs:unsignedByte"/>
+          </xs:sequence>
+          <xs:sequence dfdl:choiceBranchKey="13,14">
+            <xs:element name="OriginateTimestamp" type="xs:unsignedInt"/>
+            <xs:element name="ReceiveTimestamp" type="xs:unsignedInt"/>
+            <xs:element name="TransmitTimestamp" type="xs:unsignedInt"/>
+          </xs:sequence>
+        </xs:choice>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

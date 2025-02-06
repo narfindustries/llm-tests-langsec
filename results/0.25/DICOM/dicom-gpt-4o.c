@@ -1,63 +1,90 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *dicom_parser() {
-    // Define basic parsers
-    HParser *preamble = h_repeat_n(h_uint8(), 128);
-    HParser *prefix = h_sequence(h_ch('D'), h_ch('I'), h_ch('C'), h_ch('M'), NULL);
+// Function prototypes for creating parsers
+HParser *create_uint16_parser();
+HParser *create_uint32_parser();
+HParser *create_string_parser(size_t length);
+HParser *create_uid_parser(size_t length);
+HParser *create_dicom_element_parser();
+HParser *create_dicom_file_parser();
 
-    // Element parsers
-    HParser *group_number = h_uint16();
-    HParser *element_number = h_uint16();
-    HParser *vr = h_choice(
-        h_sequence(h_ch('O'), h_ch('B'), NULL),
-        h_sequence(h_ch('O'), h_ch('W'), NULL),
-        h_sequence(h_ch('U'), h_ch('N'), NULL),
-        h_sequence(h_ch('S'), h_ch('Q'), NULL),
-        h_sequence(h_ch('A'), h_ch('E'), NULL),
-        h_sequence(h_ch('A'), h_ch('S'), NULL),
-        h_sequence(h_ch('A'), h_ch('T'), NULL),
-        h_sequence(h_ch('D'), h_ch('A'), NULL),
-        h_sequence(h_ch('D'), h_ch('S'), NULL),
-        h_sequence(h_ch('D'), h_ch('T'), NULL),
-        h_sequence(h_ch('F'), h_ch('L'), NULL),
-        h_sequence(h_ch('F'), h_ch('D'), NULL),
-        h_sequence(h_ch('I'), h_ch('S'), NULL),
-        h_sequence(h_ch('L'), h_ch('O'), NULL),
-        h_sequence(h_ch('L'), h_ch('T'), NULL),
-        h_sequence(h_ch('P'), h_ch('N'), NULL),
-        h_sequence(h_ch('S'), h_ch('H'), NULL),
-        h_sequence(h_ch('S'), h_ch('L'), NULL),
-        h_sequence(h_ch('S'), h_ch('S'), NULL),
-        h_sequence(h_ch('S'), h_ch('T'), NULL),
-        h_sequence(h_ch('T'), h_ch('M'), NULL),
-        h_sequence(h_ch('U'), h_ch('I'), NULL),
-        h_sequence(h_ch('U'), h_ch('L'), NULL),
-        h_sequence(h_ch('U'), h_ch('S'), NULL),
-        h_sequence(h_ch('U'), h_ch('T'), NULL),
+// Create parsers for DICOM fields
+HParser *create_uint16_parser() {
+    return h_uint16();
+}
+
+HParser *create_uint32_parser() {
+    return h_uint32();
+}
+
+HParser *create_string_parser(size_t length) {
+    return h_repeat_n(length, h_uint8());
+}
+
+HParser *create_uid_parser(size_t length) {
+    return h_repeat_n(length, h_uint8());
+}
+
+// Create a parser for a DICOM data element
+HParser *create_dicom_element_parser() {
+    return h_sequence(
+        create_uint16_parser(), // Group Number
+        create_uint16_parser(), // Element Number
+        create_string_parser(2), // Value Representation
+        create_uint32_parser(), // Value Length
+        h_length_value(create_uint32_parser(), h_uint8()), // Value Field
         NULL
     );
+}
 
-    HParser *reserved = h_uint16();
-    HParser *length = h_uint32();
-    HParser *value = h_length_value(length, h_uint8());
+// Create a parser for a DICOM file
+HParser *create_dicom_file_parser() {
+    return h_many(create_dicom_element_parser());
+}
 
-    HParser *element = h_sequence(
-        group_number,
-        element_number,
-        vr,
-        reserved,
-        length,
-        value,
-        NULL
-    );
+// Function to parse a DICOM file
+void parse_dicom_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
 
-    // Define the DICOM parser
-    HParser *dicom_file = h_sequence(
-        preamble,
-        prefix,
-        h_many(element),
-        NULL
-    );
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    return dicom_file;
+    unsigned char *buffer = (unsigned char *)malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *dicom_file_parser = create_dicom_file_parser();
+    HParseResult *result = h_parse(dicom_file_parser, buffer, file_size);
+    if (result) {
+        printf("DICOM file parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse DICOM file.\n");
+    }
+
+    free(buffer);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_dicom_file(argv[1]);
+
+    return EXIT_SUCCESS;
 }

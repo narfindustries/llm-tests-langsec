@@ -1,98 +1,55 @@
 grammar HL7v2;
 
-@Message = 
-  HL7Message;
+message = header segments*;
 
-HL7Message = {
-  msh: MSH
-  segments*: Segment
-};
+header = 'MSH' '|' encoding_chars '|' sending_app '|' sending_fac '|' recv_app '|' recv_fac '|' datetime '|' security '|' msg_type '|' msg_id '|' processing_id '|' version '|' seq_num '|' cont_ptr '|' ack_type '|' app_ack '|' country '|' charset;
 
-MSH = {
-  "MSH"
-  field_sep: "^|"
-  encoding_chars: "^~\\&"
-  sending_app: FieldContent
-  sending_facility: FieldContent
-  receiving_app: FieldContent
-  receiving_facility: FieldContent
-  datetime: DateTime
-  security: FieldContent
-  message_type: MessageType
-  message_control_id: FieldContent
-  processing_id: ProcessingID
-  version_id: "2.5"
-};
+segments = segment_id fields+;
 
-Segment =
-  PID |
-  PV1 |
-  OBR |
-  OBX;
+segment_id = 'PID' | 'PV1' | 'OBR' | 'OBX' | 'EVN' | 'NK1' | 'IN1';
 
-PID = {
-  "PID"
-  set_id: FieldContent
-  patient_id: FieldContent
-  patient_id_list: FieldContent
-  alt_patient_id: FieldContent
-  patient_name: FieldContent
-  mothers_maiden_name: FieldContent
-  birth_date: DateTime
-  admin_sex: Sex
-};
+fields = field ('|' field)*;
 
-PV1 = {
-  "PV1"
-  set_id: FieldContent
-  patient_class: FieldContent
-  assigned_location: FieldContent
-  admission_type: FieldContent
-  preadmit_number: FieldContent
-  prior_location: FieldContent
-};
+field = components ('~' components)*;
 
-OBR = {
-  "OBR"
-  set_id: FieldContent
-  placer_order_number: FieldContent
-  filler_order_number: FieldContent
-  universal_service_id: FieldContent
-  priority: FieldContent
-  requested_datetime: DateTime
-};
+components = subcomponents ('^' subcomponents)*;
 
-OBX = {
-  "OBX"
-  set_id: FieldContent
-  value_type: FieldContent
-  observation_id: FieldContent
-  observation_value: FieldContent
-  units: FieldContent
-  reference_range: FieldContent
-  abnormal_flags: FieldContent
-};
+subcomponents = value ('&' value)*;
 
-FieldContent = {
-  content: /[^|~\\\r\n]*/
-};
+encoding_chars = component_sep repeat_sep escape subcomp_sep;
 
-DateTime = {
-  date: /\d{8}/
-  time: /\d{4}/
-};
+component_sep = '^';
+repeat_sep = '~'; 
+escape = '\\';
+subcomp_sep = '&';
 
-MessageType = {
-  message_code: /[A-Z]{3}/
-  trigger_event: /[A-Z0-9]{3}/
-  message_structure: /[A-Z]{3}/
-};
+msg_type = msg_code '^' trigger_event '^' msg_structure;
 
-ProcessingID = {
-  id: /[PTA]/
-  mode: /[NID]/
-};
+datetime = YYYY MM DD HH mm ss;
 
-Sex = {
-  value: /[MFO]/
-};
+value = [^|^~\&]+;
+
+sending_app = value;
+sending_fac = value;
+recv_app = value;
+recv_fac = value;
+security = value;
+msg_code = value;
+trigger_event = value;
+msg_structure = value;
+msg_id = value;
+processing_id = value;
+version = value;
+seq_num = [0-9]+;
+cont_ptr = value;
+ack_type = value;
+app_ack = value;
+country = value;
+charset = value;
+
+YYYY = [0-9]{4};
+MM = [0-9]{2};
+DD = [0-9]{2};
+HH = [0-9]{2};
+mm = [0-9]{2};
+ss = [0-9]{2};

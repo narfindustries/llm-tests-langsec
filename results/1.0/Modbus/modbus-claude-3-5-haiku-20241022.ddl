@@ -1,108 +1,85 @@
-// Modbus Protocol Specification in Daedalus
-module Modbus
+type MbapHeader {
+    transaction_id: uint16;
+    protocol_id: uint16 = 0x0000;
+    length: uint16;
+    unit_id: uint8;
+}
 
-// Define base structures for Modbus frame
-type MBAPHeader {
-  transactionId: uint16,
-  protocolId: uint16,
-  length: uint16
+enum FunctionCode : uint8 {
+    ReadCoils = 0x01,
+    ReadDiscreteInputs = 0x02,
+    ReadHoldingRegisters = 0x03,
+    ReadInputRegisters = 0x04,
+    WriteSingleCoil = 0x05,
+    WriteSingleRegister = 0x06,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleRegisters = 0x10
+}
+
+enum ExceptionCode : uint8 {
+    IllegalFunction = 0x01,
+    IllegalDataAddress = 0x02,
+    IllegalDataValue = 0x03,
+    SlaveDeviceFailure = 0x04
 }
 
 type ModbusRequest {
-  mbapHeader: MBAPHeader,
-  unitId: uint8,
-  functionCode: uint8,
-  payload: bytes
+    function_code: FunctionCode;
+    data: match function_code {
+        FunctionCode.ReadCoils => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 2000
+        },
+        FunctionCode.ReadDiscreteInputs => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 2000
+        },
+        FunctionCode.ReadHoldingRegisters => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 125
+        },
+        FunctionCode.ReadInputRegisters => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 125
+        },
+        FunctionCode.WriteSingleCoil => {
+            address: uint16;
+            value: uint16 where value == 0x0000 || value == 0xFF00
+        },
+        FunctionCode.WriteSingleRegister => {
+            address: uint16;
+            value: uint16
+        },
+        FunctionCode.WriteMultipleCoils => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 2000;
+            byte_count: uint8;
+            coil_values: uint8[byte_count]
+        },
+        FunctionCode.WriteMultipleRegisters => {
+            start_address: uint16;
+            quantity: uint16 where quantity >= 1 && quantity <= 123;
+            byte_count: uint8;
+            register_values: uint8[byte_count]
+        }
+    }
 }
 
 type ModbusResponse {
-  mbapHeader: MBAPHeader,
-  unitId: uint8,
-  functionCode: uint8,
-  payload: bytes
-}
-
-// Supported Function Codes
-enum FunctionCode {
-  ReadCoils = 0x01,
-  ReadDiscreteInputs = 0x02,
-  ReadHoldingRegisters = 0x03,
-  ReadInputRegisters = 0x04,
-  WriteSingleCoil = 0x05,
-  WriteSingleRegister = 0x06,
-  WriteMultipleCoils = 0x0F,
-  WriteMultipleRegisters = 0x10
-}
-
-// Error Codes
-enum ErrorCode {
-  IllegalFunction = 0x01,
-  IllegalDataAddress = 0x02,
-  IllegalDataValue = 0x03
-}
-
-// Parsing and validation of Modbus frames
-parser ModbusParser {
-  // MBAP Header parsing
-  consume mbapHeader: MBAPHeader
-
-  // Validate protocol
-  assert(mbapHeader.protocolId == 0x0000)
-
-  // Parse unit ID and function code
-  consume unitId: uint8
-  consume functionCode: uint8
-
-  // Validate function code
-  assert(functionCode in FunctionCode)
-
-  // Dynamic payload parsing based on function code
-  match functionCode {
-    FunctionCode.ReadCoils => {
-      consume startAddress: uint16
-      consume quantityCoils: uint16
-      assert(quantityCoils <= 2000)
-    },
-    FunctionCode.ReadHoldingRegisters => {
-      consume startAddress: uint16
-      consume quantityRegisters: uint16
-      assert(quantityRegisters <= 125)
-    },
-    // Add more specific parsing for other function codes
-    default => {
-      consume payload: bytes
+    is_error: bool;
+    data: match is_error {
+        true => {
+            exception_code: ExceptionCode
+        },
+        false => {
+            function_code: FunctionCode;
+            response_data: uint8[]
+        }
     }
-  }
 }
 
-// Serialization rules
-serializer ModbusSerializer {
-  // Similar structure to parser with serialization logic
-  serialize mbapHeader
-  serialize unitId
-  serialize functionCode
-
-  // Conditional serialization based on function code
-  match functionCode {
-    FunctionCode.WriteSingleCoil => {
-      serialize outputAddress: uint16
-      serialize outputValue: uint16
-    },
-    // Add more serialization cases
-    default => {
-      serialize payload
-    }
-  }
-}
-
-// Error handling specification
-error_handler ModbusErrorHandler {
-  on ErrorCode.IllegalFunction {
-    log("Illegal Function Error")
-    reject
-  }
-  on ErrorCode.IllegalDataAddress {
-    log("Invalid Data Address")
-    reject
-  }
+type ModbusMessage {
+    header: MbapHeader;
+    request: ModbusRequest;
+    response: ModbusResponse?
 }

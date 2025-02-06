@@ -1,43 +1,66 @@
-module ICMP {
-  import Network.IPv4
+type ICMP struct {
+    Type        uint8
+    Code        uint8
+    Checksum    uint16
+    RestOfHeader bytes (switch Type {
+        case 0, 8          => size ICMPEcho
+        case 3             => size ICMPUnreachable
+        case 11            => size ICMPTimeExceeded
+        case 5             => size ICMPRedirect
+        case 12            => size ICMPParameterProblem
+        case 13, 14        => size ICMPTimestamp
+        default            => 0
+    })
+}
 
-  type IcmpType = {
-    typeCode : UInt8,
-    code : UInt8,
-    checksum : UInt16,
-    restOfHeader : UInt32
-  }
+type ICMPEcho struct {
+    Identifier  uint16
+    SequenceNum uint16
+}
 
-  type IPv4Packet = {
-    versionIHL : UInt8,
-    typeOfService : UInt8,
-    totalLength : UInt16,
-    identification : UInt16,
-    flagsFragmentOffset : UInt16,
-    ttl : UInt8,
-    protocol : UInt8,
-    headerChecksum : UInt16,
-    srcAddr : IPv4,
-    dstAddr : IPv4,
-    optionsPadding : [UInt8]  // Variable length based on IHL
-  }
+type ICMPUnreachable struct {
+    Unused      uint32
+    IPHeader    IP
+    First8Bytes bytes : 8
+}
 
-  type IcmpEchoRequestOrReply = {
-    header : IcmpType,
-    identifier : UInt16,
-    sequenceNumber : UInt16,
-    data : [UInt8]
-  }
+type ICMPTimeExceeded struct {
+    Unused      uint32
+    IPHeader    IP
+    First8Bytes bytes : 8
+}
 
-  type IcmpMessage = union (UInt8) {
-    case 0 | 8 => Echo : IcmpEchoRequestOrReply,
-    case _ => Unknown : {}
-  }
+type ICMPRedirect struct {
+    GatewayInternetAddress uint32
+    IPHeader               IP
+    First8Bytes            bytes : 8
+}
 
-  type IcmpPacket = {
-    ipHeader : IPv4Packet,
-    icmpMessage : IcmpMessage
-  }
+type ICMPParameterProblem struct {
+    Pointer     uint8
+    Unused      bytes : 3
+    IPHeader    IP
+    First8Bytes bytes : 8
+}
 
-  let icmpPacket = parse IcmpPacket
+type ICMPTimestamp struct {
+    Identifier          uint16
+    SequenceNum         uint16
+    OriginateTimestamp  uint32
+    ReceiveTimestamp    uint32
+    TransmitTimestamp   uint32
+}
+
+type IP struct {
+    VersionIHL        uint8
+    TypeOfService     uint8
+    TotalLength       uint16
+    Identification    uint16
+    FlagsFragment     uint16
+    TimeToLive        uint8
+    Protocol          uint8
+    HeaderChecksum    uint16
+    SourceIP          uint32
+    DestinationIP     uint32
+    Options           bytes ((VersionIHL & 0x0F) - 5) * 4
 }

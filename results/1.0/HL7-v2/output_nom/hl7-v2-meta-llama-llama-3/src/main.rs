@@ -1,72 +1,240 @@
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_till, take_while},
-    character::complete::{char, digit1, multispace0, multispace1, newline},
-    combinator::{map, map_res, opt, recognize},
-    multiple::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, preceded, tuple},
-    IResult,
-};
-use std::{
-    env,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
-use std::io::prelude::*;
+use nom::branch::alt;
+use nom::bytes::complete::{tag, take_while_m_n};
+use nom::character::complete::{char};
+use nom::combinator::{map, opt};
+use nom::error::{context, ParseError};
+use nom::sequence::{tuple};
+use nom::IResult;
+use std::env;
+use std::fs::File;
+use std::io::{Read, BufReader};
+use std::path::Path;
 
 #[derive(Debug, PartialEq)]
 enum EncodingCharacters {
-    ComponentSeparator,
-    FieldSeparator,
-    RepetitionSeparator,
-    EscapeCharacter,
-    SubcomponentSeparator,
+    Caret,
+    Tilde,
+    Ampersand,
+}
+
+impl EncodingCharacters {
+    fn parse(input: &str) -> IResult<&str, EncodingCharacters> {
+        alt((tag("^"), tag("~"), tag("&")))(input)
+            .map(|(input, c)| match c {
+                "^" => (input, EncodingCharacters::Caret),
+                "~" => (input, EncodingCharacters::Tilde),
+                "&" => (input, EncodingCharacters::Ampersand),
+                _ => unreachable!(),
+            })
+    }
 }
 
 #[derive(Debug, PartialEq)]
-enum MessageStructure {
-    Segments(Vec<Segment>),
+enum FieldSeparator {
+    Pipe,
+}
+
+impl FieldSeparator {
+    fn parse(input: &str) -> IResult<&str, FieldSeparator> {
+        char('|')(input).map(|(input, _)| (input, FieldSeparator::Pipe))
+    }
 }
 
 #[derive(Debug, PartialEq)]
-enum Segment {
-    MSH(MessageHeaderSegment),
-    EVN(EventTypeSegment),
-    PID(PatientIdentificationSegment),
-    PV1(VisitSegment),
-    // Add more segment types as needed
+enum SegmentIdentifier {
+    MSH,
+    EVN,
+    PID,
+    PV1,
+    ORC,
+    OBR,
+    OBX,
+    RXE,
+    RXC,
+    RXD,
+    RXG,
+    RXR,
+}
+
+impl SegmentIdentifier {
+    fn parse(input: &str) -> IResult<&str, SegmentIdentifier> {
+        alt((
+            tag("MSH"),
+            tag("EVN"),
+            tag("PID"),
+            tag("PV1"),
+            tag("ORC"),
+            tag("OBR"),
+            tag("OBX"),
+            tag("RXE"),
+            tag("RXC"),
+            tag("RXD"),
+            tag("RXG"),
+            tag("RXR"),
+        ))(input)
+        .map(|(input, ident)| match ident {
+            "MSH" => (input, SegmentIdentifier::MSH),
+            "EVN" => (input, SegmentIdentifier::EVN),
+            "PID" => (input, SegmentIdentifier::PID),
+            "PV1" => (input, SegmentIdentifier::PV1),
+            "ORC" => (input, SegmentIdentifier::ORC),
+            "OBR" => (input, SegmentIdentifier::OBR),
+            "OBX" => (input, SegmentIdentifier::OBX),
+            "RXE" => (input, SegmentIdentifier::RXE),
+            "RXC" => (input, SegmentIdentifier::RXC),
+            "RXD" => (input, SegmentIdentifier::RXD),
+            "RXG" => (input, SegmentIdentifier::RXG),
+            "RXR" => (input, SegmentIdentifier::RXR),
+            _ => unreachable!(),
+        })
+    }
 }
 
 #[derive(Debug, PartialEq)]
-struct MessageHeaderSegment {
-    field_separator: char,
+enum MessageType {
+    MSG,
+    ACK,
+}
+
+impl MessageType {
+    fn parse(input: &str) -> IResult<&str, MessageType> {
+        alt((tag("MSG"), tag("ACK")))(input)
+            .map(|(input, msg_type)| match msg_type {
+                "MSG" => (input, MessageType::MSG),
+                "ACK" => (input, MessageType::ACK),
+                _ => unreachable!(),
+            })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum TriggerEvent {
+    AdtA01,
+    OrmO01,
+}
+
+impl TriggerEvent {
+    fn parse(input: &str) -> IResult<&str, TriggerEvent> {
+        alt((tag("ADT_A01"), tag("ORM_O01")))(input)
+            .map(|(input, event)| match event {
+                "ADT_A01" => (input, TriggerEvent::AdtA01),
+                "ORM_O01" => (input, TriggerEvent::OrmO01),
+                _ => unreachable!(),
+            })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct MessageHeader {
+    field_separator: FieldSeparator,
     encoding_characters: EncodingCharacters,
     sending_facility: String,
-    sending_application: String,
     receiving_facility: String,
-    receiving_application: String,
-    message_date: String,
-    message_time: String,
-    security: String,
+    date_time: String,
+    security: Option<String>,
     message_type: MessageType,
+    trigger_event: TriggerEvent,
     message_control_id: String,
     processing_id: String,
-    version_id: String,
-    sequence_number: String,
+}
+
+impl MessageHeader {
+    fn parse(input: &str) -> IResult<&str, MessageHeader> {
+        context(
+            "Message Header",
+            tuple((
+                FieldSeparator::parse,
+                EncodingCharacters::parse,
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 14, |c: char| c.is_alphanumeric()),
+                opt(take_while_m_n(1, 2, |c: char| c.is_alphanumeric())),
+                MessageType::parse,
+                TriggerEvent::parse,
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 2, |c: char| c.is_alphanumeric()),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                field_separator,
+                encoding_characters,
+                sending_facility,
+                receiving_facility,
+                date_time,
+                security,
+                message_type,
+                trigger_event,
+                message_control_id,
+                processing_id,
+            ))| {
+                (
+                    input,
+                    MessageHeader {
+                        field_separator,
+                        encoding_characters,
+                        sending_facility: sending_facility.to_string(),
+                        receiving_facility: receiving_facility.to_string(),
+                        date_time: date_time.to_string(),
+                        security: security.map(|s| s.to_string()),
+                        message_type,
+                        trigger_event,
+                        message_control_id: message_control_id.to_string(),
+                        processing_id: processing_id.to_string(),
+                    },
+                )
+            },
+        )
+    }
 }
 
 #[derive(Debug, PartialEq)]
-struct EventTypeSegment {
+struct EventType {
     event_type_code: String,
-    event_type_description: String,
-    event_date: String,
-    event_time: String,
-    event_facility: String,
+    recorded_date_time: String,
+    date_time_planned_event: Option<String>,
+    event_reason_code: Option<String>,
+    operator_id: Option<String>,
+}
+
+impl EventType {
+    fn parse(input: &str) -> IResult<&str, EventType> {
+        context(
+            "Event Type",
+            tuple((
+                take_while_m_n(1, 3, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 14, |c: char| c.is_alphanumeric()),
+                opt(take_while_m_n(1, 14, |c: char| c.is_alphanumeric())),
+                opt(take_while_m_n(1, 2, |c: char| c.is_alphanumeric())),
+                opt(take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_')),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                event_type_code,
+                recorded_date_time,
+                date_time_planned_event,
+                event_reason_code,
+                operator_id,
+            ))| {
+                (
+                    input,
+                    EventType {
+                        event_type_code: event_type_code.to_string(),
+                        recorded_date_time: recorded_date_time.to_string(),
+                        date_time_planned_event: date_time_planned_event.map(|s| s.to_string()),
+                        event_reason_code: event_reason_code.map(|s| s.to_string()),
+                        operator_id: operator_id.map(|s| s.to_string()),
+                    },
+                )
+            },
+        )
+    }
 }
 
 #[derive(Debug, PartialEq)]
-struct PatientIdentificationSegment {
+struct PatientInformation {
+    set_id_patient_id: String,
     patient_id: String,
     patient_name: String,
     date_of_birth: String,
@@ -74,181 +242,209 @@ struct PatientIdentificationSegment {
     patient_address: String,
 }
 
+impl PatientInformation {
+    fn parse(input: &str) -> IResult<&str, PatientInformation> {
+        context(
+            "Patient Information",
+            tuple((
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 50, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 8, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 1, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 50, |c: char| c.is_alphanumeric() || c == '_'),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                set_id_patient_id,
+                patient_id,
+                patient_name,
+                date_of_birth,
+                sex,
+                patient_address,
+            ))| {
+                (
+                    input,
+                    PatientInformation {
+                        set_id_patient_id: set_id_patient_id.to_string(),
+                        patient_id: patient_id.to_string(),
+                        patient_name: patient_name.to_string(),
+                        date_of_birth: date_of_birth.to_string(),
+                        sex: sex.to_string(),
+                        patient_address: patient_address.to_string(),
+                    },
+                )
+            },
+        )
+    }
+}
+
 #[derive(Debug, PartialEq)]
-struct VisitSegment {
+struct VisitInformation {
     visit_number: String,
     patient_class: String,
-    visit_number_unique: String,
-    visit_number_unique_facility: String,
+    admitting_doctor: String,
+    discharge_disposition: String,
+}
+
+impl VisitInformation {
+    fn parse(input: &str) -> IResult<&str, VisitInformation> {
+        context(
+            "Visit Information",
+            tuple((
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 1, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 50, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 2, |c: char| c.is_alphanumeric()),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                visit_number,
+                patient_class,
+                admitting_doctor,
+                discharge_disposition,
+            ))| {
+                (
+                    input,
+                    VisitInformation {
+                        visit_number: visit_number.to_string(),
+                        patient_class: patient_class.to_string(),
+                        admitting_doctor: admitting_doctor.to_string(),
+                        discharge_disposition: discharge_disposition.to_string(),
+                    },
+                )
+            },
+        )
+    }
 }
 
 #[derive(Debug, PartialEq)]
-enum MessageType {
-    ACK,
-    ADT,
-    BAR,
-    // Add more message types as needed
+struct OrderInformation {
+    order_control: String,
+    order_id: String,
+    order_type: String,
+    order_priority: String,
 }
 
-fn encoding_characters(input: &str) -> IResult<&str, EncodingCharacters> {
-    alt((
-        map(tag("^"), |_| EncodingCharacters::ComponentSeparator),
-        map(tag("&"), |_| EncodingCharacters::FieldSeparator),
-        map(tag("~"), |_| EncodingCharacters::RepetitionSeparator),
-        map(tag("\\"), |_| EncodingCharacters::EscapeCharacter),
-        map(tag("|"), |_| EncodingCharacters::SubcomponentSeparator),
-    ))(input)
-}
-
-fn message_header_segment(input: &str) -> IResult<&str, MessageHeaderSegment> {
-    let (input, _) = tag("MSH")(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, field_separator) = char(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, encoding_characters) = encoding_characters(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, sending_facility) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, sending_application) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, receiving_facility) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, receiving_application) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, message_date) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, message_time) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, security) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, message_type) = alt((
-        map(tag("ACK"), |_| MessageType::ACK),
-        map(tag("ADT"), |_| MessageType::ADT),
-        map(tag("BAR"), |_| MessageType::BAR),
-        // Add more message types as needed
-    ))(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, message_control_id) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, processing_id) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, version_id) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, sequence_number) = take_while(|c| c != '^')(input)?;
-    Ok((
-        input,
-        MessageHeaderSegment {
-            field_separator,
-            encoding_characters,
-            sending_facility: sending_facility.to_string(),
-            sending_application: sending_application.to_string(),
-            receiving_facility: receiving_facility.to_string(),
-            receiving_application: receiving_application.to_string(),
-            message_date: message_date.to_string(),
-            message_time: message_time.to_string(),
-            security: security.to_string(),
-            message_type,
-            message_control_id: message_control_id.to_string(),
-            processing_id: processing_id.to_string(),
-            version_id: version_id.to_string(),
-            sequence_number: sequence_number.to_string(),
-        },
-    ))
-}
-
-fn event_type_segment(input: &str) -> IResult<&str, EventTypeSegment> {
-    let (input, _) = tag("EVN")(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, event_type_code) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, event_type_description) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, event_date) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, event_time) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, event_facility) = take_while(|c| c != '^')(input)?;
-    Ok((
-        input,
-        EventTypeSegment {
-            event_type_code: event_type_code.to_string(),
-            event_type_description: event_type_description.to_string(),
-            event_date: event_date.to_string(),
-            event_time: event_time.to_string(),
-            event_facility: event_facility.to_string(),
-        },
-    ))
-}
-
-fn patient_identification_segment(input: &str) -> IResult<&str, PatientIdentificationSegment> {
-    let (input, _) = tag("PID")(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, patient_id) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, patient_name) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, date_of_birth) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, sex) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, patient_address) = take_while(|c| c != '^')(input)?;
-    Ok((
-        input,
-        PatientIdentificationSegment {
-            patient_id: patient_id.to_string(),
-            patient_name: patient_name.to_string(),
-            date_of_birth: date_of_birth.to_string(),
-            sex: sex.to_string(),
-            patient_address: patient_address.to_string(),
-        },
-    ))
-}
-
-fn visit_segment(input: &str) -> IResult<&str, VisitSegment> {
-    let (input, _) = tag("PV1")(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, visit_number) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, patient_class) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, visit_number_unique) = take_while(|c| c != '^')(input)?;
-    let (input, _) = multispace0(input)?;
-    let (input, visit_number_unique_facility) = take_while(|c| c != '^')(input)?;
-    Ok((
-        input,
-        VisitSegment {
-            visit_number: visit_number.to_string(),
-            patient_class: patient_class.to_string(),
-            visit_number_unique: visit_number_unique.to_string(),
-            visit_number_unique_facility: visit_number_unique_facility.to_string(),
-        },
-    ))
-}
-
-fn segment(input: &str) -> IResult<&str, Segment> {
-    alt((
-        map(message_header_segment, Segment::MSH),
-        map(event_type_segment, Segment::EVN),
-        map(patient_identification_segment, Segment::PID),
-        map(visit_segment, Segment::PV1),
-        // Add more segment types as needed
-    ))(input)
-}
-
-fn message_structure(input: &str) -> IResult<&str, MessageStructure> {
-    let (input, segments) = many1(delimited(multispace0, segment, multispace0))(input)?;
-    Ok((input, MessageStructure::Segments(segments)))
-}
-
-fn main() -> std::io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    let filename = &args[1];
-    let file = File::open(filename)?;
-    let reader = BufReader::new(file);
-    for line in reader.lines() {
-        let line = line?;
-        let (_remaining, message) = message_structure(&line).unwrap();
-        println!("{:?}", message);
+impl OrderInformation {
+    fn parse(input: &str) -> IResult<&str, OrderInformation> {
+        context(
+            "Order Information",
+            tuple((
+                take_while_m_n(1, 2, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 3, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 10, |c: char| c.is_alphanumeric()),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                order_control,
+                order_id,
+                order_type,
+                order_priority,
+            ))| {
+                (
+                    input,
+                    OrderInformation {
+                        order_control: order_control.to_string(),
+                        order_id: order_id.to_string(),
+                        order_type: order_type.to_string(),
+                        order_priority: order_priority.to_string(),
+                    },
+                )
+            },
+        )
     }
-    Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+struct ObservationRequest {
+    observation_request: String,
+    observation_id: String,
+    observation_result: String,
+    units: String,
+    reference_range: String,
+    abnormal_flags: String,
+}
+
+impl ObservationRequest {
+    fn parse(input: &str) -> IResult<&str, ObservationRequest> {
+        context(
+            "Observation Request",
+            tuple((
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 20, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 50, |c: char| c.is_alphanumeric() || c == '_'),
+                take_while_m_n(1, 10, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 10, |c: char| c.is_alphanumeric()),
+                take_while_m_n(1, 1, |c: char| c.is_alphanumeric()),
+            )),
+        )(input)
+        .map(
+            |(input, (
+                observation_request,
+                observation_id,
+                observation_result,
+                units,
+                reference_range,
+                abnormal_flags,
+            ))| {
+                (
+                    input,
+                    ObservationRequest {
+                        observation_request: observation_request.to_string(),
+                        observation_id: observation_id.to_string(),
+                        observation_result: observation_result.to_string(),
+                        units: units.to_string(),
+                        reference_range: reference_range.to_string(),
+                        abnormal_flags: abnormal_flags.to_string(),
+                    },
+                )
+            },
+        )
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum HL7Message {
+    MessageHeader(MessageHeader),
+    EventType(EventType),
+    PatientInformation(PatientInformation),
+    VisitInformation(VisitInformation),
+    OrderInformation(OrderInformation),
+    ObservationRequest(ObservationRequest),
+}
+
+impl HL7Message {
+    fn parse(input: &str) -> IResult<&str, HL7Message> {
+        alt((
+            map(MessageHeader::parse, HL7Message::MessageHeader),
+            map(EventType::parse, HL7Message::EventType),
+            map(PatientInformation::parse, HL7Message::PatientInformation),
+            map(VisitInformation::parse, HL7Message::VisitInformation),
+            map(OrderInformation::parse, HL7Message::OrderInformation),
+            map(ObservationRequest::parse, HL7Message::ObservationRequest),
+        ))(input)
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <hl7_file>", args[0]);
+        return;
+    }
+    let path = Path::new(&args[1]);
+    let file = File::open(path).expect("Failed to open file");
+    let mut reader = BufReader::new(file);
+    let mut input = String::new();
+    reader.read_to_string(&mut input).expect("Failed to read file");
+    let result = HL7Message::parse(&input);
+    match result {
+        Ok((_, msg)) => println!("{:?}", msg),
+        Err(err) => println!("Error parsing HL7 message: {:?}", err),
+    }
 }

@@ -1,15 +1,134 @@
 module HTTP;
 
-export {
-    type HTTP_1_1 = unit {
-        : HeaderLine[] &eod;
-        on %done {
-            print self;
-        }
-    };
+public type Method = enum {
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    HEAD,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH
+};
 
-    type HeaderLine = unit {
-        name: bytes &until=b":";
-        value: bytes &until=b"\r\n";
-    };
-}
+public type Version = enum {
+    HTTP10,
+    HTTP11
+};
+
+public type StatusCode = enum {
+    OK                  = 200,
+    Created             = 201,
+    Accepted            = 202,
+    NoContent           = 204,
+    MultipleChoices     = 300,
+    MovedPermanently    = 301,
+    Found               = 302,
+    SeeOther            = 303,
+    NotModified         = 304,
+    TemporaryRedirect   = 307,
+    BadRequest          = 400,
+    Unauthorized        = 401,
+    Forbidden           = 403,
+    NotFound            = 404,
+    MethodNotAllowed    = 405,
+    NotAcceptable       = 406,
+    RequestTimeout      = 408,
+    Conflict            = 409,
+    Gone                = 410,
+    LengthRequired      = 411,
+    PreconditionFailed  = 412,
+    PayloadTooLarge     = 413,
+    URITooLong          = 414,
+    UnsupportedMediaType= 415,
+    RangeNotSatisfiable = 416,
+    ExpectationFailed   = 417,
+    InternalServerError = 500,
+    NotImplemented      = 501,
+    BadGateway          = 502,
+    ServiceUnavailable  = 503,
+    GatewayTimeout      = 504,
+    HTTPVersionNotSupported = 505
+};
+
+public type GeneralHeaders = unit {
+    cacheControl:      bytes &optional;
+    connection:        bytes &optional;
+    date:              bytes &optional;
+    pragma:            bytes &optional;
+    trailer:           bytes &optional;
+    transferEncoding:  bytes &optional;
+    upgrade:           bytes &optional;
+    via:               bytes &optional;
+    warning:           bytes &optional;
+};
+
+public type RequestHeaders = unit {
+    accept:            bytes &optional;
+    acceptCharset:     bytes &optional;
+    acceptEncoding:    bytes &optional;
+    acceptLanguage:    bytes &optional;
+    authorization:     bytes &optional;
+    expect:            bytes &optional;
+    fromEmail:         bytes &optional; # Renamed from 'from' to avoid keyword conflict
+    host:              bytes;
+    ifMatch:           bytes &optional;
+    ifModifiedSince:   bytes &optional;
+    ifNoneMatch:       bytes &optional;
+    ifRange:           bytes &optional;
+    ifUnmodifiedSince: bytes &optional;
+    maxForwards:       uint16 &optional;
+    proxyAuthorization:bytes &optional;
+    range:             bytes &optional;
+    referer:           bytes &optional;
+    te:                bytes &optional;
+    userAgent:         bytes &optional;
+};
+
+public type ResponseHeaders = unit {
+    acceptRanges:      bytes &optional;
+    age:               uint32 &optional;
+    eTag:              bytes &optional;
+    location:          bytes &optional;
+    proxyAuthenticate: bytes &optional;
+    retryAfter:        bytes &optional;
+    server:            bytes &optional;
+    vary:              bytes &optional;
+    wwwAuthenticate:   bytes &optional;
+};
+
+public type EntityHeaders = unit {
+    allow:             bytes &optional;
+    contentEncoding:   bytes &optional;
+    contentLanguage:   bytes &optional;
+    contentLength:     uint64 &optional;
+    contentLocation:   bytes &optional;
+    contentMD5:        bytes &optional;
+    contentRange:      bytes &optional;
+    contentType:       bytes &optional;
+    expires:           bytes &optional;
+    lastModified:      bytes &optional;
+};
+
+public type Request = unit {
+    method:    Method;
+    uri:       bytes;
+    version:   Version;
+    headers:   RequestHeaders;
+    body:      bytes &optional;
+};
+
+public type Response = unit {
+    version:   Version;
+    statusCode: StatusCode;
+    reasonPhrase: bytes;
+    headers:   ResponseHeaders;
+    body:      bytes &optional;
+};
+
+public type HTTPMessage = unit {
+    isRequest:  bool;
+    request:    Request &if (self.isRequest);
+    response:   Response &if (!self.isRequest);
+};

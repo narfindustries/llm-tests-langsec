@@ -1,98 +1,96 @@
-def Main = {
-  def domain_name = {
-    def label = {
-      $len = uint8;
-      Take len Many byte
-    };
-    def labels = {
-      $first = label;
-      Many {
-        $next = label;
-        first ^ "." ^ next
-      }
-    };
-    labels
-  }
+def DNS = {
+    header: DNSHeader
+    questions: DNSQuestion[]
+    answers: ResourceRecord[]
+    authorities: ResourceRecord[]
+    additionals: ResourceRecord[]
+}
 
-  def record_type = {
-    Choose {
-      1 -> Pure "A"
-      2 -> Pure "NS"
-      5 -> Pure "CNAME"
-      15 -> Pure "MX"
-      16 -> Pure "TXT"
-      28 -> Pure "AAAA"
-    }
-  }
+def DNSHeader = {
+    id: uint16
+    flags: DNSFlags
+    qdcount: uint16
+    ancount: uint16
+    nscount: uint16
+    arcount: uint16
+}
 
-  def record_class = {
-    Choose {
-      1 -> Pure "IN"
-      2 -> Pure "CS"
-      3 -> Pure "CH"
-      4 -> Pure "HS"
-    }
-  }
+def DNSFlags = {
+    qr: uint1
+    opcode: uint4
+    aa: uint1
+    tc: uint1
+    rd: uint1
+    ra: uint1
+    z: uint3
+    rcode: uint4
+}
 
-  def resource_record = {
-    $name = domain_name;
-    $type = uint16;
-    $class = uint16;
-    $ttl = uint32;
-    $rdlength = uint16;
-    $rdata = Take rdlength Many byte;
-    {
-      name = name,
-      type = type,
-      class = class,
-      ttl = ttl,
-      rdlength = rdlength,
-      rdata = rdata
-    }
-  }
+def DNSQuestion = {
+    qname: DomainName
+    qtype: uint16
+    qclass: uint16
+}
 
-  def header = {
-    $id = uint16;
-    $flags = uint16;
-    $qdcount = uint16;
-    $ancount = uint16;
-    $nscount = uint16;
-    $arcount = uint16;
-    {
-      id = id,
-      flags = flags,
-      qdcount = qdcount,
-      ancount = ancount,
-      nscount = nscount,
-      arcount = arcount
-    }
-  }
+def ResourceRecord = {
+    name: DomainName
+    type: uint16
+    class: uint16
+    ttl: uint32
+    rdlength: uint16
+    rdata: bytes(rdlength)
+}
 
-  def question = {
-    $qname = domain_name;
-    $qtype = uint16;
-    $qclass = uint16;
-    {
-      qname = qname,
-      qtype = qtype,
-      qclass = qclass
-    }
-  }
+def DomainName = {
+    labels: Label[]
+    terminator: uint8 where terminator == 0
+}
 
-  def dns_message = {
-    $hdr = header;
-    $questions = Repeat hdr.qdcount question;
-    $answers = Repeat hdr.ancount resource_record;
-    $authorities = Repeat hdr.nscount resource_record;
-    $additionals = Repeat hdr.arcount resource_record;
-    {
-      header = hdr,
-      questions = questions,
-      answers = answers,
-      authorities = authorities,
-      additionals = additionals
-    }
-  }
+def Label = {
+    length: uint8 where length > 0 and length <= 63
+    name: bytes(length)
+}
 
-  dns_message
+def Pointer = {
+    pointer: uint16 where (pointer & 0xC000) == 0xC000
+}
+
+def SOA_RDATA = {
+    mname: DomainName
+    rname: DomainName
+    serial: uint32
+    refresh: uint32
+    retry: uint32
+    expire: uint32
+    minimum: uint32
+}
+
+def MX_RDATA = {
+    preference: uint16
+    exchange: DomainName
+}
+
+def A_RDATA = {
+    address: bytes(4)
+}
+
+def AAAA_RDATA = {
+    address: bytes(16)
+}
+
+def TXT_RDATA = {
+    txt_length: uint8
+    txt_data: bytes(txt_length)
+}
+
+def NS_RDATA = {
+    nsdname: DomainName
+}
+
+def CNAME_RDATA = {
+    cname: DomainName
+}
+
+def PTR_RDATA = {
+    ptrdname: DomainName
 }

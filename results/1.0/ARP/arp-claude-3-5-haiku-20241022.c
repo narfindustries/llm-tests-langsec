@@ -1,105 +1,143 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <hammer/hammer.h>
 
-// Define a structure to hold the parsed data
 typedef struct {
-    char* protocol;
-    char* sender_mac;
-    char* sender_ip;
-    char* target_mac;
-    char* target_ip;
+    uint16_t hardware_type;
+    uint16_t protocol_type;
+    uint8_t hardware_addr_len;
+    uint8_t protocol_addr_len;
+    uint16_t operation;
+    uint8_t *sender_hw_addr;
+    uint8_t *sender_protocol_addr;
+    uint8_t *target_hw_addr;
+    uint8_t *target_protocol_addr;
 } ARPPacket;
 
-// Parser for MAC address format
-static HParsedToken* parse_mac_address(void* p) {
-    const HParseResult* result = h_parse(h_re("[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"), p);
-    if (result && result->ast) {
-        char* mac = h_ast_to_string(result->ast);
-        return h_make_str(mac);
-    }
-    return NULL;
+static HParser *arp_parser = NULL;
+
+static HParsedToken* parse_arp_packet(const HParseResult *result, void *user_data) {
+    ARPPacket *packet = calloc(1, sizeof(ARPPacket));
+    const HParsedToken *token = result->ast;
+
+    packet->hardware_type = token[0].uint;
+    packet->protocol_type = token[1].uint;
+    packet->hardware_addr_len = token[2].uint;
+    packet->protocol_addr_len = token[3].uint;
+    packet->operation = token[4].uint;
+
+    packet->sender_hw_addr = malloc(packet->hardware_addr_len);
+    packet->sender_protocol_addr = malloc(packet->protocol_addr_len);
+    packet->target_hw_addr = malloc(packet->hardware_addr_len);
+    packet->target_protocol_addr = malloc(packet->protocol_addr_len);
+
+    memcpy(packet->sender_hw_addr, token[5].bytes.token, packet->hardware_addr_len);
+    memcpy(packet->sender_protocol_addr, token[6].bytes.token, packet->protocol_addr_len);
+    memcpy(packet->target_hw_addr, token[7].bytes.token, packet->hardware_addr_len);
+    memcpy(packet->target_protocol_addr, token[8].bytes.token, packet->protocol_addr_len);
+
+    HParsedToken *result_token = malloc(sizeof(HParsedToken));
+    result_token->user = packet;
+    return result_token;
 }
 
-// Parser for IP address format
-static HParsedToken* parse_ip_address(void* p) {
-    const HParseResult* result = h_parse(h_re("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"), p);
-    if (result && result->ast) {
-        char* ip = h_ast_to_string(result->ast);
-        return h_make_str(ip);
-    }
-    return NULL;
+static void init_arp_parser() {
+    HParser *hardware_type = h_uint16();
+    HParser *protocol_type = h_uint16();
+    HParser *hardware_addr_len = h_uint8();
+    HParser *protocol_addr_len = h_uint8();
+    HParser *operation = h_uint16();
+    
+    arp_parser = h_action(
+        h_sequence(
+            hardware_type,
+            protocol_type,
+            hardware_addr_len,
+            protocol_addr_len,
+            operation,
+            h_repeat_n(h_uint8(), (size_t)hardware_addr_len),   // sender hardware address
+            h_repeat_n(h_uint8(), (size_t)protocol_addr_len),   // sender protocol address
+            h_repeat_n(h_uint8(), (size_t)hardware_addr_len),   // target hardware address
+            h_repeat_n(h_uint8(), (size_t)protocol_addr_len),   // target protocol address
+            NULL
+        ), parse_arp_packet, NULL);
 }
 
-// Main ARP packet parser
-static HParsedToken* parse_arp_packet(void* p) {
-    HParser* protocol = h_choice(h_string("Request"), h_string("Reply"), NULL);
-    HParser* mac_address = h_action(h_re("[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"), parse_mac_address, NULL);
-    HParser* ip_address = h_action(h_re("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"), parse_ip_address, NULL);
-
-    HParser* arp_parser = h_sequence(
-        protocol,
-        h_whitespace(h_ignore(h_ch(' '))),
-        mac_address,
-        h_whitespace(h_ignore(h_ch(' '))),
-        ip_address,
-        h_whitespace(h_ignore(h_ch(' '))),
-        mac_address,
-        h_whitespace(h_ignore(h_ch(' '))),
-        ip_address,
-        NULL
-    );
-
-    const HParseResult* result = h_parse(arp_parser, p);
-    if (result && result->ast) {
-        ARPPacket* packet = malloc(sizeof(ARPPacket));
-        packet->protocol = h_ast_to_string(h_idx(result->ast, 0));
-        packet->sender_mac = h_ast_to_string(h_idx(result->ast, 1));
-        packet->sender_ip = h_ast_to_string(h_idx(result->ast, 2));
-        packet->target_mac = h_ast_to_string(h_idx(result->ast, 3));
-        packet->target_ip = h_ast_to_string(h_idx(result->ast, 4));
-        return h_make_usr(packet);
+void print_byte_array(uint8_t *arr, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x ", arr[i]);
     }
-    return NULL;
+    printf("\n");
 }
 
-int main() {
-    // Initialize Hammer
-    h_init();
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <arp_packet_file>\n", argv[0]);
+        return 1;
+    }
 
-    // Sample ARP packet string
-    const char* arp_packet_str = "Request 00:11:22:33:44:55 192.168.1.100 00:AA:BB:CC:DD:EE 192.168.1.1";
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    // Create the ARP parser
-    HParser* arp_parser = h_action(
-        h_re("(Request|Reply) [0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5} \\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3} [0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5} \\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"),
-        parse_arp_packet,
-        NULL
-    );
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Parse the ARP packet
-    const HParseResult* result = h_parse(arp_parser, arp_packet_str);
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
 
-    // Process and print the result
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("File read error");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    init_arp_parser();
+
+    HParseResult *result = h_parse(arp_parser, buffer, file_size);
     if (result && result->ast) {
-        ARPPacket* packet = h_ast_to_usr(result->ast);
-        printf("Protocol: %s\n", packet->protocol);
-        printf("Sender MAC: %s\n", packet->sender_mac);
-        printf("Sender IP: %s\n", packet->sender_ip);
-        printf("Target MAC: %s\n", packet->target_mac);
-        printf("Target IP: %s\n", packet->target_ip);
+        ARPPacket *packet = result->ast->user;
+        printf("ARP Packet Details:\n");
+        printf("Hardware Type: %u\n", packet->hardware_type);
+        printf("Protocol Type: %u\n", packet->protocol_type);
+        printf("Hardware Address Length: %u\n", packet->hardware_addr_len);
+        printf("Protocol Address Length: %u\n", packet->protocol_addr_len);
+        printf("Operation: %u\n", packet->operation);
+        
+        printf("Sender Hardware Address: ");
+        print_byte_array(packet->sender_hw_addr, packet->hardware_addr_len);
+        
+        printf("Sender Protocol Address: ");
+        print_byte_array(packet->sender_protocol_addr, packet->protocol_addr_len);
+        
+        printf("Target Hardware Address: ");
+        print_byte_array(packet->target_hw_addr, packet->hardware_addr_len);
+        
+        printf("Target Protocol Address: ");
+        print_byte_array(packet->target_protocol_addr, packet->protocol_addr_len);
 
-        // Free allocated memory
-        free(packet->protocol);
-        free(packet->sender_mac);
-        free(packet->sender_ip);
-        free(packet->target_mac);
-        free(packet->target_ip);
+        // Free dynamically allocated memory
+        free(packet->sender_hw_addr);
+        free(packet->sender_protocol_addr);
+        free(packet->target_hw_addr);
+        free(packet->target_protocol_addr);
         free(packet);
     } else {
         printf("Parsing failed\n");
     }
 
+    free(buffer);
+    h_parse_result_free(result);
     return 0;
 }

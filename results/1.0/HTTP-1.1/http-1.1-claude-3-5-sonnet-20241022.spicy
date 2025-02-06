@@ -2,47 +2,119 @@ module HTTP;
 
 import spicy;
 
+public type Version = unit {
+    : b"HTTP/";
+    major: uint8 &convert=cast<uint64>($$);
+    : b".";
+    minor: uint8 &convert=cast<uint64>($$);
+};
+
+type Method = enum {
+    OPTIONS = 1,
+    GET = 2,
+    HEAD = 3,
+    POST = 4,
+    PUT = 5,
+    DELETE = 6,
+    TRACE = 7,
+    CONNECT = 8
+};
+
+type StatusCode = enum {
+    CONTINUE = 100,
+    SWITCHING_PROTOCOLS = 101,
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NON_AUTHORITATIVE_INFO = 203,
+    NO_CONTENT = 204,
+    RESET_CONTENT = 205,
+    PARTIAL_CONTENT = 206,
+    MULTIPLE_CHOICES = 300,
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+    SEE_OTHER = 303,
+    NOT_MODIFIED = 304,
+    USE_PROXY = 305,
+    TEMPORARY_REDIRECT = 307,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    PAYMENT_REQUIRED = 402,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    METHOD_NOT_ALLOWED = 405,
+    NOT_ACCEPTABLE = 406,
+    PROXY_AUTH_REQUIRED = 407,
+    REQUEST_TIMEOUT = 408,
+    CONFLICT = 409,
+    GONE = 410,
+    LENGTH_REQUIRED = 411,
+    PRECONDITION_FAILED = 412,
+    REQUEST_ENTITY_TOO_LARGE = 413,
+    REQUEST_URI_TOO_LONG = 414,
+    UNSUPPORTED_MEDIA_TYPE = 415,
+    REQUESTED_RANGE_NOT_SATISFIABLE = 416,
+    EXPECTATION_FAILED = 417,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    SERVICE_UNAVAILABLE = 503,
+    GATEWAY_TIMEOUT = 504,
+    HTTP_VERSION_NOT_SUPPORTED = 505
+};
+
+type HeaderField = unit {
+    name: bytes &until=b":";
+    : b": ";
+    value: bytes &until=b"\r\n";
+};
+
+type Headers = unit {
+    fields: HeaderField[] &until=b"\r\n";
+};
+
 public type Request = unit {
-    method:     /[A-Z]+/;
-    :          /[ ]+/;
-    uri:       /[^ \t\r\n]+/;
-    :          /[ ]+/;
-    version:   /HTTP\/[0-9.]+/;
-    :          /\r?\n/;
-    headers:   Header[];
-    :          /\r?\n/;
-    body:      Body;
-};
-
-type Header = unit {
-    name:      /[^:\r\n]+/;
-    :          /:/;
-    :          /[ ]*/;
-    value:     /[^\r\n]*/;
-    :          /\r?\n/;
-};
-
-type Body = unit {
-    content: bytes &eod;
+    method: bytes &until=b" " &convert=$$.upper();
+    uri: bytes &until=b" ";
+    version: Version;
+    : b"\r\n";
+    headers: Headers;
 };
 
 public type Response = unit {
-    version:   /HTTP\/[0-9.]+/;
-    :          /[ ]+/;
-    status:    uint16;
-    :          /[ ]+/;
-    reason:    /[^\r\n]+/;
-    :          /\r?\n/;
-    headers:   Header[];
-    :          /\r?\n/;
-    body:      Body;
+    version: Version;
+    : b" ";
+    status: uint16 &convert=cast<uint64>($$);
+    : b" ";
+    reason: bytes &until=b"\r\n";
+    headers: Headers;
 };
 
-on Request::%init    { self.method_ = ""; }
-on Request::method   { self.method_ = $$; }
+type ChunkedBody = unit {
+    chunks: ChunkSize[];
+};
 
-on Response::%init   { self.status_ = 0; }
-on Response::status  { self.status_ = $$; }
+type ChunkSize = unit {
+    size: bytes &until=b"\r\n" &convert=cast<uint64>(spicy::hex_to_uint($$));
+    data: bytes &size=self.size if (self.size > 0);
+    : b"\r\n" if (self.size > 0);
+};
 
-on Request    -> event HTTP::request($conn, self.method_, self.uri, self.version, self.headers);
-on Response   -> event HTTP::reply($conn, self.status_, self.reason, self.version, self.headers);
+type ContentBody = unit {
+    data: bytes &eod;
+};
+
+public type Body = unit {
+    switch {
+        -> content: ContentBody;
+        -> chunked: ChunkedBody;
+    };
+
+    var has_content_length: bool;
+    var has_chunked_encoding: bool;
+
+    on %init {
+        self.has_content_length = False;
+        self.has_chunked_encoding = False;
+    }
+};

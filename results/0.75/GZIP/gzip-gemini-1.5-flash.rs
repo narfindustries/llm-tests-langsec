@@ -1,74 +1,82 @@
-use std::env;
-use std::fs;
-use std::io::Read;
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::{tag, take, take_while_m_n},
     combinator::{map, map_res, opt},
-    number::complete::le_u32,
-    sequence::{tuple, preceded},
+    number::complete::{be_u16, be_u32, le_u16, le_u32},
+    sequence::{tuple,},
     IResult,
 };
-use flate2::read::GzDecoder;
-
+use std::fs::File;
+use std::io::Read;
+use std::env;
 
 fn gzip_header(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = tag(b"\x1f\x8b")(input)?;
-    let (input, compression_method) = le_u32(input)?;
-    if compression_method != 8 {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Custom(1))));
-    }
-    let (input, flags) = le_u32(input)?;
-    let (input, mtime) = le_u32(input)?;
-    let (input, xflags) = opt(le_u32)(input)?;
-    let (input, os) = le_u32(input)?;
+    let (input, _) = tag([0x1f, 0x8b])(input)?;
+    let (input, cm) = be_u16(input)?;
+    assert_eq!(cm, 8); // Check for deflate compression method
+    let (input,flg) = be_u16(input)?;
+    let (input, mtime) = be_u32(input)?;
+    let (input, xfl) = be_u16(input)?;
+    let (input, os) = be_u16(input)?;
+    let ftext = (flg >> 0) & 1 != 0;
+    let fhcrc = (flg >> 1) & 1 != 0;
+    let fextra = (flg >> 2) & 1 != 0;
+    let fname = (flg >> 3) & 1 != 0;
+    let fcomment = (flg >> 4) & 1 != 0;
 
-    //Process optional fields based on flags
+    let (input, extra_field) = opt(gzip_extra)(input)?;
+    let (input, filename) = opt(gzip_filename)(input)?;
+    let (input, comment) = opt(gzip_comment)(input)?;
+    let (input, header_crc) = opt(le_u16)(input)?;
 
     Ok((input, ()))
-
 }
+
+fn gzip_extra(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, len) = be_u16(input)?;
+    let (input, _) = take(len as usize)(input)?;
+    Ok((input, ()))
+}
+
+fn gzip_filename(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, filename) = take_while_m_n(1, 1024, |b| b != 0)(input)?;
+    let (input,_) = tag([0])(input)?;
+    Ok((input, ()))
+}
+
+fn gzip_comment(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, comment) = take_while_m_n(1, 1024, |b| b != 0)(input)?;
+    let (input,_) = tag([0])(input)?;
+    Ok((input, ()))
+}
+
 
 fn gzip_footer(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = tag(b"\x00")(input)?;
+    let (input, crc32) = be_u32(input)?;
+    let (input, isize) = be_u32(input)?;
     Ok((input, ()))
-}
-
-fn gzip_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    map(take(input.len()), |x: &[u8]| x.to_vec())(input)
-}
-
-
-
-fn parse_gzip(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, _) = gzip_header(input)?;
-    let (input, data) = gzip_data(input)?;
-    let (input, _) = gzip_footer(input)?;
-    Ok((input, data))
 }
 
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <gzip_file>", args[0]);
-        std::process::exit(1);
+        println!("Usage: gzip_parser <filename>");
+        return;
     }
-
     let filename = &args[1];
-    let contents = fs::read(filename).expect("Failed to read file");
+    let mut file = File::open(filename).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_gzip(&contents) {
-        Ok((_, data)) => {
-            let mut decoder = GzDecoder::new(&data[..]);
-            let mut uncompressed_data = Vec::new();
-            decoder.read_to_end(&mut uncompressed_data).unwrap();
-            println!("Uncompressed data: {:?}", uncompressed_data);
-
-
+    match gzip_header(&buffer) {
+        Ok((remaining, _)) => {
+            println!("Header parsed successfully!");
+            match gzip_footer(remaining) {
+                Ok((_,_)) => println!("Footer parsed successfully"),
+                Err(e) => println!("Footer parsing failed: {:?}", e),
+            }
         }
-        Err(e) => {
-            eprintln!("Error parsing gzip file: {:?}", e);
-            std::process::exit(1);
-        }
+        Err(e) => println!("Header parsing failed: {:?}", e),
     }
 }
+

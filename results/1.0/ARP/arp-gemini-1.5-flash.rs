@@ -1,75 +1,69 @@
 use nom::{
     bytes::complete::{take, tag},
     combinator::{map, map_res},
-    number::complete::{be_u16, be_u32},
+    number::complete::{be_u16, be_u8},
     sequence::tuple,
     IResult,
 };
 use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs::read;
 
 #[derive(Debug)]
 struct ArpPacket {
     hardware_type: u16,
     protocol_type: u16,
-    hardware_len: u8,
-    protocol_len: u8,
+    hardware_addr_len: u8,
+    protocol_addr_len: u8,
     opcode: u16,
-    sender_mac: [u8; 6],
-    sender_ip: [u8; 4],
-    target_mac: [u8; 6],
-    target_ip: [u8; 4],
+    sender_hw_addr: Vec<u8>,
+    sender_protocol_addr: Vec<u8>,
+    target_hw_addr: Vec<u8>,
+    target_protocol_addr: Vec<u8>,
 }
 
 fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-    map(
-        tuple((
-            be_u16,
-            be_u16,
-            take(1u8),
-            take(1u8),
-            be_u16,
-            take(6u8),
-            take(4u8),
-            take(6u8),
-            take(4u8),
-        )),
-        |(hardware_type, protocol_type, hardware_len, protocol_len, opcode, sender_mac, sender_ip, target_mac, target_ip)| {
-            ArpPacket {
-                hardware_type,
-                protocol_type,
-                hardware_len: hardware_len[0],
-                protocol_len: protocol_len[0],
-                opcode,
-                sender_mac: sender_mac.try_into().unwrap(),
-                sender_ip: sender_ip.try_into().unwrap(),
-                target_mac: target_mac.try_into().unwrap(),
-                target_ip: target_ip.try_into().unwrap(),
-            }
+    let (input, (hardware_type, protocol_type, hardware_addr_len, protocol_addr_len, opcode)) =
+        tuple((be_u16, be_u16, be_u8, be_u8, be_u16))(input)?;
+
+    let (input, sender_hw_addr) = take(hardware_addr_len as usize)(input)?;
+    let (input, sender_protocol_addr) = take(protocol_addr_len as usize)(input)?;
+    let (input, target_hw_addr) = take(hardware_addr_len as usize)(input)?;
+    let (input, target_protocol_addr) = take(protocol_addr_len as usize)(input)?;
+
+    Ok((
+        input,
+        ArpPacket {
+            hardware_type,
+            protocol_type,
+            hardware_addr_len,
+            protocol_addr_len,
+            opcode,
+            sender_hw_addr: sender_hw_addr.to_vec(),
+            sender_protocol_addr: sender_protocol_addr.to_vec(),
+            target_hw_addr: target_hw_addr.to_vec(),
+            target_protocol_addr: target_protocol_addr.to_vec(),
         },
-    )(input)
+    ))
 }
 
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
-        return;
+        eprintln!("Usage: {} <filename>", args[0]);
+        std::process::exit(1);
     }
 
     let filename = &args[1];
-    let mut file = File::open(filename).expect("Failed to open file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    let buffer = read(filename)?;
 
     match parse_arp_packet(&buffer) {
-        Ok((remaining, packet)) => {
-            println!("Parsed ARP packet:\n{:?}\nRemaining bytes: {:?}", packet, remaining);
-        }
+        Ok((_, packet)) => println!("{:#?}", packet),
         Err(e) => {
-            eprintln!("Failed to parse ARP packet: {:?}", e);
+            eprintln!("Error parsing ARP packet: {:?}", e);
+            std::process::exit(1);
         }
     }
+
+    Ok(())
 }

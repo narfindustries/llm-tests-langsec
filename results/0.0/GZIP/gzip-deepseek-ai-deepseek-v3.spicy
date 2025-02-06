@@ -1,0 +1,27 @@
+module GZIP;
+
+public type Header = unit {
+    id1: uint8 &requires=($$ == 0x1f);
+    id2: uint8 &requires=($$ == 0x8b);
+    cm: uint8 &requires=($$ == 0x08);
+    flg: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+    xlen: uint16 if (self.flg & 0x04) != 0;
+    extra: bytes &size=self.xlen if (self.flg & 0x04) != 0;
+    fname: bytes &until=b"\x00" if (self.flg & 0x08) != 0;
+    fcomment: bytes &until=b"\x00" if (self.flg & 0x10) != 0;
+    hcrc: uint16 if (self.flg & 0x02) != 0;
+};
+
+public type Footer = unit {
+    crc32: uint32;
+    isize: uint32;
+};
+
+public type GZIP = unit {
+    header: Header;
+    compressed_data: bytes &eod;
+    footer: Footer;
+};

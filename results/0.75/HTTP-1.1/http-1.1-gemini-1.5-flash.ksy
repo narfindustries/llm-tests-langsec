@@ -1,17 +1,35 @@
-# This is a sample Kaitai Struct definition.  You'll need to replace this with your actual schema.
-# The error message indicates a problem with the compilation command, not necessarily the schema itself.
-# Common causes include:  incorrect paths, missing dependencies, or problems within the .ksy file.
+types:
+  http_message:
+    seq:
+      - id: start_line
+        type: start_line
+      - id: headers
+        type: headers
+      - id: body
+        type: body
 
-# Please provide the correct .ksy file content for accurate generation.
+  start_line:
+    seq:
+      - id: method
+        type: str
+      - id: uri
+        type: str
+      - id: version
+        type: str
 
-# Example:  A simple structure
-type: struct
-endian: be
-fields:
-  - id: magic
-    type: u4
-  - id: version
-    type: u2
-  - id: data
-    type: str
-    size: 10
+  headers:
+    type: array
+    elements: header_field
+    
+
+  header_field:
+    seq:
+      - id: header_name
+        type: str
+      - id: header_value
+        type: str
+
+  body:
+    id: body_data
+    type: bytes
+

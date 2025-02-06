@@ -1,26 +1,81 @@
 module HL7_V2;
 
-public type HL7Message = unit {
-    delim_start: bytes &size = 3; # Assume the delimiter starts with MSH
-    segment: array of Segment
-        &until($input.eof())
-        &byteorder=big-endian;
+public type HL7_Message = unit {
+    segments: array of Segment &until(@input.is_end());
 };
 
-public type Segment = unit {
-    id: string &length = 3;
-    rest: bytes &until("\r");
+type Segment = unit {
+    seg_type: bytes &length=3;
+    delimiter: bytes &length=1 &default="\r";
+    fields: array of Field &until(@input.lookahead(1) == delimiter);
+
+    on %init {
+        print(fmt("Segment: %s", seg_type));
+    }
 };
 
-public global hl7_parser: function%(data: bytes &restofdata%): list<HL7Message> %};
+type Field = unit {
+    value: bytes &until(is_end_of_field());
 
-event spicy_parse_conn%(c: connection, msg: list<HL7Message>%) {
-    for (message in msg) {
-        print "Parsed HL7 Message:";
-        for (segment in message.segment) {
-            print fmt("Segment ID: %s", segment.id);
-            print fmt("Segment Data: %s", segment.rest);
+    on %init {
+        if ( ! value.empty() ) {
+            print(fmt("Field value: %s", value));
         }
     }
-}
 
+    is_end_of_field(): bool {
+        return @input.lookahead(1) == '|' || @input.lookahead(1) == '\r';
+    }
+};
+
+type MSH = unit extends Segment {
+    fields: array of MSH_Field;
+
+    on %init {
+        print("Processing MSH segment");
+    }
+} &requires(seg_type == "MSH");
+
+type MSH_Field = unit {
+    value: switch (index) {
+        0   -> field_separator: bytes &size=1;
+        1   -> encoding_characters: bytes &size=4;
+        2   -> sending_application: bytes;
+        3   -> sending_facility: bytes;
+        4   -> receiving_application: bytes;
+        5   -> receiving_facility: bytes;
+        6   -> date_time_of_message: bytes;
+        7   -> security: bytes;
+        8   -> message_type: bytes;
+        9   -> message_control_id: bytes;
+        10  -> processing_id: bytes;
+        11  -> version_id: bytes;
+        default -> fallback: Field
+    };
+    index: uint32;
+} &priority(10);
+
+type PID = unit extends Segment {
+    fields: array of PID_Field;
+
+    on %init {
+        print("Processing PID segment");
+    }
+} &requires(seg_type == "PID");
+
+type PID_Field = unit {
+    value: switch (index) {
+        0  -> set_id: bytes;
+        1  -> patient_id: bytes;
+        2  -> patient_identifier_list: bytes;
+        3  -> alternate_patient_id: bytes;
+        4  -> patient_name: bytes;
+        5  -> mother_maiden_name: bytes;
+        6  -> date_time_of_birth: bytes;
+        7  -> administrative_sex: bytes;
+        8  -> patient_alias: bytes;
+        9  -> race: bytes;
+        default -> fallback: Field
+    };
+    index: uint32;
+} &priority(10);

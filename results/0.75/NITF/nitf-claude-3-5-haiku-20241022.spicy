@@ -2,34 +2,121 @@ module NITF;
 
 import spicy;
 
-public type Header = unit {
-    magic: bytes(4) &requires(self.magic == b"NITF");
-    version: bytes(2);
-    reserved1: bytes(10);
-    num_image_segments: uint16;
-    num_graphic_segments: uint16;
-    num_text_segments: uint16;
-    num_data_segments: uint16;
+public type NITFFile = unit {
+    file_header: FileHeader;
+    image_segments: ImageSegment[];
+    graphic_segments: GraphicSegment[];
+    text_segments: TextSegment[];
+    data_extension_segments: DataExtensionSegment[];
+    reserved_extension_segments: ReservedExtensionSegment[];
+    user_defined_headers: UserDefinedHeader[];
 
-    on %done {
-        print fmt("NITF Header parsed: Version %s, Segments [Images: %d, Graphics: %d, Text: %d, Data: %d]", 
-            self.version, 
-            self.num_image_segments, 
-            self.num_graphic_segments, 
-            self.num_text_segments, 
-            self.num_data_segments
-        );
-    }
+    type FileHeader = unit {
+        magic: bytes &size=9 &requires($$=="NITF02.10");
+        complexity_level: bytes &size=2;
+        security_classification: bytes &size=1;
+        security_country_code: bytes &size=2;
+        security_release_instructions: bytes &size=20;
+        security_declassification_date: bytes &size=8;
+        security_declassification_exemption: bytes &size=4;
+        security_downgrade_date: bytes &size=8;
+        security_downgrade_event: bytes &size=1;
+        file_security_class: bytes &size=1;
+        file_security_system: bytes &size=2;
+        file_security_code: bytes &size=11;
+        file_security_control: bytes &size=2;
+        originating_station_id: bytes &size=10;
+        file_datetime: bytes &size=14;
+        file_title: bytes &size=80;
+        reserved_1: bytes &size=3;
+        file_length: bytes &size=10;
+        header_length: bytes &size=6;
+        num_image_segments: bytes &size=3;
+        num_graphic_segments: bytes &size=3;
+        num_text_segments: bytes &size=3;
+        num_data_extension_segments: bytes &size=3;
+        num_reserved_extension_segments: bytes &size=3;
+        user_defined_header_length: bytes &size=3;
+        extended_header_length: bytes &size=3;
+        reserved_2: bytes &size=4;
+    };
+
+    type ImageSegment = unit {
+        subheader: ImageSubheader;
+        data: bytes;
+    };
+
+    type ImageSubheader = unit {
+        image_length: bytes &size=10;
+        header_length: bytes &size=6;
+        image_category: bytes &size=8;
+        image_representation: bytes &size=3;
+        image_category_type: bytes &size=8;
+        blocked_image_flag: bytes &size=1;
+        image_mode: bytes &size=1;
+        number_of_bands: uint8;
+        bands: BandInfo[number_of_bands];
+    };
+
+    type BandInfo = unit {
+        representation: bytes &size=2;
+        subcategory: bytes &size=6;
+        bit_depth: bytes &size=2;
+        actual_bits_per_pixel: bytes &size=4;
+    };
+
+    type GraphicSegment = unit {
+        subheader: GraphicSubheader;
+        data: bytes;
+    };
+
+    type GraphicSubheader = unit {
+        graphic_length: bytes &size=6;
+        header_length: bytes &size=4;
+        graphic_type: bytes &size=2;
+        display_level: bytes &size=3;
+        graphic_color: bytes &size=2;
+        graphic_location: bytes &size=10;
+    };
+
+    type TextSegment = unit {
+        subheader: TextSubheader;
+        data: bytes;
+    };
+
+    type TextSubheader = unit {
+        text_length: bytes &size=10;
+        header_length: bytes &size=6;
+        text_type: bytes &size=3;
+        text_title: bytes &size=80;
+    };
+
+    type DataExtensionSegment = unit {
+        subheader: DataExtensionSubheader;
+        data: bytes;
+    };
+
+    type DataExtensionSubheader = unit {
+        length: bytes &size=10;
+        header_length: bytes &size=6;
+        type: bytes &size=2;
+    };
+
+    type ReservedExtensionSegment = unit {
+        subheader: ReservedExtensionSubheader;
+        data: bytes;
+    };
+
+    type ReservedExtensionSubheader = unit {
+        length: bytes &size=10;
+        header_length: bytes &size=6;
+    };
+
+    type UserDefinedHeader = unit {
+        data: bytes;
+    };
 };
 
-public type File = unit {
-    header: Header;
-    
-    on %done {
-        print "NITF file parsed successfully";
-    }
-};
-
-export type NITF = unit {
-    file: File;
-};
+public function parse(data: bytes): NITFFile {
+    return NITFFile(data);
+}

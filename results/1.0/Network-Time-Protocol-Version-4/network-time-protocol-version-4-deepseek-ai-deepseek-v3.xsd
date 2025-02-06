@@ -1,0 +1,32 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ntpFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <dfdl:defineFormat name="ntpFormat">
+    <dfdl:sequence>
+      <dfdl:element name="LeapIndicator" type="xs:int" dfdl:length="2" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="VersionNumber" type="xs:int" dfdl:length="3" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="Mode" type="xs:int" dfdl:length="3" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="Stratum" type="xs:int" dfdl:length="8" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="Poll" type="xs:int" dfdl:length="8" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="Precision" type="xs:int" dfdl:length="8" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="RootDelay" type="xs:float" dfdl:length="32" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="RootDispersion" type="xs:float" dfdl:length="32" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="ReferenceID" type="xs:hexBinary" dfdl:length="32" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="ReferenceTimestamp" type="xs:long" dfdl:length="64" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="OriginTimestamp" type="xs:long" dfdl:length="64" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="ReceiveTimestamp" type="xs:long" dfdl:length="64" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:element name="TransmitTimestamp" type="xs:long" dfdl:length="64" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+      <dfdl:choice dfdl:choiceLengthKind="implicit">
+        <dfdl:sequence dfdl:occurrenceCount="0">
+          <dfdl:element name="KeyIdentifier" type="xs:hexBinary" dfdl:length="32" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+          <dfdl:element name="MessageDigest" type="xs:hexBinary" dfdl:length="128" dfdl:representation="binary" dfdl:byteOrder="bigEndian"/>
+        </dfdl:sequence>
+      </dfdl:choice>
+    </dfdl:sequence>
+  </dfdl:defineFormat>
+
+</xs:schema>

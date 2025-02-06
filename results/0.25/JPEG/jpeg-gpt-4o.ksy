@@ -1,17 +1,16 @@
 meta:
   id: jpeg
-  title: JPEG File Interchange Format
+  title: JPEG File Format
   file-extension: jpg
   xref:
     mime: image/jpeg
-  license: CC0-1.0
   endian: be
 
 seq:
   - id: segments
     type: segment
     repeat: until
-    repeat-until: _.marker == 0xd9
+    repeat-until: _.marker == 0xffd9
 
 types:
   segment:
@@ -20,55 +19,119 @@ types:
         type: u2
       - id: length
         type: u2
-        if: marker != 0xd8 and marker != 0xd9
+        if: marker != 0xffd8 and marker != 0xffd9
       - id: data
         size: length - 2
-        if: marker != 0xd8 and marker != 0xd9
+        if: marker != 0xffd8 and marker != 0xffd9
+        type:
+          switch-on: marker
+          cases:
+            0xffe0: app0_segment
+            0xffdb: dqt_segment
+            0xffc0: sof0_segment
+            0xffc4: dht_segment
+            0xffda: sos_segment
+            0xffdd: dri_segment
+            0xfffe: com_segment
 
-enums:
-  marker:
-    0xffd8: soi
-    0xffd9: eoi
-    0xffe0: app0
-    0xffe1: app1
-    0xffe2: app2
-    0xffe3: app3
-    0xffe4: app4
-    0xffe5: app5
-    0xffe6: app6
-    0xffe7: app7
-    0xffe8: app8
-    0xffe9: app9
-    0xffea: app10
-    0xffeb: app11
-    0xffec: app12
-    0xffed: app13
-    0xffee: app14
-    0xffef: app15
-    0xffc0: sof0
-    0xffc1: sof1
-    0xffc2: sof2
-    0xffc3: sof3
-    0xffc5: sof5
-    0xffc6: sof6
-    0xffc7: sof7
-    0xffc9: sof9
-    0xffca: sof10
-    0xffcb: sof11
-    0xffcd: sof13
-    0xffce: sof14
-    0xffcf: sof15
-    0xffc4: dht
-    0xffdb: dqt
-    0xffdd: dri
-    0xffda: sos
-    0xfffe: com
-    0xff01: tem
-    0xfff0: rst0
-    0xfff1: rst1
-    0xfff2: rst2
-    0xfff3: rst3
-    0xfff4: rst4
-    0xfff5: rst5
-    0xfff6: rst6
-    0xfff7: rst7
+  app0_segment:
+    seq:
+      - id: identifier
+        type: str
+        size: 5
+        encoding: ASCII
+      - id: version_major
+        type: u1
+      - id: version_minor
+        type: u1
+      - id: density_units
+        type: u1
+      - id: x_density
+        type: u2
+      - id: y_density
+        type: u2
+      - id: x_thumbnail
+        type: u1
+      - id: y_thumbnail
+        type: u1
+      - id: thumbnail_data
+        size: x_thumbnail * y_thumbnail * 3
+
+  dqt_segment:
+    seq:
+      - id: info
+        type: u1
+      - id: quantization_table
+        type: u1
+        repeat: expr
+        repeat-expr: 64
+
+  sof0_segment:
+    seq:
+      - id: precision
+        type: u1
+      - id: height
+        type: u2
+      - id: width
+        type: u2
+      - id: num_components
+        type: u1
+      - id: components
+        type: component
+        repeat: expr
+        repeat-expr: num_components
+
+  component:
+    seq:
+      - id: id
+        type: u1
+      - id: sampling_factors
+        type: u1
+      - id: quantization_table_id
+        type: u1
+
+  dht_segment:
+    seq:
+      - id: info
+        type: u1
+      - id: num_codes
+        type: u1
+        repeat: expr
+        repeat-expr: 16
+      - id: values
+        type: u1
+        repeat: eos
+
+  sos_segment:
+    seq:
+      - id: num_components
+        type: u1
+      - id: components
+        type: sos_component
+        repeat: expr
+        repeat-expr: num_components
+      - id: start_spectral
+        type: u1
+      - id: end_spectral
+        type: u1
+      - id: approx
+        type: u1
+
+  sos_component:
+    seq:
+      - id: id
+        type: u1
+      - id: huffman_table
+        type: u1
+
+  dri_segment:
+    seq:
+      - id: restart_interval
+        type: u2
+
+  com_segment:
+    seq:
+      - id: comment
+        type: str
+        size: _root.segments[_index].length - 2
+        encoding: ASCII

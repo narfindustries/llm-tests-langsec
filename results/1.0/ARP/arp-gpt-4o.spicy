@@ -1,37 +1,14 @@
 module ARP;
 
-public type ARPRequest = unit {
-    htype: uint16;
-    ptype: uint16;
-    hlen: uint8;
-    plen: uint8;
-    oper: uint16;
-    sha: bytes &size=6;
-    spa: bytes &size=4;
-    tha: bytes &size=6;
-    tpa: bytes &size=4;
-};
+type ARP = unit {
+    htype: uint16;      # Hardware Type
+    ptype: uint16;      # Protocol Type
+    hlen:  uint8;       # Hardware Address Length
+    plen:  uint8;       # Protocol Address Length
+    oper:  uint16;      # Operation Code
 
-public type ARPReply = unit {
-    htype: uint16;
-    ptype: uint16;
-    hlen: uint8;
-    plen: uint8;
-    oper: uint16;
-    sha: bytes &size=6;
-    spa: bytes &size=4;
-    tha: bytes &size=6;
-    tpa: bytes &size=4;
-};
-
-public type ARPMessage = unit {
-    message: ARPRequest | ARPReply {
-        switch(self.oper) {
-            case 1: self = ARPRequest;
-            case 2: self = ARPReply;
-        }
-    }
-    %{
-        // Custom parsing logic can be added here
-    %}
+    sha: bytes[h _len];  # Sender Hardware Address
+    spa: bytes[p _len];  # Sender Protocol Address
+    tha: bytes[h _len];  # Target Hardware Address
+    tpa: bytes[p _len];  # Target Protocol Address
 };

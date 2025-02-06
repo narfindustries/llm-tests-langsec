@@ -1,70 +1,187 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:sqlite="urn:sqlite:db:format"
-    targetNamespace="urn:sqlite:db:format">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        occursCountKind="implicit"
-                        representation="binary"
-                        byteOrder="littleEndian"
-                        binaryNumberRep="binary"
-                        encodingErrorPolicy="replace"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+           targetNamespace="urn:sqlite3"
+           xmlns:sqlite="urn:sqlite3">
 
-    <xs:element name="sqlite3_db">
-        <xs:complexType>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   alignmentUnits="bytes"
+                   binaryNumberRep="binary"
+                   byteOrder="bigEndian"
+                   encoding="UTF-8"
+                   ignoreCase="no"
+                   lengthKind="explicit"
+                   lengthUnits="bytes"
+                   occursCountKind="fixed"
+                   representation="binary"
+                   textNumberRep="standard"
+                   textStringJustification="left"
+                   textTrimKind="none"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   textBidi="no"
+                   floating="no"
+                   encodingErrorPolicy="replace"
+                   sequenceKind="ordered"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="SQLiteDatabase" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header">
+          <xs:complexType>
             <xs:sequence>
-                <xs:element name="header">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="magic" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:encoding="ASCII"/>
-                            <xs:element name="page_size" type="xs:unsignedShort"/>
-                            <xs:element name="write_version" type="xs:unsignedByte"/>
-                            <xs:element name="read_version" type="xs:unsignedByte"/>
-                            <xs:element name="reserved_space" type="xs:unsignedByte"/>
-                            <xs:element name="max_payload_fraction" type="xs:unsignedByte"/>
-                            <xs:element name="min_payload_fraction" type="xs:unsignedByte"/>
-                            <xs:element name="leaf_payload_fraction" type="xs:unsignedByte"/>
-                            <xs:element name="file_change_counter" type="xs:unsignedInt"/>
-                            <xs:element name="database_size" type="xs:unsignedInt"/>
-                            <xs:element name="first_freelist_trunk_page" type="xs:unsignedInt"/>
-                            <xs:element name="total_freelist_pages" type="xs:unsignedInt"/>
-                            <xs:element name="schema_cookie" type="xs:unsignedInt"/>
-                            <xs:element name="schema_format" type="xs:unsignedInt"/>
-                            <xs:element name="default_page_cache_size" type="xs:unsignedInt"/>
-                            <xs:element name="largest_root_btree_page" type="xs:unsignedInt"/>
-                            <xs:element name="database_text_encoding" type="xs:unsignedInt"/>
-                            <xs:element name="user_version" type="xs:unsignedInt"/>
-                            <xs:element name="incremental_vacuum_mode" type="xs:unsignedInt"/>
-                            <xs:element name="application_id" type="xs:unsignedInt"/>
-                            <xs:element name="reserved" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="20"/>
-                            <xs:element name="version_valid_for" type="xs:unsignedInt"/>
-                            <xs:element name="sqlite_version_number" type="xs:unsignedInt"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="pages" minOccurs="0" maxOccurs="unbounded">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="page_type" type="xs:unsignedByte"/>
-                            <xs:element name="first_freeblock" type="xs:unsignedShort"/>
-                            <xs:element name="cell_count" type="xs:unsignedShort"/>
-                            <xs:element name="cell_content_start" type="xs:unsignedShort"/>
-                            <xs:element name="fragmented_free_bytes" type="xs:unsignedByte"/>
-                            <xs:element name="page_content" type="xs:hexBinary" dfdl:lengthKind="explicit" 
-                                      dfdl:length="{ ../header/page_size - 8 }"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
+              <xs:element name="magic" type="xs:string" dfdl:length="16" dfdl:lengthKind="explicit"/>
+              <xs:element name="pageSize" type="xs:unsignedShort"/>
+              <xs:element name="writeVersion" type="xs:unsignedByte"/>
+              <xs:element name="readVersion" type="xs:unsignedByte"/>
+              <xs:element name="reservedSpace" type="xs:unsignedByte"/>
+              <xs:element name="maxPayloadFraction" type="xs:unsignedByte"/>
+              <xs:element name="minPayloadFraction" type="xs:unsignedByte"/>
+              <xs:element name="leafPayloadFraction" type="xs:unsignedByte"/>
+              <xs:element name="fileChangeCounter" type="xs:unsignedInt"/>
+              <xs:element name="databaseSizePages" type="xs:unsignedInt"/>
+              <xs:element name="firstFreelistTrunk" type="xs:unsignedInt"/>
+              <xs:element name="freelistPages" type="xs:unsignedInt"/>
+              <xs:element name="schemaCookie" type="xs:unsignedInt"/>
+              <xs:element name="schemaFormat" type="xs:unsignedInt"/>
+              <xs:element name="defaultPageCache" type="xs:unsignedInt"/>
+              <xs:element name="largestRootBtree" type="xs:unsignedInt"/>
+              <xs:element name="textEncoding" type="xs:unsignedInt"/>
+              <xs:element name="userVersion" type="xs:unsignedInt"/>
+              <xs:element name="incrementalVacuum" type="xs:unsignedInt"/>
+              <xs:element name="applicationId" type="xs:unsignedInt"/>
+              <xs:element name="reserved" type="xs:hexBinary" dfdl:length="20"/>
+              <xs:element name="versionValid" type="xs:unsignedInt"/>
+              <xs:element name="sqliteVersion" type="xs:unsignedInt"/>
             </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="pages" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="interiorIndex">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="pageType" type="xs:unsignedByte" fixed="2"/>
+                    <xs:element name="firstFreeblock" type="xs:unsignedShort"/>
+                    <xs:element name="cellCount" type="xs:unsignedShort"/>
+                    <xs:element name="cellContentOffset" type="xs:unsignedShort"/>
+                    <xs:element name="fragmentedFreeBytes" type="xs:unsignedByte"/>
+                    <xs:element name="rightChildPointer" type="xs:unsignedInt"/>
+                    <xs:element name="cells" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="leftChildPointer" type="xs:unsignedInt"/>
+                          <xs:element name="payloadLength" type="sqlite:Varint"/>
+                          <xs:element name="payload" type="sqlite:Record"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="interiorTable">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="pageType" type="xs:unsignedByte" fixed="5"/>
+                    <xs:element name="firstFreeblock" type="xs:unsignedShort"/>
+                    <xs:element name="cellCount" type="xs:unsignedShort"/>
+                    <xs:element name="cellContentOffset" type="xs:unsignedShort"/>
+                    <xs:element name="fragmentedFreeBytes" type="xs:unsignedByte"/>
+                    <xs:element name="rightChildPointer" type="xs:unsignedInt"/>
+                    <xs:element name="cells" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="leftChildPointer" type="xs:unsignedInt"/>
+                          <xs:element name="rowId" type="sqlite:Varint"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="leafIndex">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="pageType" type="xs:unsignedByte" fixed="10"/>
+                    <xs:element name="firstFreeblock" type="xs:unsignedShort"/>
+                    <xs:element name="cellCount" type="xs:unsignedShort"/>
+                    <xs:element name="cellContentOffset" type="xs:unsignedShort"/>
+                    <xs:element name="fragmentedFreeBytes" type="xs:unsignedByte"/>
+                    <xs:element name="cells" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="payloadLength" type="sqlite:Varint"/>
+                          <xs:element name="payload" type="sqlite:Record"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="leafTable">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="pageType" type="xs:unsignedByte" fixed="13"/>
+                    <xs:element name="firstFreeblock" type="xs:unsignedShort"/>
+                    <xs:element name="cellCount" type="xs:unsignedShort"/>
+                    <xs:element name="cellContentOffset" type="xs:unsignedShort"/>
+                    <xs:element name="fragmentedFreeBytes" type="xs:unsignedByte"/>
+                    <xs:element name="cells" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="payloadLength" type="sqlite:Varint"/>
+                          <xs:element name="rowId" type="sqlite:Varint"/>
+                          <xs:element name="payload" type="sqlite:Record"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Record">
+    <xs:sequence>
+      <xs:element name="headerLength" type="sqlite:Varint"/>
+      <xs:element name="serialTypes" type="sqlite:Varint" maxOccurs="unbounded"/>
+      <xs:element name="values" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:choice>
+            <xs:element name="null" type="xs:string" fixed=""/>
+            <xs:element name="int8" type="xs:byte"/>
+            <xs:element name="int16" type="xs:short"/>
+            <xs:element name="int24" type="xs:int"/>
+            <xs:element name="int32" type="xs:int"/>
+            <xs:element name="int48" type="xs:long"/>
+            <xs:element name="int64" type="xs:long"/>
+            <xs:element name="float64" type="xs:double"/>
+            <xs:element name="blob" type="xs:hexBinary"/>
+            <xs:element name="text" type="xs:string"/>
+          </xs:choice>
         </xs:complexType>
-    </xs:element>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="Varint">
+    <xs:restriction base="xs:long"/>
+  </xs:simpleType>
 
 </xs:schema>

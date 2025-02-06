@@ -1,143 +1,287 @@
-# MQTT Protocol Specification in Zeek Spicy
+module MQTT;
 
-%header {
-    import Frameworks
+type mqtt_message = record {
+  fixed_header = fixed_header,
+  variable_header = variable_header,
+  payload = bytes
 }
 
-%config {
-    # Framework configuration
-    env = Fidir::Even
-    framework = "mqtt"
+type fixed_header = record {
+  msg_type = uint4,
+  dup = bool,
+  qos = uint2,
+  retain = bool
 }
 
-%def transitions {
-    # Initial state
-    start: inbound -> connected
-
-    # Connecting to the broker
-    connected: connack -> connected
-    connected: publish -> connected
-    connected: puback -> connected
-    connected: pubrec -> connected
-    connected: pubrel -> connected
-    connected: pubcomp -> connected
-    connected: subscribe -> connected
-    connected: suback -> connected
-    connected: unsubscribe -> connected
-    connected: unsuback -> connected
-    connected: pingreq -> connected
-    connected: pingresp -> connected
-    connected: disconnect -> disconnected
-
-    # Connection acknowledgment
-    connack: connack_ack -> connected
-
-    # Publishing messages
-    publish: publish_dup -> connected
-    publish: publish_qos0 -> connected
-    publish: publish_qos1 -> connected
-    publish: publish_qos2 -> connected
-
-    # Publishing with QoS 1
-    puback: puback_ack -> connected
-
-    # Publishing with QoS 2
-    pubrec: pubrec_ack -> connected
-    pubrel: pubrel_ack -> connected
-    pubcomp: pubcomp_ack -> connected
-
-    # Subscribing to topics
-    subscribe: suback_ack -> connected
-
-    # Unsubscribing from topics
-    unsubscribe: unsuback_ack -> connected
-
-    # Ping request
-    pingreq: pingresp_ack -> connected
-
-    # Disconnecting from the broker
-    disconnect: disconnect_ack -> disconnected
+type variable_header = record {
+  packet_identifier = uint16,
+  properties = seq_of property
 }
 
-%type mqtt_message {
-    # Common header for all MQTT messages
-    1 uint8  # Message type
-    1 uint8  # Flags
-    2 uint16 # Remaining length
-    condition message_type == 1 -> connect
-    condition message_type == 2 -> connack
-    condition message_type == 3 -> publish
-    condition message_type == 4 -> puback
-    condition message_type == 5 -> pubrec
-    condition message_type == 6 -> pubrel
-    condition message_type == 7 -> pubcomp
-    condition message_type == 8 -> subscribe
-    condition message_type == 9 -> suback
-    condition message_type == 10 -> unsubscribe
-    condition message_type == 11 -> unsuback
-    condition message_type == 12 -> pingreq
-    condition message_type == 13 -> pingresp
-    condition message_type == 14 -> disconnect
-
-    # Connect message
-    1 uint8  # Protocol name length (4 for MQTT)
-    4 string # Protocol name (MQTT)
-    1 uint8  # Protocol level (4 for MQTT 3.1.1)
-    1 uint8  # Connect flags
-    2 uint16 # Keep alive
-
-    # Connack message
-    1 uint8  # Session present
-    1 uint8  # Return code
-
-    # Publish message
-    1 uint8  # Topic length (high byte)
-    1 uint8  # Topic length (low byte)
-    2 string # Topic name
-    2 uint16 # Packet identifier (for QoS 1 and 2)
-    condition flags & 0x01 == 1 -> dup
-    condition flags & 0x02 == 2 -> qos
-    condition flags & 0x04 == 4 -> retain
-    condition qos == 0 -> payload
-    condition qos == 1 -> payload
-    condition qos == 2 -> payload
-
-    # Puback message
-    2 uint16 # Packet identifier
-
-    # Pubrec message
-    2 uint16 # Packet identifier
-
-    # Pubrel message
-    2 uint16 # Packet identifier
-
-    # Pubcomp message
-    2 uint16 # Packet identifier
-
-    # Subscribe message
-    2 uint16 # Packet identifier
-    1 uint8  # Topic length (high byte)
-    1 uint8  # Topic length (low byte)
-    2 string # Topic name
-    1 uint8  # QoS
-
-    # Suback message
-    2 uint16 # Packet identifier
-    1 uint8  # Return code
-
-    # Unsubscribe message
-    2 uint16 # Packet identifier
-    1 uint8  # Topic length (high byte)
-    1 uint8  # Topic length (low byte)
-    2 string # Topic name
-
-    # Unsuback message
-    2 uint16 # Packet identifier
-
-    # Pingreq message
-
-    # Pingresp message
-
-    # Disconnect message
-    1 uint8  # Disconnect reason code
+type property = record {
+  id = uint8,
+  value = bytes
 }
+
+type connack_properties = record {
+  session_present = bool,
+  connect_reason_code = uint8,
+  assign_client_identifier = uint8,
+  reason_string = string,
+  user_properties = seq_of user_property,
+  wildcard_subscription_available = bool,
+  subscription_identifiers_available = bool,
+  shared_subscription_available = bool,
+  server_keep_alive = uint16,
+  response_information = string,
+  server_reference = string,
+  authentication_method = string,
+  authentication_data = bytes
+}
+
+type connect_properties = record {
+  protocol_name = string,
+  protocol_level = uint8,
+  connect_flags = connect_flags,
+  keep_alive = uint16,
+  payload_format_indicator = bool,
+  message_expiry_interval = uint32,
+  topic_alias_maximum = uint16,
+  request_response_information = uint8,
+  request_problem_information = uint8,
+  user_properties = seq_of user_property,
+  authentication_method = string,
+  authentication_data = bytes,
+  will_properties = will_properties
+}
+
+type user_property = record {
+  name = string,
+  value = string
+}
+
+type puback_properties = record {
+  reason_code = uint8,
+  properties = seq_of property
+}
+
+type pubrec_properties = record {
+  reason_code = uint8,
+  properties = seq_of property
+}
+
+type pubrel_properties = record {
+  reason_code = uint8,
+  properties = seq_of property
+}
+
+type pubcomp_properties = record {
+  reason_code = uint8,
+  properties = seq_of property
+}
+
+type publish_properties = record {
+  payload_format_indicator = bool,
+  message_expiry_interval = uint32,
+  topic_alias = uint16,
+  request_response_information = uint8,
+  request_problem_information = uint8,
+  user_properties = seq_of user_property,
+  subscription_identifier = uint32,
+  content_type = string,
+  correlation_data = bytes,
+  response_topic = string,
+  response_payload = bytes
+}
+
+type suback_properties = record {
+  reason_code = uint8,
+  reason_string = string,
+  user_properties = seq_of user_property
+}
+
+type subscribe_properties = record {
+  subscription_identifier = uint32,
+  user_properties = seq_of user_property
+}
+
+type unsubscribe_properties = record {
+  user_properties = seq_of user_property
+}
+
+type disconnect_properties = record {
+  session_expiration_interval = uint32,
+  server_reference = string,
+  reason_string = string,
+  user_properties = seq_of user_property
+}
+
+type will_properties = record {
+  payload_format_indicator = bool,
+  message_expiry_interval = uint32,
+  content_type = string,
+  response_topic = string,
+  correlation_data = bytes,
+  user_properties = seq_of user_property
+}
+
+type auth_properties = record {
+  reason_code = uint8,
+  authentication_method = string,
+  authentication_data = bytes,
+  reason_string = string,
+  user_properties = seq_of user_property
+}
+
+type connect_flags = record {
+  username = bool,
+  password = bool,
+  will_retain = bool,
+  will_qos = uint2,
+  will_flag = bool,
+  clean_start = bool
+}
+
+let mqtt_parser = $(choice {
+  connect_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      protocol_name = string,
+      protocol_level = uint8,
+      connect_flags = connect_flags,
+      keep_alive = uint16,
+      payload_format_indicator = bool,
+      message_expiry_interval = uint32,
+      topic_alias_maximum = uint16,
+      request_response_information = uint8,
+      request_problem_information = uint8,
+      user_properties = seq_of user_property,
+      authentication_method = string,
+      authentication_data = bytes,
+      will_properties = will_properties
+    },
+    payload = bytes
+  },
+  connack_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      session_present = bool,
+      connect_reason_code = uint8,
+      assign_client_identifier = uint8,
+      reason_string = string,
+      user_properties = seq_of user_property,
+      wildcard_subscription_available = bool,
+      subscription_identifiers_available = bool,
+      shared_subscription_available = bool,
+      server_keep_alive = uint16,
+      response_information = string,
+      server_reference = string,
+      authentication_method = string,
+      authentication_data = bytes
+    },
+    payload = bytes
+  },
+  publish_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      topic_name = string,
+      packet_identifier = uint16,
+      payload_format_indicator = bool,
+      message_expiry_interval = uint32,
+      topic_alias = uint16,
+      request_response_information = uint8,
+      request_problem_information = uint8,
+      user_properties = seq_of user_property,
+      subscription_identifier = uint32,
+      content_type = string,
+      correlation_data = bytes,
+      response_topic = string,
+      response_payload = bytes
+    },
+    payload = bytes
+  },
+  puback_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      reason_code = uint8,
+      properties = seq_of property
+    },
+    payload = bytes
+  },
+  pubrec_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      reason_code = uint8,
+      properties = seq_of property
+    },
+    payload = bytes
+  },
+  pubrel_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      reason_code = uint8,
+      properties = seq_of property
+    },
+    payload = bytes
+  },
+  pubcomp_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      reason_code = uint8,
+      properties = seq_of property
+    },
+    payload = bytes
+  },
+  subscribe_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      subscription_identifier = uint32,
+      user_properties = seq_of user_property
+    },
+    payload = bytes
+  },
+  suback_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      reason_code = uint8,
+      reason_string = string,
+      user_properties = seq_of user_property
+    },
+    payload = bytes
+  },
+  unsubscribe_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      packet_identifier = uint16,
+      user_properties = seq_of user_property
+    },
+    payload = bytes
+  },
+  disconnect_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      session_expiration_interval = uint32,
+      server_reference = string,
+      reason_string = string,
+      user_properties = seq_of user_property
+    },
+    payload = bytes
+  },
+  auth_msg = record {
+    fixed_header = fixed_header,
+    variable_header = record {
+      reason_code = uint8,
+      authentication_method = string,
+      authentication_data = bytes,
+      reason_string = string,
+      user_properties = seq_of user_property
+    },
+    payload = bytes
+  }
+})

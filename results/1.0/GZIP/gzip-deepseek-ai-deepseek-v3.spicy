@@ -1,0 +1,33 @@
+module GZIP;
+
+const ID1 = 0x1f;
+const ID2 = 0x8b;
+
+public type Header = unit {
+    id1: uint8;
+    id2: uint8; 
+    cm: uint8;
+    flg: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+
+    xlen: uint16                  if (self.flg & 0x04);
+    extra_fields: bytes &size=xlen if (self.flg & 0x04);
+
+    fname: bytes &until=b"\x00"    if (self.flg & 0x08);
+    comment: bytes &until=b"\x00"  if (self.flg & 0x10);
+    crc16: uint16                  if (self.flg & 0x02);
+
+    compressed_data: bytes &eod;
+};
+
+public type Trailer = unit {
+    crc32: uint32;
+    isize: uint32;
+};
+
+public type GZIPFile = unit {
+    header: Header;
+    trailer: Trailer;
+};

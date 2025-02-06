@@ -1,42 +1,90 @@
 module JPEG;
 
 public type JPEG = unit {
-    magic: bytes &validate = (self.magic == "\xff\xd8");
-
-    segments: vector of Segment {
-        while ( not eos() )
-    };
+    soi: SOI,
+    segments: vector<Segment> &until($$.body.is<EOI>)
 };
 
-public type Segment = unit {
-    marker: uint16 &byteorder=be;
+type SOI = unit {
+    marker: uint16 &equals=0xFFD8
+};
 
-    length_and_data: LengthAndData(marker) 
-        &size = length_data_size(marker);
+type EOI = unit {
+    marker: uint16 &equals=0xFFD9
+};
 
-    on %done {
-        if ( marker == 0xffd9 ) {
-            # EOI marker, end of image
-            break;
-        }
+type Segment = unit {
+    marker: uint16,
+    body: body_type(marker)
+} &depends_on(marker != 0xFFD8);
+
+type body_type = function(marker: uint16) -> unit {
+    switch (marker) {
+        case 0xFFE0...0xFFEF: return APPn(marker);
+        case 0xFFDB: return DQT;
+        case 0xFFC0, 0xFFC1, 0xFFC2, 0xFFC3, 0xFFC5, 0xFFC6, 0xFFC7, 0xFFC9, 0xFFCA, 0xFFCB, 0xFFCD, 0xFFCE, 0xFFCF: return SOF(marker);
+        case 0xFFC4: return DHT;
+        case 0xFFDA: return SOS;
+        case 0xFFFE: return COM;
+        case 0xFFD9: return EOI;
+        default: return UnknownSegment;
     }
 };
 
-function length_data_size(marker: uint16): uint64 {
-    if ( marker in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } ) {
-        # Markers without length field
-        return 0;
-    }
-    else {
-        # Length is stored in the two bytes after the marker
-        return 2 + uint16 &byteorder=be;
-    }
-}
+type APPn = unit (marker: uint16) {
+    length: uint16,
+    identifier: bytes &size=5 &optional &check=($$ == b"JFIF\0"),
+    data: bytes &size=(length - 2 - (identifier ? |identifier| : 0))
+};
 
-public type LengthAndData = unit (marker: uint16) {
-    length: uint16 &byteorder=be 
-        &if ( marker not in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } );
+type DQT = unit {
+    length: uint16,
+    qt_info: uint8,
+    qt_values: bytes &size=(length - 2 - 1)
+};
 
-    data: bytes &restofdata 
-        &if ( marker not in { 0xffd0, 0xffd1, 0xffd2, 0xffd3, 0xffd4, 0xffd5, 0xffd6, 0xffd7, 0xffd8, 0xffd9 } );
+type SOF = unit (marker: uint16) {
+    length: uint16,
+    sample_precision: uint8,
+    image_height: uint16,
+    image_width: uint16,
+    number_of_components: uint8,
+    components: vector<Component> &length=number_of_components
+};
+
+type Component = unit {
+    component_id: uint8,
+    sampling_factors: uint8,
+    qt_selector: uint8
+};
+
+type DHT = unit {
+    length: uint16,
+    ht_info: uint8,
+    num_codes: bytes &size=16,
+    huffman_values: bytes &size=(length - 2 - 17)
+};
+
+type SOS = unit {
+    length: uint16,
+    number_of_components: uint8,
+    components: vector<SOSComponent> &length=number_of_components,
+    spectral_selection_start: uint8,
+    spectral_selection_end: uint8,
+    approximation: uint8
+};
+
+type SOSComponent = unit {
+    component_id: uint8,
+    huffman_table_selectors: uint8
+};
+
+type COM = unit {
+    length: uint16,
+    comment: bytes &size=(length - 2)
+};
+
+type UnknownSegment = unit {
+    length: uint16,
+    data: bytes &size=(length - 2)
 };

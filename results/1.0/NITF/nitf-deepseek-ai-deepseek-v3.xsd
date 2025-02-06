@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="text" lengthKind="explicit" encoding="UTF-8"/>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FHDR" type="xs:string" dfdl:length="4" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="FVER" type="xs:string" dfdl:length="5" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="CLEVEL" type="xs:string" dfdl:length="2" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="STYPE" type="xs:string" dfdl:length="4" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="OSTAID" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="FDT" type="xs:string" dfdl:length="14" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageSegments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ISCLAS" type="xs:string" dfdl:length="1" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="IID" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="IID2" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="ITITLE" type="xs:string" dfdl:length="80" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="IGEOLO" type="xs:string" dfdl:length="60" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="GraphicsSegments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SS_CLAS" type="xs:string" dfdl:length="1" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="SS_ID" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="SS_TITLE" type="xs:string" dfdl:length="80" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TextSegments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TS_CLAS" type="xs:string" dfdl:length="1" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="TS_ID" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="TS_TITLE" type="xs:string" dfdl:length="80" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="DataExtensions" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="DES_CLAS" type="xs:string" dfdl:length="1" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="DES_ID" type="xs:string" dfdl:length="10" dfdl:terminator="" dfdl:alignment="1"/>
+              <xs:element name="DES_TITLE" type="xs:string" dfdl:length="80" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ReservedExtensions" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Reserved" type="xs:string" dfdl:length="100" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="TaggedRecordExtensions" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TRE" type="xs:string" dfdl:length="100" dfdl:terminator="" dfdl:alignment="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

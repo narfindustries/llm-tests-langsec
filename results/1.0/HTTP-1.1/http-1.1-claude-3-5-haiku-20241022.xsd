@@ -1,1 +1,314 @@
-Before I paste the full DFDL schema, may I clarify something? The error message suggests a compilation issue with a previous DFDL schema. Would you like me to regenerate the entire HTTP/1.1 DFDL schema from scratch, addressing potential structural or syntax problems? Or do you want me to make specific targeted fixes based on the error?
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+            targetNamespace="http://example.com/http11">
+
+  <xsd:annotation>
+    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" separatorPosition="prefix" separatorPolicy="suppressed"
+                   representation="text" encoding="ASCII" 
+                   ignoreCase="no" textNumberRep="standard"/>
+    </xsd:appinfo>
+  </xsd:annotation>
+
+  <xsd:element name="HTTPMessage" dfdl:lengthKind="delimited">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="StartLine" type="StartLineType"/>
+        <xsd:element name="Headers" type="HeadersType"/>
+        <xsd:element name="Body" type="BodyType" minOccurs="0"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+
+  <xsd:complexType name="StartLineType">
+    <xsd:choice>
+      <xsd:element name="RequestLine">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="Method" type="MethodType"/>
+            <xsd:element name="URI" type="xsd:string"/>
+            <xsd:element name="HTTPVersion" type="HTTPVersionType"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="StatusLine">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="HTTPVersion" type="HTTPVersionType"/>
+            <xsd:element name="StatusCode" type="StatusCodeType"/>
+            <xsd:element name="ReasonPhrase" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:choice>
+  </xsd:complexType>
+
+  <xsd:complexType name="BodyType">
+    <xsd:sequence>
+      <xsd:element name="Content" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:simpleType name="MethodType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="GET"/>
+      <xsd:enumeration value="POST"/>
+      <xsd:enumeration value="PUT"/>
+      <xsd:enumeration value="DELETE"/>
+      <xsd:enumeration value="HEAD"/>
+      <xsd:enumeration value="OPTIONS"/>
+      <xsd:enumeration value="TRACE"/>
+      <xsd:enumeration value="CONNECT"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="HTTPVersionType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="HTTP/1.1"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="StatusCodeType">
+    <xsd:restriction base="xsd:integer">
+      <xsd:minInclusive value="100"/>
+      <xsd:maxInclusive value="599"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="HeadersType">
+    <xsd:sequence>
+      <xsd:element name="GeneralHeaders" type="GeneralHeadersType" minOccurs="0"/>
+      <xsd:element name="RequestHeaders" type="RequestHeadersType" minOccurs="0"/>
+      <xsd:element name="ResponseHeaders" type="ResponseHeadersType" minOccurs="0"/>
+      <xsd:element name="EntityHeaders" type="EntityHeadersType" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="GeneralHeadersType">
+    <xsd:sequence>
+      <xsd:element name="CacheControl" type="CacheControlType" minOccurs="0"/>
+      <xsd:element name="Connection" type="ConnectionType" minOccurs="0"/>
+      <xsd:element name="Date" type="DateType" minOccurs="0"/>
+      <xsd:element name="Pragma" type="PragmaType" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="CacheControlType">
+    <xsd:sequence>
+      <xsd:element name="Directive" type="CacheDirectiveType" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:simpleType name="CacheDirectiveType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="public"/>
+      <xsd:enumeration value="private"/>
+      <xsd:enumeration value="no-cache"/>
+      <xsd:enumeration value="no-store"/>
+      <xsd:enumeration value="no-transform"/>
+      <xsd:enumeration value="must-revalidate"/>
+      <xsd:enumeration value="proxy-revalidate"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="ConnectionType">
+    <xsd:sequence>
+      <xsd:element name="Option" type="ConnectionOptionType"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:simpleType name="ConnectionOptionType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="close"/>
+      <xsd:enumeration value="keep-alive"/>
+      <xsd:enumeration value="upgrade"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="DateType">
+    <xsd:sequence>
+      <xsd:element name="HTTPDate" type="xsd:dateTime"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="PragmaType">
+    <xsd:sequence>
+      <xsd:element name="Directive" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="RequestHeadersType">
+    <xsd:sequence>
+      <xsd:element name="Accept" type="AcceptType" minOccurs="0"/>
+      <xsd:element name="AcceptCharset" type="AcceptCharsetType" minOccurs="0"/>
+      <xsd:element name="AcceptEncoding" type="AcceptEncodingType" minOccurs="0"/>
+      <xsd:element name="AcceptLanguage" type="AcceptLanguageType" minOccurs="0"/>
+      <xsd:element name="Authorization" type="AuthorizationType" minOccurs="0"/>
+      <xsd:element name="Host" type="HostType" minOccurs="0"/>
+      <xsd:element name="IfMatch" type="IfMatchType" minOccurs="0"/>
+      <xsd:element name="IfModifiedSince" type="xsd:dateTime" minOccurs="0"/>
+      <xsd:element name="IfNoneMatch" type="IfNoneMatchType" minOccurs="0"/>
+      <xsd:element name="IfRange" type="IfRangeType" minOccurs="0"/>
+      <xsd:element name="IfUnmodifiedSince" type="xsd:dateTime" minOccurs="0"/>
+      <xsd:element name="MaxForwards" type="xsd:positiveInteger" minOccurs="0"/>
+      <xsd:element name="Referer" type="xsd:anyURI" minOccurs="0"/>
+      <xsd:element name="UserAgent" type="xsd:string" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AcceptType">
+    <xsd:sequence>
+      <xsd:element name="MimeType" type="xsd:string" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AcceptCharsetType">
+    <xsd:sequence>
+      <xsd:element name="Charset" type="xsd:string" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AcceptEncodingType">
+    <xsd:sequence>
+      <xsd:element name="Encoding" type="EncodingType" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:simpleType name="EncodingType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="gzip"/>
+      <xsd:enumeration value="compress"/>
+      <xsd:enumeration value="deflate"/>
+      <xsd:enumeration value="identity"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="AcceptLanguageType">
+    <xsd:sequence>
+      <xsd:element name="Language" type="xsd:language" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AuthorizationType">
+    <xsd:sequence>
+      <xsd:element name="Credentials" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="HostType">
+    <xsd:sequence>
+      <xsd:element name="Domain" type="xsd:string"/>
+      <xsd:element name="Port" type="xsd:integer" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="IfMatchType">
+    <xsd:sequence>
+      <xsd:element name="ETag" type="xsd:string" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="IfNoneMatchType">
+    <xsd:sequence>
+      <xsd:element name="ETag" type="xsd:string" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="IfRangeType">
+    <xsd:choice>
+      <xsd:element name="ETag" type="xsd:string"/>
+      <xsd:element name="Date" type="xsd:dateTime"/>
+    </xsd:choice>
+  </xsd:complexType>
+
+  <xsd:complexType name="ResponseHeadersType">
+    <xsd:sequence>
+      <xsd:element name="AcceptRanges" type="AcceptRangesType" minOccurs="0"/>
+      <xsd:element name="Age" type="xsd:nonNegativeInteger" minOccurs="0"/>
+      <xsd:element name="ETag" type="ETagType" minOccurs="0"/>
+      <xsd:element name="Location" type="xsd:anyURI" minOccurs="0"/>
+      <xsd:element name="ProxyAuthenticate" type="AuthenticateType" minOccurs="0"/>
+      <xsd:element name="RetryAfter" type="RetryAfterType" minOccurs="0"/>
+      <xsd:element name="Server" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="Vary" type="VaryType" minOccurs="0"/>
+      <xsd:element name="WWWAuthenticate" type="AuthenticateType" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AcceptRangesType">
+    <xsd:sequence>
+      <xsd:element name="Unit" type="AcceptRangesUnitType"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:simpleType name="AcceptRangesUnitType">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="bytes"/>
+      <xsd:enumeration value="none"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="ETagType">
+    <xsd:sequence>
+      <xsd:element name="Tag" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AuthenticateType">
+    <xsd:sequence>
+      <xsd:element name="Challenge" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="RetryAfterType">
+    <xsd:choice>
+      <xsd:element name="Date" type="xsd:dateTime"/>
+      <xsd:element name="Seconds" type="xsd:positiveInteger"/>
+    </xsd:choice>
+  </xsd:complexType>
+
+  <xsd:complexType name="VaryType">
+    <xsd:sequence>
+      <xsd:element name="HeaderName" type="xsd:string" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="EntityHeadersType">
+    <xsd:sequence>
+      <xsd:element name="Allow" type="AllowType" minOccurs="0"/>
+      <xsd:element name="ContentEncoding" type="ContentEncodingType" minOccurs="0"/>
+      <xsd:element name="ContentLanguage" type="xsd:language" minOccurs="0"/>
+      <xsd:element name="ContentLength" type="xsd:nonNegativeInteger" minOccurs="0"/>
+      <xsd:element name="ContentLocation" type="xsd:anyURI" minOccurs="0"/>
+      <xsd:element name="ContentMD5" type="xsd:base64Binary" minOccurs="0"/>
+      <xsd:element name="ContentRange" type="ContentRangeType" minOccurs="0"/>
+      <xsd:element name="ContentType" type="ContentTypeType" minOccurs="0"/>
+      <xsd:element name="Expires" type="xsd:dateTime" minOccurs="0"/>
+      <xsd:element name="LastModified" type="xsd:dateTime" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="AllowType">
+    <xsd:sequence>
+      <xsd:element name="Method" type="MethodType" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ContentEncodingType">
+    <xsd:sequence>
+      <xsd:element name="Encoding" type="EncodingType"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ContentRangeType">
+    <xsd:sequence>
+      <xsd:element name="Start" type="xsd:nonNegativeInteger"/>
+      <xsd:element name="End" type="xsd:nonNegativeInteger"/>
+      <xsd:element name="Total" type="xsd:nonNegativeInteger" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ContentTypeType">
+    <xsd:sequence>
+      <xsd:element name="Mime

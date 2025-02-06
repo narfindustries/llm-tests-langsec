@@ -1,41 +1,77 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/tiff"
            xmlns:tns="http://example.com/tiff">
 
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian"
+                         bitOrder="mostSignificantBitFirst"
+                         encoding="US-ASCII"
+                         lengthKind="explicit"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <xs:element name="TIFFFile" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:initiator="II" dfdl:terminator="MM"/>
-        <xs:element name="magicNumber" type="xs:short" dfdl:length="2" dfdl:byteOrder="bigEndian">
-          <xs:simpleType>
-            <xs:restriction base="xs:short">
-              <xs:enumeration value="42"/>
-            </xs:restriction>
-          </xs:simpleType>
-        </xs:element>
-        <xs:element name="offsetToIFD" type="xs:int" dfdl:length="4" dfdl:byteOrder="{ ../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-        <xs:element name="IFD" type="tns:IFDType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
-      </xs:sequence>
+    <xs:simpleType name="BYTE">
+        <xs:restriction base="xs:unsignedByte"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="ASCII">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="SHORT">
+        <xs:restriction base="xs:unsignedShort"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="LONG">
+        <xs:restriction base="xs:unsignedInt"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="RATIONAL">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d+/\d+"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="IFDEntryType">
+        <xs:sequence>
+            <xs:element name="Tag" type="tns:SHORT" dfdl:length="2"/>
+            <xs:element name="Type" type="tns:SHORT" dfdl:length="2"/>
+            <xs:element name="Count" type="tns:LONG" dfdl:length="4"/>
+            <xs:element name="ValueOffset" type="tns:LONG" dfdl:length="4"/>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
 
-  <xs:complexType name="IFDType">
-    <xs:sequence>
-      <xs:element name="numEntries" type="xs:short" dfdl:length="2" dfdl:byteOrder="{ ../../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-      <xs:element name="entry" maxOccurs="unbounded" minOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../numEntries }">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="tag" type="xs:short" dfdl:length="2" dfdl:byteOrder="{ ../../../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-            <xs:element name="type" type="xs:short" dfdl:length="2" dfdl:byteOrder="{ ../../../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-            <xs:element name="count" type="xs:int" dfdl:length="4" dfdl:byteOrder="{ ../../../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-            <xs:element name="valueOrOffset" type="xs:int" dfdl:length="4" dfdl:byteOrder="{ ../../../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-          </xs:sequence>
-        </xs:complexType>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+    <xs:element name="IFDEntry" type="tns:IFDEntryType"/>
+
+    <xs:complexType name="ImageFileDirectoryType">
+        <xs:sequence>
+            <xs:element name="NumDirEntries" type="tns:SHORT" dfdl:length="2"/>
+            <xs:element name="Entries" type="tns:IFDEntryType" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="implicit"/>
+            <xs:element name="NextIFDOffset" type="tns:LONG" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="ImageFileDirectory" type="tns:ImageFileDirectoryType"/>
+
+    <xs:complexType name="TIFFHeaderType">
+        <xs:sequence>
+            <xs:element name="ByteOrder" type="tns:ASCII" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="MagicNumber" type="tns:SHORT" dfdl:length="2" dfdl:lengthKind="explicit"/>
+            <xs:element name="OffsetFirstIFD" type="tns:LONG" dfdl:length="4" dfdl:lengthKind="explicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="TIFFHeader" type="tns:TIFFHeaderType"/>
+
+    <xs:complexType name="TIFFFileType">
+        <xs:sequence>
+            <xs:element ref="tns:TIFFHeader"/>
+            <xs:element ref="tns:ImageFileDirectory"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="TIFFFile" type="tns:TIFFFileType"/>
+
 </xs:schema>

@@ -2,19 +2,19 @@ module GIF;
 
 import spicy;
 
-public type Signature = unit {
-    signature: bytes = b"GIF";
-    version: bytes(3) &requires($$=="87a" || $$=="89a");
+public type Header = unit {
+    signature: bytes(3) where $$ == b"GIF";
+    version: bytes(3) where $$ == b"87a" || $$ == b"89a";
 };
 
 public type LogicalScreenDescriptor = unit {
-    width: uint16 be;
-    height: uint16 be;
-    packed_fields: uint8 {
-        global_color_table_flag: bitfield(0,1),
-        color_resolution: bitfield(1,3),
-        sort_flag: bitfield(4,1),
-        global_color_table_size: bitfield(5,3)
+    width: uint16;
+    height: uint16;
+    packed_fields: bitfield(1) {
+        global_color_table_flag: 1;
+        color_resolution: 3;
+        sort_flag: 1;
+        global_color_table_size: 3;
     };
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
@@ -26,50 +26,105 @@ public type ColorTableEntry = unit {
     blue: uint8;
 };
 
+public type GlobalColorTable = unit {
+    entries: vector<ColorTableEntry>;
+};
+
 public type ImageDescriptor = unit {
-    separator: uint8 &requires($$==0x2c);
-    left: uint16 be;
-    top: uint16 be;
-    width: uint16 be;
-    height: uint16 be;
-    packed_fields: uint8 {
-        local_color_table_flag: bitfield(0,1),
-        interlace_flag: bitfield(1,1),
-        sort_flag: bitfield(2,1),
-        reserved: bitfield(3,2),
-        local_color_table_size: bitfield(5,3)
+    separator: uint8 where $$ == 0x2C;
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: bitfield(1) {
+        local_color_table_flag: 1;
+        interlace_flag: 1;
+        sort_flag: 1;
+        local_color_table_size: 3;
     };
 };
 
-public type GIF = unit {
-    signature: Signature;
+public type LocalColorTable = unit {
+    entries: vector<ColorTableEntry>;
+};
+
+public type GraphicControlExtension = unit {
+    extension_introducer: uint8 where $$ == 0x21;
+    graphic_control_label: uint8 where $$ == 0xF9;
+    block_size: uint8 where $$ == 4;
+    packed_fields: bitfield(1) {
+        reserved: 3;
+        disposal_method: 3;
+        user_input_flag: 1;
+        transparent_color_flag: 1;
+    };
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8 where $$ == 0;
+};
+
+public type PlainTextExtension = unit {
+    extension_introducer: uint8 where $$ == 0x21;
+    plain_text_label: uint8 where $$ == 0x01;
+    block_size: uint8 where $$ == 12;
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    plain_text_data: bytes;
+    block_terminator: uint8 where $$ == 0;
+};
+
+public type ApplicationExtension = unit {
+    extension_introducer: uint8 where $$ == 0x21;
+    application_label: uint8 where $$ == 0xFF;
+    block_size: uint8 where $$ == 11;
+    application_identifier: bytes(8);
+    authentication_code: bytes(3);
+    application_data: bytes;
+    block_terminator: uint8 where $$ == 0;
+};
+
+public type CommentExtension = unit {
+    extension_introducer: uint8 where $$ == 0x21;
+    comment_label: uint8 where $$ == 0xFE;
+    comment_data: bytes;
+    block_terminator: uint8 where $$ == 0;
+};
+
+public type Trailer = unit {
+    terminator: uint8 where $$ == 0x3B;
+};
+
+public type GIFFile = unit {
+    header: Header;
     logical_screen_descriptor: LogicalScreenDescriptor;
-    global_color_table: vector<ColorTableEntry> if ( logical_screen_descriptor.packed_fields.global_color_table_flag == 1 ) 
-        &size=(1 << (logical_screen_descriptor.packed_fields.global_color_table_size + 1));
+    global_color_table: optional<GlobalColorTable>;
     
-    blocks: list<GIFBlock>;
+    blocks: vector<variant> {
+        graphic_control_extension: GraphicControlExtension,
+        image_descriptor: ImageDescriptor,
+        local_color_table: optional<LocalColorTable>,
+        plain_text_extension: PlainTextExtension,
+        application_extension: ApplicationExtension,
+        comment_extension: CommentExtension
+    }* until ( $$.is_type<Trailer>() );
+
+    trailer: Trailer;
 };
 
-public type GIFBlock = unit {
-    switch {
-        %init { local block_type = $$.read(1); }
-        block_type == b"\x21" -> extension: Extension;
-        block_type == b"\x2c" -> image_descriptor: ImageDescriptor;
-        block_type == b"\x3b" -> terminator: Terminator;
-    };
-};
+on GIFFile::global_color_table {
+    if ( self.logical_screen_descriptor.packed_fields.global_color_table_flag ) {
+        self.global_color_table = GlobalColorTable();
+    }
+}
 
-public type Extension = unit {
-    marker: uint8 &requires($$ == 0x21);
-    label: uint8;
-    data: list<DataSubBlock>;
-};
-
-public type DataSubBlock = unit {
-    size: uint8;
-    data: bytes(size) if (size > 0);
-};
-
-public type Terminator = unit {
-    marker: uint8 &requires($$ == 0x3b);
-};
+on GIFFile::blocks {
+    for ( block in self.blocks ) {
+        if ( block.image_descriptor && block.image_descriptor.packed_fields.local_color_table_flag ) {
+            block.local_color_table = LocalColorTable();
+        }
+    }
+}

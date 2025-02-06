@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- PNG Signature -->
+  <xs:element name="PNGSignature">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:initiator="\x89PNG\r\n\x1a\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Chunk Structure -->
+  <xs:element name="Chunk">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:length="4"/>
+        <xs:element name="ChunkData" dfdl:length="{../Length}"/>
+        <xs:element name="CRC" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- IHDR Chunk -->
+  <xs:element name="IHDR">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Width" type="xs:unsignedInt"/>
+        <xs:element name="Height" type="xs:unsignedInt"/>
+        <xs:element name="BitDepth" type="xs:unsignedByte"/>
+        <xs:element name="ColorType" type="xs:unsignedByte"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+        <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- IDAT Chunk -->
+  <xs:element name="IDAT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CompressedData" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- IEND Chunk -->
+  <xs:element name="IEND">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PLTE Chunk -->
+  <xs:element name="PLTE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PaletteEntries" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- tRNS Chunk -->
+  <xs:element name="tRNS">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransparencyData" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- gAMA Chunk -->
+  <xs:element name="gAMA">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="GammaValue" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- cHRM Chunk -->
+  <xs:element name="cHRM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="WhitePointX" type="xs:unsignedInt"/>
+        <xs:element name="WhitePointY" type="xs:unsignedInt"/>
+        <xs:element name="RedX" type

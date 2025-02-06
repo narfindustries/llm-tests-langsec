@@ -15,45 +15,22 @@ class DnsPacket(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.transaction_id = self._io.read_u2be()
-        self.flags = DnsPacket.Flags(self._io, self, self._root)
-        self.qdcount = self._io.read_u2be()
-        self.ancount = self._io.read_u2be()
-        self.nscount = self._io.read_u2be()
-        self.arcount = self._io.read_u2be()
+        self.header = DnsPacket.Header(self._io, self, self._root)
         self.questions = []
-        for i in range(self.qdcount):
+        for i in range(self.header.qdcount):
             self.questions.append(DnsPacket.Question(self._io, self, self._root))
 
         self.answers = []
-        for i in range(self.ancount):
+        for i in range(self.header.ancount):
             self.answers.append(DnsPacket.ResourceRecord(self._io, self, self._root))
 
         self.authorities = []
-        for i in range(self.nscount):
+        for i in range(self.header.nscount):
             self.authorities.append(DnsPacket.ResourceRecord(self._io, self, self._root))
 
         self.additionals = []
-        for i in range(self.arcount):
+        for i in range(self.header.arcount):
             self.additionals.append(DnsPacket.ResourceRecord(self._io, self, self._root))
-
-
-    class Flags(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.qr = self._io.read_bits_int_be(1) != 0
-            self.opcode = self._io.read_bits_int_be(4)
-            self.aa = self._io.read_bits_int_be(1) != 0
-            self.tc = self._io.read_bits_int_be(1) != 0
-            self.rd = self._io.read_bits_int_be(1) != 0
-            self.ra = self._io.read_bits_int_be(1) != 0
-            self.z = self._io.read_bits_int_be(3)
-            self.rcode = self._io.read_bits_int_be(4)
 
 
     class Question(KaitaiStruct):
@@ -85,11 +62,7 @@ class DnsPacket(KaitaiStruct):
             self.rdata = self._io.read_bytes(self.rdlength)
 
 
-    class DomainName(KaitaiStruct):
-        """Domain names are a series of labels, where each label consists of a length
-        octet followed by that number of octets. The domain name terminates with
-        the zero length octet for the null label of the root.
-        """
+    class Flags(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -97,12 +70,62 @@ class DnsPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.name = []
+            self.qr = self._io.read_bits_int_be(1) != 0
+            self.opcode = self._io.read_bits_int_be(4)
+            self.aa = self._io.read_bits_int_be(1) != 0
+            self.tc = self._io.read_bits_int_be(1) != 0
+            self.rd = self._io.read_bits_int_be(1) != 0
+            self.ra = self._io.read_bits_int_be(1) != 0
+            self.z = self._io.read_bits_int_be(3)
+            self.rcode = self._io.read_bits_int_be(4)
+
+
+    class Label(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.length = self._io.read_u1()
+            if self.length > 0:
+                self.name = self._io.read_bytes(self.length)
+
+
+
+    class DomainName(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.labels = []
             i = 0
-            while not self._io.is_eof():
-                self.name.append((self._io.read_bytes_term(0, False, True, True)).decode(u"ascii"))
+            while True:
+                _ = DnsPacket.Label(self._io, self, self._root)
+                self.labels.append(_)
+                if _.length == 0:
+                    break
                 i += 1
 
+
+    class Header(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.id = self._io.read_u2be()
+            self.flags = DnsPacket.Flags(self._io, self, self._root)
+            self.qdcount = self._io.read_u2be()
+            self.ancount = self._io.read_u2be()
+            self.nscount = self._io.read_u2be()
+            self.arcount = self._io.read_u2be()
 
 
 

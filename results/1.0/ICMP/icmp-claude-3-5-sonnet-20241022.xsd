@@ -1,45 +1,135 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:ice="urn:icmp:1.0"
-    targetNamespace="urn:icmp:1.0"
-    elementFormDefault="qualified">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format byteOrder="bigEndian" 
-                binaryNumberRep="binary"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthUnits="bytes"
-                alignment="1"
-                alignmentUnits="bytes"
-                trailingSkipRegion="0"
-                leadingSkipRegion="0"
-                textPadKind="none"
-                encoding="UTF-8"
-                ignoreCase="no"
-                initiator="" 
-                terminator=""
-                separator=""
-                textBidi="no"
-                floating="IEEE"
-                sequenceKind="ordered"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:icmp="http://example.com/icmp"
+           targetNamespace="http://example.com/icmp">
 
-    <xs:element name="ICMP">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="type" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-                <xs:element name="code" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-                <xs:element name="checksum" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-                <xs:element name="restOfHeader" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-                <xs:element name="payload" type="xs:hexBinary" dfdl:lengthKind="remainder"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" 
+                   byteOrder="bigEndian"
+                   binaryNumberRep="binary"
+                   alignmentUnits="bits"
+                   lengthKind="explicit"
+                   lengthUnits="bits"
+                   occursCountKind="implicit"/>
+      <dfdl:defineVariable name="type" type="xs:unsignedByte"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="type" type="xs:unsignedByte" dfdl:length="8">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:setVariable ref="type" value="{.}"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="code" type="xs:unsignedByte" dfdl:length="8"/>
+        <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="payload">
+          <xs:complexType>
+            <xs:sequence dfdl:initiatedContent="no">
+              <xs:element ref="icmp:EchoMessage" 
+                         dfdl:initiator="{if ($type eq 0 or $type eq 8) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:DestinationUnreachable" 
+                         dfdl:initiator="{if ($type eq 3) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:SourceQuench" 
+                         dfdl:initiator="{if ($type eq 4) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:Redirect" 
+                         dfdl:initiator="{if ($type eq 5) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:TimeExceeded" 
+                         dfdl:initiator="{if ($type eq 11) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:ParameterProblem" 
+                         dfdl:initiator="{if ($type eq 12) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:TimestampMessage" 
+                         dfdl:initiator="{if ($type eq 13 or $type eq 14) then '' else 'invalid'}"/>
+              <xs:element ref="icmp:InformationMessage" 
+                         dfdl:initiator="{if ($type eq 15 or $type eq 16) then '' else 'invalid'}"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EchoMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="remainder"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DestinationUnreachable">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="unused" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="originalPacket" type="xs:hexBinary" dfdl:length="576"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SourceQuench">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="unused" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="originalPacket" type="xs:hexBinary" dfdl:length="576"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Redirect">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="gatewayInternetAddress" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="originalPacket" type="xs:hexBinary" dfdl:length="576"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="TimeExceeded">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="unused" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="originalPacket" type="xs:hexBinary" dfdl:length="576"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ParameterProblem">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="pointer" type="xs:unsignedByte" dfdl:length="8"/>
+        <xs:element name="unused" type="xs:hexBinary" dfdl:length="24"/>
+        <xs:element name="originalPacket" type="xs:hexBinary" dfdl:length="576"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="TimestampMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="originateTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="receiveTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+        <xs:element name="transmitTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="InformationMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="16"/>
+        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

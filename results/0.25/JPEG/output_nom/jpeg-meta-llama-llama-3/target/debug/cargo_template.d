@@ -1,0 +1,1 @@
+/home/user/llm-ddl-tests/generated/888/0.25/JPEG/output_nom/jpeg-meta-llama-llama-3/target/debug/cargo_template: /home/user/llm-ddl-tests/generated/888/0.25/JPEG/output_nom/jpeg-meta-llama-llama-3/src/main.rs

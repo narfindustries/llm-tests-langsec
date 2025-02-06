@@ -2,147 +2,135 @@ use nom::{
     bytes::complete::{tag, take},
     combinator::{map, verify},
     multi::{length_data, many0},
-    number::complete::{be_u16, be_u24, be_u32, be_u8},
+    number::complete::{be_u16, be_u8},
     sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
-pub struct ClientHello {
-    version: (u8, u8),
-    random: Random,
-    session_id: Option<Vec<u8>>,
+struct ClientHello {
+    legacy_version: u16,
+    random: Vec<u8>,
+    legacy_session_id: Vec<u8>,
     cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
     extensions: Vec<Extension>,
 }
 
 #[derive(Debug)]
-pub struct Random {
-    gmt_unix_time: u32,
-    random_bytes: [u8; 28],
-}
-
-#[derive(Debug)]
-pub struct Extension {
+struct Extension {
     extension_type: u16,
-    extension_data: Vec<u8>,
+    data: Vec<u8>,
 }
 
-fn parse_random(input: &[u8]) -> IResult<&[u8], Random> {
-    let (input, gmt_unix_time) = be_u32(input)?;
-    let (input, random_bytes) = map(take(28usize), |bytes: &[u8]| {
-        let mut arr = [0u8; 28];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)?;
-    Ok((
-        input,
-        Random {
-            gmt_unix_time,
-            random_bytes,
-        },
-    ))
+fn parse_legacy_version(input: &[u8]) -> IResult<&[u8], u16> {
+    verify(be_u16, |&x| x == 0x0303)(input)
 }
 
-fn parse_session_id(input: &[u8]) -> IResult<&[u8], Option<Vec<u8>>> {
-    let (input, length) = be_u8(input)?;
-    if length == 0 {
-        Ok((input, None))
-    } else {
-        let (input, data) = take(length as usize)(input)?;
-        Ok((input, Some(data.to_vec())))
-    }
+fn parse_random(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    map(take(32usize), |bytes: &[u8]| bytes.to_vec())(input)
+}
+
+fn parse_legacy_session_id(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    map(length_data(be_u8), |bytes: &[u8]| bytes.to_vec())(input)
 }
 
 fn parse_cipher_suites(input: &[u8]) -> IResult<&[u8], Vec<u16>> {
     let (input, length) = be_u16(input)?;
-    let (input, data) = take(length as usize)(input)?;
+    let (input, data) = take(length)(input)?;
     let mut cipher_suites = Vec::new();
-    let mut remaining = data;
-    while !remaining.is_empty() {
-        let (rest, cipher_suite) = be_u16(remaining)?;
-        cipher_suites.push(cipher_suite);
-        remaining = rest;
+    let mut slice = data;
+    while !slice.is_empty() {
+        let (remaining, suite) = be_u16(slice)?;
+        cipher_suites.push(suite);
+        slice = remaining;
     }
     Ok((input, cipher_suites))
 }
 
 fn parse_compression_methods(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, length) = be_u8(input)?;
-    let (input, methods) = take(length as usize)(input)?;
-    Ok((input, methods.to_vec()))
+    map(length_data(be_u8), |bytes: &[u8]| bytes.to_vec())(input)
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
-    let (input, extension_type) = be_u16(input)?;
-    let (input, extension_data) = length_data(be_u16)(input)?;
-    Ok((
-        input,
-        Extension {
-            extension_type,
-            extension_data: extension_data.to_vec(),
-        },
-    ))
+    let (input, (extension_type, length)) = tuple((be_u16, be_u16))(input)?;
+    let (input, data) = map(take(length), |bytes: &[u8]| bytes.to_vec())(input)?;
+    Ok((input, Extension {
+        extension_type,
+        data,
+    }))
 }
 
 fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
     let (input, length) = be_u16(input)?;
-    let (input, data) = take(length as usize)(input)?;
+    let (input, data) = take(length)(input)?;
     let (_, extensions) = many0(parse_extension)(data)?;
     Ok((input, extensions))
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, _) = tag(&[0x16])(input)?; // Content Type: Handshake
-    let (input, _) = verify(tuple((be_u8, be_u8)), |v: &(u8, u8)| {
-        v.0 == 3 && (v.1 == 1 || v.1 == 3)
-    })(input)?; // Protocol Version
+    let (input, _) = tag([0x16])(input)?; // Content Type: Handshake
+    let (input, _) = tag([0x03, 0x03])(input)?; // Legacy Record Layer Version
     let (input, length) = be_u16(input)?;
-    let (input, data) = take(length as usize)(input)?;
+    let (input, data) = take(length)(input)?;
     
-    let (data, _) = tag(&[0x01])(data)?; // Handshake Type: Client Hello
-    let (data, _) = be_u24(data)?; // Length
-    let (data, version) = tuple((be_u8, be_u8))(data)?;
-    let (data, random) = parse_random(data)?;
-    let (data, session_id) = parse_session_id(data)?;
-    let (data, cipher_suites) = parse_cipher_suites(data)?;
-    let (data, compression_methods) = parse_compression_methods(data)?;
-    let (data, extensions) = if !data.is_empty() {
-        parse_extensions(data)?
-    } else {
-        (data, Vec::new())
-    };
+    let (_, (
+        _handshake_type,
+        _length,
+        legacy_version,
+        random,
+        legacy_session_id,
+        cipher_suites,
+        compression_methods,
+        extensions
+    )) = tuple((
+        verify(be_u8, |&x| x == 1), // Handshake Type: ClientHello
+        be_u24,
+        parse_legacy_version,
+        parse_random,
+        parse_legacy_session_id,
+        parse_cipher_suites,
+        parse_compression_methods,
+        parse_extensions,
+    ))(data)?;
 
-    Ok((
-        input,
-        ClientHello {
-            version,
-            random,
-            session_id,
-            cipher_suites,
-            compression_methods,
-            extensions,
-        },
-    ))
+    Ok((input, ClientHello {
+        legacy_version,
+        random,
+        legacy_session_id,
+        cipher_suites,
+        compression_methods,
+        extensions,
+    }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn be_u24(input: &[u8]) -> IResult<&[u8], u32> {
+    let (input, bytes) = take(3usize)(input)?;
+    Ok((input, ((bytes[0] as u32) << 16) | ((bytes[1] as u32) << 8) | (bytes[2] as u32)))
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <tls_client_hello_file>", args[0]);
+        return;
     }
 
-    let mut file = File::open(&args[1])?;
+    let mut file = File::open(&args[1]).expect("Failed to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_client_hello(&buffer) {
-        Ok((_, client_hello)) => println!("{:#?}", client_hello),
-        Err(e) => eprintln!("Failed to parse Client Hello: {:?}", e),
+        Ok((remaining, client_hello)) => {
+            println!("Successfully parsed ClientHello:");
+            println!("{:#?}", client_hello);
+            println!("Remaining bytes: {} bytes", remaining.len());
+        }
+        Err(e) => {
+            eprintln!("Failed to parse ClientHello: {:?}", e);
+        }
     }
-
-    Ok(())
 }

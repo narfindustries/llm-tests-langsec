@@ -1,22 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/jpeg" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty" dfdl:lengthUnits="bytes">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/jpeg"
+           xmlns="http://example.org/jpeg"
+           elementFormDefault="qualified">
 
-  <xs:element name="jpeg_gemini_1_5_flash">
+  <xs:element name="JPEG">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="12"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="variable" dfdl:length="unbounded" dfdl:occursCountKind="implicit"/>
+        <xs:element ref="SOI"/>
+        <xs:element ref="APPn" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DQT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DHT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="SOF"/>
+        <xs:element ref="DRI" minOccurs="0"/>
+        <xs:element ref="SOS"/>
+        <xs:element ref="EOI"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="magic_number" type="xs:hexBinary" dfdl:length="4"/>
-      <xs:element name="version" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="image_width" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="image_height" type="xs:unsignedInt" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="SOI" dfdl:length="2">
+    <xs:simpleType>
+      <xs:restriction base="xs:hexBinary">
+        <xs:pattern value="FFD8"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+
+  <xs:element name="EOI" dfdl:length="2">
+    <xs:simpleType>
+      <xs:restriction base="xs:hexBinary">
+        <xs:pattern value="FFD9"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+
+  <xs:element name="APPn">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DQT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DHT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SOF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DRI">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SOS">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

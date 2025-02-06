@@ -1,28 +1,37 @@
 module GZIP;
 
-public type GzipHeader = unit {
-    id1: uint8;
-    id2: uint8;
-    compressionMethod: uint8;
-    flags: uint8;
-    mtime: uint32;
-    extraFlags: uint8;
-    os: uint8;
+public type GZIPMember = unit {
+    ID1: uint8 &requires=($$ == 0x1f);
+    ID2: uint8 &requires=($$ == 0x8b);
+    CM: uint8 &requires=($$ == 0x08);
+    FLG: uint8;
+    MTIME: uint32;
+    XFL: uint8;
+    OS: uint8;
 
-    on %init {
-        if (self.id1 != 0x1f || self.id2 != 0x8b) {
-            throw ParseError("Not a valid GZIP header");
+    extra: bytes &size=FEXTRA_len() &optional=hasFEXTRA();
+    fname: bytes &until=b"\x00" &optional=hasFNAME();
+    fcomment: bytes &until=b"\x00" &optional=hasFCOMMENT();
+    fhcrc: uint16 &optional=hasFHCRC();
+
+    compressed_data: bytes &eod;
+    crc32: uint32;
+    isize: uint32;
+
+    method hasFTEXT() : bool { return (self.FLG & 0x01) != 0; }
+    method hasFHCRC() : bool { return (self.FLG & 0x02) != 0; }
+    method hasFEXTRA() : bool { return (self.FLG & 0x04) != 0; }
+    method hasFNAME() : bool { return (self.FLG & 0x08) != 0; }
+    method hasFCOMMENT() : bool { return (self.FLG & 0x10) != 0; }
+
+    method FEXTRA_len() : uint16 {
+        if (|self.extra| >= 2) {
+            return cast<uint16>(self.extra[0]) + (cast<uint16>(self.extra[1]) << 8);
         }
+        return 0;
     }
 };
 
-public type GzipFooter = unit {
-    crc32: uint32;
-    inputSize: uint32;
-};
-
-public type GzipFile = unit {
-    header: GzipHeader;
-    body: /[^\0]*/ : bytes &eod;
-    footer: GzipFooter;
+public type GZIPFile = unit {
+    members: GZIPMember[] &eod;
 };

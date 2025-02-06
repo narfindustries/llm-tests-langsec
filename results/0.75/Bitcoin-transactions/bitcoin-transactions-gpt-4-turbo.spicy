@@ -1,48 +1,36 @@
 module Bitcoin;
 
-public type TransactionOutput = unit {
-    value: uint64;
-    script_len: uint8;
-    script: bytes &size=script_len;
+import spicy;
+
+type Version = int32;
+
+public type OutPoint = unit {
+    hash: bytes &size=32;
+    index: uint32;
 };
 
-public type Transaction = unit {
-    version: int32;
-    input_count: uint8;
-    inputs: TransactionInput(input_count)[];
-
-    output_count: uint8;
-    outputs: TransactionOutput(output_count)[];
-
-    lock_time: uint32;
-};
-
-public type TransactionInput = unit(count: uint8) {
-    previous_output: bytes &size=32; // Transaction hash
-    output_index: uint32;
-    script_len: uint8;
-    script: bytes &size=script_len;
+public type TxIn = unit {
+    previous_output: OutPoint;
+    script_length: uint32;
+    signature_script: bytes &size=script_length;
     sequence: uint32;
 };
 
-public type Block = unit {
-    magic: uint32;
-    block_size: uint32;
-    version: int32;
-    prev_block: bytes &size=32;
-    merkle_root: bytes &size=32;
-    timestamp: uint32;
-    bits: uint32;
-    nonce: uint32;
-
-    transaction_count: uint32;
-    transactions: Transaction(transaction_count)[];
-
-    on $.done {
-        print "Parsed a Bitcoin block with", len(self.transactions), "transactions.";
-    }
+public type TxOut = unit {
+    value: uint64;
+    script_length: uint32;
+    script_pub_key: bytes &size=script_length;
 };
 
-event zeek_init() {
-    print "Bitcoin protocol parser loaded.";
-}
+public type Transaction = unit {
+    version: Version;
+    input_count: uint32;
+    inputs: TxIn[] &size=input_count;
+    output_count: uint32;
+    outputs: TxOut[] &size=output_count;
+    lock_time: uint32;
+};
+
+public type Bitcoin_Transactions = unit {
+    transactions: Transaction[];
+};

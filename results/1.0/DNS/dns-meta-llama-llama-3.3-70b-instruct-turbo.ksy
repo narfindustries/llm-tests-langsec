@@ -1,49 +1,167 @@
 meta:
-  id: dns_packet
-  file-format: dns
+  id: dns
+  endian: be
+
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: u2
-  - id: qdcount
-    type: u2
-  - id: ancount
-    type: u2
-  - id: nscount
-    type: u2
-  - id: arcount
-    type: u2
-  - id: query
-    type: dns_query
-  - id: answer
-    type: dns_answer
-    repeat: expr
-    repeat-expr: ancount
-types:
-  dns_query:
-    seq:
-      - id: name
-        type: str
-        encoding: utf-8
-      - id: type
-        type: u2
-      - id: class
-        type: u2
-  dns_answer:
-    seq:
-      - id: name
-        type: str
-        encoding: utf-8
-      - id: type
-        type: u2
-      - id: class
-        type: u2
-      - id: ttl
-        type: u4
-      - id: rdlength
-        type: u2
-      - id: rdata
-        type: str
-        encoding: utf-8
-        size: rdlength
+  - id: uint16
+  - qr: uint1
+  - opcode: uint4
+  - aa: uint1
+  - tc: uint1
+  - rd: uint1
+  - ra: uint1
+  - z: uint3
+  - rcode: uint4
+  - qdcount: uint16
+  - ancount: uint16
+  - nscount: uint16
+  - arcount: uint16
+
+repeat: expr: qdcount
+  - name:
+    repeat: until: expr: _ == 0
+      - len: uint8
+      - data: bytes => len
+  - qtype: uint16
+  - qclass: uint16
+
+repeat: expr: ancount
+  - name:
+    repeat: until: expr: _ == 0
+      - len: uint8
+      - data: bytes => len
+  - type: uint16
+  - class: uint16
+  - ttl: uint32
+  - rdlength: uint16
+  - rdata:
+    type: 
+      switch-on: type
+      cases:
+        1: 
+          seq:
+            - addr: uint32
+        2: 
+          seq:
+            - nsdname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        5: 
+          seq:
+            - cname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        6: 
+          seq:
+            - mname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - rname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - serial: uint32
+            - refresh: uint32
+            - retry: uint32
+            - expire: uint32
+            - minimum: uint32
+        else: 
+          seq:
+            - data: bytes => rdlength
+
+repeat: expr: nscount
+  - name:
+    repeat: until: expr: _ == 0
+      - len: uint8
+      - data: bytes => len
+  - type: uint16
+  - class: uint16
+  - ttl: uint32
+  - rdlength: uint16
+  - rdata:
+    type: 
+      switch-on: type
+      cases:
+        1: 
+          seq:
+            - addr: uint32
+        2: 
+          seq:
+            - nsdname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        5: 
+          seq:
+            - cname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        6: 
+          seq:
+            - mname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - rname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - serial: uint32
+            - refresh: uint32
+            - retry: uint32
+            - expire: uint32
+            - minimum: uint32
+        else: 
+          seq:
+            - data: bytes => rdlength
+
+repeat: expr: arcount
+  - name:
+    repeat: until: expr: _ == 0
+      - len: uint8
+      - data: bytes => len
+  - type: uint16
+  - class: uint16
+  - ttl: uint32
+  - rdlength: uint16
+  - rdata:
+    type: 
+      switch-on: type
+      cases:
+        1: 
+          seq:
+            - addr: uint32
+        2: 
+          seq:
+            - nsdname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        5: 
+          seq:
+            - cname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+        6: 
+          seq:
+            - mname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - rname:
+              repeat: until: expr: _ == 0
+                - len: uint8
+                - data: bytes => len
+            - serial: uint32
+            - refresh: uint32
+            - retry: uint32
+            - expire: uint32
+            - minimum: uint32
+        else: 
+          seq:
+            - data: bytes => rdlength

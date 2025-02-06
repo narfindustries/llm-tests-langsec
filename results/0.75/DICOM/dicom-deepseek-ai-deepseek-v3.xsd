@@ -1,0 +1,81 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom"
+           xmlns="http://example.com/dicom"
+           elementFormDefault="qualified">
+
+  <!-- Define DICOM Data Elements -->
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- Patient Module -->
+        <xs:element name="PatientName" type="PN" dfdl:length="64"/>
+        <xs:element name="PatientID" type="LO" dfdl:length="64"/>
+        <xs:element name="PatientBirthDate" type="DA" dfdl:length="8"/>
+        <xs:element name="PatientSex" type="CS" dfdl:length="1"/>
+
+        <!-- Study Module -->
+        <xs:element name="StudyDate" type="DA" dfdl:length="8"/>
+        <xs:element name="StudyTime" type="TM" dfdl:length="14"/>
+        <xs:element name="AccessionNumber" type="SH" dfdl:length="16"/>
+
+        <!-- Image Module -->
+        <xs:element name="Rows" type="US" dfdl:length="2"/>
+        <xs:element name="Columns" type="US" dfdl:length="2"/>
+        <xs:element name="BitsAllocated" type="US" dfdl:length="2"/>
+        <xs:element name="BitsStored" type="US" dfdl:length="2"/>
+        <xs:element name="HighBit" type="US" dfdl:length="2"/>
+
+        <!-- Modality Module -->
+        <xs:element name="Modality" type="CS" dfdl:length="16"/>
+
+        <!-- Optional Fields -->
+        <xs:element name="OptionalField1" type="LO" dfdl:length="64" minOccurs="0"/>
+        <xs:element name="OptionalField2" type="LO" dfdl:length="64" minOccurs="0"/>
+        <!-- Add more optional fields as needed -->
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define Value Representations (VR) Types -->
+  <xs:simpleType name="PN">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LO">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DA">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{8}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CS">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="TM">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SH">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="US">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+</xs:schema>

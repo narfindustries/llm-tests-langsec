@@ -1,69 +1,178 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://dicom.nema.org/DICOM/2020/DFDL"
-           xmlns:dicom="http://dicom.nema.org/DICOM/2020/DFDL"
-           xmlns:fn="http://www.w3.org/2005/xpath-functions">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
+           targetNamespace="http://dicom.nema.org/standard"
+           xmlns:dicom="http://dicom.nema.org/standard"
+           elementFormDefault="qualified"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:dfdlx="http://www.ogf.org/dfdl/dfdl-1.0">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
       <dfdl:format 
-        separator=""
+        lengthKind="explicit"
+        lengthUnits="bytes"
+        encoding="UTF-8"
+        representation="binary"
+        byteOrder="bigEndian"
         initiator=""
         terminator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        representation="binary"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberRoundingMode="roundUp"
-        textZeroRepresentation="0"
-        escapeSchemeRef=""
-        alignment="1"
-        alignmentUnits="bytes"/>
+        separator=""
+        separatorPosition="infix"
+        separatorPolicy="suppressed"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="DicomFile" dfdl:lengthKind="implicit">
+  <xs:element name="DICOMFile" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FileHeader" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="Preamble" type="xs:hexBinary" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="128"/>
-              <xs:element name="DicomPrefix" type="xs:string" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="4"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:element name="DataSet" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="DataElements" dfdl:lengthKind="unbounded">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="Tag" type="xs:hexBinary" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="4"/>
-                    <xs:element name="VR" type="xs:string" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="2"/>
-                    <xs:element name="Length" type="xs:unsignedInt" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="2"/>
-                    <xs:element name="Value" type="xs:hexBinary" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="{ ../Length }"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="FileHeader" type="dicom:FileHeaderType"/>
+        <xs:element name="PatientModule" type="dicom:PatientModuleType"/>
+        <xs:element name="StudyModule" type="dicom:StudyModuleType"/>
+        <xs:element name="SeriesModule" type="dicom:SeriesModuleType"/>
+        <xs:element name="ImageModule" type="dicom:ImageModuleType"/>
+        <xs:element name="PixelData" type="dicom:PixelDataType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="FileMetaInformation" dfdl:lengthKind="implicit">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="FileMetaInformationGroupLength" type="dicom:UIType" 
+                       dfdl:lengthKind="explicit" dfdl:length="4"/>
+            <xs:element name="FileMetaInformationVersion" type="dicom:OBType" 
+                       dfdl:lengthKind="explicit" dfdl:length="2"/>
+            <xs:element name="MediaStorageSOPClassUID" type="dicom:UIType"/>
+            <xs:element name="MediaStorageSOPInstanceUID" type="dicom:UIType"/>
+            <xs:element name="TransferSyntaxUID" type="dicom:UIType"/>
+            <xs:element name="ImplementationClassUID" type="dicom:UIType"/>
+            <xs:element name="ImplementationVersionName" type="dicom:SHType" 
+                       minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PatientModuleType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PatientName" type="dicom:PNType"/>
+      <xs:element name="PatientID" type="dicom:LOType"/>
+      <xs:element name="PatientBirthDate" type="dicom:DAType" minOccurs="0"/>
+      <xs:element name="PatientSex" type="dicom:CSType" minOccurs="0"/>
+      <xs:element name="PatientAge" type="dicom:ASType" minOccurs="0"/>
+      <xs:element name="PatientWeight" type="dicom:DSType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StudyModuleType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="StudyInstanceUID" type="dicom:UIType"/>
+      <xs:element name="StudyDate" type="dicom:DAType"/>
+      <xs:element name="StudyTime" type="dicom:TMType"/>
+      <xs:element name="AccessionNumber" type="dicom:SHType" minOccurs="0"/>
+      <xs:element name="ReferringPhysicianName" type="dicom:PNType" minOccurs="0"/>
+      <xs:element name="StudyDescription" type="dicom:LOType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SeriesModuleType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Modality" type="dicom:CSType"/>
+      <xs:element name="SeriesInstanceUID" type="dicom:UIType"/>
+      <xs:element name="SeriesNumber" type="dicom:ISType"/>
+      <xs:element name="SeriesDescription" type="dicom:LOType" minOccurs="0"/>
+      <xs:element name="BodyPartExamined" type="dicom:CSType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageModuleType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="SOPClassUID" type="dicom:UIType"/>
+      <xs:element name="SOPInstanceUID" type="dicom:UIType"/>
+      <xs:element name="ImageType" type="dicom:CSType"/>
+      <xs:element name="AcquisitionDate" type="dicom:DAType" minOccurs="0"/>
+      <xs:element name="AcquisitionTime" type="dicom:TMType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PixelDataType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Rows" type="dicom:USType"/>
+      <xs:element name="Columns" type="dicom:USType"/>
+      <xs:element name="BitsAllocated" type="dicom:USType"/>
+      <xs:element name="BitsStored" type="dicom:USType"/>
+      <xs:element name="HighBit" type="dicom:USType"/>
+      <xs:element name="PixelRepresentation" type="dicom:USType"/>
+      <xs:element name="PixelData" type="dicom:OWType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="UIType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9.]+"/>
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PNType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LOType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DAType">
+    <xs:restriction base="xs:date"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="TMType">
+    <xs:restriction base="xs:time"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="CSType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SHType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ISType">
+    <xs:restriction base="xs:integer"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ASType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d+[D|W|M|Y]"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="DSType">
+    <xs:restriction base="xs:decimal"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="USType">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="OBType">
+    <xs:restriction base="xs:base64Binary"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="OWType">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
 </xs:schema>

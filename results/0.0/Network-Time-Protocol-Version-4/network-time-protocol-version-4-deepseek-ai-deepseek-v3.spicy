@@ -1,0 +1,20 @@
+module NTPv4;
+
+public type Packet = unit {
+    li: uint8 &convert=(self & 0xC0) >> 6;
+    vn: uint8 &convert=(self & 0x38) >> 3;
+    mode: uint8 &convert=(self & 0x07);
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: uint32;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+    extension_fields: bytes &size=0;
+    key_identifier: uint32 if (self.mode == 6 || self.mode == 7);
+    mac: bytes[16] if (self.mode == 6 || self.mode == 7);
+};

@@ -1,62 +1,74 @@
 use nom::{
-    be::{be_u16, be_u32, be_u8},
-    bytes::complete::take,
-    combinator::{map, map_res, opt},
-    error::ErrorKind,
+    bytes::complete::{tag, take},
+    combinator::{map, map_res},
+    number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
-use std::fs::File;
-use std::io::Read;
+use std::env;
+use std::fs::read;
 use std::net::Ipv4Addr;
-use std::path::Path;
 
-#[derive(Debug, PartialEq)]
-struct NtpTimestamp {
-    seconds: u32,
-    fraction: u32,
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct NtpPacket {
-    li_vn_mode: u8,
+    li: u8,
+    vn: u8,
+    mode: u8,
     stratum: u8,
-    poll: i8,
+    poll: u8,
     precision: i8,
-    root_delay: u32,
-    root_dispersion: u32,
-    reference_id: u32,
-    reference_timestamp: NtpTimestamp,
-    originate_timestamp: NtpTimestamp,
-    receive_timestamp: NtpTimestamp,
-    transmit_timestamp: NtpTimestamp,
-    // Optional fields
-    extension: Option<Vec<u8>>,
+    root_delay: f64,
+    root_dispersion: f64,
+    reference_id: String,
+    reference_timestamp: u64,
+    originate_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    // Add extension fields here if needed (RFC 5905 details optional fields)
 }
 
-fn ntp_timestamp(input: &[u8]) -> IResult<&[u8], NtpTimestamp> {
-    let (input, seconds) = be_u32(input)?;
-    let (input, fraction) = be_u32(input)?;
-    Ok((input, NtpTimestamp { seconds, fraction }))
-}
 
-fn ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    let (input, li_vn_mode) = be_u8(input)?;
-    let (input, stratum) = be_u8(input)?;
-    let (input, poll) = map_res(be_u8(input), |x| x.wrapping_sub(128) as i8)(input)?;
-    let (input, precision) = map_res(be_u8(input), |x| x.wrapping_sub(128) as i8)(input)?;
-    let (input, root_delay) = be_u32(input)?;
-    let (input, root_dispersion) = be_u32(input)?;
-    let (input, reference_id) = be_u32(input)?;
-    let (input, reference_timestamp) = ntp_timestamp(input)?;
-    let (input, originate_timestamp) = ntp_timestamp(input)?;
-    let (input, receive_timestamp) = ntp_timestamp(input)?;
-    let (input, transmit_timestamp) = ntp_timestamp(input)?;
-    let (input, extension) = opt(take(48usize))(input)?;
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
+    let (rest, li_vn_mode) = be_u16(input)?;
+    let li = (li_vn_mode >> 6) as u8;
+    let vn = ((li_vn_mode >> 3) & 0x7) as u8;
+    let mode = (li_vn_mode & 0x7) as u8;
+
+    let (rest, stratum) = be_u8(rest)?;
+    let (rest, poll) = be_u8(rest)?;
+    let (rest, precision) = map_res(be_u8, |x| {
+        if x > 127 {
+            Ok(-((x as i16) - 255) as i8)
+        } else {
+            Ok(x as i8)
+        }
+    })(rest)?;
+    let (rest, root_delay) = map_res(be_u32, |x| {
+        let delay = x as f64 / (1 << 16);
+        Ok(delay)
+    })(rest)?;
+    let (rest, root_dispersion) = map_res(be_u32, |x| {
+        let dispersion = x as f64 / (1 << 16);
+        Ok(dispersion)
+    })(rest)?;
+
+    let (rest, reference_id_bytes) = take(4usize)(rest)?;
+    let reference_id = match Ipv4Addr::new(reference_id_bytes[0], reference_id_bytes[1], reference_id_bytes[2], reference_id_bytes[3]) {
+        Ok(ip) => ip.to_string(),
+        Err(_) => String::from_utf8_lossy(reference_id_bytes).to_string(),
+    };
+
+
+    let (rest, reference_timestamp) = map(take(8usize), |x| u64::from_be_bytes(x.try_into().unwrap()))(rest)?;
+    let (rest, originate_timestamp) = map(take(8usize), |x| u64::from_be_bytes(x.try_into().unwrap()))(rest)?;
+    let (rest, receive_timestamp) = map(take(8usize), |x| u64::from_be_bytes(x.try_into().unwrap()))(rest)?;
+    let (rest, transmit_timestamp) = map(take(8usize), |x| u64::from_be_bytes(x.try_into().unwrap()))(rest)?;
 
     Ok((
-        input,
+        rest,
         NtpPacket {
-            li_vn_mode,
+            li,
+            vn,
+            mode,
             stratum,
             poll,
             precision,
@@ -67,45 +79,24 @@ fn ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
             originate_timestamp,
             receive_timestamp,
             transmit_timestamp,
-            extension,
         },
     ))
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <ntp_file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <binary_file>", args[0]);
+        return Ok(());
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("Error opening file: {}", e);
-            std::process::exit(1);
-        }
-    };
+    let filename = &args[1];
+    let data = read(filename)?;
 
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    match ntp_packet(&buffer) {
-        Ok((leftover, packet)) => {
-            println!("Parsed NTP Packet:\n{:#?}", packet);
-            if !leftover.is_empty() {
-                println!("Leftover bytes: {:?}", leftover);
-            }
-        }
-        Err(e) => {
-            println!("Error parsing NTP packet: {:?}", e);
-        }
+    match parse_ntp_packet(&data) {
+        Ok((_, packet)) => println!("{:#?}", packet),
+        Err(e) => eprintln!("Error parsing NTP packet: {:?}", e),
     }
+
+    Ok(())
 }

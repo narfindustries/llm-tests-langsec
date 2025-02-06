@@ -1,81 +1,74 @@
 use nom::{
-    bytes::complete::{tag, take_until, take_while},
-    character::complete::{char, digit1, line_ending, space1},
+    bytes::complete::{tag, take_while},
+    character::complete::{alpha1, digit1, space1},
     combinator::{map_res, opt},
     multi::separated_list0,
-    sequence::{delimited, pair, preceded, terminated, tuple},
+    sequence::{delimited, pair, preceded, tuple},
     IResult,
 };
-use std::collections::HashMap;
-use std::env;
-use std::fs::read_to_string;
+use std::fs::File;
+use std::io::{self, Read};
+use std::str::{self, FromStr};
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file>", args[0]);
+        std::process::exit(1);
+    }
+
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents).expect("Failed to read file");
+
+    match parse_http_request(&contents) {
+        Ok((_, request)) => println!("{:?}", request),
+        Err(e) => eprintln!("Failed to parse HTTP request: {:?}", e),
+    }
+}
 
 #[derive(Debug)]
 struct HttpRequest {
     method: String,
     uri: String,
     version: String,
-    headers: HashMap<String, String>,
-    body: Option<String>,
+    headers: Vec<(String, String)>,
+    body: Option<Vec<u8>>,
 }
 
-fn parse_request_line(input: &str) -> IResult<&str, (&str, &str, &str)> {
-    tuple((
-        terminated(take_until(" "), char(' ')),
-        terminated(take_until(" "), char(' ')),
-        terminated(take_until("\r\n"), line_ending),
-    ))(input)
-}
-
-fn parse_header(input: &str) -> IResult<&str, (&str, &str)> {
-    pair(
-        terminated(take_until(":"), char(':')),
-        delimited(space1, take_until("\r\n"), line_ending),
-    )(input)
-}
-
-fn parse_headers(input: &str) -> IResult<&str, HashMap<String, String>> {
-    map_res(
-        separated_list0(line_ending, parse_header),
-        |headers: Vec<(&str, &str)>| {
-            let mut header_map = HashMap::new();
-            for (key, value) in headers {
-                header_map.insert(key.trim().to_string(), value.trim().to_string());
-            }
-            Ok(header_map)
-        },
-    )(input)
-}
-
-fn parse_http_request(input: &str) -> IResult<&str, HttpRequest> {
+fn parse_http_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
     let (input, (method, uri, version)) = parse_request_line(input)?;
     let (input, headers) = parse_headers(input)?;
-    let (input, body) = opt(preceded(line_ending, take_until("")))(input)?;
+    let (input, body) = opt(take_while(|_| true))(input)?;
 
     Ok((
         input,
         HttpRequest {
-            method: method.to_string(),
-            uri: uri.to_string(),
-            version: version.to_string(),
+            method,
+            uri,
+            version,
             headers,
-            body: body.map(|s| s.to_string()),
+            body: body.map(|b| b.to_vec()),
         },
     ))
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
-    }
+fn parse_request_line(input: &[u8]) -> IResult<&[u8], (String, String, String)> {
+    let (input, method) = map_res(delimited(space1, alpha1, space1), str::from_utf8)(input)?;
+    let (input, uri) = map_res(delimited(space1, take_while(|c| c != b' '), space1), str::from_utf8)(input)?;
+    let (input, version) = map_res(delimited(tag("HTTP/"), take_while(|c| c != b'\r'), tag("\r\n")), str::from_utf8)(input)?;
 
-    let filename = &args[1];
-    let data = read_to_string(filename).expect("Failed to read file");
+    Ok((input, (method.to_string(), uri.to_string(), version.to_string())))
+}
 
-    match parse_http_request(&data) {
-        Ok((_, request)) => println!("{:?}", request),
-        Err(e) => eprintln!("Failed to parse HTTP request: {:?}", e),
-    }
+fn parse_headers(input: &[u8]) -> IResult<&[u8], Vec<(String, String)>> {
+    separated_list0(tag("\r\n"), parse_header)(input)
+}
+
+fn parse_header(input: &[u8]) -> IResult<&[u8], (String, String)> {
+    let (input, key) = map_res(take_while(|c| c != b':'), str::from_utf8)(input)?;
+    let (input, value) = map_res(preceded(tag(": "), take_while(|c| c != b'\r')), str::from_utf8)(input)?;
+    let (input, _) = tag("\r\n")(input)?;
+
+    Ok((input, (key.trim().to_string(), value.trim().to_string())))
 }

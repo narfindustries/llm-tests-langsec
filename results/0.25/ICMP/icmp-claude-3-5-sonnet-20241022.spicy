@@ -1,52 +1,63 @@
 module ICMP;
 
 public type Message = unit {
-    type: uint8;
+    msg_type: uint8;
     code: uint8;
     checksum: uint16;
-    
-    switch ( self.type ) {
-        0 -> echo_reply: EchoMessage;
-        3 -> dest_unreach: DestUnreachMessage;
-        8 -> echo_request: EchoMessage;
-        11 -> time_exceeded: TimeExceededMessage;
-        * -> payload: bytes &eod;
+
+    switch ( self.msg_type ) {
+        0, 8 -> echo: EchoMessage;
+        3 -> dest_unreachable: DestUnreachable;
+        4 -> source_quench: SourceQuench;
+        5 -> redirect: Redirect;
+        11 -> time_exceeded: TimeExceeded;
+        12 -> parameter_problem: ParameterProblem;
+        13, 14 -> timestamp: TimestampMessage;
+        15, 16 -> info: InfoMessage;
     };
 };
 
 type EchoMessage = unit {
     identifier: uint16;
     sequence: uint16;
-    payload: bytes &eod;
+    data: bytes &eod;
 };
 
-type DestUnreachMessage = unit {
+type DestUnreachable = unit {
     unused: uint32;
-    payload: bytes &eod;
+    ip_header: bytes &eod;
 };
 
-type TimeExceededMessage = unit {
+type SourceQuench = unit {
     unused: uint32;
-    payload: bytes &eod;
+    ip_header: bytes &eod;
 };
 
-on ICMP::Message::%done {
-    print "ICMP Message:";
-    print fmt("  Type: %d", self.type);
-    print fmt("  Code: %d", self.code);
-    print fmt("  Checksum: %d", self.checksum);
-}
+type Redirect = unit {
+    gateway_address: uint32;
+    ip_header: bytes &eod;
+};
 
-on ICMP::EchoMessage::%done {
-    print "Echo Message:";
-    print fmt("  Identifier: %d", self.identifier);
-    print fmt("  Sequence: %d", self.sequence);
-}
+type TimeExceeded = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
 
-on ICMP::DestUnreachMessage::%done {
-    print "Destination Unreachable Message";
-}
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+    ip_header: bytes &eod;
+};
 
-on ICMP::TimeExceededMessage::%done {
-    print "Time Exceeded Message";
-}
+type TimestampMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    original_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type InfoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+};

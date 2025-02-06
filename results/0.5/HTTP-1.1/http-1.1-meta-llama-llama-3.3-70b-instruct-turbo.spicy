@@ -1,62 +1,246 @@
-@header {{
-    author = "Meta Llama 3.3"
-    description = "HTTP/1.1 protocol parser"
-    version = "1.0"
-}}
+module HTTP;
 
-type HTTP_Request = record {{
-    method: bytestring(4);
-    space1: bytestring(1);
-    url: bytestring;
-    space2: bytestring(1);
-    http_version: bytestring(8);
-}};
+type http_method = enum {
+  GET,
+  HEAD,
+  POST,
+  PUT,
+  DELETE,
+  CONNECT,
+  OPTIONS,
+  TRACE
+};
 
-type HTTP_Response = record {{
-    http_version: bytestring(8);
-    space: bytestring(1);
-    status_code: uint16;
-    space2: bytestring(1);
-    reason_phrase: bytestring;
-}};
+type http_version = enum {
+  HTTP_1_1
+};
 
-type HTTP_Header = record {{
-    name: bytestring;
-    colon: bytestring(1);
-    space: bytestring(1);
-    value: bytestring;
-    crlf: bytestring(2);
-}};
+type http_request = struct {
+  method: http_method;
+  request_uri: bytestring;
+  http_version: http_version;
+  headers: http_headers;
+};
 
-type HTTP_Message = record {{
-    request: HTTP_Request;
-    headers: array[HTTP_Header];
-    body: bytestring;
-}};
+type http_response = struct {
+  http_version: http_version;
+  status_code: uint16;
+  reason_phrase: bytestring;
+  headers: http_headers;
+};
 
-parser P = {{
-    magic: bytestring(4) = "HTTP";
+type http_headers = struct {
+  accept: optional http_accept;
+  accept_charset: optional http_accept_charset;
+  accept_encoding: optional http_accept_encoding;
+  accept_language: optional http_accept_language;
+  authorization: optional http_authorization;
+  cache_control: optional http_cache_control;
+  connection: optional http_connection;
+  content_encoding: optional http_content_encoding;
+  content_language: optional http_content_language;
+  content_length: optional http_content_length;
+  content_location: optional http_content_location;
+  content_md5: optional http_content_md5;
+  content_range: optional http_content_range;
+  content_type: optional http_content_type;
+  date: optional http_date;
+  etag: optional http_etag;
+  expect: optional http_expect;
+  from: optional http_from;
+  host: optional http_host;
+  if_match: optional http_if_match;
+  if_modified_since: optional http_if_modified_since;
+  if_none_match: optional http_if_none_match;
+  if_range: optional http_if_range;
+  if_unmodified_since: optional http_if_unmodified_since;
+  max_forwards: optional http_max_forwards;
+  proxy_authorization: optional http_proxy_authorization;
+  range: optional http_range;
+  referer: optional http_referer;
+  te: optional http_te;
+  trailer: optional http_trailer;
+  transfer_encoding: optional http_transfer_encoding;
+  upgrade: optional http_upgrade;
+  user_agent: optional http_user_agent;
+  vary: optional http_vary;
+  via: optional http_via;
+  warning: optional http_warning;
+  www_authenticate: optional http_www_authenticate;
+};
 
-    entry {{
-        message: HTTP_Message;
-    }}
-}};
+type http_accept = struct {
+  media_type: bytestring;
+  quality: optional uint16;
+};
 
-analyzer A = {{
-    entry {{
-        when P.message.request {{
-            print("Request method:", P.message.request.method);
-            print("Request URL:", P.message.request.url);
-            print("Request HTTP version:", P.message.request.http_version);
-        }};
-        when P.message.headers {{
-            for (header in P.message.headers) {{
-                print("Header name:", header.name);
-                print("Header value:", header.value);
-            }}
-        }};
-        when P.message.body {{
-            print("Body:", P.message.body);
-        }};
-    }}
-}};
+type http_accept_charset = struct {
+  charset: bytestring;
+  quality: optional uint16;
+};
+
+type http_accept_encoding = struct {
+  encoding: bytestring;
+  quality: optional uint16;
+};
+
+type http_accept_language = struct {
+  language: bytestring;
+  quality: optional uint16;
+};
+
+type http_authorization = struct {
+  scheme: bytestring;
+  credentials: bytestring;
+};
+
+type http_cache_control = struct {
+  directives: array http_cache_control_directive;
+};
+
+type http_cache_control_directive = enum {
+  MAX_AGE,
+  MIN_FRESH,
+  MUST_REVALIDATE,
+  NO_CACHE,
+  NO_STORE,
+  NO_TRANSFORM,
+  ONLY_IF_CACHED,
+  PUBLIC,
+  PROXY_REVALIDATE,
+  MAX_STALE,
+  STALE_IF_ERROR,
+  STALE_WHILE_REVALIDATE;
+};
+
+type http_connection = struct {
+  tokens: array bytestring;
+};
+
+type http_content_encoding = struct {
+  encoding: bytestring;
+};
+
+type http_content_language = struct {
+  language: bytestring;
+};
+
+type http_content_length = uint64;
+
+type http_content_location = bytestring;
+
+type http_content_md5 = bytestring;
+
+type http_content_range = struct {
+  unit: bytestring;
+  range: bytestring;
+  length: optional uint64;
+};
+
+type http_content_type = struct {
+  media_type: bytestring;
+  parameters: array http_content_type_parameter;
+};
+
+type http_content_type_parameter = struct {
+  name: bytestring;
+  value: bytestring;
+};
+
+type http_date = bytestring;
+
+type http_etag = bytestring;
+
+type http_expect = struct {
+  expectation: bytestring;
+  parameters: array http_expect_parameter;
+};
+
+type http_expect_parameter = struct {
+  name: bytestring;
+  value: bytestring;
+};
+
+type http_from = bytestring;
+
+type http_host = bytestring;
+
+type http_if_match = bytestring;
+
+type http_if_modified_since = bytestring;
+
+type http_if_none_match = bytestring;
+
+type http_if_range = bytestring;
+
+type http_if_unmodified_since = bytestring;
+
+type http_max_forwards = uint16;
+
+type http_proxy_authorization = struct {
+  scheme: bytestring;
+  credentials: bytestring;
+};
+
+type http_range = struct {
+  unit: bytestring;
+  range: bytestring;
+};
+
+type http_referer = bytestring;
+
+type http_te = struct {
+  transfer_encodings: array bytestring;
+};
+
+type http_trailer = bytestring;
+
+type http_transfer_encoding = bytestring;
+
+type http_upgrade = bytestring;
+
+type http_user_agent = bytestring;
+
+type http_vary = bytestring;
+
+type http_via = struct {
+  protocol: bytestring;
+  received_by: bytestring;
+  comment: optional bytestring;
+};
+
+type http_warning = struct {
+  code: uint16;
+  agent: bytestring;
+  text: bytestring;
+  date: optional bytestring;
+};
+
+type http_www_authenticate = struct {
+  scheme: bytestring;
+  realm: bytestring;
+  parameters: array http_www_authenticate_parameter;
+};
+
+type http_www_authenticate_parameter = struct {
+  name: bytestring;
+  value: bytestring;
+};
+
+let http_request_p = tcp_payload(
+  where payload_length >= 8,
+  p: bytestring &length=8 &transient,
+  method: http_method &transient,
+  request_uri: bytestring &transient,
+  http_version: http_version &transient,
+  headers: http_headers &transient
+): http_request;
+
+let http_response_p = tcp_payload(
+  where payload_length >= 8,
+  p: bytestring &length=8 &transient,
+  http_version: http_version &transient,
+  status_code: uint16 &transient,
+  reason_phrase: bytestring &transient,
+  headers: http_headers &transient
+): http_response;

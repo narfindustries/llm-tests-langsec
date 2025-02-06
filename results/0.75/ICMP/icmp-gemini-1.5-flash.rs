@@ -1,99 +1,85 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    number::complete::{be_u16, be_u32},
+    combinator::{map, map_res, rest},
+    error::ErrorKind,
+    number::complete::le_u16,
+    sequence::tuple,
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs::read;
+use std::net::IpAddr;
+use std::str::from_utf8;
+
 
 #[derive(Debug)]
-struct IPHeader {
-    version_ihl: u8,
-    diffserv: u8,
-    len: u16,
-    id: u16,
-    flags_offset: u16,
-    ttl: u8,
-    protocol: u8,
-    checksum: u16,
-    source: [u8; 4],
-    destination: [u8; 4],
+enum IcmpType {
+    EchoRequest,
+    EchoReply,
+    DestinationUnreachable(u8),
+    TimeExceeded(u8),
+    ParameterProblem(u8),
+    // Add other ICMP types as needed
+    Unknown(u8),
 }
 
 #[derive(Debug)]
-struct ICMPHeader {
-    type_: u8,
+struct IcmpHeader {
+    typ: IcmpType,
     code: u8,
     checksum: u16,
-    rest: Vec<u8>,
+    // Add other header fields as needed based on ICMP type
+    data: Vec<u8>,
 }
 
-fn parse_ip_header(input: &[u8]) -> IResult<&[u8], IPHeader> {
-    let (rest, version_ihl) = take(1usize)(input)?;
-    let (rest, diffserv) = take(1usize)(rest)?;
-    let (rest, len) = be_u16(rest)?;
-    let (rest, id) = be_u16(rest)?;
-    let (rest, flags_offset) = be_u16(rest)?;
-    let (rest, ttl) = take(1usize)(rest)?;
-    let (rest, protocol) = take(1usize)(rest)?;
-    let (rest, checksum) = be_u16(rest)?;
-    let (rest, source) = take(4usize)(rest)?;
-    let (rest, destination) = take(4usize)(rest)?;
+fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
+    let (input, (typ, code, checksum)) = tuple((
+        map(take(1usize), |b: &[u8]| match b[0] {
+            8 => IcmpType::EchoRequest,
+            0 => IcmpType::EchoReply,
+            3 => IcmpType::DestinationUnreachable(0), // Placeholder code
+            11 => IcmpType::TimeExceeded(0), // Placeholder code
+            12 => IcmpType::ParameterProblem(0), // Placeholder code
+            x => IcmpType::Unknown(x),
+        }),
+        take(1usize),
+        le_u16,
+    ))(input)?;
+
+    let (input, data) = rest(input)?;
 
     Ok((
-        rest,
-        IPHeader {
-            version_ihl,
-            diffserv,
-            len,
-            id,
-            flags_offset,
-            ttl,
-            protocol,
+        input,
+        IcmpHeader {
+            typ,
+            code: code[0],
             checksum,
-            source: source.try_into().unwrap(),
-            destination: destination.try_into().unwrap(),
+            data: data.to_vec(),
         },
     ))
 }
 
 
-fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], ICMPHeader> {
-    let (rest, type_) = take(1usize)(input)?;
-    let (rest, code) = take(1usize)(rest)?;
-    let (rest, checksum) = be_u16(rest)?;
-    let rest = &rest[..];
-    Ok((rest, ICMPHeader { type_: type_[0], code: code[0], checksum, rest: rest.to_vec() }))
-}
-
-fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], (IPHeader, ICMPHeader)> {
-    let (rest, ip_header) = parse_ip_header(input)?;
-    let (rest, icmp_header) = parse_icmp_header(rest)?;
-    Ok((rest, (ip_header, icmp_header)))
-}
-
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <binary_file>", args[0]);
+        eprintln!("Usage: {} <binary_file>", args[0]);
         return;
     }
 
     let filename = &args[1];
-    let mut file = File::open(filename).expect("Failed to open file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
-
-    match parse_icmp_packet(&buffer) {
-        Ok((_, (ip_header, icmp_header))) => {
-            println!("IP Header: {:?}", ip_header);
-            println!("ICMP Header: {:?}", icmp_header);
+    match read(filename) {
+        Ok(buffer) => {
+            match parse_icmp_header(&buffer) {
+                Ok((_, header)) => {
+                    println!("{:?}", header);
+                }
+                Err(e) => {
+                    eprintln!("Error parsing ICMP header: {:?}", e);
+                }
+            }
         }
         Err(e) => {
-            println!("Error parsing packet: {:?}", e);
+            eprintln!("Error reading file: {}", e);
         }
     }
 }

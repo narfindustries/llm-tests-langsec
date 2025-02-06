@@ -1,57 +1,124 @@
 module HTTP;
 
-import spicy;
+public type HTTP = unit {
+    request: Request;
+    
+    headers: Headers;
+    body: bytes &size=(content_length > 0 ? content_length : 0);
 
-public type Request = unit {
-    method: bytes;
-    space: bytes;
-    uri: bytes;
-    space2: bytes;
-    version: bytes &eod;
+    var content_length: uint64 = 0;
+    var transfer_encoding: TransferEncoding = TransferEncoding::IDENTITY;
 
-    on %init {
-        self.method = b"";
-        self.uri = b"";
-        self.version = b"";
+    method parse_headers(hdrs: Headers) {
+        for ( h in hdrs.headers ) {
+            switch ( to_lower(h.name) ) {
+                case "content-length":
+                    content_length = parse_content_length(h.value);
+                case "transfer-encoding":
+                    transfer_encoding = parse_transfer_encoding(h.value);
+            }
+        }
     }
 
-    parsing_success = method == /GET|POST|HEAD|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH/ &&
-                      version == /HTTP\/1\.[01]/;
-};
-
-public type Response = unit {
-    version: bytes;
-    space: bytes;
-    status_code: bytes;
-    space2: bytes;
-    status_text: bytes &eod;
-
     on %init {
-        self.version = b"";
-        self.status_code = b"";
-        self.status_text = b"";
-    }
-
-    parsing_success = version == /HTTP\/1\.[01]/ &&
-                      status_code == /\d{3}/;
-};
-
-public type Header = unit {
-    name: bytes;
-    b":";
-    value: bytes &eod;
-
-    on %init {
-        self.name = b"";
-        self.value = b"";
+        parse_headers(headers);
     }
 };
 
-public type Message = unit {
-    headers: vector<Header>;
-    b"\r\n\r\n";
-
-    on %init {
-        self.headers = [];
-    }
+type Request = unit {
+    request_line: RequestLine;
 };
+
+type RequestLine = unit {
+    method: Method;
+    sp1: bytes &size=1 &requires=(" ");
+    uri: URI;
+    sp2: bytes &size=1 &requires=(" ");
+    version: Version;
+    eol: bytes &size=2 &requires=("\r\n");
+};
+
+type Method = enum {
+    GET,
+    POST,
+    HEAD,
+    PUT,
+    DELETE,
+    TRACE,
+    OPTIONS,
+    CONNECT
+};
+
+type URI = bytes;
+
+type Version = unit {
+    http: bytes &size=4 &requires="HTTP";
+    slash: bytes &size=1 &requires="/";
+    major: uint8;
+    dot: bytes &size=1 &requires=".";
+    minor: uint8;
+};
+
+type Headers = unit {
+    headers: Header[];
+    terminator: bytes &size=2 &requires="\r\n";
+};
+
+type Header = unit {
+    name: HeaderName;
+    colon: bytes &size=1 &requires=":";
+    sp: bytes &size=1 &requires=" ";
+    value: HeaderValue;
+    eol: bytes &size=2 &requires=("\r\n");
+};
+
+type HeaderName = bytes;
+type HeaderValue = bytes;
+
+type TransferEncoding = enum {
+    CHUNKED,
+    COMPRESS,
+    DEFLATE,
+    GZIP,
+    IDENTITY
+};
+
+type StatusLine = unit {
+    version: Version;
+    sp1: bytes &size=1 &requires=(" ");
+    status: StatusCode;
+    sp2: bytes &size=1 &requires=(" ");
+    reason: Reason;
+    eol: bytes &size=2 &requires=("\r\n");
+};
+
+type StatusCode = uint16;
+type Reason = bytes;
+
+function parse_content_length(val: bytes): uint64 {
+    return to_uint(val);
+}
+
+function parse_transfer_encoding(val: bytes): TransferEncoding {
+    switch ( to_lower(val) ) {
+        case "chunked":
+            return TransferEncoding::CHUNKED;
+        case "compress":
+            return TransferEncoding::COMPRESS;
+        case "deflate":
+            return TransferEncoding::DEFLATE;
+        case "gzip":
+            return TransferEncoding::GZIP;
+        default:
+            return TransferEncoding::IDENTITY;
+    }
+}
+
+function parse_accept_header(val: bytes): vector<string> {
+    return split_string(val, /\s*,\s*/);
+}
+
+function parse_quality_value(val: bytes): double {
+    local parts = split_string(val, /\s*;\s*q=/);
+    return |parts| > 1 ? to_double(parts[1]) : 1.0;
+}

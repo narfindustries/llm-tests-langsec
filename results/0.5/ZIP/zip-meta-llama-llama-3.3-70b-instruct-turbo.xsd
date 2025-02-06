@@ -1,120 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ZIP"
-           xmlns="http://example.com/ZIP"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="zipFile">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="zipFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="localFileHeader" maxOccurs="unbounded"/>
-        <xs:element ref="centralDirectory"/>
-        <xs:element ref="endOfCentralDirectory"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="localFileHeader">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="localFileHeaderFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="signature" type="xs:hexBinary" fixed="04034b50"/>
-        <xs:element name="version" type="xs:unsignedShort"/>
-        <xs:element name="generalPurposeFlag" type="xs:unsignedShort"/>
-        <xs:element name="compressionMethod" type="xs:unsignedShort"/>
-        <xs:element name="lastModifiedDate" type="xs:unsignedShort"/>
-        <xs:element name="lastModifiedTime" type="xs:unsignedShort"/>
-        <xs:element name="crc32" type="xs:unsignedInt"/>
-        <xs:element name="compressedSize" type="xs:unsignedInt"/>
-        <xs:element name="uncompressedSize" type="xs:unsignedInt"/>
-        <xs:element name="fileNameLength" type="xs:unsignedShort"/>
-        <xs:element name="extraFieldLength" type="xs:unsignedShort"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="centralDirectory">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="centralDirectoryFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="centralDirectoryFileHeader" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="centralDirectoryFileHeader">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="centralDirectoryFileHeaderFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="signature" type="xs:hexBinary" fixed="02014b50"/>
-        <xs:element name="versionMadeBy" type="xs:unsignedShort"/>
-        <xs:element name="versionToExtract" type="xs:unsignedShort"/>
-        <xs:element name="generalPurposeFlag" type="xs:unsignedShort"/>
-        <xs:element name="compressionMethod" type="xs:unsignedShort"/>
-        <xs:element name="lastModifiedDate" type="xs:unsignedShort"/>
-        <xs:element name="lastModifiedTime" type="xs:unsignedShort"/>
-        <xs:element name="crc32" type="xs:unsignedInt"/>
-        <xs:element name="compressedSize" type="xs:unsignedInt"/>
-        <xs:element name="uncompressedSize" type="xs:unsignedInt"/>
-        <xs:element name="fileNameLength" type="xs:unsignedShort"/>
-        <xs:element name="extraFieldLength" type="xs:unsignedShort"/>
-        <xs:element name="fileCommentLength" type="xs:unsignedShort"/>
-        <xs:element name="diskNumberStart" type="xs:unsignedShort"/>
-        <xs:element name="internalAttributes" type="xs:unsignedShort"/>
-        <xs:element name="externalAttributes" type="xs:unsignedInt"/>
-        <xs:element name="relativeOffsetOfLocalHeader" type="xs:unsignedInt"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="endOfCentralDirectory">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="endOfCentralDirectoryFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="signature" type="xs:hexBinary" fixed="06054b50"/>
-        <xs:element name="numberOfThisDisk" type="xs:unsignedShort"/>
-        <xs:element name="numberOfTheDiskWhereTheCentralDirectoryStarts" type="xs:unsignedShort"/>
-        <xs:element name="numberOfEntriesInTheCentralDirectoryOnThisDisk" type="xs:unsignedShort"/>
-        <xs:element name="totalNumberOfEntriesInTheCentralDirectory" type="xs:unsignedShort"/>
-        <xs:element name="sizeOfTheCentralDirectory" type="xs:unsignedInt"/>
-        <xs:element name="offsetOfTheStartOfTheCentralDirectory" type="xs:unsignedInt"/>
-        <xs:element name="commentLength" type="xs:unsignedShort"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:notation name="zipFormat" public="zip" system="http://www.ogf.org/dfdl/zip"/>
-
-  <xs:notation name="localFileHeaderFormat" public="localFileHeader" system="http://www.ogf.org/dfdl/localFileHeader"/>
-
-  <xs:notation name="centralDirectoryFormat" public="centralDirectory" system="http://www.ogf.org/dfdl/centralDirectory"/>
-
-  <xs:notation name="centralDirectoryFileHeaderFormat" public="centralDirectoryFileHeader" system="http://www.ogf.org/dfdl/centralDirectoryFileHeader"/>
-
-  <xs:notation name="endOfCentralDirectoryFormat" public="endOfCentralDirectory" system="http://www.ogf.org/dfdl/endOfCentralDirectory"/>
-
+  <xs:element name="LocalFileHeader" type="LocalFileHeaderType"/>
+  <xs:element name="CentralDirectory" type="CentralDirectoryType"/>
+  <xs:element name="EndOfCentralDirectory" type="EndOfCentralDirectoryType"/>
+  
+  <xs:complexType name="LocalFileHeaderType">
+    <xs:sequence>
+      <xs:element name="local_file_header_signature" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="version_needed_to_extract" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="general_purpose_bit_flag" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="compression_method" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="last_mod_file_time" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="last_mod_file_date" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="crc_32" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="compressed_size" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="uncompressed_size" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="file_name_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="extra_field_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="file_name" type="xs:string" dfdl:lengthKind="implicit" dfdl:length="file_name_length"/>
+      <xs:element name="extra_field" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:length="extra_field_length" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="ExtraFieldType">
+    <xs:sequence>
+      <xs:element name="header_id" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="data_size" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:length="data_size"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="CentralDirectoryType">
+    <xs:sequence>
+      <xs:element name="central_directory_header_signature" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="version_made_by" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="version_needed_to_extract" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="general_purpose_bit_flag" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="compression_method" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="last_mod_file_time" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="last_mod_file_date" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="crc_32" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="compressed_size" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="uncompressed_size" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="file_name_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="extra_field_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="file_comment_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="disk_number_start" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="int_file_attributes" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="ext_file_attributes" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="local_header_offset" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="file_name" type="xs:string" dfdl:lengthKind="implicit" dfdl:length="file_name_length"/>
+      <xs:element name="extra_field" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:length="extra_field_length" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="file_comment" type="xs:string" dfdl:lengthKind="implicit" dfdl:length="file_comment_length" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="EndOfCentralDirectoryType">
+    <xs:sequence>
+      <xs:element name="end_of_central_dir_signature" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="number_of_this_disk" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="number_of_the_disk_with_the_start_of_the_central_directory" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="total_number_of_entries_in_the_central_directory_on_this_disk" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="total_number_of_entries_in_the_central_directory" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="size_of_the_central_directory" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="zipfile_comment_length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="zipfile_comment" type="xs:string" dfdl:lengthKind="implicit" dfdl:length="zipfile_comment_length" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

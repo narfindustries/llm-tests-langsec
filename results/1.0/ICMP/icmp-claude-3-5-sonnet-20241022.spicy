@@ -1,31 +1,19 @@
 module ICMP;
 
-import spicy;
-
-public type MessageTypes = enum {
-    ECHO_REPLY = 0,
-    DESTINATION_UNREACHABLE = 3,
-    SOURCE_QUENCH = 4,
-    REDIRECT = 5,
-    ECHO_REQUEST = 8,
-    TIME_EXCEEDED = 11,
-    PARAMETER_PROBLEM = 12,
-    TIMESTAMP = 13,
-    TIMESTAMP_REPLY = 14,
-    INFO_REQUEST = 15,
-    INFO_REPLY = 16
-};
-
-public type ICMP = unit {
-    type: uint8 &convert=MessageTypes($$);
+public type Message = unit {
+    msg_type: uint8;
     code: uint8;
     checksum: uint16;
-    
-    switch ( self.type ) {
-        MessageTypes::ECHO_REQUEST, MessageTypes::ECHO_REPLY -> echo: EchoMessage;
-        MessageTypes::TIME_EXCEEDED -> time_exceeded: TimeExceeded;
-        MessageTypes::DESTINATION_UNREACHABLE -> dest_unreachable: DestinationUnreachable;
-        * -> : bytes &eod;
+
+    switch ( self.msg_type ) {
+        0, 8 -> echo: EchoMessage;
+        3 -> dest_unreachable: DestinationUnreachable;
+        4 -> source_quench: SourceQuench;
+        5 -> redirect: Redirect;
+        11 -> time_exceeded: TimeExceeded;
+        12 -> param_problem: ParameterProblem;
+        13, 14 -> timestamp: TimestampMessage;
+        15, 16 -> info: InformationMessage;
     };
 };
 
@@ -35,16 +23,41 @@ type EchoMessage = unit {
     data: bytes &eod;
 };
 
-type TimeExceeded = unit {
-    unused: uint32;
-    ip_header: bytes &eod;
-};
-
 type DestinationUnreachable = unit {
     unused: uint32;
-    ip_header: bytes &eod;
+    original_data: bytes &eod;
 };
 
-on ICMP::echo -> event icmp_echo($conn, self.identifier, self.sequence, self.data);
-on ICMP::time_exceeded -> event icmp_time_exceeded($conn, self.ip_header);
-on ICMP::dest_unreachable -> event icmp_destination_unreachable($conn, self.unused, self.ip_header);
+type SourceQuench = unit {
+    unused: uint32;
+    original_data: bytes &eod;
+};
+
+type Redirect = unit {
+    gateway_address: uint32;
+    original_data: bytes &eod;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    original_data: bytes &eod;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused_bytes: bytes &size=3;
+    original_data: bytes &eod;
+};
+
+type TimestampMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type InformationMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+};

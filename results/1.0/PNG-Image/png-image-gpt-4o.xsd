@@ -1,72 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/png"
-           xmlns:tns="http://example.com/dfdl/png"
+           targetNamespace="http://example.org/png"
+           xmlns:tns="http://example.org/png"
            elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:documentation>
-      DFDL schema for PNG image format
-    </xs:documentation>
-  </xs:annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:pngFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <dfdl:format ref="tns:ImageFormat" />
+    <dfdl:defineFormat name="pngFormat">
+        <dfdl:byteOrder value="bigEndian"/>
+        <dfdl:lengthKind value="explicit"/>
+        <dfdl:lengthUnits value="bytes"/>
+    </dfdl:defineFormat>
 
-  <xs:element name="PNG">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Signature" type="tns:SignatureType" />
-        <xs:element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded" />
-      </xs:sequence>
+    <xs:element name="pngFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="signature" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="8">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:initiator value="%x89PNG%x0D%x0A%x1A%x0A"/>
+                            <dfdl:assert test="{. eq xs:hexBinary('89504E470D0A1A0A')}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="chunks" minOccurs="1" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+                            <xs:element name="chunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:encoding="US-ASCII"/>
+                            <xs:element name="chunkData" type="xs:hexBinary" minOccurs="0">
+                                <xs:annotation>
+                                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                        <dfdl:lengthKind value="explicit"/>
+                                        <dfdl:length ref="tns:length"/>
+                                    </xs:appinfo>
+                                </xs:annotation>
+                            </xs:element>
+                            <xs:element name="crc" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- IHDR chunk definition -->
+    <xs:element name="IHDR" type="tns:IHDRType"/>
+
+    <xs:complexType name="IHDRType">
+        <xs:sequence>
+            <xs:element name="width" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+            <xs:element name="height" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+            <xs:element name="bitDepth" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            <xs:element name="colorType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:assert test="{. eq 0}"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="filterMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:assert test="{. eq 0}"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="interlaceMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:assert test="{. eq 0 or . eq 1}"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
 
-  <!-- PNG signature (8 bytes constant value) -->
-  <xs:simpleType name="SignatureType">
-    <xs:restriction base="xs:hexBinary">
-      <xs:length value="8" />
-      <xs:pattern value="89504E470D0A1A0A" />
-    </xs:restriction>
-  </xs:simpleType>
+    <!-- IDAT and IEND can be modeled similarly as elements -->
+    <xs:element name="IDAT" type="tns:chunkType"/>
 
-  <!-- PNG Chunk Type -->
-  <xs:complexType name="ChunksType">
-    <xs:sequence>
-      <xs:element name="Length" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="bigEndian" />
-      <xs:element name="Type" type="tns:ChunkType" dfdl:lengthKind="explicit" dfdl:length="4" />
-      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../Length}" />
-      <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="bigEndian" />
-    </xs:sequence>
-  </xs:complexType>
+    <xs:complexType name="chunkType">
+        <xs:sequence>
+            <xs:element name="chunkData" type="xs:hexBinary"/>
+        </xs:sequence>
+    </xs:complexType>
 
-  <!-- PNG Chunk Type Name -->
-  <xs:simpleType name="ChunkType">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="IHDR" />
-      <xs:enumeration value="PLTE" />
-      <xs:enumeration value="IDAT" />
-      <xs:enumeration value="IEND" />
-      <xs:enumeration value="tRNS" />
-      <xs:enumeration value="cHRM" />
-      <xs:enumeration value="gAMA" />
-      <xs:enumeration value="iCCP" />
-      <xs:enumeration value="sBIT" />
-      <xs:enumeration value="sRGB" />
-      <xs:enumeration value="tEXt" />
-      <xs:enumeration value="zTXt" />
-      <xs:enumeration value="iTXt" />
-      <xs:enumeration value="bKGD" />
-      <xs:enumeration value="hIST" />
-      <xs:enumeration value="pHYs" />
-      <xs:enumeration value="sPLT" />
-      <xs:enumeration value="tIME" />
-    </xs:restriction>
-  </xs:simpleType>
+    <xs:element name="IEND" type="tns:chunkType"/>
 
-  <!-- DFDL image format -->
-  <dfdl:defineFormat name="ImageFormat">
-    <dfdl:format encoding="utf-8" byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes" documentFinalTerminatorCanBeMissing="yes" />
-  </dfdl:defineFormat>
+    <!-- Ancillary chunks can follow similar pattern to IHDR and IDAT -->
 
 </xs:schema>

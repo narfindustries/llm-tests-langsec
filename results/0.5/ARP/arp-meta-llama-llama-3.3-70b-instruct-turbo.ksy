@@ -1,27 +1,73 @@
 meta:
   id: arp
-  title: Address Resolution Protocol
-  file-format: network-protocol
+  endian: be
+types:
+  mac_addr:
+    seq:
+      - id: addr
+        type: u1
+        repeat: 6
+  ip_addr:
+    seq:
+      - id: addr
+        type: u1
+        repeat: 4
 seq:
-  - id: hardware_type
+  - id: htype
     type: u2
-  - id: protocol_type
+  - id: ptype
     type: u2
-  - id: hardware_address_length
+  - id: hlen
     type: u1
-  - id: protocol_address_length
+  - id: plen
     type: u1
-  - id: operation
+  - id: oper
     type: u2
-  - id: sender_hardware_address
-    type: bytes
-    size: hardware_address_length
-  - id: sender_protocol_address
-    type: bytes
-    size: protocol_address_length
-  - id: target_hardware_address
-    type: bytes
-    size: hardware_address_length
-  - id: target_protocol_address
-    type: bytes
-    size: protocol_address_length
+  - id: sha
+    type:
+      switch-on: htype
+      cases:
+        1: 
+          type: mac_addr
+        else: 
+          type: 
+            seq:
+              - id: addr
+                type: u1
+                repeat: hlen
+  - id: spa
+    type:
+      switch-on: ptype
+      cases:
+        2048: 
+          type: ip_addr
+        else: 
+          type: 
+            seq:
+              - id: addr
+                type: u1
+                repeat: plen
+  - id: tha
+    type:
+      switch-on: htype
+      cases:
+        1: 
+          type: mac_addr
+        else: 
+          type: 
+            seq:
+              - id: addr
+                type: u1
+                repeat: hlen
+  - id: tpa
+    type:
+      switch-on: ptype
+      cases:
+        2048: 
+          type: ip_addr
+        else: 
+          type: 
+            seq:
+              - id: addr
+                type: u1
+                repeat: plen

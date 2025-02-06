@@ -1,90 +1,122 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-static const uint8_t VERSION_MAJOR = 0x03;
-static const uint8_t VERSION_MINOR = 0x03;
+// Extension Types
+#define EXT_SERVER_NAME 0
+#define EXT_SUPPORTED_GROUPS 10
+#define EXT_SIGNATURE_ALGORITHMS 13
+#define EXT_KEY_SHARE 51
+#define EXT_SUPPORTED_VERSIONS 43
+#define EXT_PSK_KEY_EXCHANGE_MODES 45
+#define EXT_EARLY_DATA 42
+#define EXT_COOKIE 44
+#define EXT_CERT_AUTHORITIES 47
+#define EXT_SIG_ALGS_CERT 50
+#define EXT_PADDING 21
+#define EXT_RECORD_SIZE_LIMIT 28
 
-HParser* init_tls_client_hello_parser(void) {
-    // Basic integer parsers
-    HParser* uint8 = h_uint8();
-    HParser* uint16 = h_uint16();
-    
-    // Content Type (0x16 for Handshake)
-    HParser* content_type = h_int_range(uint8, 0x16, 0x16);
-    
-    // Protocol Version (0x0301 - 0x0303)
-    HParser* protocol_version = h_sequence(
-        h_int_range(uint8, 0x03, 0x03),
-        h_int_range(uint8, 0x01, 0x03),
-        NULL
-    );
-    
-    // Length (uint16)
-    HParser* record_length = uint16;
-    
-    // Handshake Type (1 for ClientHello)
-    HParser* handshake_type = h_int_range(uint8, 0x01, 0x01);
-    
-    // Handshake Length (uint24 - represented as 3 bytes)
-    HParser* handshake_length = h_sequence(
-        uint8,
-        uint8,
-        uint8,
-        NULL
-    );
-    
-    // Client Version
-    HParser* client_version = h_sequence(
-        h_ch(VERSION_MAJOR),
-        h_ch(VERSION_MINOR),
-        NULL
-    );
-    
-    // Random (32 bytes)
-    HParser* random = h_repeat_n(uint8, 32);
-    
-    // Session ID
-    HParser* session_id_length = uint8;
-    HParser* session_id = h_length_value(session_id_length, uint8);
-    
-    // Cipher Suites
-    HParser* cipher_suites_length = uint16;
-    HParser* cipher_suites = h_length_value(cipher_suites_length, uint8);
-    
-    // Compression Methods
-    HParser* compression_methods_length = uint8;
-    HParser* compression_methods = h_length_value(compression_methods_length, uint8);
-    
-    // Extensions Length
-    HParser* extensions_length = uint16;
-    
-    // Extensions
-    HParser* extension_type = uint16;
-    HParser* extension_length = uint16;
-    HParser* extension_data = h_length_value(extension_length, uint8);
-    
-    HParser* extension = h_sequence(
-        extension_type,
-        extension_length,
-        extension_data,
-        NULL
-    );
-    
-    HParser* extensions = h_length_value(extensions_length, extension);
-    
-    // Complete ClientHello
+static HParser* init_tls_parser(void) {
+    // Basic field parsers
+    HParser* legacy_version_p = h_uint16();
+    HParser* random_p = h_repeat_n(h_uint8(), 32);
+    HParser* legacy_session_id_p = h_length_value(h_uint8(), h_uint8());
+    HParser* cipher_suites_p = h_length_value(h_uint16(), h_repeat_n(h_uint16(), 1));
+    HParser* compression_methods_p = h_length_value(h_uint8(), h_uint8());
+
+    // Extension parsers
+    HParser* server_name_p = h_sequence(
+        h_uint16(),
+        h_length_value(h_uint8(),
+                      h_length_value(h_uint16(), h_uint8())),
+        NULL);
+
+    HParser* supported_groups_p = h_length_value(
+        h_uint16(),
+        h_repeat_n(h_uint16(), 1));
+
+    HParser* signature_algorithms_p = h_length_value(
+        h_uint16(),
+        h_repeat_n(h_uint16(), 1));
+
+    HParser* key_share_p = h_length_value(
+        h_uint16(),
+        h_sequence(
+            h_uint16(),
+            h_length_value(h_uint16(), h_uint8()),
+            NULL));
+
+    HParser* supported_versions_p = h_length_value(
+        h_uint8(),
+        h_repeat_n(h_uint16(), 1));
+
+    HParser* extension_p = h_choice(
+        h_sequence(h_ch(EXT_SERVER_NAME), server_name_p, NULL),
+        h_sequence(h_ch(EXT_SUPPORTED_GROUPS), supported_groups_p, NULL),
+        h_sequence(h_ch(EXT_SIGNATURE_ALGORITHMS), signature_algorithms_p, NULL),
+        h_sequence(h_ch(EXT_KEY_SHARE), key_share_p, NULL),
+        h_sequence(h_ch(EXT_SUPPORTED_VERSIONS), supported_versions_p, NULL),
+        NULL);
+
+    HParser* extensions_p = h_length_value(h_uint16(), h_many(extension_p));
+
     return h_sequence(
-        content_type,
-        protocol_version,
-        record_length,
-        handshake_type,
-        handshake_length,
-        client_version,
-        random,
-        session_id,
-        cipher_suites,
-        compression_methods,
-        extensions,
-        NULL
-    );
+        h_ch(0x01),           // handshake type
+        h_uint16(),           // length (using uint16 instead of uint24)
+        legacy_version_p,
+        random_p,
+        legacy_session_id_p,
+        cipher_suites_p,
+        compression_methods_p,
+        extensions_p,
+        NULL);
+}
+
+void print_parse_result(const HParseResult* result) {
+    if (!result) {
+        printf("Parse failed\n");
+        return;
+    }
+    printf("Successfully parsed TLS ClientHello\n");
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        perror("Failed to allocate buffer");
+        fclose(f);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(f);
+        return 1;
+    }
+
+    HParser* parser = init_tls_parser();
+    HParseResult* result = h_parse(parser, buffer, size);
+    print_parse_result(result);
+
+    h_parse_result_free(result);
+    free(buffer);
+    fclose(f);
+    return 0;
 }

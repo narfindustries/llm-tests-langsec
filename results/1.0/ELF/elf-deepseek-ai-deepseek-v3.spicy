@@ -1,0 +1,178 @@
+module ELF;
+
+public type ELF_Header = unit {
+    e_ident: MagicNumber;
+    e_type: uint16 &convert=to_elf_type;
+    e_machine: uint16 &convert=to_elf_machine;
+    e_version: uint32 &convert=to_elf_version;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+};
+
+type MagicNumber = unit {
+    magic: bytes &size=4 &convert=is_elf;
+    class: uint8 &convert=to_elf_class;
+    data: uint8 &convert=to_elf_data;
+    version: uint8 &convert=to_elf_version;
+    osabi: uint8 &convert=to_elf_osabi;
+    abiversion: uint8;
+    padding: bytes &size=7;
+};
+
+type SectionHeader = unit {
+    sh_name: uint32;
+    sh_type: uint32 &convert=to_section_type;
+    sh_flags: uint64 &convert=to_section_flags;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
+};
+
+type ProgramHeader = unit {
+    p_type: uint32 &convert=to_program_type;
+    p_flags: uint32 &convert=to_program_flags;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
+
+type Symbol = unit {
+    st_name: uint32;
+    st_value: uint64;
+    st_size: uint64;
+    st_info: uint8 &convert=to_symbol_type;
+    st_other: uint8;
+    st_shndx: uint16;
+};
+
+type ELF = unit {
+    header: ELF_Header;
+    program_headers: ProgramHeader[] &size=header.e_phnum;
+    section_headers: SectionHeader[] &size=header.e_shnum;
+};
+
+function to_elf_class(c: uint8): string {
+    switch c {
+        case 0: return "None";
+        case 1: return "32-bit";
+        case 2: return "64-bit";
+        default: return "Unknown";
+    }
+}
+
+function to_elf_data(d: uint8): string {
+    switch d {
+        case 0: return "None";
+        case 1: return "Little-endian";
+        case 2: return "Big-endian";
+        default: return "Unknown";
+    }
+}
+
+function to_elf_version(v: uint8): string {
+    switch v {
+        case 0: return "None";
+        case 1: return "Current";
+        default: return "Unknown";
+    }
+}
+
+function to_elf_osabi(o: uint8): string {
+    switch o {
+        case 0: return "System V";
+        case 3: return "Linux";
+        case 9: return "FreeBSD";
+        default: return "Unknown";
+    }
+}
+
+function to_elf_type(t: uint16): string {
+    switch t {
+        case 0: return "None";
+        case 1: return "Relocatable";
+        case 2: return "Executable";
+        case 3: return "Shared";
+        case 4: return "Core";
+        default: return "Unknown";
+    }
+}
+
+function to_elf_machine(m: uint16): string {
+    switch m {
+        case 0: return "None";
+        case 3: return "Intel 80386";
+        case 8: return "MIPS";
+        case 40: return "ARM";
+        case 62: return "x86-64";
+        default: return "Unknown";
+    }
+}
+
+function to_section_type(t: uint32): string {
+    switch t {
+        case 0: return "None";
+        case 1: return "Program Bits";
+        case 2: return "Symbol Table";
+        case 3: return "String Table";
+        case 4: return "Relocation with Addends";
+        case 8: return "No Space";
+        default: return "Unknown";
+    }
+}
+
+function to_section_flags(f: uint64): string {
+    flags: string = "";
+    if (f & 0x1) flags += "Write ";
+    if (f & 0x2) flags += "Alloc ";
+    if (f & 0x4) flags += "Executable";
+    return flags;
+}
+
+function to_program_type(t: uint32): string {
+    switch t {
+        case 0: return "None";
+        case 1: return "Loadable";
+        case 2: return "Dynamic";
+        case 3: return "Interpreter";
+        case 4: return "Note";
+        default: return "Unknown";
+    }
+}
+
+function to_program_flags(f: uint32): string {
+    flags: string = "";
+    if (f & 0x1) flags += "Executable ";
+    if (f & 0x2) flags += "Writable ";
+    if (f & 0x4) flags += "Readable";
+    return flags;
+}
+
+function to_symbol_type(i: uint8): string {
+    type_mask: uint8 = 0x0F;
+    type: uint8 = i & type_mask;
+    switch type {
+        case 0: return "None";
+        case 1: return "Object";
+        case 2: return "Func";
+        default: return "Unknown";
+    }
+}
+
+function is_elf(m: bytes): bool {
+    return m == b"\x7FELF";
+}

@@ -1,57 +1,15 @@
-module TLS.ClientHello {
-  import ByteOrder::BigEndian;
-  import layout::bytes;
-  import layout::word16;
-  import layout::word24;
-  import layout::word32;
-
-  ++type ProtocolVersion = struct {
-    major : byte;
-    minor : byte;
-  };
-
-  ++type Random = struct {
-    gmt_unix_time : word32;
-    random_bytes : bytes[28];
-  };
-
-  ++type SessionID = struct {
-    length : byte;
-    session_id : bytes[length];
-  };
-
-  ++type CipherSuites = struct {
-    length : word16;
-    cipher_suites : word16[length / 2];
-  };
-
-  ++type CompressionMethods = struct {
-    length : byte;
-    compression_methods : byte[length];
-  };
-
-  ++type Extension = struct {
-    type : word16;
-    length : word16;
-    data : bytes[length];
-  };
-
-  ++type Extensions = struct {
-    length : word16;
-    extensions : Extension[length to end];
-  };
-
-  public ++type TLSClientHello = struct {
-    record_type : byte;
-    version : ProtocolVersion;
-    length : word16;
-    handshake_type : byte;
-    handshake_length : word24;
-    handshake_version : ProtocolVersion;
-    random : Random;
-    session_id : SessionID;
-    cipher_suites : CipherSuites;
-    compression_methods : CompressionMethods;
-    extensions : Extensions;
-  };
-}
+def TLS_ClientHello:
+  u16 legacy_version = 0x0303
+  array u8[32] random
+  u8 legacy_session_id_len
+  array u8[legacy_session_id_len] legacy_session_id
+  u16 cipher_suites_len
+  array u16[cipher_suites_len / 2] cipher_suites
+  u8 legacy_compression_methods_len
+  array u8[legacy_compression_methods_len] legacy_compression_methods
+  u16 extensions_len
+  array {
+    u16 extension_type
+    u16 extension_data_length
+    array u8[extension_data_length] extension_data
+  }[extensions_len] extensions

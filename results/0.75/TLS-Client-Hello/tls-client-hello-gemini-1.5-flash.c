@@ -1,98 +1,121 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 8443
+typedef struct {
+    uint16_t major;
+    uint16_t minor;
+} TlsVersion;
 
-int main() {
-    SSL_CTX *ctx;
-    SSL *ssl;
-    int sockfd;
-    struct sockaddr_in server_addr;
+typedef struct {
+    uint8_t random_bytes[32];
+} TlsRandom;
 
-    // Initialize OpenSSL
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_all_algorithms();
+typedef struct {
+    uint8_t session_id_bytes[32];
+    size_t session_id_len;
+} TlsSessionId;
 
-    // Create SSL context
-    ctx = SSL_CTX_new(TLS_client_method());
-    if (ctx == NULL) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
+typedef struct {
+    uint16_t cipher_suite;
+} TlsCipherSuite;
+
+typedef struct {
+    uint8_t compression_method;
+} TlsCompressionMethod;
+
+typedef struct {
+    uint16_t extension_type;
+    size_t extension_data_len;
+    uint8_t *extension_data;
+} TlsExtension;
+
+typedef struct {
+    size_t num_extensions;
+    TlsExtension *extensions;
+} TlsExtensions;
+
+typedef struct {
+    TlsVersion version;
+    TlsRandom random;
+    TlsSessionId legacy_session_id;
+    size_t num_cipher_suites;
+    uint16_t *cipher_suites;
+    size_t num_compression_methods;
+    uint8_t *compression_methods;
+    TlsExtensions extensions;
+} TlsClientHello;
+
+static HammerParser tls_version = seq(h_uint16, h_uint16, &((TlsVersion*)0)->major, &((TlsVersion*)0)->minor);
+static HammerParser tls_random = bytes(32, &((TlsRandom*)0)->random_bytes);
+static HammerParser tls_session_id = count(h_uint8, &((TlsSessionId*)0)->session_id_len, &((TlsSessionId*)0)->session_id_bytes, 0, 32);
+static HammerParser tls_cipher_suite = h_uint16;
+static HammerParser tls_compression_method = h_uint8;
+static HammerParser tls_extension = seq(h_uint16, count(h_uint8, &((TlsExtension*)0)->extension_data_len, &((TlsExtension*)0)->extension_data), &((TlsExtension*)0)->extension_type);
+static HammerParser tls_extensions = count(tls_extension, &((TlsExtensions*)0)->num_extensions, &((TlsExtensions*)0)->extensions);
+
+static HammerParser tls_client_hello = seq(
+    tls_version, tls_random, tls_session_id, 
+    count(tls_cipher_suite, &((TlsClientHello*)0)->num_cipher_suites, &((TlsClientHello*)0)->cipher_suites),
+    count(tls_compression_method, &((TlsClientHello*)0)->num_compression_methods, &((TlsClientHello*)0)->compression_methods),
+    tls_extensions, &((TlsClientHello*)0)->version, &((TlsClientHello*)0)->random, &((TlsClientHello*)0)->legacy_session_id, &((TlsClientHello*)0)->extensions
+);
+
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
 
-    // Create socket
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("socket");
-        exit(1);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    // Set up server address
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_PORT);
-    if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
-        perror("inet_pton");
-        exit(1);
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = (uint8_t *)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
     }
 
-    // Connect to server
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect");
-        exit(1);
+    if (fread(buffer, 1, fileSize, fp) != fileSize) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(fp);
+        return 1;
     }
 
-    // Create SSL object
-    ssl = SSL_new(ctx);
-    if (ssl == NULL) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
+    fclose(fp);
+
+    TlsClientHello client_hello;
+    HammerResult result = hammer_parse(tls_client_hello, buffer, fileSize, &client_hello);
+
+    if (result.success) {
+        printf("Client Hello parsed successfully:\n");
+        printf("Version: %u.%u\n", client_hello.version.major, client_hello.version.minor);
+        for (size_t i = 0; i < client_hello.extensions.num_extensions; ++i) {
+            printf("Extension Type: %u\n", client_hello.extensions.extensions[i].extension_type);
+        }
+    } else {
+        fprintf(stderr, "Error parsing Client Hello: %s at offset %zu\n", result.error_message, result.error_offset);
     }
 
-    // Connect SSL to socket
-    SSL_set_fd(ssl, sockfd);
-
-    // Perform SSL handshake
-    if (SSL_connect(ssl) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
+    free(buffer);
+    free(client_hello.cipher_suites);
+    free(client_hello.compression_methods);
+    for (size_t i = 0; i < client_hello.extensions.num_extensions; ++i) {
+        free(client_hello.extensions.extensions[i].extension_data);
     }
-
-    printf("Connected to server!\n");
-
-
-    //Send and receive data (example)
-    char buffer[1024] = "Hello from client!";
-    int bytes_sent = SSL_write(ssl, buffer, strlen(buffer));
-    if (bytes_sent <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-    
-    char recv_buffer[1024];
-    int bytes_received = SSL_read(ssl, recv_buffer, sizeof(recv_buffer));
-    if (bytes_received <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-    recv_buffer[bytes_received] = '\0';
-    printf("Received from server: %s\n", recv_buffer);
-
-
-    //Cleanup
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
-    close(sockfd);
+    free(client_hello.extensions.extensions);
 
     return 0;
 }

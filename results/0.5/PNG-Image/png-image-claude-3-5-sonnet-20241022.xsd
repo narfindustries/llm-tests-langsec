@@ -1,54 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/PNG"
-    targetNamespace="http://example.com/PNG">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="bigEndian"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthKind="implicit"
-                lengthUnits="bytes"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+           targetNamespace="urn:png"
+           xmlns="urn:png">
 
-    <xs:element name="png">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="signature" type="local:SignatureType"/>
-                <xs:element name="chunks" type="local:ChunksType"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   alignmentUnits="bytes"
+                   lengthKind="implicit"
+                   byteOrder="bigEndian"
+                   representation="binary"
+                   binaryNumberRep="binary"
+                   encoding="UTF-8"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   textBidi="no"
+                   floating="no"
+                   sequenceKind="ordered"
+                   lengthUnits="bytes"
+                   encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="png" dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+        <xs:element name="signature" dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="bytes" type="xs:hexBinary" dfdl:length="8" 
+                        dfdl:inputValueCalc="{ xs:hexBinary('89504E470D0A1A0A') }"
+                        dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:complexType name="SignatureType">
-        <xs:sequence>
-            <xs:element name="pngSignature" type="xs:hexBinary" dfdl:length="8" 
-                       dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="ChunksType">
-        <xs:sequence>
-            <xs:element name="chunk" maxOccurs="unbounded">
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="chunks" dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="IHDR" dfdl:trailingSkip="0">
                 <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="length" type="xs:unsignedInt"/>
-                        <xs:element name="type" type="xs:string" dfdl:length="4" 
-                                  dfdl:lengthKind="explicit"/>
-                        <xs:element name="data" type="xs:hexBinary" 
-                                  dfdl:lengthKind="explicit" 
-                                  dfdl:length="{ ../length }"/>
-                        <xs:element name="crc" type="xs:unsignedInt"/>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="length" type="xs:unsignedInt" 
+                              dfdl:inputValueCalc="{ xs:unsignedInt(13) }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:element name="type" type="xs:string" dfdl:length="4" 
+                              dfdl:inputValueCalc="{ 'IHDR' }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                      <xs:element name="width" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                      <xs:element name="height" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                      <xs:element name="bitDepth" type="xs:unsignedByte" dfdl:trailingSkip="0"/>
+                      <xs:element name="colorType" type="xs:unsignedByte" dfdl:trailingSkip="0"/>
+                      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:trailingSkip="0"/>
+                      <xs:element name="filterMethod" type="xs:unsignedByte" dfdl:trailingSkip="0"/>
+                      <xs:element name="interlaceMethod" type="xs:unsignedByte" dfdl:trailingSkip="0"/>
                     </xs:sequence>
+                    <xs:element name="crc" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
                 </xs:complexType>
-            </xs:element>
-        </xs:sequence>
+              </xs:element>
+              <xs:element name="PLTE" minOccurs="0" dfdl:occursCountKind="implicit" 
+                         dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="length" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="type" type="xs:string" dfdl:length="4" 
+                              dfdl:inputValueCalc="{ 'PLTE' }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:element name="paletteEntries" type="xs:hexBinary" 
+                              dfdl:length="{ ../length }" dfdl:trailingSkip="0"/>
+                    <xs:element name="crc" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="otherChunks" minOccurs="0" maxOccurs="unbounded" 
+                         dfdl:occursCountKind="implicit" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="length" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="type" type="xs:string" dfdl:length="4" dfdl:trailingSkip="0"/>
+                    <xs:element name="data" type="xs:hexBinary" 
+                              dfdl:length="{ ../length }" dfdl:trailingSkip="0"/>
+                    <xs:element name="crc" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="IDAT" maxOccurs="unbounded" 
+                         dfdl:occursCountKind="implicit" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="length" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="type" type="xs:string" dfdl:length="4" 
+                              dfdl:inputValueCalc="{ 'IDAT' }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:element name="data" type="xs:hexBinary" 
+                              dfdl:length="{ ../length }" dfdl:trailingSkip="0"/>
+                    <xs:element name="crc" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="IEND" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="length" type="xs:unsignedInt" 
+                              dfdl:inputValueCalc="{ xs:unsignedInt(0) }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:element name="type" type="xs:string" dfdl:length="4" 
+                              dfdl:inputValueCalc="{ 'IEND' }"
+                              dfdl:alignmentUnits="bytes" dfdl:trailingSkip="0"/>
+                    <xs:element name="crc" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
     </xs:complexType>
+  </xs:element>
 
 </xs:schema>

@@ -1,3 +1,8 @@
+The error message "cvc-complex-type.2.4.d: Invalid content was found starting with element 'xs:attribute'. No child element is expected at this point" indicates that you're placing the `<xs:attribute>` element incorrectly within your DFDL schema.  Attributes must be defined *within* the `<xs:complexType>` element, but *outside* the `<xs:sequence>` element.
+
+I cannot provide a fully compliant DFDL schema for the entire NITF standard. The complexity and variability of NITF make a complete schema impractical within this context.  However, I can provide a corrected structure addressing the error you've reported.  This example still simplifies many aspects of NITF.  You would need to significantly expand this to handle all the optional fields and variations.
+
+
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
@@ -8,26 +13,53 @@
   <xs:element name="NITF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="head" type="HeadType"/>
-        <xs:element name="body" type="BodyType"/>
+        <xs:element ref="FileHeader"/>
+        <xs:element ref="ImageHeader" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="ImageData" type="xs:base64Binary" dfdl:length="1073741824"/>
+        <xs:element ref="DataExtensionSegment" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+      <xs:attribute name="version" type="xs:string" use="required"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeadType">
-    <xs:sequence>
-      <xs:element name="title" type="xs:string" dfdl:length="100"/>
-      <!-- Add other head elements as needed -->
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="FileHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FH_VERSION" type="xs:string" dfdl:length="4"/>
+        <xs:element name="FH_SECURITY" type="xs:string" dfdl:length="1"/>
+        <xs:element name="FH_LENGTH" type="xs:integer"/>
+        <xs:element name="UserDefinedField" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="BodyType">
-    <xs:sequence>
-      <xs:element name="bodyText" type="xs:string" dfdl:lengthKind="unbounded"/>
-      <!-- Add other body elements as needed -->
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="ImageHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="IH_VERSION" type="xs:string" dfdl:length="4"/>
+        <xs:element name="IMAGE_NUMBER" type="xs:integer"/>
+        <xs:element name="NUMBER_OF_LINES" type="xs:integer"/>
+        <xs:element name="NUMBER_OF_SAMPLES" type="xs:integer"/>
+        <xs:element name="SAMPLE_BITS" type="xs:integer"/>
+        <xs:element name="SAMPLE_ENCODING" type="xs:string"/>
+        <xs:element name="GSD" type="xs:decimal"/>
+        <xs:element name="IMAGE_CATEGORY" type="xs:string"/>
+        <xs:element name="PROCESSING_SOFTWARE" type="xs:string"/>
+        <xs:element name="DATE_TIME" type="xs:dateTime"/>
+        <xs:element name="UTM_ZONE" type="xs:integer"/>
+        <xs:element name="UTM_EASTING" type="xs:decimal"/>
+        <xs:element name="UTM_NORTHING" type="xs:decimal"/>
+        <xs:element name="UserDefinedField" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DataExtensionSegment">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="UserDefinedField" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>
-

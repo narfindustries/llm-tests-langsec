@@ -1,0 +1,112 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/modbus" xmlns:tns="http://example.com/modbus" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="ModbusFormat">
+        <dfdl:format representation="binary" byteOrder="bigEndian"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ModbusMessage">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element name="ModbusTCP">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TransactionIdentifier" type="xs:unsignedShort"/>
+              <xs:element name="ProtocolIdentifier" type="xs:unsignedShort"/>
+              <xs:element name="Length" type="xs:unsignedShort"/>
+              <xs:element name="UnitIdentifier" type="xs:unsignedByte"/>
+              <xs:element name="PDU" type="tns:PDU"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ModbusSerial">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Address" type="xs:unsignedByte"/>
+              <xs:element name="PDU" type="tns:PDU"/>
+              <xs:element name="ErrorCheck" type="xs:unsignedShort"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PDU">
+    <xs:sequence>
+      <xs:element name="FunctionCode" type="tns:FunctionCode"/>
+      <xs:element name="Data" type="tns:Data" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="FunctionCode">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+      <xs:enumeration value="17"/>
+      <xs:enumeration value="18"/>
+      <xs:enumeration value="20"/>
+      <xs:enumeration value="21"/>
+      <xs:enumeration value="22"/>
+      <xs:enumeration value="23"/>
+      <xs:enumeration value="24"/>
+      <xs:enumeration value="43"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Data">
+    <xs:choice>
+      <xs:element name="ReadCoils">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+            <xs:element name="QuantityOfCoils" type="xs:unsignedShort"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="WriteSingleCoil">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+            <xs:element name="OutputValue" type="xs:unsignedShort"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <!-- Add other function-specific data structures here -->
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="ExceptionResponse">
+    <xs:sequence>
+      <xs:element name="FunctionCode" type="xs:unsignedByte"/>
+      <xs:element name="ExceptionCode" type="tns:ExceptionCode"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ExceptionCode">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

@@ -2,63 +2,51 @@ module DNS;
 
 import spicy;
 
-public type Message = unit {
-    header: Header;
-    queries: list<Query> &until($input.eof());
-    answers: list<ResourceRecord> &until($input.eof());
-    authorities: list<ResourceRecord> &until($input.eof());
-    additional: list<ResourceRecord> &until($input.eof());
-
-    on %done {
-        self.header.validate();
-    }
-};
-
-type Header = unit {
+public type Header = unit {
     id: uint16;
-    flags: Flags;
+    flags: bitfield(16) {
+        qr: 0..1;
+        opcode: 2..5;
+        aa: 6;
+        tc: 7;
+        rd: 8;
+        ra: 9;
+        z: 10;
+        rcode: 12..15;
+    };
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
-
-    method validate() {
-        # Optional validation logic
-    }
 };
 
-type Flags = unit {
-    qr: bool;
-    opcode: uint8[4];
-    aa: bool;
-    tc: bool;
-    rd: bool;
-    ra: bool;
-    z: uint8[3];
-    rcode: uint8[4];
+public type DomainName = unit {
+    labels: bytes &until = /\x00/;
 };
 
-type Query = unit {
-    name: Name;
+public type Question = unit {
+    name: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
-type ResourceRecord = unit {
-    name: Name;
+public type ResourceRecord = unit {
+    name: DomainName;
     type: uint16;
     class: uint16;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &size=self.rdlength;
+    rdata: bytes &length = rdlength;
 };
 
-type Name = unit {
-    labels: list<Label> &until($input.lookahead(1) == b"\x00");
-    end: uint8 where $$ == 0;
+public type Message = unit {
+    header: Header;
+    questions: Question[] &count = header.qdcount;
+    answers: ResourceRecord[] &count = header.ancount;
+    authorities: ResourceRecord[] &count = header.nscount;
+    additionals: ResourceRecord[] &count = header.arcount;
+};
 
-    type Label = unit {
-        length: uint8 where $$ <= 63;
-        label: bytes &size=self.length;
-    };
+public type DNS = unit {
+    message: Message;
 };

@@ -1,70 +1,141 @@
-use std::env;
-use std::fs;
-use std::io::Read;
 use nom::{
-    bytes::complete::take,
-    combinator::map,
-    error::ErrorKind,
-    multi::count,
-    number::complete::be_u32,
+    bytes::complete::{take, take_while_m_n},
+    combinator::{map_res, opt},
+    error::{context, VerboseError, VerboseErrorKind},
+    number::complete::{be_u16},
+    sequence::{preceded, tuple},
     IResult,
 };
-use flate2::read::GzDecoder;
+use std::fs;
+use std::path::Path;
 
-
-fn gzip_header(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = take(2usize)(input)?; // ID1, ID2
-    let (input, cm) = be_u32(input)?;
-    let (input, flg) = be_u32(input)?;
-    let (input, mtime) = be_u32(input)?;
-    let (input, xfl) = take(1usize)(input)?;
-    let (input, os) = take(1usize)(input)?;
-
-    //Basic checks, more robust checks could be implemented.
-    if cm != 8 { return Err(nom::Err::Error(nom::error::Error { input, code: ErrorKind::Custom(1) })); }
-
-    Ok((input, ()))
+#[derive(Debug)]
+struct GzipHeader {
+    id1: u8,
+    id2: u8,
+    cm: u8,
+    flg: u8,
+    mtime: u32,
+    xfl: u8,
+    os: u8,
+    extra: Option<Vec<u8>>,
+    fname: Option<String>,
+    fcomment: Option<String>,
+    fhcrc: Option<u16>,
 }
 
-fn gzip_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let mut decoder = GzDecoder::new(input);
-    let mut data = Vec::new();
-    decoder.read_to_end(&mut data).unwrap();
-    Ok(("", data))
+fn gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader, VerboseError<&[u8]>> {
+    let (rest, (id1, id2, cm, flg, mtime, xfl, os)) = tuple((
+        take(1usize),
+        take(1usize),
+        take(1usize),
+        take(1usize),
+        take(4usize),
+        take(1usize),
+        take(1usize),
+    ))(input)?;
+
+    let (rest, extra) = opt(preceded(
+        context("extra_field", |i| {
+            if (flg & 0b0000_0100) != 0 {
+                Ok((i, ()))
+            } else {
+                Err(nom::Err::Error(VerboseError {
+                    errors: vec![(i, VerboseErrorKind::Nom(nom::error::ErrorKind::Tag))],
+                }))
+            }
+        }),
+        context("extra_data", |i: &[u8]| {
+            let (i, len) = be_u16(i)?;
+            let (i, data) = take(len as usize)(i)?;
+            Ok((i, data.to_vec()))
+        }),
+    ))(rest)?;
+
+    let (rest, fname) = opt(preceded(
+        context("fname_field", |i| {
+            if (flg & 0b0000_1000) != 0 {
+                Ok((i, ()))
+            } else {
+                Err(nom::Err::Error(VerboseError {
+                    errors: vec![(i, VerboseErrorKind::Nom(nom::error::ErrorKind::Tag))],
+                }))
+            }
+        }),
+        context("fname", map_res(take_while_m_n(1, 255, |b| b != 0), |bytes: &[u8]| {
+            String::from_utf8(bytes.to_vec())
+        })),
+    ))(rest)?;
+
+    let (rest, fcomment) = opt(preceded(
+        context("fcomment_field", |i| {
+            if (flg & 0b0001_0000) != 0 {
+                Ok((i, ()))
+            } else {
+                Err(nom::Err::Error(VerboseError {
+                    errors: vec![(i, VerboseErrorKind::Nom(nom::error::ErrorKind::Tag))],
+                }))
+            }
+        }),
+        context("fcomment", map_res(take_while_m_n(1, 255, |b| b != 0), |bytes: &[u8]| {
+            String::from_utf8(bytes.to_vec())
+        })),
+    ))(rest)?;
+
+    let (rest, fhcrc) = opt(preceded(
+        context("fhcrc_field", |i| {
+            if (flg & 0b0000_0010) != 0 {
+                Ok((i, ()))
+            } else {
+                Err(nom::Err::Error(VerboseError {
+                    errors: vec![(i, VerboseErrorKind::Nom(nom::error::ErrorKind::Tag))],
+                }))
+            }
+        }),
+        be_u16,
+    ))(rest)?;
+
+    Ok((
+        rest,
+        GzipHeader {
+            id1: id1[0],
+            id2: id2[0],
+            cm: cm[0],
+            flg: flg[0],
+            mtime: u32::from_le_bytes(mtime.try_into().unwrap()),
+            xfl: xfl[0],
+            os: os[0],
+            extra,
+            fname,
+            fcomment,
+            fhcrc,
+        },
+    ))
 }
-
-
-fn gzip_trailer(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = take(8usize)(input)?; // CRC32 and ISIZE
-    Ok((input, ()))
-}
-
-
-fn parse_gzip(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, ()) = gzip_header(input)?;
-    let (input, data) = gzip_data(input)?;
-    let (input, ()) = gzip_trailer(input)?;
-    Ok((input, data))
-}
-
-
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: gzip_parser <filename>");
-        return;
+        eprintln!("Usage: {} <gzip_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let contents = fs::read(filename).expect("Something went wrong reading the file");
+    let file_path = Path::new(&args[1]);
+    let file_contents = match fs::read(file_path) {
+        Ok(contents) => contents,
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
+            std::process::exit(1);
+        }
+    };
 
-    match parse_gzip(&contents) {
-        Ok((_, data)) => {
-            println!("Decompressed data: {:?}", data);
+    match gzip_header(&file_contents) {
+        Ok((rest, header)) => {
+            println!("Gzip Header: {:?}", header);
+            println!("Remaining data: {} bytes", rest.len());
         }
         Err(e) => {
-            println!("Error parsing gzip file: {:?}", e);
+            println!("Error parsing GZIP header: {:?}", e);
         }
     }
 }

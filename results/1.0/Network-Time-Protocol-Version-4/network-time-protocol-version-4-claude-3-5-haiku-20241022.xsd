@@ -1,52 +1,138 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:network-time-protocol-v4"
-           xmlns:ntp="urn:network-time-protocol-v4">
+           xmlns:ntp="http://example.com/ntp/v4"
+           targetNamespace="http://example.com/ntp/v4">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
-        alignment="1"
+      <dfdl:format
+        alignmentUnits="bits"
+        alignment="8"
         leadingSkip="0"
         trailingSkip="0"
         byteOrder="bigEndian"
-        encoding="ascii"
+        bitOrder="mostSignificantBitFirst"
         representation="binary"
-        separator=""
-        separatorPosition="infix"
-        separatorPolicy="suppressedAtEndLast"
-        initiator=""
-        terminator=""
-        textNumberPattern=""
-        textNumberRep="standard"
-        textZonedSignStyle="asciiStandardZonedSign"/>
+        lengthKind="explicit"
+        lengthUnits="bits"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="NTPPacket" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="LIVNMode" type="ntp:LIVNModeBits" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
-        <xs:element name="Stratum" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
-        <xs:element name="PollInterval" type="xs:byte" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
-        <xs:element name="Precision" type="xs:byte" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
-        <xs:element name="RootDelay" type="xs:float" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        <xs:element name="RootDispersion" type="xs:float" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        <xs:element name="ReferenceIdentifier" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        <xs:element name="ReferenceTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-        <xs:element name="OriginTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-        <xs:element name="ReceiveTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-        <xs:element name="TransmitTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="NTPPacket" type="ntp:NTPPacketType"/>
 
-  <xs:simpleType name="LIVNModeBits" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes">
+  <xs:complexType name="NTPPacketType">
+    <xs:sequence>
+      <xs:element name="header" type="ntp:NTPHeaderType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NTPHeaderType">
+    <xs:sequence>
+      <xs:element name="leapIndicator" type="ntp:LeapIndicatorType" 
+        dfdl:length="2" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="version" type="ntp:VersionType" 
+        dfdl:length="3" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="mode" type="ntp:ModeType" 
+        dfdl:length="3" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="stratum" type="xs:unsignedByte" 
+        dfdl:length="8" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="pollInterval" type="xs:byte" 
+        dfdl:length="8" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="precision" type="xs:byte" 
+        dfdl:length="8" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="rootDelay" type="ntp:FixedPointType"/>
+      <xs:element name="rootDispersion" type="ntp:FixedPointType"/>
+      <xs:element name="referenceIdentifier" type="ntp:ReferenceIdentifierType"/>
+      <xs:element name="referenceTimestamp" type="ntp:NTPTimestampType"/>
+      <xs:element name="originTimestamp" type="ntp:NTPTimestampType"/>
+      <xs:element name="receiveTimestamp" type="ntp:NTPTimestampType"/>
+      <xs:element name="transmitTimestamp" type="ntp:NTPTimestampType"/>
+      <xs:element name="extensionFields" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="extensionType" type="xs:unsignedShort"/>
+            <xs:element name="extensionLength" type="xs:unsignedShort"/>
+            <xs:element name="extensionData" type="xs:hexBinary" 
+              dfdl:lengthKind="explicit" 
+              dfdl:length="{ ../extensionLength * 8 }"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="LeapIndicatorType">
     <xs:restriction base="xs:unsignedByte">
-      <xs:pattern value="[0-255]"/>
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="VersionType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:minInclusive value="1"/>
+      <xs:maxInclusive value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ModeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="FixedPointType">
+    <xs:sequence>
+      <xs:element name="integer" type="xs:unsignedShort" 
+        dfdl:length="16" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="fraction" type="xs:unsignedShort" 
+        dfdl:length="16" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReferenceIdentifierType">
+    <xs:choice>
+      <xs:element name="asciiCode" type="xs:string" 
+        dfdl:length="32" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="ipAddress" type="xs:unsignedInt" 
+        dfdl:length="32" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="NTPTimestampType">
+    <xs:sequence>
+      <xs:element name="seconds" type="xs:unsignedInt" 
+        dfdl:length="32" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+      <xs:element name="fraction" type="xs:unsignedInt" 
+        dfdl:length="32" 
+        dfdl:lengthKind="explicit"
+        dfdl:lengthUnits="bits"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

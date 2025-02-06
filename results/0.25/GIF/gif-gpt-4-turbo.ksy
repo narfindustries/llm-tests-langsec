@@ -2,24 +2,20 @@ meta:
   id: gif
   file-extension: gif
   endian: le
-  license: CC0-1.0
   title: Graphics Interchange Format (GIF)
 doc: |
-  The Graphics Interchange Format is a bitmap image format that was developed
-  by a team at the online services provider CompuServe led by American computer scientist Steve Wilhite.
-  It was first released in 1987 and has since come into widespread usage on the World Wide Web due to its wide support and portability.
-
+  GIF (Graphics Interchange Format) is an image format developed by CompuServe in 1987.
+  This format supports both animated and static images. It uses LZW compression to reduce
+  the file size without degrading the visual quality.
 seq:
   - id: header
     type: header
-
-  - id: logical_screen
+  - id: logical_screen_descriptor
     type: logical_screen_descriptor
-
   - id: global_color_table
-    type: color_table
-    if: logical_screen.has_color_table
-
+    type: rgb
+    repeat: expr
+    repeat-expr: logical_screen_descriptor.global_color_table_flag ? (2 ** (logical_screen_descriptor.size_of_global_color_table + 1)) : 0
   - id: blocks
     type: block
     repeat: eos
@@ -27,10 +23,12 @@ seq:
 types:
   header:
     seq:
-      - id: magic
+      - id: signature
+        size: 3
         contents: 'GIF'
       - id: version
-        contents: ['87a', '89a']
+        size: 3
+        contents: '89a'
 
   logical_screen_descriptor:
     seq:
@@ -38,33 +36,21 @@ types:
         type: u2
       - id: screen_height
         type: u2
-      - id: flags
+      - id: packed_fields
         type: u1
       - id: bg_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
     instances:
-      has_color_table:
-        value: flags & 0x80 != 0
+      global_color_table_flag:
+        value: (packed_fields & 0x80) != 0
       color_resolution:
-        value: ((flags & 0x70) >> 4) + 1
+        value: ((packed_fields & 0x70) >> 4) + 1
       sort_flag:
-        value: (flags & 0x08) != 0
+        value: (packed_fields & 0x08) != 0
       size_of_global_color_table:
-        value: (flags & 0x07) + 1
-
-  color_table:
-    params:
-      num_colors: expr
-    seq:
-      - id: colors
-        type: rgb
-        repeat: expr
-        repeat-expr: num_colors
-    instances:
-      num_colors_calc:
-        value: 2 ** num_colors
+        value: packed_fields & 0x07
 
   rgb:
     seq:
@@ -92,31 +78,41 @@ types:
 
   image_block:
     seq:
-      - id: image_left
+      - id: left_pos
         type: u2
-      - id: image_top
+      - id: top_pos
         type: u2
-      - id: image_width
+      - id: width
         type: u2
-      - id: image_height
+      - id: height
         type: u2
-      - id: flags
+      - id: packed_fields
         type: u1
-      - id: local_color_table
-        type: color_table
-        if: flags & 0x80 != 0
       - id: lzw_min_code_size
         type: u1
-      - id: data_blocks
-        type: data_block
-        repeat: eos
+      - id: image_data
+        type: image_data_block
+    instances:
+      local_color_table_flag:
+        value: (packed_fields & 0x80) != 0
+      interlace_flag:
+        value: (packed_fields & 0x40) != 0
+      sort_flag:
+        value: (packed_fields & 0x20) != 0
+      size_of_local_color_table:
+        value: packed_fields & 0x07
+      local_color_table:
+        pos: _io.pos
+        io: _io
+        type: rgb
+        repeat: expr
+        repeat-expr: local_color_table_flag ? (2 ** (size_of_local_color_table + 1)) : 0
 
-  data_block:
+  image_data_block:
     seq:
-      - id: block_size
+      - id: data
         type: u1
-      - id: block_data
-        size: block_size
+        repeat: eos
 
   extension:
     seq:
@@ -124,7 +120,7 @@ types:
         type: u1
       - id: block_size
         type: u1
-      - id: block_data
+      - id: data
         size: block_size
 
   terminator:

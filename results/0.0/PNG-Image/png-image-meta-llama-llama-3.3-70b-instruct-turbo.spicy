@@ -1,53 +1,127 @@
-# PNG Image File Format Specification
+module PNG_Image;
 
-# Define the PNG file signature
-file_signature: 
-  magic: byte[8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+type MagicNumber = uint8[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
 
-# Define the IHDR chunk
-ihdr_chunk:
-  length: uint32 = 13
-  type: byte[4] = [0x49, 0x48, 0x44, 0x52]
-  width: uint32
-  height: uint32
-  bit_depth: byte
-  color_type: byte
-  compression_method: byte
-  filter_method: byte
-  interlace_method: byte
-  crc: uint32
+type IHDR = struct {
+  length: uint32 = 0x00000013,
+  chunk_type: string = "IHDR",
+  width: uint32,
+  height: uint32,
+  bit_depth: uint8,
+  color_type: uint8,
+  compression_method: uint8 = 0,
+  filter_method: uint8 = 0,
+  interlace_method: uint8,
+  crc: uint32,
+};
 
-# Define the IDAT chunk
-idat_chunk:
-  length: uint32
-  type: byte[4] = [0x49, 0x44, 0x41, 0x54]
-  data: byte[length]
-  crc: uint32
+type PLTE = struct {
+  length: uint32,
+  chunk_type: string = "PLTE",
+  palette_entries: uint8[3],
+  crc: uint32,
+};
 
-# Define the IEND chunk
-iend_chunk:
-  length: uint32 = 0
-  type: byte[4] = [0x49, 0x45, 0x4E, 0x44]
-  crc: uint32 = 0xAE426082
+type IDAT = struct {
+  length: uint32,
+  chunk_type: string = "IDAT",
+  compressed_image_data: bytes,
+  crc: uint32,
+};
 
-# Define the PNG file structure
-png_file:
-  file_signature
-  ihdr_chunk
-  idat_chunk*
-  iend_chunk
+type IEND = struct {
+  length: uint32 = 0,
+  chunk_type: string = "IEND",
+  crc: uint32,
+};
 
-# Define the PNG image metadata
-png_image_meta:
-  width: uint32
-  height: uint32
-  bit_depth: byte
-  color_type: byte
-  compression_method: byte
-  filter_method: byte
-  interlace_method: byte
+type cHRM = struct {
+  length: uint32,
+  chunk_type: string = "cHRM",
+  white_point_x: uint32,
+  white_point_y: uint32,
+  red_x: uint32,
+  red_y: uint32,
+  green_x: uint32,
+  green_y: uint32,
+  blue_x: uint32,
+  blue_y: uint32,
+  crc: uint32,
+};
 
-# Define the PNG image parser
-png_image_parser:
-  png_file
-  png_image_meta
+type gAMA = struct {
+  length: uint32,
+  chunk_type: string = "gAMA",
+  gamma: uint32,
+  crc: uint32,
+};
+
+type iCCP = struct {
+  length: uint32,
+  chunk_type: string = "iCCP",
+  profile_name: string,
+  compression_method: uint8,
+  compressed_profile: bytes,
+  crc: uint32,
+};
+
+type sBIT = struct {
+  length: uint32,
+  chunk_type: string = "sBIT",
+  significant_bits: uint8,
+  crc: uint32,
+};
+
+type sRGB = struct {
+  length: uint32,
+  chunk_type: string = "sRGB",
+  rendering_intent: uint8,
+  crc: uint32,
+};
+
+type tEXt = struct {
+  length: uint32,
+  chunk_type: string = "tEXt",
+  keyword: string,
+  text: string,
+  crc: uint32,
+};
+
+type tIME = struct {
+  length: uint32,
+  chunk_type: string = "tIME",
+  year: uint16,
+  month: uint8,
+  day: uint8,
+  hour: uint8,
+  minute: uint8,
+  second: uint8,
+  crc: uint32,
+};
+
+type zTXt = struct {
+  length: uint32,
+  chunk_type: string = "zTXt",
+  keyword: string,
+  compression_method: uint8,
+  compressed_text: bytes,
+  crc: uint32,
+};
+
+type PNG = struct {
+  magic_number: MagicNumber,
+  ihdr: IHDR,
+  plte: PLTE,
+  idat: IDAT,
+  iend: IEND,
+  cHRM: cHRM,
+  gAMA: gAMA,
+  iCCP: iCCP,
+  sBIT: sBIT,
+  sRGB: sRGB,
+  tEXt: tEXt,
+  tIME: tIME,
+  zTXt: zTXt,
+};
+
+let png: PNG;

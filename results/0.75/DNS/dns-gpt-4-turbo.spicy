@@ -2,50 +2,55 @@ module DNS;
 
 import spicy;
 
-type Header = unit {
-    id: uint16;
-    qr: bit;
-    opcode: uint4;
-    aa: bit;
-    tc: bit;
-    rd: bit;
-    ra: bit;
-    z: uint3;
-    rcode: uint4;
+type uint4 = bitfield(4) {
 };
 
-type Question = unit {
-    qname: bytes &eod;
-    qtype: uint16;
-    qclass: uint16;
+type uint3 = bitfield(3) {
 };
 
-type ResourceRecord = unit {
-    name: bytes &eod;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes &size=rdlength;
+public type Header = unit {
+    ID: uint16;
+    QR: bool;
+    OPCODE: uint4;
+    AA: bool;
+    TC: bool;
+    RD: bool;
+    RA: bool;
+    Z: uint3;  # Reserved bits, must be zero
+    RCODE: uint4;
+    QDCOUNT: uint16;
+    ANCOUNT: uint16;
+    NSCOUNT: uint16;
+    ARCOUNT: uint16;
 };
 
-type Message = unit {
+public type DomainName = unit {
+    components: bytes[];
+} &eod;
+
+public type Question = unit {
+    QNAME: DomainName;
+    QTYPE: uint16;
+    QCLASS: uint16;
+};
+
+public type RRData = unit {
+    NAME: DomainName;
+    TYPE: uint16;
+    CLASS: uint16;
+    TTL: uint32;
+    RDLENGTH: uint16;
+    RDATA: bytes &size=RDLENGTH;
+};
+
+public type Message = unit {
     header: Header;
-    questions: Question[] &size=header.qdcount;
-    answers: ResourceRecord[] &size=header.ancount;
-    authorities: ResourceRecord[] &size=header.nscount;
-    additionals: ResourceRecord[] &size=header.arcount;
-} &byte_order=big;
+    questions: Question[] &size=header.QDCOUNT;
+    answers: RRData[] &size=header.ANCOUNT;
+    authorities: RRData[] &size=header.NSCOUNT;
+    additionals: RRData[] &size=header.ARCOUNT;
+};
 
-public type DNSMessage = unit {
-    transaction_id: uint16;
-    flags: uint16;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
-    questions: Question[] &size=qdcount;
-    answers: ResourceRecord[] &size=ancount;
-    authorities: ResourceRecord[] &size=nscount;
-    additionals: ResourceRecord[] &size=arcount;
-} &byte_order=big;
+public type DNSPacket = unit {
+    message: Message;
+};

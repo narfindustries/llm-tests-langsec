@@ -1,0 +1,30 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:NTPFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NTPPacket">
+    <xs:sequence>
+      <xs:element name="LeapIndicator" type="xs:unsignedByte" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="VersionNumber" type="xs:unsignedByte" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="Poll" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="Precision" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="RootDelay" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="RootDispersion" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="ReferenceID" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="OriginTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="ExtensionFields" type="xs:hexBinary" dfdl:length="0" dfdl:representation="binary" minOccurs="0"/>
+      <xs:element name="KeyIdentifier" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary" minOccurs="0"/>
+      <xs:element name="MessageAuthenticationCode" type="xs:hexBinary" dfdl:length="128" dfdl:representation="binary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NTP" type="tns:NTPPacket"/>
+</xs:schema>

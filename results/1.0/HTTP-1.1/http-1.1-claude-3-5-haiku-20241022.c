@@ -1,148 +1,178 @@
-I'll generate a complete, corrected Hammer specification for the HTTP 1.1 parser based on the error message, focusing on ensuring clean compilation and adherence to previous requirements.
-
 #include <hammer/hammer.h>
 #include <hammer/glue.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-// HTTP Method Enum
-typedef enum {
-    HTTP_GET,
-    HTTP_POST,
-    HTTP_PUT,
-    HTTP_DELETE,
-    HTTP_HEAD,
-    HTTP_OPTIONS,
-    HTTP_TRACE,
-    HTTP_CONNECT,
-    HTTP_PATCH
-} HttpMethod;
+HParser* http_request;
+HParser* http_response;
+HParser* http_message;
 
-// HTTP Header Structure
-typedef struct {
-    char* key;
-    char* value;
-} HttpHeader;
+HParser* sp;
+HParser* crlf;
+HParser* token;
+HParser* quoted_string;
+HParser* method;
+HParser* http_version;
+HParser* status_code;
 
-// HTTP Request Structure
-typedef struct {
-    HttpMethod method;
-    char* uri;
-    char* version;
-    HttpHeader* headers;
-    size_t header_count;
-    char* body;
-} HttpRequest;
+HParser* create_http_parsers() {
+    // Basic character parsers
+    const uint8_t sp_chars[] = {' '};
+    const uint8_t token_exclude[] = {' ', '\r', '\n', '\t', '(', ')', '{', '}', '[', ']', '<', '>', ':', ';', ',', '"', '/', '?', '='};
+    const uint8_t quote_exclude[] = {'"'};
+    const uint8_t crlf_chars[] = {'\r', '\n'};
 
-// Method Parsing
-static HParsedToken* parse_method(void* context) {
-    const char* method_strings[] = {
-        "GET", "POST", "PUT", "DELETE", "HEAD", 
-        "OPTIONS", "TRACE", "CONNECT", "PATCH"
-    };
-    HttpMethod methods[] = {
-        HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE, HTTP_HEAD,
-        HTTP_OPTIONS, HTTP_TRACE, HTTP_CONNECT, HTTP_PATCH
-    };
-    
-    for (size_t i = 0; i < sizeof(method_strings)/sizeof(method_strings[0]); i++) {
-        if (strcmp(context, method_strings[i]) == 0) {
-            return h_make_uint(methods[i]);
-        }
-    }
-    return NULL;
-}
-
-// HTTP Grammar Definition
-HParsedToken* http_parse(HParseResult* result) {
-    // Placeholder for actual parsing logic
-    return NULL;
-}
-
-// Create HTTP Parser
-HParser* create_http_parser() {
-    // Whitespace character parser
-    HParser* ws = h_whitespace(NULL);
-
-    // Method parser
-    HParser* method = h_choice(
-        h_token_c("GET"),
-        h_token_c("POST"),
-        h_token_c("PUT"),
-        h_token_c("DELETE"),
-        h_token_c("HEAD"),
-        h_token_c("OPTIONS"),
-        h_token_c("TRACE"),
-        h_token_c("CONNECT"),
-        h_token_c("PATCH"),
+    sp = h_ch(sp_chars[0]);
+    crlf = h_sequence(h_ch('\r'), h_ch('\n'), NULL);
+    token = h_many1(h_not_in(token_exclude, sizeof(token_exclude)));
+    quoted_string = h_sequence(
+        h_ch('"'),
+        h_many(h_not_in(quote_exclude, sizeof(quote_exclude))),
+        h_ch('"'),
         NULL
     );
 
-    // URI parser (basic version)
-    HParser* uri = h_many1(h_not_char(' '));
+    // HTTP Method parser
+    method = h_choice(
+        h_parse_string("GET"),
+        h_parse_string("POST"),
+        h_parse_string("PUT"),
+        h_parse_string("DELETE"),
+        h_parse_string("HEAD"),
+        h_parse_string("OPTIONS"),
+        h_parse_string("TRACE"),
+        h_parse_string("CONNECT"),
+        NULL
+    );
 
     // HTTP Version parser
-    HParser* version = h_choice(
-        h_token_c("HTTP/1.0"),
-        h_token_c("HTTP/1.1"),
+    http_version = h_sequence(
+        h_parse_string("HTTP/"),
+        h_choice(
+            h_parse_string("1.0"),
+            h_parse_string("1.1"),
+            NULL
+        ),
         NULL
     );
 
-    // Header parser
-    HParser* header_key = h_many1(h_not_char(':'));
-    HParser* header_value = h_many1(h_not_char('\r'));
+    // Status Code parser
+    HParser* zero = h_ch('0');
+    HParser* nine = h_ch('9');
+    HParser* digit = h_in_range(zero, nine);
+    status_code = h_sequence(
+        digit, digit, digit,
+        NULL
+    );
+
+    // Headers parser
+    HParser* header_name = token;
+    HParser* header_value = h_many1(h_not_in(crlf_chars, sizeof(crlf_chars)));
+    
     HParser* header = h_sequence(
-        header_key,
-        h_token_c(": "),
+        header_name,
+        h_ch(':'),
+        sp,
         header_value,
-        h_token_c("\r\n"),
+        crlf,
         NULL
     );
 
-    // Full request parser
-    HParser* request = h_sequence(
-        method,
-        ws,
-        uri,
-        ws,
-        version,
-        h_token_c("\r\n"),
-        h_many(header),
-        h_token_c("\r\n"),
+    HParser* headers = h_many(header);
+
+    // Request Line parser
+    HParser* request_line = h_sequence(
+        method, sp,
+        token, sp,  // Request URI
+        http_version,
+        crlf,
         NULL
     );
 
-    return request;
+    // Response Line parser
+    HParser* response_line = h_sequence(
+        http_version, sp,
+        status_code, sp,
+        h_many(h_not_in(crlf_chars, sizeof(crlf_chars))),  // Reason Phrase
+        crlf,
+        NULL
+    );
+
+    // Message Body parser
+    const uint8_t null_char[] = {0};
+    HParser* message_body = h_many(h_not_in(null_char, sizeof(null_char)));
+
+    // Complete Request parser
+    http_request = h_sequence(
+        request_line,
+        headers,
+        crlf,
+        h_optional(message_body),
+        NULL
+    );
+
+    // Complete Response parser
+    http_response = h_sequence(
+        response_line,
+        headers,
+        crlf,
+        h_optional(message_body),
+        NULL
+    );
+
+    // Generic Message parser
+    http_message = h_choice(
+        http_request,
+        http_response,
+        NULL
+    );
+
+    return http_message;
 }
 
-// Main parse function
-int parse_http_request(const char* request_text) {
-    HParser* parser = create_http_parser();
-    HParseResult* result = h_parse(parser, 
-        (const uint8_t*)request_text, 
-        strlen(request_text));
-
-    if (result && result->ast) {
-        // Successful parsing
-        h_destroy_parse_result(result);
-        h_destroy_parser(parser);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <http_file>\n", argv[0]);
         return 1;
     }
 
-    // Parsing failed
-    h_destroy_parser(parser);
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    size_t read_size = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (read_size != file_size) {
+        perror("File read error");
+        free(buffer);
+        return 1;
+    }
+
+    create_http_parsers();
+    HParseResult* result = h_parse(http_message, buffer, read_size);
+
+    if (result && result->ast) {
+        printf("Parsing successful!\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Parsing failed.\n");
+    }
+
+    free(buffer);
     return 0;
-}
-
-int main(int argc, char** argv) {
-    const char* sample_request = 
-        "GET /index.html HTTP/1.1\r\n"
-        "Host: www.example.com\r\n"
-        "User-Agent: Mozilla/5.0\r\n\r\n";
-
-    int result = parse_http_request(sample_request);
-    printf("Parsing result: %s\n", result ? "Success" : "Failure");
-
-    return result ? 0 : 1;
 }

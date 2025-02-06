@@ -1,43 +1,46 @@
 module TLS;
 
-import spicy;
-
-public type ClientHello = unit {
-    version: Version;
-    random: bytes &size=32;
-    session_id_len: uint8;
-    session_id: bytes &size=uint(session_id_len);
-    cipher_suites_len: uint16;
-    cipher_suites: CipherSuites &size=cipher_suites_len;
-    compression_methods_len: uint8;
-    compression_methods: bytes &size=compression_methods_len;
-    extensions_len: uint16 &optional;
-    extensions: ExtensionList &size=extensions_len;
-
-    on %done {
-        print self;
-    }
-};
-
-type Version = unit {
+public type ProtocolVersion = unit {
     major: uint8;
     minor: uint8;
 };
 
-type CipherSuites = unit {
-    suite_list: CipherSuite[] &eod;
+public type Random = unit {
+    gmt_unix_time: uint32;
+    random_bytes: bytes &size=28;
 };
 
-type CipherSuite = unit {
-    suite: uint16;
+public type SessionID = unit {
+    length: uint8;
+    session_id: bytes &size=this.length;
 };
 
-type ExtensionList = unit {
-    list: Extension[] &eod;
-};
-
-type Extension = unit {
-    type: bytes &size=2;
+public type CipherSuites = unit {
     length: uint16;
-    data: bytes &size=length;
+    suites: uint16[] &size=this.length / 2;
+};
+
+public type CompressionMethods = unit {
+    length: uint8;
+    methods: uint8[] &size=this.length;
+};
+
+public type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=this.length;
+};
+
+public type Extensions = unit {
+    length: uint16;
+    extensions: vector<Extension> &size=(this.length / 4); // fixing size computation
+};
+
+public type ClientHello = unit {
+    legacy_version: ProtocolVersion;
+    random: Random;
+    session_id: SessionID;
+    cipher_suites: CipherSuites;
+    compression_methods: CompressionMethods;
+    extensions: Extensions;
 };

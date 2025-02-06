@@ -1,82 +1,83 @@
-extern crate nom;
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::many0,
-    number::complete::{be_u16, be_u32},
-    sequence::tuple,
+    bytes::complete::take,
+    number::complete::{le_u16, le_u32},
     IResult,
 };
-use std::fs::File;
-use std::io::Read;
 use std::env;
-use std::str;
+use std::fs::File;
+use std::io::{self, Read};
 
 #[derive(Debug)]
 struct DicomElement {
-    tag: u32,
+    tag: (u16, u16),
     vr: String,
     length: u32,
     value: Vec<u8>,
 }
 
-fn parse_tag(input: &[u8]) -> IResult<&[u8], u32> {
-    map(tuple((be_u16, be_u16)), |(group, element)| {
-        ((group as u32) << 16) | (element as u32)
-    })(input)
+fn parse_tag(input: &[u8]) -> IResult<&[u8], (u16, u16)> {
+    let (input, group) = le_u16(input)?;
+    let (input, element) = le_u16(input)?;
+    Ok((input, (group, element)))
 }
 
 fn parse_vr(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take(2usize), |bytes: &[u8]| {
-        str::from_utf8(bytes).map(|s| s.to_string())
-    })(input)
+    let (input, vr_bytes) = take(2usize)(input)?;
+    let vr = String::from_utf8_lossy(vr_bytes).to_string();
+    Ok((input, vr))
 }
 
-fn parse_length(input: &[u8], vr: &str) -> IResult<&[u8], u32> {
-    match vr {
-        "OB" | "OW" | "OF" | "SQ" | "UT" | "UN" => {
-            let (input, _) = tag([0u8, 0u8])(input)?;
-            be_u32(input)
-        }
-        _ => map(be_u16, |len| len as u32)(input),
-    }
+fn parse_length(input: &[u8]) -> IResult<&[u8], u32> {
+    le_u32(input)
 }
 
 fn parse_value(input: &[u8], length: u32) -> IResult<&[u8], Vec<u8>> {
-    map(take(length), |bytes: &[u8]| bytes.to_vec())(input)
+    let (input, value_bytes) = take(length as usize)(input)?;
+    Ok((input, value_bytes.to_vec()))
 }
 
-fn parse_element(input: &[u8]) -> IResult<&[u8], DicomElement> {
+fn parse_dicom_element(input: &[u8]) -> IResult<&[u8], DicomElement> {
     let (input, tag) = parse_tag(input)?;
     let (input, vr) = parse_vr(input)?;
-    let (input, length) = parse_length(input, &vr)?;
+    let (input, length) = parse_length(input)?;
     let (input, value) = parse_value(input, length)?;
 
-    Ok((input, DicomElement { tag, vr, length, value }))
+    Ok((
+        input,
+        DicomElement {
+            tag,
+            vr,
+            length,
+            value,
+        },
+    ))
 }
 
-fn parse_dicom(input: &[u8]) -> IResult<&[u8], Vec<DicomElement>> {
-    many0(parse_element)(input)
-}
-
-fn main() {
+fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <dicom_file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <DICOM file>", args[0]);
+        return Ok(());
     }
 
     let filename = &args[1];
-    let mut file = File::open(filename).expect("Could not open file");
+    let mut file = File::open(filename)?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Could not read file");
+    file.read_to_end(&mut buffer)?;
 
-    match parse_dicom(&buffer) {
-        Ok((_, elements)) => {
-            for element in elements {
+    let mut input = &buffer[..];
+    while !input.is_empty() {
+        match parse_dicom_element(input) {
+            Ok((remaining, element)) => {
                 println!("{:?}", element);
+                input = remaining;
+            }
+            Err(_) => {
+                eprintln!("Failed to parse DICOM element");
+                break;
             }
         }
-        Err(e) => eprintln!("Failed to parse DICOM file: {:?}", e),
     }
+
+    Ok(())
 }

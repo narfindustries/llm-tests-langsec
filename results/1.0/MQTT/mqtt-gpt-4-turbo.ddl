@@ -1,122 +1,115 @@
-module MQTT {
+module MQTT;
 
-  import BE;
-  import Util;
+import Dae;
 
-  type Byte = BE.u8;
-  type Word = BE.u16;
-  type DWord = BE.u32;
+type Byte = U8;
 
-  type ByteArray(length: Exp<Size>) = [Byte]#length;
+alias VarInt = Dae.VarInt;
+alias Binary = List[U8];
 
-  type Nibble = Bits(4);
+type UTF8String = Dae.Field(
+  len: U16,
+  data: Binary(len)
+);
 
-  @[Size=8]
-  union Packet {
-    struct {
-      header: FixedHeader;
-      payload: switch header.controlPacketType {
-        case 1  => ConnectPacket;
-        case 2  => ConnAckPacket;
-        case 3  => PublishPacket(header);
-        case 8  => SubscribePacket;
-        case 9  => SubAckPacket;
-        case 10 => UnsubscribePacket;
-        case 12 => PingReqPacket;
-        case 13 => PingRespPacket;
-        case 14 => DisconnectPacket;
-      };
-    };
-  }
+enum PacketType {
+  CONNECT = 1,
+  CONNACK,
+  PUBLISH,
+  PUBACK,
+  PUBREC,
+  PUBREL,
+  PUBCOMP,
+  SUBSCRIBE,
+  SUBACK,
+  UNSUBSCRIBE,
+  UNSUBACK,
+  PINGREQ,
+  PINGRESP,
+  DISCONNECT,
+  AUTH
+};
 
-  @[Size=8]
-  struct FixedHeader {
-    controlPacketType: Nibble;
-    flags: Nibble;
-    remainingLength: VariableLength;
-  }
-
-  alias VariableLength = VLInt;
-
-  @[Size=8]
-  struct VLInt {
-    value: Exp<Size> = BE.u7;
-    hasMore: Bit;
-    next: switch hasMore {
-      case 1 => VLInt;
-      case 0 => EmptyType;
-    };
-  }
-
-  type ConnectPacket = struct {
-    protocolName: LengthPrefixedString;
-    versionNumber: Byte;
-    connectFlags: Byte;
-    keepAlive: Word;
-    clientIdentifier: LengthPrefixedString;
-    willTopic: switch ((connectFlags >> 2) & 0x01) {
-      case 1 => LengthPrefixedString;
-      default => EmptyType;
-    };
-    willMessage: switch ((connectFlags >> 2) & 0x01) {
-      case 1 => LengthPrefixedString;
-      default => EmptyType;
-    };
-    userName: switch (connectFlags >> 7) {
-      case 1 => LengthPrefixedString;
-      default => EmptyType;
-    };
-    password: switch ((connectFlags >> 6) & 0x01) {
-      case 1 => LengthPrefixedString;
-      default => EmptyType;
-    };
-  }
-
-  type ConnAckPacket = struct {
-    reserved: Byte#1;
-    returnCode: Byte;
-  }
-
-  type PublishPacket(header: FixedHeader) = struct {
-    topicName: LengthPrefixedString;
-    packetIdentifier: switch ((header.flags >> 1) & 0x03) {
-      case 0 => EmptyType;
-      case 1 => Word;
-      case 2 => Word;
-      case 3 => Word;
-      default => EmptyType;
-    };
-    payload: ByteArray(header.remainingLength);
-  }
-
-  type SubscribePacket = struct {
-    packetIdentifier: Word;
-    topicFilters: [SubscriptionRequest]#_;
-  }
-
-  type SubAckPacket = struct {
-    packetIdentifier: Word;
-    returnCodes: [Byte]#_;
-  }
-
-  type UnsubscribePacket = struct {
-    packetIdentifier: Word;
-    topicFilters: [LengthPrefixedString]#_;
-  }
-
-  type PingReqPacket = EmptyType;
-  type PingRespPacket = EmptyType;
-  type DisconnectPacket = EmptyType;
-
-  type SubscriptionRequest = struct {
-    topicFilter: LengthPrefixedString;
-    requestedQoS: Byte;
-  }
-
-  type LengthPrefixedString = struct {
-    length: Word;
-    string: ByteArray(length);
-  }
-
-  type EmptyType = struct { }
+struct FixedHeader {
+  packetType: PacketType;
+  flags: U8;
+  remainingLength: VarInt;
 }
+
+struct ProtocolNameAndVersion {
+  name: UTF8String;
+  version: U8;
+}
+
+struct ConnectFlags {
+  reserved: U1 = 0;
+  cleanStart: U1;
+  willFlag: U1;
+  willQoS: U2;
+  willRetain: U1;
+  passwordFlag: U1;
+  usernameFlag: U1;
+}
+
+struct ConnectVariableHeader {
+  protocolNameAndVersion: ProtocolNameAndVersion;
+  connectFlags: ConnectFlags;
+  keepAlive: U16;
+  properties: Properties;
+}
+
+type PacketIdentifier = U16;
+
+typedef Properties = Dae.Map[UTF8String, UTF8String];
+
+struct PublishVariableHeader {
+  topicName: UTF8String;
+  packetIdentifier: PacketIdentifier;
+  properties: Properties;
+}
+
+struct ConnectPayload {
+  clientIdentifier: UTF8String;
+  willProperties: Properties;
+  willTopic: UTF8String;
+  willMessage: Binary;
+  userName: UTF8String;
+  password: Binary;
+}
+
+struct SubscribePayload {
+  packetIdentifier: PacketIdentifier;
+  properties: Properties;
+  topicFilters: List[Subscription];
+}
+
+struct Subscription {
+  topicFilter: UTF8String;
+  options: U8;
+}
+
+struct UnsubscribePayload {
+  packetIdentifier: PacketIdentifier;
+  properties: Properties;
+  topicFilters: List[UTF8String];
+}
+
+union Payload depending on (PacketType) {
+  case CONNECT:
+    ConnectPayload;
+  case PUBLISH:
+    Binary;
+  case SUBSCRIBE:
+    SubscribePayload;
+  case UNSUBSCRIBE:
+    UnsubscribePayload;
+  default:
+    Binary;
+}
+
+struct MQTTMessage {
+  header: FixedHeader;
+  variableHeader: Binary depending on (header.packetType);
+  payload: Payload depending on (header.packetType);
+}
+

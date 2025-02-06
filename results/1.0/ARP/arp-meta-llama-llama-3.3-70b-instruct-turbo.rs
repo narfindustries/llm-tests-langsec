@@ -1,153 +1,205 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::take,
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{tuple, preceded},
+    bytes::complete::{take},
+    combinator::{map},
+    number::complete::{be_u16, be_u8},
+    sequence::{tuple},
     IResult,
 };
 use std::{
     env,
     fs::File,
-    io::{Read, stdin},
-    path::Path,
+    io::{Read, BufReader},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum HardwareType {
     Ethernet,
     ExperimentalEthernet,
+    AmateurRadioAX25,
+    ProteonProNETTokenRing,
+    Chaos,
+    Ieee802Networks,
+    Arcnet,
+    Hyperchannel,
+    Lanstar,
+    Autonet,
+    LocalTalk,
+    LocalNet,
+    UltraLink,
+    SmDS,
+    FrameRelay,
+    Atm,
+    Hdlc,
+    FibreChannel,
+    SerialLine,
+    Metricom,
+    Ieee13941995,
+    MAPOS,
+    Twinaxial,
+    Eui64,
+    Hiparp,
+    IpAndArpOverIso8473,
+    IpxOverIso8473,
+    IpOverInfiniband,
     Other(u16),
 }
 
-impl HardwareType {
-    fn parse(input: &[u8]) -> IResult<&[u8], HardwareType> {
-        map(be_u16, |n| match n {
+impl From<u16> for HardwareType {
+    fn from(value: u16) -> Self {
+        match value {
             1 => HardwareType::Ethernet,
             2 => HardwareType::ExperimentalEthernet,
-            n => HardwareType::Other(n),
-        })(input)
+            3 => HardwareType::AmateurRadioAX25,
+            4 => HardwareType::ProteonProNETTokenRing,
+            5 => HardwareType::Chaos,
+            6 => HardwareType::Ieee802Networks,
+            7 => HardwareType::Arcnet,
+            8 => HardwareType::Hyperchannel,
+            9 => HardwareType::Lanstar,
+            10 => HardwareType::Autonet,
+            11 => HardwareType::LocalTalk,
+            12 => HardwareType::LocalNet,
+            13 => HardwareType::UltraLink,
+            14 => HardwareType::SmDS,
+            15 => HardwareType::FrameRelay,
+            16 => HardwareType::Atm,
+            17 => HardwareType::Hdlc,
+            18 => HardwareType::FibreChannel,
+            19 => HardwareType::Atm,
+            20 => HardwareType::SerialLine,
+            21 => HardwareType::Atm,
+            22 => HardwareType::Other(22),
+            23 => HardwareType::Metricom,
+            24 => HardwareType::Ieee13941995,
+            25 => HardwareType::MAPOS,
+            26 => HardwareType::Twinaxial,
+            27 => HardwareType::Eui64,
+            28 => HardwareType::Hiparp,
+            29 => HardwareType::IpAndArpOverIso8473,
+            30 => HardwareType::IpxOverIso8473,
+            31 => HardwareType::IpOverInfiniband,
+            _ => HardwareType::Other(value),
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ProtocolType {
-    IPv4,
-    IPv6,
+    Ipv4,
+    Arp,
+    Rarp,
+    Ipv6,
     Other(u16),
 }
 
-impl ProtocolType {
-    fn parse(input: &[u8]) -> IResult<&[u8], ProtocolType> {
-        map(be_u16, |n| match n {
-            0x0800 => ProtocolType::IPv4,
-            0x86dd => ProtocolType::IPv6,
-            n => ProtocolType::Other(n),
-        })(input)
+impl From<u16> for ProtocolType {
+    fn from(value: u16) -> Self {
+        match value {
+            0x0800 => ProtocolType::Ipv4,
+            0x0806 => ProtocolType::Arp,
+            0x0835 => ProtocolType::Rarp,
+            0x86DD => ProtocolType::Ipv6,
+            _ => ProtocolType::Other(value),
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Operation {
     Request,
     Reply,
+    RequestReverse,
+    ReplyReverse,
+    RequestInverse,
+    ReplyInverse,
     Other(u16),
 }
 
-impl Operation {
-    fn parse(input: &[u8]) -> IResult<&[u8], Operation> {
-        map(be_u16, |n| match n {
+impl From<u16> for Operation {
+    fn from(value: u16) -> Self {
+        match value {
             1 => Operation::Request,
             2 => Operation::Reply,
-            n => Operation::Other(n),
-        })(input)
+            3 => Operation::RequestReverse,
+            4 => Operation::ReplyReverse,
+            8 => Operation::RequestInverse,
+            9 => Operation::ReplyInverse,
+            _ => Operation::Other(value),
+        }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ArpPacket {
     hardware_type: HardwareType,
     protocol_type: ProtocolType,
-    hardware_len: u8,
-    protocol_len: u8,
+    hardware_address_length: u8,
+    protocol_address_length: u8,
     operation: Operation,
-    sender_hardware_addr: Vec<u8>,
-    sender_protocol_addr: Vec<u8>,
-    target_hardware_addr: Vec<u8>,
-    target_protocol_addr: Vec<u8>,
+    sender_hardware_address: Vec<u8>,
+    sender_protocol_address: Vec<u8>,
+    target_hardware_address: Vec<u8>,
+    target_protocol_address: Vec<u8>,
 }
 
 impl ArpPacket {
-    fn parse(input: &[u8]) -> IResult<&[u8], ArpPacket> {
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
         map(
             tuple((
-                HardwareType::parse,
-                ProtocolType::parse,
+                map(be_u16::<&[u8], nom::error::Error<&[u8]>>, HardwareType::from),
+                map(be_u16::<&[u8], nom::error::Error<&[u8]>>, ProtocolType::from),
                 be_u8,
                 be_u8,
-                Operation::parse,
-                take_opt,
-                take_opt,
-                take_opt,
-                take_opt,
+                map(be_u16::<&[u8], nom::error::Error<&[u8]>>, Operation::from),
+                take(6usize),
+                take(4usize),
+                take(6usize),
+                take(4usize),
             )),
-            |(
-                hardware_type,
-                protocol_type,
-                hardware_len,
-                protocol_len,
-                operation,
-                sender_hardware_addr,
-                sender_protocol_addr,
-                target_hardware_addr,
-                target_protocol_addr,
-            )| ArpPacket {
-                hardware_type,
-                protocol_type,
-                hardware_len,
-                protocol_len,
-                operation,
-                sender_hardware_addr.unwrap_or_default(),
-                sender_protocol_addr.unwrap_or_default(),
-                target_hardware_addr.unwrap_or_default(),
-                target_protocol_addr.unwrap_or_default(),
+            |(hardware_type, protocol_type, hardware_address_length, protocol_address_length, operation, sender_hardware_address, sender_protocol_address, target_hardware_address, target_protocol_address)| {
+                ArpPacket {
+                    hardware_type,
+                    protocol_type,
+                    hardware_address_length,
+                    protocol_address_length,
+                    operation,
+                    sender_hardware_address: sender_hardware_address.to_vec(),
+                    sender_protocol_address: sender_protocol_address.to_vec(),
+                    target_hardware_address: target_hardware_address.to_vec(),
+                    target_protocol_address: target_protocol_address.to_vec(),
+                }
             },
         )(input)
     }
 }
 
-fn take_opt<Input, Output>(input: Input) -> IResult<Input, Option<Output>>
-where
-    Input: nom::InputTake,
-    Output: nom::InputTake,
-{
-    opt(take(1usize))(input)
-}
-
 fn main() {
-    let filename = env::args().nth(1).expect("filename is required");
-    let mut file = match File::open(&Path::new(&filename)) {
-        Ok(f) => f,
-        Err(err) => {
-            eprintln!("Error reading file: {}", err);
-            return;
-        }
-    };
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(n) => {
-            if n == 0 {
-                eprintln!("File is empty.");
-                return;
-            }
-        }
-        Err(err) => {
-            eprintln!("Error reading file: {}", err);
-            return;
-        }
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        panic!("Usage: {} <input_file>", args[0]);
     }
-    match ArpPacket::parse(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(err) => eprintln!("Error parsing packet: {:?}", err),
+
+    let file = File::open(&args[1]).expect("Could not open file");
+    let mut reader = BufReader::new(file);
+    let mut input = Vec::new();
+    reader.read_to_end(&mut input).expect(" bisa tidak read file");
+
+    let result = ArpPacket::parse(&input);
+    match result {
+        Ok((_, packet)) => {
+            println!("ARP Packet:");
+            println!("  Hardware Type: {:?}", packet.hardware_type);
+            println!("  Protocol Type: {:?}", packet.protocol_type);
+            println!("  Hardware Address Length: {}", packet.hardware_address_length);
+            println!("  Protocol Address Length: {}", packet.protocol_address_length);
+            println!("  Operation: {:?}", packet.operation);
+            println!("  Sender Hardware Address: {:?}", packet.sender_hardware_address);
+            println!("  Sender Protocol Address: {:?}", packet.sender_protocol_address);
+            println!("  Target Hardware Address: {:?}", packet.target_hardware_address);
+            println!("  Target Protocol Address: {:?}", packet.target_protocol_address);
+        }
+        Err(err) => {
+            panic!("Error parsing ARP packet: {:?}", err);
+        }
     }
 }

@@ -1,0 +1,113 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:d="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+    <!-- General Header Fields -->
+    <xs:element name="Cache-Control" type="xs:string"/>
+    <xs:element name="Connection" type="xs:string"/>
+    <xs:element name="Date" type="xs:dateTime"/>
+    <xs:element name="Pragma" type="xs:string"/>
+    <xs:element name="Trailer" type="xs:string"/>
+    <xs:element name="Transfer-Encoding" type="xs:string"/>
+    <xs:element name="Upgrade" type="xs:string"/>
+    <xs:element name="Via" type="xs:string"/>
+    <xs:element name="Warning" type="xs:string"/>
+
+    <!-- Request Header Fields -->
+    <xs:element name="Accept" type="xs:string"/>
+    <xs:element name="Accept-Charset" type極xs:string"/>
+    <xs:element name="Accept-Encoding" type="xs:string"/>
+    <xs:element name="Accept-Language" type="xs:string"/>
+    <xs:element name="Authorization" type="xs:string"/>
+    <xs:element name="Expect" type="xs:string"/>
+    <xs:element name="From" type="xs:string"/>
+    <xs:element name="Host" type="xs:string"/>
+    <xs:element name="If-Match" type="xs:string"/>
+    <xs:element name="If-Modified-Since" type="xs:dateTime"/>
+    <xs:element name="If-None-Match" type="xs:string"/>
+    <xs:element name="If-Range" type="xs:string"/>
+    <xs:element name="If-Unmodified-Since" type="xs:dateTime"/>
+    <xs:element name="Max-Forwards極type="xs:int"/>
+    <xs:element name="Proxy-Authorization" type="xs:string"/>
+    <xs:element name="Range" type="xs:string"/>
+    <xs:element name="Referer" type="xs:string"/>
+    <xs:element name="TE" type="xs:string"/>
+    <xs:element name="User-Agent" type="xs:string"/>
+
+    <!-- Response Header Fields -->
+    <xs:element name="Accept-Ranges" type="xs:string"/>
+    <xs:element name="Age" type="xs:int"/>
+    <xs:element name="ETag" type="xs:string"/>
+    <xs:element name="Location" type="xs:string"/>
+    <xs:element name="Proxy-Authenticate" type="xs:string"/>
+    <xs:element name="Retry-After" type="xs:string"/>
+    <xs:element name="Server" type="xs:string"/>
+    <xs:element name="Vary" type="xs:string"/>
+    <xs:element name="WWW-Authenticate" type="xs:string"/>
+
+    <!-- Entity Header Fields -->
+    <xs:element name="Allow" type="xs:string"/>
+    <xs:element name="Content-Encoding" type="xs:string"/>
+    <xs:element name="Content-Language" type="xs:string"/>
+    <xs:element name="Content-Length" type="xs:int"/>
+    <xs:element name="Content-Location" type="xs:string"/>
+    <xs:element name="Content-MD5" type="xs:string"/>
+    <xs:element name="Content-Range" type="xs:string"/>
+    <xs:element name="Content-Type" type="xs:string"/>
+    <xs:element name="Expires" type="xs:dateTime"/>
+    <xs:element name="Last-Modified" type="xs:dateTime"/>
+
+    <!-- HTTP Message Structure -->
+    <xs:element name="HTTPMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="d:Cache-Control" minOccurs="0"/>
+                <xs:element ref="d:Connection" minOccurs="0"/>
+                <xs:element ref="d:Date" minOccurs="0"/>
+                <xs:element ref="d:Pragma" minOccurs="0"/>
+                <xs:element ref="d:Trailer" minOccurs="0"/>
+                <xs:element ref="d:Transfer-Encoding" min極ccurs="0"/>
+                <xs:element ref="d:Upgrade" minOccurs="0"/>
+                <xs:element ref="d:Via" minOccurs="0"/>
+                <xs:element ref="d:Warning" minOccurs="0"/>
+                <xs:element ref="d:Accept" minOccurs="0"/>
+                <xs:element ref="d:Accept-Charset" minOccurs="0"/>
+                <xs:element ref="d:Accept-Encoding" minOccurs="0"/>
+                <xs:element ref="d:Accept-Language" minOccurs="0"/>
+                <xs:element ref="d:Authorization" minOccurs="0"/>
+                <xs:element ref="d:Expect" minOccurs="0"/>
+                <xs:element ref="d:From" minOccurs="0"/>
+                <xs:element ref="d:Host" minOccurs="0"/>
+                <xs:element ref="d:If-Match" minOccurs="0"/>
+                <xs:element ref="d:If-Modified-Since" minOccurs="0"/>
+                <xs:element ref="d:If-None-Match" minOccurs="0"/>
+                <xs:element ref="d:If-Range" minOccurs="0"/>
+                <xs:element ref="d:If-Unmodified-Since" minOccurs="0"/>
+                <xs:element ref="d:Max-Forwards" minOccurs="0"/>
+                <xs:element ref="d:Proxy-Authorization" minOccurs="0"/>
+                <xs:element ref="d:Range" minOccurs="0"/>
+                <xs:element ref="d:Referer" minOccurs="0"/>
+                <xs:element ref="d:TE" minOccurs="0"/>
+                <xs:element ref="d:User-Agent" minOccurs="0"/>
+                <xs:element ref="d:Accept-Ranges" minOccurs="0"/>
+                <xs:element ref="d:Age" minOccurs="0"/>
+                <xs:element ref="d:ETag" minOccurs="0"/>
+                <xs:element ref="d:Location" minOccurs="0"/>
+                <xs:element ref="d:Proxy-Authenticate" minOccurs="0"/>
+                <xs:element ref="d:Retry-After" minOccurs="0"/>
+                <xs:element ref="d:Server" minOccurs="0"/>
+                <xs:element ref="d:Vary" minOccurs="0"/>
+                <xs:element ref="d:WWW-Authenticate" minOccurs="0"/>
+                <xs:element ref="d:Allow" minOccurs="0"/>
+                <xs:element ref="d:Content-Encoding" minOccurs="0"/>
+                <xs:element ref="d:Content-Language" minOccurs="0"/>
+                <xs:element ref="d:Content-Length" minOccurs="0"/>
+                <xs:element ref="d:Content-Location" minOccurs="0"/>
+                <xs:element ref="d:Content-MD5" minOccurs="0"/>
+                <xs:element ref="d:Content-Range" minOccurs="0"/>
+                <xs:element ref="d:Content-Type" minOccurs="0"/>
+                <xs:element ref="d:Expires" minOccurs="0"/>
+                <xs:element ref="d:Last-Modified" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

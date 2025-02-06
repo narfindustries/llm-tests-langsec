@@ -2,16 +2,88 @@ module ELF;
 
 import spicy;
 
-public type Header = struct {
-    magic: bytes[4] = b"\x7fELF";
-    class: uint8;
-    data_encoding: uint8;
-    version: uint8;
-    os_abi: uint8;
+public type ElfClass = enum {
+    ELFCLASSNONE = 0,
+    ELFCLASS32 = 1,
+    ELFCLASS64 = 2
+} &default = ELFCLASSNONE &storage = uint8;
+
+public type ElfData = enum {
+    ELFDATANONE = 0,
+    ELFDATA2LSB = 1,
+    ELFDATA2MSB = 2
+} &default = ELFDATANONE &storage = uint8;
+
+public type ElfVersion = enum {
+    EV_NONE = 0,
+    EV_CURRENT = 1
+} &default = EV_NONE &storage = uint8;
+
+public type ElfOSABI = enum {
+    ELFOSABI_SYSV = 0,
+    ELFOSABI_HPUX = 1,
+    ELFOSABI_LINUX = 3,
+    ELFOSABI_FREEBSD = 9,
+    ELFOSABI_OPENBSD = 12
+} &default = ELFOSABI_SYSV &storage = uint8;
+
+public type ElfType = enum {
+    ET_NONE = 0,
+    ET_REL = 1,
+    ET_EXEC = 2,
+    ET_DYN = 3,
+    ET_CORE = 4
+} &default = ET_NONE &storage = uint16;
+
+public type ElfMachine = enum {
+    EM_NONE = 0,
+    EM_M32 = 1,
+    EM_SPARC = 2,
+    EM_386 = 3,
+    EM_X86_64 = 62
+} &default = EM_NONE &storage = uint16;
+
+public type ElfProgramSegmentType = enum {
+    PT_NULL = 0,
+    PT_LOAD = 1,
+    PT_DYNAMIC = 2,
+    PT_INTERP = 3,
+    PT_NOTE = 4,
+    PT_SHLIB = 5,
+    PT_PHDR = 6
+} &default = PT_NULL &storage = uint32;
+
+public type ElfProgramSegmentFlags = enum {
+    PF_X = 1,
+    PF_W = 2,
+    PF_R = 4
+} &default = 0 &storage = uint32;
+
+public type ElfSectionType = enum {
+    SHT_NULL = 0,
+    SHT_PROGBITS = 1,
+    SHT_SYMTAB = 2,
+    SHT_STRTAB = 3,
+    SHT_RELA = 4,
+    SHT_HASH = 5
+} &default = SHT_NULL &storage = uint32;
+
+public type ElfSectionFlags = enum {
+    SHF_WRITE = 1,
+    SHF_ALLOC = 2,
+    SHF_EXECINSTR = 4
+} &default = 0 &storage = uint64;
+
+public type ElfHeader = struct {
+    magic: bytes &size=4 &convert=b"\x7fELF";
+    class: ElfClass;
+    data: ElfData;
+    version: ElfVersion;
+    osabi: ElfOSABI;
     abi_version: uint8;
-    padding: bytes[7];
-    type: uint16;
-    machine: uint16;
+    padding: bytes &size=7;
+    type: ElfType;
+    machine: ElfMachine;
     elf_version: uint32;
     entry_point: uint64;
     program_header_offset: uint64;
@@ -22,11 +94,54 @@ public type Header = struct {
     program_header_num_entries: uint16;
     section_header_entry_size: uint16;
     section_header_num_entries: uint16;
-    section_header_string_index: uint16;
-
-    validates magic == b"\x7fELF";
+    section_header_string_table_index: uint16;
 };
 
-public type File = unit {
-    header: Header;
+public type ProgramHeaderEntry = struct {
+    type: ElfProgramSegmentType;
+    flags: ElfProgramSegmentFlags;
+    offset: uint64;
+    virtual_address: uint64;
+    physical_address: uint64;
+    file_size: uint64;
+    memory_size: uint64;
+    alignment: uint64;
 };
+
+public type SectionHeaderEntry = struct {
+    name_offset: uint32;
+    type: ElfSectionType;
+    flags: ElfSectionFlags;
+    virtual_address: uint64;
+    file_offset: uint64;
+    size: uint64;
+    link: uint32;
+    info: uint32;
+    address_alignment: uint64;
+    entry_size: uint64;
+};
+
+public type ElfFile = struct {
+    header: ElfHeader;
+    program_headers: vector<ProgramHeaderEntry>;
+    section_headers: vector<SectionHeaderEntry>;
+};
+
+public function parse(data: bytes) : ElfFile {
+    local result = ElfFile();
+    result.header = ElfHeader::parse(data[0:64]);
+    
+    result.program_headers = ProgramHeaderEntry::parse_vector(
+        data[result.header.program_header_offset:], 
+        result.header.program_header_num_entries, 
+        result.header.program_header_entry_size
+    );
+
+    result.section_headers = SectionHeaderEntry::parse_vector(
+        data[result.header.section_header_offset:], 
+        result.header.section_header_num_entries, 
+        result.header.section_header_entry_size
+    );
+
+    return result;
+}

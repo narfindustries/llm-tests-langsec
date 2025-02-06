@@ -1,43 +1,89 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
 HParser *create_hl7_v2_parser() {
-    // HL7 v2 message types are delimited by the vertical bar '|'
-    HParser *field_delimiter = h_ch('|');
-  
-    // HL7 v2 segments end with a carriage return '\r'
-    HParser *segment_terminator = h_ch('\r');
-    
-    // A field in HL7 can be any printable ASCII character excluding '|', '\r', and '^' for simplicity.
-    HParser *field = h_many1(h_choice(h_range(' ', '~'), h_range('!', '&'), h_range('(', '<'), h_range('>', '}')));
-    
-    // HL7 v2 segments start with a 3-character segment identifier, such as "MSH", followed by a field delimiter
-    HParser *segment_id = h_sequence(h_ch_range('A', 'Z'), h_ch_range('A', 'Z'), h_ch_range('A', 'Z'), field_delimiter, NULL);
-    
-    // A segment consists of a starting segment identifier, a series of fields, and a segment terminator.
-    HParser *segment = h_sequence(segment_id, h_many(h_sequence(field, field_delimiter, NULL)), h_optional(field), segment_terminator, NULL);
-    
-    // An HL7 message is composed of segments.
-    HParser *message = h_many1(segment);
+    // HL7 v2 field separator (|) and components separator (^~\&)
+    HParser *field_separator = h_token("|", 1);
+    HParser *component_separator = h_token("^~\\&", 4);
 
-    // Finalize the parser, which will parse an HL7 message
-    return message;
+    // Character set for simple field
+    HParser *simple_char = h_choice(h_ch_range('A', 'Z'), h_ch_range('a', 'z'), h_ch_range('0', '9'), h_ch('-'), h_ch(' '), NULL);
+    HParser *simple_field = h_many1(simple_char);
+
+    // MSH Segment Parser (illustrative, starting fields only)
+    HParser *msh_segment = h_sequence(
+        h_token("MSH", 3),
+        field_separator,
+        component_separator,
+        field_separator,
+        simple_field,  // Sending Application
+        field_separator,
+        simple_field,  // Sending Facility
+        field_separator,
+        simple_field,  // Receiving Application
+        field_separator,
+        simple_field,  // Receiving Facility
+        field_separator,
+        simple_field,  // Date/Time of Message
+        field_separator,
+        simple_field,  // Security
+        field_separator,
+        simple_field,  // Message Type
+        field_separator,
+        simple_field,  // Message Control ID
+        field_separator,
+        simple_field,  // Processing ID
+        field_separator,
+        simple_field,  // Version ID
+        NULL
+    );
+
+    // Full message parser starting with MSH Segment
+    HParser *hl7_message = h_many1(msh_segment);
+
+    return hl7_message;
 }
 
-int main() {
-    HParser *hl7_parser = create_hl7_v2_parser();
-
-    // Example data (not an actual HL7 message, just for illustration)
-    const char *data = "MSH|^~\\&|LAB|XYZ|RTF|Denver Health|20131031154855||ORU^R01|568656|P|2.4\rPID|1||123456||Doe^John||19800101|M|||123 Oak St^^Denver^CO^80204\r";
-
-    HParseResult *result = h_parse(hl7_parser, (const uint8_t *)data, strlen(data));
-
-    if (result) {
-        printf("HL7 Message parsed successfully!\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse HL7 Message.\n");
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parser_close(hl7_parser);
-    return 0;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("fopen");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *data = malloc(length);
+    if (!data) {
+        perror("malloc");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    HParser *parser = create_hl7_v2_parser();
+    HParseResult *result = h_parse(parser, data, length);
+
+    if (result) {
+        printf("Parsing Successful!\n");
+        // Process result->ast or result data here
+    } else {
+        fprintf(stderr, "Parsing Failed!\n");
+    }
+
+    h_parse_result_free(result);
+    h_free(parser);  // Using h_free as h_parser_free is not a standard Hammer function
+    free(data);
+
+    return result ? EXIT_SUCCESS : EXIT_FAILURE;
 }

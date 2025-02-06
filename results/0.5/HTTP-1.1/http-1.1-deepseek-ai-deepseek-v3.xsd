@@ -1,0 +1,81 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/http1.1"
+           xmlns:tns="http://example.com/dfdl/http1.1"
+           xmlns:http="http://example.com/dfdl/http1.1">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="HTTPFormat">
+        <dfdl:format representation="text" encoding="UTF-8" lengthKind="delimited" separator="CRLF"/>
+      </dfdl:defineFormat>
+      <dfdl:format ref="tns:HTTPFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="HTTPMessage">
+    <xs:sequence>
+      <xs:element name="StartLine" type="http:StartLine"/>
+      <xs:element name="Headers" type="http:Headers"/>
+      <xs:element name="Body" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StartLine">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="CRLF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Headers">
+    <xs:sequence>
+      <xs:element name="Header" type="http:Header" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":"/>
+      <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="CRLF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Request">
+    <xs:sequence>
+      <xs:element name="StartLine" type="http:RequestStartLine"/>
+      <xs:element name="Headers" type="http:Headers"/>
+      <xs:element name="Body" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RequestStartLine">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="CRLF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Response">
+    <xs:sequence>
+      <xs:element name="StartLine" type="http:ResponseStartLine"/>
+      <xs:element name="Headers" type="http:Headers"/>
+      <xs:element name="Body" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResponseStartLine">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="StatusCode" type="xs:int" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+      <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="CRLF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="HTTPMessage" type="http:HTTPMessage"/>
+  <xs:element name="Request" type="http:Request"/>
+  <xs:element name="Response" type="http:Response"/>
+
+</xs:schema>

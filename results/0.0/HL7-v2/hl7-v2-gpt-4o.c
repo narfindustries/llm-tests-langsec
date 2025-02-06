@@ -1,55 +1,72 @@
 #include <hammer/hammer.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-HParser *create_hl7_v2_parser() {
-    // Define basic parsers for HL7 components
-    HParser *field_separator = h_ch('|');
-    HParser *component_separator = h_ch('^');
-    HParser *repetition_separator = h_ch('~');
-    HParser *escape_character = h_ch('\\');
-    HParser *subcomponent_separator = h_ch('&');
-    HParser *newline = h_choice(h_ch('\r'), h_ch('\n'), NULL);
+// Function prototypes
+HParser *create_hl7_field_parser();
+HParser *create_hl7_segment_parser();
+HParser *create_hl7_message_parser();
 
-    // Define a parser for a single character (any character except control characters)
-    HParser *char_parser = h_choice(h_range(0x20, 0x7E), NULL);
-
-    // Define a parser for a field (sequence of characters)
-    HParser *field = h_many(char_parser);
-
-    // Define a parser for a component (sequence of fields separated by component separator)
-    HParser *component = h_many_sep(field, component_separator);
-
-    // Define a parser for a repetition (sequence of components separated by repetition separator)
-    HParser *repetition = h_many_sep(component, repetition_separator);
-
-    // Define a parser for a segment (sequence of repetitions separated by field separator)
-    HParser *segment = h_many_sep(repetition, field_separator);
-
-    // Define a parser for a message (sequence of segments separated by newline)
-    HParser *message = h_many_sep(segment, newline);
-
-    // Return the complete HL7 v2 message parser
-    return message;
+// Define parsers for HL7 components
+HParser *create_hl7_field_parser() {
+    return h_many1(h_choice(h_class("AZaz09"), h_ch(' '), NULL));
 }
 
-int main(int argc, char **argv) {
-    // Create the HL7 v2 parser
-    HParser *hl7_parser = create_hl7_v2_parser();
+HParser *create_hl7_segment_parser() {
+    return h_sequence(
+        h_many1(h_choice(h_class("AZaz"), NULL)), // Segment ID
+        h_ch('|'), // Field Separator
+        h_many(h_sequence(create_hl7_field_parser(), h_ch('|'), NULL)), // Fields
+        h_end_p(), // End of segment
+        NULL
+    );
+}
 
-    // Example HL7 message
-    const char *hl7_message = "MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|202310101200||ADT^A01|123456|P|2.5\rPID|1||123456^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^Metropolis^NY^12345||(555)555-5555|||M||123456789|987654321\r";
+HParser *create_hl7_message_parser() {
+    return h_many1(create_hl7_segment_parser());
+}
 
-    // Parse the message
-    HParseResult *result = h_parse(hl7_parser, (const uint8_t *)hl7_message, strlen(hl7_message));
-
-    if (result) {
-        printf("Parsing succeeded!\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Parsing failed.\n");
+// Function to parse HL7 message from file
+void parse_hl7_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
     }
 
-    // Free the parser
-    h_parser_free(hl7_parser);
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    return 0;
+    char *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *hl7_message = create_hl7_message_parser();
+    HParseResult *result = h_parse(hl7_message, buffer, file_size);
+    if (result) {
+        printf("HL7 message parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse HL7 message.\n");
+    }
+
+    free(buffer);
+    h_parser_free(hl7_message);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_hl7_file(argv[1]);
+    return EXIT_SUCCESS;
 }

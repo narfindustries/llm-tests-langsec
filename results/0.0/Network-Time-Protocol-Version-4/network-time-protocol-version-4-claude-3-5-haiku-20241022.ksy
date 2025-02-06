@@ -4,69 +4,80 @@ meta:
   endian: be
 
 seq:
-  - id: leap_indicator
-    type: b2
-    doc: Warning of an impending leap second to be inserted/deleted
-  - id: version
-    type: b3
-    doc: NTP version number (4)
-  - id: mode
-    type: b3
-    doc: Association mode
-  - id: stratum
-    type: u1
-    doc: Stratum level of the local clock
-  - id: poll
-    type: s1
-    doc: Poll interval in log2 seconds
-  - id: precision
-    type: s1
-    doc: Precision of the local clock in log2 seconds
-  - id: root_delay
-    type: u4
-    doc: Total round-trip delay to the reference clock
-  - id: root_dispersion
-    type: u4
-    doc: Maximum error relative to the reference clock
-  - id: reference_identifier
-    type: u4
-    doc: Reference source identifier
-  - id: reference_timestamp
-    type: u8
-    doc: Time when the system clock was last set or corrected
-  - id: originate_timestamp
-    type: u8
-    doc: Time when the request was sent from the client
-  - id: receive_timestamp
-    type: u8
-    doc: Time when the request was received by the server
-  - id: transmit_timestamp
-    type: u8
-    doc: Time when the response was sent from the server
-  - id: extensions
-    type: extension
-    repeat: eos
-    doc: Optional extension fields
-  - id: authentication
-    type: auth_data
-    doc: Optional authentication data
+  - id: header
+    type: ntp_header
 
 types:
-  extension:
+  ntp_header:
     seq:
-      - id: field_type
-        type: u2
-      - id: field_length
-        type: u2
-      - id: data
-        size: field_length
-        doc: Extension field data
-
-  auth_data:
-    seq:
-      - id: key_identifier
+      - id: flags
+        type: u1
+        doc: Leap Indicator, Version, Mode
+      - id: stratum
+        type: u1
+        doc: Stratum level of clock
+      - id: poll_interval
+        type: s1
+        doc: Log2 of polling interval
+      - id: precision
+        type: s1
+        doc: Log2 of system clock precision
+      - id: root_delay
         type: u4
-        doc: Authentication key identifier
-      - id: message_digest
-        size: 16
-        doc: MD5 message digest
+        doc: Total round-trip delay to primary reference
+      - id: root_dispersion
+        type: u4
+        doc: Maximum error relative to primary reference
+      - id: reference_identifier
+        type: str
+        size: 4
+        encoding: ASCII
+        doc: Reference source identifier
+      - id: reference_timestamp
+        type: ntp_timestamp
+        doc: Time when system clock was last set
+      - id: origin_timestamp
+        type: ntp_timestamp
+        doc: Time request sent by client
+      - id: receive_timestamp
+        type: ntp_timestamp
+        doc: Time request arrived at server
+      - id: transmit_timestamp
+        type: ntp_timestamp
+        doc: Time reply sent by server
+
+  ntp_timestamp:
+    seq:
+      - id: seconds
+        type: u4
+        doc: Seconds since Jan 1, 1900
+      - id: fraction
+        type: u4
+        doc: Fractional seconds
+
+instances:
+  leap_indicator:
+    value: header.flags >> 6
+    enum: leap_indicator_type
+  version:
+    value: (header.flags >> 3) & 0b111
+  mode:
+    value: header.flags & 0b111
+    enum: mode_type
+
+enums:
+  leap_indicator_type:
+    0: no_warning
+    1: last_minute_61_seconds
+    2: last_minute_59_seconds
+    3: alarm_not_synchronized
+
+  mode_type:
+    0: reserved
+    1: symmetric_active
+    2: symmetric_passive
+    3: client
+    4: server
+    5: broadcast
+    6: ntp_control
+    7: private_use

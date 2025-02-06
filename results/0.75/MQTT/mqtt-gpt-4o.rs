@@ -1,122 +1,142 @@
-use nom::bytes::complete::{tag, take};
-use nom::combinator::map_res;
-use nom::number::complete::{be_u16, be_u8};
-use nom::sequence::{pair, tuple};
-use nom::IResult;
+extern crate nom;
+
+use nom::{
+    bytes::complete::{tag, take},
+    number::complete::{be_u16, be_u8},
+    sequence::tuple,
+    IResult,
+};
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 use std::env;
 
 #[derive(Debug)]
-enum MqttPacket {
-    Connect { 
-        protocol_name: String, 
-        protocol_level: u8, 
-        connect_flags: u8, 
-        keep_alive: u16, 
-        client_id: String 
-    },
-    ConnAck { 
-        session_present: u8, 
-        return_code: u8 
-    },
-    Publish {
-        topic_name: String,
-        packet_id: Option<u16>,
-        payload: Vec<u8>,
-    },
-    // Add additional packet types as per specification
+enum PacketType {
+    Connect,
+    Connack,
+    Publish,
+    Puback,
+    Pubrec,
+    Pubrel,
+    Pubcomp,
+    Subscribe,
+    Suback,
+    Unsubscribe,
+    Unsuback,
+    Pingreq,
+    Pingresp,
+    Disconnect,
+    Auth,
+    Unknown,
 }
 
-fn parse_string(input: &[u8]) -> IResult<&[u8], String> {
-    let (input, length) = be_u16(input)?;
-    let (input, string_bytes) = take(length)(input)?;
-    let string_res = String::from_utf8(string_bytes.to_vec());
-    map_res(string_res, |s| Ok::<_, std::string::FromUtf8Error>(s))(input)
+impl From<u8> for PacketType {
+    fn from(byte: u8) -> Self {
+        match byte >> 4 {
+            1 => PacketType::Connect,
+            2 => PacketType::Connack,
+            3 => PacketType::Publish,
+            4 => PacketType::Puback,
+            5 => PacketType::Pubrec,
+            6 => PacketType::Pubrel,
+            7 => PacketType::Pubcomp,
+            8 => PacketType::Subscribe,
+            9 => PacketType::Suback,
+            10 => PacketType::Unsubscribe,
+            11 => PacketType::Unsuback,
+            12 => PacketType::Pingreq,
+            13 => PacketType::Pingresp,
+            14 => PacketType::Disconnect,
+            15 => PacketType::Auth,
+            _ => PacketType::Unknown,
+        }
+    }
 }
 
-fn parse_connect(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, (_, protocol_name, protocol_level, connect_flags, keep_alive, client_id)) = tuple((
-        tag([0x10]), // Packet type for CONNECT
-        parse_string,
-        be_u8,
-        be_u8,
-        be_u16,
-        parse_string,
-    ))(input)?;
+#[derive(Debug)]
+struct FixedHeader {
+    packet_type: PacketType,
+    flags: u8,
+    remaining_length: usize,
+}
+
+fn variable_length(input: &[u8]) -> IResult<&[u8], usize> {
+    let mut multiplier = 1;
+    let mut value = 0;
+    let mut index = 0;
+
+    while index < input.len() {
+        let encoded_byte = input[index];
+        index += 1;
+        value += ((encoded_byte & 127) as usize) * multiplier;
+        multiplier *= 128;
+        if multiplier > 128 * 128 * 128 {
+            return Err(nom::Err::Failure(nom::error::Error::new(input, nom::error::ErrorKind::TooLarge)));
+        }
+        if encoded_byte & 128 == 0 {
+            break;
+        }
+    }
+    Ok((&input[index..], value))
+}
+
+fn parse_fixed_header(input: &[u8]) -> IResult<&[u8], FixedHeader> {
+    let (input, byte1) = be_u8(input)?;
+    let (input, remaining_length) = variable_length(input)?;
+
     Ok((
         input,
-        MqttPacket::Connect {
-            protocol_name,
-            protocol_level,
-            connect_flags,
-            keep_alive,
-            client_id,
+        FixedHeader {
+            packet_type: PacketType::from(byte1),
+            flags: byte1 & 0x0F,
+            remaining_length,
         },
     ))
 }
 
-fn parse_connack(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, (_, session_present, return_code)) = tuple((
-        tag([0x20]),
-        be_u8,
-        be_u8,
-    ))(input)?;
-    Ok((input, MqttPacket::ConnAck { session_present, return_code }))
+fn parse_connect(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, (_, protocol_version, connect_flags, keep_alive)) =
+        tuple((tag(b"\x00\x04MQTT"), be_u8, be_u8, be_u16))(input)?;
+    println!(
+        "Connect: protocol_version={}, connect_flags={}, keep_alive={}",
+        protocol_version, connect_flags, keep_alive
+    );
+    Ok((input, ()))
 }
 
-fn parse_publish(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, (_, topic_name, packet_id, payload)) = tuple((
-        tag([0x30]), // Simplified, assuming QoS 0 for no packet_id
-        parse_string,
-        be_u16,
-        take(remaining_length(input)?),
-    ))(input)?;
-    Ok((input, MqttPacket::Publish { topic_name, packet_id: Some(packet_id), payload: payload.to_vec() }))
+fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, fixed_header) = parse_fixed_header(input)?;
+    println!("{:?}", fixed_header);
+
+    match fixed_header.packet_type {
+        PacketType::Connect => {
+            let (input, _) = take(fixed_header.remaining_length)(input)?;
+            parse_connect(input)
+        }
+        _ => {
+            let (input, _) = take(fixed_header.remaining_length)(input)?;
+            Ok((input, ()))
+        }
+    }
 }
 
-// A utility function to calculate remaining length of packet if needed
-fn remaining_length(input: &[u8]) -> IResult<&[u8], usize> {
-    // This function should decode the MQTT remaining length encoding
-    // For simplicity, let's assume a single byte length here, which is not always correct for real MQTT
-    let (input, length) = be_u8(input)?;
-    Ok((input, length as usize))
-}
-
-fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, packet) = nom::branch::alt((
-        parse_connect,
-        parse_connack,
-        parse_publish,
-        // Add more parsers for other MQTT packet types here
-    ))(input)?;
-    Ok((input, packet))
-}
-
-fn main() {
+fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
-        std::process::exit(1);
+
+    if args.len() < 2 {
+        eprintln!("Usage: mqtt_parser <file>");
+        return Ok(());
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("Failed to open file {}: {}", filename, e);
-            std::process::exit(1);
-        }
-    };
-
+    let mut file = File::open(filename)?;
     let mut buffer = Vec::new();
-    if let Err(e) = file.read_to_end(&mut buffer) {
-        eprintln!("Failed to read file {}: {}", filename, e);
-        std::process::exit(1);
-    }
+    file.read_to_end(&mut buffer)?;
 
     match parse_mqtt_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(e) => eprintln!("Failed to parse MQTT packet: {:?}", e),
+        Ok((_, _)) => println!("Parsing successful"),
+        Err(e) => eprintln!("Error parsing file: {:?}", e),
     }
+
+    Ok(())
 }

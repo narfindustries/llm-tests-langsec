@@ -1,53 +1,140 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/modbus"
-           xmlns:tns="http://example.com/modbus"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="modbus">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:transaction" maxOccurs="unbounded" dfdl:occursCount="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="transaction">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="transactionId" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="protocolId" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="unitId" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="functionCode" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="data" type="tns:modbusData" dfdl:length="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="modbusData">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0" 
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0" 
+           elementFormDefault="qualified" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0">
+  <xs:element name="ModbusMessage" type="ModbusMessageType"/>
+  <xs:complexType name="ModbusMessageType">
     <xs:sequence>
-      <xs:element name="registerAddress" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="registerCount" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="registerValues" type="tns:registerValue" maxOccurs="unbounded" dfdl:occursCount="*"/>
+      <xs:element name="Address" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test=". &gt;= 0 and . &lt;= 247" message="Invalid address"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FunctionCode" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test=". = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 6 or . = 15 or . = 16 or . = 17 or . = 18 or . = 20 or . = 21 or . = 22 or . = 23 or . = 24 or . = 43 or . = 44" message="Invalid function code"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Data" type="ModbusData" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="CRC" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="registerValue">
+  <xs:complexType name="ModbusData">
+    <xs:choice>
+      <xs:element name="ReadCoilStatus" type="ReadCoilStatusType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadInputStatus" type="ReadInputStatusType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadHoldingRegisters" type="ReadHoldingRegistersType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadInputRegisters" type="ReadInputRegistersType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="WriteSingleCoil" type="WriteSingleCoilType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="WriteSingleHoldingRegister" type="WriteSingleHoldingRegisterType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="WriteMultipleCoils" type="WriteMultipleCoilsType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="WriteMultipleHoldingRegisters" type="WriteMultipleHoldingRegistersType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReportSlaveID" type="ReportSlaveIDType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadFileRecord" type="ReadFileRecordType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="WriteFileRecord" type="WriteFileRecordType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="MaskWriteRegister" type="MaskWriteRegisterType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadWriteMultipleRegisters" type="ReadWriteMultipleRegistersType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReadFIFOQueue" type="ReadFIFOQueueType" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="ReadCoilStatusType">
     <xs:sequence>
-      <xs:element name="value" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfCoils" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="crc">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="crcValue" type="xs:unsignedShort" dfdl:length="2"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+  <xs:complexType name="ReadInputStatusType">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfInputs" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReadHoldingRegistersType">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReadInputRegistersType">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WriteSingleCoilType">
+    <xs:sequence>
+      <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+      <xs:element name="OutputValue" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WriteSingleHoldingRegisterType">
+    <xs:sequence>
+      <xs:element name="RegisterAddress" type="xs:unsignedShort"/>
+      <xs:element name="RegisterValue" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WriteMultipleCoilsType">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfOutputs" type="xs:unsignedShort"/>
+      <xs:element name="OutputValues" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WriteMultipleHoldingRegistersType">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+      <xs:element name="RegisterValues" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReportSlaveIDType">
+    <xs:sequence>
+      <xs:element name="SlaveID" type="xs:unsignedByte"/>
+      <xs:element name="RunIndicatorStatus" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReadFileRecordType">
+    <xs:sequence>
+      <xs:element name="ReferenceType" type="xs:unsignedByte"/>
+      <xs:element name="FileNumber" type="xs:unsignedShort"/>
+      <xs:element name="RecordNumber" type="xs:unsignedShort"/>
+      <xs:element name="RecordLength" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WriteFileRecordType">
+    <xs:sequence>
+      <xs:element name="ReferenceType" type="xs:unsignedByte"/>
+      <xs:element name="FileNumber" type="xs:unsignedShort"/>
+      <xs:element name="RecordNumber" type="xs:unsignedShort"/>
+      <xs:element name="RecordData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="MaskWriteRegisterType">
+    <xs:sequence>
+      <xs:element name="ReferenceAddress" type="xs:unsignedShort"/>
+      <xs:element name="AndMask" type="xs:unsignedShort"/>
+      <xs:element name="OrMask" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReadWriteMultipleRegistersType">
+    <xs:sequence>
+      <xs:element name="ReadStartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfReadRegisters" type="xs:unsignedShort"/>
+      <xs:element name="WriteStartingAddress" type="xs:unsignedShort"/>
+      <xs:element name="QuantityOfWriteRegisters" type="xs:unsignedShort"/>
+      <xs:element name="WriteRegisterValues" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ReadFIFOQueueType">
+    <xs:sequence>
+      <xs:element name="FIFOPointerAddress" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

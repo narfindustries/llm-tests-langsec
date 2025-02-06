@@ -1,91 +1,28 @@
-module NetworkTimeProtocol;
+module NTP;
 
-import spicy
-
-public type NTP = unit {
-    li_vn_mode: uint8 {
-        is_lazy = true
-    };
-    stratum: uint8;
-    poll: int8;
-    precision: int8;
-    root_delay: int32;
-    root_dispersion: int32;
-    reference_id: uint32;
-    reference_timestamp: uint64;
-    originate_timestamp: uint64;
-    receive_timestamp: uint64;
-    transmit_timestamp: uint64;
-} &endian=big;
-
-public type NTP_Header = unit {
-    ntp: NTP;
+type NTP_Packet = unit {
+    li_vn_mode: uint8;                        # Combined Leap Indicator, Version Number, and Mode
+    stratum: uint8;                           # Stratum
+    poll: int8;                               # Poll Interval
+    precision: int8;                          # Precision
+    root_delay: uint32;                       # Root Delay (in NTP short format, 16.16 fixed-point)
+    root_dispersion: uint32;                  # Root Dispersion (in NTP short format, 16.16 fixed-point)
+    ref_id: uint32;                           # Reference Identifier
+    ref_timestamp: uint64;                    # Reference Timestamp
+    orig_timestamp: uint64;                   # Originate Timestamp
+    recv_timestamp: uint64;                   # Receive Timestamp
+    transmit_timestamp: uint64;               # Transmit Timestamp
+    # Optional Authenticator
+    authenticator: Authenticator &optional;   # Authenticator (Key Identifier and Message Digest)
+    
+    var li: uint8 = (li_vn_mode & 0xC0) >> 6;
+    var vn: uint8 = (li_vn_mode & 0x38) >> 3;
+    var mode: uint8 = li_vn_mode & 0x07;
 };
 
-public module Parser = spicy::export {
-    public type NTPParser = unit {
-        ntp_header: NTP_Header;
-
-        on %done {
-            event ntp_packet_parsed(self.ntp_header.ntp);
-        }
-    };
-
-    public event ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP);
+type Authenticator = unit {
+    key_id: uint32;                           # Key Identifier
+    message_digest: bytes &size=16;           # Message Digest (typically 16 bytes for MD5, can vary)
 };
 
-public module Analyzer = spicy::export {
-    public type NTPAnalyzer = spicy::Analyzer::UnitAnalyzer {
-        .anon = spicy::Analyzer::UnitAnalyzer::parameter {
-            unit = Parser::NTPParser
-        };
-
-        on ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP) {
-            # Add custom handling for the parsed NTP packet here
-        }
-    };
-};
-
-public export {
-    redef enum Log::ID += {
-        LOG_NTP
-    };
-
-    type Info: record {
-        ts: time &log;
-        uid: string &log;
-        id: conn_id &log;
-        li_vn_mode: count &log;
-        stratum: count &log;
-        poll: count &log;
-        precision: count &log;
-        root_delay: count &log;
-        root_dispersion: count &log;
-        reference_id: count &log;
-        reference_timestamp: time &log;
-        originate_timestamp: time &log;
-        receive_timestamp: time &log;
-        transmit_timestamp: time &log;
-    };
-
-    global log_ntp: event(ntp: NetworkTimeProtocol::NTP, c: connection);
-
-    event ntp_packet_parsed(ntp: NetworkTimeProtocol::NTP, c: connection) {
-        Log::write(LOG_NTP, Info(
-            ts = network_time(),
-            uid = c$uid,
-            id = c$id,
-            li_vn_mode = ntp.li_vn_mode,
-            stratum = ntp.stratum,
-            poll = ntp.poll,
-            precision = ntp.precision,
-            root_delay = ntp.root_delay,
-            root_dispersion = ntp.root_dispersion,
-            reference_id = ntp.reference_id,
-            reference_timestamp = ntp.reference_timestamp,
-            originate_timestamp = ntp.originate_timestamp,
-            receive_timestamp = ntp.receive_timestamp,
-            transmit_timestamp = ntp.transmit_timestamp
-        ));
-    }
-};
+public type NTP_Message = NTP_Packet;

@@ -1,43 +1,27 @@
 module NTP;
 
-public type NTPMessage = unit {
-    li_vn_mode: uint8 {
-        doc = "Leap Indicator, Version Number, and Mode";
-    };
-    stratum: uint8 {
-        doc = "Stratum level of the local clock";
-    };
-    poll: int8 {
-        doc = "Maximum interval between successive messages";
-    };
-    precision: int8 {
-        doc = "Precision of the local clock";
-    };
-    root_delay: int32 {
-        doc = "Total round-trip delay to the primary reference source";
-    };
-    root_dispersion: int32 {
-        doc = "Maximum error relative to the primary reference source";
-    };
-    reference_id: uint32 {
-        doc = "Reference clock identifier";
-    };
-    reference_timestamp: uint64 {
-        doc = "Time when the system clock was last set or corrected";
-    };
-    originate_timestamp: uint64 {
-        doc = "Time at which the request departed the client for the server";
-    };
-    receive_timestamp: uint64 {
-        doc = "Time at which the request arrived at the server";
-    };
-    transmit_timestamp: uint64 {
-        doc = "Time at which the reply departed the server for the client";
-    };
+public type NTPv4 = unit {
+    li: uint8 &size=2;
+    vn: uint8 &size=3;
+    mode: uint8 &size=3;
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    root_delay: int32;
+    root_dispersion: uint32;
+    reference_id: bytes &size=4;
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+    authenticator: optional Authenticator = (mode == 3 || mode == 4) ? parse_authenticator() : nil;
+
+    function parse_authenticator() : Authenticator {
+        return Authenticator();
+    }
 };
 
-public export {
-    type Protocol = unit {
-        message: NTPMessage;
-    };
-}
+type Authenticator = unit {
+    key_identifier: uint32;
+    message_digest: bytes &size=16;
+};

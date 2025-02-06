@@ -1,91 +1,62 @@
 use nom::{
-    bytes::complete::{tag, take_while},
+    bytes::complete::take_while1,
     character::complete::{alphanumeric1, char, line_ending},
-    combinator::{map, map_res, opt, recognize},
-    multi::{many0, separated_list1},
-    sequence::{delimited, pair, preceded, separated_pair, tuple},
+    combinator::{map, recognize},
+    multi::separated_list0,
     IResult,
 };
 use std::env;
 use std::fs;
-use std::io::{self, Read};
+use std::path::Path;
 
-#[derive(Debug, PartialEq, Eq)]
-struct Hl7Message {
-    segments: Vec<Hl7Segment>,
+#[derive(Debug, PartialEq)]
+enum Hl7DataType {
+    String(String),
+    Number(i32),
+    Date(String),
+    // Add more data types as needed based on HL7 spec
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct Hl7Segment {
-    field_separator: char,
-    fields: Vec<Hl7Field>,
+fn parse_hl7_field(input: &str) -> IResult<&str, Hl7DataType> {
+    let parser = recognize(alphanumeric1);
+    map(parser, |s: &str| Hl7DataType::String(s.to_string()))(input)
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct Hl7Field {
-    components: Vec<Hl7Component>,
+fn parse_hl7_segment(input: &str) -> IResult<&str, Vec<Hl7DataType>> {
+    let mut parser = separated_list0(char('|'), parse_hl7_field);
+    parser(input)
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct Hl7Component {
-    subcomponents: Vec<String>,
+fn parse_hl7_message(input: &str) -> IResult<&str, Vec<Vec<Hl7DataType>>> {
+    let mut parser = separated_list0(line_ending, parse_hl7_segment);
+    parser(input)
 }
 
-fn hl7_component(input: &str) -> IResult<&str, Hl7Component> {
-    let subcomponent_sep = tag("^");
-    let subcomponent = map_res(alphanumeric1, |s| s.to_string());
-
-    map(
-        separated_list1(subcomponent_sep, subcomponent),
-        |subcomponents| Hl7Component { subcomponents },
-    )(input)
-}
-
-fn hl7_field(input: &str, field_sep: char) -> IResult<&str, Hl7Field> {
-    let component_sep = char(field_sep);
-    let component = hl7_component;
-
-    map(
-        separated_list1(component_sep, component),
-        |components| Hl7Field { components },
-    )(input)
-}
-
-
-fn hl7_segment(input: &str) -> IResult<&str, Hl7Segment> {
-    let field_sep =  char('|');
-    let field = |input| hl7_field(input, '|');
-    let segment = tuple((field_sep, many0(field)));
-
-    map(segment, |(field_sep, fields)| Hl7Segment {
-        field_separator: field_sep,
-        fields
-    })(input)
-}
-
-fn hl7_message(input: &str) -> IResult<&str, Hl7Message> {
-    let segment = hl7_segment;
-    let segments = many0(preceded(line_ending, segment));
-
-    map(segments, |segments| Hl7Message { segments })(input)
-}
-
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        return Ok(());
-    }
-    let filename = &args[1];
-    let mut file = fs::File::open(filename)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    match hl7_message(&contents) {
-        Ok((_, message)) => println!("{:#?}", message),
-        Err(e) => eprintln!("Error parsing HL7 message: {:?}", e),
+        eprintln!("Usage: {} <hl7_file>", args[0]);
+        return;
     }
 
-    Ok(())
+    let file_path = Path::new(&args[1]);
+    let file_content = match fs::read_to_string(file_path) {
+        Ok(content) => content,
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+            return;
+        }
+    };
+
+    match parse_hl7_message(&file_content) {
+        Ok((_, message)) => {
+            println!("Parsed HL7 message:");
+            for segment in message {
+                println!("Segment: {:?}", segment);
+            }
+        }
+        Err(err) => {
+            eprintln!("Error parsing HL7 message: {:?}", err);
+        }
+    }
 }

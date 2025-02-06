@@ -1,17 +1,15 @@
 meta:
   id: dicom
-  file-extension: dicom
+  file-extension: dcm
   endian: le
-  license: CC0-1.0
 seq:
   - id: preamble
     size: 128
-  - id: magic
-    contents: [0x44, 0x49, 0x43, 0x4D] # "DICM"
-  - id: data_elements
+  - id: dicom_prefix
+    contents: 'DICM'
+  - id: elements
     type: data_element
     repeat: eos
-
 types:
   data_element:
     seq:
@@ -21,22 +19,27 @@ types:
         type: u2
       - id: vr
         type: str
+        size: 2
         encoding: ASCII
-        size: 2
       - id: reserved
-        size: 2
-        if: vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UT" or vr == "UN"
+        type: u2
+        if: has_explicit_vr
       - id: value_length
         type: u4
+        if: has_explicit_vr
+      - id: implicit_value_length
+        type: u4
+        if: is_implicit_vr
       - id: value
-        size: value_length
-        type:
-          switch-on: vr
-          cases:
-            '"AE", "AS", "AT", "CS", "DA", "DS", "DT", "FL", "FD", "IS", "LO", "LT", "PN", "SH", "SL", "SS", "ST", "TM", "UI", "UL", "US"': strz
-            '"OB", "OW", "OF", "SQ", "UT", "UN"': byte_array
-
-  byte_array:
-    seq:
-      - id: data
-        size-eos: true
+        size: value_length_calculated
+    instances:
+      has_explicit_vr:
+        value: |
+          vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UT" or vr == "UN" or
+          vr == "AE" or vr == "AS" or vr == "AT" or vr == "CS" or vr == "DA" or vr == "DS" or
+          vr == "DT" or vr == "IS" or vr == "LO" or vr == "LT" or vr == "PN" or vr == "SH" or
+          vr == "SL" or vr == "SS" or vr == "ST" or vr == "TM" or vr == "UI" or vr == "UL" or vr == "US"
+      is_implicit_vr:
+        value: not has_explicit_vr
+      value_length_calculated:
+        value: "_io.read_u4() if is_implicit_vr else value_length"

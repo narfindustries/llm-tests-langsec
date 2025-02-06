@@ -9,14 +9,23 @@ type DNSHeader = unit {
     arcount: uint16;
 };
 
+type DomainName = unit {
+    labels: bytes &until(input == 0);
+
+    on %init {
+        # Consume the null byte marking the end of the domain name.
+        local _ = input;
+    }
+};
+
 type DNSQuestion = unit {
-    qname: string &until=($$ == 0);
+    qname: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
-type DNSRR = unit {
-    name: string &until=($$ == 0);
+type DNSResourceRecord = unit {
+    name: DomainName;
     type: uint16;
     class: uint16;
     ttl: uint32;
@@ -26,12 +35,8 @@ type DNSRR = unit {
 
 type DNSMessage = unit {
     header: DNSHeader;
-    questions: array[DNSQuestion] &length=header.qdcount;
-    answers: array[DNSRR] &length=header.ancount;
-    authorities: array[DNSRR] &length=header.nscount;
-    additionals: array[DNSRR] &length=header.arcount;
+    questions: DNSQuestion[header.qdcount];
+    answers: DNSResourceRecord[header.ancount];
+    authorities: DNSResourceRecord[header.nscount];
+    additionals: DNSResourceRecord[header.arcount];
 };
-
-public type DNSAnalyzer = unit {
-    dns: DNSMessage;
-} &byteorder=bigendian;

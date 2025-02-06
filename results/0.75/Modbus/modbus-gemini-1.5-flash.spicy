@@ -1,42 +1,63 @@
-#version=2
+module Modbus;
 
-redef type ModbusAddress = uint16;
+type ModbusPDU: record {
+  transaction_id: uint16;
+  protocol_id: uint16;
+  length: uint16;
+  unit_id: uint8;
+  function_code: uint8;
+  data: bytes;
+};
 
-redef type ModbusFunctionCode = uint8;
+type ModbusTCP: record {
+  header: ModbusPDU;
+};
 
-event ModbusRequest(ModbusAddress unit_id, ModbusFunctionCode function_code, count:uint16, data:string) {
-  # This event represents a Modbus request.  
-  # unit_id:  The Modbus slave ID.
-  # function_code: The Modbus function code.
-  # count: The number of bytes expected in the response.
-  # data: The data payload of the Modbus request.
+type ModbusRTU: record {
+  header: ModbusPDU;
+};
+
+type ModbusASCII: record {
+  header: ModbusPDU;
+};
+
+global modbus_function_codes = {
+  0x01: "Read Coils",
+  0x02: "Read Discrete Inputs",
+  0x03: "Read Holding Registers",
+  0x04: "Read Input Registers",
+  0x05: "Write Single Coil",
+  0x06: "Write Single Register",
+  0x0f: "Write Multiple Coils",
+  0x10: "Write Multiple Registers",
+  // Add other function codes here as needed...
+};
+
+event modbus_event(pdu: ModbusPDU) {
+  local function_code_str = lookup(modbus_function_codes, pdu.function_code);
+  if (function_code_str != undef) {
+    print fmt("Modbus Function: %s", function_code_str);
+  } else {
+    print fmt("Modbus Function: Unknown (0x%x)", pdu.function_code);
+  }
+  // Add more detailed parsing and analysis based on pdu.function_code here.
+  // For example, parse the data field based on the function code to extract
+  // specific values like coil status, register values, etc.
+
+  if (pdu.function_code >= 0x80) {
+    print fmt("Modbus Exception Response: 0x%x", pdu.function_code);
+    // Handle Modbus exception responses (error codes)
+  }
 }
 
-event ModbusResponse(ModbusAddress unit_id, ModbusFunctionCode function_code, status:uint8, data:string) {
-    # This event represents a Modbus response.
-    # unit_id: The Modbus slave ID.
-    # function_code: The Modbus function code.
-    # status: The Modbus response status (0x00 for success).
-    # data: The data payload of the Modbus response.
+event modbus_tcp_event(pkt: ModbusTCP) {
+    modbus_event(pkt.header);
 }
 
-event ModbusException(ModbusAddress unit_id, ModbusFunctionCode function_code, exception_code:uint8) {
-    # This event represents a Modbus exception response.
-    # unit_id: The Modbus slave ID.
-    # function_code: The Modbus function code.
-    # exception_code: The Modbus exception code.
+event modbus_rtu_event(pkt: ModbusRTU) {
+    modbus_event(pkt.header);
 }
 
-# Example usage (replace with your actual Modbus parsing logic)
-# This is a placeholder and needs to be adapted to your specific Modbus implementation.
-
-local modbus_data = "01 03 04 00 00 00 01 02"; # Example Modbus data
-local modbus_frame = split(modbus_data, " ");
-
-if (len(modbus_frame) > 3) {
-    ModbusRequest(uint16(modbus_frame[0]), uint8(modbus_frame[1]), uint16(modbus_frame[2]), join(modbus_frame[3:], " "));
+event modbus_ascii_event(pkt: ModbusASCII) {
+    modbus_event(pkt.header);
 }
-
-# Add more sophisticated Modbus parsing here for different function codes
-# and error handling.  This example only handles one specific case.
-

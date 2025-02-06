@@ -1,47 +1,44 @@
-module DNS;
+dns_message : struct {
+    id : uint16;
+    flags : bitfield {
+        qr : uint16[1];
+        opcode : uint16[4];
+        aa : uint16[1];
+        tc : uint16[1];
+        rd : uint16[1];
+        ra : uint16[1];
+        z : uint16[3];
+        rcode : uint16[4];
+    };
+    qdcount : uint16;
+    ancount : uint16;
+    nscount : uint16;
+    arcount : uint16;
 
-type DNSMessage = struct {
-    id: uint16;
-    flags: DNSFlags;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
-    questions: array[qdcount] of DNSQuestion;
-    answers: array[ancount] of DNSRecord;
-    authorities: array[nscount] of DNSRecord;
-    additionals: array[arcount] of DNSRecord;
-};
+    questions : question[qdcount];
+    answers : resource_record[ancount];
+    authorities : resource_record[nscount];
+    additionals : resource_record[arcount];
+}
 
-type DNSFlags = struct {
-    qr: bit;
-    opcode: uint4;
-    aa: bit;
-    tc: bit;
-    rd: bit;
-    ra: bit;
-    z: uint3;
-    rcode: uint4;
-};
+question : struct {
+    qname : domain_name;
+    qtype : uint16;
+    qclass : uint16;
+}
 
-type DNSQuestion = struct {
-    qname: DNSName;
-    qtype: uint16;
-    qclass: uint16;
-};
+resource_record : struct {
+    name : domain_name;
+    type : uint16;
+    class : uint16;
+    ttl : uint32;
+    rdlength : uint16;
+    rdata : uint8[rdlength];
+}
 
-type DNSRecord = struct {
-    name: DNSName;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes[rdlength];
-};
+domain_name : list(domain_label);
 
-type DNSName = array of DNSLabel;
-
-type DNSLabel = struct {
-    length: uint8;
-    label: bytes[length];
-};
+domain_label : struct {
+    length : uint8;
+    label : uint8[length] if length > 0;
+}

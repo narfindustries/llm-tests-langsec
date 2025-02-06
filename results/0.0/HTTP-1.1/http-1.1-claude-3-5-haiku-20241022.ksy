@@ -3,94 +3,129 @@ meta:
   title: HTTP/1.1 Protocol Specification
   file-extension: http
   endian: be
+  encoding: utf-8
 
 seq:
-  - id: request
-    type: request_message
-    if: is_request
-
-  - id: response
-    type: response_message
-    if: is_response
+  - id: request_or_response
+    type: http_message
 
 types:
-  request_message:
+  http_message:
+    seq:
+      - id: start_line
+        type:
+          switch-on: _root.message_type
+          cases:
+            'request': request_line
+            'response': status_line
+      - id: headers
+        type: header_collection
+      - id: body
+        type: body_content
+        size-eos: true
+
+  request_line:
     seq:
       - id: method
-        type: str
-        encoding: ascii
-        terminator: 0x20
-
+        type: method_enum
       - id: uri
         type: str
         encoding: ascii
-        terminator: 0x20
-
-      - id: version
+      - id: http_version
         type: str
         encoding: ascii
-        terminator: 0x0d
+        pattern: 'HTTP/1\.1'
 
-      - id: headers
-        type: header_section
-
-      - id: body
-        type: body_section
-        size-eos: true
-
-  response_message:
+  status_line:
     seq:
-      - id: version
+      - id: http_version
         type: str
         encoding: ascii
-        terminator: 0x20
-
+        pattern: 'HTTP/1\.1'
       - id: status_code
+        type: u2
+        enum: http_status_codes
+      - id: reason_phrase
         type: str
         encoding: ascii
-        terminator: 0x20
 
-      - id: status_text
+  method_enum:
+    seq:
+      - id: value
         type: str
         encoding: ascii
-        terminator: 0x0d
+        valid:
+          any-of: 
+            - 'GET'
+            - 'POST'
+            - 'HEAD'
+            - 'PUT'
+            - 'DELETE'
+            - 'TRACE'
+            - 'OPTIONS'
+            - 'CONNECT'
 
-      - id: headers
-        type: header_section
-
-      - id: body
-        type: body_section
-        size-eos: true
-
-  header_section:
+  header_collection:
     seq:
       - id: headers
         type: header
-        repeat: until
-        repeat-until: not _io.is_eof
+        repeat: eos
 
   header:
     seq:
       - id: name
         type: str
         encoding: ascii
-        terminator: 0x3a
-
       - id: value
         type: str
         encoding: ascii
-        terminator: 0x0d
 
-  body_section:
+  authorization_value:
     seq:
-      - id: content
+      - id: auth_type
+        type: auth_type_enum
+      - id: credentials
         type: str
         encoding: ascii
+
+  auth_type_enum:
+    seq:
+      - id: value
+        type: str
+        encoding: ascii
+        valid:
+          any-of:
+            - 'Basic'
+            - 'Digest'
+            - 'Bearer'
+            - 'OAuth'
+
+  body_content:
+    seq:
+      - id: raw_body
+        type: bytes
         size-eos: true
 
-instances:
-  is_request:
-    value: method != ''
+enums:
+  http_status_codes:
+    100: continue
+    101: switching_protocols
+    200: ok
+    201: created
+    204: no_content
+    301: moved_permanently
+    302: found
+    304: not_modified
+    400: bad_request
+    401: unauthorized
+    403: forbidden
+    404: not_found
+    500: internal_server_error
+    501: not_implemented
+    503: service_unavailable
 
-  is_response:
-    value: version.substring(0, 4) == 'HTTP'
+instances:
+  message_type:
+    value: >-
+      _io.pos == 0 and 
+      (_root.start_line.method.value != '' ? 'request' : 'response')

@@ -1,0 +1,69 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dns="http://example.com/dns"
+           targetNamespace="http://example.com/dns">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="GeneralFormat">
+        <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit">
+        <xs:element name="Header" type="dns:HeaderType"/>
+        <xs:element name="Question" minOccurs="0" type="dns:QuestionType"/>
+        <xs:element name="Answer" minOccurs="0" type="dns:ResourceRecordType"/>
+        <xs:element name="Authority" minOccurs="0" type="dns:ResourceRecordType"/>
+        <xs:element name="Additional" minOccurs="0" type="dns:ResourceRecordType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit">
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="QR" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="Opcode" type="xs:unsignedByte" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="AA" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="TC" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="RD" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="RA" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="Z" type="xs:unsignedByte" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="RCODE" type="xs:unsignedByte" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuestionType">
+    <xs:sequence dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit">
+      <xs:element name="QNAME" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%x00"/>
+      <xs:element name="QTYPE" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="QCLASS" type="xs:unsignedShort" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResourceRecordType">
+    <xs:sequence dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit">
+      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%x00"/>
+      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="RDATA">
+        <xs:complexType>
+          <xs:sequence dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit">
+            <xs:element name="data" type="xs:hexBinary" dfdl:length="{ ../RDLENGTH }"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

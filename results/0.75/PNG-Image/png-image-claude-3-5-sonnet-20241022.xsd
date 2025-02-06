@@ -1,54 +1,229 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/PNG"
-    targetNamespace="http://example.com/PNG">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+           targetNamespace="urn:png">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="bigEndian"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthUnits="bytes"
-                lengthKind="implicit"/>
+            <dfdl:format alignment="1" 
+                        lengthKind="implicit"
+                        byteOrder="bigEndian"
+                        encoding="UTF-8"
+                        leadingSkip="0"
+                        trailingSkip="0"
+                        initiatedContent="no"
+                        sequenceKind="ordered"
+                        representation="binary"
+                        occursCountKind="implicit"
+                        floating="no"
+                        textBidi="no"
+                        lengthUnits="bytes"
+                        encodingErrorPolicy="replace"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="png">
+    <xs:element name="PNG">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="signature" type="local:SignatureType"/>
-                <xs:element name="chunks" type="local:ChunksType"/>
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <!-- PNG Signature -->
+                <xs:element name="signature" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="8" 
+                           dfdl:outputValueCalc="{ xs:hexBinary('89504E470D0A1A0A') }"/>
+
+                <!-- Chunks -->
+                <xs:element name="chunks" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence dfdl:sequenceKind="ordered">
+                            <xs:element name="length" type="xs:unsignedInt"/>
+                            <xs:element name="type" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+                            <xs:element name="data">
+                                <xs:complexType>
+                                    <xs:choice>
+                                        <!-- IHDR Chunk -->
+                                        <xs:element name="IHDR" dfdl:initiator="IHDR">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="width" type="xs:unsignedInt"/>
+                                                    <xs:element name="height" type="xs:unsignedInt"/>
+                                                    <xs:element name="bitDepth" type="xs:unsignedByte"/>
+                                                    <xs:element name="colorType" type="xs:unsignedByte"/>
+                                                    <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+                                                    <xs:element name="filterMethod" type="xs:unsignedByte"/>
+                                                    <xs:element name="interlaceMethod" type="xs:unsignedByte"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- PLTE Chunk -->
+                                        <xs:element name="PLTE" dfdl:initiator="PLTE">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="palette" maxOccurs="256">
+                                                        <xs:complexType>
+                                                            <xs:sequence dfdl:sequenceKind="ordered">
+                                                                <xs:element name="red" type="xs:unsignedByte"/>
+                                                                <xs:element name="green" type="xs:unsignedByte"/>
+                                                                <xs:element name="blue" type="xs:unsignedByte"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- IDAT Chunk -->
+                                        <xs:element name="IDAT" dfdl:initiator="IDAT" type="xs:hexBinary"/>
+
+                                        <!-- IEND Chunk -->
+                                        <xs:element name="IEND" dfdl:initiator="IEND">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered"/>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- tRNS Chunk -->
+                                        <xs:element name="tRNS" dfdl:initiator="tRNS" type="xs:hexBinary"/>
+
+                                        <!-- cHRM Chunk -->
+                                        <xs:element name="cHRM" dfdl:initiator="cHRM">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="whitePointX" type="xs:unsignedInt"/>
+                                                    <xs:element name="whitePointY" type="xs:unsignedInt"/>
+                                                    <xs:element name="redX" type="xs:unsignedInt"/>
+                                                    <xs:element name="redY" type="xs:unsignedInt"/>
+                                                    <xs:element name="greenX" type="xs:unsignedInt"/>
+                                                    <xs:element name="greenY" type="xs:unsignedInt"/>
+                                                    <xs:element name="blueX" type="xs:unsignedInt"/>
+                                                    <xs:element name="blueY" type="xs:unsignedInt"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- gAMA Chunk -->
+                                        <xs:element name="gAMA" dfdl:initiator="gAMA">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="gamma" type="xs:unsignedInt"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- iCCP Chunk -->
+                                        <xs:element name="iCCP" dfdl:initiator="iCCP">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="profileName" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+                                                    <xs:element name="compressedProfile" type="xs:hexBinary"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- sBIT Chunk -->
+                                        <xs:element name="sBIT" dfdl:initiator="sBIT" type="xs:hexBinary"/>
+
+                                        <!-- sRGB Chunk -->
+                                        <xs:element name="sRGB" dfdl:initiator="sRGB">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="renderingIntent" type="xs:unsignedByte"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- tEXt Chunk -->
+                                        <xs:element name="tEXt" dfdl:initiator="tEXt">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="keyword" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="text" type="xs:string"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- zTXt Chunk -->
+                                        <xs:element name="zTXt" dfdl:initiator="zTXt">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="keyword" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+                                                    <xs:element name="compressedText" type="xs:hexBinary"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- iTXt Chunk -->
+                                        <xs:element name="iTXt" dfdl:initiator="iTXt">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="keyword" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="compressionFlag" type="xs:unsignedByte"/>
+                                                    <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+                                                    <xs:element name="languageTag" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="translatedKeyword" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="text" type="xs:string"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- bKGD Chunk -->
+                                        <xs:element name="bKGD" dfdl:initiator="bKGD" type="xs:hexBinary"/>
+
+                                        <!-- pHYs Chunk -->
+                                        <xs:element name="pHYs" dfdl:initiator="pHYs">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="pixelsPerUnitX" type="xs:unsignedInt"/>
+                                                    <xs:element name="pixelsPerUnitY" type="xs:unsignedInt"/>
+                                                    <xs:element name="unitSpecifier" type="xs:unsignedByte"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- sPLT Chunk -->
+                                        <xs:element name="sPLT" dfdl:initiator="sPLT">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="paletteName" type="xs:string" dfdl:terminator="%NL;"/>
+                                                    <xs:element name="sampleDepth" type="xs:unsignedByte"/>
+                                                    <xs:element name="entries" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:sequence dfdl:sequenceKind="ordered">
+                                                                <xs:element name="red" type="xs:unsignedShort"/>
+                                                                <xs:element name="green" type="xs:unsignedShort"/>
+                                                                <xs:element name="blue" type="xs:unsignedShort"/>
+                                                                <xs:element name="alpha" type="xs:unsignedShort"/>
+                                                                <xs:element name="frequency" type="xs:unsignedShort"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+
+                                        <!-- tIME Chunk -->
+                                        <xs:element name="tIME" dfdl:initiator="tIME">
+                                            <xs:complexType>
+                                                <xs:sequence dfdl:sequenceKind="ordered">
+                                                    <xs:element name="year" type="xs:unsignedShort"/>
+                                                    <xs:element name="month" type="xs:unsignedByte"/>
+                                                    <xs:element name="day" type="xs:unsignedByte"/>
+                                                    <xs:element name="hour" type="xs:unsignedByte"/>
+                                                    <xs:element name="minute" type="xs:unsignedByte"/>
+                                                    <xs:element name="second" type="xs:unsignedByte"/>
+                                                </xs:sequence>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:choice>
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="crc" type="xs:unsignedInt"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
-    <xs:complexType name="SignatureType">
-        <xs:sequence>
-            <xs:element name="pngSignature" type="xs:hexBinary" dfdl:length="8" 
-                dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="ChunksType">
-        <xs:sequence>
-            <xs:element name="chunk" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="length" type="xs:unsignedInt"/>
-                        <xs:element name="type" type="xs:string" dfdl:length="4" 
-                            dfdl:lengthKind="explicit"/>
-                        <xs:element name="data" type="xs:hexBinary" 
-                            dfdl:lengthKind="explicit"
-                            dfdl:length="{ ../length }"/>
-                        <xs:element name="crc" type="xs:unsignedInt"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
-
 </xs:schema>

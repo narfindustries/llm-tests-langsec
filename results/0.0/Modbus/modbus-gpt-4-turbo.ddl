@@ -1,20 +1,19 @@
-module Modbus {
-  type Word = U16 : little;
-  type Byte = U8;
+module Modbus;
 
-  type ExceptionCode = U8 {
-    IllegalFunction       = 0x01,
-    IllegalDataAddress    = 0x02,
-    IllegalDataValue      = 0x03,
-    ServerDeviceFailure   = 0x04,
-    Acknowledge           = 0x05,
-    ServerDeviceBusy      = 0x06,
-    MemoryParityError     = 0x08,
-    GatewayPathUnavailable = 0x0A,
-    GatewayTargetFailedToRespond = 0x0B
-  };
+type ModbusADU = struct {
+    transactionId : uint16;
+    protocolId    : uint16;
+    length        : uint16;
+    unitId        : uint8;
+    pdu           : ModbusPDU;
+};
 
-  type FunctionCode = U8 {
+type ModbusPDU = struct {
+    functionCode  : uint8;
+    data          : bytes(length - 1);
+};
+
+type ModbusFunctionCode = enum uint8 {
     ReadCoils = 0x01,
     ReadDiscreteInputs = 0x02,
     ReadHoldingRegisters = 0x03,
@@ -34,41 +33,31 @@ module Modbus {
     ReadWriteMultipleRegisters = 0x17,
     ReadFIFOQueue = 0x18,
     EncapsulatedInterfaceTransport = 0x2B
-  };
+};
 
-  type MBAPHeader = struct {
-    transactionId : Word;
-    protocolId    : Word;
-    length        : Word;
-    unitId        : Byte;
-  };
+type ModbusRequest = struct {
+    functionCode : ModbusFunctionCode;
+    data         : bytes;
+};
 
-  type RequestPDU = struct {
-    functionCode : FunctionCode;
-    data         : bytes @length(this._parent.length - 2);
-  };
+type ModbusResponse = struct {
+    functionCode : ModbusFunctionCode;
+    data         : bytes;
+};
 
-  type ResponsePDU = struct {
-    functionCode : FunctionCode;
-    data         : bytes @length(this._parent.length - 2);
-  };
+type ModbusExceptionResponse = struct {
+    functionCode  : uint8;
+    exceptionCode : ModbusExceptionCode;
+};
 
-  type ExceptionPDU = struct {
-    functionCode : FunctionCode;
-    exceptionCode: ExceptionCode;
-  };
-
-  type ADU = struct {
-    header : MBAPHeader;
-    pdu    : select(this.header.protocolId) {
-      0 -> select(this.header.unitId) {
-        0 -> ExceptionPDU,
-        _ -> select(this.pdu.functionCode) {
-          FunctionCode.ReadCoils | FunctionCode.ReadDiscreteInputs | FunctionCode.ReadHoldingRegisters | FunctionCode.ReadInputRegisters -> ResponsePDU,
-          FunctionCode.WriteSingleCoil | FunctionCode.WriteSingleRegister | FunctionCode.WriteMultipleCoils | FunctionCode.WriteMultipleRegisters | FunctionCode.ReadExceptionStatus | FunctionCode.Diagnostics | FunctionCode.GetComEventCounter | FunctionCode.GetComEventLog | FunctionCode.ReportServerID | FunctionCode.ReadFileRecord | FunctionCode.WriteFileRecord | FunctionCode.MaskWriteRegister | FunctionCode.ReadWriteMultipleRegisters | FunctionCode.ReadFIFOQueue | FunctionCode.EncapsulatedInterfaceTransport -> RequestPDU,
-          _ -> ExceptionPDU
-        }
-      }
-    }
-  };
-}
+type ModbusExceptionCode = enum uint8 {
+    IllegalFunction = 0x01,
+    IllegalDataAddress = 0x02,
+    IllegalDataValue = 0x03,
+    ServerDeviceFailure = 0x04,
+    Acknowledge = 0x05,
+    ServerDeviceBusy = 0x06,
+    MemoryParityError = 0x08,
+    GatewayPathUnavailable = 0x0A,
+    GatewayTargetDeviceFailedToRespond = 0x0B
+};

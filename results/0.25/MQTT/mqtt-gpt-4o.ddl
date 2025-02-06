@@ -1,112 +1,170 @@
-type MQTT = struct {
-    fixed_header: FixedHeader,
-    variable_header: VariableHeader,
-    payload: Payload
+enum ControlPacketType : uint8 {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
 }
 
-type FixedHeader = struct {
-    byte1: u8,
-    remaining_length: VLInt
+struct MQTT {
+    ControlPacketType packetType;
+    uint8 flags;
+    uint32 remainingLength;
+    switch (packetType) {
+        case CONNECT: ConnectPacket connect;
+        case CONNACK: ConnackPacket connack;
+        case PUBLISH: PublishPacket publish;
+        case PUBACK: PubackPacket puback;
+        case PUBREC: PubrecPacket pubrec;
+        case PUBREL: PubrelPacket pubrel;
+        case PUBCOMP: PubcompPacket pubcomp;
+        case SUBSCRIBE: SubscribePacket subscribe;
+        case SUBACK: SubackPacket suback;
+        case UNSUBSCRIBE: UnsubscribePacket unsubscribe;
+        case UNSUBACK: UnsubackPacket unsuback;
+        case PINGREQ: PingreqPacket pingreq;
+        case PINGRESP: PingrespPacket pingresp;
+        case DISCONNECT: DisconnectPacket disconnect;
+        case AUTH: AuthPacket auth;
+    }
 }
 
-type VariableHeader = switch (fixed_header.byte1 & 0xF0) {
-    0x10 => ConnectHeader,
-    0x20 => ConnAckHeader,
-    0x30 => PublishHeader,
-    0x40 => PubAckHeader,
-    0x50 => PubRecHeader,
-    0x60 => PubRelHeader,
-    0x70 => PubCompHeader,
-    0x80 => SubscribeHeader,
-    0x90 => SubAckHeader,
-    0xA0 => UnsubscribeHeader,
-    0xB0 => UnsubAckHeader,
-    0xC0 => PingReqHeader,
-    0xD0 => PingRespHeader,
-    0xE0 => DisconnectHeader,
-    0xF0 => AuthHeader
+struct ConnectPacket {
+    string protocolName;
+    uint8 protocolLevel;
+    uint8 connectFlags;
+    uint16 keepAlive;
+    Properties properties;
+    string clientIdentifier;
+    if (connectFlags & 0x04) {
+        uint8 willPropertiesLength;
+        WillProperties willProperties;
+        string willTopic;
+        bytes willPayload;
+    }
+    if (connectFlags & 0x80) {
+        string username;
+    }
+    if (connectFlags & 0x40) {
+        bytes password;
+    }
 }
 
-type Payload = switch (fixed_header.byte1 & 0xF0) {
-    0x30 => PublishPayload,
-    0x80 => SubscribePayload,
-    0xA0 => UnsubscribePayload,
-    _ => EmptyPayload
+struct ConnackPacket {
+    uint8 connackFlags;
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type VLInt = vlq
-
-type ConnectHeader = struct {
-    protocol_name: String,
-    protocol_level: u8,
-    connect_flags: u8,
-    keep_alive: u16
+struct PublishPacket {
+    string topicName;
+    if ((flags & 0x06) != 0) {
+        uint16 packetIdentifier;
+    }
+    Properties properties;
+    bytes payload;
 }
 
-type ConnAckHeader = struct {
-    connect_ack_flags: u8,
-    connect_return_code: u8
+struct PubackPacket {
+    uint16 packetIdentifier;
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type PublishHeader = struct {
-    topic_name: String,
-    packet_identifier: u16
+struct PubrecPacket {
+    uint16 packetIdentifier;
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type PubAckHeader = struct {
-    packet_identifier: u16
+struct PubrelPacket {
+    uint16 packetIdentifier;
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type PubRecHeader = struct {
-    packet_identifier: u16
+struct PubcompPacket {
+    uint16 packetIdentifier;
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type PubRelHeader = struct {
-    packet_identifier: u16
+struct SubscribePacket {
+    uint16 packetIdentifier;
+    Properties properties;
+    list<Subscription> subscriptions;
 }
 
-type PubCompHeader = struct {
-    packet_identifier: u16
+struct Subscription {
+    string topicFilter;
+    uint8 subscriptionOptions;
 }
 
-type SubscribeHeader = struct {
-    packet_identifier: u16
+struct SubackPacket {
+    uint16 packetIdentifier;
+    Properties properties;
+    list<uint8> reasonCodes;
 }
 
-type SubAckHeader = struct {
-    packet_identifier: u16
+struct UnsubscribePacket {
+    uint16 packetIdentifier;
+    Properties properties;
+    list<string> topicFilters;
 }
 
-type UnsubscribeHeader = struct {
-    packet_identifier: u16
+struct UnsubackPacket {
+    uint16 packetIdentifier;
+    Properties properties;
+    list<uint8> reasonCodes;
 }
 
-type UnsubAckHeader = struct {
-    packet_identifier: u16
+struct PingreqPacket {}
+
+struct PingrespPacket {}
+
+struct DisconnectPacket {
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type PingReqHeader = struct {}
-
-type PingRespHeader = struct {}
-
-type DisconnectHeader = struct {}
-
-type AuthHeader = struct {}
-
-type PublishPayload = struct {
-    message: Bytes
+struct AuthPacket {
+    uint8 reasonCode;
+    Properties properties;
 }
 
-type SubscribePayload = struct {
-    topics: List<String>
+struct Properties {
+    optional uint32 sessionExpiryInterval;
+    optional uint16 receiveMaximum;
+    optional uint32 maximumPacketSize;
+    optional uint16 topicAliasMaximum;
+    optional uint8 requestResponseInformation;
+    optional uint8 requestProblemInformation;
+    list<UserProperty> userProperties;
+    optional string authenticationMethod;
+    optional bytes authenticationData;
 }
 
-type UnsubscribePayload = struct {
-    topics: List<String>
+struct WillProperties {
+    optional uint32 willDelayInterval;
+    optional uint8 payloadFormatIndicator;
+    optional uint32 messageExpiryInterval;
+    optional string contentType;
+    optional string responseTopic;
+    optional bytes correlationData;
+    list<UserProperty> userProperties;
 }
 
-type EmptyPayload = struct {}
-
-type String = prefixed_string(u16)
-
-type Bytes = list[u8]
+struct UserProperty {
+    string name;
+    string value;
+}

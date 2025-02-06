@@ -2,25 +2,140 @@ module PNG;
 
 import spicy;
 
-public type Image = unit {
-    signature: bytes(8) &requires(self == b"\x89PNG\r\n\x1a\n");
-    
-    chunks: list<Chunk> &until($!);
-    
-    type Chunk = unit {
-        length: uint32;
-        chunk_type: bytes(4);
-        chunk_data: bytes(self.length) if (self.length > 0);
-        crc: uint32;
+public type File = unit {
+    signature: bytes(8) &requires($$==b"\x89PNG\r\n\x1a\n");
+    header: Header;
+    chunks: Chunk[] &until($$.type == b"IEND");
+};
+
+type Header = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8 &validate($$==1 || $$==2 || $$==4 || $$==8 || $$==16);
+    color_type: uint8 &validate($$==0 || $$==2 || $$==3 || $$==4 || $$==6);
+    compression: uint8 &validate($$==0);
+    filter: uint8 &validate($$==0);
+    interlace: uint8 &validate($$==0 || $$==1);
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes(4);
+    data: bytes(length);
+    crc: uint32;
+
+    var parsed_data: ChunkData = ChunkData(type, data);
+};
+
+type ChunkData = unit(chunk_type: bytes, chunk_data: bytes) {
+    switch ( chunk_type ) {
+        b"PLTE" -> palette: Palette(chunk_data);
+        b"tRNS" -> transparency: Transparency(chunk_data);
+        b"cHRM" -> chromaticity: Chromaticity(chunk_data);
+        b"gAMA" -> gamma: Gamma(chunk_data);
+        b"iCCP" -> icc_profile: ICCProfile(chunk_data);
+        b"sBIT" -> significant_bits: SignificantBits(chunk_data);
+        b"sRGB" -> standard_rgb: StandardRGB(chunk_data);
+        b"tEXt" -> text: Text(chunk_data);
+        b"zTXt" -> compressed_text: CompressedText(chunk_data);
+        b"iTXt" -> international_text: InternationalText(chunk_data);
+        b"bKGD" -> background: Background(chunk_data);
+        b"pHYs" -> physical_dims: PhysicalDimensions(chunk_data);
+        b"sPLT" -> suggested_palette: SuggestedPalette(chunk_data);
+        b"hIST" -> palette_histogram: PaletteHistogram(chunk_data);
+        b"tIME" -> modification_time: ModificationTime(chunk_data);
+        b"IDAT" -> image_data: ImageData(chunk_data);
+        b"IEND" -> end: End(chunk_data);
     };
 };
 
-public function is_png(data: bytes) : bool {
-    try {
-        local img = parse Image(data);
-        return true;
-    }
-    catch {
-        return false;
-    }
+type Palette = unit(data: bytes) { 
+    entries: bytes &size=|data|; 
 }
+
+type Transparency = unit(data: bytes) { 
+    transparency_data: bytes &size=|data|; 
+}
+
+type Chromaticity = unit(data: bytes) { 
+    white_x: uint32, 
+    white_y: uint32, 
+    red_x: uint32, 
+    red_y: uint32, 
+    green_x: uint32, 
+    green_y: uint32, 
+    blue_x: uint32, 
+    blue_y: uint32; 
+}
+
+type Gamma = unit(data: bytes) { 
+    value: uint32; 
+}
+
+type ICCProfile = unit(data: bytes) { 
+    name: string, 
+    compression: uint8, 
+    profile: bytes; 
+}
+
+type SignificantBits = unit(data: bytes) { 
+    significant_bits_data: bytes &size=|data|; 
+}
+
+type StandardRGB = unit(data: bytes) { 
+    rendering_intent: uint8; 
+}
+
+type Text = unit(data: bytes) { 
+    keyword: string, 
+    text: string; 
+}
+
+type CompressedText = unit(data: bytes) { 
+    keyword: string, 
+    compression: uint8, 
+    text: bytes; 
+}
+
+type InternationalText = unit(data: bytes) { 
+    keyword: string, 
+    compression: uint8, 
+    language_tag: string, 
+    translated_keyword: string, 
+    text: string; 
+}
+
+type Background = unit(data: bytes) { 
+    background_data: bytes &size=|data|; 
+}
+
+type PhysicalDimensions = unit(data: bytes) { 
+    pixels_x: uint32, 
+    pixels_y: uint32, 
+    unit: uint8; 
+}
+
+type SuggestedPalette = unit(data: bytes) { 
+    name: string, 
+    depth: uint8, 
+    entries: bytes; 
+}
+
+type PaletteHistogram = unit(data: bytes) { 
+    frequencies: uint16[]; 
+}
+
+type ModificationTime = unit(data: bytes) { 
+    year: uint16, 
+    month: uint8, 
+    day: uint8, 
+    hour: uint8, 
+    minute: uint8, 
+    second: uint8; 
+}
+
+type ImageData = unit(data: bytes) { 
+    compressed_data: bytes &size=|data|; 
+}
+
+type End = unit(data: bytes) {};

@@ -3,26 +3,30 @@ module GZIP;
 public type GzipHeader = unit {
     id1: uint8;
     id2: uint8;
-    compressionMethod: uint8;
-    flags: uint8;
+    cm: uint8;
+    flg: uint8;
     mtime: uint32;
-    extraFlags: uint8;
+    xfl: uint8;
     os: uint8;
 
-    on %init {
-        if (self.id1 != 0x1f || self.id2 != 0x8b) {
-            throw Error("Not a valid GZIP header");
-        }
-    }
+    extra_field_present: bool &requires=($$ == (self.flg & 0x04) != 0);
+    fname_present: bool &requires=($$ == (self.flg & 0x08) != 0);
+    fcomment_present: bool &requires=($$ == (self.flg & 0x10) != 0);
+    fhcrc_present: bool &requires=($$ == (self.flg & 0x02) != 0);
+
+    extra: bytes &size=extra_len if (self.extra_field_present);
+    fname: bytes &until=b"\x00" if (self.fname_present);
+    fcomment: bytes &until=b"\x00" if (self.fcomment_present);
+    fhcrc: uint16 if (self.fhcrc_present);
 };
 
-public type GzipFooter = unit {
+public type GzipMember = unit {
+    header: GzipHeader;
+    compressed_data: bytes &eod;
     crc32: uint32;
-    inputSize: uint32;
+    isize: uint32;
 };
 
 public type GzipFile = unit {
-    header: GzipHeader;
-    data: bytes &size=self.header.inputSize;
-    footer: GzipFooter;
+    members: GzipMember[] &eod;
 };

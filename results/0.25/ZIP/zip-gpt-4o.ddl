@@ -1,47 +1,93 @@
-module ZIP {
-    struct ZipFile {
-        local file_count: u16 = 0;
-        files: FileEntry[file_count];
+endianness "big";
+
+struct LocalFileHeader {
+    u32 signature = 0x04034b50;
+    u16 versionNeededToExtract;
+    u16 generalPurposeBitFlag;
+    u16 compressionMethod;
+    u16 lastModFileTime;
+    u16 lastModFileDate;
+    u32 crc32;
+    u32 compressedSize;
+    u32 uncompressedSize;
+    u16 fileNameLength;
+    u16 extraFieldLength;
+    u8[fileNameLength] fileName;
+    u8[extraFieldLength] extraField;
+    u8[compressedSize] compressedData;
+    if (generalPurposeBitFlag & 0x0008) {
+        DataDescriptor dataDescriptor;
     }
+}
 
-    struct FileEntry {
-        local header_signature: u32 = 0x04034b50;
-        local extra_field_length: u16 = 0;
-        local file_name_length: u16 = 0;
-        local compressed_size: u32 = 0;
-        local uncompressed_size: u32 = 0;
-        local compression_method: u16 = 0;
-        local crc32: u32 = 0;
-        local file_name: string[file_name_length];
-        local extra_field: bytes[extra_field_length];
-        local file_data: bytes[compressed_size];
+struct DataDescriptor {
+    u32 crc32;
+    u32 compressedSize;
+    u32 uncompressedSize;
+}
 
-        header: FileHeader = {
-            signature: header_signature,
-            version_needed: u16,
-            flags: u16,
-            compression_method: compression_method,
-            last_mod_time: u16,
-            last_mod_date: u16,
-            crc32: crc32,
-            compressed_size: compressed_size,
-            uncompressed_size: uncompressed_size,
-            file_name_length: file_name_length,
-            extra_field_length: extra_field_length
-        };
+struct CentralDirectoryFileHeader {
+    u32 signature = 0x02014b50;
+    u16 versionMadeBy;
+    u16 versionNeededToExtract;
+    u16 generalPurposeBitFlag;
+    u16 compressionMethod;
+    u16 lastModFileTime;
+    u16 lastModFileDate;
+    u32 crc32;
+    u32 compressedSize;
+    u32 uncompressedSize;
+    u16 fileNameLength;
+    u16 extraFieldLength;
+    u16 fileCommentLength;
+    u16 diskNumberStart;
+    u16 internalFileAttributes;
+    u32 externalFileAttributes;
+    u32 relativeOffsetOfLocalHeader;
+    u8[fileNameLength] fileName;
+    u8[extraFieldLength] extraField;
+    u8[fileCommentLength] fileComment;
+}
 
-        struct FileHeader {
-            signature: u32;
-            version_needed: u16;
-            flags: u16;
-            compression_method: u16;
-            last_mod_time: u16;
-            last_mod_date: u16;
-            crc32: u32;
-            compressed_size: u32;
-            uncompressed_size: u32;
-            file_name_length: u16;
-            extra_field_length: u16;
-        }
+struct EndOfCentralDirectoryRecord {
+    u32 signature = 0x06054b50;
+    u16 numberOfThisDisk;
+    u16 diskWhereCentralDirectoryStarts;
+    u16 numberOfCentralDirectoryRecordsOnThisDisk;
+    u16 totalNumberOfCentralDirectoryRecords;
+    u32 sizeOfCentralDirectory;
+    u32 offsetOfStartOfCentralDirectory;
+    u16 zipFileCommentLength;
+    u8[zipFileCommentLength] zipFileComment;
+}
+
+struct Zip64EndOfCentralDirectoryRecord {
+    u32 signature = 0x06064b50;
+    u64 sizeOfZip64EndOfCentralDirectoryRecord;
+    u16 versionMadeBy;
+    u16 versionNeededToExtract;
+    u32 numberOfThisDisk;
+    u32 diskWhereCentralDirectoryStarts;
+    u64 numberOfCentralDirectoryRecordsOnThisDisk;
+    u64 totalNumberOfCentralDirectoryRecords;
+    u64 sizeOfCentralDirectory;
+    u64 offsetOfStartOfCentralDirectory;
+    u8[] extensibleDataSector;
+}
+
+struct Zip64EndOfCentralDirectoryLocator {
+    u32 signature = 0x07064b50;
+    u32 numberOfDiskWithStartOfZip64EndOfCentralDirectory;
+    u64 relativeOffsetOfZip64EndOfCentralDirectoryRecord;
+    u32 totalNumberOfDisks;
+}
+
+struct ZipFile {
+    LocalFileHeader[] localFileHeaders;
+    CentralDirectoryFileHeader[] centralDirectoryFileHeaders;
+    EndOfCentralDirectoryRecord endOfCentralDirectoryRecord;
+    if (endOfCentralDirectoryRecord.totalNumberOfCentralDirectoryRecords == 0xFFFF) {
+        Zip64EndOfCentralDirectoryRecord zip64EndOfCentralDirectoryRecord;
+        Zip64EndOfCentralDirectoryLocator zip64EndOfCentralDirectoryLocator;
     }
 }

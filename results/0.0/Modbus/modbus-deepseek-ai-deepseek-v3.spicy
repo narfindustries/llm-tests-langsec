@@ -1,0 +1,205 @@
+module Modbus;
+
+public type Modbus_Header = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+public type Modbus_PDU = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_Exception = unit {
+    exception_code: uint8;
+};
+
+public type Modbus_Response = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_Request = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_Exception_Response = unit {
+    function_code: uint8;
+    exception_code: uint8;
+};
+
+public type Modbus_Normal_Response = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_Broadcast_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_Slave_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_Master_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_TCP_IP_Port = unit {
+    port: uint16;
+};
+
+public type Modbus_RTU_Baud_Rate = unit {
+    baud_rate: uint32;
+};
+
+public type Modbus_RTU_Parity = unit {
+    parity: uint8;
+};
+
+public type Modbus_RTU_Stop_Bits = unit {
+    stop_bits: uint8;
+};
+
+public type Modbus_RTU_Data_Bits = unit {
+    data_bits: uint8;
+};
+
+public type Modbus_ASCII_Start_Bit = unit {
+    start_bit: uint8;
+};
+
+public type Modbus_ASCII_Stop_Bit = unit {
+    stop_bit: uint8;
+};
+
+public type Modbus_ASCII_Data_Bits = unit {
+    data_bits: uint8;
+};
+
+public type Modbus_ASCII_Parity = unit {
+    parity: uint8;
+};
+
+public type Modbus_ASCII_Baud_Rate = unit {
+    baud_rate: uint32;
+};
+
+public type Modbus_ASCII_Start_Delimiter = unit {
+    start_delimiter: uint8;
+};
+
+public type Modbus_ASCII_End_Delimiter = unit {
+    end_delimiter: uint16;
+};
+
+public type Modbus_ASCII_LRC = unit {
+    lrc: uint8;
+};
+
+public type Modbus_RTU_CRC = unit {
+    crc: uint16;
+};
+
+public type Modbus_TCP_IP_Header = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+public type Modbus_TCP_IP_PDU = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_TCP_IP_Response = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_TCP_IP_Request = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_TCP_IP_Exception_Response = unit {
+    function_code: uint8;
+    exception_code: uint8;
+};
+
+public type Modbus_TCP_IP_Normal_Response = unit {
+    function_code: uint8;
+    data: bytes &size=length-1;
+};
+
+public type Modbus_TCP_IP_Broadcast_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_TCP_IP_Slave_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_TCP_IP_Master_Address = unit {
+    address: uint8;
+};
+
+public type Modbus_TCP_IP_Port = unit {
+    port: uint16;
+};
+
+public type Modbus_TCP_IP_IP_Address = unit {
+    ip_address: bytes &size=4;
+};
+
+public type Modbus_TCP_IP_Subnet_Mask = unit {
+    subnet_mask: bytes &size=4;
+};
+
+public type Modbus_TCP_IP_Gateway = unit {
+    gateway: bytes &size=4;
+};
+
+public type Modbus_TCP_IP_DNS = unit {
+    dns: bytes &size=4;
+};
+
+public type Modbus_TCP_IP_MAC_Address = unit {
+    mac_address: bytes &size=6;
+};
+
+public type Modbus_TCP_IP_Hostname = unit {
+    hostname: bytes &until=0x00;
+};
+
+public type Modbus_TCP_IP_Domain_Name = unit {
+    domain_name: bytes &until=0x00;
+};
+
+public type Modbus_TCP_IP_Timeout = unit {
+    timeout: uint32;
+};
+
+public type Modbus_TCP_IP_Retries = unit {
+    retries: uint8;
+};
+
+public type Modbus_TCP_IP_Keepalive = unit {
+    keepalive: uint8;
+};
+
+public type Modbus_TCP_IP_Keepalive_Interval = unit {
+    keepalive_interval: uint32;
+};
+
+public type Modbus_TCP_IP_Keepalive_Probes = unit {
+    keepalive_probes: uint8;
+};
+
+public type Modbus_TCP_IP_Keepalive_Time = unit {
+    keepalive_time: uint32;
+};

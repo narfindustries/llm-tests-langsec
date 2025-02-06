@@ -1,78 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gif"
-           xmlns:ex="http://example.com/gif"
-           elementFormDefault="qualified"
-           dfdl:format="http://example.com/gif"
-           dfdl:encoding="utf-8">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/gif" xmlns="http://example.com/gif" elementFormDefault="qualified">
+  
+  <xsd:element name="GIF" type="GIFType">
+    <xsd:annotation>
+      <xsd:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:format byteOrder="bigEndian" encoding="ascii" lengthKind="explicit"/>
+      </xsd:appinfo>
+    </xsd:annotation>
+  </xsd:element>
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:gifFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xsd:complexType name="GIFType">
+    <xsd:sequence>
+      <xsd:element name="Header" type="HeaderType"/>
+      <xsd:element name="LogicalScreenDescriptor" type="LogicalScreenDescriptorType"/>
+      <xsd:element name="GlobalColorTable" type="ColorTableType" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if ($LogicalScreenDescriptor/GlobalColorTableFlag eq '1') then 2 ^ ($LogicalScreenDescriptor/SizeOfGlobalColorTable + 1) else 0 }"/>
+      <xsd:element name="DataBlocks" type="DataBlocksType" maxOccurs="unbounded"/>
+      <xsd:element name="Trailer" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x3B }"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <dfdl:defineFormat name="gifFormat">
-        <dfdl:sequenceLengthKind value="explicit"/>
-        <dfdl:lengthKind value="explicit"/>
-        <dfdl:byteOrder value="bigEndian"/>
-        <dfdl:encoding value="ascii"/>
-    </dfdl:defineFormat>
+  <xsd:complexType name="HeaderType">
+    <xsd:sequence>
+      <xsd:element name="Signature" type="xsd:string" dfdl:length="3" dfdl:outputValueCalc="{ 'GIF' }"/>
+      <xsd:element name="Version" type="xsd:string" dfdl:length="3" dfdl:outputValueCalc="{ '89a' }"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:element name="GIF" type="ex:GIFType"/>
+  <xsd:complexType name="LogicalScreenDescriptorType">
+    <xsd:sequence>
+      <xsd:element name="LogicalScreenWidth" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="LogicalScreenHeight" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="PackedFields" type="PackedFieldsType"/>
+      <xsd:element name="BackgroundColorIndex" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="PixelAspectRatio" type="xsd:unsignedByte" dfdl:length="1"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="GIFType">
-        <xs:sequence>
-            <xs:element name="Header" type="ex:HeaderType"/>
-            <xs:element name="LogicalScreenDescriptor" type="ex:LogicalScreenDescriptorType"/>
-            <xs:element name="GlobalColorTable" type="ex:GlobalColorTableType" minOccurs="0"/>
-            <xs:element name="Blocks" type="ex:BlocksType" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="PackedFieldsType">
+    <xsd:sequence>
+      <xsd:element name="GlobalColorTableFlag" type="xsd:boolean" dfdl:length="1" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="ColorResolution" type="xsd:unsignedByte" dfdl:length="3" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="SortFlag" type="xsd:boolean" dfdl:length="1" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="SizeOfGlobalColorTable" type="xsd:unsignedByte" dfdl:length="3" dfdl:bitOrder="leastSignificantBitFirst"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="HeaderType">
-        <xs:sequence>
-            <xs:element name="Signature" type="xs:string" dfdl:length="3" dfdl:lengthKind="explicit"/>
-            <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:lengthKind="explicit"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="ColorTableType">
+    <xsd:sequence>
+      <xsd:element name="ColorEntry" type="ColorEntryType" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ 2 ^ ($SizeOfGlobalColorTable + 1) }"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="LogicalScreenDescriptorType">
-        <xs:sequence>
-            <xs:element name="LogicalScreenWidth" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-            <xs:element name="LogicalScreenHeight" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-            <xs:element name="PackedFields" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-            <xs:element name="BackgroundColorIndex" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-            <xs:element name="PixelAspectRatio" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="ColorEntryType">
+    <xsd:sequence>
+      <xsd:element name="Red" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="Green" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="Blue" type="xsd:unsignedByte" dfdl:length="1"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="GlobalColorTableType">
-        <xs:sequence dfdl:sequenceLengthKind="implicit">
-            <xs:element name="Color" type="ex:ColorType" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="DataBlocksType">
+    <xsd:choice>
+      <xsd:element name="ImageDescriptor" type="ImageDescriptorType"/>
+      <xsd:element name="ExtensionBlock" type="ExtensionBlockType"/>
+    </xsd:choice>
+  </xsd:complexType>
 
-    <xs:complexType name="ColorType">
-        <xs:sequence>
-            <xs:element name="Red" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-            <xs:element name="Green" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-            <xs:element name="Blue" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="ImageDescriptorType">
+    <xsd:sequence>
+      <xsd:element name="ImageSeparator" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x2C }"/>
+      <xsd:element name="ImageLeftPosition" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="ImageTopPosition" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="ImageWidth" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="ImageHeight" type="xsd:unsignedShort" dfdl:length="2"/>
+      <xsd:element name="PackedFields" type="ImagePackedFieldsType"/>
+      <xsd:element name="LocalColorTable" type="ColorTableType" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ if ($PackedFields/LocalColorTableFlag eq '1') then 2 ^ ($PackedFields/SizeOfLocalColorTable + 1) else 0 }"/>
+      <xsd:element name="ImageData" type="ImageDataType"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="BlocksType">
-        <xs:sequence dfdl:sequenceLengthKind="implicit">
-            <xs:element name="Block" type="ex:BlockType" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="ImagePackedFieldsType">
+    <xsd:sequence>
+      <xsd:element name="LocalColorTableFlag" type="xsd:boolean" dfdl:length="1" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="InterlaceFlag" type="xsd:boolean" dfdl:length="1" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="SortFlag" type="xsd:boolean" dfdl:length="1" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="Reserved" type="xsd:unsignedByte" dfdl:length="2" dfdl:bitOrder="leastSignificantBitFirst"/>
+      <xsd:element name="SizeOfLocalColorTable" type="xsd:unsignedByte" dfdl:length="3" dfdl:bitOrder="leastSignificantBitFirst"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-    <xs:complexType name="BlockType">
-        <xs:sequence>
-            <xs:element name="BlockType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-            <xs:element name="BlockData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xsd:complexType name="ImageDataType">
+    <xsd:sequence>
+      <xsd:element name="LZWMinimumCodeSize" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="ImageDataBlocks" type="ImageDataBlocksType" maxOccurs="unbounded"/>
+      <xsd:element name="BlockTerminator" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x00 }"/>
+    </xsd:sequence>
+  </xsd:complexType>
 
-</xs:schema>
+  <xsd:complexType name="ImageDataBlocksType">
+    <xsd:sequence>
+      <xsd:element name="BlockSize" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="BlockData" type="xsd:unsignedByte" maxOccurs="unbounded" dfdl:lengthKind="implicit" dfdl:occursCountKind="expression" dfdl:occursCount="{ $BlockSize }"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ExtensionBlockType">
+    <xsd:sequence>
+      <xsd:element name="ExtensionIntroducer" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x21 }"/>
+      <xsd:element name="ExtensionLabel" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="BlockSize" type="xsd:unsignedByte" dfdl:length="1"/>
+      <xsd:element name="ExtensionData" type="xsd:unsignedByte" maxOccurs="unbounded" dfdl:lengthKind="implicit" dfdl:occursCountKind="expression" dfdl:occursCount="{ $BlockSize }"/>
+      <xsd:element name="BlockTerminator" type="xsd:unsignedByte" dfdl:length="1" dfdl:outputValueCalc="{ 0x00 }"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>

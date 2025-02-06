@@ -1,5 +1,5 @@
 use nom::{
-    bytes::complete::{take, tag},
+    bytes::complete::{take, take_while_m_n},
     number::complete::{be_u16, be_u8},
     IResult,
 };
@@ -8,54 +8,26 @@ use std::fs::File;
 use std::io::{self, Read};
 
 #[derive(Debug)]
-enum FunctionCode {
-    ReadCoils = 0x01,
-    ReadDiscreteInputs = 0x02,
-    ReadHoldingRegisters = 0x03,
-    ReadInputRegisters = 0x04,
-    WriteSingleCoil = 0x05,
-    WriteSingleRegister = 0x06,
-    WriteMultipleCoils = 0x0F,
-    WriteMultipleRegisters = 0x10,
-    // Add other function codes as needed
-}
-
-#[derive(Debug)]
-struct ModbusFrame {
+struct ModbusTCPFrame {
     transaction_id: u16,
     protocol_id: u16,
     length: u16,
     unit_id: u8,
-    function_code: FunctionCode,
+    function_code: u8,
     data: Vec<u8>,
 }
 
-fn parse_function_code(input: &[u8]) -> IResult<&[u8], FunctionCode> {
-    let (input, code) = be_u8(input)?;
-    match code {
-        0x01 => Ok((input, FunctionCode::ReadCoils)),
-        0x02 => Ok((input, FunctionCode::ReadDiscreteInputs)),
-        0x03 => Ok((input, FunctionCode::ReadHoldingRegisters)),
-        0x04 => Ok((input, FunctionCode::ReadInputRegisters)),
-        0x05 => Ok((input, FunctionCode::WriteSingleCoil)),
-        0x06 => Ok((input, FunctionCode::WriteSingleRegister)),
-        0x0F => Ok((input, FunctionCode::WriteMultipleCoils)),
-        0x10 => Ok((input, FunctionCode::WriteMultipleRegisters)),
-        _ => Err(nom::Err::Error((input, nom::error::ErrorKind::Tag))),
-    }
-}
-
-fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
+fn parse_modbus_tcp_frame(input: &[u8]) -> IResult<&[u8], ModbusTCPFrame> {
     let (input, transaction_id) = be_u16(input)?;
     let (input, protocol_id) = be_u16(input)?;
     let (input, length) = be_u16(input)?;
     let (input, unit_id) = be_u8(input)?;
-    let (input, function_code) = parse_function_code(input)?;
-    let (input, data) = take(length - 2u16)(input)?;
+    let (input, function_code) = be_u8(input)?;
+    let (input, data) = take(length as usize - 2)(input)?;
 
     Ok((
         input,
-        ModbusFrame {
+        ModbusTCPFrame {
             transaction_id,
             protocol_id,
             length,
@@ -69,17 +41,22 @@ fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <file_path>", args[0]);
+        return Ok(());
     }
 
-    let mut file = File::open(&args[1])?;
+    let file_path = &args[1];
+    let mut file = File::open(file_path)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_modbus_frame(&buffer) {
-        Ok((_, frame)) => println!("{:?}", frame),
-        Err(e) => eprintln!("Failed to parse Modbus frame: {:?}", e),
+    match parse_modbus_tcp_frame(&buffer) {
+        Ok((_remaining, frame)) => {
+            println!("{:?}", frame);
+        }
+        Err(error) => {
+            eprintln!("Failed to parse Modbus TCP frame: {:?}", error);
+        }
     }
 
     Ok(())

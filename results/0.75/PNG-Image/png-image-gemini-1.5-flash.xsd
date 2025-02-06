@@ -1,23 +1,69 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/png-image" elementFormDefault="qualified" attributeFormDefault="unqualified">
-
-  <xs:element name="pngImage">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/png" elementFormDefault="qualified" xmlns:tns="http://example.org/png">
+  <xs:element name="PNGImage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="signature" type="xs:hexBinary" dfdl:length="8"/>
-        <xs:element name="width" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="height" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="image_data" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+        <xs:element name="Signature" type="tns:SignatureType" dfdl:length="8"/>
+        <xs:element name="Chunks" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ChunkLength" type="xs:unsignedInt" dfdl:length="4"/>
+              <xs:element name="ChunkType" type="tns:ChunkTypeType" dfdl:length="4"/>
+              <xs:element name="ChunkData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../ChunkLength}"/>
+              <xs:element name="ChunkCRC" type="xs:unsignedInt" dfdl:length="4"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCount="1"/>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-        <dfdl:binaryFormat binaryNumberRep="binary"/>
-        <dfdl:representation term="text"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
+
+  <xs:complexType name="SignatureType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="fixedValue" type="xs:hexBinary" use="required" dfdl:fixedValue="89504E470D0A1A0A"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ChunkTypeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="pattern" type="xs:string" use="required" dfdl:pattern="[A-Za-z]{4}"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="IHDR">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Width" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="Height" type="xs:unsignedInt" dfdl:length="4"/>
+        <xs:element name="BitDepth" type="xs:unsignedInt" dfdl:length="1"/>
+        <xs:element name="ColorType" type="xs:unsignedInt" dfdl:length="1"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedInt" dfdl:length="1"/>
+        <xs:element name="FilterMethod" type="xs:unsignedInt" dfdl:length="1"/>
+        <xs:element name="InterlaceMethod" type="xs:unsignedInt" dfdl:length="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="PLTE">
+    <xs:complexType>
+      <xs:sequence>
+          <xs:element name="PaletteEntry" type="tns:PaletteEntryType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PaletteEntryType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:positiveInteger" use="required" dfdl:length="3"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Add other chunk types (IDAT, IEND, etc.) here. Remember to use the tns prefix where necessary. -->
+  <!-- Note: This is a simplified representation.  A complete DFDL schema for PNG would require significantly more detail to handle variations and complexities within each chunk type, especially IDAT (compressed image data). Data types and constraints would need adjustments based on color type and bit depth.  Consider using DFDL's text and binary capabilities for IDAT. -->
 
 </xs:schema>

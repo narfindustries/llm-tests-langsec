@@ -1,26 +1,143 @@
-module HL7;
+module HL7V2;
 
-import spicy;
-import zeek;
-
-public type HL7Message = unit {
-    segments: list<HL7Segment> &until(eos);
+type MSH = unit {
+    field_separator: bytes &size=1;
+    encoding_characters: bytes &size=4;
+    sending_application: string;
+    sending_facility: string;
+    receiving_application: string;
+    receiving_facility: string;
+    datetime_of_message: string;
+    security: string;
+    message_type: string;
+    message_control_id: string;
+    processing_id: string;
+    version_id: string;
+    sequence_number: string;
+    continuation_pointer: string;
+    accept_acknowledgment_type: string;
+    application_acknowledgment_type: string;
+    country_code: string;
+    character_set: string;
+    principal_language_of_message: string;
+    alternate_character_set_handling_scheme: string;
+    message_profile_identifier: string;
 };
 
-public type HL7Segment = unit {
-    id: string &size = 3;
-    content: bytes &until(eol);
+type PID = unit {
+    set_id: string;
+    patient_id: string;
+    patient_identifier_list: string;
+    alternate_patient_id: string;
+    patient_name: string;
+    mother_maiden_name: string;
+    datetime_of_birth: string;
+    administrative_sex: string;
+    patient_alias: string;
+    race: string;
+    patient_address: string;
+    county_code: string;
+    phone_number_home: string;
+    phone_number_business: string;
+    primary_language: string;
+    marital_status: string;
+    religion: string;
+    patient_account_number: string;
+    ssn_number_patient: string;
+    driver_license_number_patient: string;
+    mother_identifier: string;
+    ethnic_group: string;
+    birth_place: string;
+    multiple_birth_indicator: string;
+    birth_order: string;
+    citizenship: string;
+    veterans_military_status: string;
+    nationality: string;
+    patient_death_date_and_time: string;
+    patient_death_indicator: string;
 };
 
-public type HL7Parser = unit {
-    message: HL7Message;
-} &implements zeek::Parser;
+type OBR = unit {
+    set_id: string;
+    placer_order_number: string;
+    filler_order_number: string;
+    universal_service_identifier: string;
+    priority_code: string;
+    requested_datetime: string;
+    observation_datetime: string;
+    observation_end_datetime: string;
+    collection_volume: string;
+    collector_identifier: string;
+    specimen_action_code: string;
+    danger_code: string;
+    relevant_clinical_information: string;
+    specimen_received_datetime: string;
+    specimen_source: string;
+    ordering_provider: string;
+    order_callback_phone_number: string;
+    placer_field_1: string;
+    placer_field_2: string;
+    filler_field_1: string;
+    filler_field_2: string;
+    results_rpt_status_chng_datetime: string;
+    charge_to_practice: string;
+    diagnostic_serv_sect_id: string;
+    result_status: string;
+    parent_result: string;
+    quantity_timing: string;
+    result_copies_to: string;
+    parent: string;
+    transportation_mode: string;
+    reason_for_study: string;
+    principal_result_interpreter: string;
+    assistant_result_interpreter: string;
+    technician: string;
+    transcriptionist: string;
+    scheduled_datetime: string;
+    number_of_sample_containers: string;
+    transport_logistics_of_collected_sample: string;
+    collectors_comment: string;
+    transport_arrangement_responsibility: string;
+    transport_arranged: string;
+    escort_required: string;
+    planned_patient_transport_comment: string;
+};
 
-public function parse_hl7_message(data: bytes): HL7Message {
-    return HL7Message(data);
-}
+type OBX = unit {
+    set_id: string;
+    value_type: string;
+    observation_identifier: string;
+    observation_sub_id: string;
+    observation_value: string;
+    units: string;
+    references_range: string;
+    abnormal_flags: string;
+    probability: string;
+    nature_of_abnormal_test: string;
+    observation_result_status: string;
+    effective_date_of_reference_range: string;
+    user_defined_access_checks: string;
+    datetime_of_the_observation: string;
+    producers_id: string;
+    responsible_observer: string;
+    observation_method: string;
+    equipment_instance_identifier: string;
+    datetime_of_the_analysis: string;
+};
 
-public event zeek_init() {
-    local parser = HL7Parser();
-    zeek::register_parser("HL7", parser);
-}
+type AL1 = unit {
+    set_id: string;
+    allergy_type: string;
+    allergy_code_mnemonic_description: string;
+    allergy_severity_code: string;
+    allergy_reaction: string;
+    identification_date: string;
+};
+
+type HL7Message = unit {
+    msh: MSH;
+    pid: PID &optional;
+    obr: OBR &optional;
+    obx: OBX &optional;
+    al1: AL1 &optional;
+};

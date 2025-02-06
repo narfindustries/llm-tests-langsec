@@ -1,0 +1,1 @@
+/home/user/llm-ddl-tests/generated/888/1.0/JPEG/output_nom/jpeg-deepseek-ai-deepseek-v3/target/debug/cargo_template: /home/user/llm-ddl-tests/generated/888/1.0/JPEG/output_nom/jpeg-deepseek-ai-deepseek-v3/src/main.rs

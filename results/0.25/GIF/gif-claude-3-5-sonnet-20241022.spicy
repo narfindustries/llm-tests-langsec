@@ -1,69 +1,106 @@
 module GIF;
 
-public type Header = unit {
+type Header = unit {
     signature: bytes &size=3;
     version: bytes &size=3;
+};
+
+type PackedField = unit {
+    global_color_table_flag: uint8;
+    color_resolution: uint8;
+    sort_flag: uint8;
+    size_of_global_color_table: uint8;
+};
+
+type LogicalScreenDescriptor = unit {
     width: uint16;
     height: uint16;
-    packed: uint8;
-    background_color: uint8;
-    aspect_ratio: uint8;
-
-    on %done {
-        self.global_color_table_size = (1 << ((self.packed & 0x07) + 1));
-        self.has_global_color_table = (self.packed & 0x80) != 0;
-    }
-
-    var global_color_table_size: uint64;
-    var has_global_color_table: bool;
+    packed: PackedField;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+    global_color_table: bytes &size=3 &until($$ == 0x00);
 };
 
-type RGB = unit {
-    r: uint8;
-    g: uint8;
-    b: uint8;
+type ImagePackedField = unit {
+    local_color_table_flag: uint8;
+    interlace_flag: uint8;
+    sort_flag: uint8;
+    reserved: uint8;
+    size_of_local_color_table: uint8;
 };
 
-type GlobalColorTable = unit {
-    colors: RGB[parent.global_color_table_size];
+type DataSubBlock = unit {
+    size: uint8;
+    data: bytes &size=self.size;
 };
 
-type GraphicControlExtension = unit {
-    blocksize: uint8;
-    packed: uint8;
-    delay: uint16;
-    transparent_color: uint8;
-    terminator: uint8;
+type DataSubBlocks = unit {
+    blocks: DataSubBlock[];
 };
 
-type ImageDescriptor = unit {
+type ImageBlock = unit {
     left: uint16;
     top: uint16;
     width: uint16;
     height: uint16;
-    packed: uint8;
+    packed: ImagePackedField;
+    local_color_table: bytes &size=3 &until($$ == 0x00);
+    lzw_minimum_code_size: uint8;
+    data_blocks: DataSubBlocks;
+};
+
+type GraphicControlPackedField = unit {
+    reserved: uint8;
+    disposal_method: uint8;
+    user_input_flag: uint8;
+    transparent_color_flag: uint8;
+};
+
+type GraphicControlExtension = unit {
+    block_size: uint8;
+    packed: GraphicControlPackedField;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8;
+};
+
+type CommentExtension = unit {
+    data_blocks: DataSubBlocks;
+};
+
+type PlainTextExtension = unit {
+    block_size: uint8;
+    text_grid_left: uint16;
+    text_grid_top: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    cell_width: uint8;
+    cell_height: uint8;
+    foreground_color: uint8;
+    background_color: uint8;
+    data_blocks: DataSubBlocks;
+};
+
+type ApplicationExtension = unit {
+    block_size: uint8;
+    identifier: bytes &size=8;
+    auth_code: bytes &size=3;
+    data_blocks: DataSubBlocks;
 };
 
 type Extension = unit {
     label: uint8;
-    switch ( self.label ) {
-        0xF9 -> graphic_control: GraphicControlExtension;
-        * -> skip: bytes &eod;
-    };
+    extension_data: bytes &eod;
 };
 
 type Block = unit {
-    marker: uint8;
-    switch ( self.marker ) {
-        0x2C -> image: ImageDescriptor;
-        0x21 -> extension: Extension;
-        0x3B -> : void;
-        * -> data: bytes &eod;
-    };
+    introducer: uint8;
+    block_data: bytes &eod;
 };
 
-public type File = unit {
+public type GIF = unit {
     header: Header;
-    global_color_table: GlobalColorTable if ( self.header.has_global_color_table );
+    screen: LogicalScreenDescriptor;
     blocks: Block[];
+    trailer: uint8;
 };

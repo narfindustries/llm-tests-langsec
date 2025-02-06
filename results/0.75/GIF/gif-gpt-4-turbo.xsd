@@ -1,52 +1,98 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/gif"
-           xmlns:tns="http://example.com/gif">
-
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+           xmlns:ex="http://example.com/gif">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
+      <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="GIFFileType">
+  <xs:element name="GIF" type="ex:GIFType" dfdl:lengthKind="delimited" dfdl:terminator=";"/>
+
+  <xs:complexType name="GIFType">
     <xs:sequence>
-      <xs:element name="header" type="tns:GIFHeaderType"/>
-      <xs:element name="logicalScreenDescriptor" type="tns:LogicalScreenDescriptorType"/>
-      <xs:element name="globalColorTable" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../logicalScreenDescriptor.sizeOfGlobalColorTable}"/>
-      <!-- Define other sections as needed -->
+      <xs:element name="Header" type="ex:HeaderType"/>
+      <xs:element name="LogicalScreenDescriptor" type="ex:LogicalScreenDescriptorType"/>
+      <xs:element name="GlobalColorTable" type="ex:ColorTableType" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../LogicalScreenDescriptor/PackedFields/GCTF eq 1 }"/>
+      <xs:choice dfdl:choiceDispatchKey="{ fn:substring(../_value, 1, 1) }">
+        <xs:element name="ImageBlock" type="ex:ImageBlockType" dfdl:choiceBranchKey=","/>
+        <xs:element name="ExtensionBlock" type="ex:ExtensionBlockType" dfdl:choiceBranchKey="!"/>
+      </xs:choice>
+      <xs:element name="Trailer" type="ex:TrailerType"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="GIFHeaderType">
+  <xs:complexType name="HeaderType">
     <xs:sequence>
-      <xs:element name="signature" type="xs:string" dfdl:length="3"/>
-      <xs:element name="version" type="xs:string" dfdl:length="3"/>
+      <xs:element name="Signature" type="xs:string" dfdl:length="3"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="LogicalScreenDescriptorType">
     <xs:sequence>
-      <xs:element name="screenWidth" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="screenHeight" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="packedFields" type="xs:byte"/>
-      <xs:element name="backgroundColorIndex" type="xs:byte"/>
-      <xs:element name="pixelAspectRatio" type="xs:byte"/>
+      <xs:element name="ScreenWidth" type="xs:int" dfdl:length="2"/>
+      <xs:element name="ScreenHeight" type="xs:int" dfdl:length="2"/>
+      <xs:element name="PackedFields" type="ex:PackedFieldsType"/>
+      <xs:element name="BackgroundColorIndex" type="xs:int" dfdl:length="1"/>
+      <xs:element name="PixelAspectRatio" type="xs:int" dfdl:length="1"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:simpleType name="PackedFieldType">
-    <xs:restriction base="xs:byte">
-      <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-          <dfdl:bitOrder>mostSignificantBitFirst</dfdl:bitOrder>
-          <dfdl:lengthKind>implicit</dfdl:lengthKind>
-        </xs:appinfo>
-      </xs:annotation>
-    </xs:restriction>
-  </xs:simpleType>
+  <xs:complexType name="PackedFieldsType">
+    <xs:sequence>
+      <xs:element name="GCTF" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="ColorResolution" type="xs:int" dfdl:length="3" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="SortFlag" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="SizeOfGCT" type="xs:int" dfdl:length="3" dfdl:bitOrder="mostSignificantBitFirst"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableType">
+    <xs:sequence>
+      <xs:element name="Color" type="ex:ColorType" dfdl:occursCount="{ fn:pow(2, ../PackedFields/SizeOfGCT + 1) }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:int" dfdl:length="1"/>
+      <xs:element name="Green" type="xs:int" dfdl:length="1"/>
+      <xs:element name="Blue" type="xs:int" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageBlockType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="xs:int" dfdl:length="1"/>
+      <xs:element name="ImageLeftPosition" type="xs:int" dfdl:length="2"/>
+      <xs:element name="ImageTopPosition" type="xs:int" dfdl:length="2"/>
+      <xs:element name="ImageWidth" type="xs:int" dfdl:length="2"/>
+      <xs:element name="ImageHeight" type="xs:int" dfdl:length="2"/>
+      <xs:element name="LocalColorTableFlag" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="InterlaceFlag" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="SortFlag" type="xs:boolean" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="SizeOfLCT" type="xs:int" dfdl:length="3" dfdl:bitOrder="mostSignificantBitFirst"/>
+      <xs:element name="LocalColorTable" type="ex:ColorTableType" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../LocalColorTableFlag eq 1 }"/>
+      <xs:element name="ImageData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionBlockType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:int" dfdl:length="1"/>
+      <xs:element name="ExtensionLabel" type="xs:int" dfdl:length="1"/>
+      <xs:element name="BlockSize" type="xs:int" dfdl:length="1"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{ ../BlockSize }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="TrailerMarker" type="xs:int" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

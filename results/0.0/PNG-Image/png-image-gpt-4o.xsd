@@ -1,62 +1,208 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/png"
-           xmlns:tns="http://example.com/png"
-           elementFormDefault="qualified"
-           dfdl:format="true"
-           dfdl:byteOrder="bigEndian"
-           dfdl:encoding="utf-8">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/png"
+        xmlns:tns="http://example.com/png"
+        elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:PNGFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
-    <dfdl:defineFormat name="PNGFormat">
-        <dfdl:byteOrder value="bigEndian"/>
-        <dfdl:encoding value="utf-8"/>
-        <dfdl:lengthKind value="explicit"/>
-        <dfdl:terminator value=""/>
-    </dfdl:defineFormat>
+    <element name="PNG" type="tns:PNGType"/>
 
-    <xs:element name="PNG" type="tns:PNGType"/>
+    <complexType name="PNGType">
+        <sequence>
+            <element name="Signature" type="tns:SignatureType"/>
+            <element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
 
-    <xs:complexType name="PNGType">
-        <xs:sequence>
-            <xs:element name="Signature" type="tns:SignatureType" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-            <xs:element name="Chunks" type="tns:ChunksType" minOccurs="1" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
+    <simpleType name="SignatureType">
+        <restriction base="hexBinary">
+            <length value="8"/>
+            <pattern value="89504E470D0A1A0A"/>
+        </restriction>
+    </simpleType>
 
-    <xs:complexType name="SignatureType">
-        <xs:simpleContent>
-            <xs:extension base="xs:hexBinary">
-                <xs:attribute name="value" type="xs:string" fixed="89504E470D0A1A0A"/>
-            </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
+    <complexType name="ChunksType">
+        <sequence>
+            <element name="Length" type="int"/>
+            <element name="ChunkType" type="string" dfdl:length="4"/>
+            <element name="ChunkData" type="tns:ChunkDataType" dfdl:length="{../Length}"/>
+            <element name="CRC" type="unsignedInt"/>
+        </sequence>
+    </complexType>
 
-    <xs:complexType name="ChunksType">
-        <xs:sequence>
-            <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-            <xs:element name="Type" type="tns:ChunkTypeType" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-            <xs:element name="Data" type="tns:ChunkDataType" dfdl:length="{../Length}" dfdl:lengthUnits="bytes"/>
-            <xs:element name="CRC" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        </xs:sequence>
-    </xs:complexType>
+    <complexType name="ChunkDataType">
+        <choice>
+            <element name="IHDR" type="tns:IHDRType"/>
+            <element name="PLTE" type="tns:PLTEType"/>
+            <element name="IDAT" type="tns:IDATType"/>
+            <element name="IEND" type="tns:IENDType"/>
+            <element name="tRNS" type="tns:tRNSType" minOccurs="0"/>
+            <element name="cHRM" type="tns:cHRMType" minOccurs="0"/>
+            <element name="gAMA" type="tns:gAMAType" minOccurs="0"/>
+            <element name="iCCP" type="tns:iCCPType" minOccurs="0"/>
+            <element name="sBIT" type="tns:sBITType" minOccurs="0"/>
+            <element name="sRGB" type="tns:sRGBType" minOccurs="0"/>
+            <element name="tEXt" type="tns:tEXtType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="zTXt" type="tns:zTXtType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="iTXt" type="tns:iTXtType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="bKGD" type="tns:bKGDType" minOccurs="0"/>
+            <element name="pHYs" type="tns:pHYsType" minOccurs="0"/>
+            <element name="sPLT" type="tns:sPLTType" minOccurs="0" maxOccurs="unbounded"/>
+            <element name="hIST" type="tns:hISTType" minOccurs="0"/>
+            <element name="tIME" type="tns:tIMEType" minOccurs="0"/>
+        </choice>
+    </complexType>
 
-    <xs:simpleType name="ChunkTypeType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="[A-Za-z]{4}"/>
-        </xs:restriction>
-    </xs:simpleType>
+    <complexType name="IHDRType">
+        <sequence>
+            <element name="Width" type="unsignedInt"/>
+            <element name="Height" type="unsignedInt"/>
+            <element name="BitDepth" type="unsignedByte"/>
+            <element name="ColorType" type="unsignedByte"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="FilterMethod" type="unsignedByte"/>
+            <element name="InterlaceMethod" type="unsignedByte"/>
+        </sequence>
+    </complexType>
 
-    <xs:simpleType name="ChunkDataType">
-        <xs:restriction base="xs:hexBinary">
-            <xs:minLength value="0"/>
-        </xs:restriction>
-    </xs:simpleType>
+    <complexType name="PLTEType">
+        <sequence>
+            <element name="PaletteEntry" type="tns:PaletteEntryType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
 
-</xs:schema>
+    <complexType name="PaletteEntryType">
+        <sequence>
+            <element name="Red" type="unsignedByte"/>
+            <element name="Green" type="unsignedByte"/>
+            <element name="Blue" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="IDATType">
+        <sequence>
+            <element name="CompressedData" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="IENDType">
+        <sequence/>
+    </complexType>
+
+    <complexType name="tRNSType">
+        <sequence>
+            <element name="TransparencyData" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="cHRMType">
+        <sequence>
+            <element name="WhitePointX" type="unsignedInt"/>
+            <element name="WhitePointY" type="unsignedInt"/>
+            <element name="RedX" type="unsignedInt"/>
+            <element name="RedY" type="unsignedInt"/>
+            <element name="GreenX" type="unsignedInt"/>
+            <element name="GreenY" type="unsignedInt"/>
+            <element name="BlueX" type="unsignedInt"/>
+            <element name="BlueY" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="gAMAType">
+        <sequence>
+            <element name="Gamma" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="iCCPType">
+        <sequence>
+            <element name="ProfileName" type="string"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="CompressedProfile" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sBITType">
+        <sequence>
+            <element name="SignificantBits" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sRGBType">
+        <sequence>
+            <element name="RenderingIntent" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="tEXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="Text" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="zTXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="CompressedText" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="iTXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="CompressionFlag" type="unsignedByte"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="LanguageTag" type="string"/>
+            <element name="TranslatedKeyword" type="string"/>
+            <element name="Text" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="bKGDType">
+        <sequence>
+            <element name="BackgroundColor" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="pHYsType">
+        <sequence>
+            <element name="PixelsPerUnitX" type="unsignedInt"/>
+            <element name="PixelsPerUnitY" type="unsignedInt"/>
+            <element name="UnitSpecifier" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sPLTType">
+        <sequence>
+            <element name="PaletteName" type="string"/>
+            <element name="SampleDepth" type="unsignedByte"/>
+            <element name="PaletteEntries" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="hISTType">
+        <sequence>
+            <element name="Frequency" type="unsignedShort" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="tIMEType">
+        <sequence>
+            <element name="Year" type="unsignedShort"/>
+            <element name="Month" type="unsignedByte"/>
+            <element name="Day" type="unsignedByte"/>
+            <element name="Hour" type="unsignedByte"/>
+            <element name="Minute" type="unsignedByte"/>
+            <element name="Second" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+</schema>

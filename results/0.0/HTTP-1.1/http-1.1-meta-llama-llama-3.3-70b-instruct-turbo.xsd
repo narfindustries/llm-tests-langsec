@@ -1,57 +1,154 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/http-1.1"
-           xmlns:tns="http://example.com/http-1.1"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http-1.1.xsd"/>
-
-  <xs:element name="http-1.1-meta-llama-llama-3.3-70b-instruct-turbo">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:request-line" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:headers" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:message-body" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="request-line">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="method" type="xs:string" dfdl:length="3..10"/>
-        <xs:element name="request-target" type="xs:string" dfdl:length="1..2000"/>
-        <xs:element name="http-version" type="xs:string" dfdl:length="8" dfdl:pattern="[Hh][Tt][Tt][Pp]/1\.1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="headers">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:header" dfdl:occurs="1..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="field-name" type="xs:string" dfdl:length="1..50"/>
-        <xs:element name="field-value" type="xs:string" dfdl:length="0..1000"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="message-body">
-    <xs:complexType mixed="true">
-      <xs:sequence>
-        <xs:element name="body" type="xs:base64Binary" dfdl:length="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <dfdl:format dfdl:encoding="UTF-8" dfdl:lineEndingStyle="lf" dfdl:sequenceKind="ordered" dfdl:separator=" " dfdl:terminator=""/>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                 lengthKind="delimited" encoding="UTF-8" separator="," escapeCharacter="\">
+  <dfdl:element name="httpMessage" type="httpMessageType" dfdl:occurs="1"/>
+  <dfdl:element name="httpMessageType" type="dfdl:sequence" dfdl:occurs="1">
+    <dfdl:element name="requestLine" type="requestLineType" dfdl:occurs="0..1"/>
+    <dfdl:element name="statusLine" type="statusLineType" dfdl:occurs="0..1"/>
+    <dfdl:element name="headers" type="headersType" dfdl:occurs="0..1"/>
+    <dfdl:element name="body" type="bodyType" dfdl:occurs="0..1"/>
+  </dfdl:element>
+  <dfdl:element name="requestLineType" type="dfdl:sequence" dfdl:occurs="1">
+    <dfdl:element name="method" type="methodType" dfdl:occurs="1"/>
+    <dfdl:element name="requestUri" type="requestUriType" dfdl:occurs="1"/>
+    <dfdl:element name="httpVersion" type="httpVersionType" dfdl:occurs="1"/>
+  </dfdl:element>
+  <dfdl:element name="methodType" type="dfdl:choice" dfdl:occurs="1">
+    <dfdl:element name="GET" type="dfdl:string" dfdl:occurs="0..1" value="GET"/>
+    <dfdl:element name="HEAD" type="dfdl:string" dfdl:occurs="0..1" value="HEAD"/>
+    <dfdl:element name="POST" type="dfdl:string" dfdl:occurs="0..1" value="POST"/>
+    <dfdl:element name="PUT" type="dfdl:string" dfdl:occurs="0..1" value="PUT"/>
+    <dfdl:element name="DELETE" type="dfdl:string" dfdl:occurs="0..1" value="DELETE"/>
+    <dfdl:element name="CONNECT" type="dfdl:string" dfdl:occurs="0..1" value="CONNECT"/>
+    <dfdl:element name="OPTIONS" type="dfdl:string" dfdl:occurs="0..1" value="OPTIONS"/>
+    <dfdl:element name="TRACE" type="dfdl:string" dfdl:occurs="0..1" value="TRACE"/>
+  </dfdl:element>
+  <dfdl:element name="requestUriType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="httpVersionType" type="dfdl:string" dfdl:occurs="1" value="HTTP/1.1"/>
+  <dfdl:element name="statusLineType" type="dfdl:sequence" dfdl:occurs="1">
+    <dfdl:element name="httpVersion" type="httpVersionType" dfdl:occurs="1"/>
+    <dfdl:element name="statusCode" type="statusCodeType" dfdl:occurs="1"/>
+    <dfdl:element name="reasonPhrase" type="reasonPhraseType" dfdl:occurs="1"/>
+  </dfdl:element>
+  <dfdl:element name="statusCodeType" type="dfdl:choice" dfdl:occurs="1">
+    <dfdl:element name="100" type="dfdl:string" dfdl:occurs="0..1" value="100"/>
+    <dfdl:element name="101" type="dfdl:string" dfdl:occurs="0..1" value="101"/>
+    <dfdl:element name="200" type="dfdl:string" dfdl:occurs="0..1" value="200"/>
+    <dfdl:element name="201" type="dfdl:string" dfdl:occurs="0..1" value="201"/>
+    <dfdl:element name="202" type="dfdl:string" dfdl:occurs="0..1" value="202"/>
+    <dfdl:element name="203" type="dfdl:string" dfdl:occurs="0..1" value="203"/>
+    <dfdl:element name="204" type="dfdl:string" dfdl:occurs="0..1" value="204"/>
+    <dfdl:element name="205" type="dfdl:string" dfdl:occurs="0..1" value="205"/>
+    <dfdl:element name="206" type="dfdl:string" dfdl:occurs="0..1" value="206"/>
+    <dfdl:element name="300" type="dfdl:string" dfdl:occurs="0..1" value="300"/>
+    <dfdl:element name="301" type="dfdl:string" dfdl:occurs="0..1" value="301"/>
+    <dfdl:element name="302" type="dfdl:string" dfdl:occurs="0..1" value="302"/>
+    <dfdl:element name="303" type="dfdl:string" dfdl:occurs="0..1" value="303"/>
+    <dfdl:element name="304" type="dfdl:string" dfdl:occurs="0..1" value="304"/>
+    <dfdl:element name="305" type="dfdl:string" dfdl:occurs="0..1" value="305"/>
+    <dfdl:element name="307" type="dfdl:string" dfdl:occurs="0..1" value="307"/>
+    <dfdl:element name="400" type="dfdl:string" dfdl:occurs="0..1" value="400"/>
+    <dfdl:element name="401" type="dfdl:string" dfdl:occurs="0..1" value="401"/>
+    <dfdl:element name="402" type="dfdl:string" dfdl:occurs="0..1" value="402"/>
+    <dfdl:element name="403" type="dfdl:string" dfdl:occurs="0..1" value="403"/>
+    <dfdl:element name="404" type="dfdl:string" dfdl:occurs="0..1" value="404"/>
+    <dfdl:element name="405" type="dfdl:string" dfdl:occurs="0..1" value="405"/>
+    <dfdl:element name="406" type="dfdl:string" dfdl:occurs="0..1" value="406"/>
+    <dfdl:element name="407" type="dfdl:string" dfdl:occurs="0..1" value="407"/>
+    <dfdl:element name="408" type="dfdl:string" dfdl:occurs="0..1" value="408"/>
+    <dfdl:element name="409" type="dfdl:string" dfdl:occurs="0..1" value="409"/>
+    <dfdl:element name="410" type="dfdl:string" dfdl:occurs="0..1" value="410"/>
+    <dfdl:element name="411" type="dfdl:string" dfdl:occurs="0..1" value="411"/>
+    <dfdl:element name="412" type="dfdl:string" dfdl:occurs="0..1" value="412"/>
+    <dfdl:element name="413" type="dfdl:string" dfdl:occurs="0..1" value="413"/>
+    <dfdl:element name="414" type="dfdl:string" dfdl:occurs="0..1" value="414"/>
+    <dfdl:element name="415" type="dfdl:string" dfdl:occurs="0..1" value="415"/>
+    <dfdl:element name="416" type="dfdl:string" dfdl:occurs="0..1" value="416"/>
+    <dfdl:element name="417" type="dfdl:string" dfdl:occurs="0..1" value="417"/>
+    <dfdl:element name="500" type="dfdl:string" dfdl:occurs="0..1" value="500"/>
+    <dfdl:element name="501" type="dfdl:string" dfdl:occurs="0..1" value="501"/>
+    <dfdl:element name="502" type="dfdl:string" dfdl:occurs="0..1" value="502"/>
+    <dfdl:element name="503" type="dfdl:string" dfdl:occurs="0..1" value="503"/>
+    <dfdl:element name="504" type="dfdl:string" dfdl:occurs="0..1" value="504"/>
+    <dfdl:element name="505" type="dfdl:string" dfdl:occurs="0..1" value="505"/>
+  </dfdl:element>
+  <dfdl:element name="reasonPhraseType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="headersType" type="dfdl:sequence" dfdl:occurs="1">
+    <dfdl:element name="header" type="headerType" dfdl:occurs="0..*"/>
+  </dfdl:element>
+  <dfdl:element name="headerType" type="dfdl:choice" dfdl:occurs="1">
+    <dfdl:element name="Accept" type="acceptType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Accept-Charset" type="acceptCharsetType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Accept-Encoding" type="acceptEncodingType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Accept-Language" type="acceptLanguageType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Authorization" type="authorizationType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Cache-Control" type="cacheControlType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Connection" type="connectionType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Encoding" type="contentEncodingType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Language" type="contentLanguageType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Length" type="contentLengthType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Location" type="contentLocationType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-MD5" type="contentMD5Type" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Range" type="contentRangeType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Content-Type" type="contentTypeType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Date" type="dateType" dfdl:occurs="0..1"/>
+    <dfdl:element name="ETag" type="etagType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Expect" type="expectType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Expires" type="expiresType" dfdl:occurs="0..1"/>
+    <dfdl:element name="From" type="fromType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Host" type="hostType" dfdl:occurs="0..1"/>
+    <dfdl:element name="If-Match" type="ifMatchType" dfdl:occurs="0..1"/>
+    <dfdl:element name="If-Modified-Since" type="ifModifiedSinceType" dfdl:occurs="0..1"/>
+    <dfdl:element name="If-None-Match" type="ifNoneMatchType" dfdl:occurs="0..1"/>
+    <dfdl:element name="If-Range" type="ifRangeType" dfdl:occurs="0..1"/>
+    <dfdl:element name="If-Unmodified-Since" type="ifUnmodifiedSinceType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Last-Modified" type="lastModifiedType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Location" type="locationType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Max-Forwards" type="maxForwardsType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Proxy-Authenticate" type="proxyAuthenticateType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Proxy-Authorization" type="proxyAuthorizationType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Range" type="rangeType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Referer" type="refererType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Retry-After" type="retryAfterType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Server" type="serverType" dfdl:occurs="0..1"/>
+    <dfdl:element name="TE" type="teType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Trailer" type="trailerType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Transfer-Encoding" type="transferEncodingType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Upgrade" type="upgradeType" dfdl:occurs="0..1"/>
+    <dfdl:element name="User-Agent" type="userAgentType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Vary" type="varyType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Via" type="viaType" dfdl:occurs="0..1"/>
+    <dfdl:element name="Warning" type="warningType" dfdl:occurs="0..1"/>
+    <dfdl:element name="WWW-Authenticate" type="wwwAuthenticateType" dfdl:occurs="0..1"/>
+  </dfdl:element>
+  <dfdl:element name="acceptType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="acceptCharsetType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="acceptEncodingType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="acceptLanguageType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="authorizationType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="cacheControlType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="connectionType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentEncodingType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentLanguageType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentLengthType" type="dfdl:integer" dfdl:occurs="1"/>
+  <dfdl:element name="contentLocationType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentMD5Type" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentRangeType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="contentTypeType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="dateType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="etagType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="expectType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="expiresType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="fromType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="hostType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="ifMatchType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="ifModifiedSinceType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="ifNoneMatchType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="ifRangeType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="ifUnmodifiedSinceType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="lastModifiedType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="locationType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="maxForwardsType" type="dfdl:integer" dfdl:occurs="1"/>
+  <dfdl:element name="proxyAuthenticateType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name="proxyAuthorizationType" type="dfdl:string" dfdl:occurs="1"/>
+  <dfdl:element name

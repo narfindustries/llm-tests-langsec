@@ -1,90 +1,50 @@
 use nom::{
-    bytes::complete::{tag, take_while, take_until},
-    character::complete::{alphanumeric1, char, line_ending},
+    bytes::complete::{tag, take_while},
+    character::complete::{alpha1, alphanumeric1, char, digit1, line_ending},
     combinator::{map, map_res, opt, recognize},
-    multi::many0,
-    sequence::{delimited, pair, preceded, separated_pair, terminated},
+    multi::separated_list1,
+    sequence::{delimited, pair, preceded, separated_pair, tuple},
     IResult,
 };
 use std::env;
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct Hl7Message {
     segments: Vec<Hl7Segment>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct Hl7Segment {
-    field_separator: char,
-    component_separator: char,
-    repetition_separator: char,
-    escape_character: char,
-    subcomponent_separator: char,
-    fields: Vec<Hl7Field>,
+    segment_id: String,
+    fields: Vec<String>,
 }
 
-#[derive(Debug, PartialEq)]
-struct Hl7Field {
-    components: Vec<Hl7Component>,
+fn hl7_field(input: &str) -> IResult<&str, String> {
+    let parser = recognize(many1(
+        alt((alphanumeric1, tag("|"), tag("^"), tag("&"), tag("~"), tag("\\"))),
+    ));
+    map(parser, |s| s.to_string())(input)
 }
 
-
-#[derive(Debug, PartialEq)]
-struct Hl7Component {
-    subcomponents: Vec<String>,
-}
-
-
-fn parse_hl7_message(input: &[u8]) -> IResult<&[u8], Hl7Message> {
-    let mut input = input;
-    let (input, _) = take_until("\r")(input)?;
+fn hl7_segment(input: &str) -> IResult<&str, Hl7Segment> {
+    let (input, segment_id) = map(alpha1, |s| s.to_string())(input)?;
+    let (input, fields) = separated_list1(char('|'), hl7_field)(input)?;
     let (input, _) = line_ending(input)?;
-
-    let (input, message) = many0(parse_hl7_segment)(input)?;
-
-    Ok((input, Hl7Message { segments: message }))
-}
-
-fn parse_hl7_segment(input: &[u8]) -> IResult<&[u8], Hl7Segment> {
-    let (input, field_separator) = map(char('|'), |c| c)(input)?;
-    let (input, component_separator) = map(char('^'), |c| c)(input)?;
-    let (input, repetition_separator) = map(char('&'), |c| c)(input)?;
-    let (input, escape_character) = map(char('\\'), |c| c)(input)?;
-    let (input, subcomponent_separator) = map(char('~'), |c| c)(input)?;
-
-    let (input, fields) = many0(parse_hl7_field)(input)?;
-
     Ok((
         input,
         Hl7Segment {
-            field_separator,
-            component_separator,
-            repetition_separator,
-            escape_character,
-            subcomponent_separator,
+            segment_id,
             fields,
         },
     ))
 }
 
-fn parse_hl7_field(input: &[u8]) -> IResult<&[u8], Hl7Field> {
-    let (input, components) = many0(parse_hl7_component)(input)?;
-    Ok((input, Hl7Field { components }))
+fn hl7_message(input: &str) -> IResult<&str, Hl7Message> {
+    let (input, segments) = separated_list1(line_ending, hl7_segment)(input)?;
+    Ok((input, Hl7Message { segments }))
 }
-
-fn parse_hl7_component(input: &[u8]) -> IResult<&[u8], Hl7Component> {
-    let (input, subcomponents) = many0(parse_hl7_subcomponent)(input)?;
-    Ok((input, Hl7Component { subcomponents }))
-}
-
-
-fn parse_hl7_subcomponent(input: &[u8]) -> IResult<&[u8], String> {
-    let (input, subcomponent) = take_while(|c| c != b'~' && c != b'|' && c != b'\r')(input)?;
-    Ok((input, String::from_utf8_lossy(subcomponent).to_string()))
-}
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -93,11 +53,21 @@ fn main() {
         std::process::exit(1);
     }
 
-    let path = Path::new(&args[1]);
-    let contents = fs::read(path).expect("Failed to read file");
+    let file_path = Path::new(&args[1]);
+    let file_content = match fs::read_to_string(file_path) {
+        Ok(content) => content,
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+            std::process::exit(1);
+        }
+    };
 
-    match parse_hl7_message(&contents) {
+    match hl7_message(&file_content) {
         Ok((_, message)) => println!("{:#?}", message),
-        Err(e) => eprintln!("Error parsing HL7 message: {:?}", e),
+        Err(err) => {
+            eprintln!("Error parsing HL7 message: {:?}", err);
+            std::process::exit(1);
+        }
     }
 }
+

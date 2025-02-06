@@ -3,90 +3,136 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <elf.h>
+#include <fcntl.h>
 
+typedef struct {
+    unsigned char e_ident[16];
+    uint16_t e_type;
+    uint16_t e_machine;
+    uint32_t e_version;
+    uint64_t e_entry;
+    uint64_t e_phoff;
+    uint64_t e_shoff;
+    uint32_t e_flags;
+    uint16_t e_ehsize;
+    uint16_t e_phentsize;
+    uint16_t e_phnum;
+    uint16_t e_shentsize;
+    uint16_t e_shnum;
+    uint16_t e_shstrndx;
+} elf_header_t;
 
-// Helper function to read a file into a buffer
-uint8_t* readFile(const char* filename, size_t* size) {
-    struct stat sb;
-    if (stat(filename, &sb) == -1) {
-        perror("stat");
-        return NULL;
-    }
+typedef struct {
+    uint32_t p_type;
+    uint32_t p_flags;
+    uint64_t p_offset;
+    uint64_t p_vaddr;
+    uint64_t p_paddr;
+    uint64_t p_filesz;
+    uint64_t p_memsz;
+    uint64_t p_align;
+} elf_program_header_t;
 
-    int fd = open(filename, O_RDONLY);
-    if (fd == -1) {
-        perror("open");
-        return NULL;
-    }
+typedef struct {
+    uint32_t sh_name;
+    uint32_t sh_type;
+    uint64_t sh_flags;
+    uint64_t sh_addr;
+    uint64_t sh_offset;
+    uint64_t sh_size;
+    uint32_t sh_link;
+    uint32_t sh_info;
+    uint64_t sh_addralign;
+    uint64_t sh_entsize;
+} elf_section_header_t;
 
-    *size = sb.st_size;
-    uint8_t* buffer = (uint8_t*)malloc(*size);
-    if (buffer == NULL) {
-        perror("malloc");
-        close(fd);
-        return NULL;
-    }
+HParser elf_uint16_parser() {
+    return h_map(h_consume(2), (HMapFunc)HBytesToUint16);
+}
 
-    ssize_t bytesRead = read(fd, buffer, *size);
-    if (bytesRead == -1) {
-        perror("read");
-        free(buffer);
-        close(fd);
-        return NULL;
-    }
-    close(fd);
-    return buffer;
+HParser elf_uint32_parser() {
+    return h_map(h_consume(4), (HMapFunc)HBytesToUint32);
+}
+
+HParser elf_uint64_parser() {
+    return h_map(h_consume(8), (HMapFunc)HBytesToUint64);
+}
+
+HParser elf_header_parser() {
+    return h_map(h_sequence(
+                    h_consume(16),
+                    elf_uint16_parser(),
+                    elf_uint16_parser(),
+                    elf_uint32_parser(),
+                    elf_uint64_parser(),
+                    elf_uint64_parser(),
+                    elf_uint64_parser(),
+                    elf_uint32_parser(),
+                    elf_uint16_parser(),
+                    elf_uint16_parser(),
+                    elf_uint16_parser(),
+                    elf_uint16_parser(),
+                    elf_uint16_parser(),
+                    elf_uint16_parser()),
+                (HMapFunc)HBytesToElfHeader);
 }
 
 
-int main(int argc, char** argv) {
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
         return 1;
     }
 
-    size_t fileSize;
-    uint8_t* fileBuffer = readFile(argv[1], &fileSize);
-    if (fileBuffer == NULL) {
+    int fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        perror("open");
         return 1;
     }
 
-    //Basic ELF header parser (replace with full Hammer parser)
+    off_t fileSize = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
 
-    Elf64_Ehdr* header = (Elf64_Ehdr*)fileBuffer;
-
-    if(memcmp(header->e_ident, ELFMAG, SELFMAG) != 0){
-        fprintf(stderr, "Not a valid ELF file\n");
+    void* fileBuffer = malloc(fileSize);
+    if (read(fd, fileBuffer, fileSize) != fileSize) {
+        perror("read");
         free(fileBuffer);
+        close(fd);
         return 1;
     }
+    close(fd);
 
-    printf("ELF Header:\n");
-    printf("  Magic: %x %x %x %x\n", header->e_ident[EI_MAG0], header->e_ident[EI_MAG1], header->e_ident[EI_MAG2], header->e_ident[EI_MAG3]);
-    printf("  Data encoding: %d\n", header->e_ident[EI_DATA]);
-    printf("  Version: %d\n", header->e_ident[EI_VERSION]);
-    printf("  OS ABI: %d\n", header->e_ident[EI_OSABI]);
-    printf("  ABI version: %d\n", header->e_ident[EI_ABIVERSION]);
-    printf("  Type: %d\n", header->e_type);
-    printf("  Machine: %d\n", header->e_machine);
-    printf("  Version: %d\n", header->e_version);
-    printf("  Entry point: 0x%lx\n", header->e_entry);
-    printf("  Program header offset: %d\n", header->e_phoff);
-    printf("  Section header offset: %d\n", header->e_shoff);
-    printf("  Flags: %d\n", header->e_flags);
-    printf("  Size of this header: %d\n", header->e_ehsize);
-    printf("  Size of program header entry: %d\n", header->e_phentsize);
-    printf("  Number of program header entries: %d\n", header->e_phnum);
-    printf("  Size of section header entry: %d\n", header->e_shentsize);
-    printf("  Number of section header entries: %d\n", header->e_shnum);
-    printf("  Section header string table index: %d\n", header->e_shstrndx);
+    HParseResult* result = h_parse(elf_header_parser(), fileBuffer, fileSize);
 
+    if (h_result_is_success(result)) {
+        elf_header_t* header = (elf_header_t*)h_result_get_value(result);
+        printf("ELF header parsed successfully!\n");
+        free(header);
+        h_result_destroy(result);
+    } else {
+        fprintf(stderr, "ELF header parsing failed: %s\n", h_result_get_error(result));
+        h_result_destroy(result);
+    }
 
     free(fileBuffer);
     return 0;
+}
+
+uint16_t HBytesToUint16(const void* bytes) {
+    return *(uint16_t*)bytes;
+}
+
+uint32_t HBytesToUint32(const void* bytes) {
+    return *(uint32_t*)bytes;
+}
+
+uint64_t HBytesToUint64(const void* bytes) {
+    return *(uint64_t*)bytes;
+}
+
+elf_header_t* HBytesToElfHeader(const void* bytes) {
+    elf_header_t* header = malloc(sizeof(elf_header_t));
+    memcpy(header, bytes, sizeof(elf_header_t));
+    return header;
 }

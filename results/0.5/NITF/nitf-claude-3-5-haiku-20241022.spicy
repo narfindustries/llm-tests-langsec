@@ -2,32 +2,128 @@ module NITF;
 
 import spicy;
 
-public type Header = unit {
-    magic: bytes(4) &requires($$=="NITF");
-    version: bytes(2);
-    datetime: bytes(14);
-    reserved1: bytes(2);
-    file_header_length: bytes(3);
-    file_header_length_int: uint32 = parse_file_header_length(file_header_length);
-
-    method parse_file_header_length(length: bytes) -> uint32 {
-        return spicy::parse_int(length, spicy::ByteOrder::Network);
-    }
-
-    var parsed_length: uint32 = file_header_length_int;
-
-    : void &size(parsed_length);
-
-    on %done {
-        self.validate();
-    }
-
-    method validate() {
-        if ( magic != b"NITF" ) 
-            throw "Invalid NITF magic number";
-    }
+public type NITF = unit {
+    file_header: FileHeader;
+    image_segments: ImageSegment[];
+    graphic_segments: GraphicSegment[];
+    text_segments: TextSegment[];
+    data_extension_segments: DataExtensionSegment[];
+    reserved_extension_segments: ReservedExtensionSegment[];
 };
 
-public type File = unit {
-    header: Header;
+type FileHeader = unit {
+    fhdr: bytes &size=9 &requires=($$ == b"NITF02.10");
+    clevel: bytes &size=2 &convert=to_int($$);
+    stype: bytes &size=1 &requires=($$[0] == b"R" || $$[0] == b"C" || $$[0] == b"S" || $$[0] == b"T");
+    ostaid: bytes &size=10;
+    fdt: bytes &size=14;
+    ftitle: bytes &size=80;
+    fscop: bytes &size=2;
+    fscpys: bytes &size=5;
+    encryption: bytes &size=1;
+    background_color: bytes &size=3;
+    originating_station: bytes &size=10;
+    standard_type: bytes &size=2;
+    standard_version: bytes &size=2;
+    num_image_segments: bytes &size=3 &convert=to_int($$);
+    num_graphic_segments: bytes &size=3 &convert=to_int($$);
+    num_text_segments: bytes &size=3 &convert=to_int($$);
+    num_data_ext_segments: bytes &size=3 &convert=to_int($$);
+    num_reserved_ext_segments: bytes &size=3 &convert=to_int($$);
+    user_header_length: bytes &size=5 &convert=to_int($$);
+    extended_header_length: bytes &size=5 &convert=to_int($$);
+};
+
+type ImageSegment = unit {
+    seg_header: ImageSegmentHeader;
+    image_data: bytes &size=(seg_header.block_size * seg_header.num_blocks_v * seg_header.num_blocks_h);
+};
+
+type ImageSegmentHeader = unit {
+    segment_type: bytes &size=2;
+    segment_length: bytes &size=10 &convert=to_int($$);
+    reserved_1: bytes &size=1;
+    security_class: bytes &size=1;
+    security_system: bytes &size=2;
+    security_code: bytes &size=11;
+    security_control: bytes &size=2;
+    security_downgrade: bytes &size=6;
+    encryption_type: bytes &size=1;
+    img_struct: ImageStructure;
+    img_navigation: ImageNavigation;
+    img_band_info: ImageBandInfo[];
+    compression_type: bytes &size=2;
+    compression_rate: bytes &size=4;
+    num_blocks_v: bytes &size=4 &convert=to_int($$);
+    num_blocks_h: bytes &size=4 &convert=to_int($$);
+    block_size: bytes &size=4 &convert=to_int($$);
+    num_bands: bytes &size=1 &convert=to_int($$);
+};
+
+type ImageStructure = unit {
+    columns: bytes &size=5 &convert=to_int($$);
+    rows: bytes &size=5 &convert=to_int($$);
+    pixel_type: bytes &size=3;
+    image_representation: bytes &size=8;
+    image_category: bytes &size=1;
+};
+
+type ImageNavigation = unit {
+    block_header_length: bytes &size=1 &convert=to_int($$);
+    compression_algorithm: bytes &size=1;
+    geo_reference_info: bytes &size=60;
+};
+
+type ImageBandInfo = unit {
+    band_representation: bytes &size=2;
+    radiometric_category: bytes &size=1;
+    num_luts: bytes &size=1 &convert=to_int($$);
+    band_name: bytes &size=14;
+};
+
+type GraphicSegment = unit {
+    seg_header: GraphicSegmentHeader;
+    graphic_data: bytes &size=(seg_header.segment_length);
+};
+
+type GraphicSegmentHeader = unit {
+    segment_type: bytes &size=2;
+    segment_length: bytes &size=6 &convert=to_int($$);
+    security_class: bytes &size=1;
+    graphic_name: bytes &size=20;
+};
+
+type TextSegment = unit {
+    seg_header: TextSegmentHeader;
+    text_data: bytes &size=(seg_header.segment_length);
+};
+
+type TextSegmentHeader = unit {
+    segment_type: bytes &size=2;
+    segment_length: bytes &size=5 &convert=to_int($$);
+    security_class: bytes &size=1;
+    text_title: bytes &size=80;
+};
+
+type DataExtensionSegment = unit {
+    seg_header: DataExtensionSegmentHeader;
+    data: bytes &size=(seg_header.segment_length);
+};
+
+type DataExtensionSegmentHeader = unit {
+    segment_type: bytes &size=2;
+    segment_length: bytes &size=6 &convert=to_int($$);
+    security_class: bytes &size=1;
+    data_extension_type: bytes &size=2;
+};
+
+type ReservedExtensionSegment = unit {
+    seg_header: ReservedExtensionSegmentHeader;
+    data: bytes &size=(seg_header.segment_length);
+};
+
+type ReservedExtensionSegmentHeader = unit {
+    segment_type: bytes &size=2;
+    segment_length: bytes &size=6 &convert=to_int($$);
+    security_class: bytes &size=1;
 };

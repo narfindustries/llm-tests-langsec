@@ -1,1 +1,92 @@
-Llama 3 Together API Error: 'choices'
+module ARP;
+
+type ARP_HTYPE = enum {
+  Ethernet_10Mb = 1,
+  Experimental_Ethernet_3Mb = 2,
+  Amateur_Radio_AX25 = 3,
+  Proteon_ProNET_Token_Ring = 4,
+  Chaos = 5,
+  IEEE_802_Networks = 6,
+  ARCNET = 7,
+  Hyperchannel = 8,
+  Lanbridge = 9,
+  DQDB_IEEE_802_6 = 10,
+  SMDS = 11,
+  Frame_Relay = 12,
+  ATM = 13,
+  HDLC = 14,
+  Fibre_Channel = 15,
+  ATM_RFC_2225 = 16,
+  Serial_Line = 17,
+  ATM_RFC_2684 = 18,
+  MPLS = 19,
+  IEEE_1394_Firewire = 20,
+  HIPARP = 21,
+  ISATAP_RFC_5214 = 22,
+  Infiniband_TM = 23
+};
+
+type ARP_PTYPE = enum {
+  IPv4 = 0x0800,
+  ARP = 0x0806,
+  RARP = 0x0835,
+  TRILL = 0x22F3,
+  IPv6 = 0x86DD
+};
+
+type ARP_HLEN = enum {
+  Ethernet_48bit = 6,
+  IEEE_802_5_16bit = 4,
+  IEEE_802_4_8bit = 2
+};
+
+type ARP_PLEN = enum {
+  IPv4_32bit = 4,
+  IPv6_128bit = 16
+};
+
+type ARP_OPER = enum {
+  Request = 1,
+  Reply = 2,
+  Request_Reverse = 3,
+  Reply_Reverse = 4,
+  DRARP_Request = 5,
+  DRARP_Reply = 6,
+  DRARP_Error = 7,
+  InARP_Request = 8,
+  InARP_Reply = 9
+};
+
+type ARP_Ethernet_Address = uint8[6];
+
+type ARP_IEEE_802_5_Address = uint8[4];
+
+type ARP_IEEE_802_4_Address = uint8[2];
+
+type ARP_Hardware_Address = uint8[] = 
+  case htype: ARP_HTYPE of 
+    Ethernet_10Mb => ARP_Ethernet_Address, 
+    Proteon_ProNET_Token_Ring => ARP_IEEE_802_5_Address, 
+    ARCNET => ARP_IEEE_802_4_Address;
+
+type ARP_IPv4_Address = uint8[4];
+
+type ARP_IPv6_Address = uint8[16];
+
+type ARP_Protocol_Address = uint8[] = 
+  case ptype: ARP_PTYPE of 
+    IPv4 => ARP_IPv4_Address, 
+    IPv6 => ARP_IPv6_Address;
+
+unit ARP_Packet = {
+  htype: ARP_HTYPE;
+  ptype: ARP_PTYPE;
+  hlen: ARP_HLEN;
+  plen: ARP_PLEN;
+  oper: ARP_OPER;
+  sha: ARP_Hardware_Address;
+  spa: ARP_Protocol_Address;
+  tha: ARP_Hardware_Address;
+  tpa: ARP_Protocol_Address;
+  pad: uint8[];
+};

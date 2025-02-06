@@ -1,51 +1,76 @@
 module DICOM;
 
-import spicy;
+public type DicomHeader = unit {
+    preamble: bytes;
+    magic: bytes;
 
-public type Header = unit {
-    prefix: bytes(4) = b"DICM";
-    meta_info_length: uint32;
-    meta_info: bytes(self.meta_info_length);
-
-    on %init {
-        self.validate();
-    }
-
-    function validate() {
-        if ( self.prefix != b"DICM" ) {
-            throw "Invalid DICOM header prefix";
-        }
-    }
+    header_length: uint32;
+    header_version: uint16;
+    transfer_syntax: bytes;
+    application_context: bytes;
+    calling_ae_title: bytes;
+    called_ae_title: bytes;
+    maximum_length: uint32;
+    implementation_version: bytes;
 };
 
-public type DataElement = unit {
-    tag: bytes(4);
-    vr: bytes(2);
-    length: uint32;
-    value: bytes(self.length);
-
-    on %init {
-        self.validate();
-    }
-
-    function validate() {
-        # Optional validation logic for data elements
-    }
+type PatientModule = unit {
+    patient_name: bytes;
+    patient_id: bytes;
+    patient_birth_date: bytes;
+    patient_sex: bytes;
+    patient_age: bytes;
+    patient_weight: double;
 };
 
-public type File = unit {
-    header: Header;
-    elements: DataElement[];
-
-    on %init {
-        self.validate();
-    }
-
-    function validate() {
-        # Optional file-level validation
-    }
+type StudyModule = unit {
+    study_instance_uid: bytes;
+    study_date: bytes;
+    study_time: bytes;
+    accession_number: bytes;
+    referring_physician_name: bytes;
+    study_description: bytes;
 };
 
-public type Parser = unit {
-    file: File;
+type SeriesModule = unit {
+    modality: bytes;
+    series_number: uint16;
+    series_description: bytes;
+    series_instance_uid: bytes;
+    series_date: bytes;
+    series_time: bytes;
+};
+
+type ImageModule = unit {
+    sop_class_uid: bytes;
+    sop_instance_uid: bytes;
+    image_number: uint16;
+    rows: uint16;
+    columns: uint16;
+    pixel_data: bytes;
+    bits_allocated: uint16;
+    photometric_interpretation: bytes;
+    window_center: double;
+    window_width: double;
+};
+
+type TransferSyntax = enum {
+    IMPLICIT_LITTLE_ENDIAN,
+    EXPLICIT_LITTLE_ENDIAN,
+    EXPLICIT_BIG_ENDIAN
+};
+
+type Modality = enum {
+    CT,
+    MR,
+    US,
+    XA
+};
+
+public type DICOM = unit {
+    header: DicomHeader;
+    patient: PatientModule;
+    study: StudyModule;
+    series: SeriesModule;
+    image: ImageModule;
 };

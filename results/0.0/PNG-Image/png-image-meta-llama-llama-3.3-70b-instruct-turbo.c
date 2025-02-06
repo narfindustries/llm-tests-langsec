@@ -1,13 +1,12 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the PNG image structure
+#define CHUNK_SIZE 1024
+
 typedef struct {
-    uint8_t signature[8];
-    uint32_t ihdr_length;
-    uint8_t ihdr_type[4];
     uint32_t width;
     uint32_t height;
     uint8_t bit_depth;
@@ -15,278 +14,150 @@ typedef struct {
     uint8_t compression_method;
     uint8_t filter_method;
     uint8_t interlace_method;
+} ihdr_chunk_t;
+
+typedef struct {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+} plte_entry_t;
+
+typedef struct {
+    plte_entry_t entries[256];
+    uint8_t num_entries;
+} plte_chunk_t;
+
+typedef struct {
+    uint8_t* data;
+    uint32_t size;
+} idat_chunk_t;
+
+typedef struct {
     uint32_t crc;
-    uint32_t idat_length;
-    uint8_t idat_data[1024];
-    uint32_t iend_length;
-    uint8_t iend_type[4];
-    uint32_t iend_crc;
+} iend_chunk_t;
+
+typedef struct {
+    char type[5];
+    uint8_t* data;
+    uint32_t size;
+    uint32_t crc;
+} chunk_t;
+
+typedef struct {
+    uint8_t magic_number[8];
+    ihdr_chunk_t ihdr;
+    plte_chunk_t plte;
+    idat_chunk_t idat;
+    iend_chunk_t iend;
+    chunk_t* chunks;
+    uint32_t num_chunks;
 } png_image_t;
 
-// Define the Hammer specification
-typedef struct {
-    uint8_t magic[4];
-    uint32_t version;
-    uint32_t image_count;
-    png_image_t images[10];
-} hammer_t;
-
-// Define the functions to read and write the Hammer specification
-hammer_t* read_hammer(const char* filename) {
-    FILE* file = fopen(filename, "rb");
-    if (!file) {
+void* png_magic_number_parser(void* input) {
+    static uint8_t magic_number[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    if (memcmp(input, magic_number, 8) == 0) {
+        return input + 8;
+    } else {
         return NULL;
     }
-
-    hammer_t* hammer = malloc(sizeof(hammer_t));
-    if (!hammer) {
-        fclose(file);
-        return NULL;
-    }
-
-    // Read the magic and version
-    if (fread(hammer->magic, 1, 4, file) != 4) {
-        free(hammer);
-        fclose(file);
-        return NULL;
-    }
-    if (fread(&hammer->version, 1, 4, file) != 4) {
-        free(hammer);
-        fclose(file);
-        return NULL;
-    }
-
-    // Read the image count
-    if (fread(&hammer->image_count, 1, 4, file) != 4) {
-        free(hammer);
-        fclose(file);
-        return NULL;
-    }
-
-    // Read the images
-    for (int i = 0; i < hammer->image_count; i++) {
-        png_image_t* image = &hammer->images[i];
-
-        // Read the IHDR chunk
-        if (fread(&image->ihdr_length, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(image->ihdr_type, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->width, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->height, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->bit_depth, 1, 1, file) != 1) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->color_type, 1, 1, file) != 1) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->compression_method, 1, 1, file) != 1) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->filter_method, 1, 1, file) != 1) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->interlace_method, 1, 1, file) != 1) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->crc, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-
-        // Read the IDAT chunk
-        if (fread(&image->idat_length, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(image->idat_data, 1, image->idat_length, file) != image->idat_length) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-
-        // Read the IEND chunk
-        if (fread(&image->iend_length, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(image->iend_type, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-        if (fread(&image->iend_crc, 1, 4, file) != 4) {
-            free(hammer);
-            fclose(file);
-            return NULL;
-        }
-    }
-
-    fclose(file);
-    return hammer;
 }
 
-int write_hammer(const char* filename, hammer_t* hammer) {
-    FILE* file = fopen(filename, "wb");
-    if (!file) {
-        return -1;
-    }
-
-    // Write the magic and version
-    if (fwrite(hammer->magic, 1, 4, file) != 4) {
-        fclose(file);
-        return -1;
-    }
-    if (fwrite(&hammer->version, 1, 4, file) != 4) {
-        fclose(file);
-        return -1;
-    }
-
-    // Write the image count
-    if (fwrite(&hammer->image_count, 1, 4, file) != 4) {
-        fclose(file);
-        return -1;
-    }
-
-    // Write the images
-    for (int i = 0; i < hammer->image_count; i++) {
-        png_image_t* image = &hammer->images[i];
-
-        // Write the IHDR chunk
-        if (fwrite(&image->ihdr_length, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(image->ihdr_type, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->width, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->height, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->bit_depth, 1, 1, file) != 1) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->color_type, 1, 1, file) != 1) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->compression_method, 1, 1, file) != 1) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->filter_method, 1, 1, file) != 1) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->interlace_method, 1, 1, file) != 1) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->crc, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-
-        // Write the IDAT chunk
-        if (fwrite(&image->idat_length, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(image->idat_data, 1, image->idat_length, file) != image->idat_length) {
-            fclose(file);
-            return -1;
-        }
-
-        // Write the IEND chunk
-        if (fwrite(&image->iend_length, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(image->iend_type, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-        if (fwrite(&image->iend_crc, 1, 4, file) != 4) {
-            fclose(file);
-            return -1;
-        }
-    }
-
-    fclose(file);
-    return 0;
+void* ihdr_chunk_parser(void* input) {
+    ihdr_chunk_t* ihdr = (ihdr_chunk_t*)input;
+    input += sizeof(ihdr_chunk_t);
+    return input;
 }
 
-int main() {
-    // Create a sample Hammer specification
-    hammer_t hammer;
-    memcpy(hammer.magic, "HAMR", 4);
-    hammer.version = 1;
-    hammer.image_count = 1;
+void* plte_chunk_parser(void* input) {
+    plte_chunk_t* plte = (plte_chunk_t*)input;
+    input += sizeof(plte_chunk_t);
+    return input;
+}
+
+void* idat_chunk_parser(void* input) {
+    idat_chunk_t* idat = (idat_chunk_t*)input;
+    input += sizeof(idat_chunk_t);
+    return input;
+}
+
+void* iend_chunk_parser(void* input) {
+    iend_chunk_t* iend = (iend_chunk_t*)input;
+    input += sizeof(iend_chunk_t);
+    return input;
+}
+
+void* chunk_parser(void* input) {
+    chunk_t* chunk = (chunk_t*)input;
+    input += sizeof(chunk_t);
+    return input;
+}
+
+void* png_image_parser(void* input) {
+    png_image_t* image = (png_image_t*)input;
+    input = png_magic_number_parser(input);
+    if (input == NULL) {
+        return NULL;
+    }
+    input = ihdr_chunk_parser(input);
+    if (input == NULL) {
+        return NULL;
+    }
+    input = plte_chunk_parser(input);
+    if (input == NULL) {
+        return NULL;
+    }
+    input = idat_chunk_parser(input);
+    if (input == NULL) {
+        return NULL;
+    }
+    input = iend_chunk_parser(input);
+    if (input == NULL) {
+        return NULL;
+    }
+    return input;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
 
     png_image_t image;
-    image.ihdr_length = 25;
-    memcpy(image.ihdr_type, "IHDR", 4);
-    image.width = 1024;
-    image.height = 768;
-    image.bit_depth = 8;
-    image.color_type = 2;
-    image.compression_method = 0;
-    image.filter_method = 0;
-    image.interlace_method = 0;
-    image.crc = 0x12345678;
-    image.idat_length = 1024;
-    memset(image.idat_data, 0, 1024);
-    image.iend_length = 0;
-    memcpy(image.iend_type, "IEND", 4);
-    image.iend_crc = 0x12345678;
+    void* input = &image;
+    void* result = png_image_parser(input);
 
-    hammer.images[0] = image;
-
-    // Write the Hammer specification to a file
-    write_hammer("output.hammer", &hammer);
-
-    // Read the Hammer specification from the file
-    hammer_t* read_hammer_spec = read_hammer("output.hammer");
-    if (read_hammer_spec) {
-        printf("Read Hammer specification successfully\n");
-        free(read_hammer_spec);
+    if (result != NULL) {
+        printf("PNG image parsed successfully:\n");
+        printf("Width: %u\n", image.ihdr.width);
+        printf("Height: %u\n", image.ihdr.height);
+        printf("Bit depth: %u\n", image.ihdr.bit_depth);
+        printf("Color type: %u\n", image.ihdr.color_type);
+        printf("Compression method: %u\n", image.ihdr.compression_method);
+        printf("Filter method: %u\n", image.ihdr.filter_method);
+        printf("Interlace method: %u\n", image.ihdr.interlace_method);
+        if (image.plte.num_entries > 0) {
+            printf("PLTE chunk:\n");
+            for (uint8_t i = 0; i < image.plte.num_entries; i++) {
+                printf("Entry %u: (%u, %u, %u)\n", i, image.plte.entries[i].red, image.plte.entries[i].green, image.plte.entries[i].blue);
+            }
+        }
+        if (image.idat.size > 0) {
+            printf("IDAT chunk:\n");
+            printf("Size: %u\n", image.idat.size);
+        }
+        printf("IEND chunk:\n");
+        printf("CRC: %u\n", image.iend.crc);
     } else {
-        printf("Failed to read Hammer specification\n");
+        printf("Error parsing PNG image\n");
     }
 
+    fclose(file);
     return 0;
 }

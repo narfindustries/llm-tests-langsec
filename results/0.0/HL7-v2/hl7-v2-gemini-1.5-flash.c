@@ -1,65 +1,74 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent an HL7 message segment
-typedef struct {
-    char *segment_id;
-    char *field1;
-    char *field2;
-    // Add more fields as needed based on the HL7 message structure
-} HL7Segment;
+// This is a highly simplified example and does NOT cover the entire HL7 v2 specification.
+// A complete implementation would be extremely complex and lengthy.  This demonstrates a basic approach.
 
+// Define parsers for basic HL7 data types (highly simplified)
+hm_parser_t* hm_parse_string(const char* str) {
+    return hm_string(str);
+}
 
-// Function to parse an HL7 message (replace with your actual parsing logic)
-HL7Segment* parseHL7Segment(char *line) {
-    HL7Segment *segment = (HL7Segment*)malloc(sizeof(HL7Segment));
-    if (segment == NULL) {
+hm_parser_t* hm_parse_integer() {
+    return hm_integer();
+}
+
+hm_parser_t* hm_parse_date() {
+    // Replace with a more robust date parser as needed
+    return hm_regex("[0-9]{8}"); // YYYYMMDD format - a very basic example
+}
+
+// Example parser for a simplified PID segment
+hm_parser_t* hm_parse_pid_segment() {
+    hm_parser_t* field_parser = hm_choice(hm_string(""), hm_integer(), hm_string(""), hm_regex("[0-9]{8}"));
+    return hm_seq(
+        hm_string("PID"),
+        hm_sep_by(hm_string("|"), field_parser),
+        hm_end_of_input()
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(fsize + 1);
+    if (buffer == NULL) {
         perror("Memory allocation failed");
-        exit(1);
-    }
-    //Basic parsing -  replace with robust HL7 parsing library
-    char *token;
-    token = strtok(line, "|");
-    segment->segment_id = strdup(token);
-
-    token = strtok(NULL, "|");
-    segment->field1 = (token != NULL) ? strdup(token) : NULL;
-
-    token = strtok(NULL, "|");
-    segment->field2 = (token != NULL) ? strdup(token) : NULL;
-
-    // ... parse remaining fields ...
-
-    return segment;
-}
-
-
-// Function to process an HL7 segment (replace with your actual processing logic)
-void processHL7Segment(HL7Segment *segment) {
-    //Example processing - print segment data
-    printf("Segment ID: %s\n", segment->segment_id);
-    if (segment->field1 != NULL) printf("Field 1: %s\n", segment->field1);
-    if (segment->field2 != NULL) printf("Field 2: %s\n", segment->field2);
-    // ... process the segment data ...
-
-    free(segment->segment_id);
-    if (segment->field1 != NULL) free(segment->field1);
-    if (segment->field2 != NULL) free(segment->field2);
-    free(segment);
-}
-
-
-int main() {
-    char line[1024]; // Adjust buffer size as needed
-
-    //Simulate reading from a file. Replace with actual file reading.
-    strcpy(line, "MSH|^~\\&|ADT|XYZ|123|ABC|202403081000||ORU^R01|12345|P|2.5");
-
-    HL7Segment *segment = parseHL7Segment(line);
-    if (segment != NULL) {
-        processHL7Segment(segment);
+        fclose(fp);
+        return 1;
     }
 
+    fread(buffer, 1, fsize, fp);
+    buffer[fsize] = '\0';
+    fclose(fp);
+
+    hm_parser_t* parser = hm_parse_pid_segment(); // Replace with a more complete parser
+    hm_result_t result = hm_parse(parser, buffer);
+
+    if (result.success) {
+        printf("HL7 message parsed successfully!\n");
+        // Process the parsed data (result.value) here. This is highly simplified.
+    } else {
+        fprintf(stderr, "Parsing failed at position %zu: %s\n", result.position, result.error);
+    }
+
+    hm_free(parser);
+    free(buffer);
     return 0;
 }
+

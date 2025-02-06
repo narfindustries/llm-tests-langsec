@@ -1,86 +1,105 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hammer/hammer.h>
-
-// Define HL7 v2 message structure using Hammer parser combinators
-// Note: This is a simplified example and does not cover the entire specification.
-//       A complete implementation would be significantly larger and more complex.
 
 typedef struct {
-    char* msh_field_1; //MSH-1
-    char* msh_field_2; //MSH-2
-    char* msh_field_3; //MSH-3
-    char* msh_field_4; //MSH-4
-    char* msh_field_5; //MSH-5
-    char* msh_field_6; //MSH-6
-    char* msh_field_7; //MSH-7
-    char* msh_field_8; //MSH-8
-    char* msh_field_9; //MSH-9
-    char* msh_field_10; //MSH-10
-    char* msh_field_11; //MSH-11
-    char* msh_field_12; //MSH-12
-    // Add other segments and fields as needed...
-} HL7Message;
+    char* value;
+} HL7String;
 
+typedef struct {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+} HL7DateTime;
 
-//Helper function to read file into buffer
-char* readFile(const char* filename) {
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        perror("Error opening file");
-        return NULL;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    rewind(file);
-
-    char *buffer = (char*)malloc(fileSize + 1);
-    if (buffer == NULL) {
-        perror("Memory allocation failed");
-        fclose(file);
-        return NULL;
-    }
-
-    fread(buffer, 1, fileSize, file);
-    buffer[fileSize] = '\0'; // Null-terminate the string
-    fclose(file);
-    return buffer;
+hammer_parser HL7String_parser() {
+    return hammer_string();
 }
 
+hammer_parser HL7DateTime_parser() {
+    return hammer_map(
+        hammer_seq(
+            hammer_int(),
+            hammer_char('-'),
+            hammer_int(),
+            hammer_char('-'),
+            hammer_int(),
+            hammer_char(' '),
+            hammer_int(),
+            hammer_char(':'),
+            hammer_int(),
+            hammer_char(':'),
+            hammer_int()
+        ),
+        (void*) [](hammer_tuple t) {
+            HL7DateTime* dt = malloc(sizeof(HL7DateTime));
+            dt->year = hammer_get_int(hammer_get_element(t, 0));
+            dt->month = hammer_get_int(hammer_get_element(t, 2));
+            dt->day = hammer_get_int(hammer_get_element(t, 4));
+            dt->hour = hammer_get_int(hammer_get_element(t, 6));
+            dt->minute = hammer_get_int(hammer_get_element(t, 8));
+            dt->second = hammer_get_int(hammer_get_element(t, 10));
+            return dt;
+        }
+    );
+}
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
         return 1;
     }
 
-    char* fileContent = readFile(argv[1]);
-    if (fileContent == NULL) return 1;
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    //Example using Hammer (replace with actual HL7 parsing logic)
-    //This is a placeholder and needs to be replaced with actual parser combinators
-    //for HL7 message parsing.  The complexity of this will depend on the 
-    //level of detail required in the parsing.
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    HL7Message message;
-    // ... (Hammer parser combinator code to parse the HL7 message from fileContent) ...
-    //Example of assigning values (replace with actual parser results)
-    message.msh_field_1 = "MSH";
-    message.msh_field_2 = "SendingApp";
-    message.msh_field_3 = "SendingFacility";
-    // ... assign other fields ...
+    char* fileContent = (char*) malloc(fileSize + 1);
+    fread(fileContent, 1, fileSize, fp);
+    fileContent[fileSize] = '\0';
+    fclose(fp);
 
+    hammer_parser mshParser = hammer_seq(
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7String_parser(), 
+        hammer_char('|'),
+        HL7DateTime_parser(), 
+        hammer_char('|'),
+        HL7String_parser()
+    );
 
-    printf("Parsed HL7 Message:\n");
-    printf("MSH-1: %s\n", message.msh_field_1);
-    printf("MSH-2: %s\n", message.msh_field_2);
-    printf("MSH-3: %s\n", message.msh_field_3);
-    // ... print other fields ...
+    hammer_result result = hammer_parse(mshParser, fileContent);
 
+    if (hammer_is_success(result)) {
+        printf("Parsing successful!\n");
+        HL7String* sendingApplication = hammer_get_value(hammer_get_element(hammer_get_value(result), 2));
+        printf("Sending Application: %s\n", sendingApplication->value);
+        free(sendingApplication->value);
+        free(sendingApplication);
+    } else {
+        printf("Parsing failed: %s\n", hammer_get_error(result));
+    }
+
+    hammer_free_result(result);
     free(fileContent);
-    // ... free other dynamically allocated memory ...
-
     return 0;
 }

@@ -1,0 +1,16 @@
+JPEG = SOI (Frame)* EOI
+SOI = 0xFFD8
+EOI = 0xFFD9
+Frame = SOF0 | SOF1 | SOF2 | SOF3 | DHT | DQT | DRI | SOS | APPn | COM
+SOF0 = 0xFFC0 Precision:u8 Height:u16 Width:u16 NumComponents:u8 (Component)*
+SOF1 = 0xFFC1 Precision:u8 Height:u16 Width:u16 NumComponents:u8 (Component)*
+SOF2 = 0xFFC2 Precision:u8 Height:u16 Width:u16 NumComponents:u8 (Component)*
+SOF3 = 0xFFC3 Precision:u8 Height:u16 Width:u16 NumComponents:u8 (Component)*
+Component = ComponentID:u8 SamplingFactors:u8 QuantizationTableID:u8
+DHT = 0xFFC4 TableClass:u4 TableID:u4 (CodeLengths:u8)[16] (CodeValues:u8)*
+DQT = 0xFFDB Precision:u4 TableID:u4 (QuantizationValues:u8)[64] | (QuantizationValues:u16)[64]
+DRI = 0xFFDD RestartInterval:u16
+SOS = 0xFFDA NumComponents:u8 (ComponentInScan)*
+ComponentInScan = ComponentID:u8 DCHuffmanTableID:u4 ACHuffmanTableID:u4
+APPn = 0xFFE0..0xFFEF (Data:u8)*
+COM = 0xFFFE (Comment:u8)*

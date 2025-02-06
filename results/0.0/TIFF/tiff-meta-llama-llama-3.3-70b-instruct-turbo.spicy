@@ -1,55 +1,299 @@
-# TIFF File Format Parser
+module TIFF;
 
-# Define the TIFF file format
-file_format tiff {
-  magic = b"MM\x00\x2a" | b"II\x2a\x00";
-}
+type tiff_header = struct {
+  byte_order: uint16;
+  version: uint16;
+  ifd_offset: uint32
+};
 
-# Define the TIFF IFD (Image File Directory)
-type ifd {
-  uint16 count;
-  repeat count {
-    uint16 tag;
-    uint16 type;
-    uint32 count;
-    bytes value;
+type ifd = struct {
+  tag: uint16;
+  type: uint16;
+  count: uint32;
+  value_offset: uint32
+};
+
+type ifd_tag_256 = struct {
+  width: uint16
+};
+
+type ifd_tag_257 = struct {
+  length: uint16
+};
+
+type ifd_tag_258 = struct {
+  bits_per_sample: array[uint16]
+};
+
+type ifd_tag_259 = struct {
+  compression: uint16
+};
+
+type ifd_tag_262 = struct {
+  photometric_interpretation: uint16
+};
+
+type ifd_tag_274 = struct {
+  orientation: uint16
+};
+
+type ifd_tag_277 = struct {
+  samples_per_pixel: uint16
+};
+
+type ifd_tag_278 = struct {
+  rows_per_strip: uint16
+};
+
+type ifd_tag_279 = struct {
+  strip_offsets: array[uint32]
+};
+
+type ifd_tag_280 = struct {
+  strip_byte_counts: array[uint32]
+};
+
+type ifd_tag_282 = struct {
+  x_resolution: rational
+};
+
+type ifd_tag_283 = struct {
+  y_resolution: rational
+};
+
+type ifd_tag_284 = struct {
+  planar_configuration: uint16
+};
+
+type ifd_tag_285 = struct {
+  page_name: string
+};
+
+type ifd_tag_286 = struct {
+  x_position: rational
+};
+
+type ifd_tag_287 = struct {
+  y_position: rational
+};
+
+type ifd_tag_288 = struct {
+  free_offsets: array[uint32]
+};
+
+type ifd_tag_289 = struct {
+  free_byte_counts: array[uint32]
+};
+
+type ifd_tag_290 = struct {
+  gray_response_unit: uint16
+};
+
+type ifd_tag_291 = struct {
+  gray_response_curve: array[uint16]
+};
+
+type ifd_tag_292 = struct {
+  t4_options: uint32
+};
+
+type ifd_tag_293 = struct {
+  t6_options: uint32
+};
+
+type ifd_tag_296 = struct {
+  resolution_unit: uint16
+};
+
+type ifd_tag_297 = struct {
+  page_number: array[uint16]
+};
+
+type ifd_tag_301 = struct {
+  transfer_function: array[uint16]
+};
+
+type ifd_tag_305 = struct {
+  software: string
+};
+
+type ifd_tag_306 = struct {
+  date_time: string
+};
+
+type ifd_tag_315 = struct {
+  artist: string
+};
+
+type ifd_tag_316 = struct {
+  host_computer: string
+};
+
+type ifd_tag_317 = struct {
+  predictor: uint16
+};
+
+type ifd_tag_318 = struct {
+  white_point: array[rational]
+};
+
+type ifd_tag_319 = struct {
+  primary_chromaticities: array[rational]
+};
+
+type ifd_tag_320 = struct {
+  color_map: array[uint16]
+};
+
+type ifd_tag_321 = struct {
+  halftone_hints: array[uint16]
+};
+
+type ifd_tag_322 = struct {
+  tile_width: uint16
+};
+
+type ifd_tag_323 = struct {
+  tile_length: uint16
+};
+
+type ifd_tag_324 = struct {
+  tile_offsets: array[uint32]
+};
+
+type ifd_tag_325 = struct {
+  tile_byte_counts: array[uint32]
+};
+
+type ifd_tag_330 = struct {
+  sub_ifds: array[uint32]
+};
+
+type ifd_tag_332 = struct {
+  ink_set: uint16
+};
+
+type ifd_tag_333 = struct {
+  ink_names: array[string]
+};
+
+type ifd_tag_334 = struct {
+  number_of_inks: uint16
+};
+
+type ifd_tag_336 = struct {
+  dot_range: array[uint8]
+};
+
+type ifd_tag_337 = struct {
+  target_printer: string
+};
+
+type ifd_tag_338 = struct {
+  extra_samples: array[uint8]
+};
+
+type ifd_tag_339 = struct {
+  sample_format: array[uint16]
+};
+
+type ifd_tag_340 = struct {
+  s_min_sample_value: array[uint16]
+};
+
+type ifd_tag_341 = struct {
+  s_max_sample_value: array[uint16]
+};
+
+type ifd_tag_342 = struct {
+  transfer_range: array[uint16]
+};
+
+type ifd_tag_343 = struct {
+  clip_path: array[uint8]
+};
+
+type ifd_tag_344 = struct {
+  x_clip_path_units: uint16
+};
+
+type ifd_tag_345 = struct {
+  y_clip_path_units: uint16
+};
+
+type ifd_tag_346 = struct {
+  indexed: uint16
+};
+
+type ifd_tag_347 = struct {
+  jpeg_tables: bytes
+};
+
+type tiff = struct {
+  header: tiff_header;
+  ifds: array[ifd]
+};
+
+let tiff_parser = parser "tiff" : tiff {
+  header: parse tiff_header;
+  ifds: parse while (peek uint16 != 0) {
+    ifd: parse ifd;
+    switch ifd.tag {
+      256: parse ifd_tag_256;
+      257: parse ifd_tag_257;
+      258: parse ifd_tag_258;
+      259: parse ifd_tag_259;
+      262: parse ifd_tag_262;
+      274: parse ifd_tag_274;
+      277: parse ifd_tag_277;
+      278: parse ifd_tag_278;
+      279: parse ifd_tag_279;
+      280: parse ifd_tag_280;
+      282: parse ifd_tag_282;
+      283: parse ifd_tag_283;
+      284: parse ifd_tag_284;
+      285: parse ifd_tag_285;
+      286: parse ifd_tag_286;
+      287: parse ifd_tag_287;
+      288: parse ifd_tag_288;
+      289: parse ifd_tag_289;
+      290: parse ifd_tag_290;
+      291: parse ifd_tag_291;
+      292: parse ifd_tag_292;
+      293: parse ifd_tag_293;
+      296: parse ifd_tag_296;
+      297: parse ifd_tag_297;
+      301: parse ifd_tag_301;
+      305: parse ifd_tag_305;
+      306: parse ifd_tag_306;
+      315: parse ifd_tag_315;
+      316: parse ifd_tag_316;
+      317: parse ifd_tag_317;
+      318: parse ifd_tag_318;
+      319: parse ifd_tag_319;
+      320: parse ifd_tag_320;
+      321: parse ifd_tag_321;
+      322: parse ifd_tag_322;
+      323: parse ifd_tag_323;
+      324: parse ifd_tag_324;
+      325: parse ifd_tag_325;
+      330: parse ifd_tag_330;
+      332: parse ifd_tag_332;
+      333: parse ifd_tag_333;
+      334: parse ifd_tag_334;
+      336: parse ifd_tag_336;
+      337: parse ifd_tag_337;
+      338: parse ifd_tag_338;
+      339: parse ifd_tag_339;
+      340: parse ifd_tag_340;
+      341: parse ifd_tag_341;
+      342: parse ifd_tag_342;
+      343: parse ifd_tag_343;
+      344: parse ifd_tag_344;
+      345: parse ifd_tag_345;
+      346: parse ifd_tag_346;
+      347: parse ifd_tag_347;
+      _ : skip
+    }
   }
-}
-
-# Define the TIFF header
-type header {
-  bytes magic: 2;
-  uint16 version;
-  uint32 ifd_offset;
-}
-
-# Define the TIFF file structure
-type file {
-  header header;
-  ifd ifd;
-}
-
-# Define the parser
-parser tiff_parser {
-  header: header;
-  ifd: ifd;
-}
-
-# Define the event handler
-event tiff_file_parsed(header: header, ifd: ifd) {
-  print("TIFF file parsed");
-  print("Header:", header);
-  print("IFD:", ifd);
-}
-
-# Define the main function
-function main() {
-  # Read the TIFF file
-  file = read_file("tiff_file.tiff");
-
-  # Parse the TIFF file
-  tiff_parser->parse(file);
-
-  # Handle the parsed TIFF file
-  event tiff_file_parsed(tiff_parser->header, tiff_parser->ifd);
-}
+};

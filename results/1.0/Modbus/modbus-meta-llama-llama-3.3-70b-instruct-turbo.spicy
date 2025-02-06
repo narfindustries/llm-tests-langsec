@@ -1,1 +1,96 @@
-Llama 3 Together API Error: 'choices'
+module Modbus;
+
+type ModbusAddress = uint8;
+type ModbusFunctionCode = uint8;
+
+type ModbusData = record {
+  address: uint16;
+  quantity: uint16;
+  values: array[uint16] of uint16;
+  byte_count: uint8;
+};
+
+type ModbusExceptionCode = uint8;
+
+type ModbusCRC = uint16;
+
+type ModbusHeader = record {
+  transaction_id: uint16;
+  protocol_id: uint16 = 0x0000;
+  length: uint16;
+  unit_id: uint8 = 0x00;
+};
+
+type ModbusMessage = record {
+  address: uint8;
+  function_code: uint8;
+  data: ModbusData;
+  crc: uint16;
+};
+
+type ModbusTCPMessage = record {
+  header: ModbusHeader;
+  pdu: ModbusMessage;
+};
+
+type ModbusRTUMessage = record {
+  address: uint8;
+  function_code: uint8;
+  data: ModbusData;
+  crc: uint16;
+};
+
+type ModbusASCIIMessage = record {
+  address: uint8;
+  function_code: uint8;
+  data: ModbusData;
+  lrc: uint8;
+};
+
+let modbus_tcp_message = ModbusTCPMessage;
+let modbus_rtu_message = ModbusRTUMessage;
+let modbus_ascii_message = ModbusASCIIMessage;
+
+let modbus_tcp_message_init = ModbusTCPMessage = {
+  header = {
+    transaction_id = 0x0001,
+    protocol_id = 0x0000,
+    length = 6,
+    unit_id = 0x01
+  },
+  pdu = {
+    address = 0x01,
+    function_code = 0x03,
+    data = {
+      address = 0x0001,
+      quantity = 0x0002,
+      values = [],
+      byte_count = 0x00
+    },
+    crc = 0x1234
+  }
+};
+
+let modbus_rtu_message_init = ModbusRTUMessage = {
+  address = 0x01,
+  function_code = 0x03,
+  data = {
+    address = 0x0001,
+    quantity = 0x0002,
+    values = [],
+    byte_count = 0x00
+  },
+  crc = 0x1234
+};
+
+let modbus_ascii_message_init = ModbusASCIIMessage = {
+  address = 0x01,
+  function_code = 0x03,
+  data = {
+    address = 0x0001,
+    quantity = 0x0002,
+    values = [],
+    byte_count = 0x00
+  },
+  lrc = 0x12
+};

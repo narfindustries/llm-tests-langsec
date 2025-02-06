@@ -1,59 +1,62 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/http-1.1/"
-           xmlns:tns="http://example.com/dfdl/http-1.1/">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
+      <dfdl:format ref="tns:HTTPFormat"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:simpleType name="CrLf">
-    <xs:restriction base="xs:string">
-      <xs:whiteSpace value="replace"/>
-      <xs:pattern value="[\r\n]+"/>
+  <xs:element name="HTTPRequest" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+
+        <xs:element name="Headers" type="tns:HTTPHeader" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Content" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="\r\n" minOccurs="0"/>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="HTTPResponse" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="StatusCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+
+        <xs:element name="Headers" type="tns:HTTPHeader" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Content" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="\r\n" minOccurs="0"/>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HTTPHeader">
+    <xs:sequence>
+      <xs:element name="HeaderName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":"/>
+      <xs:element name="HeaderValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="HTTPFormat">
+    <xs:restriction base="dfdl:Format">
+      <dfdl:lengthKind>delimited</dfdl:lengthKind>
+      <dfdl:textBidi="no"/>
+      <dfdl:textBooleanPadCharacter>%SP;</dfdl:textBooleanPadCharacter>
+      <dfdl:textBooleanJustification>left</dfdl:textBooleanJustification>
+      <dfdl:textPadKind>none</dfdl:textPadKind>
+      <dfdl:textTrimKind>none</dfdl:textTrimKind>
+      <dfdl:textNumberRep>standard</dfdl:textNumberRep>
+      <dfdl:encoding>UTF-8</dfdl:encoding>
+      <dfdl:textStandardBase>10</dfdl:textStandardBase>
+      <dfdl:textStandardDecimalSeparator="."/>
+      <dfdl:textStandardGroupingSeparator=","/>
+      <dfdl:textStandardExponentCharacter="e"/>
     </xs:restriction>
   </xs:simpleType>
 
-  <xs:complexType name="RequestLine">
-    <xs:sequence>
-      <xs:element name="method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
-      <xs:element name="requestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
-      <xs:element name="httpVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%WSP*;"/>
-      <xs:element name="CRLF" type="tns:CrLf" dfdl:lengthKind="explicit" dfdl:length="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="HeaderField">
-    <xs:sequence>
-      <xs:element name="fieldName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":"/>
-      <xs:element name="fieldValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:initiatedContent="true" dfdl:initiator=":" dfdl:terminator="%WSP*;"/>
-      <xs:element name="CRLF" type="tns:CrLf" dfdl:lengthKind="explicit" dfdl:length="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="HTTPRequest">
-    <xs:sequence>
-      <xs:element name="RequestLine" type="tns:RequestLine"/>
-      <xs:element name="HeaderFields" type="tns:HeaderField" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:element name="CRLF" type="tns:CrLf" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="messageBody" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%WSP*;"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="HTTPRequest" type="tns:HTTPRequest"/>
-
-  <dfdl:defineFormat name="GeneralFormat">
-    <dfdl:format byteOrder="bigEndian"
-                 encoding="ASCII"
-                 bitOrder="mostSignificantBitFirst"
-                 textStringJustification="left"
-                 textPadKind="none"
-                 textTrimKind="none"
-                 lengthKind="delimited"
-                 initiationTerminatorSuppressPolicy="suppress"
-                 terminatorPolicy="required"/>
-  </dfdl:defineFormat>
 </xs:schema>

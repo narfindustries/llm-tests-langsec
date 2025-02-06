@@ -1,89 +1,100 @@
-jpeg_file = {
-    header: jpeg_header,
-    segments: jpeg_segments
+def JPEG = {
+    start_of_image: magic(0xFFD8),
+    segments: list(Segment),
+    end_of_image: magic(0xFFD9)
 }
 
-jpeg_header = {
-    start_marker: 0xFFD8,
-    markers: [start_marker]
+def Segment = 
+    | APP0
+    | APP1
+    | SOF
+    | DHT
+    | DQT
+    | SOS
+    | Restart
+    | Comment
+
+def APP0 = {
+    marker: u16be = 0xFFE0,
+    length: u16be,
+    identifier: string(5),
+    version: u16be,
+    units: u8,
+    x_density: u16be,
+    y_density: u16be,
+    thumbnail_width: u8,
+    thumbnail_height: u8,
+    thumbnail_data: bytes(thumbnail_width * thumbnail_height * 3)
 }
 
-jpeg_segments = [
-    app_segments*,
-    quantization_tables,
-    huffman_tables,
-    start_of_frame,
-    start_of_scan,
-    compressed_data,
-    end_marker
-]
-
-app_segments = {
-    marker: 0xFFE0 to 0xFFEF,
-    length: uint16,
-    data: bytes(length - 2)
+def APP1 = {
+    marker: u16be = 0xFFE1,
+    length: u16be,
+    exif_data: bytes(length - 2)
 }
 
-quantization_tables = {
-    marker: 0xFFDB,
-    length: uint16,
-    tables: [quantization_table+]
+def SOF = {
+    marker: u16be = choice(0xFFC0, 0xFFC1, 0xFFC2, 0xFFC3),
+    length: u16be,
+    precision: u8,
+    height: u16be,
+    width: u16be,
+    components_count: u8,
+    components: list(Component, components_count)
 }
 
-quantization_table = {
-    precision: uint8,
-    table_data: bytes(64)
+def DHT = {
+    marker: u16be = 0xFFC4,
+    length: u16be,
+    tables: list(HuffmanTable)
 }
 
-huffman_tables = {
-    marker: 0xFFC4,
-    length: uint16,
-    tables: [huffman_table+]
+def DQT = {
+    marker: u16be = 0xFFDB,
+    length: u16be,
+    tables: list(QuantizationTable)
 }
 
-huffman_table = {
-    table_class: uint8,
-    destination_id: uint8,
-    lengths: uint8[16],
-    values: bytes(sum(lengths))
+def SOS = {
+    marker: u16be = 0xFFC0,
+    length: u16be,
+    components_count: u8,
+    components: list(ScanComponent, components_count),
+    spectral_start: u8,
+    spectral_end: u8,
+    approximation: u8,
+    compressed_data: bytes
 }
 
-start_of_frame = {
-    marker: 0xFFC0,
-    length: uint16,
-    precision: uint8,
-    height: uint16,
-    width: uint16,
-    components: [color_component+]
+def Restart = {
+    marker: u16be = choice(0xFFD0, 0xFFD1, 0xFFD2, 0xFFD3, 0xFFD4, 0xFFD5, 0xFFD6, 0xFFD7)
 }
 
-color_component = {
-    id: uint8,
-    sampling_factors: uint8,
-    quantization_table_id: uint8
+def Comment = {
+    marker: u16be = 0xFFFE,
+    length: u16be,
+    comment: string(length - 2)
 }
 
-start_of_scan = {
-    marker: 0xFFC0,
-    length: uint16,
-    component_count: uint8,
-    scan_components: [scan_component+],
-    spectral_selection_start: uint8,
-    spectral_selection_end: uint8,
-    approximation_high: uint8,
-    approximation_low: uint8
+def Component = {
+    id: u8,
+    sampling_factors: u8,
+    quantization_table_id: u8
 }
 
-scan_component = {
-    component_id: uint8,
-    dc_huffman_table: uint8,
-    ac_huffman_table: uint8
+def HuffmanTable = {
+    class: u8,
+    destination: u8,
+    code_lengths: array(16, u8),
+    values: bytes(sum(code_lengths))
 }
 
-compressed_data = {
-    data: bytes
+def QuantizationTable = {
+    precision: u8,
+    elements: array(64, u16be)
 }
 
-end_marker = {
-    marker: 0xFFD9
+def ScanComponent = {
+    selector: u8,
+    huffman_tables: u8
 }

@@ -1,46 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ELF"
-           xmlns:elf="http://example.com/ELF"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="elfFile" type="elf:elfFileType" dfdl:representation="binary" dfdl:encoding="utf-8">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format representation="binary" encoding="utf-8"/>
-      </xs:appinfo>
-    </xs:annotation>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/ELF" xmlns="http://example.com/ELF" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="elfFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="e_ident" type="eIdentType" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_type" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_machine" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_version" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_entry" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_phoff" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_shoff" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_flags" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_ehsize" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_phentsize" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_phnum" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_shentsize" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_shnum" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="e_shstrndx" type="xs:unsignedShort" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="programHeaderTable" type="programHeaderTableType" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="sectionHeaderTable" type="sectionHeaderTableType" maxOccurs="1" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="elfFileType">
+  <xs:complexType name="eIdentType">
     <xs:sequence>
-      <xs:element name="e_ident" type="elf:e_identType" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
-      <xs:element name="e_type" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_version" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="4"/>
-      <xs:element name="e_entry" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
-      <xs:element name="e_phoff" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
-      <xs:element name="e_shoff" type="xs:unsignedLong" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="8"/>
-      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="4"/>
-      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
-      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="2"/>
+      <xs:element name="EI_MAG0" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_MAG1" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_MAG2" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_MAG3" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_CLASS" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_DATA" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_VERSION" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_OSABI" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_ABIVERSION" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="EI_PAD" type="xs:unsignedByte" maxOccurs="7" minOccurs="7"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="e_identType">
+  <xs:complexType name="programHeaderTableType">
     <xs:sequence>
-      <xs:element name="ei_mag" type="xs:unsignedByte" dfdl:occurs="4..4" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
-      <xs:element name="ei_class" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
-      <xs:element name="ei_data" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
-      <xs:element name="ei_version" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
-      <xs:element name="ei_pad" type="xs:unsignedByte" dfdl:occurs="9..9" dfdl:initiatedContent="true" dfdl:terminator=" " dfdl:alignment="1"/>
+      <xs:element name="programHeader" type="programHeaderType" maxOccurs="unbounded" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="programHeaderType">
+    <xs:sequence>
+      <xs:element name="p_type" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_offset" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_vaddr" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_paddr" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_filesz" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_memsz" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_flags" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="p_align" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sectionHeaderTableType">
+    <xs:sequence>
+      <xs:element name="sectionHeader" type="sectionHeaderType" maxOccurs="unbounded" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sectionHeaderType">
+    <xs:sequence>
+      <xs:element name="sh_name" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_type" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_flags" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_addr" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_offset" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_size" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_link" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_info" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_addralign" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
+      <xs:element name="sh_entsize" type="xs:unsignedInt" maxOccurs="1" minOccurs="1"/>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

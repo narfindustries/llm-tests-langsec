@@ -1,53 +1,48 @@
 module Bitcoin;
 
-public type Transaction = unit {
-    version: int32;
-    inputCount: uint8;
-    inputs: Input(inputCount)[] &requires=($$ > 0);
-    outputCount: uint8;
-    outputs: Output(outputCount)[] &requires=($$ > 0);
-    lockTime: uint32;
-
-    on %done {
-        print self;
-    }
+type VarInt = unit {
+    value: uint64 &convert=VarIntToUInt($$);
 };
 
-type Input = unit(count: uint) {
-    previousOutput: HashPrevOut;
-    scriptLen: Size;
-    signatureScript: bytes &size=scriptLen;
+public type TxIn = unit {
+    prevOutHash: bytes &size=32;
+    prevOutIndex: uint32;
+    scriptLength: VarInt;
+    scriptSig: bytes &size=this.scriptLength.value;
     seqNo: uint32;
-    
-    &requires=($$ > 0);
 };
 
-type Output = unit(count: uint) {
+public type TxOut = unit {
     value: uint64;
-    pubkeyScriptLen: Size;
-    pubkeyScript: bytes &size=pubkeyScriptLen;
-    
-    &requires=($$ > 0);
+    scriptLength: VarInt;
+    scriptPubKey: bytes &size=this.scriptLength.value;
 };
 
-type HashPrevOut = unit {
-    hash: bytes &size=32;
-    index: uint32;
+public type BitcoinTransaction = unit {
+    version: int32;
+    inCount: VarInt;
+    inputs: TxIn[] &size=this.inCount.value;
+    outCount: VarInt;
+    outputs: TxOut[] &size=this.outCount.value;
+    lockTime: uint32;
 };
 
-public type Size = unit {
-    size_bytes: uint8;
-    on %done {
-        self.size = size_bytes;
+public type BitcoinBlock = unit {
+    blockHeader: bytes &size=80;
+    txCount: VarInt;
+    transactions: BitcoinTransaction[] &size=this.txCount.value;
+};
+
+global function VarIntToUInt(data: bytes): uint64 {
+    local result: uint64 = 0;
+    local shift: uint = 0;
+    for (local i = 0; i < data.size(); ++i) {
+        local byteVal: uint8 = data[i];
+        local tempVal: uint64 = (byteVal & 0x7F) << shift;
+        result |= tempVal;
+        shift += 7;
+        if ((byteVal & 0x80) == 0)
+            break;
     }
-    
-    var size: uint;
-};
-
-event zeek_init() {
-    print "Bitcoin parser initialized.";
-}
-
-event spicy_heartbeat() {
-    print "Heartbeat from Spicy Bitcoin parser.";
+    return result;
 }

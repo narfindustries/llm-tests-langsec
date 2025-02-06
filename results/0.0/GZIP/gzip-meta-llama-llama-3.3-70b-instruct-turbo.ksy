@@ -1,48 +1,48 @@
 meta:
-  id: gzip
-  file-extension: gz
   endian: le
 seq:
-  - id: magic
-    contents: [31, 139]
-  - id: compression_method
+  - id: id1
+    type: u1
+  - id: id2
+    type: u1
+  - id: cm
     type: u1
   - id: flags
     type: u1
-  - id: modification_time
+  - id: mtime
     type: u4
-  - id: extra_flags
+  - id: xfl
     type: u1
   - id: os
     type: u1
   - id: extra
-    seq:
-      - id: extra_len
-        type: u2
-      - id: extra_data
-        size: extra_len
-      - id: extra_subfield
-        type: extra_subfield
-        repeat: expr
-        repeat-expr: extra_len > 0
-  - id: filename
-    type: str
-    terminator: 0
-  - id: comment
-    type: str
-    terminator: 0
-  - id: crc16
+    type:
+      seq:
+        - id: xlen
+          type: u2
+        - id: extra_field
+          type: bytes
+          size: xlen
+    if: flags & 4 != 0
+  - id: fname
+    type:
+      str:
+        encoding: ascii
+        terminator: 0
+    if: flags & 8 != 0
+  - id: fcomment
+    type:
+      str:
+        encoding: ascii
+        terminator: 0
+    if: flags & 16 != 0
+  - id: hcrc
     type: u2
-  - id: body
-    process: xor
-    process-xor: 31
+    if: flags & 2 != 0
+  - id: compr
+    type: bytes
     size: eos
-types:
-  extra_subfield:
-    seq:
-      - id: id
-        type: u2
-      - id: len
-        type: u2
-      - id: data
-        size: len
+  - id: isize
+    type: u4
+  - id: crc32
+    type: u4

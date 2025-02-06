@@ -3,60 +3,156 @@
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/jpeg"
            xmlns:tns="http://example.com/jpeg"
-           elementFormDefault="qualified"
-           dfdl:formatRef="tns:JPEGFormat">
+           elementFormDefault="qualified">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:JPEGFormat"/>
+      <dfdl:format byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes" encoding="ascii"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <dfdl:defineFormat name="JPEGFormat">
-    <dfdl:format byteOrder="bigEndian" encoding="utf-8"/>
-  </dfdl:defineFormat>
+  <xs:element name="JPEG" type="tns:JPEGType"/>
 
-  <xs:element name="JPEGImage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="SOIMarker" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:assert test="fn:exists(.) and . eq 0xFFD8" message="SOI marker must be 0xFFD8"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Segments" type="tns:Segment" maxOccurs="unbounded"/>
-        <xs:element name="EOIMarker" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:assert test="fn:exists(.) and . eq 0xFFD9" message="EOI marker must be 0xFFD9"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="Segment">
+  <xs:complexType name="JPEGType">
     <xs:sequence>
-      <xs:element name="Marker" type="xs:unsignedShort"/>
-      <xs:element name="Length" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:lengthKind value="explicit"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="Data" type="xs:hexBinary">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:lengthKind value="explicit"/>
-            <dfdl:lengthUnits value="bytes"/>
-            <dfdl:length expression="{../Length - 2}"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="SOI" type="tns:MarkerType" dfdl:initiator="%xFFD8"/>
+      <xs:element name="Segment" type="tns:SegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="EOI" type="tns:MarkerType" dfdl:initiator="%xFFD9"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentType">
+    <xs:choice>
+      <xs:element name="APPn" type="tns:APPnType"/>
+      <xs:element name="COM" type="tns:COMType"/>
+      <xs:element name="DQT" type="tns:DQTType"/>
+      <xs:element name="SOF0" type="tns:SOF0Type"/>
+      <xs:element name="DHT" type="tns:DHTType"/>
+      <xs:element name="SOS" type="tns:SOSType"/>
+      <xs:element name="DRI" type="tns:DRIType"/>
+      <xs:element name="RSTn" type="tns:RSTnType"/>
+      <xs:element name="SOF2" type="tns:SOF2Type"/>
+      <xs:element name="DNL" type="tns:DNLType"/>
+      <xs:element name="APP14" type="tns:APP14Type"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APPnType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFE0-%xFFEF"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length - 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="COMType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFFE"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Comment" type="xs:string" dfdl:length="{../Length - 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFDB"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="QuantizationTables" type="xs:hexBinary" dfdl:length="{../Length - 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFC0"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="SamplePrecision" type="xs:unsignedByte"/>
+      <xs:element name="NumberOfLines" type="xs:unsignedShort"/>
+      <xs:element name="SamplesPerLine" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponents" type="xs:unsignedByte"/>
+      <xs:element name="ComponentSpecifications" type="tns:ComponentSpecificationType" minOccurs="1" maxOccurs="unbounded" dfdl:occursCount="{NumberOfComponents}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentSpecificationType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:unsignedByte"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableSelector" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFC4"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="HuffmanTables" type="xs:hexBinary" dfdl:length="{../Length - 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFDA"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponentsInScan" type="xs:unsignedByte"/>
+      <xs:element name="ScanComponents" type="tns:ScanComponentType" minOccurs="1" maxOccurs="unbounded" dfdl:occursCount="{NumberOfComponentsInScan}"/>
+      <xs:element name="SpectralSelectionStart" type="xs:unsignedByte"/>
+      <xs:element name="SpectralSelectionEnd" type="xs:unsignedByte"/>
+      <xs:element name="SuccessiveApproximation" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ScanComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentSelector" type="xs:unsignedByte"/>
+      <xs:element name="HuffmanTableSelector" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DRIType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFDD"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="RestartInterval" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RSTnType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFD0-%xFFD7"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF2Type">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFC2"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="SamplePrecision" type="xs:unsignedByte"/>
+      <xs:element name="NumberOfLines" type="xs:unsignedShort"/>
+      <xs:element name="SamplesPerLine" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponents" type="xs:unsignedByte"/>
+      <xs:element name="ComponentSpecifications" type="tns:ComponentSpecificationType" minOccurs="1" maxOccurs="unbounded" dfdl:occursCount="{NumberOfComponents}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DNLType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFDC"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfLines" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APP14Type">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:initiator="%xFFEE"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length - 2}"/>
     </xs:sequence>
   </xs:complexType>
 

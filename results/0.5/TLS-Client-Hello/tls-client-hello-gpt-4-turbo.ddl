@@ -1,52 +1,40 @@
-type TLSClientHello = {
-  handshake_type : U8;
-  length : U24;
-  version : ProtocolVersion;
+module TLS_ClientHello;
+
+type uint8 = UInt<8>;
+type uint16 = UInt<16>;
+type uint32 = UInt<32>;
+
+type Random = struct {
+  gmt_unix_time : uint32;
+  random_bytes : array[uint8, 28];
+};
+
+type CipherSuites = struct {
+  length : uint16;
+  suites : array[uint16, length / 2];
+};
+
+type CompressionMethods = struct {
+  length : uint8;
+  methods : array[uint8, length];
+};
+
+type Extension = struct {
+  extension_type : uint16;
+  extension_data_length : uint16;
+  extension_data : array[uint8, extension_data_length];
+};
+
+type Extensions = struct {
+  length : uint16;
+  extension_list : array[Extension];
+};
+
+type ClientHello = struct {
+  legacy_version : uint16 = 0x0303;
   random : Random;
-  session_id : SessionID;
+  legacy_session_id : array[uint8];
   cipher_suites : CipherSuites;
-  compression_methods : CompressionMethods;
+  legacy_compression_methods : CompressionMethods;
   extensions : Extensions;
-}
-
-type ProtocolVersion = {
-  major : U8;
-  minor : U8;
-}
-
-type Random = {
-  gmt_unix_time : U32;
-  random_bytes : Bytes<28>;
-}
-
-type SessionID = {
-  length : U8;
-  session_id : Bytes<length>;
-}
-
-type CipherSuites = {
-  length : U16;
-  cipher_suites : List<CipherSuite, length / 2>;
-}
-
-type CipherSuite = U16;
-
-type CompressionMethods = {
-  length : U8;
-  compression_methods : List<U8, length>;
-}
-
-type Extensions = {
-  length : U16;
-  extensions : List<Extension, length>;
-}
-
-type Extension = {
-  extension_type : U16;
-  extension_data : ExtensionData;
-}
-
-type ExtensionData = {
-  length : U16;
-  data : Bytes<length>;
-}
+};

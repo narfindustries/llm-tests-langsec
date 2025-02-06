@@ -1,56 +1,45 @@
 meta:
-  id: gzip-gemini-1
+  id: gzip
   endian: be
-
 seq:
-  - id: magic
-    type: u4
-    enum:
-      0x1f8b: gzip
+  - id: id1
+    type: u1
+  - id: id2
+    type: u1
   - id: cm
-    type: u2
-    doc: Compression method
+    type: u1
   - id: flg
-    type: u2
-    doc: Flags
+    type: u1
   - id: mtime
-    type: u4
-    doc: Modification time
+    type: u4le
   - id: xfl
     type: u1
-    doc: Extra flags
   - id: os
     type: u1
-    doc: Operating system
-  - id: xlen
-    type: u2
-    doc: Extra field length
+  - id: extra_len
+    type: u2le
+    if: (flg & 0x04) != 0
   - id: extra
-    type: u1
-    size: xlen
-    doc: Extra field
-  - id: flen
-    type: u2
-    doc: Filename length
-  - id: filename
+    type: bytes
+    size: extra_len
+    if: (flg & 0x04) != 0
+  - id: fname
     type: str
-    size: flen
-    doc: Filename
-  - id: csum
-    type: u2
-    doc: Comment length
-  - id: comment
+    encoding: UTF-8
+    term: 0
+    if: (flg & 0x08) != 0
+  - id: fcomment
     type: str
-    size: csum
-    doc: Comment
-  - id: hcrc
-    type: u2
-    doc: Header CRC
+    encoding: UTF-8
+    term: 0
+    if: (flg & 0x10) != 0
+  - id: fhcrc
+    type: u2le
+    if: (flg & 0x02) != 0
   - id: compressed_data
-    type: u1
-    size: is_compressed_data_size
-  - id: is_compressed_data_size:
-    type: expr
-    expr: self.size - self.pos - 8
-    doc: Size of compressed data
+    type: bytes
+  - id: crc32
+    type: u4le
+  - id: isize
+    type: u4le
 

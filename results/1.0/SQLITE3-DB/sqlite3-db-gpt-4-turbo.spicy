@@ -1,82 +1,103 @@
-module SQLITE3;
-
-import spicy;
+module SQLite;
 
 type FileHeader = unit {
-    magic: bytes &size=16;
-    pageSize: uint16;
-    fileChangeCounter: uint32;
-    numPages: uint32;
-    on $init {
-        if (self.magic != b"SQLite format 3\0") {
-            throw ParseError("Not a valid SQLite3 database file");
+    magic:          bytes &size=16;
+    pageSize:       uint16;
+    writeVersion:   uint8;
+    readVersion:    uint8;
+    reservedSpace:  uint8;
+    maxPayloadFrac: uint8;
+    minPayloadFrac: uint8;
+    leafPayloadFrac:uint8;
+    changeCounter:  uint32;
+    sizeInPages:    uint32;
+    firstFreelistPage: uint32;
+    numFreelistPages: uint32;
+    schemaCookie:   uint32;
+    schemaFormat:   uint32;
+    defaultCacheSize: uint32;
+    largestBTreePage:  uint32;
+    encoding:       uint32;
+    userVersion:    uint32;
+    vacuumMode:     uint32;
+    appID:          uint32;
+    reserved:       bytes &size=20;
+    versionValidFor: uint32;
+    sqliteVersion:  uint32;
+};
+
+type BTreePageHeader = unit {
+    pageType:       uint8;
+    firstFreeblock: uint16;
+    numCells:       uint16;
+    startOfContent: uint16;
+    fragmentedFreeBytes: uint8;
+};
+
+type CellPointers = unit {
+    pointers: [uint16] &size;
+};
+
+type Cell = unit {
+    leftChildPage: optional<uint32>;
+    payload: optional<Record>;
+    rowid: optional<UVarint>;
+    isTableLeaf: bool, 
+    isLeaf: bool,
+    isTableInterior: bool;
+
+    on %init {
+        isTableLeaf = (self.$.header.pageType == 0x0D);
+        isLeaf = (self.$.header.pageType == 0x0D || self.$.header.pageType == 0x0A);
+        isTableInterior = (self.$.header.pageType == 0x05);
+
+        if (isTableInterior) {
+            self.leftChildPage = uint32(self);
+        }
+      
+        if (isLeaf) {
+            self.payload = Record(self);
+        }
+
+        if (isTableLeaf) {
+            self.rowid = UVarint(self);
         }
     }
 };
 
-type Varint = unit {
-    value: uint64;
-    on $init {
-        local bytePos = 0;
-        local byte = self.parseByte();
-        local intValue = (byte & 0x7F);
-        while (byte & 0x80) {
-            byte = self.parseByte();
-            intValue |= ((byte & 0x7F) << (7 * ++bytePos));
-        }
-        self.value = intValue;
-    }
-    method parseByte(): uint8 {
-        local byte = self.context().consume(1);
-        if ( ! byte || byte.size() != 1)
-            throw ParseError("Incomplete varint byte sequence");
-        return byte[0];
-    }
+public type Record = unit {
+    header:         RecordHeader;
+    columns:        [ColumnData] &size=this.header.columnSizes.length();
 };
 
-type Record = unit {
-    columns: Vector<Column>;
-    on $init {
-        local header = self.parseRecordHeader();
-        for (i in header) {
-            switch (i)
-            {
-                // Implement column types based on their codes, e.g., 0 for NULL, 1 for 8-bit int, etc.
-                0 -> self.columns.push(NullColumn());
-                1 -> self.columns.push(IntegerColumn(self.parseInteger()));
-                // Additional cases for other supported SQLite types
-            }
-        }
-    }
-
-    method parseRecordHeader(): Vector<int> {
-        local headerLen = self.parseVarint().value;
-        local headerBytes = self.context().consume(headerLen); // Fix the length as necessary
-        return self.decodeHeader(headerBytes);
-    }
-
-    method parseVarint(): Varint {
-        return spicy.parse<Varint>(self);
-    }
-    
-    method decodeHeader(data: bytes): Vector<int> {
-        local result = Vector<int>();
-        local pos = 0;
-        while (pos < data.size()) {
-            local vint = self.parseVarint();
-            result.push(vint.value);
-            pos += vint.size();
-        }
-        return result;
-    }
-
-    method parseInteger(): int64 {
-        local intBytes = self.context().consume(8); // Assuming big-endian
-        return bytes_to_int(intBytes, byteorder=Big);
-    }
+public type RecordHeader = unit {
+    hdrSize:        UVarint;
+    columnSizes:    [SerialType];
 };
 
-type SQLite3DB = unit {
-    fileHeader: FileHeader;
-    records: Vector<Record>;
+type ColumnData = unit {
+    data: bytes &size;
+};
+
+type BTreePage = unit {
+    header: BTreePageHeader;
+    cellPointers:   CellPointers;
+    cells:          [Cell] &size=this.header.numCells;
+};
+
+public type SerialType = unit {
+    value: varint;
+};
+
+public type UVarint = unit {
+    value: varint;
+};
+
+type Database = unit {
+    header: FileHeader;
+    pages: [BTreePage] &size=this.header.sizeInPages - 1;
+};
+
+public type SQLiteDB = unit {
+    db: Database;
 };

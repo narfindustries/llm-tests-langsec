@@ -2,67 +2,178 @@ module ELF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    sections: Section[] &until($input.eof());
+public type ElfClass = enum {
+    NONE = 0,
+    CLASS32 = 1,
+    CLASS64 = 2
+};
 
-    var section_headers: vector<Section> = [];
+public type ElfEndian = enum {
+    NONE = 0,
+    LITTLE = 1,
+    BIG = 2
+};
 
-    on sections foreach {
-        section_headers.push_back(self);
+public type ElfOSABI = enum {
+    SYSV = 0,
+    LINUX = 3,
+    FREEBSD = 9,
+    OPENBSD = 12
+};
+
+public type ElfType = enum {
+    NONE = 0,
+    REL = 1,
+    EXEC = 2,
+    DYN = 3,
+    CORE = 4
+};
+
+public type ElfMachine = enum {
+    NONE = 0,
+    X86 = 3,
+    X86_64 = 62,
+    ARM = 40,
+    AARCH64 = 183
+};
+
+public type ElfHeader = struct {
+    magic: bytes(4),
+    class: ElfClass,
+    data_encoding: ElfEndian,
+    version: uint8,
+    os_abi: ElfOSABI,
+    abi_version: uint8,
+    padding: bytes(7),
+    type: ElfType,
+    machine: ElfMachine,
+    elf_version: uint32,
+    entry_point: uint64,
+    program_header_offset: uint64,
+    section_header_offset: uint64,
+    flags: uint32,
+    header_size: uint16,
+    program_header_entry_size: uint16,
+    program_header_num_entries: uint16,
+    section_header_entry_size: uint16,
+    section_header_num_entries: uint16,
+    section_header_string_index: uint16
+} &parse($input) {
+    self.magic = $input.read(4);
+    if ( self.magic != b"\x7FELF" ) 
+        throw "Invalid ELF magic number";
+
+    self.class = $input.read<ElfClass>();
+    self.data_encoding = $input.read<ElfEndian>();
+    self.version = $input.read<uint8>();
+    self.os_abi = $input.read<ElfOSABI>();
+    self.abi_version = $input.read<uint8>();
+    self.padding = $input.read(7);
+    self.type = $input.read<ElfType>();
+    self.machine = $input.read<ElfMachine>();
+    self.elf_version = $input.read<uint32>();
+    self.entry_point = $input.read<uint64>();
+    self.program_header_offset = $input.read<uint64>();
+    self.section_header_offset = $input.read<uint64>();
+    self.flags = $input.read<uint32>();
+    self.header_size = $input.read<uint16>();
+    self.program_header_entry_size = $input.read<uint16>();
+    self.program_header_num_entries = $input.read<uint16>();
+    self.section_header_entry_size = $input.read<uint16>();
+    self.section_header_num_entries = $input.read<uint16>();
+    self.section_header_string_index = $input.read<uint16>();
+    return self;
+};
+
+public type ProgramHeaderType = enum {
+    NULL = 0,
+    LOAD = 1,
+    DYNAMIC = 2,
+    INTERP = 3,
+    NOTE = 4,
+    SHLIB = 5,
+    PHDR = 6
+};
+
+public type ProgramHeader = struct {
+    type: ProgramHeaderType,
+    flags: uint32,
+    segment_offset: uint64,
+    segment_virtual_addr: uint64,
+    segment_physical_addr: uint64,
+    segment_file_size: uint64,
+    segment_memory_size: uint64,
+    alignment: uint64
+} &parse($input) {
+    self.type = $input.read<ProgramHeaderType>();
+    self.flags = $input.read<uint32>();
+    self.segment_offset = $input.read<uint64>();
+    self.segment_virtual_addr = $input.read<uint64>();
+    self.segment_physical_addr = $input.read<uint64>();
+    self.segment_file_size = $input.read<uint64>();
+    self.segment_memory_size = $input.read<uint64>();
+    self.alignment = $input.read<uint64>();
+    return self;
+};
+
+public type SectionHeaderType = enum {
+    NULL = 0,
+    PROGBITS = 1,
+    SYMTAB = 2,
+    STRTAB = 3,
+    RELA = 4,
+    HASH = 5,
+    DYNAMIC = 6,
+    NOTE = 7
+};
+
+public type SectionHeader = struct {
+    name_offset: uint32,
+    type: SectionHeaderType,
+    flags: uint64,
+    virtual_addr: uint64,
+    offset: uint64,
+    size: uint64,
+    link: uint32,
+    info: uint32,
+    address_align: uint64,
+    entry_size: uint64
+} &parse($input) {
+    self.name_offset = $input.read<uint32>();
+    self.type = $input.read<SectionHeaderType>();
+    self.flags = $input.read<uint64>();
+    self.virtual_addr = $input.read<uint64>();
+    self.offset = $input.read<uint64>();
+    self.size = $input.read<uint64>();
+    self.link = $input.read<uint32>();
+    self.info = $input.read<uint32>();
+    self.address_align = $input.read<uint64>();
+    self.entry_size = $input.read<uint64>();
+    return self;
+};
+
+public type ELFFile = struct {
+    header: ElfHeader,
+    program_headers: vector<ProgramHeader>,
+    section_headers: vector<SectionHeader>
+} &parse($input) {
+    self.header = ElfHeader::parse($input);
+    
+    self.program_headers = vector<ProgramHeader>();
+    $input.seek(self.header.program_header_offset);
+    for ( i in 0..self.header.program_header_num_entries-1 ) {
+        self.program_headers.push_back(ProgramHeader::parse($input));
     }
+
+    self.section_headers = vector<SectionHeader>();
+    $input.seek(self.header.section_header_offset);
+    for ( i in 0..self.header.section_header_num_entries-1 ) {
+        self.section_headers.push_back(SectionHeader::parse($input));
+    }
+
+    return self;
 };
 
-public type Header = unit {
-    magic: bytes &size=4 
-        where $$ == b"\x7FELF";
-    
-    class: uint8 
-        where $$ == 1 || $$ == 2;  # 1 = 32-bit, 2 = 64-bit
-    
-    endian: uint8 
-        where $$ == 1 || $$ == 2;  # 1 = little endian, 2 = big endian
-    
-    version: uint8;
-    
-    os_abi: uint8;
-    abi_version: uint8;
-    
-    padding: bytes &size=7;
-    
-    type: uint16;
-    machine: uint16;
-    elf_version: uint32;
-    
-    entry_point: uint64;
-    
-    program_header_offset: uint64;
-    section_header_offset: uint64;
-    
-    flags: uint32;
-    header_size: uint16;
-    program_header_entry_size: uint16;
-    program_header_num_entries: uint16;
-    section_header_entry_size: uint16;
-    section_header_num_entries: uint16;
-    section_names_index: uint16;
-};
-
-public type Section = unit {
-    name_offset: uint32;
-    type: uint32;
-    flags: uint64;
-    addr: uint64;
-    offset: uint64;
-    size: uint64;
-    link: uint32;
-    info: uint32;
-    addr_align: uint64;
-    entry_size: uint64;
-
-    data: bytes &size=self.size;
-};
-
-public function is_elf_file(f: File) : bool {
-    return |f.header.magic| == 4 && f.header.magic == b"\x7FELF";
+public function parse(data: bytes) : ELFFile {
+    return ELFFile::parse(data);
 }

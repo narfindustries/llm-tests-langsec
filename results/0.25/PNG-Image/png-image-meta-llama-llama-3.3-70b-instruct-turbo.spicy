@@ -1,83 +1,147 @@
-module PNG_Image;
+module PNGImage;
 
-export {
-        ## Record type to hold PNG file metadata
-        type png_metadata: record {
-                magic_number: uint32;
-                ihdr_length: uint32;
-                ihdr_cdtype: string;
-                ihdr_width: uint32;
-                ihdr_height: uint32;
-                ihdr_bit_depth: uint8;
-                ihdr_color_type: uint8;
-                ihdr_compression_method: uint8;
-                ihdr_filter_method: uint8;
-                ihdr_interlace_method: uint8;
-                idat_data: string;
-        };
+type png_signature = byte[8] = { 89, 50, 4E, 47, 0D, 0A, 1A, 0A };
+type png_chunk_length = uint32;
+type png_chunk_type = enum { IHDR, PLTE, IDAT, IEND, cHRM, gAMA, iCCP, sBIT, sRGB, tEXt, tIME, bKGD, hIST, pHYs, sCAL, tRNS, oFFs, pCAL, sPLT, acTL, fcTL, fdAT };
 
-        ## Event to be raised when parsing PNG file
-        global png_image_parsed: event(png_metadata);
-}
+type png_chunk = record {
+  length: uint32;
+  type: png_chunk_type;
+  data: byte[length];
+  crc: uint32;
+};
 
-## Implementation of PNG parser in Zeek Spicy
-file PNG_Image_Parser is packet_contents(
-        seq(
-                magic_number == 0x89504E47,
-                parse_ihdr,
-                parse_idat,
-                parse_iend
-        )
-);
+type png_ihdr = record {
+  width: uint32;
+  height: uint32;
+  bit_depth: uint8;
+  color_type: uint8;
+  compression_method: uint8;
+  filter_method: uint8;
+  interlace_method: uint8;
+};
 
-## IHDR chunk parsing logic
-file parse_ihdr is seq(
-        ihdr_length == 13,
-        ihdr_cdtype == "IHDR",
-        parse_ihdr_data
-);
+type png_plte = record {
+  palette_entries: byte[3][*];
+};
 
-## IHDR data parsing logic
-file parse_ihdr_data is struct(
-        ihdr_width: uint32,
-        ihdr_height: uint32,
-        ihdr_bit_depth: uint8,
-        ihdr_color_type: uint8,
-        ihdr_compression_method: uint8,
-        ihdr_filter_method: uint8,
-        ihdr_interlace_method: uint8,
-        crc32: uint32
-);
+type png_idat = record {
+  compressed_image_data: byte[*];
+};
 
-## IDAT chunk parsing logic
-file parse_idat is seq(
-        idat_length: uint32,
-        idat_data: string &length=idat_length,
-        crc32: uint32
-);
+type png_iend = record { };
 
-## IEND chunk parsing logic
-file parse_iend is seq(
-        iend_length == 0,
-        iend_cdtype == "IEND",
-        crc32: uint32
-);
+type png_chrm = record {
+  white_point_x: uint32;
+  white_point_y: uint32;
+  red_x: uint32;
+  red_y: uint32;
+  green_x: uint32;
+  green_y: uint32;
+  blue_x: uint32;
+  blue_y: uint32;
+};
 
-## On parse completion, raise png_image_parsed event
-event file_end(
-        png_image_parsed(
-                png_metadata(
-                        $ctx.magic_number,
-                        $ctx.ihdr_length,
-                        $ctx.ihdr_cdtype,
-                        $ctx.ihdr_width,
-                        $ctx.ihdr_height,
-                        $ctx.ihdr_bit_depth,
-                        $ctx.ihdr_color_type,
-                        $ctx.ihdr_compression_method,
-                        $ctx.ihdr_filter_method,
-                        $ctx.ihdr_interlace_method,
-                        $ctx.idat_data
-                )
-        )
-);
+type png_gama = record {
+  gamma_value: uint32;
+};
+
+type png_iccp = record {
+  profile_name: byte[*];
+  compression_method: uint8;
+  compressed_profile: byte[*];
+};
+
+type png_sbit = record {
+  significant_bits: uint8[4];
+};
+
+type png_srgb = record {
+  rendering_intent: uint8;
+};
+
+type png_text = record {
+  keyword: byte[*];
+  text: byte[*];
+};
+
+type png_time = record {
+  year: uint16;
+  month: uint8;
+  day: uint8;
+  hour: uint8;
+  minute: uint8;
+  second: uint8;
+};
+
+type png_bkgd = record {
+  background_color: byte[1] | byte[3] | byte[6];
+};
+
+type png_hist = record {
+  histogram_entries: uint16[*];
+};
+
+type png_phys = record {
+  pixels_per_unit_x: uint32;
+  pixels_per_unit_y: uint32;
+  unit: uint8;
+};
+
+type png_scal = record {
+  unit: uint8;
+  width: byte[*];
+  height: byte[*];
+};
+
+type png_trns = record {
+  transparency_data: byte[1] | byte[3] | byte[6];
+};
+
+type png_offs = record {
+  x_offset: int32;
+  y_offset: int32;
+  unit: uint8;
+};
+
+type png_pcal = record {
+  calibration_name: byte[*];
+  calibration_data: byte[*];
+};
+
+type png_splt = record {
+  palette_name: byte[*];
+  palette_entries: record {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+    frequency: uint16;
+  }[*];
+};
+
+type png_actl = record {
+  number_of_frames: uint32;
+  number_of_plays: uint32;
+};
+
+type png_fctl = record {
+  sequence_number: uint32;
+  width: uint32;
+  height: uint32;
+  x_offset: int32;
+  y_offset: int32;
+  delay_num: uint16;
+  delay_den: uint16;
+  dispose_op: uint8;
+  blend_op: uint8;
+};
+
+type png_fdta = record {
+  sequence_number: uint32;
+  frame_data: byte[*];
+};
+
+type png_image = record {
+  signature: png_signature;
+  chunks: png_chunk[*];
+};

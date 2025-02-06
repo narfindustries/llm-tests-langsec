@@ -1,110 +1,130 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations for recursive rules
-static HParsedToken *parse_payload(HRParser *, const HParseResult *, void *);
+// Define MQTT control packet types
+#define CONNECT     1
+#define CONNACK     2
+#define PUBLISH     3
+#define PUBACK      4
+#define PUBREC      5
+#define PUBREL      6
+#define PUBCOMP     7
+#define SUBSCRIBE   8
+#define SUBACK      9
+#define UNSUBSCRIBE 10
+#define UNSUBACK    11
+#define PINGREQ     12
+#define PINGRESP    13
+#define DISCONNECT  14
+#define AUTH        15
 
-// MQTT Control Packet Types
-static HParser *mqtt_connect;
-static HParser *mqtt_connack;
-static HParser *mqtt_publish;
-static HParser *mqtt_puback;
-static HParser *mqtt_pubrec;
-static HParser *mqtt_pubrel;
-static HParser *mqtt_pubcomp;
-static HParser *mqtt_subscribe;
-static HParser *mqtt_suback;
-static HParser *mqtt_unsubscribe;
-static HParser *mqtt_unsuback;
-static HParser *mqtt_pingreq;
-static HParser *mqtt_pingresp;
-static HParser *mqtt_disconnect;
+// Parser for a single byte
+static HParser *uint8;
+// Parser for a two-byte integer
+static HParser *uint16;
+// Parser for a four-byte integer
+static HParser *uint32;
 
-// Helper parsers
-static HParser *fixed_header;
-static HParser *variable_header;
-static HParser *payload;
-
-// Fixed Header
-static HParser *packet_type;
-static HParser *flags;
-static HParser *remaining_length;
-
-// Variable Header and Payload for specific packet types
-static HParser *connect_flags;
-static HParser *keep_alive;
-static HParser *topic_name;
-static HParser *message_id;
-static HParser *topic_filter;
-static HParser *qos;
-
-// MQTT packet type definitions
-static void init_mqtt_parsers() {
-    packet_type = h_bits(4, false);
-    flags = h_bits(4, false);
-    remaining_length = h_uint8();  // Simplified for example
-
-    fixed_header = h_sequence(packet_type, flags, remaining_length, NULL);
-
-    // CONNECT
-    connect_flags = h_uint8();
-    keep_alive = h_uint16();
-    variable_header = h_sequence(connect_flags, keep_alive, NULL);
-    payload = h_action(h_arbitrary(), parse_payload, NULL);
-    mqtt_connect = h_sequence(fixed_header, variable_header, payload, NULL);
-
-    // CONNACK
-    mqtt_connack = h_sequence(fixed_header, h_uint8(), NULL);  // Simplified
-
-    // PUBLISH
-    topic_name = h_length_value(h_uint16(), h_arbitrary_bytes());
-    message_id = h_uint16();
-    variable_header = h_sequence(topic_name, message_id, NULL);
-    mqtt_publish = h_sequence(fixed_header, variable_header, payload, NULL);
-
-    // PUBACK, PUBREC, PUBREL, PUBCOMP
-    mqtt_puback = mqtt_pubrec = mqtt_pubrel = mqtt_pubcomp = h_sequence(fixed_header, message_id, NULL);
-
-    // SUBSCRIBE
-    message_id = h_uint16();
-    topic_filter = h_length_value(h_uint16(), h_arbitrary_bytes());
-    qos = h_bits(2, false);
-    variable_header = h_sequence(message_id, NULL);
-    payload = h_many1(h_sequence(topic_filter, qos, NULL));
-    mqtt_subscribe = h_sequence(fixed_header, variable_header, payload, NULL);
-
-    // SUBACK
-    mqtt_suback = h_sequence(fixed_header, message_id, payload, NULL);
-
-    // UNSUBSCRIBE
-    mqtt_unsubscribe = h_sequence(fixed_header, variable_header, payload, NULL);
-
-    // UNSUBACK
-    mqtt_unsuback = h_sequence(fixed_header, message_id, NULL);
-
-    // PINGREQ, PINGRESP, DISCONNECT
-    mqtt_pingreq = mqtt_pingresp = mqtt_disconnect = fixed_header;
+// Parser for variable byte integer
+static HParser *var_int() {
+    return h_uint64();
 }
 
-static HParsedToken *parse_payload(HRParser *p, const HParseResult *res, void *user_data) {
-    // Custom payload parsing logic can be added here
-    return h_make_bytes(res->bit_length, res->bit_offset, res->byte_length, res->byte_offset, res->seq);
+// Parser for UTF-8 encoded strings
+static HParser *utf8_string() {
+    return h_length_value(uint16, h_bits(8 * h_length_value(uint16, h_any())));
+}
+
+// Parser for binary data
+static HParser *binary_data() {
+    return h_length_value(uint16, h_bits(8 * h_length_value(uint16, h_any())));
+}
+
+// Parser for MQTT properties
+static HParser *mqtt_property() {
+    return h_choice(
+        h_sequence(h_int8(), uint8, NULL), // Payload Format Indicator
+        h_sequence(h_int8(), uint32, NULL), // Message Expiry Interval
+        h_sequence(h_int8(), utf8_string(), NULL), // Content Type
+        h_sequence(h_int8(), utf8_string(), NULL), // Response Topic
+        h_sequence(h_int8(), binary_data(), NULL), // Correlation Data
+        h_sequence(h_int8(), var_int(), NULL), // Subscription Identifier
+        h_sequence(h_int8(), uint32, NULL), // Session Expiry Interval
+        h_sequence(h_int8(), utf8_string(), NULL), // Assigned Client Identifier
+        h_sequence(h_int8(), uint16, NULL), // Server Keep Alive
+        h_sequence(h_int8(), utf8_string(), NULL), // Authentication Method
+        h_sequence(h_int8(), binary_data(), NULL), // Authentication Data
+        h_sequence(h_int8(), uint8, NULL), // Request Problem Information
+        h_sequence(h_int8(), uint32, NULL), // Will Delay Interval
+        h_sequence(h_int8(), uint8, NULL), // Request Response Information
+        h_sequence(h_int8(), utf8_string(), NULL), // Response Information
+        h_sequence(h_int8(), utf8_string(), NULL), // Server Reference
+        h_sequence(h_int8(), utf8_string(), NULL), // Reason String
+        h_sequence(h_int8(), uint16, NULL), // Receive Maximum
+        h_sequence(h_int8(), uint16, NULL), // Topic Alias Maximum
+        h_sequence(h_int8(), uint16, NULL), // Topic Alias
+        h_sequence(h_int8(), uint8, NULL), // Maximum QoS
+        h_sequence(h_int8(), uint8, NULL), // Retain Available
+        h_sequence(h_int8(), utf8_string(), utf8_string(), NULL), // User Property
+        h_sequence(h_int8(), uint32, NULL), // Maximum Packet Size
+        h_sequence(h_int8(), uint8, NULL), // Wildcard Subscription Available
+        h_sequence(h_int8(), uint8, NULL), // Subscription Identifier Available
+        h_sequence(h_int8(), uint8, NULL), // Shared Subscription Available
+        NULL
+    );
+}
+
+// Parser for MQTT packet
+static HParser *mqtt_packet() {
+    return h_sequence(
+        uint8, // Packet type and flags
+        var_int(), // Remaining length
+        h_many(mqtt_property()), // Properties
+        h_end_p(), // End of packet
+        NULL
+    );
 }
 
 int main(int argc, char **argv) {
-    init_mqtt_parsers();
-
-    // Example usage of mqtt_connect parser
-    const uint8_t data[] = {0x10, 0x04, 0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04, 0x02, 0x00, 0x3C, 0x00};
-    size_t len = sizeof(data);
-    HParseResult *result = h_parse(mqtt_connect, data, len);
-    if (result) {
-        printf("Parsed MQTT CONNECT packet successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse MQTT CONNECT packet.\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <MQTT binary file>\n", argv[0]);
+        return 1;
     }
 
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(length);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    uint8 = h_uint8();
+    uint16 = h_uint16();
+    uint32 = h_uint32();
+
+    HParseResult *result = h_parse(mqtt_packet(), data, length);
+    if (result) {
+        printf("MQTT packet parsed successfully.\n");
+        h_pprint(stdout, result->ast, 0, 4);
+    } else {
+        printf("Failed to parse MQTT packet.\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
     return 0;
 }

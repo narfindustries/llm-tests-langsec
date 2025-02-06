@@ -2,15 +2,12 @@ meta:
   id: tiff
   file-extension: tif
   endian: le
-  title: TIFF (Tagged Image File Format)
+  title: Tagged Image File Format (TIFF)
   license: CC0-1.0
   ks-version: 0.9
 
 doc: |
-  TIFF is a flexible, adaptable file format for handling images and data
-  within a single file, by including the header tags (size, definition, image-data arrangement, applied image compression) defining the image's geometry.
-  For example, a TIFF file can be a container holding compressed (lossy) JPEG and (lossless) PackBits compressed images.
-  TIFF files also can include vector-based clipping paths (outlines, croppings, image frames).
+  TIFF, short for Tagged Image File Format, is a variable, flexible, and adaptable file format for handling images and data within a single file. It supports various types of compression, color formats, and resolutions.
 
 seq:
   - id: header
@@ -25,20 +22,29 @@ types:
     seq:
       - id: byte_order
         type: u2
-        enum: tiff_byte_order
+        enum: endian
+        doc: Byte order used in the file (little or big endian).
+
       - id: magic
-        contents: [0x2a, 0x00]
+        type: u2
+        valid:
+          eq: 42
+        doc: Magic number (42).
+
       - id: offset_first_ifd
         type: u4
+        doc: Offset to the first IFD.
 
   ifd:
     seq:
-      - id: num_tags
+      - id: num_entries
         type: u2
-      - id: tags
-        type: tag
+
+      - id: entries
+        type: ifd_entry
         repeat: expr
-        repeat-expr: num_tags
+        repeat-expr: num_entries
+
       - id: next_ifd_offset
         type: u4
 
@@ -48,58 +54,108 @@ types:
         type: ifd
         if: next_ifd_offset != 0
 
-  tag:
+  ifd_entry:
     seq:
-      - id: tag_type
+      - id: tag
         type: u2
         enum: tag_type
-      - id: tag_data_type
+
+      - id: type
         type: u2
-        enum: tag_data_type
+        enum: field_type
+
       - id: num_values
         type: u4
+
       - id: value_offset
         type: u4
 
+    instances:
+      values:
+        pos: value_offset
+        type:
+          switch-on: type
+          cases:
+            'field_type::byte': bytes
+            'field_type::ascii': strz
+            'field_type::short': shorts
+            'field_type::long': longs
+            'field_type::rational': rationals
+
 enums:
-  tiff_byte_order:
+  endian:
     0x4949: le
     0x4d4d: be
 
   tag_type:
-    0x0100: image_width
-    0x0101: image_length
-    0x0102: bits_per_sample
-    0x0103: compression
-    0x0106: photometric_interpretation
-    0x010e: image_description
-    0x0111: strip_offsets
-    0x0115: samples_per_pixel
-    0x0116: rows_per_strip
-    0x0117: strip_byte_counts
-    0x011a: x_resolution
-    0x011b: y_resolution
-    0x011c: planar_configuration
-    0x0128: resolution_unit
-    0x0131: software
-    0x0132: datetime
-    0x013b: artist
-    0x0201: jpeg_interchange_format
-    0x0202: jpeg_interchange_format_length
-    0x0213: ycbcr_positioning
-    0x8769: exif_ifd_pointer
-    0x8825: gps_info_ifd_pointer
+    256: image_width
+    257: image_length
+    258: bits_per_sample
+    259: compression
+    262: photometric_interpretation
+    274: orientation
+    277: samples_per_pixel
+    278: rows_per_strip
+    273: strip_offsets
+    279: strip_byte_counts
+    282: x_resolution
+    283: y_resolution
+    284: planar_configuration
+    296: resolution_unit
+    # Add other tags as necessary
 
-  tag_data_type:
+  field_type:
     1: byte
     2: ascii
     3: short
     4: long
     5: rational
-    6: signed_byte
-    7: undefined
-    8: signed_short
-    9: signed_long
-    10: signed_rational
-    11: float
-    12: double
+    # Add other types as necessary
+
+types:
+  bytes:
+    seq:
+      - id: data
+        type: u1
+        repeat: expr
+        repeat-expr: _parent.num_values
+
+  strz:
+    seq:
+      - id: str
+        type: str
+        encoding: ASCII
+        size: _parent.num_values
+
+  shorts:
+    seq:
+      - id: data
+        type: u2
+        repeat: expr
+        repeat-expr: _parent.num_values
+
+  longs:
+    seq:
+      - id: data
+        type: u4
+        repeat: expr
+        repeat-expr: _parent.num_values
+
+  rationals:
+    seq:
+      - id: data
+        type: rational
+        repeat: expr
+        repeat-expr: _parent.num_values
+
+  rational:
+    seq:
+      - id: numerator
+        type: u4
+      - id: denominator
+        type: u4
+
+    instances:
+      value:
+        value: numerator / denominator
+        if: denominator != 0

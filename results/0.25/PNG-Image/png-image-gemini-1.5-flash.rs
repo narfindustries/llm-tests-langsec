@@ -1,118 +1,83 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, recognize},
-    number::complete::be_u32,
-    sequence::{tuple, preceded},
+    combinator::{map, map_res, rest},
+    error::{context, ErrorKind, ParseError},
+    multi::count,
+    number::complete::{be_u32, le_u32},
+    sequence::{preceded, tuple},
     IResult,
 };
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug)]
-struct PngHeader {
+struct PngSignature {
     signature: [u8; 8],
-    ihdr: IHDR,
-    // Add other chunks here as needed...  This is a simplified example.
+}
+
+fn png_signature(input: &[u8]) -> IResult<&[u8], PngSignature> {
+    map(tag(b"\x89PNG\r\n\x1a\n"), |_| PngSignature {
+        signature: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    })(input)
 }
 
 #[derive(Debug)]
-struct IHDR {
-    width: u32,
-    height: u32,
-    bit_depth: u8,
-    color_type: u8,
-    compression_method: u8,
-    filter_method: u8,
-    interlace_method: u8,
+struct PngChunk {
+    length: u32,
+    chunk_type: [u8; 4],
+    chunk_data: Vec<u8>,
+    crc: u32,
 }
 
-fn png_signature(input: &[u8]) -> IResult<&[u8], [u8; 8]> {
-    map(take(8usize), |bytes: &[u8]| {
-        let mut arr = [0u8; 8];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)
-}
-
-fn chunk_length(input: &[u8]) -> IResult<&[u8], u32> {
-    be_u32(input)
-}
-
-fn chunk_type(input: &[u8]) -> IResult<&[u8], [u8; 4]> {
-    map(take(4usize), |bytes: &[u8]| {
-        let mut arr = [0u8; 4];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)
-}
-
-fn chunk_data(input: &[u8], len: u32) -> IResult<&[u8], Vec<u8>> {
-    map(take(len as usize), |bytes: &[u8]| bytes.to_vec())(input)
-}
-
-
-fn chunk_crc(input: &[u8]) -> IResult<&[u8], u32> {
-    be_u32(input)
-}
-
-fn ihdr(input: &[u8]) -> IResult<&[u8], IHDR> {
-    map(
-        tuple((
-            be_u32,
-            be_u32,
-            map(take(1usize), |b| b[0]),
-            map(take(1usize), |b| b[0]),
-            map(take(1usize), |b| b[0]),
-            map(take(1usize), |b| b[0]),
-            map(take(1usize), |b| b[0]),
-        )),
-        |(width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)| IHDR {
-            width,
-            height,
-            bit_depth,
-            color_type,
-            compression_method,
-            filter_method,
-            interlace_method,
-        },
-    )(input)
-}
-
-fn png_chunk(input: &[u8]) -> IResult<&[u8], ([u8;4],Vec<u8>)> {
-    let (input, len) = chunk_length(input)?;
-    let (input, type_) = chunk_type(input)?;
-    let (input, data) = chunk_data(input, len)?;
-    let (input, _) = chunk_crc(input)?;
-    Ok((input, (type_,data)))
-}
-
-fn parse_png(input: &[u8]) -> IResult<&[u8], PngHeader> {
-    let (input, signature) = png_signature(input)?;
-    let (input, ihdr) = preceded(png_chunk, ihdr)(input)?;
-
+fn png_chunk(input: &[u8]) -> IResult<&[u8], PngChunk> {
+    let (input, length) = be_u32(input)?;
+    let (input, chunk_type) = take(4usize)(input)?;
+    let (input, chunk_data) = take(length as usize)(input)?;
+    let (input, crc) = be_u32(input)?;
     Ok((
         input,
-        PngHeader {
+        PngChunk {
+            length,
+            chunk_type: chunk_type.try_into().unwrap(),
+            chunk_data: chunk_data.to_vec(),
+            crc,
+        },
+    ))
+}
+
+#[derive(Debug)]
+struct PngImage {
+    signature: PngSignature,
+    chunks: Vec<PngChunk>,
+}
+
+fn png_image(input: &[u8]) -> IResult<&[u8], PngImage> {
+    let (input, signature) = png_signature(input)?;
+    let (input, chunks) = many0(png_chunk)(input)?;
+    let (input, _) = tag(b"IEND")(input)?; //check for IEND
+    Ok((
+        input,
+        PngImage {
             signature,
-            ihdr,
+            chunks,
         },
     ))
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: png_parser <filename>");
-        return;
+        eprintln!("Usage: {} <filename>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let mut file = match File::open(filename) {
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
         Ok(file) => file,
         Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
+            eprintln!("Failed to open file: {}", err);
+            std::process::exit(1);
         }
     };
 
@@ -120,13 +85,18 @@ fn main() {
     match file.read_to_end(&mut buffer) {
         Ok(_) => (),
         Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
+            eprintln!("Failed to read file: {}", err);
+            std::process::exit(1);
         }
     };
 
-    match parse_png(&buffer) {
-        Ok((_, header)) => println!("PNG Header: {:?}", header),
-        Err(err) => println!("Error parsing PNG: {:?}", err),
+    match png_image(&buffer) {
+        Ok((_, image)) => println!("PNG Image: {:?}", image),
+        Err(err) => {
+            eprintln!("Failed to parse PNG: {:?}", err);
+            std::process::exit(1);
+        }
     }
 }
+
+use nom::multi::many0;

@@ -1,13 +1,14 @@
-#ifndef TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
-#define TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+module TLS_Client_Hello;
 
-event tls_client_hello_gemini_1_5_flash(tls_client_hello: tls_client_hello_t)
-	{
-	// Add your logic here to process the TLS Client Hello message.
-	// Example: Log the server name indication (SNI) if available.
-	if (tls_client_hello.server_name != "") {
-		print fmt("TLS Client Hello with SNI: %s", tls_client_hello.server_name);
-	}
-	}
-
-#endif
+type tls_client_hello {
+    uint16 protocol_version;
+    bytes random[32];
+    uint8 session_id_len;
+    bytes session_id[session_id_len];
+    uint16 cipher_suites_len;
+    uint16 cipher_suites[cipher_suites_len / 2];
+    uint8 compression_methods_len;
+    uint8 compression_methods[compression_methods_len];
+    uint16 extensions_len;
+    bytes extensions[extensions_len];
+};

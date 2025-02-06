@@ -1,32 +1,70 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/png"
-           xmlns:tns="http://example.com/png">
+           xmlns:tns="http://example.com/png"
+           elementFormDefault="qualified">
 
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+  <xs:include schemaLocation="dfdlGeneralFormat.xsd"/>
 
-  <xs:element name="PNG" dfdl:lengthKind="delimited">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="hexBinary" dfdl:initiator="89504E470D0A1A0A"/>
-        <xs:element name="Chunks" type="tns:ChunksType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="PNG" type="tns:PNGType"/>
+
+  <xs:complexType name="PNGType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="hexBinary"/>
+      <xs:element name="Chunks" type="tns:ChunksType"/>
+    </xs:sequence>
+  </xs:complexType>
 
   <xs:complexType name="ChunksType">
-    <xs:sequence dfdl:separatorSuppressionPolicy="never">
-      <xs:element name="Chunk" type="tns:ChunkType" minOccurs="1" maxOccurs="unbounded"/>
+    <xs:sequence>
+      <xs:element name="Chunk" maxOccurs="unbounded" type="tns:ChunkType"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="ChunkType">
     <xs:sequence>
-      <xs:element name="Length" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="Type" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../tns:Length}"/>
-      <xs:element name="CRC" type="xs:hexBinary" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="4"/>
+      <xs:element name="ChunkType" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
+      <xs:element name="ChunkData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length }"/>
+      <xs:element name="CRC" type="xs:int" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IHDRChunk">
+    <xs:sequence>
+      <xs:element name="Width" type="xs:int" dfdl:length="4"/>
+      <xs:element name="Height" type="xs:int" dfdl:length="4"/>
+      <xs:element name="BitDepth" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="ColorType" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="CompressionMethod" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="FilterMethod" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="InterlaceMethod" type="xs:byte" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PLTEChunk">
+    <xs:sequence>
+      <xs:element name="PaletteEntry" maxOccurs="unbounded" type="tns:PaletteEntryType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PaletteEntryType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Green" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Blue" type="xs:byte" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IDATChunk">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IENDChunk">
+    <xs:sequence>
+      <!-- No fields for IEND -->
     </xs:sequence>
   </xs:complexType>
 

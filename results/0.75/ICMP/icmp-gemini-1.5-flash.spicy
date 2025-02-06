@@ -1,68 +1,68 @@
-#ifndef _ICMP_GEMINI_1_5_FLASH_H_
-#define _ICMP_GEMINI_1_5_FLASH_H_
+module icmp;
 
-#include <stdint.h>
-
-typedef struct {
-    uint8_t type;
-    uint8_t code;
-    uint16_t checksum;
-    uint16_t identifier;
-    uint16_t sequence_number;
-    uint8_t data[1024];
-} icmp_gemini_1_5_flash_t;
-
-int decode_icmp_gemini_1_5_flash(const uint8_t *data, size_t len, icmp_gemini_1_5_flash_t *result);
-
-#endif // _ICMP_GEMINI_1_5_FLASH_H_
-
-
-#include "icmp_gemini_1_5_flash.h"
-#include <zeek/zeek-config.h>
-
-int decode_icmp_gemini_1_5_flash(const uint8_t *data, size_t len, icmp_gemini_1_5_flash_t *result) {
-    if (len < 8) {
-        return 0;
-    }
-
-    result->type = data[0];
-    result->code = data[1];
-    result->checksum = (data[2] << 8) | data[3];
-    result->identifier = (data[4] << 8) | data[5];
-    result->sequence_number = (data[6] << 8) | data[7];
-
-    size_t data_len = len - 8;
-    if (data_len > sizeof(result->data)) {
-        data_len = sizeof(result->data);
-    }
-    memcpy(result->data, data + 8, data_len);
-
-    return 1;
-}
-
-
-event zeek_init() {
-    // No initialization needed for this example
-}
-
-event zeek_done() {
-    // No cleanup needed for this example
-}
-
-redef record ICMP_Packet : record {
+type icmp_header {
     uint8 type;
     uint8 code;
     uint16 checksum;
-    uint16 identifier;
-    uint16 sequence_number;
-    string data;
-};
-
-event zeek_detect_icmp_gemini_1_5_flash(ICMP_Packet pkt) {
-    icmp_gemini_1_5_flash_t decoded_pkt;
-    if (decode_icmp_gemini_1_5_flash((const uint8_t*)pkt.data, strlen(pkt.data), &decoded_pkt) == 1) {
-       //Process the decoded packet here.  Example:
-       print fmt("Decoded ICMP Gemini 1.5 Flash Packet: Type=%d, Code=%d, Identifier=%d, Sequence Number=%d", decoded_pkt.type, decoded_pkt.code, decoded_pkt.identifier, decoded_pkt.sequence_number);
+    switch(type) {
+        case 0:  # Echo Reply
+            uint16 identifier;
+            uint16 sequence_number;
+        case 8:  # Echo Request
+            uint16 identifier;
+            uint16 sequence_number;
+        case 3:  # Destination Unreachable
+            uint32 unused;
+            ip original_ip_header;
+        case 11: # Time Exceeded
+            uint32 unused;
+            ip original_ip_header;
+        case 5: # Redirect
+            uint8 redirect_type;
+            ipv4 gateway_ip_address;
+        case 13: # Timestamp Request
+            uint32 origin_timestamp;
+            uint32 receive_timestamp;
+            uint32 transmit_timestamp;
+        case 14: # Timestamp Reply
+            uint32 origin_timestamp;
+            uint32 receive_timestamp;
+            uint32 transmit_timestamp;
+        case 15: # Information Request
+            uint32 unused;
+            ipv4 address_mask;
+        case 16: # Information Reply
+            uint32 unused;
+            ipv4 address_mask;
+        case 17: # Address Mask Request
+            uint32 unused;
+            ipv4 address_mask;
+        case 18: # Address Mask Reply
+            uint32 unused;
+            ipv4 address_mask;
+        case 12: # Parameter problem
+            uint8 pointer;
+            bytes data;
+        default:
+            bytes data;
     }
 }
 
+type ip {
+    uint8 version;
+    uint8 ihl;
+    uint8 tos;
+    uint16 total_length;
+    uint16 identification;
+    uint16 flags_and_fragment_offset;
+    uint8 ttl;
+    uint8 protocol;
+    uint16 header_checksum;
+    ipv4 source_address;
+    ipv4 destination_address;
+    bytes options;
+}
+
+type ipv4 {
+    uint32 address;
+}

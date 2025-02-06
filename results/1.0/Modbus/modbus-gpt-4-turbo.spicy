@@ -1,24 +1,30 @@
 module Modbus;
 
-public type ExceptionFunction as unit {
-    funcCode: uint8;
-    errorCode: uint8;
-} &byte_order=big_endian;
+import spicy;
 
-public type FunctionData as unit {
-    data: bytes &size=2;
-} &byte_order=big_endian;
-
-public type PDU is ExceptionFunction, FunctionData;
-
-public type ADU as unit {
-    transactionId: uint16;
-    protocolId: uint16;
+type Header = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
     length: uint16;
-    unitId: uint16;
-    payload: PDU;
-} &byte_order=big_endian;
+    unit_id: uint8;
+};
 
-public type Main as unit {
-    adus: ADU[];
-} &byte_order=big_endian;
+type Request = unit {
+    header: Header;
+    function_code: uint8;
+    data: bytes &size=(header.length - 1);  # Fixed by removing 'this' and directly referring to 'header'
+};
+
+type Response = unit {
+    header: Header;
+    function_code: uint8;
+    data: bytes &size=(header.length - 1);  # Fixed similarly
+};
+
+public type ModbusTCP = unit {
+    request: Request;
+    response: Response &optional;
+    on %done {
+        print self;
+    }
+};

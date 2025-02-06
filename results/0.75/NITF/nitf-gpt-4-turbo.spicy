@@ -1,61 +1,95 @@
 module NITF;
 
 public type FileHeader = unit {
-    fileTypeID: /[A-Z0-9]{9}/;
-    complexLevel: uint8;
-    systemType: /[A-Z0-9]{4}/;
-    originStationID: /[A-Z0-9]{10}/;
-    fileDateTime: /[0-9]{14}/;
-    fileTitle: /[A-Z0-9]{80}/;
-
-    on %done {
-        print self;
-    }
+    FHDR:       bytes &size=9;
+    CLEVEL:     bytes &size=2;
+    STYPE:      bytes &size=4;
+    OSTAID:     bytes &size=10;
+    FDT:        bytes &size=14;
+    FTITLE:     bytes &size=80;
+    FSCLAS:     bytes &size=1;
+    FSCLSY:     bytes &size=2;
+    FSCODE:     bytes &size=11;
+    FSCTLH:     bytes &size=2;
+    FSREL:      bytes &size=20;
+    FSDCTP:     bytes &size=2;
+    FSDCD:      bytes &size=8;
+    FSDCXM:     bytes &size=4;
+    FSORGN:     bytes &size=24;
+    FSCAUT:     bytes &size=40;
+    FSCTLN:     bytes &size=15;
+    FSCOP:      bytes &size=5;
+    FSCPYS:     bytes &size=5;
+    ENCRYP:     bytes &size=1;
+    FBKGC:      bytes &size=3;
+    ONAME:      bytes &size=27;
+    OPHONE:     bytes &size=18;
 };
 
 public type ImageSegment = unit {
-    imageID: /[A-Z0-9]{10}/;
-    dateTime: /[0-9]{14}/;
-    targetID: /[A-Z0-9 ]{17}/;
-    imageTitle: /[A-Z0-9 ]{80}/;
-
-    on %done {
-        print self;
-    }
+    IID1:       bytes &size=10;
+    IDATIM:     bytes &size=14;
+    TGTID:      bytes &size=17;
+    IID2:       bytes &size=80;
+    ISCLAS:     bytes &size=1;
+    ISCLSY:     bytes &size=2;
+    ISCODE:     bytes &size=11;
+    ISCTLH:     bytes &size=2;
+    ISREL:      bytes &size=20;
+    ISDCTP:     bytes &size=2;
+    ISDCD:      bytes &size=8;
+    ISDCXM:     bytes &size=4;
+    ISORGN:     bytes &size=24;
+    ISCAUT:     bytes &size=40;
+    ISCTLN:     bytes &size=15;
+    ISDWNG:     bytes &size=6;
+    ISDEVT:     bytes &size=40;
+    ICAT:       bytes &size=8;
+    ABPP:       bytes &size=2;
+    PJUST:      bytes &size=1;
+    ICORDS:     bytes &size=1;
+    IGEOLO:     bytes &size=60;
+    NICOM:      uint16;
+    ICOM:       bytes[] &size=NICOM * 80;  // Adjusted size calculation
 };
 
 public type TextSegment = unit {
-    textID: /[A-Z0-9]{7}/;
-    dateTime: /[0-9]{14}/;
-    textTitle: /[A-Z0-9 ]{80}/;
-    textFormat: /[A-Z0-9]{3}/;
-
-    on %done {
-        print self;
-    }
+    TEXTID:     bytes &size=7;
+    TXTALVL:    bytes &size=3;
+    TXTDT:      bytes &size=14;
+    TXTITL:     bytes &size=80;
+    TSCLAS:     bytes &size=1;
+    TSCLSY:     bytes &size=2;
+    TSCODE:     bytes &size=11;
+    TSCTLH:     bytes &size=2;
+    TSREL:      bytes &size=20;
+    TSDCTP:     bytes &size=2;
+    TSDCD:      bytes &size=8;
+    TSDCXM:     bytes &size=4;
+    TSORGN:     bytes &size=24;
+    TSCAUT:     bytes &size=40;
+    TSCTLN:     bytes &size=15;
 };
 
-public type DataSegment = unit {
-    dataID: /[A-Z0-9]{5}/;
-    encrypted: uint8;
-    dataFormat: /[A-Z0-9]{3}/;
-
-    on %done {
-        print self;
-    }
+public type GraphicsSegment = unit {
+    // Similar structure to TextSegment
 };
 
-public type NITFFile = unit {
-    header: FileHeader;
-    images: ImageSegment[];
-    texts: TextSegment[];
-    data: DataSegment[];
-
-    on %done {
-        print self;
-    }
+public type DataExtensionSegment = unit {
+    DESID:      bytes &size=25;
+    DESVER:     bytes &size=2;
 };
 
-event zeek_init() {
-    print "Zeek NITF parser loaded";
-}
+public type ReservedExtensionSegment = unit {
+    RECID:      bytes &size=25;
+    RESVER:     bytes &size=2;
+};
+
+public type NITF = unit {
+    header:     FileHeader;
+    images:     ImageSegment[];
+    texts:      TextSegment[];
+    graphics:   GraphicsSegment[];
+    dataExtensions: DataExtensionSegment[];
+    reservedExtensions: ReservedExtensionSegment[];
+};

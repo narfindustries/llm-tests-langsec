@@ -1,78 +1,192 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/sqlite3"
-           xmlns:tns="http://example.com/sqlite3"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/sqlite3"
+        xmlns:tns="http://example.com/sqlite3"
+        elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:SQLite3Format"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit" lengthUnits="bytes"/>
+        </appinfo>
+    </annotation>
 
-    <dfdl:format name="SQLite3Format"
-                 byteOrder="bigEndian"
-                 encoding="utf-8"
-                 lengthKind="explicit"
-                 lengthUnits="bytes"
-                 alignmentUnits="bytes"
-                 occursCountKind="expression"
-                 occursCount="{ ../header/numPages }"/>
-
-    <xs:element name="sqlite3-db">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="header" type="tns:HeaderType"/>
-                <xs:element name="page" type="tns:PageType" maxOccurs="unbounded"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:complexType name="HeaderType">
-        <xs:sequence>
-            <xs:element name="magic" type="xs:string" dfdl:length="16" dfdl:lengthUnits="bytes"/>
-            <xs:element name="pageSize" type="xs:unsignedShort"/>
-            <xs:element name="fileFormatWriteVersion" type="xs:unsignedByte"/>
-            <xs:element name="fileFormatReadVersion" type="xs:unsignedByte"/>
-            <xs:element name="reservedSpace" type="xs:unsignedByte"/>
-            <xs:element name="maxEmbeddedPayloadFraction" type="xs:unsignedByte"/>
-            <xs:element name="minEmbeddedPayloadFraction" type="xs:unsignedByte"/>
-            <xs:element name="leafPayloadFraction" type="xs:unsignedByte"/>
-            <xs:element name="fileChangeCounter" type="xs:unsignedInt"/>
-            <xs:element name="numPages" type="xs:unsignedInt"/>
-            <xs:element name="firstFreelistTrunkPage" type="xs:unsignedInt"/>
-            <xs:element name="numFreelistPages" type="xs:unsignedInt"/>
-            <xs:element name="schemaCookie" type="xs:unsignedInt"/>
-            <xs:element name="schemaFormatNumber" type="xs:unsignedInt"/>
-            <xs:element name="defaultPageCacheSize" type="xs:unsignedInt"/>
-            <xs:element name="largestRootBtreePage" type="xs:unsignedInt"/>
-            <xs:element name="textEncoding" type="xs:unsignedInt"/>
-            <xs:element name="userVersion" type="xs:unsignedInt"/>
-            <xs:element name="incrementalVacuumMode" type="xs:unsignedInt"/>
-            <xs:element name="applicationId" type="xs:unsignedInt"/>
-            <xs:element name="reserved" type="xs:unsignedLong" dfdl:length="20" dfdl:lengthUnits="bytes"/>
-            <xs:element name="versionValidFor" type="xs:unsignedInt"/>
-            <xs:element name="sqliteVersionNumber" type="xs:unsignedInt"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="PageType">
-        <xs:sequence>
-            <xs:element name="pageHeader" type="tns:PageHeaderType"/>
-            <xs:element name="cellContent" type="xs:hexBinary" dfdl:length="{ ../header/pageSize - 8 }" dfdl:lengthUnits="bytes"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="PageHeaderType">
-        <xs:sequence>
-            <xs:element name="pageType" type="xs:unsignedByte"/>
-            <xs:element name="firstFreeblock" type="xs:unsignedShort"/>
-            <xs:element name="numCells" type="xs:unsignedShort"/>
-            <xs:element name="cellContentArea" type="xs:unsignedShort"/>
-            <xs:element name="numFragmentedFreeBytes" type="xs:unsignedByte"/>
-        </xs:sequence>
-    </xs:complexType>
-
-</xs:schema>
+    <element name="SQLite3DB">
+        <complexType>
+            <sequence>
+                <element name="headerString" type="string">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="16"/>
+                            <dfdl:assert test="{ fn:starts-with(., 'SQLite format 3') }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="pageSize" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="2"/>
+                            <dfdl:assert test="{ . = 1 or (. ge 512 and . le 65536 and . mod 2 = 0) }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="fileFormatWriteVersion" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                            <dfdl:assert test="{ . = 1 or . = 2 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="fileFormatReadVersion" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                            <dfdl:assert test="{ . = 1 or . = 2 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="reservedSpace" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="maxEmbeddedPayloadFraction" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                            <dfdl:assert test="{ . = 64 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="minEmbeddedPayloadFraction" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                            <dfdl:assert test="{ . = 32 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="leafPayloadFraction" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="1"/>
+                            <dfdl:assert test="{ . = 32 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="fileChangeCounter" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="databaseSizeInPages" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="firstFreelistTrunkPage" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="totalFreelistPages" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="schemaCookie" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="schemaFormatNumber" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                            <dfdl:assert test="{ . = 1 or . = 2 or . = 3 or . = 4 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="defaultPageCacheSize" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="largestRootBTreePageNumber" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="textEncoding" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                            <dfdl:assert test="{ . = 1 or . = 2 or . = 3 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="userVersion" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="incrementalVacuumMode" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                            <dfdl:assert test="{ . = 0 or . = 1 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="applicationID" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="reservedForExpansion" type="hexBinary">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="20"/>
+                            <dfdl:assert test="{ . = xs:hexBinary('0000000000000000000000000000000000000000') }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="versionValidForNumber" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="sqliteVersionNumber" type="int">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthKind value="explicit" length="4"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+</schema>

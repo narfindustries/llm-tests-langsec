@@ -1,204 +1,112 @@
-# Define the ZIP file format
-type Zip_File = record {
-    # Local file header
-    local_header: Local_Header;
+module ZIP;
 
-    # File data
-    file_data: bytestring;
-
-    # Data descriptor (optional)
-    data_descriptor: Data_Descriptor;
+type local_file_header_record: record {
+  local_file_header_signature: uint32 = 0x04034b50;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_modified_time: uint16;
+  last_modified_date: uint16;
+  crc32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
 };
 
-# Define the local file header
-type Local_Header = record {
-    # Magic number
-    magic: uint16 = 0x04034b50;
-
-    # Version needed to extract
-    version: uint16;
-
-    # General purpose bit flags
-    flags: uint16;
-
-    # Compression method
-    compression: uint16;
-
-    # Last modification time
-    modification_time: uint16;
-
-    # Last modification date
-    modification_date: uint16;
-
-    # CRC-32
-    crc: uint32;
-
-    # Compressed size
-    compressed_size: uint32;
-
-    # Uncompressed size
-    uncompressed_size: uint32;
-
-    # File name length
-    file_name_length: uint16;
-
-    # Extra field length
-    extra_field_length: uint16;
-
-    # File name
-    file_name: bytestring = read_bytes(file_name_length);
-
-    # Extra field
-    extra_field: bytestring = read_bytes(extra_field_length);
+type extra_field_record: record {
+  extra_field_data: byte[string];
 };
 
-# Define the data descriptor
-type Data_Descriptor = record {
-    # CRC-32
-    crc: uint32;
-
-    # Compressed size
-    compressed_size: uint32;
-
-    # Uncompressed size
-    uncompressed_size: uint32;
+type data_descriptor_record: record {
+  data_descriptor_signature: uint32 = 0x08074b50;
+  crc32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
 };
 
-# Define the central directory file header
-type Central_Directory_File_Header = record {
-    # Magic number
-    magic: uint32 = 0x02014b50;
-
-    # Version made by
-    version_made_by: uint16;
-
-    # Version needed to extract
-    version_needed_to_extract: uint16;
-
-    # General purpose bit flags
-    flags: uint16;
-
-    # Compression method
-    compression: uint16;
-
-    # Last modification time
-    modification_time: uint16;
-
-    # Last modification date
-    modification_date: uint16;
-
-    # CRC-32
-    crc: uint32;
-
-    # Compressed size
-    compressed_size: uint32;
-
-    # Uncompressed size
-    uncompressed_size: uint32;
-
-    # File name length
-    file_name_length: uint16;
-
-    # Extra field length
-    extra_field_length: uint16;
-
-    # File comment length
-    file_comment_length: uint16;
-
-    # Disk number where file starts
-    disk_number: uint16;
-
-    # Internal file attributes
-    internal_file_attributes: uint16;
-
-    # External file attributes
-    external_file_attributes: uint32;
-
-    # Relative offset of local file header
-    relative_offset: uint32;
-
-    # File name
-    file_name: bytestring = read_bytes(file_name_length);
-
-    # Extra field
-    extra_field: bytestring = read_bytes(extra_field_length);
-
-    # File comment
-    file_comment: bytestring = read_bytes(file_comment_length);
+type central_directory_record: record {
+  central_directory_header_signature: uint32 = 0x02014b50;
+  version_made_by: uint16;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_modified_time: uint16;
+  last_modified_date: uint16;
+  crc32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
+  file_comment_length: uint16;
+  disk_number_start: uint16;
+  internal_file_attributes: uint16;
+  external_file_attributes: uint32;
+  relative_offset_of_local_header: uint32;
 };
 
-# Define the end of central directory record
-type End_Of_Central_Directory_Record = record {
-    # Magic number
-    magic: uint32 = 0x06054b50;
-
-    # Number of this disk
-    disk_number: uint16;
-
-    # Disk where central directory starts
-    central_directory_disk: uint16;
-
-    # Number of entries in central directory on this disk
-    entries_on_disk: uint16;
-
-    # Total number of entries in central directory
-    total_entries: uint16;
-
-    # Size of central directory
-    central_directory_size: uint32;
-
-    # Offset of start of central directory
-    central_directory_offset: uint32;
-
-    # Comment length
-    comment_length: uint16;
-
-    # Comment
-    comment: bytestring = read_bytes(comment_length);
+type zip64_end_of_central_directory_record: record {
+  zip64_eocd_signature: uint32 = 0x06064b50;
+  size_of_zip64_eocd: uint64;
+  version_made_by: uint16;
+  version_needed_to_extract: uint16;
+  number_of_this_disk: uint32;
+  number_of_the_disk_where_the_central_directory_starts: uint32;
+  number_of_entries_in_the_central_directory_on_this_disk: uint64;
+  total_number_of_entries_in_the_central_directory: uint64;
+  size_of_the_central_directory: uint64;
+  offset_of_the_central_directory: uint64;
 };
 
-# Define the ZIP file parser
-type Zip_Parser = record {
-    # Central directory file headers
-    central_directory_file_headers: array[Central_Directory_File_Header];
-
-    # End of central directory record
-    end_of_central_directory_record: End_Of_Central_Directory_Record;
+type end_of_central_directory_record: record {
+  eocd_signature: uint32 = 0x06054b50;
+  number_of_this_disk: uint16;
+  number_of_the_disk_where_the_central_directory_starts: uint16;
+  number_of_entries_in_the_central_directory_on_this_disk: uint16;
+  total_number_of_entries_in_the_central_directory: uint16;
+  size_of_the_central_directory: uint32;
+  offset_of_the_central_directory: uint32;
+  comment_length: uint16;
 };
 
-# Define the ZIP file analyzer
-analyzer Zip_Analyzer {
-    # Analyze the ZIP file
-    function analyze(zip_file: Zip_File): Zip_Parser {
-        # Parse the central directory file headers
-        central_directory_file_headers = array();
-        for (i = 0; i < length(zip_file.local_header.file_name); i++) {
-            central_directory_file_header = parse_cdfh(zip_file.local_header.file_name[i]);
-            add(central_directory_file_headers, central_directory_file_header);
-        }
-
-        # Parse the end of central directory record
-        end_of_central_directory_record = parse_eocdr(zip_file.file_data);
-
-        # Return the ZIP file parser
-        return zip_parser(central_directory_file_headers, end_of_central_directory_record);
-    }
+type zip_file_comment_record: record {
+  comment: byte[string];
 };
 
-# Define the parse_cdfh function
-function parse_cdfh(file_name: bytestring): Central_Directory_File_Header {
-    # Read the central directory file header
-    cdfh = Central_Directory_File_Header;
-    read(cdfh);
+type file_name_record: record {
+  filename: byte[string];
+};
 
-    return cdfh;
-}
+type file_data_record: record {
+  file_data: byte[string];
+};
 
-# Define the parse_eocdr function
-function parse_eocdr(file_data: bytestring): End_Of_Central_Directory_Record {
-    # Read the end of central directory record
-    eocdr = End_Of_Central_Directory_Record;
-    read(eocdr);
+type zip_file: record {
+  local_file_header: local_file_header_record;
+  file_name: file_name_record;
+  extra_field: extra_field_record;
+  file_data: file_data_record;
+  data_descriptor: data_descriptor_record &optional;
+};
 
-    return eocdr;
-}
+type zip_archive: record {
+  central_directory: central_directory_record &optional;
+  zip64_end_of_central_directory: zip64_end_of_central_directory_record &optional;
+  end_of_central_directory: end_of_central_directory_record;
+  zip_file_comment: zip_file_comment_record &optional;
+};
+
+let zip_file_format = ftp(z => 
+  z.local_file_header 
+  + z.file_name 
+  + z.extra_field 
+  + z.file_data 
+  + (z.data_descriptor &optional)
+);
+
+let zip_archive_format = ftp(z => 
+  (z.central_directory &optional) 
+  + (z.zip64_end_of_central_directory &optional) 
+  + z.end_of_central_directory 
+  + (z.zip_file_comment &optional)
+);

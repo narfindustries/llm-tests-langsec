@@ -1,97 +1,119 @@
 use nom::{
     bytes::complete::{tag, take},
+    combinator::{map, map_res},
+    multi::{count, many0},
     number::complete::{be_u16, be_u8},
+    sequence::tuple,
     IResult,
 };
-use std::env;
 use std::fs::File;
 use std::io::{self, Read};
+use std::path::Path;
 
 #[derive(Debug)]
-struct SOF0 {
-    precision: u8,
-    height: u16,
-    width: u16,
-    number_of_components: u8,
+struct JPEG {
+    segments: Vec<Segment>,
+}
+
+#[derive(Debug)]
+enum Segment {
+    SOI,
+    EOI,
+    APP(Vec<u8>),
+    DQT(u8, Vec<u8>), // Simplified
+    SOF(u16, u16, u8, Vec<Component>),
+    DHT(u8, Vec<(u8, u8)>), // Simplified
+    SOS(Vec<ComponentSelector>),
+    Unknown(Vec<u8>),
 }
 
 #[derive(Debug)]
 struct Component {
-    component_id: u8,
+    id: u8,
     sampling_factor: u8,
-    quantization_table_id: u8,
+    quant_table_id: u8,
 }
 
 #[derive(Debug)]
-struct JPEG {
-    soi: (),
-    app0: Vec<u8>,
-    dqt: Vec<u8>,
-    sof0: SOF0,
-    components: Vec<Component>,
-    sos: Vec<u8>,
-    eoi: (),
-}
-
-fn parse_sof0(input: &[u8]) -> IResult<&[u8], SOF0> {
-    let (input, _) = tag([0xFF, 0xC0])(input)?;
-    let (input, _length) = be_u16(input)?;
-    let (input, precision) = be_u8(input)?;
-    let (input, height) = be_u16(input)?;
-    let (input, width) = be_u16(input)?;
-    let (input, number_of_components) = be_u8(input)?;
-    let (input, components) = nom::multi::count(parse_component, number_of_components as usize)(input)?;
-
-    Ok((input, SOF0 { precision, height, width, number_of_components }))
-}
-
-fn parse_component(input: &[u8]) -> IResult<&[u8], Component> {
-    let (input, component_id) = be_u8(input)?;
-    let (input, sampling_factor) = be_u8(input)?;
-    let (input, quantization_table_id) = be_u8(input)?;
-    Ok((input, Component { component_id, sampling_factor, quantization_table_id }))
+struct ComponentSelector {
+    id: u8,
+    dc_table_id: u8,
+    ac_table_id: u8,
 }
 
 fn parse_jpeg(input: &[u8]) -> IResult<&[u8], JPEG> {
-    let (input, _) = tag([0xFF, 0xD8])(input)?;
-    let (input, app0) = take_until_tag(0xFF, 0xE0)(input)?;
-    let (input, dqt) = take_until_tag(0xFF, 0xDB)(input)?;
-    let (input, sof0) = parse_sof0(input)?;
-    let (input, components) = nom::multi::count(parse_component, sof0.number_of_components as usize)(input)?;
-    let (input, sos) = take_until_tag(0xFF, 0xDA)(input)?;
-    let (input, _) = tag([0xFF, 0xD9])(input)?;
-
-    Ok((input, JPEG { soi: (), app0: app0.to_vec(), dqt: dqt.to_vec(), sof0, components, sos: sos.to_vec(), eoi: () }))
+    let (input, segments) = many0(parse_segment)(input)?;
+    Ok((input, JPEG { segments }))
 }
 
-fn take_until_tag<'a>(tag1: u8, tag2: u8) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
-    move |input: &[u8]| {
-        let mut index = 0;
-        while index + 1 < input.len() {
-            if input[index] == tag1 && input[index + 1] == tag2 {
-                return Ok((&input[index..], &input[..index]));
-            }
-            index += 1;
+fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
+    let (input, marker) = be_u16(input)?;
+    match marker {
+        0xFFD8 => Ok((input, Segment::SOI)),
+        0xFFD9 => Ok((input, Segment::EOI)),
+        0xFFE0..=0xFFEF => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length - 2)(input)?;
+            Ok((input, Segment::APP(data.to_vec())))
         }
-        Err(nom::Err::Error((input, nom::error::ErrorKind::Tag)))
+        0xFFDB => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length - 2)(input)?;
+            Ok((input, Segment::DQT(0, data.to_vec()))) // Simplified
+        }
+        0xFFC0 => {
+            let (input, length) = be_u16(input)?;
+            let (input, (precision, height, width, num_components)) = tuple((be_u8, be_u16, be_u16, be_u8))(input)?;
+            let (input, components) = count(parse_component, num_components as usize)(input)?;
+            Ok((input, Segment::SOF(height, width, precision, components)))
+        }
+        0xFFC4 => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length - 2)(input)?;
+            Ok((input, Segment::DHT(0, vec![]))) // Simplified
+        }
+        0xFFDA => {
+            let (input, length) = be_u16(input)?;
+            let (input, num_components) = be_u8(input)?;
+            let (input, selectors) = count(parse_component_selector, num_components as usize)(input)?;
+            let (input, _) = take(3usize)(input)?; // Skip 3 bytes
+            Ok((input, Segment::SOS(selectors)))
+        }
+        _ => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length - 2)(input)?;
+            Ok((input, Segment::Unknown(data.to_vec())))
+        }
     }
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "No file provided"));
-    }
+fn parse_component(input: &[u8]) -> IResult<&[u8], Component> {
+    let (input, (id, sampling_factor, quant_table_id)) = tuple((be_u8, be_u8, be_u8))(input)?;
+    Ok((input, Component { id, sampling_factor, quant_table_id }))
+}
 
-    let filename = &args[1];
-    let mut file = File::open(filename)?;
+fn parse_component_selector(input: &[u8]) -> IResult<&[u8], ComponentSelector> {
+    let (input, (id, dc_table_id, ac_table_id)) = tuple((be_u8, be_u8, be_u8))(input)?;
+    Ok((input, ComponentSelector { id, dc_table_id, ac_table_id }))
+}
+
+fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
+    let mut file = File::open(path)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
+    Ok(buffer)
+}
 
-    match parse_jpeg(&buffer) {
-        Ok((_, jpeg)) => println!("{:?}", jpeg),
-        Err(e) => println!("Failed to parse JPEG: {:?}", e),
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <JPEG_FILE>", args[0]);
+        return;
     }
 
-    Ok(())
+    let data = read_file(&args[1]).expect("Failed to read file");
+    match parse_jpeg(&data) {
+        Ok((_, jpeg)) => println!("{:#?}", jpeg),
+        Err(e) => println!("Failed to parse JPEG: {:?}", e),
+    }
 }

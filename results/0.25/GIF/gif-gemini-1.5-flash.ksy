@@ -1,145 +1,131 @@
-meta:
-  id: gif-gemini-1
-  title: GIF (Gemini 1.5 Flash)
-  homepage: https://kaitai.io
-  file-extension: gif
-  experimental: true
+type: struct
+id: gif
+endian: be
 
-types:
-  header:
-    seq:
-      - id: signature
-        type: str
-        size: 3
-      - id: version
-        type: str
-        size: 3
-      - id: screen_descriptor
-        type: screen_descriptor
-      - id: global_color_table
-        type: global_color_table
-      - id: blocks
-        type: blocks
-
-  screen_descriptor:
-    seq:
+seq:
+  - id: signature
+    type: str
+    len: 6
+    encoding: ASCII
+    assert: signature == "GIF89a"
+  - id: logical_screen_descriptor
+    type: struct
+    fields:
       - id: width
         type: u2
       - id: height
         type: u2
       - id: packed_fields
         type: u1
-        docs: |
-          Bits 0-3: Global color table flag (1=present, 0=absent)
-          Bits 4-7: Color resolution (1-8)
+        fields:
+          - id: global_color_table_flag
+            type: bits
+            size: 1
+          - id: color_resolution
+            type: bits
+            size: 3
+          - id: sort_flag
+            type: bits
+            size: 1
+          - id: size_of_global_color_table
+            type: bits
+            size: 3
       - id: background_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
-
-  global_color_table:
-    seq:
-      - id: size
-        type: u1
-        expr: (packed_fields & 0x07) + 1
-      - id: entries
-        type: color_table_entry
-        repeat: expr
-        expr: (1 << size)
-
-  color_table_entry:
-    seq:
+  - id: global_color_table
+    type: seq
+    size: lambda: (1 << (self.logical_screen_descriptor.packed_fields.size_of_global_color_table + 1)) if self.logical_screen_descriptor.packed_fields.global_color_table_flag else 0
+    type: struct
+    fields:
       - id: red
         type: u1
       - id: green
         type: u1
       - id: blue
         type: u1
+  - id: blocks
+    type: seq
+    repeat: until
+    until: lambda: self._io.is_eof()
+    type: gif_block
 
-  blocks:
-    seq:
+types:
+  gif_block:
+    type: struct
+    fields:
       - id: block_type
         type: u1
       - id: block_data
-        type: block_data
+        type: bytes
+        size: lambda: self.block_type
 
-  block_data:
-    switch-on: block_type
-    cases:
-      - 0x2C:
-          seq:
-            - id: image_descriptor
-              type: image_descriptor
-            - id: image_data
-              type: image_data
-      - 0x21:
-          seq:
-            - id: extension_type
-              type: u1
-            - id: extension_data
-              type: extension_data
-      - 0x3B:
-          seq:
-            - id: trailer
-              type: trailer
-
-  image_descriptor:
-    seq:
-      - id: left
+  gif_image_descriptor:
+    type: struct
+    fields:
+      - id: image_separator
+        type: u1
+        assert: image_separator == 0x2C
+      - id: image_left_position
         type: u2
-      - id: top
+      - id: image_top_position
         type: u2
-      - id: width
+      - id: image_width
         type: u2
-      - id: height
+      - id: image_height
         type: u2
       - id: packed_fields
         type: u1
-        docs: |
-          Bits 0-3: Local color table flag (1=present, 0=absent)
-          Bits 4-7: Interlace flag (1=interlaced, 0=non-interlaced)
+        fields:
+          - id: local_color_table_flag
+            type: bits
+            size: 1
+          - id: interlace_flag
+            type: bits
+            size: 1
+          - id: sort_flag
+            type: bits
+            size: 1
+          - id: size_of_local_color_table
+            type: bits
+            size: 3
       - id: local_color_table
-        type: local_color_table
-
-  local_color_table:
-    seq:
-      - id: size
-        type: u1
-        expr: (packed_fields & 0x07) + 1
-      - id: entries
-        type: color_table_entry
-        repeat: expr
-        expr: (1 << size)
-
-  image_data:
-    seq:
+        type: seq
+        size: lambda: (1 << (self.packed_fields.size_of_local_color_table + 1)) if self.packed_fields.local_color_table_flag else 0
+        type: struct
+        fields:
+          - id: red
+            type: u1
+          - id: green
+            type: u1
+          - id: blue
+            type: u1
       - id: lzw_minimum_code_size
         type: u1
-      - id: data
-        type: data_subblocks
+      - id: image_data
+        type: gif_data_blocks
 
-  extension_data:
-    seq:
-      - id: subblocks
-        type: data_subblocks
-
-  trailer:
-    seq:
-      - id: end_code
+  gif_data_blocks:
+    type: seq
+    repeat: until
+    until: lambda: self._io.read_u1() == 0
+    type: struct
+    fields:
+      - id: block_size
         type: u1
-        enum:
-          0x3B: end
-
-  data_subblocks:
-    seq:
-      - id: subblock_size
-        type: u1
-      - id: subblock_data
+      - id: block_data
         type: bytes
-        size: subblock_size
-      - id: next_subblock
-        type: data_subblocks
-        repeat: expr
-        expr: subblock_size != 0
+        size: lambda: self.block_size
 
+  gif_extension_block:
+    type: struct
+    fields:
+      - id: extension_introducer
+        type: u1
+        assert: extension_introducer == 0x21
+      - id: extension_label
+        type: u1
+      - id: extension_data
+        type: gif_data_blocks
 

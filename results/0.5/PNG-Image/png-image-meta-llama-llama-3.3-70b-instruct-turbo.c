@@ -1,11 +1,39 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
-// Define the PNG image structure
+#define CHUNK_SIZE 4
+
+typedef enum {
+    COLOR_TYPE_GRAYSCALE = 0,
+    COLOR_TYPE_RGB = 2,
+    COLOR_TYPE_PLTE = 3,
+    COLOR_TYPE_GRAYSCALE_ALPHA = 4,
+    COLOR_TYPE_RGBA = 6
+} color_type_t;
+
+typedef enum {
+    COMPRESSION_METHOD_DEFLATE = 0
+} compression_method_t;
+
+typedef enum {
+    FILTER_METHOD_ADAPTIVE = 0
+} filter_method_t;
+
+typedef enum {
+    INTERLACE_METHOD_NONE = 0,
+    INTERLACE_METHOD_ADAM7 = 1
+} interlace_method_t;
+
 typedef struct {
-    uint8_t signature[8];
-    uint32_t ihdr_length;
-    uint8_t ihdr_type[4];
+    uint32_t length;
+    char chunk_type[5];
+    uint32_t crc;
+} chunk_header_t;
+
+typedef struct {
+    chunk_header_t header;
     uint32_t width;
     uint32_t height;
     uint8_t bit_depth;
@@ -13,124 +41,157 @@ typedef struct {
     uint8_t compression_method;
     uint8_t filter_method;
     uint8_t interlace_method;
-    uint32_t crc;
-    uint8_t idat[1024]; // assuming a small image
-    uint32_t iend_length;
-    uint8_t iend_type[4];
-    uint32_t iend_crc;
-} png_image_t;
+} ihdr_chunk_t;
 
-// Define the Hammer specification
 typedef struct {
-    uint8_t version;
-    uint8_t instruction;
-    uint16_t operand;
-} hammer_t;
+    chunk_header_t header;
+    uint8_t palette[256 * 3];
+} plte_chunk_t;
 
-// Define the PNG image metadata structure
 typedef struct {
-    png_image_t image;
-    hammer_t meta;
-} png_image_meta_t;
+    chunk_header_t header;
+    uint8_t data[1024];
+} idat_chunk_t;
 
-// Define the LLaMA structure
 typedef struct {
-    uint8_t model[16];
-    uint8_t version[4];
-    uint32_t size;
-} llama_t;
+    chunk_header_t header;
+} iend_chunk_t;
 
-// Define the turbo instruction structure
 typedef struct {
-    uint8_t opcode;
-    uint8_t operand;
-} turbo_instruction_t;
+    chunk_header_t header;
+    uint8_t key[256];
+    uint8_t text[256];
+} text_chunk_t;
 
-// Define the output structure
+#define CHUNK_HEADER_SIZE sizeof(chunk_header_t)
+#define IHDR_CHUNK_SIZE sizeof(ihdr_chunk_t)
+#define PLTE_CHUNK_SIZE sizeof(plte_chunk_t)
+#define IDAT_CHUNK_SIZE sizeof(idat_chunk_t)
+#define IEND_CHUNK_SIZE sizeof(iend_chunk_t)
+#define TEXT_CHUNK_SIZE sizeof(text_chunk_t)
+
 typedef struct {
-    png_image_meta_t image_meta;
-    llama_t llama;
-    turbo_instruction_t turbo;
-} output_t;
+    uint8_t* data;
+    size_t size;
+} hammer_parser_t;
 
-int main() {
-    // Initialize the output structure
-    output_t output;
-    output.image_meta.image.signature[0] = 0x89;
-    output.image_meta.image.signature[1] = 0x50;
-    output.image_meta.image.signature[2] = 0x4E;
-    output.image_meta.image.signature[3] = 0x47;
-    output.image_meta.image.signature[4] = 0x0D;
-    output.image_meta.image.signature[5] = 0x0A;
-    output.image_meta.image.signature[6] = 0x1A;
-    output.image_meta.image.signature[7] = 0x0A;
-    output.image_meta.image.ihdr_length = 25;
-    output.image_meta.image.ihdr_type[0] = 'I';
-    output.image_meta.image.ihdr_type[1] = 'H';
-    output.image_meta.image.ihdr_type[2] = 'D';
-    output.image_meta.image.ihdr_type[3] = 'R';
-    output.image_meta.image.width = 1024;
-    output.image_meta.image.height = 768;
-    output.image_meta.image.bit_depth = 8;
-    output.image_meta.image.color_type = 2;
-    output.image_meta.image.compression_method = 0;
-    output.image_meta.image.filter_method = 0;
-    output.image_meta.image.interlace_method = 0;
-    output.image_meta.image.crc = 0x12345678;
-    output.image_meta.meta.version = 1;
-    output.image_meta.meta.instruction = 2;
-    output.image_meta.meta.operand = 3;
-    output.llama.model[0] = 'L';
-    output.llama.model[1] = 'L';
-    output.llama.model[2] = 'a';
-    output.llama.model[3] = 'M';
-    output.llama.model[4] = 'a';
-    output.llama.version[0] = '1';
-    output.llama.version[1] = '.';
-    output.llama.version[2] = '0';
-    output.llama.size = 1024;
-    output.turbo.opcode = 1;
-    output.turbo.operand = 2;
+typedef struct {
+    int success;
+    char* error;
+} hammer_result_t;
 
-    // Print the output structure
-    printf("PNG Image Signature: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-           output.image_meta.image.signature[0],
-           output.image_meta.image.signature[1],
-           output.image_meta.image.signature[2],
-           output.image_meta.image.signature[3],
-           output.image_meta.image.signature[4],
-           output.image_meta.image.signature[5],
-           output.image_meta.image.signature[6],
-           output.image_meta.image.signature[7]);
-    printf("IHDR Length: %u\n", output.image_meta.image.ihdr_length);
-    printf("IHDR Type: %c%c%c%c\n",
-           output.image_meta.image.ihdr_type[0],
-           output.image_meta.image.ihdr_type[1],
-           output.image_meta.image.ihdr_type[2],
-           output.image_meta.image.ihdr_type[3]);
-    printf("Width: %u\n", output.image_meta.image.width);
-    printf("Height: %u\n", output.image_meta.image.height);
-    printf("Bit Depth: %u\n", output.image_meta.image.bit_depth);
-    printf("Color Type: %u\n", output.image_meta.image.color_type);
-    printf("Compression Method: %u\n", output.image_meta.image.compression_method);
-    printf("Filter Method: %u\n", output.image_meta.image.filter_method);
-    printf("Interlace Method: %u\n", output.image_meta.image.interlace_method);
-    printf("CRC: %08x\n", output.image_meta.image.crc);
-    printf("Meta Version: %u\n", output.image_meta.meta.version);
-    printf("Meta Instruction: %u\n", output.image_meta.meta.instruction);
-    printf("Meta Operand: %u\n", output.image_meta.meta.operand);
-    printf("LLaMA Model: %c%c%c%c\n",
-           output.llama.model[0],
-           output.llama.model[1],
-           output.llama.model[2],
-           output.llama.model[3]);
-    printf("LLaMA Version: %c%c%c\n",
-           output.llama.version[0],
-           output.llama.version[1],
-           output.llama.version[2]);
-    printf("LLaMA Size: %u\n", output.llama.size);
-    printf("Turbo Opcode: %u\n", output.turbo.opcode);
-    printf("Turbo Operand: %u\n", output.turbo.operand);
+hammer_parser_t* chunk_header_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + CHUNK_HEADER_SIZE;
+    new_parser->size = parser->size - CHUNK_HEADER_SIZE;
+    return new_parser;
+}
 
+hammer_parser_t* ihdr_chunk_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + IHDR_CHUNK_SIZE;
+    new_parser->size = parser->size - IHDR_CHUNK_SIZE;
+    return new_parser;
+}
+
+hammer_parser_t* plte_chunk_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + PLTE_CHUNK_SIZE;
+    new_parser->size = parser->size - PLTE_CHUNK_SIZE;
+    return new_parser;
+}
+
+hammer_parser_t* idat_chunk_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + IDAT_CHUNK_SIZE;
+    new_parser->size = parser->size - IDAT_CHUNK_SIZE;
+    return new_parser;
+}
+
+hammer_parser_t* iend_chunk_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + IEND_CHUNK_SIZE;
+    new_parser->size = parser->size - IEND_CHUNK_SIZE;
+    return new_parser;
+}
+
+hammer_parser_t* text_chunk_parser(hammer_parser_t* parser) {
+    hammer_parser_t* new_parser = malloc(sizeof(hammer_parser_t));
+    new_parser->data = parser->data + TEXT_CHUNK_SIZE;
+    new_parser->size = parser->size - TEXT_CHUNK_SIZE;
+    return new_parser;
+}
+
+hammer_parser_t* png_parser(hammer_parser_t* parser) {
+    uint8_t magic_number[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    if (memcmp(parser->data, magic_number, 8) != 0) {
+        printf("Invalid PNG file\n");
+        return NULL;
+    }
+    parser->data += 8;
+    parser->size -= 8;
+    return parser;
+}
+
+hammer_result_t* hammer_parse(hammer_parser_t* parser, uint8_t* data, size_t size) {
+    hammer_result_t* result = malloc(sizeof(hammer_result_t));
+    parser->data = data;
+    parser->size = size;
+    parser = png_parser(parser);
+    if (parser == NULL) {
+        result->success = 0;
+        result->error = "Invalid PNG file";
+        return result;
+    }
+    result->success = 1;
+    result->error = NULL;
+    return result;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* data = malloc(file_size);
+    if (!data) {
+        printf("Error allocating memory\n");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(data, 1, file_size, file);
+    if (bytes_read != file_size) {
+        printf("Error reading file\n");
+        free(data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    hammer_parser_t* parser = malloc(sizeof(hammer_parser_t));
+    hammer_result_t* result = hammer_parse(parser, data, file_size);
+
+    if (result->success) {
+        printf("PNG file parsed successfully\n");
+    } else {
+        printf("Error parsing PNG file: %s\n", result->error);
+    }
+
+    free(data);
+    free(parser);
+    free(result);
     return 0;
 }

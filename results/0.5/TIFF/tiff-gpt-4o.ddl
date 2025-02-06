@@ -1,54 +1,92 @@
-namespace TIFF;
-
-struct TiffHeader {
-  endian: u16;
-  magic: u16;
-  ifd_offset: u32;
+enum Compression : uint16 {
+    NoCompression = 1,
+    CCITT_1D = 2,
+    Group3Fax = 3,
+    Group4Fax = 4,
+    LZW = 5,
+    JPEG = 6, // Deprecated
+    PackBits = 32773
 }
 
-enum Endian : u16 {
-  Little = 0x4949,
-  Big = 0x4D4D
+enum PhotometricInterpretation : uint16 {
+    WhiteIsZero = 0,
+    BlackIsZero = 1,
+    RGB = 2,
+    PaletteColor = 3,
+    TransparencyMask = 4,
+    CMYK = 5,
+    YCbCr = 6,
+    CIELab = 8
 }
 
-struct ImageFileDirectory {
-  num_entries: u16;
-  entries: Entry[num_entries];
-  next_ifd_offset: u32;
+enum ResolutionUnit : uint16 {
+    None = 1,
+    Inch = 2,
+    Centimeter = 3
 }
 
-struct Entry {
-  tag: u16;
-  type: u16;
-  count: u32;
-  value_offset: u32;
+enum PlanarConfiguration : uint16 {
+    Chunky = 1,
+    Planar = 2
 }
 
-enum Tag : u16 {
-  ImageWidth = 256,
-  ImageLength = 257,
-  BitsPerSample = 258,
-  Compression = 259,
-  PhotometricInterpretation = 262,
-  StripOffsets = 273,
-  RowsPerStrip = 278,
-  StripByteCounts = 279,
-  XResolution = 282,
-  YResolution = 283,
-  ResolutionUnit = 296
+enum FillOrder : uint16 {
+    MSB2LSB = 1,
+    LSB2MSB = 2
 }
 
-enum Type : u16 {
-  BYTE = 1,
-  ASCII = 2,
-  SHORT = 3,
-  LONG = 4,
-  RATIONAL = 5
+enum Orientation : uint16 {
+    TopLeft = 1,
+    TopRight = 2,
+    BottomRight = 3,
+    BottomLeft = 4,
+    LeftTop = 5,
+    RightTop = 6,
+    RightBottom = 7,
+    LeftBottom = 8
 }
 
-struct TiffFile {
-  header: TiffHeader;
-  ifds: ImageFileDirectory[];
+struct Rational {
+    uint32 numerator,
+    uint32 denominator
 }
 
-@top TiffFile;
+struct IFDEntry {
+    uint16 tag,
+    uint16 type,
+    uint32 count,
+    uint32 value_offset
+}
+
+struct TIFFHeader {
+    uint16 byte_order,
+    uint16 version,
+    uint32 ifd_offset
+}
+
+struct TIFF {
+    TIFFHeader header,
+    IFDEntry[] ifd_entries,
+
+    // Optional fields
+    uint32 ImageWidth if exists(ifd_entries, 256),
+    uint32 ImageLength if exists(ifd_entries, 257),
+    uint16[] BitsPerSample if exists(ifd_entries, 258),
+    Compression compression if exists(ifd_entries, 259),
+    PhotometricInterpretation photometric_interpretation if exists(ifd_entries, 262),
+    uint32[] StripOffsets if exists(ifd_entries, 273),
+    uint16 SamplesPerPixel if exists(ifd_entries, 277),
+    uint32 RowsPerStrip if exists(ifd_entries, 278),
+    uint32[] StripByteCounts if exists(ifd_entries, 279),
+    Rational XResolution if exists(ifd_entries, 282),
+    Rational YResolution if exists(ifd_entries, 283),
+    ResolutionUnit resolution_unit if exists(ifd_entries, 296),
+    PlanarConfiguration planar_configuration if exists(ifd_entries, 284),
+    FillOrder fill_order if exists(ifd_entries, 266),
+    Orientation orientation if exists(ifd_entries, 274),
+    uint16[] ColorMap if exists(ifd_entries, 320),
+    uint32 TileWidth if exists(ifd_entries, 322),
+    uint32 TileLength if exists(ifd_entries, 323),
+    uint32[] TileOffsets if exists(ifd_entries, 324),
+    uint32[] TileByteCounts if exists(ifd_entries, 325)
+}

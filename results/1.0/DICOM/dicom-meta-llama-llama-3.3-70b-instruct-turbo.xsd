@@ -1,68 +1,105 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DICOM"
-           xmlns="http://example.com/DICOM"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.dtd"/>
-
-  <xs:element name="DICOM">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="Prefix" dfdl:occurs="1..1"/>
-        <xs:element ref="FileMetaInformationGroup" dfdl:occurs="1..1"/>
-        <xs:element ref="DataSet" dfdl:occurs="1..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Prefix">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:encoding="hex"/>
-        <xs:element name="PrefixDictionaryItem" type="xs:string" dfdl:length="4" dfdl:encoding="ASCII"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="FileMetaInformationGroup">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="FileMetaInformationGroupLength" dfdl:occurs="1..1"/>
-        <xs:element ref="DataElement" dfdl:occurs="1..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="FileMetaInformationGroupLength">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
-        <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ASCII"/>
-        <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
-        <xs:element name="Value" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="DataElement">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
-        <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ASCII"/>
-        <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary"/>
-        <xs:element name="Value" type="xs:string" dfdl:length="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="DataSet">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="DataElement" dfdl:occurs="1..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://dicom.nema.org/" xmlns:tns="http://dicom.nema.org/" elementFormDefault="qualified">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+  <xs:element name="DICOM" type="tns:DICOMType"/>
+  <xs:complexType name="DICOMType">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationGroup" type="tns:FileMetaInformationGroupType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="DataSet" type="tns:DataSetType" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="FileMetaInformationGroupType">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SourceApplicationEntityTitle" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DataSetType">
+    <xs:sequence>
+      <xs:element name="PatientName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientID" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientBirthDate" type="xs:date" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientSex" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="StudyDate" type="xs:date" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="StudyTime" type="xs:time" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AccessionNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Modality" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Manufacturer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="InstitutionName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="InstitutionAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReferringPhysicianName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReferringPhysicianAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientAge" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientSize" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientWeight" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Occupation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AdditionalPatientHistory" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateDataElement" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="dcm-ui">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9a-fA-F]{64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-lo">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-pn">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-da">
+    <xs:restriction base="xs:date">
+      <xs:pattern value="\d{8}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-tm">
+    <xs:restriction base="xs:time">
+      <xs:pattern value="\d{6}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-cs">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-as">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-ds">
+    <xs:restriction base="xs:decimal">
+      <xs:totalDigits value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-sh">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-st">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="1024"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-ob">
+    <xs:restriction base="xs:hexBinary">
+      <xs:maxLength value="65536"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="dcm-ae">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

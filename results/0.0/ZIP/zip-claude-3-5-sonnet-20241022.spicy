@@ -1,49 +1,20 @@
 module ZIP;
 
-public type ZIP = unit {
-    signature: bytes &size=4;
-    version: uint16;
-    flags: uint16;
-    compression: uint16;
-    mod_time: uint16;
-    mod_date: uint16;
-    crc32: uint32;
-    compressed_size: uint32;
-    uncompressed_size: uint32;
-    filename_length: uint16;
-    extra_field_length: uint16;
-    filename: bytes &size=self.filename_length;
-    extra_field: bytes &size=self.extra_field_length;
-    compressed_data: bytes &size=self.compressed_size;
-
-    on %init {
-        if (self.signature != b"PK\x03\x04") {
-            self.stop_parsing();
-        }
-    }
-};
-
-on ZIP::%done {
-    print "ZIP file parsed";
-    print self.filename;
-    print self.compressed_size;
-    print self.uncompressed_size;
-}
-
 public type LocalFileHeader = unit {
     signature: bytes &size=4;
-    version: uint16;
+    version_needed: uint16;
     flags: uint16;
-    compression: uint16;
-    mod_time: uint16;
-    mod_date: uint16;
-    crc32: uint32;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: bytes &size=4;
     compressed_size: uint32;
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
     filename: bytes &size=self.filename_length;
-    extra_field: bytes &size=self.extra_field_length;
+    extra_field: bytes &size=self.extra_field_length &optional;
+    compressed_data: bytes &size=self.compressed_size;
 };
 
 public type CentralDirectoryHeader = unit {
@@ -51,32 +22,56 @@ public type CentralDirectoryHeader = unit {
     version_made_by: uint16;
     version_needed: uint16;
     flags: uint16;
-    compression: uint16;
-    mod_time: uint16;
-    mod_date: uint16;
-    crc32: uint32;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: bytes &size=4;
     compressed_size: uint32;
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
     comment_length: uint16;
     disk_number_start: uint16;
-    internal_attributes: uint16;
-    external_attributes: uint32;
+    internal_attrs: uint16;
+    external_attrs: uint32;
     local_header_offset: uint32;
     filename: bytes &size=self.filename_length;
-    extra_field: bytes &size=self.extra_field_length;
-    comment: bytes &size=self.comment_length;
+    extra_field: bytes &size=self.extra_field_length &optional;
+    comment: bytes &size=self.comment_length &optional;
 };
 
 public type EndOfCentralDirectory = unit {
     signature: bytes &size=4;
     disk_number: uint16;
-    start_disk_number: uint16;
-    total_entries_disk: uint16;
+    central_dir_disk: uint16;
+    disk_entries: uint16;
     total_entries: uint16;
-    central_directory_size: uint32;
-    central_directory_offset: uint32;
+    central_dir_size: uint32;
+    central_dir_offset: uint32;
     comment_length: uint16;
-    comment: bytes &size=self.comment_length;
+    comment: bytes &size=self.comment_length &optional;
 };
+
+public type DataDescriptor = unit {
+    crc32: bytes &size=4;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+};
+
+public type ZIP = unit {
+    files: LocalFileHeader[];
+    central_dirs: CentralDirectoryHeader[];
+    end_of_central_dir: EndOfCentralDirectory;
+};
+
+on LocalFileHeader::signature -> bool {
+    return self.signature == b"\x50\x4b\x03\x04";
+}
+
+on CentralDirectoryHeader::signature -> bool {
+    return self.signature == b"\x50\x4b\x01\x02";
+}
+
+on EndOfCentralDirectory::signature -> bool {
+    return self.signature == b"\x50\x4b\x05\x06";
+}

@@ -1,11 +1,6 @@
-module SQLite3;
+module SQLite;
 
 import spicy;
-
-type Record = unit {
-    length: uint32;
-    data: bytes &size=length;
-};
 
 type Header = unit {
     magic: bytes &size=16;
@@ -17,27 +12,53 @@ type Header = unit {
     minPayloadFrac: uint8;
     leafPayloadFrac: uint8;
     fileChangeCounter: uint32;
-    databaseSize: uint32;
-    firstFreelistTrunkPage: uint32;
-    totalFreelistPages: uint32;
+    numPages: uint32;
+    firstFreelistPage: uint32;
+    numFreelistPages: uint32;
     schemaCookie: uint32;
     schemaFormat: uint32;
     defaultCacheSize: uint32;
-    largestRootPage: uint32;
+    largestBTreePage: uint32;
     textEncoding: uint32;
     userVersion: uint32;
     incrementalVacuumMode: uint32;
     applicationId: uint32;
-    reserved: bytes &size=20;
     versionValidFor: uint32;
     sqliteVersion: uint32;
+    reserved: bytes &size=20;
 };
 
-type Database = unit {
+type CellPointer = unit {
+    offset: uint16;
+};
+
+type Cell = unit {
+    leftChildPage: uint32;
+    payloadSize: uint32;
+    rowId: uint32;
+};
+
+type BTreePage = unit {
+    pageType: uint8;
+    firstFreeblock: uint16;
+    numCells: uint16;
+    cellContentOffset: uint16;
+    numFragmentedFreeBytes: uint8;
+    rightMostPointer: uint32;
+    cellPointers: CellPointer[] &size=numCells;
+    cells: Cell[] &size=numCells;
+};
+
+type FreelistPage = unit {
+    nextFreelistPage: uint32;
+    numLeafPages: uint32;
+    leafPages: uint32[] &size=numLeafPages;
+};
+
+type SQLiteDB = unit {
     header: Header;
-    records: Record[] &eod;
+    pages: BTreePage[] &size=(header.numPages - 1);
+    freelistPages: FreelistPage[] &size=header.numFreelistPages;
 };
 
-public type File = unit {
-    db: Database;
-} &byte_order=spicy::ByteOrder::Little;
+public type File = SQLiteDB;

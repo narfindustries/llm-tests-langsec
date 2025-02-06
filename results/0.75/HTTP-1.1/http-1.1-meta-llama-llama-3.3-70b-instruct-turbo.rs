@@ -1,145 +1,120 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_till, take_till1},
-    character::complete::{char, digit1, multispace0, multispace1},
-    combinator::{map, map_res, opt, recognize},
-    error::{context, ErrorKind, ParseError},
-    multi::{many0, separated_list0, separated_list1},
-    sequence::{delimited, preceded, tuple},
     IResult,
+    bytes::complete::{tag, take_while1, tag_no_case},
+    character::complete::{digit1, multispace0},
+    combinator::{map_res},
+    multi::{many0},
+    sequence::{preceded, tuple},
 };
-use std::{env, fs, io, str};
+use std::fs::File;
+use std::io::Read;
+use std::env;
+use std::str;
+
+const CRLF: &str = "\r\n";
 
 #[derive(Debug, PartialEq)]
 enum HttpMethod {
-    Get,
-    Head,
-    Post,
-    Put,
-    Delete,
-    Connect,
-    Options,
-    Trace,
+    OPTIONS,
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    TRACE,
+    CONNECT,
 }
 
-fn http_method(input: &str) -> IResult<&str, HttpMethod> {
-    alt((
-        map(tag("GET"), |_| HttpMethod::Get),
-        map(tag("HEAD"), |_| HttpMethod::Head),
-        map(tag("POST"), |_| HttpMethod::Post),
-        map(tag("PUT"), |_| HttpMethod::Put),
-        map(tag("DELETE"), |_| HttpMethod::Delete),
-        map(tag("CONNECT"), |_| HttpMethod::Connect),
-        map(tag("OPTIONS"), |_| HttpMethod::Options),
-        map(tag("TRACE"), |_| HttpMethod::Trace),
-    ))(input)
+impl HttpMethod {
+    fn parse(input: &str) -> IResult<&str, HttpMethod> {
+        let (input, method) = tag_no_case("OPTIONS")(input)
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("GET")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("HEAD")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("POST")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("PUT")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("DELETE")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("TRACE")(input))
+            .or_else(|_: nom::Err<nom::error::Error<&str>>| tag_no_case("CONNECT")(input))?;
+        Ok((input, match method {
+            "OPTIONS" => HttpMethod::OPTIONS,
+            "GET" => HttpMethod::GET,
+            "HEAD" => HttpMethod::HEAD,
+            "POST" => HttpMethod::POST,
+            "PUT" => HttpMethod::PUT,
+            "DELETE" => HttpMethod::DELETE,
+            "TRACE" => HttpMethod::TRACE,
+            "CONNECT" => HttpMethod::CONNECT,
+            _ => unreachable!(),
+        }))
+    }
 }
 
-#[derive(Debug, PartialEq)]
-enum HttpVersion {
-    Http1_0,
-    Http1_1,
+fn http_version(input: &str) -> IResult<&str, &str> {
+    tag_no_case("HTTP/1.1")(input)
 }
 
-fn http_version(input: &str) -> IResult<&str, HttpVersion> {
-    alt((
-        map(tag("HTTP/1.0"), |_| HttpVersion::Http1_0),
-        map(tag("HTTP/1.1"), |_| HttpVersion::Http1_1),
-    ))(input)
+fn request_uri(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c != ' ' && c != '\r' && c != '\n')(input)
 }
 
-#[derive(Debug, PartialEq)]
-struct HttpResponseStatusLine {
-    version: HttpVersion,
-    status_code: u16,
-    reason_phrase: String,
+fn request_line(input: &str) -> IResult<&str, (HttpMethod, &str, &str)> {
+    tuple((HttpMethod::parse, request_uri, http_version))(input)
 }
 
-fn http_response_status_line(input: &str) -> IResult<&str, HttpResponseStatusLine> {
-    map(
-        tuple((http_version, char(' '), digit1, char(' '), take_till1(|c| c == '\r' || c == '\n'))),
-        |(version, _, status_code, _, reason_phrase)| HttpResponseStatusLine {
-            version,
-            status_code: status_code.parse().unwrap(),
-            reason_phrase: reason_phrase.to_string(),
-        },
-    )(input)
+fn header_name(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c.is_alphanumeric() || c == '-' || c == '_')(input)
 }
 
-#[derive(Debug, PartialEq)]
-struct HttpRequestStatusLine {
-    method: HttpMethod,
-    request_target: String,
-    version: HttpVersion,
+fn header_value(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c != '\r' && c != '\n')(input)
 }
 
-fn http_request_status_line(input: &str) -> IResult<&str, HttpRequestStatusLine> {
-    map(
-        tuple((http_method, char(' '), take_till1(|c| c == ' '), char(' '), http_version)),
-        |(method, _, request_target, _, version)| HttpRequestStatusLine {
-            method,
-            request_target: request_target.to_string(),
-            version,
-        },
-    )(input)
+fn header(input: &str) -> IResult<&str, (&str, &str)> {
+    preceded(multispace0, tuple((header_name, tag(": "), header_value)))(input)
 }
 
-#[derive(Debug, PartialEq)]
-struct HeaderField {
-    name: String,
-    value: String,
+fn headers(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
+    many0(header)(input)
 }
 
-fn header_field(input: &str) -> IResult<&str, HeaderField> {
-    map(
-        tuple((take_till1(|c| c == ':'), char(':'), multispace0, take_till1(|c| c == '\r'))),
-        |(name, _, _, value)| HeaderField {
-            name: name.to_string(),
-            value: value.to_string(),
-        },
-    )(input)
+fn request(input: &str) -> IResult<&str, (HttpMethod, &str, &str, Vec<(&str, &str)>)> {
+    let (input, (method, uri, version)) = request_line(input)?;
+    let (input, headers) = headers(input)?;
+    Ok((input, (method, uri, version, headers)))
 }
 
-#[derive(Debug, PartialEq)]
-struct HttpMessage {
-    start_line: HttpRequestStatusLine,
-    headers: Vec<HeaderField>,
-    body: Vec<u8>,
+fn status_code(input: &str) -> IResult<&str, u16> {
+    map_res(digit1, |s: &str| s.parse::<u16>())(input)
 }
 
-fn crlf(input: &str) -> IResult<&str, &str> {
-    tag("\r\n")(input)
+fn reason_phrase(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| c != '\r' && c != '\n')(input)
 }
 
-fn http_message(input: &str) -> IResult<&str, HttpMessage> {
-    map(
-        tuple((
-            http_request_status_line,
-            many0(preceded(crlf, header_field)),
-            crlf,
-            recognize(many0(nom::character::complete::any_u8)),
-        )),
-        |(start_line, headers, _, body)| HttpMessage {
-            start_line,
-            headers,
-            body: body.into_bytes(),
-        },
-    )(input)
+fn status_line(input: &str) -> IResult<&str, (u16, &str)> {
+    tuple((status_code, reason_phrase))(input)
+}
+
+fn response(input: &str) -> IResult<&str, (u16, &str, Vec<(&str, &str)>)> {
+    let (input, (code, phrase)) = status_line(input)?;
+    let (input, headers) = headers(input)?;
+    Ok((input, (code, phrase, headers)))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        return;
+        panic!("Usage: {} <input_file>", args[0]);
     }
 
-    let input_file = &args[1];
-    let input = fs::read(input_file).expect("Failed to read input file");
-    let input_str = str::from_utf8(&input).expect("Failed to convert input to string");
+    let mut file = File::open(&args[1]).unwrap();
+    let mut input = Vec::new();
+    file.read_to_end(&mut input).unwrap();
+    let input_str = str::from_utf8(&input).unwrap();
 
-    match http_message(input_str) {
-        Ok((remaining, message)) => println!("{:?}", message),
-        Err(err) => eprintln!("Error parsing HTTP message: {:?}", err),
-    }
+    let (_remaining, request) = request(input_str).unwrap();
+    let (_remaining, response) = response(input_str).unwrap();
+
+    println!("{:?}", request);
+    println!("{:?}", response);
 }

@@ -1,52 +1,47 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/bitcoin-transactions/"
-           xmlns:tns="http://example.com/dfdl/bitcoin-transactions/">
-
-  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+           targetNamespace="http://example.com/bitcoin"
+           xmlns:tns="http://example.com/bitcoin">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
+      <dfdl:defineFormat name="commonFormat">
+        <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                     binaryNumberRep="binary" textNumberRep="standard"
+                     representation="binary" lengthKind="explicit"/>
+      </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="BitcoinTransaction">
+  <xs:complexType name="Transaction">
     <xs:sequence>
-      <xs:element name="version" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="inputCount" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="inputs" type="tns:Input" minOccurs="{ xs:element[@name='inputCount']/xs:int }" maxOccurs="unbounded"/>
-      <xs:element name="outputCount" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="outputs" type="tns:Output" minOccurs="{ xs:element[@name='outputCount']/xs:int }" maxOccurs="unbounded"/>
-      <xs:element name="lockTime" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="version" type="xs:int" dfdl:length="4"/>
+      <xs:element name="inputCount" type="xs:int" dfdl:length="1" dfdl:occursCountKind="parsed" dfdl:representation="binary"/>
+      <xs:element name="inputs" type="tns:Input" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="outputCount" type="xs:int" dfdl:length="1" dfdl:occursCountKind="parsed" dfdl:representation="binary"/>
+      <xs:element name="outputs" type="tns:Output" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="lockTime" type="xs:unsignedInt" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="Input">
     <xs:sequence>
-      <xs:element name="previousOutput" type="tns:Outpoint"/>
-      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="scriptSig" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="hexBinary"/>
-      <xs:element name="sequence" type="xs:long" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Outpoint">
-    <xs:sequence>
-      <xs:element name="hash" type="xs:hexBinary" dfdl:length="32" dfdl:lengthKind="explicit" dfdl:encoding="hexBinary"/>
-      <xs:element name="index" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="previousOutputHash" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="previousOutputIndex" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="scriptSig" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="US-ASCII"/>
+      <xs:element name="sequence" type="xs:unsignedInt" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="Output">
     <xs:sequence>
-      <xs:element name="value" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="scriptPubKey" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="hexBinary"/>
+      <xs:element name="value" type="xs:long" dfdl:length="8"/>
+      <xs:element name="scriptLength" type="xs:int" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="scriptPubKey" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="US-ASCII"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="BitcoinTransactions" type="tns:BitcoinTransaction" dfdl:lengthKind="implicit"/>
+  <xs:element name="BitcoinTransaction" type="tns:Transaction"/>
 
 </xs:schema>

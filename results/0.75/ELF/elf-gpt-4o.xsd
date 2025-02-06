@@ -1,83 +1,113 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema"
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="urn:example:ELF"
-        xmlns:tns="urn:example:ELF"
-        elementFormDefault="qualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/elf" xmlns:tns="http://example.com/elf" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format byteOrder="littleEndian" lengthKind="explicit" encoding="ISO-8859-1"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <annotation>
-        <appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:ELFFormat"/>
-        </appinfo>
-    </annotation>
+  <xs:element name="ELFFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ELFHeader" type="tns:ELFHeaderType"/>
+        <xs:element name="ProgramHeaders" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ProgramHeader" type="tns:ProgramHeaderType"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="SectionHeaders" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SectionHeader" type="tns:SectionHeaderType"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-    <dfdl:format name="ELFFormat"
-                 alignmentUnits="bytes"
-                 byteOrder="bigEndian"
-                 lengthKind="explicit"
-                 encoding="utf-8"/>
+  <!-- ELF Header Type -->
+  <xs:complexType name="ELFHeaderType">
+    <xs:sequence>
+      <xs:element name="e_ident" type="tns:IdentType"/>
+      <xs:element name="e_type" type="tns:ElfHalfType"/>
+      <xs:element name="e_machine" type="tns:ElfHalfType"/>
+      <xs:element name="e_version" type="tns:ElfWordType"/>
+      <xs:element name="e_entry" type="tns:ElfAddrType"/>
+      <xs:element name="e_phoff" type="tns:ElfOffType"/>
+      <xs:element name="e_shoff" type="tns:ElfOffType"/>
+      <xs:element name="e_flags" type="tns:ElfWordType"/>
+      <xs:element name="e_ehsize" type="tns:ElfHalfType"/>
+      <xs:element name="e_phentsize" type="tns:ElfHalfType"/>
+      <xs:element name="e_phnum" type="tns:ElfHalfType"/>
+      <xs:element name="e_shentsize" type="tns:ElfHalfType"/>
+      <xs:element name="e_shnum" type="tns:ElfHalfType"/>
+      <xs:element name="e_shstrndx" type="tns:ElfHalfType"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <element name="ELFFile">
-        <complexType>
-            <sequence>
-                <element name="header" type="tns:ELFHeader"/>
-                <element name="programHeader" type="tns:ProgramHeader" minOccurs="0" maxOccurs="unbounded"/>
-                <element name="sectionHeader" type="tns:SectionHeader" minOccurs="0" maxOccurs="unbounded"/>
-            </sequence>
-        </complexType>
-    </element>
+  <!-- Ident Type -->
+  <xs:complexType name="IdentType">
+    <xs:sequence>
+      <xs:element name="EI_MAG" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="EI_CLASS" type="xs:unsignedByte"/>
+      <xs:element name="EI_DATA" type="xs:unsignedByte"/>
+      <xs:element name="EI_VERSION" type="xs:unsignedByte"/>
+      <xs:element name="EI_OSABI" type="xs:unsignedByte"/>
+      <xs:element name="EI_ABIVERSION" type="xs:unsignedByte"/>
+      <xs:element name="EI_PAD" type="xs:unsignedByte" minOccurs="0" maxOccurs="7"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="ELFHeader">
-        <sequence>
-            <element name="magicNumber" type="hexBinary" dfdl:length="4"/>
-            <element name="class" type="unsignedByte" dfdl:length="1"/>
-            <element name="data" type="unsignedByte" dfdl:length="1"/>
-            <element name="version" type="unsignedByte" dfdl:length="1"/>
-            <element name="osAbi" type="unsignedByte" dfdl:length="1"/>
-            <element name="abiVersion" type="unsignedByte" dfdl:length="1"/>
-            <element name="pad" type="hexBinary" dfdl:length="7"/>
-            <element name="type" type="unsignedShort"/>
-            <element name="machine" type="unsignedShort"/>
-            <element name="version2" type="unsignedInt"/>
-            <element name="entry" type="unsignedInt"/>
-            <element name="phOff" type="unsignedInt"/>
-            <element name="shOff" type="unsignedInt"/>
-            <element name="flags" type="unsignedInt"/>
-            <element name="ehSize" type="unsignedShort"/>
-            <element name="phEntSize" type="unsignedShort"/>
-            <element name="phNum" type="unsignedShort"/>
-            <element name="shEntSize" type="unsignedShort"/>
-            <element name="shNum" type="unsignedShort"/>
-            <element name="shStrNdx" type="unsignedShort"/>
-        </sequence>
-    </complexType>
+  <!-- Program Header Type -->
+  <xs:complexType name="ProgramHeaderType">
+    <xs:sequence>
+      <xs:element name="p_type" type="tns:ElfWordType"/>
+      <xs:element name="p_offset" type="tns:ElfOffType"/>
+      <xs:element name="p_vaddr" type="tns:ElfAddrType"/>
+      <xs:element name="p_paddr" type="tns:ElfAddrType"/>
+      <xs:element name="p_filesz" type="tns:ElfXwordType"/>
+      <xs:element name="p_memsz" type="tns:ElfXwordType"/>
+      <xs:element name="p_flags" type="tns:ElfWordType"/>
+      <xs:element name="p_align" type="tns:ElfXwordType"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="ProgramHeader">
-        <sequence>
-            <element name="type" type="unsignedInt"/>
-            <element name="offset" type="unsignedInt"/>
-            <element name="vaddr" type="unsignedInt"/>
-            <element name="paddr" type="unsignedInt"/>
-            <element name="fileSize" type="unsignedInt"/>
-            <element name="memSize" type="unsignedInt"/>
-            <element name="flags" type="unsignedInt"/>
-            <element name="align" type="unsignedInt"/>
-        </sequence>
-    </complexType>
+  <!-- Section Header Type -->
+  <xs:complexType name="SectionHeaderType">
+    <xs:sequence>
+      <xs:element name="sh_name" type="tns:ElfWordType"/>
+      <xs:element name="sh_type" type="tns:ElfWordType"/>
+      <xs:element name="sh_flags" type="tns:ElfXwordType"/>
+      <xs:element name="sh_addr" type="tns:ElfAddrType"/>
+      <xs:element name="sh_offset" type="tns:ElfOffType"/>
+      <xs:element name="sh_size" type="tns:ElfXwordType"/>
+      <xs:element name="sh_link" type="tns:ElfWordType"/>
+      <xs:element name="sh_info" type="tns:ElfWordType"/>
+      <xs:element name="sh_addralign" type="tns:ElfXwordType"/>
+      <xs:element name="sh_entsize" type="tns:ElfXwordType"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="SectionHeader">
-        <sequence>
-            <element name="name" type="unsignedInt"/>
-            <element name="type" type="unsignedInt"/>
-            <element name="flags" type="unsignedInt"/>
-            <element name="addr" type="unsignedInt"/>
-            <element name="offset" type="unsignedInt"/>
-            <element name="size" type="unsignedInt"/>
-            <element name="link" type="unsignedInt"/>
-            <element name="info" type="unsignedInt"/>
-            <element name="addrAlign" type="unsignedInt"/>
-            <element name="entSize" type="unsignedInt"/>
-        </sequence>
-    </complexType>
+  <!-- Common Types -->
+  <xs:simpleType name="ElfHalfType">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
 
-</schema>
+  <xs:simpleType name="ElfWordType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfXwordType">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfAddrType">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfOffType">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+</xs:schema>

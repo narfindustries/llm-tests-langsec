@@ -1,55 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/GIF"
-           xmlns="http://example.com/GIF"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="gif">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="gifFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/GIF" xmlns="http://example.com/GIF" elementFormDefault="qualified">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occurs="1..1"/>
-        <xs:element name="logicalScreen" type="logicalScreenType" dfdl:occurs="1..1"/>
-        <xs:element name="data" type="dataType" dfdl:occurs="0..1"/>
+        <xs:element name="Header" type="HeaderType"/>
+        <xs:element name="LogicalScreenDescriptor" type="LogicalScreenDescriptorType"/>
+        <xs:element name="GlobalColorTable" type="GlobalColorTableType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ImageDescriptor" type="ImageDescriptorType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Trailer" type="TrailerType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="HeaderType">
     <xs:sequence>
-      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="Signature" type="xs:string" fixed="GIF"/>
+      <xs:element name="Version" type="xs:string"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="logicalScreenType">
+  <xs:complexType name="LogicalScreenDescriptorType">
     <xs:sequence>
-      <xs:element name="width" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
-      <xs:element name="height" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="backgroundColor" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="pixelAspectRatio" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="LogicalScreenWidth" type="xs:unsignedShort"/>
+      <xs:element name="LogicalScreenHeight" type="xs:unsignedShort"/>
+      <xs:element name="PackedFields" type="PackedFieldsType"/>
+      <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="dataType">
+  <xs:complexType name="PackedFieldsType">
     <xs:sequence>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
+      <xs:element name="GlobalColorTableSize" type="xs:unsignedInt"/>
+      <xs:element name="SortFlag" type="xs:boolean"/>
+      <xs:element name="ColorResolution" type="xs:boolean"/>
+      <xs:element name="GlobalColorTableFlag" type="xs:boolean"/>
     </xs:sequence>
   </xs:complexType>
-
-  <dfdl:format name="gifFormat" ref="gifFormat"/>
-  <dfdl:format name="gifFormat" type="binary" representation="binary" lengthKind="explicit" encoding="binary">
-    <dfdl:property name="dfdl:sequenceKind" value="unordered"/>
-    <dfdl:property name="dfdl:elementKind" value="simple"/>
-    <dfdl:property name="dfdl:encoding" value="binary"/>
-  </dfdl:format>
-
+  <xs:complexType name="GlobalColorTableType">
+    <xs:sequence>
+      <xs:element name="ColorTableEntries" type="ColorTableEntryType" minOccurs="0" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ColorTableEntryType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ImageDescriptorType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="xs:string" fixed=","/>
+      <xs:element name="ImageLeftPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageTopPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+      <xs:element name="ImageHeight" type="xs:unsignedShort"/>
+      <xs:element name="PackedFields" type="ImagePackedFieldsType"/>
+      <xs:element name="LZWMinimumCodeSize" type="xs:unsignedByte"/>
+      <xs:element name="LocalColorTable" type="LocalColorTableType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ImageData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ImagePackedFieldsType">
+    <xs:sequence>
+      <xs:element name="LocalColorTableSize" type="xs:unsignedInt"/>
+      <xs:element name="InterlaceFlag" type="xs:boolean"/>
+      <xs:element name="SortFlag" type="xs:boolean"/>
+      <xs:element name="LocalColorTableFlag" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="LocalColorTableType">
+    <xs:sequence>
+      <xs:element name="ColorTableEntries" type="ColorTableEntryType" minOccurs="0" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="Trailer" type="xs:string" fixed=";"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
 </xs:schema>

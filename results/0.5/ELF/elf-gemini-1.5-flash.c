@@ -1,53 +1,110 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
-// Structure to represent a hammer
 typedef struct {
-    char* name;
-    float weight;
-    int head_size;
-} Hammer;
+    unsigned char e_ident[16];
+    unsigned short e_type;
+    unsigned short e_machine;
+    unsigned int e_version;
+    unsigned long e_entry;
+    unsigned long e_phoff;
+    unsigned long e_shoff;
+    unsigned int e_flags;
+    unsigned short e_ehsize;
+    unsigned short e_phentsize;
+    unsigned short e_phnum;
+    unsigned short e_shentsize;
+    unsigned short e_shnum;
+    unsigned short e_shstrndx;
+} elf_header_t;
 
+hammer_parser_t* parse_uint8(void) {
+    return hammer_uint8();
+}
 
-// Function to create a hammer
-Hammer* createHammer(const char* name, float weight, int head_size) {
-    Hammer* hammer = (Hammer*)malloc(sizeof(Hammer));
-    if (hammer == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(1);
+hammer_parser_t* parse_uint16_be(void) {
+    return hammer_uint16_be();
+}
+
+hammer_parser_t* parse_uint32_be(void) {
+    return hammer_uint32_be();
+}
+
+hammer_parser_t* parse_uint64_be(void) {
+    return hammer_uint64_be();
+}
+
+hammer_parser_t* parse_elf_ident(void) {
+    return hammer_array(parse_uint8(), 16);
+}
+
+hammer_parser_t* parse_elf_header(void) {
+    return hammer_sequence(
+        parse_elf_ident(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        parse_uint32_be(),
+        parse_uint64_be(),
+        parse_uint64_be(),
+        parse_uint64_be(),
+        parse_uint32_be(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        parse_uint16_be(),
+        hammer_end()
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
+        return 1;
     }
-    hammer->name = (char*)malloc(strlen(name) + 1);
-    if (hammer->name == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        free(hammer);
-        exit(1);
+
+    int fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        perror("open");
+        return 1;
     }
-    strcpy(hammer->name, name);
-    hammer->weight = weight;
-    hammer->head_size = head_size;
-    return hammer;
-}
 
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        perror("fstat");
+        close(fd);
+        return 1;
+    }
 
-// Function to print hammer information
-void printHammer(const Hammer* hammer) {
-    printf("Hammer Name: %s\n", hammer->name);
-    printf("Hammer Weight: %.2f kg\n", hammer->weight);
-    printf("Hammer Head Size: %d cm\n", hammer->head_size);
-}
+    void* addr = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (addr == MAP_FAILED) {
+        perror("mmap");
+        close(fd);
+        return 1;
+    }
 
+    close(fd);
 
-// Function to free the dynamically allocated memory
-void freeHammer(Hammer* hammer) {
-    free(hammer->name);
-    free(hammer);
-}
+    hammer_parser_t* parser = parse_elf_header();
+    hammer_result_t result = hammer_parse(parser, addr, sb.st_size);
 
-int main() {
-    // Example usage
-    Hammer* myHammer = createHammer("My Hammer", 1.5, 10);
-    printHammer(myHammer);
-    freeHammer(myHammer);
+    if (result.success) {
+        elf_header_t* header = (elf_header_t*)result.value;
+        printf("ELF Header parsed successfully!\n");
+        printf("e_type: 0x%x\n", header->e_type);
+        free(result.value);
+    } else {
+        fprintf(stderr, "ELF header parsing failed: %s\n", result.error);
+    }
+
+    munmap(addr, sb.st_size);
+
     return 0;
 }

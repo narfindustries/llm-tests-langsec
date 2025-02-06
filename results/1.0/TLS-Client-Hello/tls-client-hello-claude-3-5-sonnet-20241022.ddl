@@ -1,64 +1,39 @@
-def Main = TLS_client_hello
+def TLS_Version = u16
 
-def TLS_client_hello = {
-    §content_type = 0x16§
-    §version = HandshakeVersion§
-    §length = VarNum§
-    §msg_type = 0x01§
-    §size = VarNum§
-    §client_version = HandshakeVersion§
+def Random = { byte[32] }
+
+def Length8 = u8
+
+def Length16 = u16
+
+def CipherSuite = u16
+
+def ExtensionType = u16
+
+def Extension = {
+    extension_type: ExtensionType
+    extension_length: Length16
+    extension_data: byte[extension_length]
+}
+
+def ClientHello = {
+    protocol_version: TLS_Version
     random: Random
-    session_id: SessionID
-    cipher_suites: CipherSuites
-    compression_methods: CompressionMethods
-    extensions: Extensions
+    session_id_length: Length8
+    session_id: byte[session_id_length]
+    cipher_suites_length: Length16
+    cipher_suites: CipherSuite[cipher_suites_length div 2]
+    compression_methods_length: Length8
+    compression_methods: byte[compression_methods_length]
+    extensions_length: Length16
+    extensions: Extension[]
 }
 
-def HandshakeVersion = {
-    major : uint8
-    minor : uint8
+def TLSRecord = {
+    record_type: byte
+    record_version: TLS_Version
+    record_length: Length16
+    client_hello: ClientHello
 }
 
-def VarNum = {
-    value: uint16
-}
-
-def Random = {
-    gmt_unix_time: uint32
-    random_bytes: Array 28 uint8
-}
-
-def SessionID = {
-    length: uint8
-    session_id: Array $length uint8
-}
-
-def CipherSuites = {
-    length: uint16
-    cipher_suites: Array ($length / 2) uint16
-}
-
-def CompressionMethods = {
-    length: uint8
-    compression_methods: Array $length uint8
-}
-
-def Extensions = {
-    length: uint16
-    extensions: Array Many ExtensionEntry
-}
-
-def ExtensionEntry = {
-    type: uint16
-    length: uint16
-    data: Array $length uint8
-}
-
-def Many (p: ParserMain) = {
-    Count = length
-    values = FSeq Count p
-}
-
-def FSeq n (p: ParserMain) = {
-    values = for i <- [0 .. n-1]; yield p
-}
+def Main = TLSRecord

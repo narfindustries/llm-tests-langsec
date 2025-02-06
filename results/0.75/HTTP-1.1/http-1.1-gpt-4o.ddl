@@ -1,70 +1,66 @@
-namespace HTTP-1.1
+module HttpMessage {
+    Message = Request | Response;
 
-struct HttpRequest
-{
-    method: HttpMethod
-    path: Path
-    version: HttpVersion
-    headers: HttpHeaders
-    body: optional(HttpBody)
-}
+    Request {
+        method: Token;
+        uri: Token;
+        version: HttpVersion;
+        crlf_line: "\r\n";
+        headers: Headers;
+        crlf_body: "\r\n";
+        body: OptionalBody;
+    }
 
-enum HttpMethod : u8
-{
-    GET = 'G',
-    POST = 'P',
-    PUT = 'U',
-    DELETE = 'D',
-    HEAD = 'H',
-    OPTIONS = 'O',
-    TRACE = 'T',
-    CONNECT = 'C'
-}
+    Response {
+        version: HttpVersion;
+        status_code: Token;
+        reason_phrase: StringTerminatedBy<"\r\n">;
+        headers: Headers;
+        crlf_body: "\r\n";
+        body: OptionalBody;
+    }
 
-type Path : string
-{
-    encoding: utf8
-    terminator: u8 = 0x20 // Space character
-}
+    HttpVersion {
+        prefix: "HTTP/";
+        major: UInt8;
+        dot: ".";
+        minor: UInt8;
+    }
 
-struct HttpVersion
-{
-    prefix: string = "HTTP/"
-    major: u8
-    separator: string = "."
-    minor: u8
-}
+    Headers {
+        entries: Header*;
+    }
 
-struct HttpHeaders
-{
-    headers: list(HttpHeader)
-}
+    Header {
+        name: Token;
+        sep: ": ";
+        value: StringTerminatedBy<"\r\n">;
+    }
 
-struct HttpHeader
-{
-    name: HeaderName
-    separator: string = ": "
-    value: HeaderValue
-    terminator: string = "\r\n"
-}
+    OptionalBody {
+        has_body: not Peek<"\r\n">;
+        body: has_body ? DataUntilEof : null;
+    }
 
-type HeaderName : string
-{
-    encoding: ascii
-}
+    Token {
+        value: StringUntil<" " | "\r\n">;
+    }
 
-type HeaderValue : string
-{
-    encoding: utf8
-}
+    StringTerminatedBy<term: string> {
+        value: StringUntil<term>;
+        term: term;
+    }
 
-struct HttpBody
-{
-    content: bytes
-}
+    StringUntil<end: string> {
+        chars: (UInt8Until<end>)*;
+    }
 
-root
-{
-    request: HttpRequest
-    terminator: string = "\r\n\r\n"
+    UInt8Until<end: string> {
+        value: UInt8;
+        not_end: value != end;
+    }
+
+    DataUntilEof {
+        bytes: UInt8*;
+    }
 }

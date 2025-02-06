@@ -1,24 +1,34 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::{count, many0},
-    number::complete::{be_u16, be_u32},
-    sequence::{preceded, tuple},
+    combinator::{map_res, verify},
+    error::{FromExternalError, ParseError, VerboseError},
+    multi::many0,
+    number::complete::{be_u32, be_u8},
+    sequence::tuple,
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::PathBuf;
-use structopt::StructOpt;
+use std::{fs::File, io::{self, Read}, str::Utf8Error};
 
-#[derive(Debug, StructOpt)]
-struct Cli {
-    #[structopt(parse(from_os_str))]
-    input: PathBuf,
+const PNG_SIGNATURE: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10];
+
+#[derive(Debug)]
+struct Chunk {
+    length: u32,
+    chunk_type: String,
+    data: Vec<u8>,
+    crc: u32,
 }
 
-#[derive(Debug, PartialEq)]
-struct PngHeader {
+#[derive(Debug)]
+struct PNGImage {
+    header: IHDRChunk,
+    palette: Option<PLTEChunk>,
+    data_chunks: Vec<IDATChunk>,
+    other_chunks: Vec<Chunk>,
+}
+
+#[derive(Debug)]
+struct IHDRChunk {
     width: u32,
     height: u32,
     bit_depth: u8,
@@ -28,49 +38,19 @@ struct PngHeader {
     interlace_method: u8,
 }
 
-#[derive(Debug, PartialEq)]
-struct Chunk {
-    length: u32,
-    chunk_type: String,
+#[derive(Debug)]
+struct PLTEChunk {
+    palette: Vec<(u8, u8, u8)>,
+}
+
+#[derive(Debug)]
+struct IDATChunk {
     data: Vec<u8>,
-    crc: u32,
 }
 
-#[derive(Debug, PartialEq)]
-struct PngImage {
-    header: PngHeader,
-    chunks: Vec<Chunk>,
-}
-
-fn parse_png_header(input: &[u8]) -> IResult<&[u8], PngHeader> {
-    let (input, _) = tag(b"\x89PNG\r\n\x1a\n")(input)?;
-    let (input, _) = parse_chunk_type(input, b"IHDR")?;
-    let (
-        input,
-        (width, height, bit_depth, color_type, compression_method, filter_method, interlace_method),
-    ) = tuple((be_u32, be_u32, nom::number::complete::u8, nom::number::complete::u8, nom::number::complete::u8, nom::number::complete::u8, nom::number::complete::u8))(input)?;
-    Ok((
-        input,
-        PngHeader {
-            width,
-            height,
-            bit_depth,
-            color_type,
-            compression_method,
-            filter_method,
-            interlace_method,
-        },
-    ))
-}
-
-fn parse_chunk_type(input: &[u8], expected_type: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = tag(expected_type)(input)?;
-    Ok((input, ()))
-}
-
-fn parse_chunk(input: &[u8]) -> IResult<&[u8], Chunk> {
+fn parse_chunk<'a>(input: &'a [u8]) -> IResult<&'a [u8], Chunk, VerboseError<&'a [u8]>> {
     let (input, length) = be_u32(input)?;
-    let (input, chunk_type) = map_res(take(4usize), |s: &[u8]| std::str::from_utf8(s))(input)?;
+    let (input, chunk_type) = map_res(take(4usize), std::str::from_utf8)(input)?;
     let (input, data) = take(length)(input)?;
     let (input, crc) = be_u32(input)?;
     Ok((
@@ -78,27 +58,81 @@ fn parse_chunk(input: &[u8]) -> IResult<&[u8], Chunk> {
         Chunk {
             length,
             chunk_type: chunk_type.to_string(),
-            data: data.to_vec(),
+            data: Vec::from(data),
             crc,
         },
     ))
 }
 
-fn parse_png(input: &[u8]) -> IResult<&[u8], PngImage> {
-    let (input, header) = parse_png_header(input)?;
+fn parse_png(input: &[u8]) -> IResult<&[u8], PNGImage, VerboseError<&[u8]>> {
+    let (input, _) = tag(PNG_SIGNATURE)(input)?;
+
+    let (input, ihdr_chunk) = verify(parse_chunk, |chunk: &Chunk| chunk.chunk_type == "IHDR")(input)?;
+    let ihdr_data = parse_ihdr_chunk(&ihdr_chunk.data);
+
     let (input, chunks) = many0(parse_chunk)(input)?;
-    Ok((input, PngImage { header, chunks }))
+    let mut palette = None;
+    let mut data_chunks = vec![];
+    let mut other_chunks = vec![];
+
+    for chunk in chunks {
+        match chunk.chunk_type.as_str() {
+            "PLTE" => palette = Some(parse_plte_chunk(&chunk.data)),
+            "IDAT" => data_chunks.push(parse_idat_chunk(&chunk.data)),
+            _ => other_chunks.push(chunk),
+        }
+    }
+
+    Ok((
+        input,
+        PNGImage {
+            header: ihdr_data,
+            palette,
+            data_chunks,
+            other_chunks,
+        },
+    ))
+}
+
+fn parse_ihdr_chunk(input: &[u8]) -> IHDRChunk {
+    let (_, (width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)) =
+        tuple((be_u32, be_u32, be_u8, be_u8, be_u8, be_u8, be_u8))(input).unwrap();
+    IHDRChunk {
+        width,
+        height,
+        bit_depth,
+        color_type,
+        compression_method,
+        filter_method,
+        interlace_method,
+    }
+}
+
+fn parse_plte_chunk(input: &[u8]) -> PLTEChunk {
+    let palette = input.chunks(3).map(|chunk| (chunk[0], chunk[1], chunk[2])).collect();
+    PLTEChunk { palette }
+}
+
+fn parse_idat_chunk(input: &[u8]) -> IDATChunk {
+    IDATChunk {
+        data: Vec::from(input),
+    }
 }
 
 fn main() -> io::Result<()> {
-    let args = Cli::from_args();
-    let mut file = File::open(args.input)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <file>", args[0]);
+        return Ok(());
+    }
 
-    match parse_png(&buffer) {
+    let mut file = File::open(&args[1])?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents)?;
+
+    match parse_png(&contents) {
         Ok((_, png)) => println!("{:#?}", png),
-        Err(e) => eprintln!("Failed to parse PNG: {:?}", e),
+        Err(e) => println!("Error parsing PNG: {:?}", e),
     }
 
     Ok(())

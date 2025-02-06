@@ -1,0 +1,1 @@
+for<'a> fn(&'a [u8], usize) -> Result<(&'a [u8], Vec<Color>), nom::Err<nom::error::Error<&'a [u8]>>> {parse_global_color_table}

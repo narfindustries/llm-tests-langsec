@@ -1,29 +1,25 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, rest},
-    number::complete::be_u16,
-    sequence::{tuple, preceded},
+    bytes::complete::{take},
+    combinator::map,
+    number::complete::{be_u16, be_u32},
+    sequence::tuple,
     IResult,
+    error::Error,
 };
-use std::env;
-use std::fs::read;
-use std::net::IpAddr;
-use std::str::FromStr;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
-enum RdataType {
-    A(IpAddr),
-    NS(Vec<u8>), // Placeholder for more complex types
-    CNAME(Vec<u8>), // Placeholder for more complex types
-    MX(u16, Vec<u8>), // Placeholder for more complex types
-    AAAA(IpAddr),
-    // Add other record types as needed
-}
-
-#[derive(Debug)]
-struct DNSHeader {
+struct DnsHeader {
     id: u16,
-    flags: u16,
+    qr: bool,
+    opcode: u8,
+    aa: bool,
+    tc: bool,
+    rd: bool,
+    ra: bool,
+    z: u8,
+    rcode: u8,
     qdcount: u16,
     ancount: u16,
     nscount: u16,
@@ -31,120 +27,138 @@ struct DNSHeader {
 }
 
 #[derive(Debug)]
-struct DNSQuestion {
-    qname: Vec<u8>,
+struct DnsQuestion {
+    qname: String,
     qtype: u16,
     qclass: u16,
 }
 
 #[derive(Debug)]
-struct DNSResourceRecord {
-    name: Vec<u8>,
+struct DnsResourceRecord {
+    name: String,
     rtype: u16,
     rclass: u16,
     ttl: u32,
-    rdata: RdataType,
+    rdlength: u16,
+    rdata: Vec<u8>,
 }
 
-
-fn parse_name(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let mut result = Vec::new();
+fn parse_domain_name(input: &[u8]) -> IResult<&[u8], String, Error<&[u8]>> {
+    let mut domain_name = String::new();
     let mut remaining = input;
     loop {
-        let (r, len) = be_u8(remaining)?;
-        if len == 0 {
+        let (new_remaining, length) = be_u8(remaining)?;
+        if length == 0 {
             break;
         }
-        let (r2, label) = take(len as usize)(r)?;
-        result.extend_from_slice(label);
-        result.push(b'.');
-        remaining = r2;
+        let (new_remaining, label) = take(length as usize)(new_remaining)?;
+        domain_name.push_str(std::str::from_utf8(label).unwrap());
+        domain_name.push('.');
+        remaining = new_remaining;
     }
-    Ok((remaining, result))
+    Ok((remaining, domain_name.trim_end_matches('.').to_string()))
 }
 
-fn be_u8(input: &[u8]) -> IResult<&[u8], u8> {
-    map(take(1usize), |x: &[u8]| x[0])(input)
+fn be_u8(input: &[u8]) -> IResult<&[u8], u8, Error<&[u8]>> {
+    map(take(1usize), |bytes: &[u8]| bytes[0])(input)
 }
 
-fn parse_rdata_a(input: &[u8]) -> IResult<&[u8], RdataType> {
-    map_res(take(4usize), |x: &[u8]| {
-        IpAddr::from_str(&format!("{}.{}.{}.{}", x[0], x[1], x[2], x[3]))
-            .map(RdataType::A)
-    })(input)
+fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DnsHeader, Error<&[u8]>> {
+    let (remaining, (id, flags, qdcount, ancount, nscount, arcount)) = tuple((
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+    ))(input)?;
+
+    let qr = (flags >> 15) & 0x0001 != 0;
+    let opcode = ((flags >> 11) & 0x000F) as u8;
+    let aa = (flags >> 10) & 0x0001 != 0;
+    let tc = (flags >> 9) & 0x0001 != 0;
+    let rd = (flags >> 8) & 0x0001 != 0;
+    let ra = (flags >> 7) & 0x0001 != 0;
+    let z = ((flags >> 4) & 0x0007) as u8;
+    let rcode = (flags & 0x000F) as u8;
+
+    Ok((
+        remaining,
+        DnsHeader {
+            id,
+            qr,
+            opcode,
+            aa,
+            tc,
+            rd,
+            ra,
+            z,
+            rcode,
+            qdcount,
+            ancount,
+            nscount,
+            arcount,
+        },
+    ))
 }
 
-fn parse_rdata_aaaa(input: &[u8]) -> IResult<&[u8], RdataType> {
-    map_res(take(16usize), |x: &[u8]| {
-        let mut ip_str = String::new();
-        for i in 0..8 {
-            ip_str.push_str(&format!("{:02x}", x[i * 2]));
-            ip_str.push_str(&format!("{:02x}", x[i * 2 + 1]));
-            if i < 7 {
-                ip_str.push(':');
-            }
-        }
-        IpAddr::from_str(&ip_str).map(RdataType::AAAA)
-
-    })(input)
+fn parse_dns_question(input: &[u8]) -> IResult<&[u8], DnsQuestion, Error<&[u8]>> {
+    let (remaining, (qname, qtype, qclass)) = tuple((parse_domain_name, be_u16, be_u16))(input)?;
+    Ok((
+        remaining,
+        DnsQuestion {
+            qname,
+            qtype,
+            qclass,
+        },
+    ))
 }
 
-fn parse_resource_record(input: &[u8]) -> IResult<&[u8], DNSResourceRecord> {
-    let (input, name) = parse_name(input)?;
-    let (input, (rtype, rclass, ttl, rdlength)) = tuple((be_u16, be_u16, be_u32, be_u16))(input)?;
-    let (input, rdata) = match rtype {
-        1 => map(parse_rdata_a, |x| x)(input)?,
-        28 => map(rest, |x| RdataType::NS(x.to_vec()))(input)?,
-        5 => map(rest, |x| RdataType::CNAME(x.to_vec()))(input)?,
-        15 => map(tuple((be_u16, rest)), |(pref, x)| RdataType::MX(pref, x.to_vec()))(input)?,
-        28 => map(parse_rdata_aaaa, |x| x)(input)?,
-        _ => unimplemented!(),
-    };
-    Ok((input, DNSResourceRecord { name, rtype, rclass, ttl, rdata }))
+fn parse_dns_resource_record(input: &[u8]) -> IResult<&[u8], DnsResourceRecord, Error<&[u8]>> {
+    let (remaining, (name, rtype, rclass, ttl, rdlength, rdata)) = tuple((
+        parse_domain_name,
+        be_u16,
+        be_u16,
+        be_u32,
+        be_u16,
+        |i: &[u8]| take(be_u16(i)?.1 as usize)(i), //Fixed take usage
+    ))(input)?;
+    Ok((
+        remaining,
+        DnsResourceRecord {
+            name,
+            rtype,
+            rclass,
+            ttl,
+            rdlength,
+            rdata: rdata.to_vec(),
+        },
+    ))
 }
-
-
-fn parse_question(input: &[u8]) -> IResult<&[u8], DNSQuestion> {
-    let (input, qname) = parse_name(input)?;
-    let (input, (qtype, qclass)) = tuple((be_u16, be_u16))(input)?;
-    Ok((input, DNSQuestion { qname, qtype, qclass }))
-}
-
-fn parse_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
-    let (input, (id, flags, qdcount, ancount, nscount, arcount)) = tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16))(input)?;
-    Ok((input, DNSHeader { id, flags, qdcount, ancount, nscount, arcount }))
-}
-
-fn be_u32(i: &[u8]) -> IResult<&[u8], u32> {
-    map(take(4usize), |x: &[u8]| u32::from_be_bytes([x[0], x[1], x[2], x[3]]))(i)
-}
-
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <binary_file>", args[0]);
         return;
     }
 
-    let filename = &args[1];
-    let data = match read(filename) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
+    let path = Path::new(&args[1]);
+    let data = fs::read(path).expect("Failed to read file");
 
-    match parse_header(&data) {
+    let result = parse_dns_header(&data);
+
+    match result {
         Ok((remaining, header)) => {
-            println!("Header: {:?}", header);
-            let mut input = remaining;
+            println!("DNS Header: {:?}", header);
+
+            let mut remaining_data = remaining;
             for _ in 0..header.qdcount {
-                match parse_question(input) {
-                    Ok((r, q)) => {
-                        println!("Question: {:?}", q);
-                        input = r;
+                let question_result = parse_dns_question(remaining_data);
+                match question_result {
+                    Ok((rem, question)) => {
+                        println!("Question: {:?}", question);
+                        remaining_data = rem;
                     }
                     Err(e) => {
                         eprintln!("Error parsing question: {:?}", e);
@@ -153,10 +167,11 @@ fn main() {
                 }
             }
             for _ in 0..header.ancount {
-                match parse_resource_record(input) {
-                    Ok((r, rr)) => {
+                let rr_result = parse_dns_resource_record(remaining_data);
+                match rr_result {
+                    Ok((rem, rr)) => {
                         println!("Resource Record: {:?}", rr);
-                        input = r;
+                        remaining_data = rem;
                     }
                     Err(e) => {
                         eprintln!("Error parsing resource record: {:?}", e);
@@ -164,7 +179,32 @@ fn main() {
                     }
                 }
             }
-
+            for _ in 0..header.nscount {
+                let rr_result = parse_dns_resource_record(remaining_data);
+                match rr_result {
+                    Ok((rem, rr)) => {
+                        println!("Authority Record: {:?}", rr);
+                        remaining_data = rem;
+                    }
+                    Err(e) => {
+                        eprintln!("Error parsing authority record: {:?}", e);
+                        return;
+                    }
+                }
+            }
+            for _ in 0..header.arcount {
+                let rr_result = parse_dns_resource_record(remaining_data);
+                match rr_result {
+                    Ok((rem, rr)) => {
+                        println!("Additional Record: {:?}", rr);
+                        remaining_data = rem;
+                    }
+                    Err(e) => {
+                        eprintln!("Error parsing additional record: {:?}", e);
+                        return;
+                    }
+                }
+            }
         }
         Err(e) => {
             eprintln!("Error parsing header: {:?}", e);

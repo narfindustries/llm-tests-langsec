@@ -1,131 +1,126 @@
-domain MQTT {
-  const MAX_PACKET_SIZE = 268435455;
-  const PROTOCOL_NAME = "MQTT";
-  const PROTOCOL_VERSION = 5;
-
-  type Byte = uint8;
-  type UInt16 = uint16;
-  type UInt32 = uint32;
-  type VariableInt = uint32;
-
-  syntax Packet {
-    length: VariableInt;
-    header: Byte;
-    body: byte[length - 1];
+format mqtt {
+  message {
+    fixed_header: fixed_header,
+    variable_header: variable_header,
+    payload: payload
   }
+}
 
-  syntax ConnectPacket {
-    header: Byte = 0x10;
-    protocolNameLength: UInt16;
-    protocolName: byte[protocolNameLength];
-    protocolVersion: Byte;
-    connectFlags: Byte;
-    keepAlive: UInt16;
-    clientIdLength: UInt16;
-    clientId: byte[clientIdLength];
-  }
+format fixed_header {
+  message_type: uint(4),
+  flags: uint(8)
+}
 
-  syntax ConnAckPacket {
-    header: Byte = 0x20;
-    connectAckFlags: Byte;
-    connectReasonCode: Byte;
-  }
+format variable_header {
+  protocol_name: string,
+  protocol_version: uint(8),
+  connect_flags: connect_flags,
+  keep_alive: uint(16),
+  packet_identifier: uint(16),
+  reason_code: reason_code,
+  properties: properties
+}
 
-  syntax PublishPacket {
-    header: Byte;
-    topicNameLength: UInt16;
-    topicName: byte[topicNameLength];
-    packetId: UInt16;
-    payload: byte[length - 2 - topicNameLength];
-  }
+format payload {
+  will_topic: string,
+  will_message: bytes,
+  username: string,
+  password: bytes,
+  topic_name: string,
+  topic_alias: uint(16),
+  subscription_identifier: uint(16),
+  user_properties: user_properties,
+  data: bytes
+}
 
-  syntax PubAckPacket {
-    header: Byte = 0x40;
-    packetId: UInt16;
-  }
+format properties {
+  authentication_method: string,
+  authentication_data: bytes,
+  will_delay_interval: uint(32),
+  will_payload: bytes,
+  retain_available: uint(8),
+  user_property: user_property,
+  maximum_packet_size: uint(32),
+  receive_maximum: uint(16),
+  topic_alias_maximum: uint(16),
+  request_problem_information: uint(8),
+  will_retain: uint(8),
+  session_expiry_interval: uint(32),
+  assigned_client_identifier: string,
+  server_keep_alive: uint(16),
+  response_information: string,
+  server_reference: string,
+  reason_string: string
+}
 
-  syntax PubRecPacket {
-    header: Byte = 0x50;
-    packetId: UInt16;
-  }
+format user_properties {
+  user_property: user_property*
+}
 
-  syntax PubRelPacket {
-    header: Byte = 0x60;
-    packetId: UInt16;
-  }
+format user_property {
+  key: string,
+  value: string
+}
 
-  syntax PubCompPacket {
-    header: Byte = 0x70;
-    packetId: UInt16;
-  }
+format connect_flags {
+  clean_start: uint(1),
+  will_flag: uint(1),
+  will_qos: uint(2),
+  will_retain: uint(1),
+  password_flag: uint(1),
+  username_flag: uint(1)
+}
 
-  syntax SubscribePacket {
-    header: Byte = 0x80;
-    packetId: UInt16;
-    subscriptions: byte[length - 2];
-  }
+enum reason_code {
+  normal_disconnection = 0,
+  connection_rate_exceeded = 8,
+  unspecified_error = 128,
+  malformed_packet = 129,
+  protocol_error = 130,
+  implementation_specific_error = 131,
+  unsupported_protocol_version = 132,
+  client_identifier_not_valid = 133,
+  bad_username_or_password = 134,
+  not_authorized = 135,
+  server_unavailable = 136,
+  server_busy = 137,
+  banned = 138,
+  server_shutting_down = 139,
+  bad_authentication_method = 140,
+  keep_alive_timeout = 141,
+  session_taken_over = 142,
+  topic_filter_invalid = 143,
+  topic_name_invalid = 144,
+  receive_maximum_exceeded = 145,
+  data_rate_exceeded = 146,
+  administrative_action = 147,
+  payload_format_invalid = 148,
+  retain_not_supported = 149,
+  qos_not_supported = 150,
+  use_another_server = 151,
+  server_moved = 152,
+  shared_subscription_not_supported = 153,
+  connection_rate_exceeded = 154,
+  maximum_connect_time = 155,
+  subscription_identifiers_not_supported = 156,
+  wildcard_subscriptions_not_supported = 157
+}
 
-  syntax SubAckPacket {
-    header: Byte = 0x90;
-    packetId: UInt16;
-    returnCodes: byte[length - 2];
-  }
-
-  syntax UnsubscribePacket {
-    header: Byte = 0xA0;
-    packetId: UInt16;
-    unsubscriptions: byte[length - 2];
-  }
-
-  syntax UnsubAckPacket {
-    header: Byte = 0xB0;
-    packetId: UInt16;
-  }
-
-  syntax PingReqPacket {
-    header: Byte = 0xC0;
-  }
-
-  syntax PingRespPacket {
-    header: Byte = 0xD0;
-  }
-
-  syntax DisconnectPacket {
-    header: Byte = 0xE0;
-    reasonCode: Byte;
-   _MUX: [
-      (
-        reasonCode == 0x00 ||
-        reasonCode == 0x04 ||
-        reasonCode == 0x10 ||
-        reasonCode == 0x14 ||
-        reasonCode == 0x1F ||
-        reasonCode == 0x7E ||
-        reasonCode == 0x7F ||
-        reasonCode == 0x80 ||
-        reasonCode == 0xFF
-      ): byte[0],
-      (
-        reasonCode == 0x01 ||
-        reasonCode == 0x02 ||
-        reasonCode == 0x03 ||
-        reasonCode == 0x05 ||
-        reasonCode == 0x11 ||
-        reasonCode == 0x12 ||
-        reasonCode == 0x13 ||
-        reasonCode == 0x15 ||
-        reasonCode == 0x16 ||
-        reasonCode == 0x17 ||
-        reasonCode == 0x18 ||
-        reasonCode == 0x19 ||
-        reasonCode == 0x1A ||
-        reasonCode == 0x1B ||
-        reasonCode == 0x1C ||
-        reasonCode == 0x1D ||
-        reasonCode == 0x1E ||
-        reasonCode == 0x7D ||
-        reasonCode == 0x7C
-      ): byte[1]
-    ];
-  }
+enum message_type {
+  reserved = 0,
+  connect = 1,
+  connack = 2,
+  publish = 3,
+  puback = 4,
+  pubrec = 5,
+  pubrel = 6,
+  pubcomp = 7,
+  subscribe = 8,
+  suback = 9,
+  unsubscribe = 10,
+  unsuback = 11,
+  pingreq = 12,
+  pingresp = 13,
+  disconnect = 14,
+  auth = 15
 }

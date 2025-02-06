@@ -1,11 +1,9 @@
 meta:
   id: modbus
   title: Modbus Protocol
-  file-extension: modbus
+  application: Modbus
   endian: le
   license: CC0-1.0
-doc: |
-  Modbus is a serial communications protocol originally published by Modicon (now Schneider Electric) in 1979 for use with its programmable logic controllers (PLCs). It has become a de facto standard communication protocol and is now a commonly available means of connecting industrial electronic devices.
 
 seq:
   - id: transaction_id
@@ -19,84 +17,69 @@ seq:
   - id: function_code
     type: u1
   - id: data
-    size: length - 2
     type:
       switch-on: function_code
       cases:
-        1: coils
-        2: discrete_inputs
-        3: holding_registers
-        4: input_registers
+        1: coils_request
+        2: coils_request
+        3: register_request
+        4: register_request
         5: single_coil
-        6: write_single_register
-        15: write_multiple_coils
-        16: write_multiple_registers
+        6: single_register
+        15: multiple_coils
+        16: multiple_registers
 
 types:
-  coils:
+  coils_request:
     seq:
-      - id: coil_status
-        type: b1
-        repeat: expr
-        repeat-expr: _parent.length - 1
-
-  discrete_inputs:
-    seq:
-      - id: input_status
-        type: b1
-        repeat: expr
-        repeat-expr: _parent.length - 1
-
-  holding_registers:
-    seq:
-      - id: register_values
+      - id: start_addr
         type: u2
-        repeat: expr
-        repeat-expr: (_parent.length - 1) / 2
-
-  input_registers:
-    seq:
-      - id: register_values
+      - id: quantity
         type: u2
-        repeat: expr
-        repeat-expr: (_parent.length - 1) / 2
+
+  register_request:
+    seq:
+      - id: start_addr
+        type: u2
+      - id: quantity
+        type: u2
 
   single_coil:
     seq:
-      - id: output_address
+      - id: output_addr
         type: u2
       - id: output_value
         type: u2
 
-  write_single_register:
+  single_register:
     seq:
-      - id: register_address
+      - id: register_addr
         type: u2
       - id: register_value
         type: u2
 
-  write_multiple_coils:
+  multiple_coils:
     seq:
-      - id: starting_address
+      - id: start_addr
         type: u2
-      - id: quantity_of_outputs
+      - id: quantity_outputs
         type: u2
       - id: byte_count
         type: u1
       - id: output_values
         type: b1
         repeat: expr
-        repeat-expr: quantity_of_outputs
+        repeat-expr: quantity_outputs
 
-  write_multiple_registers:
+  multiple_registers:
     seq:
-      - id: starting_address
+      - id: start_addr
         type: u2
-      - id: quantity_of_registers
+      - id: quantity_regs
         type: u2
       - id: byte_count
         type: u1
       - id: register_values
         type: u2
         repeat: expr
-        repeat-expr: quantity_of_registers
+        repeat-expr: quantity_regs

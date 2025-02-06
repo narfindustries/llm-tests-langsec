@@ -1,21 +1,85 @@
 module ICMP;
 
-public type ICMPMessage = unit {
-    type: uint8;
+public type ICMPHeader = unit {
+    icmp_type: uint8;
     code: uint8;
     checksum: uint16;
-    payload: bytes &eod;
-    
-    on %init {
-        print "Initializing ICMP parsing...";
-    }
 
-    on %done {
-        print fmt("Parsed ICMP message: type=%d, code=%d", self.type, self.code);
+    on %init {
+        switch (icmp_type) {
+            0 -> self.body = EchoMessage($input);
+            3 -> self.body = DestinationUnreachableMessage($input);
+            4 -> self.body = DefaultMessage($input);
+            5 -> self.body = RedirectMessage($input);
+            8 -> self.body = EchoMessage($input);
+            9 -> self.body = RouterAdvertisementMessage($input);
+            10 -> self.body = DefaultMessage($input);
+            11 -> self.body = DefaultMessage($input);
+            12 -> self.body = ParameterProblemMessage($input);
+            13 -> self.body = TimestampMessage($input);
+            14 -> self.body = TimestampMessage($input);
+            15 -> self.body = DefaultMessage($input);
+            16 -> self.body = DefaultMessage($input);
+            17 -> self.body = AddressMaskMessage($input);
+            18 -> self.body = AddressMaskMessage($input);
+            : else -> self.body = DefaultMessage($input);
+        }
     }
+    : Sink<bytes> &oneline = True;
+    body: unit(in: bytes) &requires=$input.size >= 4;
 };
 
-event zeek_init() &priority=5
-{
-    print "Zeek module for ICMP loaded.";
-}
+public type EchoMessage = unit(in: bytes) {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    data: bytes &size=(in.size - 4);
+};
+
+public type DestinationUnreachableMessage = unit(in: bytes) {
+    unused: uint32;
+    originalIPHeader: bytes &size=20;
+    first8BytesOfOriginalDatagram: bytes &size=8;
+};
+
+public type RedirectMessage = unit(in: bytes) {
+    gatewayInternetAddress: addr;
+    originalIPHeader: bytes &size=20;
+    first8BytesOfOriginalDatagram: bytes &size=8;
+};
+
+public type RouterAdvertisementMessage = unit(in: bytes) {
+    numAddrs: uint8;
+    addrEntrySize: uint8;
+    lifetime: uint16;
+    addresses: vector<RouterAddress> &length=numAddrs;
+};
+
+public type RouterAddress = unit {
+    routerAddr: addr;
+    preferenceLevel: int32;
+};
+
+public type ParameterProblemMessage = unit(in: bytes) {
+    pointer: uint8;
+    unused: bytes &size=3;
+    originalIPHeader: bytes &size=20;
+    first8BytesOfOriginalDatagram: bytes &size=8;
+};
+
+public type TimestampMessage = unit(in: bytes) {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    originateTimestamp: uint32;
+    receiveTimestamp: uint32;
+    transmitTimestamp: uint32;
+};
+
+public type AddressMaskMessage = unit(in: bytes) {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    addressMask: addr;
+};
+
+public type DefaultMessage = unit(in: bytes) {
+    data: bytes &size=in.size;
+};

@@ -1,84 +1,228 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/modbus"
-    targetNamespace="http://example.com/modbus"
-    xmlns:tns="http://example.com/modbus">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+           xmlns:modbus="http://modbus.org/schema"
+           targetNamespace="http://modbus.org/schema">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        occursCountKind="implicit"
-                        representation="binary"
-                        binaryNumberRep="binary"
-                        byteOrder="bigEndian"/>
+                         alignmentUnits="bytes"
+                         lengthKind="implicit"
+                         lengthUnits="bytes"
+                         byteOrder="bigEndian"
+                         binaryNumberRep="binary"
+                         encoding="UTF-8"
+                         initiator=""
+                         terminator=""
+                         leadingSkip="0"
+                         trailingSkip="0"
+                         textTrimKind="none"
+                         initiatedContent="no"
+                         floating="no"
+                         textBidi="no"
+                         textPadKind="none"
+                         ignoreCase="no"
+                         sequenceKind="ordered"
+                         separator=""
+                         separatorPosition="infix"
+                         documentFinalTerminatorCanBeMissing="yes"
+                         occursCountKind="implicit"
+                         representation="binary"
+                         truncateSpecifiedLengthString="no"
+                         encodingErrorPolicy="replace"
+                         fillByte="%#r00"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="ModbusMessage">
+    <xs:element name="ModbusMessage" dfdl:lengthKind="implicit">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Header">
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <xs:element name="MBAPHeader" minOccurs="0">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="TransactionID" type="xs:unsignedShort"/>
-                            <xs:element name="ProtocolID" type="xs:unsignedShort" dfdl:outputValueCalc="0"/>
+                        <xs:sequence dfdl:sequenceKind="ordered">
+                            <xs:element name="TransactionId" type="xs:unsignedShort"/>
+                            <xs:element name="ProtocolId" type="xs:unsignedShort" fixed="0"/>
                             <xs:element name="Length" type="xs:unsignedShort"/>
-                            <xs:element name="UnitID" type="xs:unsignedByte"/>
+                            <xs:element name="UnitId" type="xs:unsignedByte"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="FunctionCode" type="xs:unsignedByte"/>
-                <xs:element name="Data">
-                    <xs:complexType>
-                        <xs:choice>
-                            <xs:element name="ReadRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ByteCount" type="xs:unsignedByte"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort" 
-                                                  minOccurs="0" maxOccurs="unbounded"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="WriteRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="WriteResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ErrorResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ExceptionCode" type="xs:unsignedByte"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:choice>
-                    </xs:complexType>
-                </xs:element>
+                <xs:choice>
+                    <!-- Read Coils (0x01) and Read Discrete Inputs (0x02) -->
+                    <xs:element name="ReadCoilsRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfCoils" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="ReadCoilsResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="CoilStatus" type="xs:hexBinary" 
+                                          dfdl:lengthKind="explicit" 
+                                          dfdl:length="{ ../ByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Read Holding Registers (0x03) and Read Input Registers (0x04) -->
+                    <xs:element name="ReadRegistersRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="ReadRegistersResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="RegisterValues" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ ../ByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Write Single Coil (0x05) -->
+                    <xs:element name="WriteSingleCoil">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+                                <xs:element name="OutputValue" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Write Single Register (0x06) -->
+                    <xs:element name="WriteSingleRegister">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="RegisterAddress" type="xs:unsignedShort"/>
+                                <xs:element name="RegisterValue" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Write Multiple Coils (0x0F) -->
+                    <xs:element name="WriteMultipleCoilsRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfOutputs" type="xs:unsignedShort"/>
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="OutputsValue" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ ../ByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="WriteMultipleCoilsResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfOutputs" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Write Multiple Registers (0x10) -->
+                    <xs:element name="WriteMultipleRegistersRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="RegistersValue" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ ../ByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="WriteMultipleRegistersResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Mask Write Register (0x16) -->
+                    <xs:element name="MaskWriteRegister">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ReferenceAddress" type="xs:unsignedShort"/>
+                                <xs:element name="AndMask" type="xs:unsignedShort"/>
+                                <xs:element name="OrMask" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Read/Write Multiple Registers (0x17) -->
+                    <xs:element name="ReadWriteMultipleRegistersRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ReadStartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityToRead" type="xs:unsignedShort"/>
+                                <xs:element name="WriteStartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="QuantityToWrite" type="xs:unsignedShort"/>
+                                <xs:element name="WriteByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="WriteRegistersValue" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ ../WriteByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="ReadWriteMultipleRegistersResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="ReadRegistersValue" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ ../ByteCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Read FIFO Queue (0x18) -->
+                    <xs:element name="ReadFIFOQueueRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="FIFOPointerAddress" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="ReadFIFOQueueResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ByteCount" type="xs:unsignedShort"/>
+                                <xs:element name="FIFOCount" type="xs:unsignedShort"/>
+                                <xs:element name="FIFOValueRegister" type="xs:hexBinary"
+                                          dfdl:lengthKind="explicit"
+                                          dfdl:length="{ 2 * ../FIFOCount }"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <!-- Exception Response -->
+                    <xs:element name="ExceptionResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ExceptionCode" type="xs:unsignedByte"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:choice>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
 </xs:schema>

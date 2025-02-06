@@ -1,10 +1,20 @@
-$schema: https://kaitaistruct.org/schema/ksy.v1.ksy
-id: network_time_protocol_version_4_gemini_1
-endian: be
-
-seq:
-  - id: header
-    struct:
+meta:
+  id: ntp_v4
+types:
+  ntp_timestamp:
+    seq:
+      - id: int_part
+        type: u4be
+      - id: fraction
+        type: u4be
+  ntp_packet:
+    seq:
+      - id: li
+        type: u2be
+      - id: vn
+        type: u3be
+      - id: mode
+        type: u3be
       - id: stratum
         type: u1
       - id: poll
@@ -12,17 +22,27 @@ seq:
       - id: precision
         type: u1
       - id: root_delay
-        type: f4
+        type: f8be
       - id: root_dispersion
-        type: f4
-      - id: reference_id
-        type: u4
-      - id: reference_timestamp
-        type: f8
-      - id: origin_timestamp
-        type: f8
-      - id: receive_timestamp
-        type: f8
-      - id: transmit_timestamp
-        type: f8
+        type: f8be
+      - id: ref_id
+        type: u4be
+      - id: ref_timestamp
+        type: ntp_timestamp
+      - id: orig_timestamp
+        type: ntp_timestamp
+      - id: recv_timestamp
+        type: ntp_timestamp
+      - id: xmit_timestamp
+        type: ntp_timestamp
+      - id: key_id
+        type: u4be
+        if: (mode & 0x08) != 0
+      - id: digest_len
+        type: u4be
+        if: (mode & 0x08) != 0
+      - id: digest
+        type: bytes
+        if: (mode & 0x08) != 0
+        size: digest_len
 

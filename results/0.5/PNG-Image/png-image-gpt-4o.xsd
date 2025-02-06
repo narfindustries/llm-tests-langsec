@@ -3,22 +3,20 @@
         xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
         targetNamespace="http://example.com/png"
         xmlns:tns="http://example.com/png"
-        elementFormDefault="qualified"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
+        elementFormDefault="qualified">
 
-    <dfdl:format ref="tns:dfdlGeneralFormat" lengthKind="explicit" byteOrder="bigEndian" encoding="utf-8"/>
-
-    <dfdl:defineFormat name="dfdlGeneralFormat">
-        <dfdl:format ref="dfdl:GeneralFormat" lengthKind="explicit" byteOrder="bigEndian" encoding="utf-8"/>
-    </dfdl:defineFormat>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
     <element name="PNG" type="tns:PNGType"/>
 
     <complexType name="PNGType">
         <sequence>
             <element name="Signature" type="tns:SignatureType"/>
-            <element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded"/>
+            <element name="Chunk" type="tns:ChunkType" maxOccurs="unbounded"/>
         </sequence>
     </complexType>
 
@@ -29,12 +27,228 @@
         </restriction>
     </simpleType>
 
-    <complexType name="ChunksType">
+    <complexType name="ChunkType">
         <sequence>
-            <element name="Length" type="int"/>
-            <element name="Type" type="string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <element name="Data" type="hexBinary" dfdl:length="{../Length}" dfdl:lengthKind="explicit"/>
-            <element name="CRC" type="hexBinary" dfdl:length="4" dfdl:lengthKind="explicit"/>
+            <element name="Length" type="unsignedInt"/>
+            <element name="Type" type="tns:ChunkTypeType"/>
+            <element name="Data" type="tns:ChunkDataType"/>
+            <element name="CRC" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="ChunkTypeType">
+        <restriction base="string">
+            <enumeration value="IHDR"/>
+            <enumeration value="PLTE"/>
+            <enumeration value="IDAT"/>
+            <enumeration value="IEND"/>
+            <enumeration value="tEXt"/>
+            <enumeration value="zTXt"/>
+            <enumeration value="iTXt"/>
+            <enumeration value="bKGD"/>
+            <enumeration value="cHRM"/>
+            <enumeration value="gAMA"/>
+            <enumeration value="hIST"/>
+            <enumeration value="pHYs"/>
+            <enumeration value="sBIT"/>
+            <enumeration value="sPLT"/>
+            <enumeration value="sRGB"/>
+            <enumeration value="tIME"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="ChunkDataType">
+        <choice>
+            <element name="IHDR" type="tns:IHDRType"/>
+            <element name="PLTE" type="tns:PLTEType"/>
+            <element name="IDAT" type="hexBinary"/>
+            <element name="IEND" type="tns:IENDType"/>
+            <element name="tEXt" type="tns:tEXtType"/>
+            <element name="zTXt" type="tns:zTXtType"/>
+            <element name="iTXt" type="tns:iTXtType"/>
+            <element name="bKGD" type="tns:bKGDType"/>
+            <element name="cHRM" type="tns:cHRMType"/>
+            <element name="gAMA" type="tns:gAMAType"/>
+            <element name="hIST" type="tns:hISTType"/>
+            <element name="pHYs" type="tns:pHYsType"/>
+            <element name="sBIT" type="tns:sBITType"/>
+            <element name="sPLT" type="tns:sPLTType"/>
+            <element name="sRGB" type="tns:sRGBType"/>
+            <element name="tIME" type="tns:tIMEType"/>
+        </choice>
+    </complexType>
+
+    <complexType name="IHDRType">
+        <sequence>
+            <element name="Width" type="unsignedInt"/>
+            <element name="Height" type="unsignedInt"/>
+            <element name="BitDepth" type="unsignedByte"/>
+            <element name="ColorType" type="unsignedByte"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="FilterMethod" type="unsignedByte"/>
+            <element name="InterlaceMethod" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PLTEType">
+        <sequence>
+            <element name="PaletteEntry" type="tns:PaletteEntryType" maxOccurs="256"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PaletteEntryType">
+        <sequence>
+            <element name="Red" type="unsignedByte"/>
+            <element name="Green" type="unsignedByte"/>
+            <element name="Blue" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="IENDType">
+        <sequence/>
+    </complexType>
+
+    <complexType name="tEXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="Text" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="zTXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="CompressedText" type="hexBinary"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="iTXtType">
+        <sequence>
+            <element name="Keyword" type="string"/>
+            <element name="CompressionFlag" type="unsignedByte"/>
+            <element name="CompressionMethod" type="unsignedByte"/>
+            <element name="LanguageTag" type="string"/>
+            <element name="TranslatedKeyword" type="string"/>
+            <element name="Text" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="bKGDType">
+        <sequence>
+            <choice>
+                <element name="PaletteIndex" type="unsignedByte"/>
+                <element name="GrayValue" type="unsignedShort"/>
+                <sequence>
+                    <element name="RedValue" type="unsignedShort"/>
+                    <element name="GreenValue" type="unsignedShort"/>
+                    <element name="BlueValue" type="unsignedShort"/>
+                </sequence>
+            </choice>
+        </sequence>
+    </complexType>
+
+    <complexType name="cHRMType">
+        <sequence>
+            <element name="WhitePointX" type="unsignedInt"/>
+            <element name="WhitePointY" type="unsignedInt"/>
+            <element name="RedX" type="unsignedInt"/>
+            <element name="RedY" type="unsignedInt"/>
+            <element name="GreenX" type="unsignedInt"/>
+            <element name="GreenY" type="unsignedInt"/>
+            <element name="BlueX" type="unsignedInt"/>
+            <element name="BlueY" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="gAMAType">
+        <sequence>
+            <element name="Gamma" type="unsignedInt"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="hISTType">
+        <sequence>
+            <element name="Frequency" type="unsignedShort" maxOccurs="256"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="pHYsType">
+        <sequence>
+            <element name="PixelsPerUnitX" type="unsignedInt"/>
+            <element name="PixelsPerUnitY" type="unsignedInt"/>
+            <element name="UnitSpecifier" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sBITType">
+        <sequence>
+            <choice>
+                <sequence>
+                    <element name="GrayChannelBits" type="unsignedByte"/>
+                </sequence>
+                <sequence>
+                    <element name="RedChannelBits" type="unsignedByte"/>
+                    <element name="GreenChannelBits" type="unsignedByte"/>
+                    <element name="BlueChannelBits" type="unsignedByte"/>
+                </sequence>
+                <sequence>
+                    <element name="GrayChannelBits" type="unsignedByte"/>
+                    <element name="AlphaChannelBits" type="unsignedByte"/>
+                </sequence>
+                <sequence>
+                    <element name="RedChannelBits" type="unsignedByte"/>
+                    <element name="GreenChannelBits" type="unsignedByte"/>
+                    <element name="BlueChannelBits" type="unsignedByte"/>
+                    <element name="AlphaChannelBits" type="unsignedByte"/>
+                </sequence>
+            </choice>
+        </sequence>
+    </complexType>
+
+    <complexType name="sPLTType">
+        <sequence>
+            <element name="PaletteName" type="string"/>
+            <element name="SampleDepth" type="unsignedByte"/>
+            <element name="Entries" type="tns:sPLTEntryType" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sPLTEntryType">
+        <sequence>
+            <choice>
+                <sequence>
+                    <element name="Red8" type="unsignedByte"/>
+                    <element name="Green8" type="unsignedByte"/>
+                    <element name="Blue8" type="unsignedByte"/>
+                    <element name="Alpha8" type="unsignedByte"/>
+                    <element name="Frequency" type="unsignedShort"/>
+                </sequence>
+                <sequence>
+                    <element name="Red16" type="unsignedShort"/>
+                    <element name="Green16" type="unsignedShort"/>
+                    <element name="Blue16" type="unsignedShort"/>
+                    <element name="Alpha16" type="unsignedShort"/>
+                    <element name="Frequency" type="unsignedShort"/>
+                </sequence>
+            </choice>
+        </sequence>
+    </complexType>
+
+    <complexType name="sRGBType">
+        <sequence>
+            <element name="RenderingIntent" type="unsignedByte"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="tIMEType">
+        <sequence>
+            <element name="Year" type="unsignedShort"/>
+            <element name="Month" type="unsignedByte"/>
+            <element name="Day" type="unsignedByte"/>
+            <element name="Hour" type="unsignedByte"/>
+            <element name="Minute" type="unsignedByte"/>
+            <element name="Second" type="unsignedByte"/>
         </sequence>
     </complexType>
 

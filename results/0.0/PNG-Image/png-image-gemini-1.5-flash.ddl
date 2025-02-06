@@ -1,30 +1,113 @@
-module PNG-Image.png-image-gemini-1 where
+data PNG = PNG {
+  signature :: [UInt8] {length: 8, value: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]},
+  chunks :: [Chunk]
+}
 
-import Daedalus.Type.Size
+data Chunk = Chunk {
+  length :: UInt32,
+  type :: String {length: 4},
+  data :: [UInt8] {length: length},
+  crc :: UInt32
+}
 
-data PNG = PNG { width :: Word32
-               , height :: Word32
-               , pixels :: [Word8]
-               }
+data IHDR = IHDR {
+  width :: UInt32,
+  height :: UInt32,
+  bitDepth :: UInt8,
+  colorType :: UInt8,
+  compressionMethod :: UInt8,
+  filterMethod :: UInt8,
+  interlaceMethod :: UInt8
+}
 
--- Assuming a simple PNG structure for demonstration.  A real PNG parser would be much more complex.
-parsePNG :: Parser PNG
-parsePNG = do
-  width  <- word32be
-  height <- word32be
-  pixels <- count (fromIntegral (width * height * 4)) word8be -- 4 bytes per pixel (RGBA)
-  return $ PNG width height pixels
+data PLTE = PLTE {
+  entries :: [RGB]
+}
 
--- Example usage (replace with your actual input)
-main :: Daedalus.Value.Value ()
-main = do
-  let pngData = replicate 1024 0 -- Replace with your actual PNG data
-  result <- runParser parsePNG pngData
-  case result of
-    Just png -> do
-      -- Process the parsed PNG data
-      putStrLn $ "Width: " ++ show (width png)
-      putStrLn $ "Height: " ++ show (height png)
-      --putStrLn $ "Pixels: " ++ show (pixels png) -- Avoid printing large pixel arrays
-    Nothing -> putStrLn "Failed to parse PNG"
+data RGB = RGB {
+  red :: UInt8,
+  green :: UInt8,
+  blue :: UInt8
+}
 
+data IDAT = IDAT {
+  data :: [UInt8]
+}
+
+data IEND = IEND {}
+
+data tRNS = tRNS {
+  transparency :: [UInt8]
+}
+
+data cHRM = cHRM {
+  whitePointX :: UInt32,
+  whitePointY :: UInt32,
+  redX :: UInt32,
+  redY :: UInt32,
+  greenX :: UInt32,
+  greenY :: UInt32,
+  blueX :: UInt32,
+  blueY :: UInt32
+}
+
+data gAMA = gAMA {
+  gamma :: UInt32
+}
+
+data iCCP = iCCP {
+  profileName :: String,
+  compressionMethod :: UInt8,
+  compressedProfile :: [UInt8]
+}
+
+data sBIT = sBIT {
+  significantBits :: [UInt8]
+}
+
+data sRGB = sRGB {
+  renderingIntent :: UInt8
+}
+
+data bKGD = bKGD {
+  backgroundColor :: [UInt8]
+}
+
+data hIST = hIST {
+  histogram :: [UInt32]
+}
+
+data pHYs = pHYs {
+  pixelsPerUnitX :: UInt32,
+  pixelsPerUnitY :: UInt32,
+  unitSpecifier :: UInt8
+}
+
+data tEXt = tEXt {
+  keyword :: String,
+  text :: String
+}
+
+data zTXt = zTXt {
+  keyword :: String,
+  compressionMethod :: UInt8,
+  compressedText :: [UInt8]
+}
+
+data iTXt = iTXt {
+  keyword :: String,
+  compressionFlag :: UInt8,
+  compressionMethod :: UInt8,
+  languageTag :: String,
+  translatedKeyword :: String,
+  text :: String
+}
+
+data tIME = tIME {
+  year :: UInt16,
+  month :: UInt8,
+  day :: UInt8,
+  hour :: UInt8,
+  minute :: UInt8,
+  second :: UInt8
+}

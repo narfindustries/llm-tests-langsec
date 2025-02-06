@@ -1,133 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/MQTT"
-           xmlns:tt="http://example.com/MQTT"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="MQTT-DFDL-types.xsd"/>
-
-  <xs:element name="MQTTMessage">
-    <xs:complexType>
+           targetNamespace="http://mqtt.org/dfdl"
+           elementFormDefault="qualified"
+           xmlns:tns="http://mqtt.org/dfdl"
+           dfdl:lengthKind="delimited">
+  <xs:element name="mqttMessage">
+    <xs:complexType dfdl:lengthKind="delimited">
       <xs:sequence>
-        <xs:element ref="tt:FixedHeader" dfdl:occurs="1..1"/>
-        <xs:element ref="tt:VariableHeader" dfdl:occurs="0..1"/>
-        <xs:element ref="tt:Payload" dfdl:occurs="0..1"/>
+        <xs:element name="fixedHeader" type="tns:fixedHeaderType"/>
+        <xs:element name="variableHeader" type="tns:variableHeaderType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="payload" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="FixedHeader">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="MessageType" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:lengthKind="delimited" dfdl:sequenceKind="optional">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-              <dfdl:length>variable</dfdl:length>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="VariableHeader" dfdl:occurs="0..1">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>text</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="2">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Payload" dfdl:occurs="0..1">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="connectFlags">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="UsernameFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PasswordFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="WillRetain" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="WillQoS" type="xs:unsignedByte" dfdl:length="2" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="WillFlag" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="CleanSession" type="xs:unsignedByte" dfdl:length="1" dfdl:bitOrder="mostSignificantBitFirst">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:representation>binary</dfdl:representation>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+  <xs:complexType name="fixedHeaderType">
+    <xs:sequence>
+      <xs:element name="headerType" type="xs:unsignedByte"/>
+      <xs:element name="flags" type="xs:unsignedByte"/>
+      <xs:element name="remainingLength" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="variableHeaderType">
+    <xs:sequence>
+      <xs:element name="protocolName" type="xs:string" fixed="MQTT" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="protocolLevel" type="xs:unsignedByte" fixed="5" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="connectFlags" type="tns:connectFlagsType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="keepAlive" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="packetId" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="topicName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="subscription" type="tns:subscriptionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="returnCode" type="tns:returnCodeType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="connectFlagsType">
+    <xs:sequence>
+      <xs:element name="cleanStart" type="xs:boolean"/>
+      <xs:element name="willFlag" type="xs:boolean"/>
+      <xs:element name="willQos" type="tns:willQosType"/>
+      <xs:element name="willRetain" type="xs:boolean"/>
+      <xs:element name="passwordFlag" type="xs:boolean"/>
+      <xs:element name="usernameFlag" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="willQosType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="subscriptionType">
+    <xs:sequence>
+      <xs:element name="topicFilter" type="xs:string"/>
+      <xs:element name="requestedQos" type="tns:requestedQosType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="requestedQosType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="returnCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="128"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

@@ -1,52 +1,33 @@
-#ifndef DNS_GEMINI_1_H
-#define DNS_GEMINI_1_H
+module DNS;
 
-#include <zeek/analyzer/protocol/dns.h>
+type dns_header {
+  transaction_id: uint16;
+  flags: uint16;
+  qdcount: uint16;
+  ancount: uint16;
+  nscount: uint16;
+  arcount: uint16;
+}
 
-global dns_gemini_1_count : count;
+type dns_question {
+  qname: string;
+  qtype: uint16;
+  qclass: uint16;
+}
 
-event dns_gemini_1_event(dns_query_msg q)
-	{
-	  dns_gemini_1_count++;
-	  // Add your custom logic here to handle Gemini DNS queries.
-	  // Example: Log the query details.
-	  print fmt("Gemini DNS query detected: %s", q);
-	}
+type dns_resource_record {
+  name: string;
+  type: uint16;
+  class: uint16;
+  ttl: uint32;
+  rdlength: uint16;
+  rdata: bytes;
+}
 
-#endif
-
-#ifndef DNS_GEMINI_1_5_FLASH_H
-#define DNS_GEMINI_1_5_FLASH_H
-
-#include <zeek/analyzer/protocol/dns.h>
-
-global dns_gemini_1_5_flash_count : count;
-
-event dns_gemini_1_5_flash_event(dns_query_msg q)
-	{
-	  dns_gemini_1_5_flash_count++;
-	  // Add your custom logic here to handle Gemini DNS queries with flash.
-	  // Example: Log the query details.
-	  print fmt("Gemini DNS query with flash detected: %s", q);
-	}
-
-#endif
-
-#ifndef MAIN_H
-#define MAIN_H
-
-#include "dns_gemini_1.h"
-#include "dns_gemini_1_5_flash.h"
-
-// Example usage of the events.  Replace with your actual logic.
-event zeek::dns::query_done(dns_query_msg q)
-	{
-	  if (q.qname == "gemini.example.com") {
-		dns_gemini_1_event(q);
-	  }
-	  if (q.qname == "flash.gemini.example.com") {
-		dns_gemini_1_5_flash_event(q);
-	  }
-	}
-
-#endif
+type dns_message {
+  header: dns_header;
+  questions: vector<dns_question>;
+  answers: vector<dns_resource_record>;
+  authority: vector<dns_resource_record>;
+  additional: vector<dns_resource_record>;
+}

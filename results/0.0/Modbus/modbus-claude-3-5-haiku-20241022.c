@@ -1,127 +1,165 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
 
-// Modbus Function Code Definitions
-typedef enum {
-    READ_COILS = 0x01,
-    READ_DISCRETE_INPUTS = 0x02,
-    READ_HOLDING_REGISTERS = 0x03,
-    READ_INPUT_REGISTERS = 0x04,
-    WRITE_SINGLE_COIL = 0x05,
-    WRITE_SINGLE_REGISTER = 0x06,
-    WRITE_MULTIPLE_COILS = 0x0F,
-    WRITE_MULTIPLE_REGISTERS = 0x10
-} ModbusFunctionCode;
+typedef struct {
+    uint8_t slave_address;
+    uint8_t function_code;
+    union {
+        struct {
+            uint16_t start_address;
+            uint16_t quantity;
+        } read_request;
+        struct {
+            uint16_t start_address;
+            uint16_t quantity;
+            uint8_t byte_count;
+            uint8_t* data;
+            size_t data_len;
+        } write_request;
+        struct {
+            uint8_t exception_code;
+        } error_response;
+    } payload;
+    uint16_t crc;
+} ModbusFrame;
 
-// Modbus Frame Parser
-static HParser* modbus_frame_parser() {
-    // Slave Address (1 byte)
-    HParsedToken* slave_address = h_token_uint8();
+static HParser* modbus_parser;
 
-    // Function Code (1 byte)
-    HParsedToken* function_code = h_token_uint8();
-
-    // Data Payload (variable length)
-    HParsedToken* data_payload = h_many(h_token_uint8());
-
-    // CRC (2 bytes)
-    HParsedToken* crc = h_sequence2(h_token_uint8(), h_token_uint8());
-
-    // Combine all components
-    return h_sequence4(slave_address, function_code, data_payload, crc);
+static HParseResult* parse_modbus_frame(void* data, size_t len) {
+    return h_parse(modbus_parser, data, len);
 }
 
-// Modbus Request Validator
-static bool validate_modbus_request(HParsedToken* parsed_frame) {
-    if (!parsed_frame || parsed_frame->type != TT_SEQUENCE) {
-        return false;
-    }
-
-    // Validate frame components
-    uint8_t slave_address = parsed_frame->seq->elements[0]->uint;
-    uint8_t function_code = parsed_frame->seq->elements[1]->uint;
+static HParsedToken* action_create_modbus_frame(const HParseResult* p, void* user_data) {
+    ModbusFrame* frame = malloc(sizeof(ModbusFrame));
     
-    // Basic validation checks
-    if (slave_address < 1 || slave_address > 247) {
-        return false;
-    }
-
-    switch (function_code) {
-        case READ_COILS:
-        case READ_DISCRETE_INPUTS:
-        case READ_HOLDING_REGISTERS:
-        case READ_INPUT_REGISTERS:
-        case WRITE_SINGLE_COIL:
-        case WRITE_SINGLE_REGISTER:
-        case WRITE_MULTIPLE_COILS:
-        case WRITE_MULTIPLE_REGISTERS:
-            return true;
-        default:
-            return false;
-    }
-}
-
-// CRC16 Calculation Function
-static uint16_t calculate_modbus_crc16(const uint8_t* data, size_t length) {
-    uint16_t crc = 0xFFFF;
+    frame->slave_address = p->ast->seq->elements[0]->uint;
+    frame->function_code = p->ast->seq->elements[1]->uint;
     
-    for (size_t i = 0; i < length; i++) {
-        crc ^= data[i];
-        for (int j = 0; j < 8; j++) {
-            if (crc & 0x0001) {
-                crc = (crc >> 1) ^ 0xA001;
-            } else {
-                crc >>= 1;
-            }
-        }
-    }
-    
-    return crc;
-}
-
-// Main Modbus Frame Parsing Function
-static HParsedToken* parse_modbus_frame(HParseResult* result) {
-    if (!result || !result->ast) {
-        return NULL;
-    }
-
-    HParsedToken* parsed_frame = result->ast;
-    
-    if (!validate_modbus_request(parsed_frame)) {
-        return NULL;
-    }
-
-    return parsed_frame;
-}
-
-int main() {
-    // Initialize Hammer parser
-    HParser* modbus_parser = modbus_frame_parser();
-    
-    // Example Modbus frame for testing
-    uint8_t test_frame[] = {0x01, 0x03, 0x00, 0x00, 0x00, 0x0A, 0xC5, 0xCD};
-    
-    // Parse the frame
-    HParseResult* result = h_parse(modbus_parser, test_frame, sizeof(test_frame));
-    
-    if (result && result->ast) {
-        HParsedToken* parsed_frame = parse_modbus_frame(result);
+    switch(frame->function_code) {
+        case 0x01: // Read Coils
+        case 0x02: // Read Discrete Inputs
+        case 0x03: // Read Holding Registers
+        case 0x04: // Read Input Registers
+            frame->payload.read_request.start_address = p->ast->seq->elements[2]->seq->elements[0]->uint;
+            frame->payload.read_request.quantity = p->ast->seq->elements[2]->seq->elements[1]->uint;
+            break;
         
-        if (parsed_frame) {
-            printf("Valid Modbus Frame Parsed Successfully\n");
-        } else {
-            printf("Invalid Modbus Frame\n");
-        }
-    } else {
-        printf("Parsing Failed\n");
+        case 0x05: // Write Single Coil
+        case 0x06: // Write Single Register
+            frame->payload.write_request.start_address = p->ast->seq->elements[2]->seq->elements[0]->uint;
+            frame->payload.write_request.quantity = p->ast->seq->elements[2]->seq->elements[1]->uint;
+            break;
+        
+        case 0x0F: // Write Multiple Coils
+        case 0x10: // Write Multiple Registers
+            frame->payload.write_request.start_address = p->ast->seq->elements[2]->seq->elements[0]->uint;
+            frame->payload.write_request.quantity = p->ast->seq->elements[2]->seq->elements[1]->uint;
+            frame->payload.write_request.byte_count = p->ast->seq->elements[2]->seq->elements[2]->uint;
+            frame->payload.write_request.data = (uint8_t*)p->ast->seq->elements[2]->seq->elements[3]->bytes;
+            frame->payload.write_request.data_len = p->ast->seq->elements[2]->seq->elements[3]->token_length;
+            break;
+        
+        case 0x83: // Exception Response
+            frame->payload.error_response.exception_code = p->ast->seq->elements[2]->seq->elements[0]->uint;
+            break;
     }
+    
+    frame->crc = p->ast->seq->elements[3]->uint;
+    
+    HParsedToken* token = h_make_tagged_token(TT_USER, frame);
+    return token;
+}
 
-    // Cleanup
-    h_parse_result_free(result);
-    h_destroy_parser(modbus_parser);
+static HParser* create_modbus_parser() {
+    HParser* slave_address = h_uint8();
+    HParser* function_code = h_uint8();
+    
+    HParser* read_request = h_sequence(
+        h_uint16(),   // Start Address
+        h_uint16(),   // Quantity
+        NULL
+    );
+    
+    HParser* write_single = h_sequence(
+        h_uint16(),   // Address
+        h_uint16(),   // Value
+        NULL
+    );
+    
+    HParser* write_multiple = h_sequence(
+        h_uint16(),   // Start Address
+        h_uint16(),   // Quantity
+        h_uint8(),    // Byte Count
+        h_repeat_n(h_uint8(), 1),  // Data
+        NULL
+    );
+    
+    HParser* exception_response = h_sequence(
+        h_uint8(),    // Exception Code
+        NULL
+    );
+    
+    HParser* crc = h_uint16();
+    
+    HParser* modbus_frame = h_choice(
+        h_sequence(
+            slave_address,
+            function_code,
+            h_choice(
+                read_request,     // 0x01, 0x02, 0x03, 0x04
+                write_single,     // 0x05, 0x06
+                write_multiple,   // 0x0F, 0x10
+                exception_response // 0x83
+            ),
+            crc,
+            NULL
+        ),
+        NULL
+    );
+    
+    return h_action(modbus_frame, action_create_modbus_frame, NULL);
+}
 
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <modbus_binary_file>\n", argv[0]);
+        return 1;
+    }
+    
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+    
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+    
+    size_t read_size = fread(buffer, 1, file_size, file);
+    fclose(file);
+    
+    modbus_parser = create_modbus_parser();
+    HParseResult* result = parse_modbus_frame(buffer, read_size);
+    
+    if (result) {
+        printf("Modbus frame parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Parsing failed\n");
+    }
+    
+    free(buffer);
+    h_parser_free(modbus_parser);
+    
     return 0;
 }

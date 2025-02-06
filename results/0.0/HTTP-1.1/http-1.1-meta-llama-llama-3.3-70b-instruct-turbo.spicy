@@ -1,73 +1,363 @@
-# HTTP-1.1 Zeek Spicy Specification
+module HTTP_1_1;
 
-%header {
-    # Import necessary modules
-    @load base/protocols/http
-    @load zeek/spicy
-}
+type http_method = enum {
+  GET,
+  HEAD,
+  POST,
+  PUT,
+  DELETE,
+  CONNECT,
+  OPTIONS,
+  TRACE
+};
 
-%config {
-    # Define the protocol and its version
-    protocol: HTTP
-    version: 1.1
-}
+type http_version = enum {
+  HTTP_1_1
+};
 
-%definition http_request {
-    # Define the structure of an HTTP request
-    method: string(1..10) &byte_test(method, "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "PATCH")
-    space: byte(0x20)
-    request_uri: string(1..1000) &byte_test(request_uri, /^\/.*$/)
-    space: byte(0x20)
-    http_version: string(8) &byte_test(http_version, "HTTP/1.1")
-    crlf: byte(0x0d, 0x0a)
+type status_code = enum {
+  CONTINUE,
+  SWITCHING_PROTOCOLS,
+  OK,
+  CREATED,
+  ACCEPTED,
+  NON_AUTHORITATIVE_INFORMATION,
+  NO_CONTENT,
+  RESET_CONTENT,
+  PARTIAL_CONTENT,
+  MULTIPLE_CHOICES,
+  MOVED_PERMANENTLY,
+  FOUND,
+  SEE_OTHER,
+  NOT_MODIFIED,
+  USE_PROXY,
+  TEMPORARY_REDIRECT,
+  BAD_REQUEST,
+  UNAUTHORIZED,
+  PAYMENT_REQUIRED,
+  FORBIDDEN,
+  NOT_FOUND,
+  METHOD_NOT_ALLOWED,
+  NOT_ACCEPTABLE,
+  PROXY_AUTHENTICATION_REQUIRED,
+  REQUEST_TIME_OUT,
+  CONFLICT,
+  GONE,
+  LENGTH_REQUIRED,
+  PRECONDITION_FAILED,
+  REQUEST_ENTITY_TOO_LARGE,
+  REQUEST_URI_TOO_LARGE,
+  UNSUPPORTED_MEDIA_TYPE,
+  REQUESTED_RANGE_NOT_SATISFIABLE,
+  EXPECTATION_FAILED,
+  INTERNAL_SERVER_ERROR,
+  NOT_IMPLEMENTED,
+  BAD_GATEWAY,
+  SERVICE_UNAVAILABLE,
+  GATEWAY_TIME_OUT,
+  HTTP_VERSION_NOT_SUPPORTED
+};
 
-    # Define the structure of HTTP headers
-    headers: *(
-        header_name: string(1..50) &byte_test(header_name, /^[a-zA-Z-]+$/)
-        colon: byte(0x3a)
-        space: byte(0x20)
-        header_value: string(1..1000) &byte_test(header_value, /.*/)
-        crlf: byte(0x0d, 0x0a)
+type request_line = struct {
+  method: http_method;
+  request_uri: bytestring;
+  http_version: http_version
+};
+
+type status_line = struct {
+  http_version: http_version;
+  status_code: status_code;
+  reason_phrase: bytestring
+};
+
+type header_field = struct {
+  name: bytestring;
+  value: bytestring
+};
+
+type headers = vector(header_field);
+
+type request = struct {
+  request_line: request_line;
+  headers: headers;
+  body: bytestring
+};
+
+type response = struct {
+  status_line: status_line;
+  headers: headers;
+  body: bytestring
+};
+
+type http_message = union {
+  request: request;
+  response: response
+};
+
+type accept = struct {
+  media_range: bytestring
+};
+
+type accept_charset = struct {
+  charset: bytestring
+};
+
+type accept_encoding = struct {
+  content_coding: bytestring
+};
+
+type accept_language = struct {
+  language_range: bytestring
+};
+
+type authorization = struct {
+  auth_scheme: bytestring;
+  credentials: bytestring
+};
+
+type expect = struct {
+  expectation: bytestring
+};
+
+type from = struct {
+  email_address: bytestring
+};
+
+type host = struct {
+  host: bytestring;
+  port: uint16
+};
+
+type if_match = struct {
+  entity_tag: bytestring
+};
+
+type if_modified_since = struct {
+  date: bytestring
+};
+
+type if_none_match = struct {
+  entity_tag: bytestring
+};
+
+type if_range = struct {
+  entity_tag: bytestring;
+  date: bytestring
+};
+
+type if_unmodified_since = struct {
+  date: bytestring
+};
+
+type max_forwards = struct {
+  integer: uint32
+};
+
+type proxy_authorization = struct {
+  auth_scheme: bytestring;
+  credentials: bytestring
+};
+
+type range = struct {
+  byte_range: bytestring
+};
+
+type referer = struct {
+  uri: bytestring
+};
+
+type te = struct {
+  transfer_extension: bytestring
+};
+
+type user_agent = struct {
+  product: bytestring;
+  comment: bytestring
+};
+
+type accept_ranges = struct {
+  accept_ranges: bytestring
+};
+
+type age = struct {
+  age: uint32
+};
+
+type allow = struct {
+  method: http_method
+};
+
+type cache_control = struct {
+  cache_directive: bytestring
+};
+
+type connection = struct {
+  connection_token: bytestring
+};
+
+type content_encoding = struct {
+  content_coding: bytestring
+};
+
+type content_language = struct {
+  language_range: bytestring
+};
+
+type content_length = struct {
+  length: uint64
+};
+
+type content_location = struct {
+  uri: bytestring
+};
+
+type content_md5 = struct {
+  md5_digest: bytestring
+};
+
+type content_range = struct {
+  byte_range: bytestring
+};
+
+type content_type = struct {
+  media_type: bytestring
+};
+
+type date = struct {
+  date: bytestring
+};
+
+type etag = struct {
+  entity_tag: bytestring
+};
+
+type expires = struct {
+  date: bytestring
+};
+
+type last_modified = struct {
+  date: bytestring
+};
+
+type location = struct {
+  uri: bytestring
+};
+
+type proxy_authenticate = struct {
+  auth_scheme: bytestring;
+  realm: bytestring
+};
+
+type retry_after = struct {
+  retry_after: uint32
+};
+
+type server = struct {
+  product: bytestring;
+  comment: bytestring
+};
+
+type set_cookie = struct {
+  cookie: bytestring
+};
+
+type trailer = struct {
+  transfer_extension: bytestring
+};
+
+type transfer_encoding = struct {
+  transfer_coding: bytestring
+};
+
+type upgrade = struct {
+  protocol: bytestring
+};
+
+type vary = struct {
+  field_name: bytestring
+};
+
+type via = struct {
+  protocol: bytestring;
+  received_protocol: bytestring;
+  received_by: bytestring;
+  comment: bytestring
+};
+
+type warning = struct {
+  warning_value: bytestring
+};
+
+type www_authenticate = struct {
+  auth_scheme: bytestring;
+  realm: bytestring
+};
+
+let http_message = http_message &parse(
+  request_line: request_line &parse(
+    method: http_method;
+    request_uri: bytestring;
+    http_version: http_version
+  );
+  headers: headers &parse(
+    header_field: header_field &parse(
+      name: bytestring;
+      value: bytestring
     )
+  );
+  body: bytestring
+);
 
-    # Define the structure of the request body
-    body: string(0..10000) &byte_test(body, /.*/)
-}
+let request_line = request_line &parse(
+  method: http_method;
+  request_uri: bytestring;
+  http_version: http_version
+);
 
-%definition http_response {
-    # Define the structure of an HTTP response
-    http_version: string(8) &byte_test(http_version, "HTTP/1.1")
-    space: byte(0x20)
-    status_code: string(3) &byte_test(status_code, /^[0-9]{3}$/)
-    space: byte(0x20)
-    reason_phrase: string(1..50) &byte_test(reason_phrase, /.*/)
-    crlf: byte(0x0d, 0x0a)
+let status_line = status_line &parse(
+  http_version: http_version;
+  status_code: status_code;
+  reason_phrase: bytestring
+);
 
-    # Define the structure of HTTP headers
-    headers: *(
-        header_name: string(1..50) &byte_test(header_name, /^[a-zA-Z-]+$/)
-        colon: byte(0x3a)
-        space: byte(0x20)
-        header_value: string(1..1000) &byte_test(header_value, /.*/)
-        crlf: byte(0x0d, 0x0a)
+let header_field = header_field &parse(
+  name: bytestring;
+  value: bytestring
+);
+
+let headers = headers &parse(
+  header_field: header_field &parse(
+    name: bytestring;
+    value: bytestring
+  )
+);
+
+let request = request &parse(
+  request_line: request_line &parse(
+    method: http_method;
+    request_uri: bytestring;
+    http_version: http_version
+  );
+  headers: headers &parse(
+    header_field: header_field &parse(
+      name: bytestring;
+      value: bytestring
     )
+  );
+  body: bytestring
+);
 
-    # Define the structure of the response body
-    body: string(0..10000) &byte_test(body, /.*/)
-}
-
-%parser http_parser {
-    # Define the parser for HTTP requests and responses
-    request: http_request
-    response: http_response
-}
-
-%node http_node {
-    # Define the node for HTTP parsing
-    parser: http_parser
-}
-
-%unit http_unit {
-    # Define the unit for HTTP parsing
-    node: http_node
-}
+let response = response &parse(
+  status_line: status_line &parse(
+    http_version: http_version;
+    status_code: status_code;
+    reason_phrase: bytestring
+  );
+  headers: headers &parse(
+    header_field: header_field &parse(
+      name: bytestring;
+      value: bytestring
+    )
+  );
+  body: bytestring
+);

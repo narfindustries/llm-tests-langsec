@@ -1,70 +1,107 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent an ARP entry
 typedef struct {
-    unsigned char ip_address[4];
-    unsigned char mac_address[6];
-} arp_entry_t;
+    uint16_t hardware_type;
+    uint16_t protocol_type;
+    uint8_t hardware_addr_len;
+    uint8_t protocol_addr_len;
+    uint16_t opcode;
+    uint8_t sender_hardware_addr[6]; 
+    uint8_t sender_protocol_addr[4]; 
+    uint8_t target_hardware_addr[6]; 
+    uint8_t target_protocol_addr[4]; 
 
-// Function to add an ARP entry
-int add_arp_entry(arp_entry_t *arp_table, int table_size, unsigned char *ip_address, unsigned char *mac_address) {
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, ip_address, 4) == 0) {
-            // IP address already exists, update MAC address
-            memcpy(arp_table[i].mac_address, mac_address, 6);
-            return 0; // Success
-        }
-    }
+} arp_packet;
 
-    // IP address not found, add new entry if space is available.
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, "\0\0\0\0", 4) == 0) {
-            memcpy(arp_table[i].ip_address, ip_address, 4);
-            memcpy(arp_table[i].mac_address, mac_address, 6);
-            return 0; // Success
-        }
-    }
-    return -1; // Table full
+static hammer_parser_t* parse_uint16(void) {
+    return hammer_uint16_t();
 }
 
-
-// Function to resolve IP address to MAC address
-int resolve_ip(arp_entry_t *arp_table, int table_size, unsigned char *ip_address, unsigned char *mac_address) {
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, ip_address, 4) == 0) {
-            memcpy(mac_address, arp_table[i].mac_address, 6);
-            return 0; // Success
-        }
-    }
-    return -1; // IP address not found
+static hammer_parser_t* parse_uint8(void) {
+    return hammer_uint8_t();
 }
 
-int main() {
-    // Example usage
-    arp_entry_t arp_table[100];  //Example ARP table, adjust size as needed.
-    memset(arp_table, 0, sizeof(arp_table)); // Initialize ARP table
+static hammer_parser_t* parse_mac_addr(void) {
+    return hammer_bytes(6);
+}
 
-    unsigned char ip1[] = {192, 168, 1, 1};
-    unsigned char mac1[] = {0x00, 0x16, 0x3e, 0x00, 0x00, 0x01};
+static hammer_parser_t* parse_ipv4_addr(void) {
+    return hammer_bytes(4);
+}
 
-    unsigned char ip2[] = {192, 168, 1, 2};
-    unsigned char mac2[] = {0x00, 0x16, 0x3e, 0x00, 0x00, 0x02};
+static hammer_parser_t* parse_arp_packet(void) {
+    return hammer_seq(
+        hammer_map(parse_uint16(), (hammer_map_func_t) & (uint16_t)),
+        hammer_map(parse_uint16(), (hammer_map_func_t) & (uint16_t)),
+        hammer_map(parse_uint8(), (hammer_map_func_t) & (uint8_t)),
+        hammer_map(parse_uint8(), (hammer_map_func_t) & (uint8_t)),
+        hammer_map(parse_uint16(), (hammer_map_func_t) & (uint16_t)),
+        hammer_map(parse_mac_addr(), (hammer_map_func_t) memcpy),
+        hammer_map(parse_ipv4_addr(), (hammer_map_func_t) memcpy),
+        hammer_map(parse_mac_addr(), (hammer_map_func_t) memcpy),
+        hammer_map(parse_ipv4_addr(), (hammer_map_func_t) memcpy),
+        NULL
+    );
+}
 
-    add_arp_entry(arp_table, 100, ip1, mac1);
-    add_arp_entry(arp_table, 100, ip2, mac2);
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
+    }
 
-    unsigned char resolved_mac[6];
-    if (resolve_ip(arp_table, 100, ip1, resolved_mac) == 0) {
-        printf("MAC address for 192.168.1.1: ");
-        for (int i = 0; i < 6; i++) {
-            printf("%02x:", resolved_mac[i]);
-        }
-        printf("\n");
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = (uint8_t*)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser_t* parser = parse_arp_packet();
+    hammer_result_t result = hammer_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        arp_packet* packet = (arp_packet*)result.value;
+        printf("Hardware Type: %u\n", packet->hardware_type);
+        printf("Protocol Type: %u\n", packet->protocol_type);
+        printf("Hardware Addr Len: %u\n", packet->hardware_addr_len);
+        printf("Protocol Addr Len: %u\n", packet->protocol_addr_len);
+        printf("Opcode: %u\n", packet->opcode);
+        printf("Sender MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               packet->sender_hardware_addr[0], packet->sender_hardware_addr[1],
+               packet->sender_hardware_addr[2], packet->sender_hardware_addr[3],
+               packet->sender_hardware_addr[4], packet->sender_hardware_addr[5]);
+        printf("Sender IP: %u.%u.%u.%u\n",
+               packet->sender_protocol_addr[0], packet->sender_protocol_addr[1],
+               packet->sender_protocol_addr[2], packet->sender_protocol_addr[3]);
+        printf("Target MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               packet->target_hardware_addr[0], packet->target_hardware_addr[1],
+               packet->target_hardware_addr[2], packet->target_hardware_addr[3],
+               packet->target_hardware_addr[4], packet->target_hardware_addr[5]);
+        printf("Target IP: %u.%u.%u.%u\n",
+               packet->target_protocol_addr[0], packet->target_protocol_addr[1],
+               packet->target_protocol_addr[2], packet->target_protocol_addr[3]);
+        free(result.value);
     } else {
-        printf("IP address not found in ARP table.\n");
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
     }
 
+    free(buffer);
+    hammer_free(parser);
     return 0;
 }
+
+The error persists because  `hammer_uint16_t`, `hammer_uint8_t`, `hammer_bytes`, `hammer_seq`, and `hammer_map` are not standard C functions.  They are functions from the Hammer parser combinator library.  You need to install the Hammer library and link it during compilation.  The compiler error indicates that it cannot find the definitions for these functions.  Without knowing your specific build environment, I cannot provide the exact compilation command. However, it will involve including the Hammer library header and linking against the Hammer library.  A typical compilation command might look something like this (adjust paths as needed):
+
+gcc arp_parser.c -o arp_parser -I/path/to/hammer/include -L/path/to/hammer/lib -lhammer

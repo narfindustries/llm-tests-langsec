@@ -1,63 +1,92 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-// Define HTTP version rule
-HParser *http_version = h_sequence(
-    h_ch('H'), h_ch('T'), h_ch('T'), h_ch('P'), h_ch('/'),
-    h_digit(), h_ch('.'), h_digit(),
-    NULL
-);
+HParser *create_http_parser();
 
-// Define HTTP method rule
-HParser *http_method = h_choice(
-    h_ignore_case(h_token("GET", 3)),
-    h_ignore_case(h_token("POST", 4)),
-    h_ignore_case(h_token("PUT", 3)),
-    h_ignore_case(h_token("DELETE", 6)),
-    h_ignore_case(h_token("HEAD", 4)),
-    h_ignore_case(h_token("OPTIONS", 7)),
-    h_ignore_case(h_token("PATCH", 5)),
-    NULL
-);
-
-// Define HTTP header field rule
-HParser *http_header_field = h_sequence(
-    h_many1(h_choice(h_alpha(), h_ch('-'))),
-    h_ch(':'), h_while(h_not(h_ch('\n'))), h_ch('\n'),
-    NULL
-);
-
-// Define HTTP headers section rule
-HParser *http_headers = h_many(http_header_field);
-
-// Define HTTP request line rule
-HParser *http_request_line = h_sequence(
-    http_method, h_ch(' '),
-    h_while(h_not(h_ch(' '))), h_ch(' '),
-    http_version, h_ch('\n'),
-    NULL
-);
-
-// Define HTTP request parser
-HParser *http_request = h_sequence(
-    http_request_line,
-    http_headers,
-    h_ch('\n'), // End of headers section
-    NULL
-);
-
-// Entry point for parsing
-int main(int argc, char **argv) {
-    // Example HTTP request to parse
-    const char *data = "GET /index.html HTTP/1.1\nHost: example.com\n\n";
-    HParseResult *result = h_parse(http_request, (const uint8_t *)data, strlen(data));
-    
-    if (result) {
-        printf("HTTP request parsed successfully.\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse HTTP request.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parser_free(http_request);
-    return 0;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(file_size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, file_size, file);
+    fclose(file);
+
+    HParser *parser = create_http_parser();
+    HParseResult *result = h_parse(parser, data, file_size);
+
+    if (result) {
+        printf("Parsing successful!\n");
+        h_parse_result_free(result);
+    } else {
+        fprintf(stderr, "Parsing failed!\n");
+    }
+
+    free(data);
+    h_parser_unref(parser);
+
+    return EXIT_SUCCESS;
+}
+
+HParser *create_http_parser() {
+    // Basic parsers
+    HParser *space = h_ch(' ');
+    HParser *token = h_many1(h_choice(space, h_ch('\t'), NULL));
+    HParser *alpha = h_choice(h_ch_range('a', 'z'), h_ch_range('A', 'Z'), NULL);
+    HParser *digit = h_ch_range('0', '9');
+    HParser *crlf = h_sequence(h_ch('\r'), h_ch('\n'), NULL);
+
+    // Header field parsers
+    HParser *field_name = h_many1(h_choice(alpha, digit, h_ch('-'), h_ch('_'), NULL));
+    HParser *field_value = h_many(h_not(crlf));
+    HParser *header_field = h_sequence(
+        field_name,
+        h_sequence(token, h_ch(':'), token, field_value, crlf, NULL),
+        NULL
+    );
+
+    // Start-line parsers
+    HParser *http_version = h_sequence(
+        h_token((const uint8_t *)"HTTP/", 5), digit, h_ch('.'), digit, NULL
+    );
+    HParser *request_method = h_many1(alpha);
+    HParser *request_target = h_many(h_not(h_choice(space, h_ch('\t'), h_ch('\r'), h_ch('\n'), NULL)));
+    HParser *request_line = h_sequence(
+        request_method,
+        token,
+        request_target,
+        token,
+        http_version,
+        crlf,
+        NULL
+    );
+
+    // Full HTTP message parser
+    HParser *http_message = h_sequence(
+        request_line,
+        h_many(header_field),
+        crlf,  // End of headers
+        h_optional(h_many(h_ch_range(0, 255))),  // Optional body
+        NULL
+    );
+
+    return http_message;
 }

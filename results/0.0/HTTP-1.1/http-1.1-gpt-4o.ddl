@@ -1,42 +1,77 @@
-module HTTP_1_1
+module HTTPMessage {
+    HTTPMessage = {
+        start: RequestLine | StatusLine,
+        headers: HeaderField*,
+        emptyLine: "\r\n",
+        body: Body?
+    };
 
-type HTTPMessage = struct {
-    start_line: StartLine,
-    headers: Headers,
-    body: Body
-}
+    RequestLine = {
+        method: Token,
+        space1: " ",
+        requestURI: URI,
+        space2: " ",
+        httpVersion: HTTPVersion,
+        crlf: "\r\n"
+    };
 
-type StartLine = struct {
-    method: Method,
-    uri: URI,
-    version: Version
-}
+    StatusLine = {
+        httpVersion: HTTPVersion,
+        space1: " ",
+        statusCode: StatusCode,
+        space2: " ",
+        reasonPhrase: ReasonPhrase,
+        crlf: "\r\n"
+    };
 
-type Method = enum : uint8 {
-    GET = 0x01,
-    POST = 0x02,
-    PUT = 0x03,
-    DELETE = 0x04,
-    HEAD = 0x05,
-    OPTIONS = 0x06,
-    TRACE = 0x07,
-    CONNECT = 0x08
-}
+    HeaderField = {
+        fieldName: Token,
+        colon: ":",
+        space: " ",
+        fieldValue: FieldValue,
+        crlf: "\r\n"
+    };
 
-type URI = string
+    Body = {
+        content: Byte*
+    };
 
-type Version = struct {
-    major: uint8,
-    minor: uint8
-}
+    HTTPVersion = {
+        prefix: "HTTP/",
+        major: Digit,
+        dot: ".",
+        minor: Digit
+    };
 
-type Headers = list of Header
+    StatusCode = {
+        code: Digit Digit Digit
+    };
 
-type Header = struct {
-    name: string,
-    value: string
-}
+    ReasonPhrase = {
+        text: (Char - "\r\n")*
+    };
 
-type Body = struct {
-    content: bytes
+    FieldValue = {
+        value: (Char - "\r\n")*
+    };
+
+    Token = {
+        text: (Char - " \t\r\n:")*
+    };
+
+    URI = {
+        text: (Char - " \t\r\n")*
+    };
+
+    Char = {
+        byte: Byte
+    };
+
+    Digit = {
+        byte: "0".."9"
+    };
+
+    Byte = {
+        byte: 0x00..0xFF
+    };
 }

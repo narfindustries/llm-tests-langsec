@@ -1,61 +1,75 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u8},
+    combinator::{map, opt},
+    multi::{length_data},
+    number::complete::{be_u8, be_u16, be_u32},
     IResult,
 };
-use std::{
-    fs::File,
-    io::{Read, stdin},
-    path::Path,
-};
+use std::{env, fs};
 
-// Define MQTT packet types
-#[derive(Debug, PartialEq)]
-enum PacketType {
+#[derive(Debug)]
+enum MqttControlPacketType {
     Connect,
-    ConnAck,
+    Connack,
     Publish,
-    PubAck,
-    PubRec,
-    PubRel,
-    PubComp,
+    Puback,
+    Pubrec,
+    Pubrel,
+    Pubcomp,
     Subscribe,
-    SubAck,
+    Suback,
     Unsubscribe,
-    UnsubAck,
-    PingReq,
-    PingResp,
+    Unsuback,
+    Pingreq,
+    Pingresp,
     Disconnect,
 }
 
-// Define MQTT QoS levels
-#[derive(Debug, PartialEq)]
-enum QoS {
+#[derive(Debug)]
+enum MqttQos {
     AtMostOnce,
     AtLeastOnce,
     ExactlyOnce,
 }
 
-// Define MQTT connect flags
-#[derive(Debug, PartialEq)]
-struct ConnectFlags {
-    username: bool,
-    password: bool,
-    will_retain: bool,
-    will_qos: QoS,
-    will_flag: bool,
-    clean_session: bool,
+#[derive(Debug)]
+struct MqttFixedHeader {
+    control_packet_type: MqttControlPacketType,
+    flags: u8,
 }
 
-// Define MQTT connect packet
-#[derive(Debug, PartialEq)]
-struct ConnectPacket {
+impl MqttFixedHeader {
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, first_byte) = be_u8(input)?;
+        let control_packet_type = match first_byte >> 4 {
+            1 => MqttControlPacketType::Connect,
+            2 => MqttControlPacketType::Connack,
+            3 => MqttControlPacketType::Publish,
+            4 => MqttControlPacketType::Puback,
+            5 => MqttControlPacketType::Pubrec,
+            6 => MqttControlPacketType::Pubrel,
+            7 => MqttControlPacketType::Pubcomp,
+            8 => MqttControlPacketType::Subscribe,
+            9 => MqttControlPacketType::Suback,
+            10 => MqttControlPacketType::Unsubscribe,
+            11 => MqttControlPacketType::Unsuback,
+            12 => MqttControlPacketType::Pingreq,
+            13 => MqttControlPacketType::Pingresp,
+            14 => MqttControlPacketType::Disconnect,
+            _ => panic!("Invalid control packet type"),
+        };
+        let flags = first_byte & 0x0f;
+        Ok((input, MqttFixedHeader { control_packet_type, flags }))
+    }
+}
+
+#[derive(Debug)]
+struct MqttConnect {
     protocol_name: String,
-    protocol_version: u8,
-    flags: ConnectFlags,
+    protocol_level: u8,
+    connect_flags: u8,
     keep_alive: u16,
+    properties: Option<MqttProperties>,
     client_id: String,
     will_topic: Option<String>,
     will_message: Option<String>,
@@ -63,241 +77,152 @@ struct ConnectPacket {
     password: Option<String>,
 }
 
-// Define MQTT connack packet
-#[derive(Debug, PartialEq)]
-struct ConnAckPacket {
-    session_present: bool,
-    return_code: u8,
-}
-
-// Define MQTT publish packet
-#[derive(Debug, PartialEq)]
-struct PublishPacket {
-    topic: String,
-    packet_id: Option<u16>,
-    payload: Vec<u8>,
-}
-
-// Define MQTT publish acknowledgement packet
-#[derive(Debug, PartialEq)]
-struct PubAckPacket {
-    packet_id: u16,
-}
-
-// Define MQTT packet
-#[derive(Debug, PartialEq)]
-enum Packet {
-    Connect(ConnectPacket),
-    ConnAck(ConnAckPacket),
-    Publish(PublishPacket),
-    PubAck(PubAckPacket),
-}
-
-// Implement parser for PacketType
-fn packet_type(input: &[u8]) -> IResult<&[u8], PacketType> {
-    map(be_u8, |x| match x >> 4 {
-        1 => PacketType::Connect,
-        2 => PacketType::ConnAck,
-        3 => PacketType::Publish,
-        4 => PacketType::PubAck,
-        5 => PacketType::PubRec,
-        6 => PacketType::PubRel,
-        7 => PacketType::PubComp,
-        8 => PacketType::Subscribe,
-        9 => PacketType::SubAck,
-        10 => PacketType::Unsubscribe,
-        11 => PacketType::UnsubAck,
-        12 => PacketType::PingReq,
-        13 => PacketType::PingResp,
-        14 => PacketType::Disconnect,
-        _ => unreachable!(),
-    })(input)
-}
-
-// Implement parser for QoS
-fn qos(input: &[u8]) -> IResult<&[u8], QoS> {
-    map(be_u8, |x| match x & 0b00000011 {
-        0 => QoS::AtMostOnce,
-        1 => QoS::AtLeastOnce,
-        2 => QoS::ExactlyOnce,
-        _ => unreachable!(),
-    })(input)
-}
-
-// Implement parser for ConnectFlags
-fn connect_flags(input: &[u8]) -> IResult<&[u8], ConnectFlags> {
-    map(be_u8, |x| ConnectFlags {
-        username: (x & 0b10000000) != 0,
-        password: (x & 0b01000000) != 0,
-        will_retain: (x & 0b00100000) != 0,
-        will_qos: match (x & 0b00011000) >> 3 {
-            0 => QoS::AtMostOnce,
-            1 => QoS::AtLeastOnce,
-            2 => QoS::ExactlyOnce,
-            _ => unreachable!(),
-        },
-        will_flag: (x & 0b00000100) != 0,
-        clean_session: (x & 0b00000010) != 0,
-    })(input)
-}
-
-// Implement parser for ConnectPacket
-fn connect_packet(input: &[u8]) -> IResult<&[u8], ConnectPacket> {
-    let (input, _) = tag(b"MQTT\x04")(input)?;
-    let (input, protocol_version) = be_u8(input)?;
-    let (input, flags) = connect_flags(input)?;
-    let (input, keep_alive) = be_u16(input)?;
-    let (input, client_id_length) = be_u16(input)?;
-    let (input, client_id) = take(client_id_length)(input)?;
-    let client_id = String::from_utf8(client_id.to_vec()).unwrap();
-    let (input, will_topic_length) = if flags.will_flag {
-        be_u16(input)?
-    } else {
-        (input, 0)
-    };
-    let (input, will_topic) = if flags.will_flag {
-        let (input, will_topic) = take(will_topic_length)(input)?;
-        (input, Some(String::from_utf8(will_topic.to_vec()).unwrap()))
-    } else {
-        (input, None)
-    };
-    let (input, will_message_length) = if flags.will_flag {
-        be_u16(input)?
-    } else {
-        (input, 0)
-    };
-    let (input, will_message) = if flags.will_flag {
-        let (input, will_message) = take(will_message_length)(input)?;
-        (input, Some(String::from_utf8(will_message.to_vec()).unwrap()))
-    } else {
-        (input, None)
-    };
-    let (input, username_length) = if flags.username {
-        be_u16(input)?
-    } else {
-        (input, 0)
-    };
-    let (input, username) = if flags.username {
-        let (input, username) = take(username_length)(input)?;
-        (input, Some(String::from_utf8(username.to_vec()).unwrap()))
-    } else {
-        (input, None)
-    };
-    let (input, password_length) = if flags.password {
-        be_u16(input)?
-    } else {
-        (input, 0)
-    };
-    let (input, password) = if flags.password {
-        let (input, password) = take(password_length)(input)?;
-        (input, Some(String::from_utf8(password.to_vec()).unwrap()))
-    } else {
-        (input, None)
-    };
-    Ok((
-        input,
-        ConnectPacket {
-            protocol_name: "MQTT".to_string(),
-            protocol_version,
-            flags,
+impl MqttConnect {
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, protocol_name) = map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned())(input)?;
+        let (input, _) = be_u8(input)?; // protocol level
+        let (input, connect_flags) = be_u8(input)?;
+        let (input, keep_alive) = be_u16(input)?;
+        let (input, properties) = opt(MqttProperties::parse)(input)?;
+        let (input, client_id) = map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned())(input)?;
+        let (input, will_topic) = opt(map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned()))(input)?;
+        let (input, will_message) = opt(map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned()))(input)?;
+        let (input, username) = opt(map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned()))(input)?;
+        let (input, password) = opt(map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned()))(input)?;
+        Ok((input, MqttConnect {
+            protocol_name,
+            protocol_level: 5,
+            connect_flags,
             keep_alive,
+            properties,
             client_id,
             will_topic,
             will_message,
             username,
             password,
-        },
-    ))
-}
-
-// Implement parser for ConnAckPacket
-fn connack_packet(input: &[u8]) -> IResult<&[u8], ConnAckPacket> {
-    let (input, _) = be_u8(input)?;
-    let (input, session_present) = map(be_u8, |x| (x & 0b00000001) != 0)(input)?;
-    let (input, return_code) = be_u8(input)?;
-    Ok((
-        input,
-        ConnAckPacket {
-            session_present,
-            return_code,
-        },
-    ))
-}
-
-// Implement parser for PublishPacket
-fn publish_packet(input: &[u8]) -> IResult<&[u8], PublishPacket> {
-    let (input, topic_length) = be_u16(input)?;
-    let (input, topic) = take(topic_length)(input)?;
-    let topic = String::from_utf8(topic.to_vec()).unwrap();
-    let (input, packet_id) = if (input[0] & 0b00000011) == 0b00000001 || (input[0] & 0b00000011) == 0b00000010 {
-        be_u16(input)?
-    } else {
-        (input, None)
-    };
-    let (input, payload_length) = if (input[0] & 0b00000011) == 0b00000001 || (input[0] & 0b00000011) == 0b00000010 {
-        let (input, remainder_length) = be_u16(input)?;
-        (input, remainder_length - 2)
-    } else {
-        (input, 0)
-    };
-    let (input, payload) = take(payload_length)(input)?;
-    Ok((
-        input,
-        PublishPacket {
-            topic,
-            packet_id,
-            payload: payload.to_vec(),
-        },
-    ))
-}
-
-// Implement parser for PubAckPacket
-fn puback_packet(input: &[u8]) -> IResult<&[u8], PubAckPacket> {
-    let (input, _) = be_u8(input)?;
-    let (input, packet_id) = be_u16(input)?;
-    Ok((input, PubAckPacket { packet_id }))
-}
-
-// Implement parser for Packet
-fn packet(input: &[u8]) -> IResult<&[u8], Packet> {
-    let (input, packet_type) = packet_type(input)?;
-    match packet_type {
-        PacketType::Connect => {
-            let (input, packet) = connect_packet(input)?;
-            Ok((input, Packet::Connect(packet)))
-        }
-        PacketType::ConnAck => {
-            let (input, packet) = connack_packet(input)?;
-            Ok((input, Packet::ConnAck(packet)))
-        }
-        PacketType::Publish => {
-            let (input, packet) = publish_packet(input)?;
-            Ok((input, Packet::Publish(packet)))
-        }
-        PacketType::PubAck => {
-            let (input, packet) = puback_packet(input)?;
-            Ok((input, Packet::PubAck(packet)))
-        }
-        _ => unimplemented!(),
+        }))
     }
 }
 
-// Main function to parse MQTT packet from file
+#[derive(Debug)]
+struct MqttProperties {
+    session_expiry_interval: Option<u32>,
+    receive_maximum: Option<u16>,
+    maximum_packet_size: Option<u32>,
+    topic_alias_maximum: Option<u16>,
+    request_response_information: Option<u8>,
+    request_problem_information: Option<u8>,
+    user_properties: Vec<(String, String)>,
+    authentication_method: Option<String>,
+    authentication_data: Option<Vec<u8>>,
+}
+
+impl MqttProperties {
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        let mut session_expiry_interval = None;
+        let mut receive_maximum = None;
+        let mut maximum_packet_size = None;
+        let mut topic_alias_maximum = None;
+        let mut request_response_information = None;
+        let mut request_problem_information = None;
+        let mut user_properties = Vec::new();
+        let mut authentication_method = None;
+        let mut authentication_data = None;
+        let (input, properties) = length_data(be_u16)(input)?;
+        let mut properties = properties;
+        while !properties.is_empty() {
+            let (properties_remaining, property_id) = be_u8(properties)?;
+            properties = properties_remaining;
+            match property_id {
+                0x11 => {
+                    let (properties_remaining, value) = be_u32(properties)?;
+                    session_expiry_interval = Some(value);
+                    properties = properties_remaining;
+                }
+                0x12 => {
+                    let (properties_remaining, value) = be_u16(properties)?;
+                    receive_maximum = Some(value);
+                    properties = properties_remaining;
+                }
+                0x13 => {
+                    let (properties_remaining, value) = be_u32(properties)?;
+                    maximum_packet_size = Some(value);
+                    properties = properties_remaining;
+                }
+                0x14 => {
+                    let (properties_remaining, value) = be_u16(properties)?;
+                    topic_alias_maximum = Some(value);
+                    properties = properties_remaining;
+                }
+                0x15 => {
+                    let (properties_remaining, value) = be_u8(properties)?;
+                    request_response_information = Some(value);
+                    properties = properties_remaining;
+                }
+                0x16 => {
+                    let (properties_remaining, value) = be_u8(properties)?;
+                    request_problem_information = Some(value);
+                    properties = properties_remaining;
+                }
+                0x17 => {
+                    let (properties_remaining, key) = map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned())(properties)?;
+                    let (properties_remaining, value) = map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned())(properties_remaining)?;
+                    user_properties.push((key, value));
+                    properties = properties_remaining;
+                }
+                0x18 => {
+                    let (properties_remaining, value) = map(take_while(|c| c != 0), |v: &[u8]| String::from_utf8_lossy(v).into_owned())(properties)?;
+                    authentication_method = Some(value);
+                    properties = properties_remaining;
+                }
+                0x19 => {
+                    let (properties_remaining, value) = length_data(be_u16)(properties)?;
+                    authentication_data = Some(value.to_vec());
+                    properties = properties_remaining;
+                }
+                _ => panic!("Invalid property ID"),
+            }
+        }
+        Ok((input, MqttProperties {
+            session_expiry_interval,
+            receive_maximum,
+            maximum_packet_size,
+            topic_alias_maximum,
+            request_response_information,
+            request_problem_information,
+            user_properties,
+            authentication_method,
+            authentication_data,
+        }))
+    }
+}
+
+fn take_while<F>(f: F) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8]>
+where
+    F: Fn(u8) -> bool,
+{
+    move |input: &[u8]| {
+        let mut i = 0;
+        while i < input.len() && f(input[i]) {
+            i += 1;
+        }
+        Ok((&input[i..], &input[..i]))
+    }
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <file>", args[0]);
-        return;
+        panic!("Usage: {} <input_file>", args[0]);
     }
-    let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Err(why) => panic!("couldn't open {}: {}", path.display(), why),
-        Ok(file) => file,
-    };
-    let mut input = Vec::new();
-    file.read_to_end(&mut input).unwrap();
-    match packet(&input) {
-        Ok((remaining, packet)) => println!("{:?}", packet),
-        Err(err) => println!("Error: {:?}", err),
+    let input_file = &args[1];
+    let input = fs::read(input_file).expect("Failed to read input file");
+    let (input, fixed_header) = MqttFixedHeader::parse(&input).expect("Failed to parse fixed header");
+    match fixed_header.control_packet_type {
+        MqttControlPacketType::Connect => {
+            let (_input, connect) = MqttConnect::parse(input).expect("Failed to parse connect packet");
+            println!("{:?}", connect);
+        }
+        _ => panic!("Only CONNECT packets are supported"),
     }
 }

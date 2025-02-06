@@ -1,94 +1,84 @@
-Certainly, based on the error message you provided indicating an issue during compilation with GCC, it suggests there might be some issues with the Hammer specification or in the linking phase with the Hammer library. Below I provide you with a revised and complete Hammer specification in C format, assuming you want to represent the ICMP protocol:
-
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations
-static HParser *icmp_header;
-static HParser *icmp_echo_request;
-static HParser *icmp_echo_response;
+// Define parsers for ICMP fields
+static HParser *icmp_type;
+static HParser *icmp_code;
+static HParser *icmp_checksum;
+static HParser *icmp_rest_of_header;
+static HParser *icmp_data;
 
-// ICMP Message Types
-static HParser *icmp_type() {
-    return h_uint8();
+// Initialize parsers
+void init_parsers() {
+    icmp_type = h_uint8();
+    icmp_code = h_uint8();
+    icmp_checksum = h_uint16();
+    icmp_rest_of_header = h_bits(32, false); // 32-bit field for rest of header, not byte aligned
+    icmp_data = h_bits(384, true); // Assume some arbitrary amount of data
 }
 
-// ICMP Code
-static HParser *icmp_code() {
-    return h_uint8();
+// Read the ICMP packet from a file
+uint8_t *read_file(const char *filename, size_t *size) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    *size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(*size);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return NULL;
+    }
+
+    if (fread(data, 1, *size, file) != *size) {
+        perror("Failed to read file");
+        free(data);
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+    return data;
 }
 
-// Checksum calculation
-static HParser *icmp_checksum() {
-    return h_uint16();
-}
-
-// Identifier for Echo Requests/Responses
-static HParser *identifier() {
-    return h_uint16();
-}
-
-// Sequence number for Echo Requests/Responses
-static HParser *sequence_number() {
-    return h_uint16();
-}
-
-// Data section (variable length)
-static HParser *data_section() {
-    return h_bytes(1);
-}
-
-// Build ICMP header parser
-void build_icmp_header() {
-    H_RULE(type, icmp_type());
-    H_RULE(code, icmp_code());
-    H_RULE(checksum, icmp_checksum());
-    icmp_header = h_sequence(type, code, checksum, NULL);
-}
-
-// Build ICMP Echo Request parser
-void build_icmp_echo_request() {
-    H_RULE(id, identifier());
-    H_RULE(seq, sequence_number());
-    H_RULE(data, data_section());
-    icmp_echo_request = h_sequence(icmp_header, id, seq, data, NULL);
-}
-
-// Build ICMP Echo Response parser
-void build_icmp_echo_response() {
-    H_RULE(id, identifier());
-    H_RULE(seq, sequence_number());
-    H_RULE(data, data_section());
-    icmp_echo_response = h_sequence(icmp_header, id, seq, data, NULL);
-}
-
-// Main function for compiling the parser
 int main(int argc, char *argv[]) {
-    HParser *parser;
-
-    // Initialize Hammer parsers
-    build_icmp_header();
-    build_icmp_echo_request();
-    build_icmp_echo_response();
-
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s [echo_request|echo_response]\n", argv[0]);
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <icmp_packet_file>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    if (strcmp(argv[1], "echo_request") == 0) {
-        parser = icmp_echo_request;
-    } else if (strcmp(argv[1], "echo_response") == 0) {
-        parser = icmp_echo_response;
+    size_t size;
+    uint8_t *data = read_file(argv[1], &size);
+    if (!data) return EXIT_FAILURE;
+
+    // Initialize parsers
+    init_parsers();
+
+    // Construct the packet parser
+    HParser *icmp_packet = h_sequence(icmp_type, icmp_code, icmp_checksum, icmp_rest_of_header, icmp_data, NULL);
+
+    // Parse the data
+    HParseResult *result = h_parse(icmp_packet, data, size);
+    if (result) {
+        if (result->bit_length / 8 != size) {
+            printf("Failed to parse complete ICMP packet, or incorrect packet size.\n");
+        } else {
+            printf("ICMP packet parsed successfully.\n");
+        }
+
+        h_release_parse_result(result); // Using correct function call for Hammer parser clean up
     } else {
-        fprintf(stderr, "Invalid argument: %s\n", argv[1]);
-        return EXIT_FAILURE;
+        printf("Failed to parse ICMP packet.\n");
     }
 
-    // parsing code
-    // Add parsing code here where you provide input stream/buffer.
+    free(data);
 
     return EXIT_SUCCESS;
 }
-
-This code uses Hammer, a parser combinator library for binary formats, to create parsers for ICMP headers and ICMP echo messages. The use of `h_sequence()` ties several fields together in a specified order, making it straightforward to build up complex parsers from simpler ones. The provided example parses both echo request and echo response messages. Ensure the Hammer library is correctly linked during compilation by modifying build settings or command line instructions appropriately.

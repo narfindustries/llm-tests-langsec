@@ -1,25 +1,32 @@
-protocol TLSClientHello {
-    uint16 version;
-    opaque random[32];
-    opaque session_id<0..32>;
-    CipherSuite cipher_suites<2..2^16-2>;
-    opaque compression_methods<1..2^8-1>;
-    select (version) {
-        case {0x0301, 0x0302, 0x0303}:
-            Extensions extensions<0..2^16-1>;
-    }
+ClientHello {
+    uint16 client_version;
+    uint8 random[32];
+    
+    LegacySessionID {
+        uint8 length;
+        if (length > 0) {
+            uint8 session_id[length];
+        }
+    } legacy_session_id;
+    
+    CipherSuites {
+        uint16 length;
+        uint16 cipher_suites[length / 2];
+    } cipher_suites;
+    
+    CompressionMethods {
+        uint8 length;
+        uint8 compression_methods[length];
+    } legacy_compression_methods;
+    
+    Extensions {
+        uint16 length;
+        Extension extensions[];
+    } extensions;
 }
 
-record CipherSuite {
-    uint16 suite_code;
-}
-
-record Extensions {
-    uint16 length;
-    Extension extensions[length / 2];
-}
-
-record Extension {
+Extension {
     uint16 type;
-    opaque data<0..2^16-1>;
+    uint16 length;
+    uint8 data[length];
 }

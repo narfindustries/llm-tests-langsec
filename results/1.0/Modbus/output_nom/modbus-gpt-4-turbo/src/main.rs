@@ -1,118 +1,90 @@
 use nom::{
     IResult, 
-    bytes::complete::{take, tag}, 
-    number::complete::{be_u8, be_u16}
+    bytes::streaming::take,
+    number::streaming::{be_u8, be_u16, be_u32}
 };
-use std::{env, fs::File, io::{self, Read}};
+use std::fs::File;
+use std::io::{self, Read};
+use std::env;
+use std::process;
 
 #[derive(Debug)]
-struct ModbusFrame {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
-    pdu: ProtocolDataUnit,
+enum ModbusFrame {
+    RTUFrame {
+        address: u8,
+        function_code: u8,
+        data: Vec<u8>,
+        crc: u16,
+    },
+    TCPFrame {
+        transaction_id: u16,
+        protocol_id: u16,
+        length: u16,
+        unit_id: u8,
+        function_code: u8,
+        data: Vec<u8>,
+    },
 }
 
-#[derive(Debug)]
-enum ProtocolDataUnit {
-    ReadCoils {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_coils: u16,
-    },
-    ReadDiscreteInputs {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_inputs: u16,
-    },
-    ReadHoldingRegisters {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_registers: u16,
-    },
-    ReadInputRegisters {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_registers: u16,
-    },
-    WriteSingleCoil {
-        function_code: u8,
-        output_address: u16,
-        output_value: u16,
-    },
-    WriteSingleRegister {
-        function_code: u8,
-        register_address: u16,
-        register_value: u16,
-    },
-    WriteMultipleCoils {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_outputs: u16,
-        byte_count: u8,
-        output_values: Vec<u8>,
-    },
-    WriteMultipleRegisters {
-        function_code: u8,
-        starting_address: u16,
-        quantity_of_registers: u16,
-        byte_count: u8,
-        register_values: Vec<u8>,
-    },
-    // Other function codes can be implemented in similar pattern
+fn parse_modbus_rtu(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
+    let (input, address) = be_u8(input)?;
+    let (input, function_code) = be_u8(input)?;
+    let (input, data) = take(input.len() - 2)(input)?;
+    let (input, crc) = be_u16(input)?;
+    
+    Ok((input, ModbusFrame::RTUFrame {
+        address,
+        function_code,
+        data: data.to_vec(),
+        crc,
+    }))
 }
 
-fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
+fn parse_modbus_tcp(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
     let (input, transaction_id) = be_u16(input)?;
     let (input, protocol_id) = be_u16(input)?;
     let (input, length) = be_u16(input)?;
     let (input, unit_id) = be_u8(input)?;
-    let (input, pdu) = parse_pdu(input)?;
+    let (input, function_code) = be_u8(input)?;
+    let (input, data) = take(length as usize - 2)(input)?;
 
-    Ok((input, ModbusFrame {
+    Ok((input, ModbusFrame::TCPFrame {
         transaction_id,
         protocol_id,
         length,
         unit_id,
-        pdu
+        function_code,
+        data: data.to_vec(),
     }))
 }
 
-fn parse_pdu(input: &[u8]) -> IResult<&[u8], ProtocolDataUnit> {
-    let (input, function_code) = be_u8(input)?;
-
-    match function_code {
-        0x01 => {
-            let (input, starting_address) = be_u16(input)?;
-            let (input, quantity_of_coils) = be_u16(input)?;
-            Ok((input, ProtocolDataUnit::ReadCoils {
-                function_code,
-                starting_address,
-                quantity_of_coils
-            }))
-        },
-        // Additional parsing branches for each function code
-        _ => panic!("Unimplemented function code"),
+fn parse_modbus(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
+    if input.len() > 6 && input[2] == 0 && input[3] == 0 {
+        parse_modbus_tcp(input)
+    } else {
+        parse_modbus_rtu(input)
     }
 }
 
-fn main() -> io::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
-
     if args.len() != 2 {
-        println!("Usage: {} <modbus_data_file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: modbus_parser <file_path>");
+        process::exit(1);
     }
 
-    let mut file = File::open(&args[1])?;
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents)?;
+    let file_path = &args[1];
+    let mut file = File::open(file_path).expect("Failed to open the file");
+    let mut buffer = Vec::new();
 
-    match parse_modbus_frame(&contents) {
-        Ok((_rest, frame)) => println!("{:?}", frame),
-        Err(e) => println!("Failed to parse Modbus frame: {:?}", e)
+    file.read_to_end(&mut buffer).expect("Failed to read the file");
+
+    match parse_modbus(&buffer) {
+        Ok((_rest, frame)) => {
+            println!("{:?}", frame);
+        },
+        Err(err) => {
+            eprintln!("Failed to parse Modbus data: {:?}", err);
+        },
     }
-
-    Ok(())
 }

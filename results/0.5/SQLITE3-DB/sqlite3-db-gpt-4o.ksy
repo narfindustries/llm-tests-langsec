@@ -1,14 +1,17 @@
 meta:
   id: sqlite3_db
-  file-extension: sqlite3
-  endian: le
   title: SQLite3 Database File
-  application: SQLite
-
+  file-extension: sqlite3
+  endian: be
+  application:
+    - SQLite
+  license: CC0-1.0
 seq:
   - id: header
     type: header
-
+  - id: pages
+    type: page
+    repeat: eos
 types:
   header:
     seq:
@@ -30,11 +33,11 @@ types:
         type: u1
       - id: file_change_counter
         type: u4
-      - id: num_pages
+      - id: database_size_in_pages
         type: u4
       - id: first_freelist_trunk_page
         type: u4
-      - id: num_freelist_pages
+      - id: total_freelist_pages
         type: u4
       - id: schema_cookie
         type: u4
@@ -42,19 +45,23 @@ types:
         type: u4
       - id: default_page_cache_size
         type: u4
-      - id: largest_btree_root_page
+      - id: largest_root_btree_page_number
         type: u4
       - id: text_encoding
         type: u4
       - id: user_version
         type: u4
-      - id: is_incremental_vacuum
+      - id: incremental_vacuum_mode
         type: u4
       - id: application_id
         type: u4
-      - id: reserved
+      - id: reserved_for_expansion
         size: 20
       - id: version_valid_for
         type: u4
       - id: sqlite_version_number
         type: u4
+  page:
+    seq:
+      - id: page_data
+        size-eos: true

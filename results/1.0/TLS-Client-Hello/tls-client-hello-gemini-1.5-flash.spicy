@@ -1,72 +1,87 @@
-#ifndef TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
-#define TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+module TLS_Client_Hello;
 
-#include <stdint.h>
+type tls_client_hello_msg :: record {
+    client_version: uint16;
+    random: bytes;  # 32 bytes
+    session_id: bytes; # variable length, up to 32 bytes
+    cookie: bytes; # variable length
+    cipher_suites: vector[uint16];
+    compression_methods: vector[uint8];
+    extensions: vector[tls_extension];
+};
 
-// Define structures based on your actual TLS Client Hello structure
-typedef struct {
-    uint8_t  version[2];
-    uint8_t  random[32];
-    uint16_t session_id_length;
-    uint8_t  session_id[]; // Variable length
-    uint16_t cipher_suites_length;
-    uint8_t  cipher_suites[]; // Variable length
-    uint8_t  compression_methods_length;
-    uint8_t  compression_methods[]; // Variable length
-    uint8_t  extensions_length;
-    uint8_t  extensions[]; // Variable length
-} tls_client_hello_t;
+type tls_extension :: record {
+    extension_type: uint16;
+    extension_data: bytes; # variable length
+};
 
-// Function to parse TLS Client Hello based on your format
-int parse_tls_client_hello(const uint8_t *buffer, int len, tls_client_hello_t **result) {
-    if (len < 38) { // Check minimum length of TLS Client Hello
-      return -1; // Return an error
-    }
+# Example of some common extensions (not exhaustive)
+type extension_supported_versions :: record {
+    versions: vector[uint16];
+};
 
-    tls_client_hello_t *client_hello = (tls_client_hello_t *)malloc(sizeof(tls_client_hello_t));
-    if (client_hello == NULL) {
-        return -1; // Handle memory allocation error.
-    }
+type extension_supported_groups :: record {
+    groups: vector[uint16];
+};
 
-    //Copy Header
-    memcpy(client_hello->version, buffer, 2);
-    memcpy(client_hello->random, buffer + 2, 32);
+type extension_signature_algorithms :: record {
+    algorithms: vector[uint16];
+};
 
-    //Parse Variable Length Fields
-    client_hello->session_id_length = (buffer[34] << 8) | buffer[35];
-    client_hello->cipher_suites_length = (buffer[36 + client_hello->session_id_length] << 8) | buffer[37 + client_hello->session_id_length];
-    client_hello->compression_methods_length = buffer[38 + client_hello->session_id_length + client_hello->cipher_suites_length];
+type extension_key_share :: record {
+    key_shares: vector[key_share_entry];
+};
 
-    size_t total_length = 38 + client_hello->session_id_length + client_hello->cipher_suites_length + client_hello->compression_methods_length;
-    if (len < total_length) {
-      free(client_hello);
-      return -1;
-    }
+type key_share_entry :: record {
+    group: uint16;
+    key_exchange: bytes;
+};
 
-    //Allocate Memory for Variable Length fields and copy the data
-    size_t session_id_size = client_hello->session_id_length;
-    size_t cipher_suites_size = client_hello->cipher_suites_length;
-    size_t compression_methods_size = client_hello->compression_methods_length;
-    size_t extensions_size = len - total_length;
+type extension_pre_shared_key :: record {
+    identities: vector[psk_identity];
+};
 
-    client_hello = (tls_client_hello_t *)realloc(client_hello, sizeof(tls_client_hello_t) + session_id_size + cipher_suites_size + compression_methods_size + extensions_size);
-    if (client_hello == NULL) {
-        return -1; // Handle memory allocation error
-    }
+type psk_identity :: record {
+    identity: bytes;
+    obfuscated_ticket_age: uint32;
+};
 
-    memcpy(client_hello->session_id, buffer + 36, session_id_size);
-    memcpy(client_hello->cipher_suites, buffer + 36 + session_id_size, cipher_suites_size);
-    memcpy(client_hello->compression_methods, buffer + 36 + session_id_size + cipher_suites_size, compression_methods_size);
-    if (extensions_size > 0) {
-        memcpy(client_hello->extensions, buffer + total_length, extensions_size);
-        client_hello->extensions_length = extensions_size;
-    } else {
-        client_hello->extensions_length = 0;
-    }
+type extension_extended_master_secret :: record {};
+type extension_psk_key_exchange_modes :: record {
+    modes: vector[uint8];
+};
 
+type extension_session_ticket :: record {
+    ticket: bytes;
+};
 
-    *result = client_hello;
-    return 0;
-}
+type extension_server_name :: record {
+    server_name_type: uint8;
+    server_name: string;
+};
 
-#endif
+type extension_alpn_protocols :: record {
+    protocols: vector[string];
+};
+
+type extension_status_request :: record {
+    ocsp_responder_url: vector[string];
+    request_extension: bytes;
+};
+
+type extension_ocsp_stapling :: record {};
+type extension_signed_certificate_timestamp :: record {
+    sct_list: vector[bytes];
+};
+
+type extension_supported_point_formats :: record {
+    point_formats: vector[uint8];
+};
+
+type extension_heartbeat :: record {
+    mode: uint8;
+};
+
+type extension_early_data :: record {
+    max_early_data_size: uint32;
+};

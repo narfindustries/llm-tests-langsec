@@ -1,46 +1,6 @@
 module MQTT;
 
-import spicy;
-import zeek;
-
-type MQTTMessage = unit {
-    fixed_header: FixedHeader;
-    variable_header: VariableHeader;
-    payload: Payload;
-} &requires (fixed_header.packet_type == 3);
-
-type FixedHeader = unit {
-    packet_type: uint8 &byteorder=big &convert=to_packet_type;
-    flags: uint8 &byteorder=big;
-    remaining_length: varint;
-};
-
-type VariableHeader = unit {
-    topic_name: string &length=topic_length &byteorder=big;
-    packet_identifier: uint16 &byteorder=big;
-} &requires (packet_type == 3);
-
-type Payload = unit {
-    message: string &restofdata;
-};
-
-type varint = unit {
-    value: uint32;
-} &on-parse {
-    local multiplier = 1;
-    local value = 0;
-    local byte = 0;
-    repeat {
-        byte = self.input.read<uint8>();
-        value += (byte & 127) * multiplier;
-        if ( (byte & 128) == 0 )
-            break;
-        multiplier *= 128;
-    }
-    self.value = value;
-};
-
-public type PacketType = enum {
+type PacketType = enum {
     CONNECT = 1,
     CONNACK = 2,
     PUBLISH = 3,
@@ -58,15 +18,186 @@ public type PacketType = enum {
     AUTH = 15
 };
 
-function to_packet_type(v: uint8) : PacketType {
-    return PacketType(v & 0xF);
-}
+type ReasonCode = enum {
+    Success = 0x00,
+    UnspecifiedError = 0x80,
+    MalformedPacket = 0x81,
+    ProtocolError = 0x82,
+    ImplementationSpecificError = 0x83,
+    UnsupportedProtocolVersion = 0x84,
+    ClientIdentifierNotValid = 0x85,
+    BadUserNameOrPassword = 0x86,
+    NotAuthorized = 0x87,
+    ServerUnavailable = 0x88,
+    ServerBusy = 0x89,
+    Banned = 0x8A,
+    ServerShuttingDown = 0x8B,
+    BadAuthenticationMethod = 0x8C,
+    KeepAliveTimeout = 0x8D,
+    SessionTakenOver = 0x8E,
+    TopicFilterInvalid = 0x8F,
+    TopicNameInvalid = 0x90,
+    PacketIdentifierInUse = 0x91,
+    PacketIdentifierNotFound = 0x92,
+    ReceiveMaximumExceeded = 0x93,
+    TopicAliasInvalid = 0x94,
+    PacketTooLarge = 0x95,
+    MessageRateTooHigh = 0x96,
+    QuotaExceeded = 0x97,
+    AdministrativeAction = 0x98,
+    PayloadFormatInvalid = 0x99,
+    RetainNotSupported = 0x9A,
+    QoSNotSupported = 0x9B,
+    UseAnotherServer = 0x9C,
+    ServerMoved = 0x9D,
+    SharedSubscriptionsNotSupported = 0x9E,
+    ConnectionRateExceeded = 0x9F,
+    MaximumConnectTime = 0xA0,
+    SubscriptionIdentifiersNotSupported = 0xA1,
+    WildcardSubscriptionsNotSupported = 0xA2
+};
 
-public export {
-    type MQTT::PacketType;
-    type MQTT::MQTTMessage;
-}
+type PropertyID = enum {
+    PayloadFormatIndicator = 0x01,
+    MessageExpiryInterval = 0x02,
+    ContentType = 0x03,
+    ResponseTopic = 0x08,
+    CorrelationData = 0x09,
+    SubscriptionIdentifier = 0x0B,
+    SessionExpiryInterval = 0x11,
+    AssignedClientIdentifier = 0x12,
+    ServerKeepAlive = 0x13,
+    AuthenticationMethod = 0x15,
+    AuthenticationData = 0x16,
+    RequestProblemInformation = 0x17,
+    WillDelayInterval = 0x18,
+    RequestResponseInformation = 0x19,
+    ResponseInformation = 0x1A,
+    ServerReference = 0x1C,
+    ReasonString = 0x1F,
+    ReceiveMaximum = 0x21,
+    TopicAliasMaximum = 0x22,
+    TopicAlias = 0x23,
+    MaximumQoS = 0x24,
+    RetainAvailable = 0x25,
+    UserProperty = 0x26,
+    MaximumPacketSize = 0x27,
+    WildcardSubscriptionAvailable = 0x28,
+    SubscriptionIdentifierAvailable = 0x29,
+    SharedSubscriptionAvailable = 0x2A
+};
 
-event mqtt_message(msg: MQTT::MQTTMessage) {
-    print fmt("MQTT Message: %s", msg);
-}
+type Property = unit {
+    id: PropertyID;
+    length: uint16;
+    value: bytes &size=length;
+};
+
+type Properties = unit {
+    length: uint16;
+    properties: Property[] &size=length;
+};
+
+type MQTTHeader = unit {
+    packet_type: PacketType &byte-order=big-endian;
+    flags: uint8;
+    remaining_length: uint32;
+};
+
+type ConnectFlags = unit {
+    user_name_flag: bool &bitmask=0x80;
+    password_flag: bool &bitmask=0x40;
+    will_retain: bool &bitmask=0x20;
+    will_qos: uint8 &bitmask=0x18;
+    will_flag: bool &bitmask=0x04;
+    clean_start: bool &bitmask=0x02;
+};
+
+type ConnectPacket = unit {
+    protocol_name: string &size=4;
+    protocol_level: uint8;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: Properties;
+    client_identifier: string;
+    will_properties: Properties &if(connect_flags.will_flag);
+    will_topic: string &if(connect_flags.will_flag);
+    will_payload: bytes &if(connect_flags.will_flag);
+    user_name: string &if(connect_flags.user_name_flag);
+    password: bytes &if(connect_flags.password_flag);
+};
+
+type ConnackPacket = unit {
+    session_present: bool;
+    reason_code: ReasonCode;
+    properties: Properties;
+};
+
+type PublishPacket = unit {
+    dup: bool &bitmask=0x08;
+    qos: uint8 &bitmask=0x06;
+    retain: bool &bitmask=0x01;
+    topic_name: string;
+    packet_identifier: uint16 &if(qos > 0);
+    properties: Properties;
+    payload: bytes;
+};
+
+type PubackPacket = unit {
+    packet_identifier: uint16;
+    reason_code: ReasonCode;
+    properties: Properties;
+};
+
+type SubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: string[];
+};
+
+type SubackPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: ReasonCode[];
+};
+
+type UnsubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: string[];
+};
+
+type UnsubackPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: ReasonCode[];
+};
+
+type DisconnectPacket = unit {
+    reason_code: ReasonCode;
+    properties: Properties;
+};
+
+type AuthPacket = unit {
+    reason_code: ReasonCode;
+    properties: Properties;
+};
+
+type MQTTPacket = unit {
+    header: MQTTHeader;
+    body: case header.packet_type of {
+        CONNECT => ConnectPacket,
+        CONNACK => ConnackPacket,
+        PUBLISH => PublishPacket,
+        PUBACK => PubackPacket,
+        PUBREC => PubackPacket,
+        PUBREL => PubackPacket,
+        PUBCOMP => PubackPacket,
+        SUBSCRIBE => SubscribePacket,
+        SUBACK => SubackPacket,
+        UNSUBSCRIBE => UnsubscribePacket,
+        UNSUBACK => UnsubackPacket,
+        DISCONNECT => DisconnectPacket,
+        AUTH => AuthPacket
+    };
+};

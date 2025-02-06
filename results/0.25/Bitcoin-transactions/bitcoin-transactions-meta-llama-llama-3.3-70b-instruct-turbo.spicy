@@ -1,54 +1,61 @@
-@header {
-    import "SpicyBCtrl.bif"
-}
-
 module BitcoinTransactions;
 
-@load base/protocols/conn
+type uint32le = uint32 & little-endian;
+type uint64le = uint64 & little-endian;
 
-type Input: record {
-    prev_tx: bytestring &length=32;
-    prev_out_idx: uint32;
-    script: bytestring;
-    sequence: uint32;
-    script_sig: bytestring;
-    script_pub_key: bytestring;
-    redeemed_txid: bytestring &length=32;
+type var_int = uint8 | uint16le | uint32le | uint64le;
+
+type bytestring = byte[];
+
+type BitcoinTransaction = record {
+  version: uint32le;
+  tx_in_count: var_int;
+  tx_in: array of InputTransaction;
+  tx_out_count: var_int;
+  tx_out: array of OutputTransaction;
+  lock_time: uint32le;
 };
 
-type TxOut: record {
-    value: uint64;
-    script_pub_key: bytestring;
+type InputTransaction = record {
+  previous_output_hash: bytestring & length=32;
+  previous_output_index: uint32le;
+  script_length: var_int;
+  script: bytestring;
+  sequence_number: uint32le;
 };
 
-type Transaction: record {
-    version: uint32;
-    num_inputs: uint32;
-    inputs: vector of Input;
-    num_outputs: uint32;
-    outputs: vector of TxOut;
-    lock_time: uint32;
+type OutputTransaction = record {
+  value: uint64le;
+  pk_script_length: var_int;
+  pk_script: bytestring;
 };
 
-event zeek_init() {
-    Spicy::register("BitcoinTransaction", "$external/BitcoinTransactions::Transaction", WriteEvt);
-}
+type Block = record {
+  block_header: BlockHeader;
+  transaction_count: var_int;
+  transactions: array of BitcoinTransaction;
+};
 
-event Spicy::write_BitcoinTransaction(rec: Transaction) {
-    local msg = fmt("Transaction: version=%d, num_inputs=%d, num_outputs=%d, lock_time=%d",
-                   rec.version, rec.num_inputs, rec.num_outputs, rec.lock_time);
-    print(msg);
+type BlockHeader = record {
+  version: uint32le;
+  previous_block_hash: bytestring & length=32;
+  merkle_root: bytestring & length=32;
+  timestamp: uint32le;
+  target: uint32le;
+  nonce: uint32le;
+};
 
-    for (i in rec.inputs) {
-        local input = rec.inputs[i];
-        local input_msg = fmt("  Input %d: prev_tx=%s, prev_out_idx=%d, sequence=%d",
-                              i, input.prev_tx, input.prev_out_idx, input.sequence);
-        print(input_msg);
-    }
+type Script = bytestring;
 
-    for (i in rec.outputs) {
-        local output = rec.outputs[i];
-        local output_msg = fmt("  Output %d: value=%d", i, output.value);
-        print(output_msg);
-    }
-}
+type OpCode = uint8;
+
+type PushData = bytestring;
+
+type ScriptOperation = record {
+  op_code: OpCode;
+  push_data: PushData;
+};
+
+type VarString = bytestring;
+
+let bitcoin_transaction = BitcoinTransaction;

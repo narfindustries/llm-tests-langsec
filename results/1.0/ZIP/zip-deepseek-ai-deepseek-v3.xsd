@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" encoding="ASCII" byteOrder="littleEndian" lengthKind="explicit" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ZIPFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LocalFileHeader" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:hexBinary" dfdl:length="4" fixed="504b0304" />
+              <xs:element name="VersionNeeded" type="xs:int" dfdl:length="2" />
+              <xs:element name="GeneralPurposeBitFlag" type="xs:int" dfdl:length="2" />
+              <xs:element name="CompressionMethod" type="xs:int" dfdl:length="2" />
+              <xs:element name="LastModTime" type="xs:int" dfdl:length="2" />
+              <xs:element name="LastModDate" type="xs:int" dfdl:length="2" />
+              <xs:element name="CRC32" type="xs:hexBinary" dfdl:length="4" />
+              <xs:element name="CompressedSize" type="xs:int" dfdl:length="4" />
+              <xs:element name="UncompressedSize" type="xs:int" dfdl:length="4" />
+              <xs:element name="FileNameLength" type="xs:int" dfdl:length="2" />
+              <xs:element name="ExtraFieldLength" type="xs:int" dfdl:length="2" />
+              <xs:element name="FileName" type="xs:string" dfdl:length="{ ../FileNameLength }" />
+              <xs:element name="ExtraField" type="xs:hexBinary" dfdl:length="{ ../ExtraFieldLength }" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="CentralDirectoryHeader" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:hexBinary" dfdl:length="4" fixed="504b0102" />
+              <xs:element name="VersionMadeBy" type="xs:int" dfdl:length="2" />
+              <xs:element name="VersionNeeded" type="xs:int" dfdl:length="2" />
+              <xs:element name="GeneralPurposeBitFlag" type="xs:int" dfdl:length="2" />
+              <xs:element name="CompressionMethod" type="xs:int" dfdl:length="2" />
+              <xs:element name="LastModTime" type="xs:int" dfdl:length="2" />
+              <xs:element name="LastModDate" type="xs:int" dfdl:length="2" />
+              <xs:element name="CRC32" type="xs:hexBinary" dfdl:length="4" />
+              <xs:element name="CompressedSize" type="xs:int" dfdl:length="4" />
+              <xs:element name="UncompressedSize" type="xs:int" dfdl:length="4" />
+              <xs:element name="FileNameLength" type="xs:int" dfdl:length="2" />
+              <xs:element name="ExtraFieldLength" type="xs:int" dfdl:length="2" />
+              <xs:element name="FileCommentLength" type="xs:int" dfdl:length="2" />
+              <xs:element name="DiskNumberStart" type="xs:int" dfdl:length="2" />
+              <xs:element name="InternalFileAttributes" type="xs:int" dfdl:length="2" />
+              <xs:element name="ExternalFileAttributes" type="xs:int" dfdl:length="4" />
+              <xs:element name="RelativeOffsetOfLocalHeader" type="xs:int" dfdl:length="4" />
+              <xs:element name="FileName" type="xs:string" dfdl:length="{ ../FileNameLength }" />
+              <xs:element name="ExtraField" type="xs:hexBinary" dfdl:length="{ ../ExtraFieldLength }" />
+              <xs:element name="FileComment" type="xs:string" dfdl:length="{ ../FileCommentLength }" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="EndOfCentralDirectoryRecord">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:hexBinary" dfdl:length="4" fixed="504b0506" />
+              <xs:element name="DiskNumber" type="xs:int" dfdl:length="2" />
+              <xs:element name="DiskNumberStart" type="xs:int" dfdl:length="2" />
+              <xs:element name="NumberOfEntriesOnThisDisk" type="xs:int" dfdl:length="2" />
+              <xs:element name="TotalNumberOfEntries" type="xs:int" dfdl:length="2" />
+              <xs:element name="SizeOfCentralDirectory" type="xs:int" dfdl:length开发It appears the response was cut off again. Here is the complete and fixed DFDL schema for the ZIP file format in its entirety:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" encoding="ASCII" byteOrder="littleEndian" lengthKind="explicit" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ZIPFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LocalFileHeader" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:hexBinary" dfdl:length="4" fixed="504b0304" />
+              <xs:element name="VersionNeeded" type="xs:int" dfdl:length

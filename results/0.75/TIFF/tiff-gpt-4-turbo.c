@@ -1,88 +1,113 @@
-Certainly! Based on the error message you provided, it seems that there are issues during the compilation of a C program generated for handling TIFF files using the Hammer parsing library. To address this, I'll provide an improved and complete Hammer specification for a TIFF file format in C.
-
-Here's the updated C code with the Hammer specifications:
-
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-static const HParser *tiff_header;
-static const HParser *tiff_ifd_entry;
-static const HParser *tiff_ifd;
-static const HParser *tiff_file;
+// Define TIFF tags as per TIFF 6.0 specification
+#define NewSubfileType 254
+#define ImageWidth 256
+#define ImageLength 257
+#define BitsPerSample 258
+#define Compression 259
+#define PhotometricInterpretation 262
+#define DocumentName 269
+#define ImageDescription 270
+#define Make 271
+#define Model 272
 
-void init_tiff_parser() {
-    H_RULE(uint16, h_uint16());
-    H_RULE(uint32, h_uint32());
+// TIFF data types
+#define BYTE 1
+#define ASCII 2
+#define SHORT 3
+#define LONG 4
+#define RATIONAL 5
 
-    H_ARULE(magic_number, h_uint16());
-    H_ARULE(version, h_uint16());
-    tiff_header = h_sequence(magic_number, version, h_uint32(), NULL);
+// Function prototypes for creating parsers
+HParser *hp_byte();
+HParser *hp_short();
+HParser *hp_long();
+HParser *hp_ascii();
 
-    H_ARULE(tag, h_uint16());
-    H_ARULE(type, h_uint16());
-    H_ARULE(count, h_uint32());
-    H_ARULE(offset, h_uint32());
-    tiff_ifd_entry = h_sequence(tag, type, count, offset, NULL);
-
-    H_ARULE(ifd_entry_count, h_uint16());
-    tiff_ifd = h_sequence(ifd_entry_count, h_many(tiff_ifd_entry), h_uint32(), NULL);
-
-    tiff_file = h_sequence(tiff_header, h_many1(tiff_ifd), NULL);
+// Function definitions for basic TIFF data types
+HParser *hp_byte() {
+    return h_uint8();
 }
 
-int main(int argc, char **argv) {
-    const HParsedToken *result;
-    HParser *parser;
-    FILE *file;
-    size_t read_size;
-    uint8_t *buffer;
-    size_t file_size;
+HParser *hp_short() {
+    return h_uint16();
+}
 
+HParser *hp_long() {
+    return h_uint32();
+}
+
+HParser *hp_ascii() {
+    return h_sequence(h_uint8(), h_many(h_ch_range(0x20, 0x7E)), NULL);
+}
+
+// TIFF field parser based on type
+HParser *tiff_field(uint16_t tag, HParser *type) {
+    HParser *hp_tag = h_uint16();
+    HParser *hp_type = h_uint16();
+    HParser *hp_length = h_uint32();
+    HParser *hp_value = h_length_value(hp_length, type);
+
+    return h_sequence(hp_tag, hp_type, hp_length, hp_value, NULL);
+}
+
+// Main TIFF parser that includes all necessary fields
+HParser *tiff_parser() {
+    return h_many(h_choice(
+        tiff_field(NewSubfileType, hp_long()),
+        tiff_field(ImageWidth, hp_short()),
+        tiff_field(ImageLength, hp_short()),
+        tiff_field(BitsPerSample, hp_short()),
+        tiff_field(Compression, hp_short()),
+        tiff_field(PhotometricInterpretation, hp_short()),
+        tiff_field(DocumentName, hp_ascii()),
+        tiff_field(ImageDescription, hp_ascii()),
+        tiff_field(Make, hp_ascii()),
+        tiff_field(Model, hp_ascii()),
+        NULL
+    ));
+}
+
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <TIFF file>\n", argv[0]);
         return 1;
     }
 
-    file = fopen(argv[1], "rb");
-    if (!file) {
-        fprintf(stderr, "Failed to open file.\n");
-        return 1;
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
     }
 
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    buffer = malloc(file_size);
-    if (!buffer) {
-        fprintf(stderr, "Failed to allocate memory.\n");
-        fclose(file);
-        return 1;
+    uint8_t *buffer = malloc(size);
+    if (buffer == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(fp);
+        return EXIT_FAILURE;
     }
 
-    read_size = fread(buffer, 1, file_size, file);
-    if (read_size != file_size) {
-        fprintf(stderr, "Failed to read file.\n");
-        free(buffer);
-        fclose(file);
-        return 1;
-    }
+    fread(buffer, 1, size, fp);
+    fclose(fp);
 
-    fclose(file);
-
-    init_tiff_parser();
-    parser = tiff_file;
-    result = h_parse(parser, buffer, file_size);
+    HParser *parser = tiff_parser();
+    HParseResult *result = h_parse(parser, buffer, size);
     if (result == NULL) {
-        fprintf(stderr, "Failed to parse.\n");
-    } else {
-        fprintf(stdout, "Parse successful.\n");
+        fprintf(stderr, "Parsing failed\n");
+        free(buffer);
+        return EXIT_FAILURE;
     }
 
-    h_free_parser(parser);
-    free(buffer);
-    return 0;
-}
+    h_pprint(stdout, result->ast, 0, 0);
 
-This code defines a simple TIFF file parser using Hammer. It reads a TIFF file, attempts to parse it according to the TIFF file format specifications, and prints out whether the parsing was successful. Note that this example assumes a basic understanding of the TIFF format and does not handle all possible variations and complexities found in different TIFF files. For a complete and robust implementation, further refinement and error checking would be needed.
+    h_parse_result_free(result);
+    free(buffer);
+    return EXIT_SUCCESS;
+}

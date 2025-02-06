@@ -1,0 +1,110 @@
+<xs:schema xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ex="http://example.com/dfdl">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format ref="ex:JPEGFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="JPEG">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="StartOfImage" type="MarkerType" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Segments" type="SegmentListType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="EndOfImage" type="MarkerType" minOccurs="1" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentListType">
+    <xs:sequence>
+      <xs:choice>
+        <xs:element name="StartOfFrame" type="StartOfFrameType"/>
+        <xs:element name="DefineHuffmanTable" type="HuffmanTableType"/>
+        <xs:element name="DefineQuantizationTable" type="QuantizationTableType"/>
+        <xs:element name="StartOfScan" type="StartOfScanType"/>
+        <xs:element name="Application" type="ApplicationType"/>
+        <xs:element name="Comment" type="CommentType"/>
+        <xs:element name="OtherSegment" type="OtherSegmentType"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StartOfFrameType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="ComponentCount" type="xs:unsignedByte"/>
+      <xs:element name="ComponentInfo" type="ComponentInfoType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentInfoType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:unsignedByte"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableID" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HuffmanTableType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="TableClass" type="xs:unsignedByte"/>
+      <xs:element name="DestinationID" type="xs:unsignedByte"/>
+      <xs:element name="CodeLengths" type="xs:hexBinary" dfdl:length="16"/>
+      <xs:element name="CodeValues" type="xs:hexBinary" dfdl:length="{../CodeLengths}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuantizationTableType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="DestinationID" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationValues" type="xs:hexBinary" dfdl:length="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StartOfScanType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="ComponentCount" type="xs:unsignedByte"/>
+      <xs:element name="ComponentSelector" type="xs:unsignedByte" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="DCTable" type="xs:unsignedByte"/>
+      <xs:element name="ACTable" type="xs:unsignedByte"/>
+      <xs:element name="SpectralSelectionStart" type="xs:unsignedByte"/>
+      <xs:element name="SpectralSelectionEnd" type="xs:unsignedByte"/>
+      <xs:element name="SuccessiveApproximation" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ApplicationType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Identifier" type="xs:string"/>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CommentType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="CommentText" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OtherSegmentType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

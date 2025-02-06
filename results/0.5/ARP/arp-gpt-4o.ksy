@@ -1,40 +1,51 @@
 meta:
   id: arp_packet
   title: ARP Packet
-  file-extension: arp
+  application: Address Resolution Protocol
+  license: CC0-1.0
   endian: be
 
 seq:
-  - id: hardware_type
+  - id: htype
     type: u2
-  - id: protocol_type
-    type: u2
-  - id: hardware_size
-    type: u1
-  - id: protocol_size
-    type: u1
-  - id: opcode
-    type: u2
-  - id: sender_mac
-    type: mac_address
-  - id: sender_ip
-    type: ipv4_address
-  - id: target_mac
-    type: mac_address
-  - id: target_ip
-    type: ipv4_address
+    doc: Hardware type
 
-types:
-  mac_address:
-    seq:
-      - id: octets
-        type: u1
-        repeat: expr
-        repeat-expr: 6
+  - id: ptype
+    type: u2
+    doc: Protocol type
 
-  ipv4_address:
-    seq:
-      - id: octets
-        type: u1
-        repeat: expr
-        repeat-expr: 4
+  - id: hlen
+    type: u1
+    doc: Hardware address length
+
+  - id: plen
+    type: u1
+    doc: Protocol address length
+
+  - id: oper
+    type: u2
+    doc: Operation
+
+  - id: sha
+    size: hlen
+    type: str
+    encoding: ASCII
+    doc: Sender hardware address
+
+  - id: spa
+    size: plen
+    type: str
+    encoding: ASCII
+    doc: Sender protocol address
+
+  - id: tha
+    size: hlen
+    type: str
+    encoding: ASCII
+    doc: Target hardware address
+
+  - id: tpa
+    size: plen
+    type: str
+    encoding: ASCII
+    doc: Target protocol address

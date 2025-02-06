@@ -1,51 +1,290 @@
-<dfdl:format xmlns:xs="http://www.w3.org/2001/XMLSchema"
-             xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-             name="ELF_Format"
-             alignmentUnits="bytes"
-             lengthUnits="bytes"
-             encoding="ISO-8859-1"
-             byteOrder="bigEndian"
-             bitOrder="mostSignificantBitFirst"
-             occursCountKind="implicit"
-             lengthKind="implicit">
-  <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-             xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-             targetNamespace="urn:example:ELF"
-             xmlns:tns="urn:example:ELF"
-             elementFormDefault="qualified">
-    
-    <xs:element name="ELFFile" type="tns:ELFType"/>
-    
-    <xs:complexType name="ELFType">
-      <xs:sequence>
-        <xs:element name="e_ident" type="tns:IdentType" dfdl:length="16"/>
-        <xs:element name="e_type" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_machine" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_version" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="e_entry" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="e_flags" type="xs:unsignedInt" dfdl:length="4"/>
-        <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:length="2"/>
-        <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:length="2"/>
-      </xs:sequence>
-    </xs:complexType>
-    
-    <xs:complexType name="IdentType">
-      <xs:sequence>
-        <xs:element name="magic" type="xs:hexBinary" dfdl:length="4"/>
-        <xs:element name="class" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="data" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="version" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="osabi" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="abiversion" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="pad" type="xs:unsignedByte" dfdl:length="7" dfdl:initiator="{fill(7, %xb0)}"/>
-      </xs:sequence>
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/elf"
+           xmlns="http://example.com/elf"
+           elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="littleEndian" lengthUnits="bytes"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:simpleType name="elf_ident">
+        <xs:restriction base="xs:hexBinary">
+            <xs:length value="16"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="elf_type">
+        <xs:restriction base="xs:unsignedShort">
+            <xs:enumeration value="0"/>
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="elf_machine">
+        <xs:restriction base="xs:unsignedShort">
+            <xs:enumeration value="0"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="62"/>
+            <xs:enumeration value="40"/>
+            <xs:enumeration value="183"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="elf_version">
+        <xs:restriction base="xs:unsignedInt">
+            <xs:enumeration value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="ELFFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="e_ident" type="elf_ident">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="16" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_type" type="elf_type">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_machine" type="elf_machine">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_version" type="elf_version">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="4" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_entry" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="4" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_phoff" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="4" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_shoff" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="4" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_flags" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="4" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_ehsize" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_phentsize" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_phnum" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_shentsize" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_shnum" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="e_shstrndx" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:element length="2" lengthKind="explicit"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <xs:element name="ProgramHeader" type="ProgramHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="SectionHeader" type="SectionHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="ProgramHeaderType">
+        <xs:sequence>
+            <xs:element name="p_type" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_offset" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_vaddr" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_paddr" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_filesz" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_memsz" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_flags" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="p_align" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
     </xs:complexType>
 
-  </xs:schema>
-</dfdl:format>
+    <xs:complexType name="SectionHeaderType">
+        <xs:sequence>
+            <xs:element name="sh_name" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_type" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_flags" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_addr" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_offset" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_size" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_link" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_info" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="4" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_addralign" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="sh_entsize" type="xs:unsignedLong">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="8" lengthKind="explicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

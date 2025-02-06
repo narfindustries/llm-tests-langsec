@@ -1,32 +1,146 @@
 module NITF;
 
-export {
-    type Info = unit {
-        file_header: Header;
-        files: [File] &length = file_header.file_count;
-    };
+public type NITFFile = unit {
+    file_header: FileHeader;
 
-    type Header = unit {
-        magic: bytes &size = 4 &convert = to_magic_format;
+    image_segments: array[uint16] of ImageSegment &length=file_header.number_of_image_segments;
+    graphic_segments: array[uint16] of GraphicSegment &length=file_header.number_of_graphic_segments;
+    text_segments: array[uint16] of TextSegment &length=file_header.number_of_text_segments;
+    data_extensions: array[uint16] of DataExtensionSegment &length=file_header.number_of_data_extension_segments;
+    reserved_extensions: array[uint16] of ReservedExtensionSegment &length=file_header.number_of_reserved_extension_segments;
+};
 
-        file_count: uint32;
-    };
+type FileHeader = unit {
+    fhdr: bytes &size=9;  # "NITF02.10"
+    fver: bytes &size=5;  # "02.10"
+    clevel: uint8;  # Complexity Level 00-99
+    stype: bytes &size=4;  # "BF01"
+    ostaid: bytes &size=10;  # Originating Station ID
+    fdt: bytes &size=14;  # YYMMDDHHMMSSZ
+    file_title: bytes &size=80;
+    fsclas: SecurityClass;
+    fsclsy: bytes &size=2;
+    fscode: bytes &size=11;
+    fsctlh: bytes &size=2;
+    fscatl: bytes &size=20;
+    fsrel: bytes &size=20;
+    fsdctp: bytes &size=2;
+    fsdcdt: bytes &size=8;
+    fsdcxm: bytes &size=4;
+    fsdg: bytes &size=1;
+    fsdgdt: bytes &size=8;
+    fscltx: bytes &size=43;
+    fscatp: bytes &size=40;
+    oname: bytes &size=24;
+    ophone: bytes &size=18;
+    number_of_image_segments: uint16;
+    number_of_graphic_segments: uint16;
+    number_of_text_segments: uint16;
+    number_of_data_extension_segments: uint16;
+    number_of_reserved_extension_segments: uint16;
+};
 
-    type File = unit {
-        name: string &restofdata &decode = decode_utf8;
-        size: uint32;
-        data: bytes &restofdata &size = size;
-    };
+type SecurityClass = enum {
+    U = "U",  # Unclassified
+    C = "C",  # Confidential
+    S = "S",  # Secret
+    T = "T"   # Top Secret
+};
 
-    function to_magic_format(input: bytes) : string {
-        local magic_string: string = "NTF";
-        if (input[0] == 0x4E && input[1] == 0x54 && input[2] == 0x46) {
-            return magic_string;
-        }
-        return "<invalid magic>";
-    }
+type ImageSegment = unit {
+    subheader: ImageSubheader;
+    image_data: bytes &size=subheader.imdl;
+};
 
-    function decode_utf8(input: bytes) : string {
-        return input.decode_as_utf8();
-    }
-}
+type ImageSubheader = unit {
+    iid1: bytes &size=10;
+    idatim: bytes &size=14;
+    tgtid: bytes &size=17;
+    iid2: bytes &size=80;
+    isorce: bytes &size=42;
+    nrows: uint32;
+    ncols: uint32;
+    pvtype: bytes &size=3;
+    irep: bytes &size=8;
+    icat: bytes &size=8;
+    abpp: uint8;
+    pjust: bytes &size=1;
+    icc: bytes &size=2;
+    imdl: uint32;
+};
+
+type GraphicSegment = unit {
+    subheader: GraphicSubheader;
+    graphic_data: bytes &size=subheader.cgml;
+};
+
+type GraphicSubheader = unit {
+    gsid: bytes &size=10;
+    idatim: bytes &size=14;
+    gatt: bytes &size=80;
+    gctype: bytes &size=1;
+    cgml: uint32;
+};
+
+type TextSegment = unit {
+    subheader: TextSubheader;
+    text_data: bytes &size=subheader.texdl;
+};
+
+type TextSubheader = unit {
+    textid: bytes &size=10;
+    txtalvl: bytes &size=3;
+    txtras: bytes &size=1;
+    textsx: bytes &size=5;
+    textsy: bytes &size=5;
+    txtscons: bytes &size=1;
+    textsrc: bytes &size=20;
+    texdl: uint32;
+};
+
+type DataExtensionSegment = unit {
+    subheader: DataExtensionSubheader;
+    extension_data: bytes &size=subheader.dedll;
+};
+
+type DataExtensionSubheader = unit {
+    desid: bytes &size=25;
+    desver: bytes &size=2;
+    destag: bytes &size=4;
+    desclas: SecurityClass;
+    desclsy: bytes &size=2;
+    descode: bytes &size=11;
+    desctlh: bytes &size=2;
+    descatl: bytes &size=20;
+    desrel: bytes &size=20;
+    desdctp: bytes &size=2;
+    desdgdt: bytes &size=8;
+    decltx: bytes &size=43;
+    dcsgid: bytes &size=40;
+    costrn: bytes &size=15;
+    dedll: uint32;
+};
+
+type ReservedExtensionSegment = unit {
+    subheader: ReservedExtensionSubheader;
+    reserved_data: bytes &size=subheader.resexdl;
+};
+
+type ReservedExtensionSubheader = unit {
+    reservid: bytes &size=25;
+    resver: bytes &size=2;
+    restag: bytes &size=4;
+    resclas: SecurityClass;
+    resclsy: bytes &size=2;
+    rescode: bytes &size=11;
+    resctlh: bytes &size=2;
+    rescatl: bytes &size=20;
+    resrel: bytes &size=20;
+    resdctp: bytes &size=2;
+    resdcdt: bytes &size=8;
+    resdcxm: bytes &size=4;
+    rescltx: bytes &size=43;
+    ressgid: bytes &size=40;
+    resstrn: bytes &size=15;
+    resexdl: uint32;
+};

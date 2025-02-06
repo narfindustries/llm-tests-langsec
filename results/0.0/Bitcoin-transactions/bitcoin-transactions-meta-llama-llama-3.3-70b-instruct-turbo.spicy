@@ -1,77 +1,77 @@
-# Zeek Spicy specification for Bitcoin transactions
+module Bitcoin;
 
-# Define the Bitcoin transaction structure
+type Int32 = int;
+type Int64 = int;
+type ByteSequence = string;
+
+type VarInt = int;
+
+type Opcode = enum {
+  OP_0,
+  OP_1,
+  OP_2,
+  OP_3,
+  OP_4,
+  OP_5,
+  OP_6,
+  OP_7,
+  OP_8,
+  OP_9,
+  OP_10,
+  OP_11,
+  OP_12,
+  OP_13,
+  OP_14,
+  OP_15,
+  OP_16,
+  OP_NOP,
+  OP_IF,
+  OP_NOTIF,
+  OP_VER,
+  OP_VERNOTIF,
+  OP_ELSE,
+  OP_ENDIF,
+  OP_VERIFY,
+  OP_RETURN
+};
+
+type Script = record {
+  opcodes: array[*] of Opcode;
+  data: array[*] of ByteSequence;
+};
+
+type TxIn = record {
+  txid: ByteSequence;
+  vout: Int32;
+  scriptSig: Script;
+  sequence: Int32;
+};
+
+type TxOut = record {
+  value: Int64;
+  scriptPubKey: Script;
+};
+
 type Transaction = record {
-  version: uint32,
-  num_inputs: varint,
-  inputs: array[Input],
-  num_outputs: varint,
-  outputs: array[Output],
-  lock_time: uint32,
+  version: Int32;
+  tx_in_count: VarInt;
+  tx_in: array[tx_in_count] of TxIn;
+  tx_out_count: VarInt;
+  tx_out: array[tx_out_count] of TxOut;
+  lock_time: Int32;
 };
 
-# Define the Input structure
-type Input = record {
-  prev_tx_hash: bytes[32],
-  prev_tx_out_index: uint32,
-  script_length: varint,
-  script: bytestring,
-  sequence: uint32,
+type BlockHeader = record {
+  version: Int32;
+  prev_block: ByteSequence;
+  merkle_root: ByteSequence;
+  timestamp: Int32;
+  target: Int32;
+  nonce: Int32;
 };
 
-# Define the Output structure
-type Output = record {
-  value: uint64,
-  script_length: varint,
-  script: bytestring,
+type Block = record {
+  block_header: BlockHeader;
+  transaction_count: VarInt;
+  transactions: array[transaction_count] of Transaction;
 };
-
-# Define the varint type
-type varint = int {
-  decode = function(x: bytes): int {
-    if (x[0] < 0xfd) {
-      return x[0];
-    } else if (x[0] == 0xfd) {
-      return (x[1] << 8) | x[2];
-    } else if (x[0] == 0xfe) {
-      return (x[1] << 24) | (x[2] << 16) | (x[3] << 8) | x[4];
-    } else {
-      return (x[1] << 56) | (x[2] << 48) | (x[3] << 40) | (x[4] << 32) | (x[5] << 24) | (x[6] << 16) | (x[7] << 8) | x[8];
-    }
-  };
-  encode = function(x: int): bytes {
-    if (x < 0xfd) {
-      return bytes[1] { x };
-    } else if (x < 0xffff) {
-      return bytes[3] { 0xfd, (x >> 8) & 0xff, x & 0xff };
-    } else if (x < 0xffffffff) {
-      return bytes[5] { 0xfe, (x >> 24) & 0xff, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff };
-    } else {
-      return bytes[9] { 0xff, (x >> 56) & 0xff, (x >> 48) & 0xff, (x >> 40) & 0xff, (x >> 32) & 0xff, (x >> 24) & 0xff, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff };
-    }
-  };
-};
-
-# Define the bytestring type
-type bytestring = bytes;
-
-# Define the bytes type
-type bytes = sequence[uint8];
-
-# Define the uint8 type
-type uint8 = int { min = 0, max = 255 };
-
-# Define the uint16 type
-type uint16 = int { min = 0, max = 65535 };
-
-# Define the uint32 type
-type uint32 = int { min = 0, max = 4294967295 };
-
-# Define the uint64 type
-type uint64 = int { min = 0, max = 18446744073709551615 };
-
-# Define the int type
-type int = signed;
-
-# Define the signed type
-type signed = int;

@@ -1,123 +1,162 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-static const uint8_t nitf_header[] = "NITF";
-
-HParser* init_nitf_parser() {
-    // Basic building blocks
-    HParser* file_header = h_token(nitf_header, sizeof(nitf_header)-1);
-    HParser* file_version = h_token((const uint8_t*)"02.10", 5);
-    
-    // Complex length fields
-    HParser* length_2 = h_repeat_n(h_ch_range(0x30, 0x39), 2);
-    HParser* length_4 = h_repeat_n(h_ch_range(0x30, 0x39), 4);
-    HParser* length_5 = h_repeat_n(h_ch_range(0x30, 0x39), 5);
-    HParser* length_6 = h_repeat_n(h_ch_range(0x30, 0x39), 6);
-    HParser* length_7 = h_repeat_n(h_ch_range(0x30, 0x39), 7);
-    HParser* length_10 = h_repeat_n(h_ch_range(0x30, 0x39), 10);
-    HParser* length_12 = h_repeat_n(h_ch_range(0x30, 0x39), 12);
-    HParser* length_14 = h_repeat_n(h_ch_range(0x30, 0x39), 14);
-
-    // Date and time fields
-    HParser* date_time = h_repeat_n(h_ch_range(0x30, 0x39), 14);
-    
-    // Security fields
-    HParser* security_field = h_repeat_n(h_ch_range(0x20, 0x7E), 40);
-    
-    // File header components
-    HParser* complexity_level = length_2;
-    HParser* standard_type = h_token((const uint8_t*)"BF01", 4);
-    HParser* originating_station = h_repeat_n(h_ch_range(0x20, 0x7E), 10);
-    HParser* file_date_time = date_time;
-    HParser* file_title = h_repeat_n(h_ch_range(0x20, 0x7E), 80);
-    
-    // Security group
-    HParser* security_classification = h_ch_range(0x20, 0x7E);
-    HParser* security_system = security_field;
-    HParser* codewords = security_field;
-    HParser* control_and_handling = security_field;
-    HParser* release_instructions = security_field;
-    HParser* declass_type = security_field;
-    HParser* declass_date = h_repeat_n(h_ch_range(0x20, 0x7E), 8);
-    HParser* declass_exemption = h_repeat_n(h_ch_range(0x20, 0x7E), 4);
-    HParser* downgrade = h_ch_range(0x20, 0x7E);
-    HParser* downgrade_date = h_repeat_n(h_ch_range(0x20, 0x7E), 8);
-    HParser* classification_text = h_repeat_n(h_ch_range(0x20, 0x7E), 43);
-    HParser* classification_authority_type = h_ch_range(0x20, 0x7E);
-    HParser* classification_authority = h_repeat_n(h_ch_range(0x20, 0x7E), 40);
-    HParser* classification_reason = h_repeat_n(h_ch_range(0x20, 0x7E), 1);
-    HParser* security_source_date = h_repeat_n(h_ch_range(0x20, 0x7E), 8);
-    HParser* security_control_number = h_repeat_n(h_ch_range(0x20, 0x7E), 15);
-    
-    // Background color
-    HParser* background_color = h_repeat_n(h_ch_range(0x30, 0x39), 3);
-    
-    // Originator name and phone
-    HParser* originator_name = h_repeat_n(h_ch_range(0x20, 0x7E), 24);
-    HParser* originator_phone = h_repeat_n(h_ch_range(0x20, 0x7E), 18);
-    
-    // File length fields
-    HParser* file_length = length_12;
-    HParser* header_length = length_6;
-    
-    // Image segments
-    HParser* image_segments = length_3;
-    HParser* symbol_segments = length_3;
-    HParser* label_segments = length_3;
-    HParser* text_segments = length_3;
-    HParser* data_extension_segments = length_3;
-    HParser* reserved_extension_segments = length_3;
-    
-    // User defined header data
-    HParser* user_defined_header_length = length_5;
-    HParser* extended_header_length = length_5;
-
-    // Combine all parsers
-    return h_sequence(file_header,
-                     file_version,
-                     complexity_level,
-                     standard_type,
-                     originating_station,
-                     file_date_time,
-                     file_title,
-                     security_classification,
-                     security_system,
-                     codewords,
-                     control_and_handling,
-                     release_instructions,
-                     declass_type,
-                     declass_date,
-                     declass_exemption,
-                     downgrade,
-                     downgrade_date,
-                     classification_text,
-                     classification_authority_type,
-                     classification_authority,
-                     classification_reason,
-                     security_source_date,
-                     security_control_number,
-                     background_color,
-                     originator_name,
-                     originator_phone,
-                     file_length,
-                     header_length,
-                     image_segments,
-                     symbol_segments,
-                     label_segments, 
-                     text_segments,
-                     data_extension_segments,
-                     reserved_extension_segments,
-                     user_defined_header_length,
-                     extended_header_length,
-                     NULL);
+// NITF Parser definitions
+HParser* nitf_fhdr() {
+    return h_token((const uint8_t*)"NITF", 4);
 }
 
-int main() {
-    HParser* parser = init_nitf_parser();
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+HParser* nitf_fver() {
+    return h_token((const uint8_t*)"02.10", 5);
+}
+
+HParser* nitf_clevel() {
+    return h_int_range(h_uint8(), 1, 99);
+}
+
+HParser* nitf_stype() {
+    return h_token((const uint8_t*)"BF", 2);
+}
+
+HParser* nitf_ostaid() {
+    return h_length_value(h_uint8(), h_uint8());
+}
+
+HParser* nitf_fdt() {
+    return h_length_value(h_uint8(), h_uint8());
+}
+
+HParser* nitf_ftitle() {
+    return h_length_value(h_uint8(), h_uint8());
+}
+
+HParser* nitf_fsclas() {
+    return h_choice(h_ch('T'), h_ch('S'), h_ch('C'), h_ch('R'), h_ch('U'), NULL);
+}
+
+HParser* nitf_fscop() {
+    return h_int_range(h_uint32(), 0, 99999);
+}
+
+HParser* nitf_fscpys() {
+    return h_int_range(h_uint32(), 0, 99999);
+}
+
+HParser* nitf_encryp() {
+    return h_choice(h_ch('0'), h_ch('1'), NULL);
+}
+
+// Image Segment
+HParser* nitf_im() {
+    return h_sequence(
+        h_token((const uint8_t*)"IM", 2),
+        h_length_value(h_uint32(), h_uint8()),
+        NULL
+    );
+}
+
+// Graphics Segment
+HParser* nitf_gs() {
+    return h_sequence(
+        h_token((const uint8_t*)"GS", 2),
+        h_length_value(h_uint32(), h_uint8()),
+        NULL
+    );
+}
+
+// Text Segment
+HParser* nitf_ts() {
+    return h_sequence(
+        h_token((const uint8_t*)"TS", 2),
+        h_length_value(h_uint32(), h_uint8()),
+        NULL
+    );
+}
+
+// Data Extension Segment
+HParser* nitf_des() {
+    return h_sequence(
+        h_token((const uint8_t*)"DE", 2),
+        h_length_value(h_uint32(), h_uint8()),
+        NULL
+    );
+}
+
+// Reserved Extension Segment
+HParser* nitf_res() {
+    return h_sequence(
+        h_token((const uint8_t*)"RE", 2),
+        h_length_value(h_uint32(), h_uint8()),
+        NULL
+    );
+}
+
+// Main NITF Parser
+HParser* nitf_parser() {
+    return h_sequence(
+        nitf_fhdr(),
+        nitf_fver(),
+        nitf_clevel(),
+        nitf_stype(),
+        nitf_ostaid(),
+        nitf_fdt(),
+        nitf_ftitle(),
+        nitf_fsclas(),
+        nitf_fscop(),
+        nitf_fscpys(),
+        nitf_encryp(),
+        h_many(nitf_im()),
+        h_many(nitf_gs()),
+        h_many(nitf_ts()),
+        h_many(nitf_des()),
+        h_many(nitf_res()),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
         return 1;
     }
-    
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(fp);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, fp) != size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(fp);
+        return 1;
+    }
+
+    HParser* parser = nitf_parser();
+    HParseResult* result = h_parse(parser, buffer, size);
+
+    if (result) {
+        printf("Successfully parsed NITF file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse NITF file\n");
+    }
+
+    free(buffer);
+    fclose(fp);
     return 0;
 }

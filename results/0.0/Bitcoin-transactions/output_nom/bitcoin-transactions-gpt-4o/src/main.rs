@@ -3,89 +3,89 @@ use std::io::Read;
 use std::env;
 use nom::{
     IResult,
-    bytes::complete::{take, take_while},
+    bytes::complete::take,
     number::complete::{le_u32, le_u64, le_u8, le_u16},
-    combinator::map,
     multi::length_data,
-    sequence::tuple,
 };
 
 #[derive(Debug)]
-struct BitcoinTransaction {
-    version: u32,
-    inputs: Vec<TxInput>,
-    outputs: Vec<TxOutput>,
-    lock_time: u32,
-}
-
-#[derive(Debug)]
-struct TxInput {
-    previous_output: OutPoint,
+struct TransactionInput {
+    previous_transaction_hash: [u8; 32],
+    output_index: u32,
     script_sig: Vec<u8>,
     sequence: u32,
 }
 
 #[derive(Debug)]
-struct OutPoint {
-    hash: [u8; 32],
-    index: u32,
+struct TransactionOutput {
+    value: u64,
+    script_pubkey: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct TxOutput {
-    value: u64,
-    script_pubkey: Vec<u8>,
+struct BitcoinTransaction {
+    version: u32,
+    inputs: Vec<TransactionInput>,
+    outputs: Vec<TransactionOutput>,
+    locktime: u32,
 }
 
 fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
     let (input, first_byte) = le_u8(input)?;
     match first_byte {
-        0xFD => map(le_u16, u64::from)(input),
-        0xFE => map(le_u32, u64::from)(input),
-        0xFF => le_u64(input),
+        0xFD => {
+            let (input, value) = le_u16(input)?;
+            Ok((input, value as u64))
+        },
+        0xFE => {
+            let (input, value) = le_u32(input)?;
+            Ok((input, value as u64))
+        },
+        0xFF => {
+            let (input, value) = le_u64(input)?;
+            Ok((input, value))
+        },
         _ => Ok((input, first_byte as u64)),
     }
 }
 
-fn parse_outpoint(input: &[u8]) -> IResult<&[u8], OutPoint> {
-    let (input, (hash, index)) = tuple((take(32usize), le_u32))(input)?;
-    let mut hash_array = [0u8; 32];
-    hash_array.copy_from_slice(hash);
-    Ok((input, OutPoint { hash: hash_array, index }))
-}
-
-fn parse_tx_input(input: &[u8]) -> IResult<&[u8], TxInput> {
-    let (input, previous_output) = parse_outpoint(input)?;
+fn parse_transaction_input(input: &[u8]) -> IResult<&[u8], TransactionInput> {
+    let (input, previous_transaction_hash) = take(32usize)(input)?;
+    let (input, output_index) = le_u32(input)?;
     let (input, script_sig) = length_data(parse_varint)(input)?;
     let (input, sequence) = le_u32(input)?;
-    Ok((input, TxInput {
-        previous_output,
+
+    Ok((input, TransactionInput {
+        previous_transaction_hash: previous_transaction_hash.try_into().unwrap(),
+        output_index,
         script_sig: script_sig.to_vec(),
         sequence,
     }))
 }
 
-fn parse_tx_output(input: &[u8]) -> IResult<&[u8], TxOutput> {
+fn parse_transaction_output(input: &[u8]) -> IResult<&[u8], TransactionOutput> {
     let (input, value) = le_u64(input)?;
     let (input, script_pubkey) = length_data(parse_varint)(input)?;
-    Ok((input, TxOutput {
+
+    Ok((input, TransactionOutput {
         value,
         script_pubkey: script_pubkey.to_vec(),
     }))
 }
 
-fn parse_transaction(input: &[u8]) -> IResult<&[u8], BitcoinTransaction> {
+fn parse_bitcoin_transaction(input: &[u8]) -> IResult<&[u8], BitcoinTransaction> {
     let (input, version) = le_u32(input)?;
     let (input, input_count) = parse_varint(input)?;
-    let (input, inputs) = nom::multi::count(parse_tx_input, input_count as usize)(input)?;
+    let (input, inputs) = nom::multi::count(parse_transaction_input, input_count as usize)(input)?;
     let (input, output_count) = parse_varint(input)?;
-    let (input, outputs) = nom::multi::count(parse_tx_output, output_count as usize)(input)?;
-    let (input, lock_time) = le_u32(input)?;
+    let (input, outputs) = nom::multi::count(parse_transaction_output, output_count as usize)(input)?;
+    let (input, locktime) = le_u32(input)?;
+
     Ok((input, BitcoinTransaction {
         version,
         inputs,
         outputs,
-        lock_time,
+        locktime,
     }))
 }
 
@@ -101,7 +101,7 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_transaction(&buffer) {
+    match parse_bitcoin_transaction(&buffer) {
         Ok((_, transaction)) => println!("{:?}", transaction),
         Err(e) => eprintln!("Failed to parse transaction: {:?}", e),
     }

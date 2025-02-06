@@ -1,82 +1,172 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/ns/local"
-    targetNamespace="http://example.com/ns/local"
-    xmlns:mbp="http://example.com/ns/modbus-protocol"
-    elementFormDefault="qualified">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:modbus="http://example.com/modbus"
+           targetNamespace="http://example.com/modbus"
+           elementFormDefault="qualified">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryBooleanFalseRep="0" binaryBooleanTrueRep="1"
-                binaryNumberRep="binary" byteOrder="bigEndian"
-                encoding="UTF-8" ignoreCase="no" occursCountKind="implicit"
-                leadingSkip="0" lengthKind="implicit" lengthUnits="bytes"
-                representation="binary" separator="" separatorSuppressionPolicy="anyEmpty"
-                textNumberRep="standard" textStandardBase="10" trailingSkip="0"
-                initiator="" terminator="" textTrimKind="none"/>
+            <dfdl:format alignment="1" 
+                        alignmentUnits="bytes"
+                        lengthKind="implicit"
+                        lengthUnits="bytes"
+                        byteOrder="bigEndian"
+                        encoding="UTF-8"
+                        occursCountKind="implicit"
+                        initiatedContent="no"
+                        leadingSkip="0"
+                        trailingSkip="0"
+                        textTrimKind="none"
+                        textPadKind="none"
+                        fillByte="%#r0"
+                        encodingErrorPolicy="replace"
+                        floating="no"
+                        textBidi="no"
+                        sequenceKind="ordered"
+                        separator=""
+                        separatorPosition="infix"
+                        separatorPolicy="required"
+                        representation="binary"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="ModbusFrame">
+    <xs:element name="ModbusMessage" dfdl:lengthKind="implicit">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Header">
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <xs:element name="MBAPHeader">
                     <xs:complexType>
                         <xs:sequence>
-                            <xs:element name="TransactionID" type="xs:unsignedShort"/>
-                            <xs:element name="ProtocolID" type="xs:unsignedShort" dfdl:outputValueCalc="0"/>
+                            <xs:element name="TransactionId" type="xs:unsignedShort"/>
+                            <xs:element name="ProtocolId" type="xs:unsignedShort" fixed="0"/>
                             <xs:element name="Length" type="xs:unsignedShort"/>
-                            <xs:element name="UnitID" type="xs:unsignedByte"/>
+                            <xs:element name="UnitId" type="xs:unsignedByte"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-                <xs:element name="FunctionCode" type="xs:unsignedByte"/>
-                <xs:element name="Data">
+                <xs:element name="PDU">
                     <xs:complexType>
-                        <xs:choice>
-                            <xs:element name="ReadCoilsRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="QuantityOfCoils" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadCoilsResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ByteCount" type="xs:unsignedByte"/>
-                                        <xs:element name="CoilStatus" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ByteCount }"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadDiscreteInputsRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="QuantityOfInputs" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadDiscreteInputsResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ByteCount" type="xs:unsignedByte"/>
-                                        <xs:element name="InputStatus" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ByteCount }"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ErrorResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ExceptionCode" type="xs:unsignedByte"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:choice>
+                        <xs:sequence>
+                            <xs:element name="FunctionCode" type="xs:unsignedByte"/>
+                            <xs:choice>
+                                <xs:element name="ReadRequest">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="Quantity" type="xs:unsignedShort"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="WriteSingleRequest">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="OutputValue" type="xs:unsignedShort"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="WriteMultipleRequest">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="Quantity" type="xs:unsignedShort"/>
+                                            <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                            <xs:element name="Values">
+                                                <xs:complexType>
+                                                    <xs:sequence>
+                                                        <xs:element name="Value" type="xs:unsignedByte" maxOccurs="unbounded"/>
+                                                    </xs:sequence>
+                                                </xs:complexType>
+                                            </xs:element>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="ReadResponse">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                            <xs:element name="Values">
+                                                <xs:complexType>
+                                                    <xs:sequence>
+                                                        <xs:element name="Value" type="xs:unsignedByte" maxOccurs="unbounded"/>
+                                                    </xs:sequence>
+                                                </xs:complexType>
+                                            </xs:element>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="WriteResponse">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="Address" type="xs:unsignedShort"/>
+                                            <xs:element name="Value" type="xs:unsignedShort"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="ExceptionResponse">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="ExceptionCode" type="xs:unsignedByte"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="DeviceIdentification">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="MEIType" type="xs:unsignedByte" fixed="14"/>
+                                            <xs:element name="ReadDeviceIDCode" type="xs:unsignedByte"/>
+                                            <xs:element name="ObjectId" type="xs:unsignedByte"/>
+                                            <xs:element name="ConformityLevel" type="xs:unsignedByte"/>
+                                            <xs:element name="MoreFollows" type="xs:unsignedByte"/>
+                                            <xs:element name="NextObjectId" type="xs:unsignedByte"/>
+                                            <xs:element name="NumberOfObjects" type="xs:unsignedByte"/>
+                                            <xs:element name="Objects">
+                                                <xs:complexType>
+                                                    <xs:sequence>
+                                                        <xs:element name="Object" maxOccurs="unbounded">
+                                                            <xs:complexType>
+                                                                <xs:sequence>
+                                                                    <xs:element name="ObjectId" type="xs:unsignedByte"/>
+                                                                    <xs:element name="ObjectLength" type="xs:unsignedByte"/>
+                                                                    <xs:element name="ObjectValue" type="xs:string"/>
+                                                                </xs:sequence>
+                                                            </xs:complexType>
+                                                        </xs:element>
+                                                    </xs:sequence>
+                                                </xs:complexType>
+                                            </xs:element>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="MaskWriteRegister">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="ReferenceAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="AndMask" type="xs:unsignedShort"/>
+                                            <xs:element name="OrMask" type="xs:unsignedShort"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="ReadWriteMultipleRegisters">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="ReadStartingAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="QuantityToRead" type="xs:unsignedShort"/>
+                                            <xs:element name="WriteStartingAddress" type="xs:unsignedShort"/>
+                                            <xs:element name="QuantityToWrite" type="xs:unsignedShort"/>
+                                            <xs:element name="WriteByteCount" type="xs:unsignedByte"/>
+                                            <xs:element name="WriteValues">
+                                                <xs:complexType>
+                                                    <xs:sequence>
+                                                        <xs:element name="Value" type="xs:unsignedShort" maxOccurs="unbounded"/>
+                                                    </xs:sequence>
+                                                </xs:complexType>
+                                            </xs:element>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:choice>
+                        </xs:sequence>
                     </xs:complexType>
                 </xs:element>
             </xs:sequence>

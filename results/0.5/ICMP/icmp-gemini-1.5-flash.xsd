@@ -1,66 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/icmp"
-           xmlns="http://example.org/icmp"
-           elementFormDefault="qualified">
-
-  <xs:element name="icmpGemini">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="payload" type="payloadType" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute ref="dfdl:lengthKind" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
-      <xs:attribute ref="dfdl:length" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:length units="bytes">1024</dfdl:length>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:byte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:textLength kind="explicit">1</dfdl:textLength>
-            <dfdl:binaryNumberRepresentation>binary</dfdl:binaryNumberRepresentation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="type" type="xs:byte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:textLength kind="explicit">1</dfdl:textLength>
-            <dfdl:binaryNumberRepresentation>binary</dfdl:binaryNumberRepresentation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <!-- Add other header fields as needed -->
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="payloadType">
-    <xs:sequence>
-      <xs:element name="data" type="xs:hexBinary">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:textLength kind="explicit">1000</dfdl:textLength>
-            <dfdl:binaryNumberRepresentation>hexBinary</dfdl:binaryNumberRepresentation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-</xs:schema>
+<dfdl:schema xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://example.org/icmp" targetNamespace="http://example.org/icmp" elementFormDefault="qualified" version="1.0">
+  <dfdl:annotation>
+    <dfdl:description>DFDL schema for ICMP messages as defined in RFC 792. Note that some fields' lengths and interpretations are type-dependent and not fully captured here. This schema provides a basic structure.</dfdl:description>
+  </dfdl:annotation>
+  <dfdl:element name="icmpMessage">
+    <dfdl:sequence>
+      <dfdl:element name="type" type="dfdl:byte" dfdl:length="1" dfdl:representation="binary" dfdl:encoding="bigEndian">
+        <dfdl:annotation>
+          <dfdl:description>ICMP message type (8 bits)</dfdl:description>
+        </dfdl:annotation>
+      </dfdl:element>
+      <dfdl:element name="code" type="dfdl:byte" dfdl:length="1" dfdl:representation="binary" dfdl:encoding="bigEndian">
+        <dfdl:annotation>
+          <dfdl:description>ICMP message code (8 bits)</dfdl:description>
+        </dfdl:annotation>
+      </dfdl:element>
+      <dfdl:element name="checksum" type="dfdl:unsignedInt" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="bigEndian">
+        <dfdl:annotation>
+          <dfdl:description>ICMP checksum (16 bits)</dfdl:description>
+        </dfdl:annotation>
+      </dfdl:element>
+      <dfdl:element name="restOfHeaderAndData" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit">
+        <dfdl:annotation>
+          <dfdl:description>Variable-length data specific to the ICMP message type. Structure depends on type and code.</dfdl:description>
+        </dfdl:annotation>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+</dfdl:schema>

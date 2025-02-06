@@ -1,74 +1,86 @@
-@header {
-  include "zeek/spicy/1.0/zeek-init.spicy";
-}
+module JPEG;
 
-type JPEG_Meta: record {
-  @parse_one_with {
-    id: uint16;
-    @advance id;
-  }
-  @if (id == 0xffe0) {
-    app0: App0;
-  } @else @if (id == 0xffe1) {
-    app1: App1;
-  } @else @if (id == 0xffe2) {
-    app2: App2;
-  } @else {
-    @skip 2;
-    data: byte[string];
-  }
-}
+type Marker = uint16;
+const Marker = 0xFFxx;
 
-type App0: record {
-  @parse_one_with {
-    id: uint16;
-    length: uint16;
-    @advance length;
-  }
-  @if (length >= 2) {
-    version: uint8[2];
-    units: uint8;
-    xdensity: uint16;
-    ydensity: uint16;
-    thumbnailx: uint8;
-    thumbnaily: uint8;
-  }
-}
+type JPEG = struct {
+  soi: SOI;
+  app0: optional App0;
+  app1: optional App1;
+  dqt: array of DQT;
+  dht: array of DHT;
+  sos: SOS;
+  eoi: EOI;
+};
 
-type App1: record {
-  @parse_one_with {
-    id: uint16;
-    length: uint16;
-    @advance length;
-  }
-  @if (length >= 2) {
-    identifier: string;
-    version: string;
-    units: uint8;
-    xdensity: uint16;
-    ydensity: uint16;
-    thumbnailx: uint8;
-    thumbnaily: uint8;
-  }
-}
+type SOI = struct {
+  marker: uint16 = 0xFFD8;
+  length: uint16 = 0x0002;
+};
 
-type App2: record {
-  @parse_one_with {
-    id: uint16;
-    length: uint16;
-    @advance length;
-  }
-  @if (length >= 2) {
-    identifier: string;
-    version: string;
-    units: uint8;
-    xdensity: uint16;
-    ydensity: uint16;
-    thumbnailx: uint8;
-    thumbnaily: uint8;
-  }
-}
+type App0 = struct {
+  marker: uint16 = 0xFFE0;
+  length: uint16;
+  identifier: string;
+  version: uint16;
+  units: uint8;
+  x_density: uint16;
+  y_density: uint16;
+  thumbnail_width: uint8;
+  thumbnail_height: uint8;
+};
 
-@on_parse {
-  JPEG_Meta();
-}
+type App1 = struct {
+  marker: uint16 = 0xFFE1;
+  length: uint16;
+  identifier: string;
+  version: uint16;
+  units: uint8;
+  x_density: uint16;
+  y_density: uint16;
+  thumbnail_width: uint8;
+  thumbnail_height: uint8;
+};
+
+type DQT = struct {
+  marker: uint16 = 0xFFDB;
+  length: uint16;
+  quantization_table_number: uint8;
+  precision: uint8;
+  quantization_table_data: array of uint8;
+};
+
+type DHT = struct {
+  marker: uint16 = 0xFFC4;
+  length: uint16;
+  huffman_table_class: uint8;
+  huffman_table_destination_identifier: uint8;
+  number_of_codes: array of uint8;
+  code_lengths: array of uint8;
+  huffman_code_values: array of uint8;
+};
+
+type SOS = struct {
+  marker: uint16 = 0xFFDA;
+  length: uint16;
+  number_of_components: uint8;
+  component_identifiers: array of uint8;
+  dc_huffman_table_destination_identifier: array of uint8;
+  ac_huffman_table_destination_identifier: array of uint8;
+  scan_data: array of uint8;
+};
+
+type EOI = struct {
+  marker: uint16 = 0xFFD9;
+  length: uint16 = 0x0000;
+};
+
+let jpeg: JPEG = {
+  soi = SOI();
+  app0 = App0();
+  app1 = optional(App1());
+  dqt = array([DQT()]);
+  dht = array([DHT()]);
+  sos = SOS();
+  eoi = EOI();
+};

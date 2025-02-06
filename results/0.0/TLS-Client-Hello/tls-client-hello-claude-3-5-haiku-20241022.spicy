@@ -3,31 +3,95 @@ module TLS;
 import spicy;
 
 public type ClientHello = unit {
-    record_type: uint8 = 22;
-    version: uint16;
-    length: uint16;
-
-    handshake_type: uint8 = 1;
-    handshake_length: uint24;
-    client_version: uint16;
+    record_type: uint8 { validate($$ == 0x01); }
+    length: uint24;
+    legacy_version: uint16 { validate($$ == 0x0303); }
     random: bytes(32);
     session_id_length: uint8;
-    session_id: bytes(session_id_length);
+    session_id: bytes(session_id_length) if ( session_id_length > 0 );
+    
     cipher_suites_length: uint16;
-    cipher_suites: bytes(cipher_suites_length);
+    cipher_suites: uint16[];
+    
     compression_methods_length: uint8;
-    compression_methods: bytes(compression_methods_length);
-
+    compression_methods: uint8[] { 
+        validate(|$| == 1 && $[0] == 0x00); 
+    }
+    
     extensions_length: uint16;
     extensions: Extensions;
+}
 
-    type Extensions = unit {
-        extensions: list<Extension> &until($input.at_eof());
-    }
+type Extensions = unit {
+    extensions: Extension[];
+}
 
-    type Extension = unit {
-        type: uint16;
-        length: uint16;
-        data: bytes(length);
+type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes(length) {
+        switch ( type ) {
+            case 0x0000: ServerName(data);
+            case 0x000A: SupportedGroups(data);
+            case 0x000D: SignatureAlgorithms(data);
+            case 0x0029: PreSharedKey(data);
+            case 0x002B: SupportedVersions(data);
+            case 0x002D: PSKKeyExchangeModes(data);
+            case 0x0033: KeyShare(data);
+        }
     }
-};
+}
+
+type ServerName = unit(data: bytes) {
+    list_length: uint16;
+    names: ServerNameEntry[];
+}
+
+type ServerNameEntry = unit {
+    name_type: uint8;
+    name_length: uint16;
+    name: bytes(name_length);
+}
+
+type SupportedGroups = unit(data: bytes) {
+    group_list_length: uint16;
+    groups: uint16[];
+}
+
+type SignatureAlgorithms = unit(data: bytes) {
+    algorithms_length: uint16;
+    algorithms: uint16[];
+}
+
+type PreSharedKey = unit(data: bytes) {
+    identities_length: uint16;
+    identities: PreSharedKeyIdentity[];
+    binders_length: uint16;
+    binders: bytes[];
+}
+
+type PreSharedKeyIdentity = unit {
+    identity: bytes;
+    obfuscated_ticket_age: uint32;
+}
+
+type SupportedVersions = unit(data: bytes) {
+    versions_length: uint8;
+    versions: uint16[];
+}
+
+type PSKKeyExchangeModes = unit(data: bytes) {
+    modes_length: uint8;
+    modes: uint8[];
+}
+
+type KeyShare = unit(data: bytes) {
+    client_shares_length: uint16;
+    client_shares: KeyShareEntry[];
+}
+
+type KeyShareEntry = unit {
+    group: uint16;
+    key_exchange_length: uint16;
+    key_exchange: bytes(key_exchange_length);
+}

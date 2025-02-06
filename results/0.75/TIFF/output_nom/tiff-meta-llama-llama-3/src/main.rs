@@ -1,118 +1,87 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::{many_till, separated_list1},
+    combinator::map,
     number::complete::{be_u16, be_u32, be_u8},
-    sequence::{tuple, preceded},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Read},
-    path::Path,
-};
+use std::{env, fs::File, io::Read};
 
 #[derive(Debug)]
-enum PhotometricInterpretation {
-    WhiteIsZero,
-    BlackIsZero,
-    RGB,
-    PaletteColor,
-    TransparencyMask,
-    CMYK,
-    YCbCr,
-    // Add more variants as needed
-}
-
-impl PhotometricInterpretation {
-    fn from_u16(value: u16) -> Option<Self> {
-        match value {
-            0 => Some(PhotometricInterpretation::WhiteIsZero),
-            1 => Some(PhotometricInterpretation::BlackIsZero),
-            2 => Some(PhotometricInterpretation::RGB),
-            3 => Some(PhotometricInterpretation::PaletteColor),
-            4 => Some(PhotometricInterpretation::TransparencyMask),
-            5 => Some(PhotometricInterpretation::CMYK),
-            6 => Some(PhotometricInterpretation::YCbCr),
-            _ => None,
-        }
-    }
+enum ByteOrder {
+    Intel,
+    Motorola,
 }
 
 #[derive(Debug)]
-enum Compression {
-    None,
-    CCITTGroup3,
-    CCITTGroup4,
-    LZW,
-    // Add more variants as needed
+struct Ifh {
+    byte_order: ByteOrder,
+    version: u16,
+    offset_to_ifd: u32,
 }
 
-impl Compression {
-    fn from_u16(value: u16) -> Option<Self> {
-        match value {
-            1 => Some(Compression::None),
-            2 => Some(Compression::CCITTGroup3),
-            3 => Some(Compression::CCITTGroup4),
-            5 => Some(Compression::LZW),
-            _ => None,
-        }
-    }
+fn parse_ifh(input: &[u8]) -> IResult<&[u8], Ifh> {
+    let (input, byte_order) = map(be_u16, |x| match x {
+        0x4949 => ByteOrder::Intel,
+        0x4d4d => ByteOrder::Motorola,
+        _ => panic!("Invalid byte order"),
+    })(input)?;
+    let (input, version) = be_u16(input)?;
+    let (input, offset_to_ifd) = be_u32(input)?;
+    Ok((input, Ifh { byte_order, version, offset_to_ifd }))
 }
 
 #[derive(Debug)]
-struct IFD {
+enum DataType {
+    Byte,
+    Ascii,
+    Short,
+    Long,
+    Rational,
+}
+
+#[derive(Debug)]
+struct Tag {
     tag: u16,
-    type_: u16,
+    data_type: DataType,
     count: u32,
-    value: Vec<u8>,
+    value_offset: u32,
 }
 
-impl IFD {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, tag) = be_u16(input)?;
-        let (input, type_) = be_u16(input)?;
-        let (input, count) = be_u32(input)?;
-        let (input, value) = take(count as usize)(input)?;
-        Ok((input, IFD { tag, type_, count, value }))
-    }
-}
-
-#[derive(Debug)]
-struct TiffHeader {
-    byte_order: [u8; 2],
-    magic: u16,
-    offset: u32,
-}
-
-impl TiffHeader {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, byte_order) = take(2u8)(input)?;
-        let (input, magic) = be_u16(input)?;
-        let (input, offset) = be_u32(input)?;
-        Ok((input, TiffHeader { byte_order, magic, offset }))
-    }
+fn parse_tag(input: &[u8]) -> IResult<&[u8], Tag> {
+    let (input, tag) = be_u16(input)?;
+    let (input, data_type) = map(be_u16, |x| match x {
+        1 => DataType::Byte,
+        2 => DataType::Ascii,
+        3 => DataType::Short,
+        4 => DataType::Long,
+        5 => DataType::Rational,
+        _ => panic!("Invalid data type"),
+    })(input)?;
+    let (input, count) = be_u32(input)?;
+    let (input, value_offset) = be_u32(input)?;
+    Ok((input, Tag { tag, data_type, count, value_offset }))
 }
 
 #[derive(Debug)]
-struct Tiff {
-    header: TiffHeader,
-    ifd: Vec<IFD>,
+struct Ifd {
+    number_of_directory_entries: u16,
+    directory_entries: Vec<Tag>,
+    next_ifd_offset: u32,
 }
 
-impl Tiff {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, header) = TiffHeader::parse(input)?;
-        let (input, ifd_count) = be_u16(input)?;
-        let (input, ifd) = many_till(verify(be_u16, |tag| *tag == 0xff), take(4u8))(input)?;
-        let mut ifd_list = Vec::new();
-        for _ in 0..ifd_count {
-            let (input, ifd_item) = IFD::parse(input)?;
-            ifd_list.push(ifd_item);
-        }
-        Ok((input, Tiff { header, ifd: ifd_list }))
+fn parse_ifd(input: &[u8]) -> IResult<&[u8], Ifd> {
+    let (input, number_of_directory_entries) = be_u16(input)?;
+    let mut directory_entries = vec![];
+    for _ in 0..number_of_directory_entries {
+        let (input, tag) = parse_tag(input)?;
+        directory_entries.push(tag);
     }
+    let (input, next_ifd_offset) = be_u32(input)?;
+    Ok((input, Ifd {
+        number_of_directory_entries,
+        directory_entries,
+        next_ifd_offset,
+    }))
 }
 
 fn main() {
@@ -120,11 +89,11 @@ fn main() {
     if args.len() != 2 {
         panic!("Usage: {} <input_file>", args[0]);
     }
-    let path = Path::new(&args[1]);
-    let file = File::open(path).expect("Failed to open file");
-    let mut reader = BufReader::new(file);
-    let mut input = Vec::new();
-    reader.read_to_end(&mut input).expect("Failed to read file");
-    let (_input, tiff) = Tiff::parse(&input).expect("Failed to parse TIFF");
-    println!("{:?}", tiff);
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut input = vec![];
+    file.read_to_end(&mut input).expect("Failed to read file");
+    let (input, ifh) = parse_ifh(&input).expect("Failed to parse IFH");
+    let (input, ifd) = parse_ifd(&input[ifh.offset_to_ifd as usize..]).expect("Failed to parse IFD");
+    println!("{:?}", ifh);
+    println!("{:?}", ifd);
 }

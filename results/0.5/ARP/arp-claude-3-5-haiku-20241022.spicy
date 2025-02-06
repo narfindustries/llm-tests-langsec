@@ -1,26 +1,30 @@
-module ARP;
+module arp;
 
 import spicy;
 
-public type PDU = unit {
-    hardware_type: uint16;
-    protocol_type: uint16;
-    hardware_size: uint8;
-    protocol_size: uint8;
-    opcode: uint16;
-    sender_mac: bytes(6);
-    sender_ip: bytes(4);
-    target_mac: bytes(6);
-    target_ip: bytes(4);
+public type ARPPacket = unit {
+    hardware_type: uint16 be;
+    protocol_type: uint16 be;
+    hardware_address_length: uint8;
+    protocol_address_length: uint8;
+    operation: uint16 be;
+    sender_hardware_address: bytes &length=(hardware_address_length);
+    sender_protocol_address: bytes &length=(protocol_address_length);
+    target_hardware_address: bytes &length=(hardware_address_length);
+    target_protocol_address: bytes &length=(protocol_address_length);
 
-    on %done {
-        print self;
+    on %init {
+        if ( self.hardware_type != 1 )
+            throw "Unsupported hardware type";
+        
+        if ( self.protocol_type != 0x0800 )
+            throw "Unsupported protocol type";
+        
+        if ( self.operation !in [1, 2] )
+            throw "Invalid ARP operation";
     }
 };
 
-public type Frame = unit {
-    dst_mac: bytes(6);
-    src_mac: bytes(6);
-    ethertype: uint16 where ($$ == 0x0806);
-    payload: PDU;
-};
+public function parse(data: bytes) : ARPPacket {
+    return new ARPPacket(data);
+}

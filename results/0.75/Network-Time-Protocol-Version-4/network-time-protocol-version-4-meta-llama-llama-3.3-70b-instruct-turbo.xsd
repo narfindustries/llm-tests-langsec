@@ -1,37 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
-           xmlns="http://example.com/Network-Time-Protocol-Version-4"
+           targetNamespace="http://www.ogf.org/dfdl/ntpv4"
+           xmlns="http://www.ogf.org/dfdl/ntpv4"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="ntp_packet">
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+  <xs:element name="ntpPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occurs="1..1"/>
-        <xs:element name="timestamp" type="xs:unsignedInt" dfdl:occurs="1..1"/>
+        <xs:element name="header" type="ntpHeaderType"/>
+        <xs:element name="extensionFields" type="extensionFieldsType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="ntpHeaderType">
     <xs:sequence>
-      <xs:element name="leap" type="xs:unsignedByte" dfdl:bitLength="2" dfdl:occurs="1..1"/>
-      <xs:element name="version" type="xs:unsignedByte" dfdl:bitLength="3" dfdl:occurs="1..1"/>
-      <xs:element name="mode" type="xs:unsignedByte" dfdl:bitLength="3" dfdl:occurs="1..1"/>
-      <xs:element name="poll" type="xs:unsignedByte" dfdl:bitLength="4" dfdl:occurs="1..1"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:bitLength="4" dfdl:occurs="1..1"/>
+      <xs:element name="leapIndicator" type="xs:unsignedShort"/>
+      <xs:element name="version" type="xs:unsignedShort"/>
+      <xs:element name="mode" type="xs:unsignedShort"/>
+      <xs:element name="poll" type="xs:unsignedByte"/>
+      <xs:element name="precision" type="xs:byte"/>
+      <xs:element name="rootDelay" type="xs:unsignedInt"/>
+      <xs:element name="rootDispersion" type="xs:unsignedInt"/>
+      <xs:element name="referenceIdentifier" type="xs:unsignedInt"/>
+      <xs:element name="referenceTimestamp" type="ntpTimestampType"/>
+      <xs:element name="originTimestamp" type="ntpTimestampType"/>
+      <xs:element name="receiveTimestamp" type="ntpTimestampType"/>
+      <xs:element name="transmitTimestamp" type="ntpTimestampType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="root">
+  <xs:complexType name="extensionFieldsType">
+    <xs:sequence>
+      <xs:element name="mac" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="autokey" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="signature" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ntpTimestampType">
+    <xs:sequence>
+      <xs:element name="seconds" type="xs:unsignedInt"/>
+      <xs:element name="fraction" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ntpFormat">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="ntp_packet" dfdl:occurs="1..1" dfdl:encoding="network-byte-order"/>
+        <xs:element name="ntpPacket" type="ntpPacketType" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
+  <xs:complexType name="ntpPacketType">
+    <xs:sequence>
+      <xs:element name="header" type="ntpHeaderType"/>
+      <xs:element name="extensionFields" type="extensionFieldsType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

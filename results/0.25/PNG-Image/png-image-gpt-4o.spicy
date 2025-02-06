@@ -1,33 +1,153 @@
 module PNG;
 
-public type PNG = unit {
-    magic: bytes &length=8 &check=$$ == "\x89PNG\r\n\x1a\n";
+type PNGSignature = unit {
+    signature: bytes &size=8;
+} &check(signature == "\x89PNG\r\n\x1a\n");
 
-    chunks: Chunk[] &until=io.eof;
-
-    on %done {
-        print fmt("Parsed PNG with %d chunks", chunks.length());
-    }
+type IHDRChunk = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
 };
 
-type Chunk = unit {
+type PLTEChunk = unit {
+    entries: array of RGBEntry &size=(length / 3);
+} &byteorder=big;
+
+type RGBEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+type IDATChunk = unit {
+    data: bytes &size=length;
+};
+
+type IENDChunk = unit {
+    # No data for IEND
+};
+
+type tRNSChunk = unit {
+    data: bytes &size=length;
+};
+
+type cHRMChunk = unit {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+type gAMAChunk = unit {
+    gamma: uint32;
+};
+
+type iCCPChunk = unit {
+    profile_name: string &until="\0";
+    compression_method: uint8;
+    compressed_profile: bytes &size=(length - (profile_name.size() + 1));
+};
+
+type sBITChunk = unit {
+    data: bytes &size=length;
+};
+
+type sRGBChunk = unit {
+    rendering_intent: uint8;
+};
+
+type tEXtChunk = unit {
+    keyword: string &until="\0";
+    text: string &restofdata;
+};
+
+type zTXtChunk = unit {
+    keyword: string &until="\0";
+    compression_method: uint8;
+    compressed_text: bytes &size=(length - (keyword.size() + 1));
+};
+
+type iTXtChunk = unit {
+    compressed: uint8;
+    compression_method: uint8;
+    language_tag: string &until="\0";
+    translated_keyword: string &until="\0";
+    text: string &restofdata;
+};
+
+type bKGDChunk = unit {
+    data: bytes &size=length;
+};
+
+type pHYsChunk = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+type sPLTChunk = unit {
+    palette_name: string &until="\0";
+    sample_depth: uint8;
+    entries: array of PaletteEntry &size=((length - (palette_name.size() + 1)) / (sample_depth == 8 ? 6 : 10));
+};
+
+type PaletteEntry = unit {
+    red: uint16;
+    green: uint16;
+    blue: uint16;
+    alpha: uint16;
+    frequency: uint16;
+};
+
+type hISTChunk = unit {
+    frequencies: array of uint16 &size=(length / 2);
+};
+
+type tIMEChunk = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type PNGChunk = unit {
     length: uint32;
-
-    type: string &length=4;
-
-    data: bytes &length=length;
-
+    type: string &size=4;
+    body: case type {
+        "IHDR" => IHDRChunk,
+        "PLTE" => PLTEChunk,
+        "IDAT" => IDATChunk,
+        "IEND" => IENDChunk,
+        "tRNS" => tRNSChunk,
+        "cHRM" => cHRMChunk,
+        "gAMA" => gAMAChunk,
+        "iCCP" => iCCPChunk,
+        "sBIT" => sBITChunk,
+        "sRGB" => sRGBChunk,
+        "tEXt" => tEXtChunk,
+        "zTXt" => zTXtChunk,
+        "iTXt" => iTXtChunk,
+        "bKGD" => bKGDChunk,
+        "pHYs" => pHYsChunk,
+        "sPLT" => sPLTChunk,
+        "hIST" => hISTChunk,
+        "tIME" => tIMEChunk,
+        } &byteorder=big;
     crc: uint32;
-
-    on %done {
-        local computed_crc = crc32(type + data);
-        if (computed_crc != crc) {
-            print fmt("CRC mismatch: expected %x, got %x", crc, computed_crc);
-        }
-    }
 };
 
-function crc32(data: bytes): uint32 {
-    # This is a placeholder function. You need to implement the CRC32 calculation.
-    return 0;
-}
+type PNGFile = unit {
+    signature: PNGSignature;
+    chunks: array of PNGChunk &until=eod();
+};

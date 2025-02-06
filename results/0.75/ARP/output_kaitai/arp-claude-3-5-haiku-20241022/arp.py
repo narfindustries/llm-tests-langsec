@@ -10,22 +10,27 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Arp(KaitaiStruct):
 
-    class HardwareTypes(Enum):
+    class HardwareTypeEnum(Enum):
         ethernet = 1
         ieee_802 = 6
         frame_relay = 15
-        atm = 16
-        hdlc = 17
-        fibre_channel = 18
 
-    class ProtocolTypes(Enum):
+    class ProtocolTypeEnum(Enum):
         ipv4 = 2048
         arp = 2054
         ipv6 = 34525
 
-    class ArpOperation(Enum):
+    class OperationEnum(Enum):
         request = 1
         reply = 2
+        reverse_request = 3
+        reverse_reply = 4
+        drarp_request = 5
+        drarp_reply = 6
+        drarp_error = 7
+        inarp_request = 8
+        inarp_reply = 9
+        arp_nam = 10
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -33,25 +38,25 @@ class Arp(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.hardware_type = KaitaiStream.resolve_enum(Arp.HardwareTypes, self._io.read_u2be())
-        self.protocol_type = KaitaiStream.resolve_enum(Arp.ProtocolTypes, self._io.read_u2be())
-        self.hardware_address_length = self._io.read_u1()
-        self.protocol_address_length = self._io.read_u1()
-        self.operation = KaitaiStream.resolve_enum(Arp.ArpOperation, self._io.read_u2be())
-        self._raw_sender_hardware_address = self._io.read_bytes(self.hardware_address_length)
-        _io__raw_sender_hardware_address = KaitaiStream(BytesIO(self._raw_sender_hardware_address))
-        self.sender_hardware_address = Arp.HardwareAddress(_io__raw_sender_hardware_address, self, self._root)
-        self._raw_sender_protocol_address = self._io.read_bytes(self.protocol_address_length)
-        _io__raw_sender_protocol_address = KaitaiStream(BytesIO(self._raw_sender_protocol_address))
-        self.sender_protocol_address = Arp.ProtocolAddress(_io__raw_sender_protocol_address, self, self._root)
-        self._raw_target_hardware_address = self._io.read_bytes(self.hardware_address_length)
-        _io__raw_target_hardware_address = KaitaiStream(BytesIO(self._raw_target_hardware_address))
-        self.target_hardware_address = Arp.HardwareAddress(_io__raw_target_hardware_address, self, self._root)
-        self._raw_target_protocol_address = self._io.read_bytes(self.protocol_address_length)
-        _io__raw_target_protocol_address = KaitaiStream(BytesIO(self._raw_target_protocol_address))
-        self.target_protocol_address = Arp.ProtocolAddress(_io__raw_target_protocol_address, self, self._root)
+        self.hardware_type = KaitaiStream.resolve_enum(Arp.HardwareTypeEnum, self._io.read_u2be())
+        self.protocol_type = KaitaiStream.resolve_enum(Arp.ProtocolTypeEnum, self._io.read_u2be())
+        self.hardware_addr_length = self._io.read_u1()
+        self.protocol_addr_length = self._io.read_u1()
+        self.operation = KaitaiStream.resolve_enum(Arp.OperationEnum, self._io.read_u2be())
+        self._raw_sender_hardware_addr = self._io.read_bytes(self.hardware_addr_length)
+        _io__raw_sender_hardware_addr = KaitaiStream(BytesIO(self._raw_sender_hardware_addr))
+        self.sender_hardware_addr = Arp.HardwareAddr(_io__raw_sender_hardware_addr, self, self._root)
+        self._raw_sender_protocol_addr = self._io.read_bytes(self.protocol_addr_length)
+        _io__raw_sender_protocol_addr = KaitaiStream(BytesIO(self._raw_sender_protocol_addr))
+        self.sender_protocol_addr = Arp.ProtocolAddr(_io__raw_sender_protocol_addr, self, self._root)
+        self._raw_target_hardware_addr = self._io.read_bytes(self.hardware_addr_length)
+        _io__raw_target_hardware_addr = KaitaiStream(BytesIO(self._raw_target_hardware_addr))
+        self.target_hardware_addr = Arp.HardwareAddr(_io__raw_target_hardware_addr, self, self._root)
+        self._raw_target_protocol_addr = self._io.read_bytes(self.protocol_addr_length)
+        _io__raw_target_protocol_addr = KaitaiStream(BytesIO(self._raw_target_protocol_addr))
+        self.target_protocol_addr = Arp.ProtocolAddr(_io__raw_target_protocol_addr, self, self._root)
 
-    class HardwareAddress(KaitaiStruct):
+    class HardwareAddr(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -59,13 +64,13 @@ class Arp(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.address = []
-            for i in range(self._parent.hardware_address_length):
-                self.address.append(self._io.read_u1())
+            self.addr = []
+            for i in range(self._parent.hardware_addr_length):
+                self.addr.append(self._io.read_u1())
 
 
 
-    class ProtocolAddress(KaitaiStruct):
+    class ProtocolAddr(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -73,9 +78,9 @@ class Arp(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.address = []
-            for i in range(self._parent.protocol_address_length):
-                self.address.append(self._io.read_u1())
+            self.addr = []
+            for i in range(self._parent.protocol_addr_length):
+                self.addr.append(self._io.read_u1())
 
 
 

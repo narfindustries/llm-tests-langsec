@@ -1,27 +1,25 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    error::ErrorKind,
-    multi::many0,
     number::complete::{le_u16, le_u32, u8},
-    sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct GzipHeader {
     id1: u8,
     id2: u8,
-    cm: u8,
-    flg: u8,
+    compression_method: u8,
+    flags: u8,
     mtime: u32,
     xfl: u8,
     os: u8,
-    extra: Option<Vec<u8>>,
-    name: Option<Vec<u8>>,
-    comment: Option<Vec<u8>>,
-    crc16: Option<u16>,
+    extra_field: Option<Vec<u8>>,
+    filename: Option<String>,
+    comment: Option<String>,
+    header_crc16: Option<u16>,
 }
 
 #[derive(Debug)]
@@ -32,94 +30,103 @@ struct GzipFile {
     isize: u32,
 }
 
-fn parse_extra_field(input: &[u8], flg: u8) -> IResult<&[u8], Option<Vec<u8>>> {
-    if (flg & 0x04) != 0 {
-        let (input, xlen) = le_u16(input)?;
-        let (input, extra) = take(xlen)(input)?;
-        Ok((input, Some(extra.to_vec())))
-    } else {
-        Ok((input, None))
+fn parse_null_terminated_string(input: &[u8]) -> IResult<&[u8], String> {
+    let mut i = 0;
+    while i < input.len() && input[i] != 0 {
+        i += 1;
     }
-}
-
-fn parse_zero_terminated_field(input: &[u8], flag_bit: u8, flg: u8) -> IResult<&[u8], Option<Vec<u8>>> {
-    if (flg & flag_bit) != 0 {
-        let mut result = Vec::new();
-        let mut current_input = input;
-        
-        loop {
-            let (remaining, byte) = u8(current_input)?;
-            if byte == 0 {
-                return Ok((remaining, Some(result)));
-            }
-            result.push(byte);
-            current_input = remaining;
-        }
-    } else {
-        Ok((input, None))
-    }
-}
-
-fn parse_crc16(input: &[u8], flg: u8) -> IResult<&[u8], Option<u16>> {
-    if (flg & 0x02) != 0 {
-        let (input, crc) = le_u16(input)?;
-        Ok((input, Some(crc)))
-    } else {
-        Ok((input, None))
-    }
+    let (remaining, string_bytes) = take(i)(input)?;
+    let (remaining, _) = tag(&[0])(remaining)?;
+    Ok((
+        remaining,
+        String::from_utf8_lossy(string_bytes).to_string(),
+    ))
 }
 
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, (id1, id2)) = tuple((
-        verify(u8, |&x| x == 0x1f),
-        verify(u8, |&x| x == 0x8b),
-    ))(input)?;
-    
-    let (input, cm) = verify(u8, |&x| x == 8)(input)?;
-    let (input, flg) = u8(input)?;
+    let (input, id1) = u8(input)?;
+    let (input, id2) = u8(input)?;
+    let (input, compression_method) = u8(input)?;
+    let (input, flags) = u8(input)?;
     let (input, mtime) = le_u32(input)?;
     let (input, xfl) = u8(input)?;
     let (input, os) = u8(input)?;
-    
-    let (input, extra) = parse_extra_field(input, flg)?;
-    let (input, name) = parse_zero_terminated_field(input, 0x08, flg)?;
-    let (input, comment) = parse_zero_terminated_field(input, 0x10, flg)?;
-    let (input, crc16) = parse_crc16(input, flg)?;
-    
-    Ok((input, GzipHeader {
-        id1,
-        id2,
-        cm,
-        flg,
-        mtime,
-        xfl,
-        os,
-        extra,
-        name,
-        comment,
-        crc16,
-    }))
+
+    let mut input = input;
+    let mut extra_field = None;
+    let mut filename = None;
+    let mut comment = None;
+    let mut header_crc16 = None;
+
+    // Parse optional fields based on flags
+    if flags & 0x04 != 0 {
+        // FEXTRA
+        let (remaining, xlen) = le_u16(input)?;
+        let (remaining, extra) = take(xlen)(remaining)?;
+        extra_field = Some(extra.to_vec());
+        input = remaining;
+    }
+
+    if flags & 0x08 != 0 {
+        // FNAME
+        let (remaining, fname) = parse_null_terminated_string(input)?;
+        filename = Some(fname);
+        input = remaining;
+    }
+
+    if flags & 0x10 != 0 {
+        // FCOMMENT
+        let (remaining, fcomment) = parse_null_terminated_string(input)?;
+        comment = Some(fcomment);
+        input = remaining;
+    }
+
+    if flags & 0x02 != 0 {
+        // FHCRC
+        let (remaining, crc16) = le_u16(input)?;
+        header_crc16 = Some(crc16);
+        input = remaining;
+    }
+
+    Ok((
+        input,
+        GzipHeader {
+            id1,
+            id2,
+            compression_method,
+            flags,
+            mtime,
+            xfl,
+            os,
+            extra_field,
+            filename,
+            comment,
+            header_crc16,
+        },
+    ))
 }
 
 fn parse_gzip_file(input: &[u8]) -> IResult<&[u8], GzipFile> {
     let (input, header) = parse_gzip_header(input)?;
     
-    // Find the last 8 bytes (CRC32 and ISIZE)
-    let data_end = input.len() - 8;
-    let (trailer, compressed_data) = input.split_at(data_end);
-    
-    let (trailer, crc32) = le_u32(trailer)?;
-    let (trailer, isize) = le_u32(trailer)?;
-    
-    Ok((trailer, GzipFile {
-        header,
-        compressed_data: compressed_data.to_vec(),
-        crc32,
-        isize,
-    }))
+    // The compressed data extends until the last 8 bytes (CRC32 + ISIZE)
+    let compressed_data_len = input.len() - 8;
+    let (input, compressed_data) = take(compressed_data_len)(input)?;
+    let (input, crc32) = le_u32(input)?;
+    let (input, isize) = le_u32(input)?;
+
+    Ok((
+        input,
+        GzipFile {
+            header,
+            compressed_data: compressed_data.to_vec(),
+            crc32,
+            isize,
+        },
+    ))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <gzip-file>", args[0]);
@@ -133,12 +140,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match parse_gzip_file(&buffer) {
         Ok((_, gzip_file)) => {
             println!("GZIP File Structure:");
-            println!("Header: {:?}", gzip_file.header);
-            println!("Compressed data length: {} bytes", gzip_file.compressed_data.len());
-            println!("CRC32: {:08x}", gzip_file.crc32);
-            println!("Input size (mod 2^32): {}", gzip_file.isize);
+            println!("Header:");
+            println!("  ID1: 0x{:02X}", gzip_file.header.id1);
+            println!("  ID2: 0x{:02X}", gzip_file.header.id2);
+            println!("  Compression Method: {}", gzip_file.header.compression_method);
+            println!("  Flags: 0x{:02X}", gzip_file.header.flags);
+            println!("  MTIME: {}", gzip_file.header.mtime);
+            println!("  XFL: {}", gzip_file.header.xfl);
+            println!("  OS: {}", gzip_file.header.os);
+            
+            if let Some(extra) = &gzip_file.header.extra_field {
+                println!("  Extra Field: {:?}", extra);
+            }
+            if let Some(filename) = &gzip_file.header.filename {
+                println!("  Filename: {}", filename);
+            }
+            if let Some(comment) = &gzip_file.header.comment {
+                println!("  Comment: {}", comment);
+            }
+            if let Some(crc16) = gzip_file.header.header_crc16 {
+                println!("  Header CRC16: 0x{:04X}", crc16);
+            }
+            
+            println!("Compressed Data Length: {}", gzip_file.compressed_data.len());
+            println!("CRC32: 0x{:08X}", gzip_file.crc32);
+            println!("ISIZE: {}", gzip_file.isize);
         }
-        Err(e) => eprintln!("Error parsing GZIP file: {:?}", e),
+        Err(e) => {
+            eprintln!("Error parsing GZIP file: {:?}", e);
+            std::process::exit(1);
+        }
     }
 
     Ok(())

@@ -1,73 +1,92 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
 
-// Structure to represent an ARP entry
 typedef struct {
-    unsigned char ip_address[4];
-    unsigned char mac_address[6];
-} arp_entry_t;
+    uint16_t htype;
+    uint16_t ptype;
+    uint8_t hlen;
+    uint8_t plen;
+    uint16_t opcode;
+    uint8_t sha[6];
+    uint8_t spa[4];
+    uint8_t tha[6];
+    uint8_t tpa[4];
+} arp_packet;
 
-// Function to add an ARP entry
-int add_arp_entry(arp_entry_t *arp_table, int table_size, unsigned char *ip_address, unsigned char *mac_address) {
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, ip_address, 4) == 0) {
-            // IP address already exists, update MAC address
-            memcpy(arp_table[i].mac_address, mac_address, 6);
-            return 0; // Success
-        }
-    }
-
-    // IP address not found, add new entry if space available
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, "\0\0\0\0", 4) == 0) {
-            memcpy(arp_table[i].ip_address, ip_address, 4);
-            memcpy(arp_table[i].mac_address, mac_address, 6);
-            return 0; // Success
-        }
-    }
-
-    return -1; // Table full
+hammer_parser arp_parser() {
+    return h_seq(
+        h_uint16_be(),
+        h_uint16_be(),
+        h_uint8(),
+        h_uint8(),
+        h_uint16_be(),
+        h_array(h_uint8(), 6),
+        h_array(h_uint8(), 4),
+        h_array(h_uint8(), 6),
+        h_array(h_uint8(), 4),
+        h_end()
+    );
 }
 
-
-// Function to resolve IP address to MAC address
-int resolve_ip(arp_entry_t *arp_table, int table_size, unsigned char *ip_address, unsigned char *mac_address) {
-    for (int i = 0; i < table_size; i++) {
-        if (memcmp(arp_table[i].ip_address, ip_address, 4) == 0) {
-            memcpy(mac_address, arp_table[i].mac_address, 6);
-            return 0; // Success
-        }
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
-    return -1; // IP address not found
-}
 
-int main() {
-    // Example usage
-    arp_entry_t arp_table[100]; // ARP table with a maximum of 100 entries
-    memset(arp_table, 0, sizeof(arp_table)); // Initialize ARP table
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    unsigned char ip1[] = {192, 168, 1, 100};
-    unsigned char mac1[] = {0x00, 0x16, 0x3e, 0x00, 0x00, 0x01};
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    unsigned char ip2[] = {192, 168, 1, 101};
-    unsigned char mac2[] = {0x00, 0x16, 0x3e, 0x00, 0x00, 0x02};
+    uint8_t *buffer = (uint8_t *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
-    add_arp_entry(arp_table, 100, ip1, mac1);
-    add_arp_entry(arp_table, 100, ip2, mac2);
+    hammer_result result = hammer_parse(arp_parser(), buffer, fsize);
 
-    unsigned char resolved_mac[6];
-    if (resolve_ip(arp_table, 100, ip1, resolved_mac) == 0) {
-        printf("MAC address for %d.%d.%d.%d: ", ip1[0], ip1[1], ip1[2], ip1[3]);
-        for (int i = 0; i < 6; i++) {
-            printf("%02x", resolved_mac[i]);
-            if (i < 5) printf(":");
-        }
-        printf("\n");
+    if (result.success) {
+        arp_packet *packet = (arp_packet *)result.value;
+        char spa_str[INET_ADDRSTRLEN];
+        char tpa_str[INET_ADDRSTRLEN];
+
+        inet_ntop(AF_INET, packet->spa, spa_str, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, packet->tpa, tpa_str, INET_ADDRSTRLEN);
+
+        printf("Hardware Type: %u\n", ntohs(packet->htype));
+        printf("Protocol Type: %u\n", ntohs(packet->ptype));
+        printf("Hardware Address Length: %u\n", packet->hlen);
+        printf("Protocol Address Length: %u\n", packet->plen);
+        printf("Opcode: %u\n", ntohs(packet->opcode));
+        printf("Sender Hardware Address: %02x:%02x:%02x:%02x:%02x:%02x\n", 
+               packet->sha[0], packet->sha[1], packet->sha[2], packet->sha[3], packet->sha[4], packet->sha[5]);
+        printf("Sender Protocol Address: %s\n", spa_str);
+        printf("Target Hardware Address: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               packet->tha[0], packet->tha[1], packet->tha[2], packet->tha[3], packet->tha[4], packet->tha[5]);
+        printf("Target Protocol Address: %s\n", tpa_str);
+
+        free(result.value);
     } else {
-        printf("IP address not found in ARP table.\n");
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
+        free(result.value);
+        return 1;
     }
 
+    free(buffer);
     return 0;
 }

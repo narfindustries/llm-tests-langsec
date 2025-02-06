@@ -1,0 +1,145 @@
+module DICOM;
+
+public type Command = enum {
+    C_STORE_RQ = 0x0001,
+    C_STORE_RSP = 0x8001,
+    C_FIND_RQ = 0x0020,
+    C_FIND_RSP = 0x8020,
+    C_GET_RQ = 0x0010,
+    C_GET_RSP = 0x8010,
+    C_MOVE_RQ = 0x0021,
+    C_MOVE_RSP = 0x8021,
+    C_ECHO_RQ = 0x0030,
+    C_ECHO_RSP = 0x8030,
+    N_EVENT_REPORT_RQ = 0x0100,
+    N_EVENT_REPORT_RSP = 0x8100,
+    N_GET_RQ = 0x0110,
+    N_GET_RSP = 0x8110,
+    N_SET_RQ = 0x0120,
+    N_SET_RSP = 0x8120,
+    N_ACTION_RQ = 0x0130,
+    N_ACTION_RSP = 0x8130,
+    N_CREATE_RQ = 0x0140,
+    N_CREATE_RSP = 0x8140,
+    N_DELETE_RQ = 0x0150,
+    N_DELETE_RSP = 0x8150,
+};
+
+public type VR = enum {
+    AE = 0x4145,
+    AS = 0x4153,
+    AT = 0x4154,
+    CS = 0x4353,
+    DA = 0x4441,
+    DS = 0x4453,
+    DT = 0x4454,
+    FL = 0x464C,
+    FD = 0x4644,
+    IS = 0x4953,
+    LO = 0x4C4F,
+    LT = 0x4C54,
+    OB = 0x4F42,
+    OD = 0x4F44,
+    OF = 0x4F46,
+    OL = 0x4F4C,
+    OW = 0x4F57,
+    PN = 0x504E,
+    SH = 0x5348,
+    SL = 0x534C,
+    SQ = 0x5351,
+    SS = 0x5353,
+    ST = 0x5354,
+    TM = 0x544D,
+    UI = 0x5549,
+    UL = 0x554C,
+    UN = 0x554E,
+    UR = 0x5552,
+    US = 0x5553,
+    UT = 0x5554,
+};
+
+public type DataElement = unit {
+    tag: uint16;
+    vr: VR;
+    length: uint16;
+    value: bytes &size=length;
+};
+
+public type PDU = unit {
+    pdu_type: uint8;
+    reserved: uint8;
+    length: uint32;
+    case (pdu_type) {
+        0x01 -> association_rq: AssociationRQ;
+        0x02 -> association_ac: AssociationAC;
+        0x03 -> association_rj: AssociationRJ;
+        0x04 -> p_data_tf: PDataTF;
+        0x05 -> release_rq: ReleaseRQ;
+        0x06 -> release_rp: ReleaseRP;
+        0x07 -> abort: Abort;
+        * -> unknown: bytes &size=length;
+    };
+};
+
+public type AssociationRQ = unit {
+    protocol_version: uint16;
+    called_ae_title: bytes &size=16;
+    calling_ae_title: bytes &size=16;
+    application_context: DataElement;
+    presentation_contexts: DataElement[];
+    user_information: DataElement[];
+};
+
+public type AssociationAC = unit {
+    protocol_version: uint16;
+    called_ae_title: bytes &size=16;
+    calling_ae_title: bytes &size=16;
+    application_context: DataElement;
+    presentation_contexts: DataElement[];
+    user_information: DataElement[];
+};
+
+public type AssociationRJ = unit {
+    result: uint8;
+    source: uint8;
+    reason: uint8;
+};
+
+public type PDataTF = unit {
+    presentation_context_id: uint8;
+    message_header: uint8;
+    data: bytes &eod;
+};
+
+public type ReleaseRQ = unit {};
+
+public type ReleaseRP = unit {};
+
+public type Abort = unit {
+    source: uint8;
+    reason: uint8;
+};
+
+public type DicomMessage = unit {
+    command: Command;
+    data_elements: DataElement[];
+};
+
+public type DicomFile = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    file_meta_elements: DataElement[];
+    data_set: DataElement[];
+};
+
+on DICOM::DicomFile %done {
+    print self;
+}
+
+on DICOM::DicomMessage %done {
+    print self;
+}
+
+on DICOM::PDU %done {
+    print self;
+}

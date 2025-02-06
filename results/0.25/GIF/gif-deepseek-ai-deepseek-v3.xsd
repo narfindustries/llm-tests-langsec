@@ -1,0 +1,158 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/gif" xmlns:tns="http://example.com/gif">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GIFFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="GIFType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType"/>
+      <xs:极element name="LogicalScreenDescriptor" type="tns:LogicalScreenDescriptorType"/>
+      <xs:element name="GlobalColorTable" type="tns:GlobalColorTableType" minOccurs="0"/>
+      <xs:element name="ImageDescriptor" type="tns:ImageDescriptorType" maxOccurs="unbounded"/>
+      <xs:element name="GraphicControlExtension" type="tns:GraphicControlExtensionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="PlainTextExtension" type="tns:PlainTextExtensionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="CommentExtension" type="tns:CommentExtensionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="ApplicationExtension" type="tns:ApplicationExtensionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Trailer" type="tns:TrailerType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:string" dfdl:length="3"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LogicalScreenDescriptorType">
+    <xs:sequence>
+      <xs:element name="LogicalScreenWidth" type="xs:unsignedShort"/>
+      <xs:element name="LogicalScreenHeight" type="xs:unsignedShort"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Global极ColorTableType">
+    <xs:sequence>
+      <xs:element name="Color" type="tns:ColorType" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColorType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDescriptorType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="xs:unsignedByte"/>
+      <xs:element name="ImageLeftPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageTopPosition" type="xs:unsignedShort"/>
+      <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+      <xs:element name="ImageHeight" type极:xs:unsignedShort"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="LocalColorTable" type="tns:GlobalColorTableType" minOccurs="0"/>
+      <xs:element name="ImageData" type="tns:ImageDataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageDataType">
+    <xs:sequence>
+      <xs:element name="LZWMinimumCodeSize" type="xs:unsignedByte"/>
+      <xs:element name="CompressedDataBlocks" type="tns:CompressedDataBlocksType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompressedDataBlocksType">
+    <xs:sequence>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../BlockSize}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GraphicControlExtensionType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:unsignedByte"/>
+      <xs:element name="GraphicControlLabel" type="xs:unsignedByte"/>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="DelayTime" type="xs:unsignedShort"/>
+      <xs:element name="TransparentColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="BlockTerminator" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PlainTextExtensionType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:unsignedByte"/>
+      <xs:element name="PlainTextLabel" type="xs:unsignedByte"/>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="TextGridLeftPosition" type="xs:unsignedShort"/>
+      <xs:element name="TextGridTopPosition" type="xs:unsignedShort"/>
+      <xs:element name="TextGridWidth" type="xs:unsignedShort"/>
+      <xs:element name="TextGridHeight" type="xs:unsignedShort"/>
+      <xs:element name="CharacterCellWidth" type="xs:unsignedByte"/>
+      <xs:element name="CharacterCellHeight" type="xs:unsignedByte"/>
+      <xs:element name="TextForegroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="TextBackgroundColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="PlainTextData" type="tns:PlainTextDataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PlainTextDataType">
+    <xs:sequence>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="Data" type="xs:string" dfdl:length="{../BlockSize}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CommentExtensionType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:unsignedByte"/>
+      <xs:element name="CommentLabel" type="xs:unsignedByte"/>
+      <xs:element name="CommentData" type="tns:CommentDataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CommentDataType">
+    <xs:sequence>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="Data" type="xs:string" dfdl:length="{../BlockSize}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ApplicationExtensionType">
+    <xs:sequence>
+      <xs:element name="ExtensionIntroducer" type="xs:unsignedByte"/>
+      <xs:element name="ApplicationLabel" type="xs:unsignedByte"/>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="ApplicationIdentifier" type="xs:string" dfdl:length="8"/>
+      <xs:element name="ApplicationAuthenticationCode" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ApplicationData" type="tns:ApplicationDataType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ApplicationDataType">
+    <xs:sequence>
+      <xs:element name="BlockSize" type="xs:unsignedByte"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../BlockSize}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TrailerType">
+    <xs:sequence>
+      <xs:element name="Trailer" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="GIF" type="tns:GIFType"/>
+
+</xs:schema>

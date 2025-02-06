@@ -1,33 +1,59 @@
-#include <zeek/file.zeek>
+module ZIP;
 
-function zip_gemini_1_5_flash(): string
-{
-    local file_path: string = "/path/to/zip-gemini-1.5-flash.spicy"; //Replace with actual path
-    local file_content: string;
-    
-    if (file_exists(file_path)) {
-        file_content = read_file(file_path);
-        return file_content;
-    } else {
-        return "Error: File not found.";
-    }
+type zip_local_file_header {
+	uint32 signature = 0x04034b50;
+	uint16 version_needed_to_extract;
+	uint16 general_purpose_bit_flag;
+	uint16 compression_method;
+	uint16 last_modified_time;
+	uint16 last_modified_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	bytes filename[filename_length];
+	bytes extra_field[extra_field_length];
+	bytes data[compressed_size];
 }
 
-event zeek_init()
-{
-    local spicy_code: string = zip_gemini_1_5_flash();
-    
-    if (spicy_code != "Error: File not found.") {
-        //Attempt to compile and run Spicy code (requires appropriate Spicy compiler setup)
-        try {
-            //Replace with actual Spicy compiler command.  Error handling is crucial here.
-            exec("spicyc -o /tmp/output.hlto " + spicy_code); 
-            //Further processing of the compiled output (if needed)
-        } catch (e) {
-            print("Spicy compilation error: " + e);
-        }
-    } else {
-        print(spicy_code);
-    }
+type zip_central_directory_header {
+	uint32 signature = 0x02014b50;
+	uint16 version_made_by;
+	uint16 version_needed_to_extract;
+	uint16 general_purpose_bit_flag;
+	uint16 compression_method;
+	uint16 last_modified_time;
+	uint16 last_modified_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	uint16 file_comment_length;
+	uint16 disk_number_start;
+	uint16 internal_file_attributes;
+	uint32 external_file_attributes;
+	uint32 local_header_offset;
+	bytes filename[filename_length];
+	bytes extra_field[extra_field_length];
+	bytes file_comment[file_comment_length];
 }
 
+type zip_end_of_central_directory_record {
+	uint32 signature = 0x06054b50;
+	uint16 number_of_this_disk;
+	uint16 number_of_the_disk_with_the_start_of_the_central_directory;
+	uint16 total_number_of_entries_in_the_central_directory_on_this_disk;
+	uint16 total_number_of_entries_in_the_central_directory;
+	uint32 size_of_the_central_directory;
+	uint32 offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
+	uint16 zip_file_comment_length;
+	bytes zip_file_comment[zip_file_comment_length];
+}
+
+type zip_file {
+	zip_local_file_header* local_file_headers;
+	zip_central_directory_header* central_directory_headers;
+	zip_end_of_central_directory_record end_of_central_directory_record;
+}

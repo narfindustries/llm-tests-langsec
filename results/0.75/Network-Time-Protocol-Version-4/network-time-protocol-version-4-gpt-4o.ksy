@@ -1,13 +1,11 @@
 meta:
-  id: network_time_protocol_v4
+  id: ntp_v4
   title: Network Time Protocol Version 4
-  application: network
-  file-extension: ntp
-  endian: big
-
+  application: network/time
+  endian: be
 seq:
   - id: flags
-    type: flags
+    type: flags_type
   - id: stratum
     type: u1
   - id: poll
@@ -21,30 +19,34 @@ seq:
   - id: reference_id
     type: u4
   - id: reference_timestamp
-    type: timestamp
+    type: ntp_timestamp
   - id: originate_timestamp
-    type: timestamp
+    type: ntp_timestamp
   - id: receive_timestamp
-    type: timestamp
+    type: ntp_timestamp
   - id: transmit_timestamp
-    type: timestamp
-
+    type: ntp_timestamp
+  - id: authenticator
+    type: authenticator_type
+    if: _io.size - _io.pos >= 12
 types:
-  flags:
+  flags_type:
     seq:
-      - id: li
+      - id: leap_indicator
         type: b2
-      - id: vn
+      - id: version_number
         type: b3
       - id: mode
         type: b3
-
-  timestamp:
+  ntp_timestamp:
     seq:
       - id: seconds
         type: u4
       - id: fraction
         type: u4
-    instances:
-      time:
-        value: (seconds - 2208988800) + fraction / 4294967296.0
+  authenticator_type:
+    seq:
+      - id: key_identifier
+        type: u4
+      - id: message_digest
+        type: u8

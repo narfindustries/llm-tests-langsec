@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:dns="http://example.com/dns" targetNamespace="http://example.com/dns" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" />
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="dns:Header" />
+        <xs:element ref="dns:Question" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="dns:Answer" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="dns:Authority" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="dns:Additional" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" />
+        <xs:element name="Flags">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="QR" type="xs:boolean" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="1" />
+              <xs:element name="Opcode" type="xs:unsignedByte" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="4" />
+              <xs:element name="AA" type="xs:boolean" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="1" />
+              <xs:element name="TC" type="xs:boolean" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="1" />
+              <xs:element name="RD" type="xs:boolean" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="1" />
+              <xs:element name="RA" type="xs:boolean" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="1" />
+              <xs:element name="Z" type="xs:unsignedByte" dfdl:bitOrder="mostSignificantBitFirst" dfdl:length="3" />
+              <xs:element name="RCODE" type

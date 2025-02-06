@@ -1,55 +1,77 @@
 module NITF;
 
 public type FileHeader = unit {
-    fileTypeID: /[A-Z0-9]{9}/;
-    fileTitle: /[A-Z0-9]{80}/;
-    fileSecurityClass: /[A-Z0-9]{1}/;
-    fileCopyNumber: /[A-Z0-9]{5}/;
-    fileNumOfCopys: /[A-Z0-9]{5}/;
-    fileBgColor: /[A-Z0-9]{3}/;
-    fileOriginStationID: /[A-Z0-9]{10}/;
-    fileDateTime: /[0-9]{14}/;
-    fileTitle2: /[A-Z0-9]{80}/;
-    : void { print self; }
+    fileHeader: bytes &size=4;
+    fileVersion: bytes &size=5;
+    complexityLevel: uint8;
+    standardType: bytes &size=4;
+    originatingStationID: bytes &size=10;
+    fileDateTime: bytes &size=14;
+    fileTitle: bytes &size=80;
+    fileSecurityClass: bytes &size=1;
+    fileSecuritySystem: bytes &size=2;
+    fileCodewords: bytes &size=11;
+    fileControlAndHandling: bytes &size=2;
+    fileReleasingInstructions: bytes &size=20;
+    fileDeclassificationType: bytes &size=2;
+    fileDeclassificationDate: bytes &size=8;
+    fileDeclassificationExemption: bytes &size=4;
+    fileControlNumber: bytes &size=15;
+    fileSecurityInfo: bytes &size=3;
+    fileCopyNumber: uint16;
+    fileNumCopies: uint16;
+    encryption: uint8;
+    fileBackgroundColor: bytes &size=3;
+    originatorName: bytes &size=24;
+    originatorPhone: bytes &size=18;
+    fileLength: uint32;
+    headerLength: uint16;
+};
+
+public type ImageSubHeader = unit {
+    imageID1: bytes &size=10;
+    dateTime: bytes &size=14;
+    targetID: bytes &size=17;
+    imageID2: bytes &size=80;
+    imageSecurityClass: bytes &size=1;
+    imageSecuritySystem: bytes &size=2;
+    imageCodewords: bytes &size=11;
+    imageControlAndHandling: bytes &size=2;
+    imageReleasingInstructions: bytes &size=20;
+    imageDeclassificationType: bytes &size=2;
+    imageDeclassificationDate: bytes &size=8;
+    imageDeclassificationExemption: bytes &size=4;
+    imageControlNumber: bytes &size=15;
+    imageSecurityInfo: bytes &size=3;
+    encryption: uint8;
+    imageSource: bytes &size=42;
+    significantRows: uint32;
+    significantCols: uint32;
+    pixelValueType: bytes &size=3;
+    imageRepresentation: bytes &size=8;
+    imageCategory: bytes &size=8;
+    actualBitsPerPixel: uint8;
+    pixelJustification: bytes &size=1;
+    imageCoordinateSystem: bytes &size=1;
+    imageGeoCoords: bytes &size=60;
+    numImageComments: uint16;
+    imageComments: ImageComment[] &length=numImageComments;
+};
+
+public type ImageComment = unit {
+    comment: bytes &size=80;
 };
 
 public type ImageSegment = unit {
-    imageID: /[A-Z0-9]{10}/;
-    imageDateTime: /[0-9]{14}/;
-    targetID: /[A-Z0-9]{17}/;
-    imageTitle: /[A-Z0-9]{80}/;
-    : void { print self; }
+    subHeader: ImageSubHeader;
+    imageData: bytes &eod;
 };
 
-public type TextSegment = unit {
-    textID: /[A-Z0-9]{7}/;
-    textDateTime: /[0-9]{14}/;
-    textTitle: /[A-Z0-9]{80}/;
-    textFormat: /[A-Z0-9]{3}/;
-    : void { print self; }
-};
-
-public type DataExtensionSegment = unit {
-    desID: /[A-Z0-9]{25}/;
-    desVersion: /[A-Z0-9]{2}/;
-    desDateTime: /[0-9]{14}/;
-    desTitle: /[A-Z0-9]{80}/;
-    : void { print self; }
-};
-
-public type ReservedExtensionSegment = unit {
-    resID: /[A-Z0-9]{25}/;
-    resVersion: /[A-Z0-9]{2}/;
-    resDateTime: /[0-9]{14}/;
-    resTitle: /[A-Z0-9]{80}/;
-    : void { print self; }
+public type NITFFile = unit {
+    header: FileHeader;
+    imageSegments: ImageSegment[];
 };
 
 public type NITF = unit {
-    header: FileHeader;
-    imageSegments: ImageSegment[] &size=2;
-    textSegments: TextSegment[] &size=2;
-    dataExtensionSegments: DataExtensionSegment[] &size=2;
-    reservedExtensionSegments: ReservedExtensionSegment[] &size=2;
-    : void { print self; }
+    nitfFile: NITFFile;
 };

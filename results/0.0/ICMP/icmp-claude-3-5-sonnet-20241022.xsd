@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:icmp="urn:icmp:1.0"
-    targetNamespace="urn:icmp:1.0">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:icmp="http://example.com/icmp"
+           targetNamespace="http://example.com/icmp">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        representation="binary"
-                        byteOrder="bigEndian"
-                        binaryNumberRep="binary"
-                        encodingErrorPolicy="replace"/>
+            <dfdl:format alignment="1" lengthKind="implicit" representation="binary"
+                         byteOrder="bigEndian" binaryNumberRep="binary"
+                         encodingErrorPolicy="error" encoding="utf-8"
+                         initiator="" terminator="" leadingSkip="0"
+                         trailingSkip="0" textBidi="no" floating="no"
+                         sequenceKind="ordered" initiatedContent="no"
+                         lengthUnits="bytes"/>
         </xs:appinfo>
     </xs:annotation>
 
@@ -23,17 +22,66 @@
                 <xs:element name="type" type="xs:unsignedByte"/>
                 <xs:element name="code" type="xs:unsignedByte"/>
                 <xs:element name="checksum" type="xs:unsignedShort"/>
-                <xs:element name="restOfHeader">
+                
+                <xs:element name="messageBody">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="identifier" type="xs:unsignedShort"/>
-                            <xs:element name="sequenceNumber" type="xs:unsignedShort"/>
-                        </xs:sequence>
+                        <xs:choice>
+                            <!-- Echo Request/Reply -->
+                            <xs:sequence>
+                                <xs:element name="echoIdentifier" type="xs:unsignedShort"/>
+                                <xs:element name="echoSequenceNumber" type="xs:unsignedShort"/>
+                                <xs:element name="echoData" type="xs:hexBinary" 
+                                          dfdl:lengthKind="implicit"/>
+                            </xs:sequence>
+
+                            <!-- Destination Unreachable -->
+                            <xs:sequence>
+                                <xs:element name="unusedDU" type="xs:unsignedInt"/>
+                                <xs:element name="duOriginalPacket" type="xs:hexBinary"
+                                          dfdl:lengthKind="implicit"/>
+                            </xs:sequence>
+
+                            <!-- Redirect -->
+                            <xs:sequence>
+                                <xs:element name="gatewayInternetAddress" type="xs:unsignedInt"/>
+                                <xs:element name="redirectOriginalPacket" type="xs:hexBinary"
+                                          dfdl:lengthKind="implicit"/>
+                            </xs:sequence>
+
+                            <!-- Parameter Problem -->
+                            <xs:sequence>
+                                <xs:element name="pointer" type="xs:unsignedByte"/>
+                                <xs:element name="unusedPP" type="xs:hexBinary" 
+                                          dfdl:length="3"/>
+                                <xs:element name="ppOriginalPacket" type="xs:hexBinary"
+                                          dfdl:lengthKind="implicit"/>
+                            </xs:sequence>
+
+                            <!-- Timestamp/Timestamp Reply -->
+                            <xs:sequence>
+                                <xs:element name="tsIdentifier" type="xs:unsignedShort"/>
+                                <xs:element name="tsSequenceNumber" type="xs:unsignedShort"/>
+                                <xs:element name="originateTimestamp" type="xs:unsignedInt"/>
+                                <xs:element name="receiveTimestamp" type="xs:unsignedInt"/>
+                                <xs:element name="transmitTimestamp" type="xs:unsignedInt"/>
+                            </xs:sequence>
+
+                            <!-- Information Request/Reply -->
+                            <xs:sequence>
+                                <xs:element name="infoIdentifier" type="xs:unsignedShort"/>
+                                <xs:element name="infoSequenceNumber" type="xs:unsignedShort"/>
+                            </xs:sequence>
+
+                            <!-- Source Quench and Time Exceeded -->
+                            <xs:sequence>
+                                <xs:element name="unusedSQTE" type="xs:unsignedInt"/>
+                                <xs:element name="sqteOriginalPacket" type="xs:hexBinary"
+                                          dfdl:lengthKind="implicit"/>
+                            </xs:sequence>
+                        </xs:choice>
                     </xs:complexType>
                 </xs:element>
-                <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="remainder"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
 </xs:schema>

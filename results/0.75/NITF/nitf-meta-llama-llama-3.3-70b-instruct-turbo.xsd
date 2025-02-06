@@ -1,62 +1,103 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/NITF"
-           xmlns="http://example.com/NITF"
+           targetNamespace="http://www.example.org/NITF"
+           xmlns="http://www.example.org/NITF"
            elementFormDefault="qualified">
 
-  <xs:include schemaLocation="nitf-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
-
   <xs:element name="NITF">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format scheme="binary" ref="binary-NITF"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="NITFHeader" type="NITFHeaderType" dfdl:OccursCount="1..1"/>
-        <xs:element name="NITFBody" type="NITFBodyType" dfdl:OccursCount="1..1"/>
+        <xs:element name="FileHeader" type="FileHeaderType" dfdl:occursCount="{1}"/>
+        <xs:element name="ImageHeader" type="ImageHeaderType" maxOccurs="unbounded" dfdl:occursCountKind="parsed"/>
+        <xs:element name="Image" type="ImageType" maxOccurs="unbounded" dfdl:occursCountKind="parsed"/>
+        <xs:element name="TRE" type="TREType" maxOccurs="unbounded" dfdl:occursCountKind="parsed"/>
+        <xs:element name="DES" type="DESType" maxOccurs="unbounded" dfdl:occursCountKind="parsed"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="NITFHeaderType">
-    <xs:sequence>
-      <xs:element name="FileHeader" type="FileHeaderType" dfdl:OccursCount="1..1"/>
-      <xs:element name="TREHeader" type="TREHeaderType" dfdl:OccursCount="0..1"/>
-      <xs:element name="DataExtensions" type="DataExtensionsType" dfdl:OccursCount="0..1"/>
-    </xs:sequence>
-  </xs:complexType>
-
   <xs:complexType name="FileHeaderType">
     <xs:sequence>
-      <xs:element name="FileHeaderField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+      <xs:element name="FileType" type="xs:string" fixed="NITF" dfdl:length="2" dfdl:encoding="ASCII"/>
+      <xs:element name="FileFormatVersion" type="xs:string" fixed="02.10" dfdl:length="5" dfdl:encoding="ASCII"/>
+      <xs:element name="FileLevel" type="xs:string" fixed="01" dfdl:length="2" dfdl:encoding="ASCII"/>
+      <xs:element name="FileSecurityClassification" type="SecurityClassificationType" dfdl:length="1" dfdl:encoding="ASCII"/>
+      <xs:element name="FileReleasability" type="ReleasabilityType" dfdl:length="1" dfdl:encoding="ASCII"/>
+      <xs:element name="FileControlNumber" type="xs:string" dfdl:length="25" dfdl:encoding="ASCII"/>
+      <xs:element name="FileDate" type="xs:date" dfdl:length="8" dfdl:encoding="ASCII"/>
+      <xs:element name="FileTime" type="xs:time" dfdl:length="4" dfdl:encoding="ASCII"/>
+      <xs:element name="FileTitle" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+      <xs:element name="FileSecurityMetadata" type="xs:string" dfdl:length="1000" dfdl:encoding="ASCII"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="TREHeaderType">
+  <xs:complexType name="ImageHeaderType">
     <xs:sequence>
-      <xs:element name="TREHeaderField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+      <xs:element name="ImageID" type="xs:string" dfdl:length="25" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageDate" type="xs:date" dfdl:length="8" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageTime" type="xs:time" dfdl:length="4" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageTitle" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageSecurityClassification" type="SecurityClassificationType" dfdl:length="1" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageReleasability" type="ReleasabilityType" dfdl:length="1" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageSource" type="xs:string" dfdl:length="42" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageSensorType" type="SensorTypeType" dfdl:length="2" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageCompression" type="CompressionType" dfdl:length="2" dfdl:encoding="ASCII"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DataExtensionsType">
+  <xs:complexType name="ImageType">
     <xs:sequence>
-      <xs:element name="DataExtensionField" type="xs:string" dfdl:length="25" dfdl:OccursCount="1..1"/>
+      <xs:element name="ImageData" type="xs:hexBinary" dfdl:length="1000000" dfdl:encoding="binary"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="NITFBodyType">
+  <xs:complexType name="TREType">
     <xs:sequence>
-      <xs:element name="Data" type="xs:base64Binary" dfdl:OccursCount="1..1"/>
+      <xs:element name="TREID" type="xs:string" dfdl:length="2" dfdl:encoding="ASCII"/>
+      <xs:element name="TREData" type="xs:string" dfdl:length="1000" dfdl:encoding="ASCII"/>
     </xs:sequence>
   </xs:complexType>
 
-  <dfdl:format xs:Scheme="binary" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" Name="binary-NITF">
-    <dfdl:property name="representation" value="binary"/>
-    <dfdl:property name="byteOrder" value="bigEndian"/>
-    <dfdl:property name="endianness" value="bigEndian"/>
-  </dfdl:format>
+  <xs:complexType name="DESType">
+    <xs:sequence>
+      <xs:element name="DESID" type="xs:string" dfdl:length="3" dfdl:encoding="ASCII"/>
+      <xs:element name="DESData" type="xs:string" dfdl:length="1000" dfdl:encoding="ASCII"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="SecurityClassificationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ReleasabilityType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="N"/>
+      <xs:enumeration value="M"/>
+      <xs:enumeration value="R"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SensorTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="01"/>
+      <xs:enumeration value="02"/>
+      <xs:enumeration value="03"/>
+      <xs:enumeration value="04"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CompressionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="01"/>
+      <xs:enumeration value="02"/>
+      <xs:enumeration value="03"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

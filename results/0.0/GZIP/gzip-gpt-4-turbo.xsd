@@ -1,79 +1,57 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gzip"
-           xmlns:tns="http://example.com/gzip">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:defaultFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:complexType name="gzipFile">
-    <xs:sequence>
-      <xs:element name="id1" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="id2" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="compressionMethod" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="flags" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="mtime" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
-      <xs:element name="extraFlags" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="os" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-      <xs:element name="extra" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{if (fn:exists(flags and flags mod 2 = 1)) then 1 else 0}">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="xlen" type="xs:short" dfdl:length="2" dfdl:textNumberRep="binary"/>
-            <xs:element name="extras" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../xlen}"/>
-          </xs:sequence>
-        </xs:complexType>
-      </xs:element>
-      <xs:element name="filename" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{if (fn:exists(flags and flags mod 8 = 0)) then 0 else 1}">
-        <xs:simpleType>
-          <xs:restriction base="xs:string">
-            <xs:whiteSpace value="preserve"/>
-          </xs:restriction>
-        </xs:simpleType>
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:lengthKind="delimited"/>
-            <dfdl:terminator="0x00"/>
-            <dfdl:encoding="ASCII"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="comment" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{if (fn:exists(flags and flags mod 16 = 0)) then 0 else 1}">
-        <xs:simpleType>
-          <xs:restriction base="xs:string">
-            <xs:whiteSpace value="preserve"/>
-          </xs:restriction>
-        </xs:simpleType>
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:lengthKind="delimited"/>
-            <dfdl:terminator="0x00"/>
-            <dfdl:encoding="ASCII"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="crc16" type="xs:short" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{if (fn:exists(flags and flags mod 2 = 1)) then 1 else 0}" dfdl:length="2" dfdl:textNumberRep="binary"/>
-      <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0x03 0x00"/>
-      <xs:element name="crc32" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
-      <xs:element name="inputSize" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="GzipFile" type="tns:gzipFile"/>
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="defaultFormat">
+      <dfdl:defineFormat name="GeneralFormat">
         <dfdl:format byteOrder="bigEndian"
                      bitOrder="mostSignificantBitFirst"
                      binaryNumberRep="binary"
-                     textNumberRep="standard"
+                     lengthKind="delimited"
+                     encoding="ISO-8859-1"
                      representation="binary"/>
       </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>
+
+  <xs:element name="GZipFile" type="GZipFileType" dfdl:ref="GeneralFormat"/>
+
+  <xs:complexType name="GZipFileType">
+    <xs:sequence dfdl:ref="GeneralFormat">
+      <xs:element name="member" type="GZipMemberType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GZipMemberType">
+    <xs:sequence dfdl:ref="GeneralFormat">
+      <xs:element name="header" type="GZipHeaderType"/>
+      <xs:element name="extraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../header/xlen }" minOccurs="0"/>
+      <xs:element name="fileName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%" minOccurs="0"/>
+      <xs:element name="fileComment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%" minOccurs="0"/>
+      <xs:element name="headerCRC16" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" minOccurs="0"/>
+      <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0xFFFFFFFF"/>
+      <xs:element name="trailer" type="GZipTrailerType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GZipHeaderType">
+    <xs:sequence dfdl:ref="GeneralFormat">
+      <xs:element name="id1" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="id2" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="cm" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="flg" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="mtime" type="xs:unsignedInt" dfdl:binaryNumberRep="binary" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="xfl" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="os" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="xlen" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:occursCountKind="implicit" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GZipTrailerType">
+    <xs:sequence dfdl:ref="GeneralFormat">
+      <xs:element name="crc32" type="xs:unsignedInt" dfdl:binaryNumberRep="binary" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="isize" type="xs:unsignedInt" dfdl:binaryNumberRep="binary" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

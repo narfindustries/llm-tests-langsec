@@ -2,14 +2,8 @@ module PNG;
 
 import spicy;
 
-type IHDR = unit {
-    width: uint32;
-    height: uint32;
-    bitDepth: uint8;
-    colorType: uint8;
-    compressionMethod: uint8;
-    filterMethod: uint8;
-    interlaceMethod: uint8;
+type PNGSignature = unit {
+    magic: bytes &size=8;
 };
 
 type Chunk = unit {
@@ -19,9 +13,88 @@ type Chunk = unit {
     crc: uint32;
 };
 
+type IHDRChunk = unit {
+    width: uint32;
+    height: uint32;
+    bitDepth: uint8;
+    colorType: uint8;
+    compressionMethod: uint8;
+    filterMethod: uint8;
+    interlaceMethod: uint8;
+};
+
+type PLTEChunk = unit {
+    entries: bytes[] &eod;
+};
+
+type IDATChunk = unit {
+    data: bytes &eod;
+};
+
+type IENDChunk = unit {
+    // No fields, as IEND has no data
+};
+
+type tEXtChunk = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &eod;
+};
+
+type zTXtChunk = unit {
+    keyword: bytes &until=b"\x00";
+    compressionMethod: uint8;
+    compressedText: bytes &eod;
+};
+
+type bKGDChunk = unit {
+    background: bytes &size=1; // Size depends on color type
+};
+
+type pHYsChunk = unit {
+    pixelsPerUnitX: uint32;
+    pixelsPerUnitY: uint32;
+    unitSpecifier: uint8;
+};
+
+type tIMEChunk = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type gAMAChunk = unit {
+    gamma: uint32;
+};
+
+type cHRMChunk = unit {
+    whitePointX: uint32;
+    whitePointY: uint32;
+    redX: uint32;
+    redY: uint32;
+    greenX: uint32;
+    greenY: uint32;
+    blueX: uint32;
+    blueY: uint32;
+};
+
+type sBITChunk = unit {
+    significantBits: bytes &size=1; // Size depends on color type
+};
+
+type sRGBChunk = unit {
+    renderingIntent: uint8;
+};
+
 type PNGFile = unit {
-    signature: bytes &size=8;
-    chunks: Chunk[] &eod;
-} &byte-order=big;
+    signature: PNGSignature;
+    chunks: Chunk[] &until($$.is_final_chunk());
+    
+    function is_final_chunk() : bool {
+        return |this.chunks| > 0 && this.chunks[|this.chunks|-1].type == b"IEND";
+    }
+};
 
 public type File = PNGFile;

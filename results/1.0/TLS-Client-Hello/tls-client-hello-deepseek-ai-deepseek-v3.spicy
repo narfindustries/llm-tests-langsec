@@ -1,0 +1,27 @@
+module TLS;
+
+import spicy;
+
+type ClientHello = unit {
+    legacy_version: uint16;
+    random: bytes &size=32;
+    legacy_session_id: bytes &size=uint8;
+    cipher_suites: bytes &size=uint16;
+    legacy_compression_methods: bytes &size=uint8;
+    extensions_length: uint16;
+    extensions: bytes &size=self.extensions_length;
+};
+
+type Extension = unit {
+    type: uint16;
+    length: uint16;
+    data: bytes &size=self.length;
+};
+
+type Extensions = unit {
+    extensions: Extension[] &eager;
+};
+
+on ClientHello::%done {
+    print self;
+}

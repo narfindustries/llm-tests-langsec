@@ -1,94 +1,119 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations
-static HParsedToken *act_DomainName(const HParseResult *p, void *user_data);
-static HParsedToken *act_DnsQuestion(const HParseResult *p, void *user_data);
-static HParsedToken *act_DnsResourceRecord(const HParseResult *p, void *user_data);
-static HParsedToken *act_DnsMessage(const HParseResult *p, void *user_data);
+// Define DNS message structure constants
+#define QR_MASK 0x8000
+#define OPCODE_MASK 0x7800
+#define AA_MASK 0x0400
+#define TC_MASK 0x0200
+#define RD_MASK 0x0100
+#define RA_MASK 0x0080
+#define Z_MASK 0x0070
+#define RCODE_MASK 0x000F
 
-// Basic types
-static HParser *h_uint8 = h_uint8();
-static HParser *h_uint16 = h_uint16be();
-static HParser *h_uint32 = h_uint32be();
+// DNS types
+#define TYPE_A 1
+#define TYPE_NS 2
+#define TYPE_CNAME 5
+#define TYPE_SOA 6
+#define TYPE_PTR 12
+#define TYPE_MX 15
+#define TYPE_TXT 16
+#define TYPE_AAAA 28
 
-// DNS Label
-static HParser *DNS_label;
-static HParser *DNS_labels;
+// DNS classes
+#define CLASS_IN 1
 
-// DNS Domain Name
-static HParser *DNS_domain_name;
+// Function prototypes
+static HParser *dns_header();
+static HParser *dns_question();
+static HParser *dns_rr();
+static HParser *dns_message();
 
-// DNS Question Section
-static HParser *DNS_question;
-
-// DNS Resource Record
-static HParser *DNS_resource_record;
-
-// DNS Message
-static HParser *DNS_message;
-
-// Label parser
-static HParser *DNS_label = h_action(h_length_value(h_uint8(), h_uint8()), act_DomainName, NULL);
-
-// Labels sequence parser
-static HParser *DNS_labels = h_many1(DNS_label);
-
-// Domain name parser
-static HParser *DNS_domain_name = h_right(h_ch('\0'), DNS_labels);
-
-// DNS Question section
-static HParser *DNS_question = h_action(h_sequence(DNS_domain_name, h_uint16(), h_uint16(), NULL), act_DnsQuestion, NULL);
-
-// DNS Resource Record
-static HParser *DNS_resource_record = h_action(h_sequence(DNS_domain_name, h_uint16(), h_uint16(), h_uint32(), h_length_value(h_uint16(), h_uint8()), NULL), act_DnsResourceRecord, NULL);
-
-// DNS Message
-static HParser *DNS_message = h_action(h_sequence(h_uint16(), h_uint16(), h_uint16(), h_uint16(), h_uint16(), h_uint16(),
-                                                  h_many(DNS_question),
-                                                  h_many(DNS_resource_record),
-                                                  h_many(DNS_resource_record),
-                                                  h_many(DNS_resource_record), NULL), act_DnsMessage, NULL);
-
-// Actions
-static HParsedToken *act_DomainName(const HParseResult *p, void *user_data) {
-    return H_MAKE_STR(p->ast->token);
-}
-
-static HParsedToken *act_DnsQuestion(const HParseResult *p, void *user_data) {
-    return H_MAKE_SEQ((HParsedToken *)p->ast->seq->elements[0], 
-                      H_MAKE_UINT(p->ast->seq->elements[1]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[2]->uint));
-}
-
-static HParsedToken *act_DnsResourceRecord(const HParseResult *p, void *user_data) {
-    return H_MAKE_SEQ((HParsedToken *)p->ast->seq->elements[0], 
-                      H_MAKE_UINT(p->ast->seq->elements[1]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[2]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[3]->uint),
-                      H_MAKE_BYTES(p->ast->seq->elements[4]->seq->elements, p->ast->seq->elements[4]->seq->used));
-}
-
-static HParsedToken *act_DnsMessage(const HParseResult *p, void *user_data) {
-    return H_MAKE_SEQ(H_MAKE_UINT(p->ast->seq->elements[0]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[1]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[2]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[3]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[4]->uint),
-                      H_MAKE_UINT(p->ast->seq->elements[5]->uint),
-                      (HParsedToken *)p->ast->seq->elements[6],
-                      (HParsedToken *)p->ast->seq->elements[7],
-                      (HParsedToken *)p->ast->seq->elements[8],
-                      (HParsedToken *)p->ast->seq->elements[9]);
-}
-
-// Main
-int main(int argc, char **argv) {
-    HParser *parser = DNS_message;
-    HParseResult *result = h_parse(parser, (const uint8_t *)"\x03www\x06google\x03com\x00\x00\x01\x00\x01", 16);
-    if (result) {
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_packet_file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long fsize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buf = malloc(fsize);
+    if (!buf) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    fread(buf, 1, fsize, file);
+    fclose(file);
+
+    HParser *parser = dns_message();
+    HParseResult *result = h_parse(parser, buf, fsize);
+    if (result) {
+        printf("DNS message parsed successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to parse DNS message.\n");
+    }
+
+    h_parse_result_free(result);
+    free(buf);
+    h_parser_unref(parser);
+
     return 0;
+}
+
+static HParser *dns_header() {
+    return h_sequence(
+        h_uint16(), // ID
+        h_bits(1, false), // QR
+        h_bits(4, false), // Opcode
+        h_bits(1, false), // AA
+        h_bits(1, false), // TC
+        h_bits(1, false), // RD
+        h_bits(1, false), // RA
+        h_bits(3, false), // Z
+        h_bits(4, false), // RCODE
+        h_uint16(), // QDCOUNT
+        h_uint16(), // ANCOUNT
+        h_uint16(), // NSCOUNT
+        h_uint16(), // ARCOUNT
+        NULL);
+}
+
+static HParser *dns_question() {
+    return h_sequence(
+        h_indirect(), // QNAME
+        h_uint16(),   // QTYPE
+        h_uint16(),   // QCLASS
+        NULL);
+}
+
+static HParser *dns_rr() {
+    return h_sequence(
+        h_indirect(), // NAME
+        h_uint16(),   // TYPE
+        h_uint16(),   // CLASS
+        h_uint32(),   // TTL
+        h_length_value(h_uint16(), h_bits(0, false)), // RDLENGTH and RDATA
+        NULL);
+}
+
+static HParser *dns_message() {
+    return h_sequence(
+        dns_header(),
+        h_many(dns_question()), // Questions
+        h_many(dns_rr()),       // Answer RRs
+        h_many(dns_rr()),       // Authority RRs
+        h_many(dns_rr()),       // Additional RRs
+        NULL);
 }

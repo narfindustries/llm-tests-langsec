@@ -1,46 +1,41 @@
-module sqlite3_db_gpt_4o
-
--- SQLite Database File Format
--- Reference: https://www.sqlite.org/fileformat.html
-
-pragma byteorder = big
-
-struct SQLite3DB
-{
-    header: Header
-    pages: Page[header.page_count]
+enum FileFormatVersion : uint8 {
+    Legacy = 1,
+    WAL = 2
 }
 
-struct Header
-{
-    magic: u32 -- 0x53514c69 'SQLite format 3\0'
-
-    page_size: u16
-    reserved_space: u8
-    max_embedded_payload_frac: u8
-    min_embedded_payload_frac: u8
-    leaf_payload_frac: u8
-    file_change_counter: u32
-    database_size: u32
-    first_freelist_trunk_page: u32
-    total_freelist_pages: u32
-    schema_cookie: u32
-    schema_format_number: u32
-    default_page_cache_size: u32
-    largest_btree_root_page: u32
-    text_encoding: u32
-    user_version: u32
-    incremental_vacuum_mode: u32
-    application_id: u32
-    reserved: u8[20]
-    version_valid_for: u32
-    sqlite_version_number: u32
-
-    page_count: u32 = database_size / page_size
+enum TextEncoding : uint32 {
+    UTF8 = 1,
+    UTF16le = 2,
+    UTF16be = 3
 }
 
-struct Page
-{
-    type: u8
-    data: u8[header.page_size - 1]
+struct SQLite3Header {
+    char headerString[16]; // "SQLite format 3\000"
+    uint16 pageSize; // 512 to 65536 (in powers of 2)
+    FileFormatVersion writeVersion;
+    FileFormatVersion readVersion;
+    uint8 reservedSpace; // 0 to 255
+    uint8 maxEmbeddedPayloadFraction; // Must be 64
+    uint8 minEmbeddedPayloadFraction; // Must be 32
+    uint8 leafPayloadFraction; // Must be 32
+    uint32 fileChangeCounter;
+    uint32 databaseSizeInPages;
+    uint32 firstFreelistTrunkPage;
+    uint32 totalFreelistPages;
+    uint32 schemaCookie;
+    uint32 schemaFormatNumber; // 1, 2, 3, or 4
+    uint32 defaultPageCacheSize;
+    uint32 largestRootBtreePageNumber;
+    TextEncoding textEncoding;
+    uint32 userVersion;
+    uint32 incrementalVacuumMode; // 0 or 1
+    uint32 applicationId;
+    uint8 reservedForExpansion[20]; // Zero-filled
+    uint32 versionValidForNumber;
+    uint32 sqliteVersionNumber;
+}
+
+struct SQLite3Database {
+    SQLite3Header header;
+    // Additional structures for pages would go here
 }

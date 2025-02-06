@@ -1,0 +1,100 @@
+module DICOM;
+
+public type CommandField = unit {
+    GroupNumber:    uint16;
+    ElementNumber:  uint16;
+    VR:            bytes &size=2;
+    Reserved:      bytes &size=2;
+    Length:        uint32;
+    Value:         bytes &size=Length;
+};
+
+public type DataSet = unit {
+    fields: CommandField[] &until($input.size() == 0);
+};
+
+public type CommandSet = unit {
+    group:  uint16;
+    element: uint16;
+    length: uint32;
+    data:   bytes &size=length;
+};
+
+public type CommandElement = unit {
+    group:  uint16;
+    element: uint16;
+    vr:     bytes &size=2;
+    reserved: bytes &size=2;
+    length: uint32;
+    value:  bytes &size=length;
+};
+
+public type DICOM_PDU = unit {
+    type: uint8;
+    reserved: bytes &size=1;
+    length: uint32;
+    data: case type of {
+        0x01 -> associate_rq: AssociateRQ;
+        0x02 -> associate_ac: AssociateAC;
+        0x03 -> associate_rj: AssociateRJ;
+        0x04 -> data_tf: DataTF;
+        0x05 -> release_rq: ReleaseRQ;
+        0x06 -> release_rp: ReleaseRP;
+        0x07 -> abort: Abort;
+        *    -> unknown: bytes &size=length;
+    };
+};
+
+public type AssociateRQ = unit {
+    protocol_version: uint16;
+    reserved: bytes &size=2;
+    called_ae: bytes &size=16;
+    calling_ae: bytes &size=16;
+    reserved2: bytes &size=32;
+    application_context: CommandElement;
+    presentation_contexts: CommandElement[] &until($input.size() == 0);
+    user_info: CommandElement;
+};
+
+public type AssociateAC = unit {
+    protocol_version: uint16;
+    reserved: bytes &size=2;
+    called_ae: bytes &size=16;
+    calling_ae: bytes &size=16;
+    reserved2: bytes &size=32;
+    application_context: CommandElement;
+    presentation_contexts: CommandElement[] &until($input.size() == 0);
+    user_info: CommandElement;
+};
+
+public type AssociateRJ = unit {
+    result: uint8;
+    source: uint8;
+    reason: uint8;
+};
+
+public type DataTF = unit {
+    command_set: CommandSet;
+    data_set: DataSet;
+};
+
+public type ReleaseRQ = unit {
+    reserved: bytes &size=4;
+};
+
+public type ReleaseRP = unit {
+    reserved: bytes &size=4;
+};
+
+public type Abort = unit {
+    source: uint8;
+    reason: uint8;
+};
+
+on DICOM_PDU::associate_rq -> event DICOM::associate_request($conn, self);
+on DICOM_PDU::associate_ac -> event DICOM::associate_accept($conn, self);
+on DICOM_PDU::associate_rj -> event DICOM::associate_reject($conn, self);
+on DICOM_PDU::data_tf -> event DICOM::data_transfer($conn, self);
+on DICOM_PDU::release_rq -> event DICOM::release_request($conn, self);
+on DICOM_PDU::release_rp -> event DICOM::release_response($conn, self);
+on DICOM_PDU::abort -> event DICOM::abort($conn, self);

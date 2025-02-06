@@ -1,38 +1,70 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic building blocks of a PNG file
-static HParser *uint8 = h_uint8();
-static HParser *uint32 = h_uint32();
-static HParser *signature = h_bytes((const uint8_t *)"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", 8);
+// Define PNG signature
+static const uint8_t png_signature[] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
 
-// Chunk structure: length, type, data, CRC
-static HParser *chunk_type = h_bytes(4);
-static HParser *chunk_data = h_length_value(h_uint32(), h_bytes__());
-static HParser *crc = h_uint32();
+// Parser for a single chunk
+HParser *png_chunk() {
+    HParser *chunk_length = h_uint32();
+    HParser *chunk_type = h_bits(32, false);
+    HParser *chunk_data = h_length_value(h_uint32(), h_bits(0, false));
+    HParser *chunk_crc = h_uint32();
+    return h_sequence(chunk_length, chunk_type, chunk_data, chunk_crc, NULL);
+}
 
-static HParser *chunk = h_sequence(
-    h_uint32(),
-    chunk_type,
-    chunk_data,
-    crc,
-    NULL
-);
+// Parser for PNG file
+HParser *png_parser() {
+    HParser *signature = h_bits(64, false);
+    HParser *chunks = h_many(png_chunk());
+    return h_sequence(signature, chunks, NULL);
+}
 
-// A PNG file is a signature followed by one or more chunks
-static HParser *png = h_sequence(
-    signature,
-    h_many1(chunk),
-    NULL
-);
-
+// Main function
 int main(int argc, char **argv) {
-    HParseResult *result = h_parse(png, (const uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        printf("PNG parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Failed to parse PNG.\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <png_file>\n", argv[0]);
+        return 1;
     }
+
+    // Open PNG file
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read file into memory
+    uint8_t *data = malloc(file_size);
+    if (!data) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(file);
+        return 1;
+    }
+    fread(data, 1, file_size, file);
+
+    // Create PNG parser
+    HParser *parser = png_parser();
+
+    // Parse the data
+    HParseResult *result = h_parse(parser, data, file_size);
+    if (result) {
+        printf("PNG file parsed successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to parse PNG file.\n");
+    }
+
+    // Cleanup
+    h_parse_result_free(result);
+    h_parser_unref(parser);
+    free(data);
+    fclose(file);
+
     return 0;
 }

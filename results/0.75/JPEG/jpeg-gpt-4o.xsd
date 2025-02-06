@@ -1,76 +1,140 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg"
-           xmlns:tns="http://example.com/jpeg"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified"
-           dfdl:defaultBlockSize="8192">
+<schema xmlns="http://www.w3.org/2001/XMLSchema" 
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+        targetNamespace="http://example.org/jpeg" 
+        xmlns:ex="http://example.org/jpeg" 
+        elementFormDefault="qualified">
+        
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
-    <xs:include schemaLocation="dfdl4s.dfdl.xsd"/>
+    <element name="JPEG" type="ex:JPEGType"/>
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format representation="binary"
-                         encoding="ISO-8859-1"
-                         lengthKind="explicit"
-                         lengthUnits="bytes"
-                         alignment="1"
-                         byteOrder="bigEndian"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <complexType name="JPEGType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="SOI" type="ex:SOIType"/>
+            <element name="Segments" type="ex:SegmentsType" maxOccurs="unbounded"/>
+            <element name="EOI" type="ex:EOIType"/>
+        </sequence>
+    </complexType>
 
-    <xs:element name="JPEGImage" type="tns:JPEGImageType"/>
+    <complexType name="SOIType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Marker" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes" fixed="FFD8"/>
+        </sequence>
+    </complexType>
 
-    <xs:complexType name="JPEGImageType">
-        <xs:sequence>
-            <xs:element name="SOI" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:alignment value="1"/>
-                        <dfdl:inputValueCalc>{ 0xFFD8 }</dfdl:inputValueCalc>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
+    <complexType name="EOIType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Marker" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes" fixed="FFD9"/>
+        </sequence>
+    </complexType>
 
-            <xs:element name="Segments" type="tns:SegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+    <complexType name="SegmentsType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Marker" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <choice>
+                <element name="APPn" type="ex:APPnType"/>
+                <element name="COM" type="ex:COMType"/>
+                <element name="DQT" type="ex:DQTType"/>
+                <element name="SOF0" type="ex:SOF0Type"/>
+                <element name="DHT" type="ex:DHTType"/>
+                <element name="SOS" type="ex:SOSType"/>
+                <element name="DRI" type="ex:DRIType"/>
+                <element name="DNL" type="ex:DNLType"/>
+                <element name="RSTn" type="ex:RSTnType"/>
+            </choice>
+        </sequence>
+    </complexType>
 
-            <xs:element name="EOI" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:alignment value="1"/>
-                        <dfdl:inputValueCalc>{ 0xFFD9 }</dfdl:inputValueCalc>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
+    <complexType name="APPnType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="Data" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $appnLength - 2 }" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
 
-    <xs:complexType name="SegmentsType">
-        <xs:sequence>
-            <xs:element name="Marker" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:alignment value="1"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="Length" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:lengthKind value="explicit"/>
-                        <dfdl:lengthUnits value="bytes"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $Length - 2 }">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:lengthUnits value="bytes"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
+    <complexType name="COMType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="Comment" type="string" dfdl:lengthKind="explicit" dfdl:length="{ $comLength - 2 }" dfdl:lengthUnits="bytes" dfdl:encoding="utf-8"/>
+        </sequence>
+    </complexType>
 
-</xs:schema>
+    <complexType name="DQTType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="QTInformation" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="QuantizationTable" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $dqtLength - 3 }" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="SOF0Type">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="SamplePrecision" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="ImageHeight" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="ImageWidth" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="NumberOfComponents" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="ComponentInfo" type="ex:ComponentInfoType" maxOccurs="3" minOccurs="1"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ComponentInfoType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="ComponentID" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="SamplingFactors" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="QTNumber" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="DHTType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="HTInformation" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="CodeLengths" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bytes"/>
+            <element name="HuffmanValues" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ $dhtLength - 19 }" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="SOSType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="NumberOfComponentsInScan" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="ComponentSelector" type="ex:ComponentSelectorType" maxOccurs="3" minOccurs="1"/>
+            <element name="StartOfSpectralSelection" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="EndOfSpectralSelection" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="SuccessiveApproximationBits" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="ComponentSelectorType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="ComponentID" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="HuffmanTableSelector" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="DRIType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="RestartInterval" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="DNLType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Length" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="NumberOfLines" type="int" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="RSTnType">
+        <sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+            <element name="Marker" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+</schema>

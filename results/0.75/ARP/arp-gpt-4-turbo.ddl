@@ -1,30 +1,73 @@
-module ARP {
+EthernetType : type = enum(u16) {
+  IPv4 = 0x0800,
+  ARP = 0x0806,
+  WakeOnLAN = 0x0842,
+  IETF_TRILL = 0x22F3,
+  DECnet = 0x6003,
+  RARP = 0x8035,
+  AppleTalk = 0x809B,
+  AARP = 0x80F3,
+  VLAN = 0x8100,
+  IPX = 0x8137,
+  QNXQnet = 0x8204,
+  IPv6 = 0x86DD,
+  EthernetFlowControl = 0x8808,
+  EthernetSlowProtocols = 0x8809,
+  CobraNet = 0x8819,
+  MPLSUnicast = 0x8847,
+  MPLSMulticast = 0x8848,
+  PPPoEDiscovery = 0x8863,
+  PPPoESession = 0x8864,
+  JumboFrames = 0x8870,
+  HomePlug = 0x887B,
+  EAPoLAN = 0x888E,
+  PROFINET = 0x8892,
+  HyperSCSI = 0x889A,
+  ATAoE = 0x88A2,
+  EtherCAT = 0x88A4,
+  ProviderBridging = 0x88A8,
+  AVBTransport = 0x88B5,
+  LLDP = 0x88CC,
+  SERCOS = 0x88CD,
+  HomePlugAVMME = 0x88E1,
+  MediaRedundancy = 0x88E3,
+  MACsec = 0x88E5,
+  PBB = 0x88E7,
+  PTP = 0x88F7,
+  CFM_OAM = 0x8902,
+  FCoE = 0x8906,
+  FCoEInit = 0x8914,
+  RoCE = 0x8915,
+  TTEthernet = 0x891D,
+  IEEE1905_1 = 0x893A,
+  HSR = 0x892F
+};
 
-    import Network.IPv4
-    import Network.Ethernet
-    import Data.Bytes
-    import Data.UInt
+HardwareType : type = enum(u16) {
+  Ethernet = 1,
+  IEEE_802 = 6,
+  ARCNET = 7,
+  FrameRelay = 15,
+  ATM = 16,
+  HDLC = 17,
+  FibreChannel = 18,
+  ATM2 = 19,
+  SerialLine = 20
+};
 
-    // Define ARP Packet structure
-    type ARPPacket = struct {
-        htype       : UInt16be        // Hardware type (Ethernet is 1)
-        ptype       : UInt16be        // Protocol type (IPv4 is 0x0800)
-        hlen        : UInt8           // Hardware address length (Ethernet MAC address length is 6)
-        plen        : UInt8           // Protocol address length (IPv4 address length is 4)
-        oper        : UInt16be        // Operation (1 for request, 2 for reply)
-        sha         : byte[6]         // Sender hardware address (MAC)
-        spa         : IPv4            // Sender protocol address (IPv4)
-        tha         : byte[6]         // Target hardware address (MAC)
-        tpa         : IPv4            // Target protocol address (IPv4)
-    }
-
-    // Define Ethernet Frame for ARP
-    type EthernetFrameARP = struct {
-        header      : Ethernet.Header 
-        payload     : ARPPacket       if header.etherType == 0x0806
-        // Check Ethernet type for ARP
-    }
-
-    // Parser entry point
-    let parse_arp = parse (EthernetFrameARP) from "input.pcap"
-}
+ARP_Packet : type = struct {
+  htype : HardwareType,
+  ptype : EthernetType,
+  hlen : u8,
+  plen : u8,
+  op : enum(u16) {
+    Request = 1,
+    Reply = 2,
+    Request_Reverse = 3,
+    Reply_Reverse = 4
+  },
+  sha : bytes(hlen),
+  spa : bytes(plen),
+  tha : bytes(hlen),
+  tpa : bytes(plen)
+};

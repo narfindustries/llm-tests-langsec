@@ -1,132 +1,247 @@
-domain hl7_v2_meta {
-  version = "3.3";
-  description = "HL7 v2 meta message";
+syntax = "HL7v2"
+structure = "message"
 
-  type Message = sequence {
-    MSH: Segment_MSH,
-    *SFG: Segment_SFG,
-    *PID: Segment_PID,
-    *PV1: Segment_PV1,
-    *ORC: Segment_ORC,
-    *OBR: Segment_OBR,
-    *OBX: Segment_OBX,
+segment MSH {
+  field FS {
+    type = "string"
+    length = 1
+    value = "|"
   }
-
-  type Segment_MSH = group {
-    seg_id: fixed(3) = "MSH",
-    encoding_chars: fixed(4),
-    field_separator: fixed(1),
-    component_separator: fixed(1),
-    repetition_separator: fixed(1),
-    concurrency_separator: fixed(1),
-    continuation_pointer: fixed(1),
-    message_date: fixed(8),
-    message_time: fixed(6),
-    security: fixed(20),
-    message_type: fixed(3),
-    trigger_event: fixed(3),
-    message_control_id: fixed(20),
-    processing_id: fixed(3),
-    version_id: fixed(12),
-    sequence_number: fixed(15),
-    continuation_pointer2: fixed(180),
-    accept_acknowledgment_type: fixed(2),
-    application_acknowledgment_type: fixed(2),
-    country_code: fixed(3),
-    character_set: fixed(4),
-    principal_language_of_message: fixed(3),
+  field EncodingCharacters {
+    type = "string"
+    length = 3
+    value = "^~\&"
   }
-
-  type Segment_SFG = group {
-    seg_id: fixed(3) = "SFG",
-    sending_facility: fixed(20),
-    sending_facility_namespace_id: fixed(20),
-    receiving_facility: fixed(20),
-    receiving_facility_namespace_id: fixed(20),
-    date: fixed(8),
-    time: fixed(6),
+  field SendingFacility {
+    type = "string"
+    length = "variable"
   }
-
-  type Segment_PID = group {
-    seg_id: fixed(3) = "PID",
-    set_id: fixed(4),
-    patient_id: fixed(20),
-    patient_id_internal: fixed(20),
-    patient_name: fixed(50),
-    patient_name_type_code: fixed(1),
-    date_of_birth: fixed(8),
-    sex: fixed(1),
-    patient_alias: fixed(50),
-    racial_category: fixed(1),
-    patient_address: fixed(50),
-    county_code: fixed(3),
-    phone_number_home: fixed(20),
-    phone_number_business: fixed(20),
+  field SendingFacilityNamespaceID {
+    type = "string"
+    length = "variable"
   }
-
-  type Segment_PV1 = group {
-    seg_id: fixed(3) = "PV1",
-    set_id: fixed(4),
-    visit_number: fixed(20),
-    patient_class: fixed(1),
-    visit_number_internal: fixed(20),
-    admit_source: fixed(3),
-    admitting_doctor: fixed(50),
-    visit_type: fixed(1),
-    admit_date: fixed(8),
-    admit_time: fixed(6),
-    discharge_disposition: fixed(2),
-    discharge_date: fixed(8),
-    discharge_time: fixed(6),
+  field ReceivingFacility {
+    type = "string"
+    length = "variable"
   }
-
-  type Segment_ORC = group {
-    seg_id: fixed(3) = "ORC",
-    order_control: fixed(2),
-    placer_order_number: fixed(20),
-    filler_order_number: fixed(20),
-    placer_group_number: fixed(20),
-    order_status: fixed(2),
-    response_flag: fixed(2),
-    quantity/timing: fixed(80),
-    parent: fixed(20),
-    date: fixed(8),
-    order_type: fixed(2),
-    enterer: fixed(50),
-    order_enterer_location: fixed(20),
+  field ReceivingFacilityNamespaceID {
+    type = "string"
+    length = "variable"
   }
-
-  type Segment_OBR = group {
-    seg_id: fixed(3) = "OBR",
-    set_id: fixed(4),
-    placer_order_number: fixed(20),
-    filler_order_number: fixed(20),
-    universal_service_identifier: fixed(80),
-    priority: fixed(2),
-    requested_date: fixed(8),
-    requested_time: fixed(6),
-    observation_date: fixed(8),
-    observation_time: fixed(6),
-    collection_volume: fixed(10),
-    collector_identifier: fixed(50),
-    specimen_action_code: fixed(2),
-    danger_code: fixed(5),
+  field DateTimeOfMessage {
+    type = "datetime"
+    format = "YYYYMMDDHHMMSS"
   }
+  field Security {
+    type = "string"
+    length = "variable"
+  }
+  field MessageType {
+    type = "string"
+    length = "variable"
+  }
+  field MessageControlID {
+    type = "string"
+    length = "variable"
+  }
+  field ProcessingID {
+    type = "string"
+    length = 1
+    value = ["P", "T", "D"]
+  }
+  field VersionID {
+    type = "string"
+    length = "variable"
+  }
+}
 
-  type Segment_OBX = group {
-    seg_id: fixed(3) = "OBX",
-    set_id: fixed(4),
-    value_type: fixed(2),
-    observation_identifier: fixed(80),
-    observation_sub_id: fixed(20),
-    observation_value: fixed(80),
-    units: fixed(20),
-    reference_range: fixed(20),
-    abnormal_flags: fixed(2),
-    probability: fixed(10),
-    nature_of_abnormal_test: fixed(2),
-    observation_result_status: fixed(2),
-    effective_date_of_reference_range: fixed(8),
-    user_defined_access_checks: fixed(20),
+segment PID {
+  field SetIDPatientID {
+    type = "string"
+    length = "variable"
+  }
+  field PatientID {
+    type = "string"
+    length = "variable"
+  }
+  field PatientIDIdentifier {
+    type = "string"
+    length = "variable"
+  }
+  field AlternatePatientID {
+    type = "string"
+    length = "variable"
+  }
+  field PatientName {
+    type = "string"
+    length = "variable"
+  }
+  field MothersMaidenName {
+    type = "string"
+    length = "variable"
+  }
+  field DateOfBirth {
+    type = "date"
+    format = "YYYYMMDD"
+  }
+  field Sex {
+    type = "string"
+    length = 1
+    value = ["M", "F", "U", "A", "N", "O"]
+  }
+  field PatientAlias {
+    type = "string"
+    length = "variable"
+  }
+  field Race {
+    type = "string"
+    length = "variable"
+  }
+  field PatientAddress {
+    type = "string"
+    length = "variable"
+  }
+  field CountyCode {
+    type = "string"
+    length = "variable"
+  }
+  field PhoneNumberHome {
+    type = "string"
+    length = "variable"
+  }
+  field PhoneNumberBusiness {
+    type = "string"
+    length = "variable"
+  }
+}
+
+segment PV1 {
+  field SetIDPatientVisit {
+    type = "string"
+    length = "variable"
+  }
+  field VisitNumber {
+    type = "string"
+    length = "variable"
+  }
+  field VisitIndicator {
+    type = "string"
+    length = 1
+    value = ["I", "O", "E"]
+  }
+  field AdmissionType {
+    type = "string"
+    length = "variable"
+  }
+  field PreAdmitNumber {
+    type = "string"
+    length = "variable"
+  }
+  field PriorPatientLocation {
+    type = "string"
+    length = "variable"
+  }
+  field AttendingDoctor {
+    type = "string"
+    length = "variable"
+  }
+  field ReferringDoctor {
+    type = "string"
+    length = "variable"
+  }
+  field ConsultingDoctor {
+    type = "string"
+    length = "variable"
+  }
+  field HospitalService {
+    type = "string"
+    length = "variable"
+  }
+}
+
+segment ORC {
+  field OrderControl {
+    type = "string"
+    length = 2
+    value = ["NW", "OK", "CA"]
+  }
+  field OrderControlIdentifier {
+    type = "string"
+    length = "variable"
+  }
+  field OrderControlPriorValue {
+    type = "string"
+    length = "variable"
+  }
+  field OrderControlPlacerIdentifier {
+    type = "string"
+    length = "variable"
+  }
+  field OrderControlFillerIdentifier {
+    type = "string"
+    length = "variable"
+  }
+}
+
+segment OBR {
+  field SetIDObservationRequest {
+    type = "string"
+    length = "variable"
+  }
+  field PlacerOrderNumber {
+    type = "string"
+    length = "variable"
+  }
+  field FillerOrderNumber {
+    type = "string"
+    length = "variable"
+  }
+  field UniversalServiceIdentifier {
+    type = "string"
+    length = "variable"
+  }
+  field Priority {
+    type = "string"
+    length = "variable"
+    value = ["STAT", "ASAP", "RUSH"]
+  }
+}
+
+segment OBX {
+  field SetIDObservationResult {
+    type = "string"
+    length = "variable"
+  }
+  field ValueType {
+    type = "string"
+    length = 2
+    value = ["NM", "TX", "CE"]
+  }
+  field ObservationResult {
+    type = "string"
+    length = "variable"
+  }
+  field Units {
+    type = "string"
+    length = "variable"
+  }
+  field ReferenceRange {
+    type = "string"
+    length = "variable"
+  }
+}
+
+segment OCD {
+  field SetIDObservationComponent {
+    type = "string"
+    length = "variable"
+  }
+  field ObservationComponentIdentifier {
+    type = "string"
+    length = "variable"
+  }
+  field ObservationComponentValue {
+    type = "string"
+    length = "variable"
   }
 }

@@ -1,50 +1,57 @@
 meta:
-  id: http_1_1
-  title: HTTP 1.1
+  id: http1_1
+  title: HTTP/1.1 Protocol
   file-extension: http
-  endian: be
-
+  encoding: utf-8
 seq:
   - id: request_line
     type: request_line
   - id: headers
-    type: header
-    repeat: until
-    repeat-until: _.is_empty
+    type: headers
   - id: body
-    size: _root.content_length
-
+    size-eos: true
 types:
   request_line:
     seq:
       - id: method
         type: strz
         encoding: ascii
-        terminator: 0x20
+        terminator: 0x20  # Space (' ')
       - id: request_uri
         type: strz
         encoding: ascii
-        terminator: 0x20
+        terminator: 0x20  # Space (' ')
       - id: http_version
         type: strz
         encoding: ascii
-        terminator: 0x0d0a
+        terminator: 0x0d0a  # CRLF
+
+  headers:
+    seq:
+      - id: entries
+        type: header
+        repeat: until
+        repeat-until: entries_terminator
 
   header:
     seq:
       - id: name
         type: strz
         encoding: ascii
-        terminator: 0x3a  # Colon ':'
+        terminator: 0x3a  # Colon (':')
+      - id: ws
+        type: str
+        size: 1
+        encoding: ascii
       - id: value
         type: strz
         encoding: ascii
-        terminator: 0x0d0a
+        terminator: 0x0d0a  # CRLF
 
-    instances:
-      is_empty:
-        value: 'name == ""'
-
-instances:
-  content_length:
-    value: 'headers.find { it.name.lowercase() == "content-length" }?.value.to_i'
+  entries_terminator:
+    seq:
+      - id: empty_line
+        type: strz
+        encoding: ascii
+        terminator: 0x0d0a  # CRLF
+        contents: ""

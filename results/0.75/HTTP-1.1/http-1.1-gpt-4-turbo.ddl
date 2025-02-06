@@ -1,41 +1,45 @@
-module HTTP_1_1 where
+grammar HTTP;
 
-import DAEDALUS.Core
+import std.ascii;
 
--- Define the structure of an HTTP message which includes
--- both the request and response format as per HTTP/1.1 specification
+type Request = struct {
+    MethodLine methodLine;
+    Headers headers @separator(EndOfLine);
+    optional<string> body @requires(hasBody(headers));
+};
 
--- Define basic building blocks
-token           = many1 (alpha <|> digit <|> oneOf "-!#$%&'*+.^_`|~")
-newline         = string "\r\n"
-space           = string " "
+type MethodLine = struct {
+    string method;
+    string uri;
+    string version;
+};
 
--- Request-Line = Method SP Request-URI SP HTTP-Version CRLF
-requestLine     = RequestLine <$> method <*> (space *> requestURI) <*> (space *> httpVersion <* newline)
+type Headers = struct {
+    string key;
+    string value;
+};
 
--- Method definitions (common methods included)
-method          = string "GET" <|> string "POST" <|> string "HEAD" <|> string "PUT"
-              <|> string "DELETE" <|> string "TRACE" <|> string "OPTIONS" <|> string "CONNECT" <|> string "PATCH"
+type Response = struct {
+    StatusLine statusLine;
+    Headers headers @separator(EndOfLine);
+    optional<string> body @requires(hasBody(headers));
+};
 
--- Request-URI (A simplified version)
-requestURI      = token
+type StatusLine = struct {
+    string version;
+    uint16 statusCode;
+    string reasonPhrase;
+};
 
--- HTTP Version
-httpVersion     = string "HTTP/" *> ((,) <$> digit <*> (char '.' *> digit))
+predicate hasBody(Headers[] headers) -> bool {
+    foreach(header in headers) {
+        if (header.key == "Content-Length" && parseUInt(header.value) > 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
--- Header fields: field-name ":" [ field-value ]
-header          = Header <$> (token <* string ": ") <*> (manyTill anyChar newline)
-
--- An HTTP message either a request or a response
-httpMessage     = HttpMessage <$> requestLine <*> many header <*> optional body
-
--- Body of the message (not parsed in detail here for simplicity)
-body            = many anyChar
-
--- Parsing the full HTTP message
-parseHttpMessage = parse httpMessage
-
--- Types to represent the structure
-data RequestLine = RequestLine String String (Int, Int)
-data Header = Header String String
-data HttpMessage = HttpMessage RequestLine [Header] (Maybe String)
+function parseUInt(string s) -> uint {
+    return uint(parse(s));
+}

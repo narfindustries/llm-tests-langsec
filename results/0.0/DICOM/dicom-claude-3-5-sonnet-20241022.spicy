@@ -1,61 +1,66 @@
 module DICOM;
 
-import spicy;
-
-public type PDU = unit {
+public type Header = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
     
-    switch ( prefix ) {
-        b"DICM" -> : DICOM_Dataset;
-        * -> : void;
-    };
+    var is_valid: bool;
+
+    on %init {
+        self.is_valid = self.prefix == b"DICM";
+    }
 };
 
-type DICOM_Dataset = unit {
-    elements: DICOM_Element[];
-};
-
-type DICOM_Element = unit {
+type DataElement = unit {
     tag_group: uint16;
     tag_element: uint16;
-    vr: bytes &size=2;
-    
-    switch ( self.vr ) {
-        b"OB" -> : OB_Element;
-        b"OW" -> : OW_Element;
-        b"SQ" -> : SQ_Element;
-        * -> : Standard_Element;
-    };
+    vr: bytes &size=2 if (self.tag_group != 0xFFFE);
+    length: uint16 if (self.tag_group != 0xFFFE && self.is_explicit_vr);
+    length_32: uint32 if (self.tag_group != 0xFFFE && !self.is_explicit_vr);
+    value: bytes &size=self.value_length;
+
+    var explicit_vr: bool;
+    var value_length: uint32;
+
+    on %init {
+        self.explicit_vr = True;
+        self.value_length = 0;
+    }
+
+    on vr {
+        if ( self.tag_group != 0xFFFE ) {
+            self.explicit_vr = (self.vr == b"OB" || self.vr == b"OW" || 
+                               self.vr == b"OF" || self.vr == b"SQ" || 
+                               self.vr == b"UT" || self.vr == b"UN");
+        }
+    }
+
+    on length {
+        if ( self.explicit_vr )
+            self.value_length = self.length;
+    }
+
+    on length_32 {
+        if ( !self.explicit_vr || self.tag_group == 0xFFFE )
+            self.value_length = self.length_32;
+    }
 };
 
-type Standard_Element = unit {
-    length: uint16;
-    value: bytes &size=self.length;
-};
-
-type OB_Element = unit {
-    reserved: uint16;
+type SequenceItem = unit {
+    tag: uint32;
     length: uint32;
-    value: bytes &size=self.length;
+    data_elements: DataElement[];
 };
 
-type OW_Element = unit {
-    reserved: uint16;
-    length: uint32;
-    value: bytes &size=self.length;
+type Sequence = unit {
+    items: SequenceItem[];
 };
 
-type SQ_Element = unit {
-    reserved: uint16;
-    length: uint32;
-    items: DICOM_Dataset[] &until=$input.length() == 0;
+public type DICOM = unit {
+    header: Header;
+    data_elements: DataElement[] if (self.header.is_valid);
 };
 
-on PDU::preamble -> event DICOM::preamble($data);
-on DICOM_Element::tag_group -> event DICOM::tag_group(self.tag_group);
-on DICOM_Element::tag_element -> event DICOM::tag_element(self.tag_element);
-on DICOM_Element::vr -> event DICOM::vr(self.vr);
-on Standard_Element::value -> event DICOM::value(self.value);
-on OB_Element::value -> event DICOM::value(self.value);
-on OW_Element::value -> event DICOM::value(self.value);
+on DICOM::data_elements {
+    event dicom_element(self.tag_group, self.tag_element, self.vr, self.value);
+}

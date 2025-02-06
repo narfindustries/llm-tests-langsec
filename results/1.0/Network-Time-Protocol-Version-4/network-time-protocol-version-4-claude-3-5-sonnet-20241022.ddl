@@ -1,24 +1,21 @@
-def Main = NTP4
-
-def NTP4 = {
-  li : uint2
-  vn : uint3
-  mode : uint3
-  stratum : uint8
-  poll : int8
-  precision : int8
-  root_delay : uint32
-  root_dispersion : uint32
-  reference_id : uint32
-  reference_timestamp : uint64
-  originate_timestamp : uint64
-  receive_timestamp : uint64
-  transmit_timestamp : uint64
+def NTP_Packet {
+    LI : bits(2)
+    VN : bits(3)
+    Mode : bits(3)
+    Stratum : u8
+    Poll : i8
+    Precision : i8
+    RootDelay : i32
+    RootDispersion : u32
+    ReferenceID : bytes[4]
+    ReferenceTimestamp : u64
+    OriginTimestamp : u64
+    ReceiveTimestamp : u64
+    TransmitTimestamp : u64
+    Authenticator ? {
+        KeyIdentifier : u32
+        MessageDigest : bytes
+    }
 }
 
-def uint2 = uint value ~(value <= 3)
-def uint3 = uint value ~(value <= 7)
-def uint8 = uint8
-def int8 = int8
-def uint32 = uint32
-def uint64 = uint64
+def Main = NTP_Packet

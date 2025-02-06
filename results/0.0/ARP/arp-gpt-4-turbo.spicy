@@ -1,21 +1,33 @@
 module ARP;
 
-public type ARP_Header = unit {
-    htype: uint16;
-    ptype: uint16;
+public type HardwareType : enum {
+    ETHERNET = 1,
+    // Additional hardware types can be defined here
+};
+
+public type ProtocolType : enum {
+    IPv4 = 0x0800,
+    // Additional protocol types can be defined here
+};
+
+public type Operation : enum {
+    REQUEST = 1,
+    REPLY = 2,
+    // Additional operations can be defined here
+};
+
+public type ARP_Packet : unit {
+    htype: HardwareType;
+    ptype: ProtocolType;
     hlen: uint8;
     plen: uint8;
-    oper: uint16;
-    sha: bytes &size=6;
-    spa: bytes &size=4;
-    tha: bytes &size=6;
-    tpa: bytes &size=4;
-
-    on %done {
-        print self;
-    }
+    oper: Operation;
+    sha: bytes &size=this.hlen;
+    spa: bytes &size=this.plen;
+    tha: bytes &size=this.hlen;
+    tpa: bytes &size=this.plen;
 };
 
-public type ARP_Packet = unit {
-    header: ARP_Header;
-};
+public type ARP_Message : unit {
+    packet: ARP_Packet;
+} &byte_order=big;

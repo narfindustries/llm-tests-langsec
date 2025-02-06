@@ -1,60 +1,170 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns:tns="http://example.com/ICMP"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/icmp"
+        xmlns:tns="http://example.com/icmp"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format encoding="utf-8"
-                   byteOrder="bigEndian"
-                   lengthKind="explicit"
-                   lengthUnits="bytes"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="implicit"/>
+        </appinfo>
+    </annotation>
 
-  <xs:element name="ICMPMessage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Type" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="1" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Code" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="1" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Checksum" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="RestOfHeader" type="xs:unsignedInt">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="4" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Data" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element lengthKind="implicit" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-</xs:schema>
+    <element name="ICMPMessage">
+        <complexType>
+            <sequence>
+                <element name="Type" type="unsignedByte">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                            <dfdl:length>1</dfdl:length>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Code" type="unsignedByte">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                            <dfdl:length>1</dfdl:length>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Checksum" type="unsignedShort">
+                    <annotation>
+                        <appinfo>
+                            <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                            <dfdl:length>2</dfdl:length>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <choice>
+                    <sequence dfdl:choiceBranchKey="{fn:current()/Type}">
+                        <element name="Echo" dfdl:choiceBranchKey="0 8">
+                            <complexType>
+                                <sequence>
+                                    <element name="Identifier" type="unsignedShort">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>2</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="SequenceNumber" type="unsignedShort">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>2</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="Data" type="hexBinary">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthKind>implicit</dfdl:lengthKind>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                </sequence>
+                            </complexType>
+                        </element>
+                        <element name="DestinationUnreachable" dfdl:choiceBranchKey="3">
+                            <complexType>
+                                <sequence>
+                                    <element name="Unused" type="unsignedInt">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>4</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="OriginalDatagram" type="hexBinary">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthKind>implicit</dfdl:lengthKind>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                </sequence>
+                            </complexType>
+                        </element>
+                        <element name="Redirect" dfdl:choiceBranchKey="5">
+                            <complexType>
+                                <sequence>
+                                    <element name="GatewayInternetAddress" type="unsignedInt">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>4</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="OriginalDatagram" type="hexBinary">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthKind>implicit</dfdl:lengthKind>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                </sequence>
+                            </complexType>
+                        </element>
+                        <element name="TimeExceeded" dfdl:choiceBranchKey="11">
+                            <complexType>
+                                <sequence>
+                                    <element name="Unused" type="unsignedInt">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>4</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="OriginalDatagram" type="hexBinary">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthKind>implicit</dfdl:lengthKind>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                </sequence>
+                            </complexType>
+                        </element>
+                        <element name="ParameterProblem" dfdl:choiceBranchKey="12">
+                            <complexType>
+                                <sequence>
+                                    <element name="Pointer" type="unsignedByte">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>1</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="Unused" type="unsignedShort">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+                                                <dfdl:length>2</dfdl:length>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                    <element name="OriginalDatagram" type="hexBinary">
+                                        <annotation>
+                                            <appinfo>
+                                                <dfdl:lengthKind>implicit</dfdl:lengthKind>
+                                            </appinfo>
+                                        </annotation>
+                                    </element>
+                                </sequence>
+                            </complexType>
+                        </element>
+                    </sequence>
+                </choice>
+            </sequence>
+        </complexType>
+    </element>
+</schema>

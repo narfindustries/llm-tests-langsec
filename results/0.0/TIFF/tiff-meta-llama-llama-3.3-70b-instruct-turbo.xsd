@@ -1,46 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tiff"
-           xmlns="http://example.com/tiff"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="tiff">
+  <xs:element name="definition">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="header" dfdl:occurs="1..1"/>
-        <xs:element ref="ifd" dfdl:occurs="1..1"/>
+        <xs:element name="format" type="formatType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="element" type="elementType" minOccurs="1" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="ascii"/>
-        <xs:element name="version" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ifd">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="count" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
-        <xs:element name="entries" dfdl:occurs="*">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="tag" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
-              <xs:element name="type" type="xs:integer" dfdl:length="2" dfdl:encoding="integer-be"/>
-              <xs:element name="count" type="xs:integer" dfdl:length="4" dfdl:encoding="integer-be"/>
-              <xs:element name="value" type="xs:integer" dfdl:length="4" dfdl:encoding="integer-be"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+  <xs:complexType name="formatType">
+    <xs:sequence>
+      <xs:element name="binaryRepresentation" type="binaryRepresentationType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="binaryRepresentationType">
+    <xs:sequence>
+      <xs:element name="byteOrder" type="byteOrderType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="byteOrderType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="value" type="byteOrderEnum" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="byteOrderEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="bigEndian"/>
+      <xs:enumeration value="littleEndian"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="sequence" type="sequenceType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="choice" type="choiceType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="assert" type="assertType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sequenceType">
+    <xs:sequence>
+      <xs:element name="element" type="elementType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="choiceType">
+    <xs:sequence>
+      <xs:element name="element" type="elementType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="assertType">
+    <xs:sequence>
+      <xs:element name="expression" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TIFFType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:hexBinary" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MagicNumber" type="xs:hexBinary" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="OffsetToFirstIFD" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="IFD" type="IFDType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="NumberOfDirectoryEntries" type="xs:unsignedShort" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="DirectoryEntry" type="DirectoryEntryType" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="OffsetToNextIFD" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DirectoryEntryType">
+    <xs:sequence>
+      <xs:element name="TagNumber" type="xs:unsignedShort" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="TagType" type="xs:unsignedShort" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="TagCount" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="TagValueOffset" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TagValueType">
+    <xs:choice>
+      <xs:element name="ByteValue" type="xs:unsignedByte" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="AsciiValue" type="xs:string" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="ShortValue" type="xs:unsignedShort" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="LongValue" type="xs:unsignedInt" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="RationalValue" type="RationalType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="RationalType">
+    <xs:sequence>
+      <xs:element name="Numerator" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Denominator" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+  <xs:element name="ImageLength" type="xs:unsignedShort"/>
+  <xs:element name="BitsPerSample" type="xs:unsignedShort"/>
+  <xs:element name="Compression" type="xs:unsignedShort"/>
+  <xs:element name="PhotometricInterpretation" type="xs:unsignedShort"/>
+  <xs:element name="Orientation" type="xs:unsignedShort"/>
+  <xs:element name="SamplesPerPixel" type="xs:unsignedShort"/>
+  <xs:element name="PlanarConfiguration" type="xs:unsignedShort"/>
+  <xs:element name="YCbCrSubSampling" type="xs:unsignedShort"/>
+  <xs:element name="YCbCrPositioning" type="xs:unsignedShort"/>
+  <xs:element name="XResolution" type="RationalType"/>
+  <xs:element name="YResolution" type="RationalType"/>
+  <xs:element name="ResolutionUnit" type="xs:unsignedShort"/>
+  <xs:element name="DateTime" type="xs:string"/>
+  <xs:element name="Artist" type="xs:string"/>
+  <xs:element name="ImageDescription" type="xs:string"/>
+  <xs:element name="Make" type="xs:string"/>
+  <xs:element name="Model" type="xs:string"/>
+  <xs:element name="Software" type="xs:string"/>
+  <xs:element name="DateTimeOriginal" type="xs:string"/>
+  <xs:element name="DateTimeDigitized" type="xs:string"/>
+  <xs:element name="SubIFDs" type="xs:unsignedInt"/>
 </xs:schema>

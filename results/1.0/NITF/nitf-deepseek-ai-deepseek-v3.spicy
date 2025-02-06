@@ -1,0 +1,64 @@
+module NITF;
+
+import spicy;
+
+type FileHeader = unit {
+    FILE_PROFILE_NAME:      bytes &size=4;
+    FILE_VERSION:           bytes &size=2;
+    COMPLEXITY_LEVEL:       bytes &size=2;
+    STANDARD_TYPE:          bytes &size=4;
+    ORIGINATING_STATION_ID: bytes &size=10;
+    FILE_DATE_TIME:         bytes &size=14;
+    FILE_TITLE:             bytes &size=80;
+    SECURITY_CLASSIFICATION: bytes &size=1;
+    CLASSIFICATION_SYSTEM:  bytes &size=2;
+    CLASSIFICATION_SOURCE:  bytes &size=2;
+    DECLASSIFICATION_DATE:  bytes &size=8;
+};
+
+type ImageSegmentHeader = unit {
+    IID:            bytes &size=10;
+    IDATIM:         bytes &size=14;
+    TGTID:          bytes &size=17;
+    ITITLE:         bytes &size=80;
+    PVTYPE:         bytes &size=3;
+    IC:             bytes &size=2;
+    NROWS:          bytes &size=8;
+    NCOLS:          bytes &size=8;
+};
+
+type GraphicSegmentHeader = unit {
+    GID:            bytes &size=10;
+    GDTIM:          bytes &size=14;
+    GTITLE:         bytes &size=80;
+    GTYPE:          bytes &size=1;
+};
+
+type TextSegmentHeader = unit {
+    TID:            bytes &size=10;
+    TDTIM:         bytes &size=14;
+    TTITLE:         bytes &size=80;
+    TXTALVL:        bytes &size=3;
+};
+
+type DataExtensionSegment = unit {
+    DEID:           bytes &size=25;
+    DDTIM:          bytes &size=14;
+    DTITLE:         bytes &size=80;
+    DTYPE:          bytes &size=25;
+};
+
+type SecurityMetadata = unit {
+    CONTROL_AND_HANDLING:     bytes &size=40;
+    RELEASING_INSTRUCTIONS:   bytes &size=40;
+    DECLASSIFICATION_EXEMPTION: bytes &size=6;
+};
+
+type NITF_File = unit {
+    file_header:           FileHeader;
+    image_segment_headers:  vector<ImageSegmentHeader>;
+    graphic_segment_headers: vector<GraphicSegmentHeader>;
+    text_segment_headers:   vector<TextSegmentHeader>;
+    data_extension_segments: vector<DataExtensionSegment>;
+    security_metadata:      SecurityMetadata;
+};

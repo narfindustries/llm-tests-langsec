@@ -1,77 +1,72 @@
-module HL7-v2
+module hl7v2 {
+    enum segment_type {
+        MSH, PID, PV1, OBR, OBX
+    }
 
-type Message {
-    segments: List<Segment>
-}
+    type delimiters = struct {
+        field_separator: char,
+        encoding_characters: [char; 4]
+    }
 
-type Segment {
-    name: String,
-    fields: List<Field>
-}
+    type message_header = struct {
+        segment_type: segment_type,
+        sending_application: string,
+        sending_facility: string,
+        receiving_application: string,
+        receiving_facility: string,
+        timestamp: u64,
+        message_type: struct {
+            type: [char; 3],
+            trigger_event: [char; 3]
+        },
+        processing_id: char,
+        version: [char; 3]
+    }
 
-type Field {
-    value: String,
-    components: List<Component>?
-}
+    type person_name = struct {
+        last: string,
+        first: string,
+        middle: option<string>,
+        suffix: option<string>
+    }
 
-type Component {
-    value: String,
-    subcomponents: List<Subcomponent>?
-}
+    type address = struct {
+        street: string,
+        city: string,
+        state: string,
+        postal_code: string,
+        country: option<string>
+    }
 
-type Subcomponent {
-    value: String
-}
+    type patient = struct {
+        id: string,
+        name: person_name,
+        birth_date: u64,
+        gender: char,
+        address: address,
+        phone_numbers: list<string>
+    }
 
-type Patient {
-    id: String,
-    name: Name,
-    demographics: Demographics
-}
+    type observation = struct {
+        identifier: string,
+        value: string,
+        units: string,
+        reference_range: option<string>,
+        status: option<string>
+    }
 
-type Name {
-    first: String,
-    last: String,
-    middle: String?
-}
+    type insurance = struct {
+        plan_name: string,
+        policy_number: string,
+        group_number: option<string>,
+        subscriber_id: string
+    }
 
-type Demographics {
-    birthDate: String,
-    gender: String,
-    race: String?
-}
-
-type Encounter {
-    id: String,
-    type: String,
-    date: String
-}
-
-type Observation {
-    code: String,
-    value: String,
-    units: String?
-}
-
-parse Message from input: {
-    segments = parse_segments(input)
-}
-
-parse Segment from input: {
-    name = parse_segment_name(input),
-    fields = parse_fields(input)
-}
-
-parse Field from input: {
-    value = parse_field_value(input),
-    components = parse_components(input)?
-}
-
-parse Component from input: {
-    value = parse_component_value(input),
-    subcomponents = parse_subcomponents(input)?
-}
-
-parse Subcomponent from input: {
-    value = parse_subcomponent_value(input)
+    type hl7_message = struct {
+        delimiters: delimiters,
+        header: message_header,
+        patient: patient,
+        observations: list<observation>,
+        insurance: option<insurance>
+    }
 }

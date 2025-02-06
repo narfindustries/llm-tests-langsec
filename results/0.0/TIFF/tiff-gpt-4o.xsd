@@ -1,16 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tiff"
-           xmlns:tns="http://example.com/tiff"
-           elementFormDefault="qualified"
-           dfdl:format="tns:defaultFormat">
-
-  <dfdl:format ref="tns:defaultFormat"/>
-
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/tiff" xmlns:tns="http://example.com/tiff" elementFormDefault="qualified">
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit"/>
+      <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
     </xs:appinfo>
   </xs:annotation>
 
@@ -19,41 +11,32 @@
   <xs:complexType name="TIFFType">
     <xs:sequence>
       <xs:element name="Header" type="tns:HeaderType"/>
-      <xs:element name="IFD" type="tns:IFDType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="IFD" type="tns:IFDType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="HeaderType">
     <xs:sequence>
-      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="IFDType">
     <xs:sequence>
-      <xs:element name="NumEntries" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="NumDirectoryEntries" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="DirectoryEntry" type="tns:DirectoryEntryType" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../NumDirectoryEntries }"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="EntryType">
+  <xs:complexType name="DirectoryEntryType">
     <xs:sequence>
-      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
-      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:byteOrder="bigEndian"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="defaultFormat">
-        <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit"/>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
-
 </xs:schema>

@@ -2,81 +2,182 @@ module MQTT;
 
 import spicy;
 
-public type Packet = unit {
-    var fixed_header: FixedHeader;
-    var variable_header: VariableHeader;
-    var payload: bytes &optional;
+public type MQTTPacket = unit {
+    var packet_type: uint8;
+    var flags: uint8;
+    var remaining_length: VarInt;
 
-    parse {
-        self.fixed_header = self.parse_fixed_header();
-        
-        switch ( self.fixed_header.packet_type ) {
-            CONNECT -> {
-                self.variable_header = self.parse_connect_variable_header();
-                self.payload = self.input.remaining();
-            }
-            PUBLISH -> {
-                self.variable_header = self.parse_publish_variable_header();
-                self.payload = self.input.remaining();
-            }
-            default -> {
-                self.variable_header = VariableHeader();
-            }
-        }
-    }
+    switch ( self.packet_type ) {
+        1 => connect: Connect;
+        2 => connack: ConnAck;
+        3 => publish: Publish;
+        4 => puback: PubAck;
+        5 => pubrec: PubRec;
+        6 => pubrel: PubRel;
+        7 => pubcomp: PubComp;
+        8 => subscribe: Subscribe;
+        9 => suback: SubAck;
+        10 => unsubscribe: Unsubscribe;
+        11 => unsuback: UnsubAck;
+        12 => pingreq: PingReq;
+        13 => pingresp: PingResp;
+        14 => disconnect: Disconnect;
+        15 => auth: Auth;
+    };
+}
 
-    function parse_fixed_header(): FixedHeader {
-        return FixedHeader();
-    }
+type VarInt = unit {
+    value: uint32;
+    bytes: bytes;
+}
 
-    function parse_connect_variable_header(): VariableHeader {
-        return VariableHeader();
-    }
+type Connect = unit {
+    protocol_name: bytes(4);
+    protocol_version: uint8;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: string;
+    will_properties: optional Properties;
+    will_topic: optional string;
+    will_payload: optional bytes;
+    username: optional string;
+    password: optional string;
+}
 
-    function parse_publish_variable_header(): VariableHeader {
-        return VariableHeader();
-    }
-};
+type ConnectFlags = unit {
+    username_flag: bool;
+    password_flag: bool;
+    will_retain: bool;
+    will_qos: uint2;
+    will_flag: bool;
+    clean_start: bool;
+    reserved: uint1;
+}
 
-public type FixedHeader = unit {
-    packet_type: uint8 &convert=PacketType($$);
-    flags: uint8;
-    remaining_length: varlen_integer;
-};
+type ConnAck = unit {
+    connect_ack_flags: uint8;
+    reason_code: uint8;
+    properties: Properties;
+}
 
-type VariableHeader = unit {
-    // Placeholder for variable header parsing
-};
+type Publish = unit {
+    topic_name: string;
+    packet_identifier: optional uint16;
+    properties: Properties;
+    payload: bytes;
+}
 
-enum PacketType : uint8 {
-    CONNECT = 1,
-    CONNACK = 2,
-    PUBLISH = 3,
-    PUBACK = 4,
-    PUBREC = 5,
-    PUBREL = 6,
-    PUBCOMP = 7,
-    SUBSCRIBE = 8,
-    SUBACK = 9,
-    UNSUBSCRIBE = 10,
-    UNSUBACK = 11,
-    PINGREQ = 12,
-    PINGRESP = 13,
-    DISCONNECT = 14
-};
+type PubAck = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
 
-type varlen_integer = unit {
-    digit: uint8;
-    multiplier: uint32 = 1;
-    value: uint32 = 0;
+type PubRec = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
 
-    parse {
-        local continue = (self.digit & 0x80) != 0;
-        self.value += (self.digit & 0x7F) * self.multiplier;
-        self.multiplier *= 128;
+type PubRel = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
 
-        if ( continue ) {
-            self.-> digit;
-        }
-    }
-};
+type PubComp = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Subscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    subscriptions: vector<Subscription>;
+}
+
+type Subscription = unit {
+    topic_filter: string;
+    qos: uint8;
+}
+
+type SubAck = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector<uint8>;
+}
+
+type Unsubscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: vector<string>;
+}
+
+type UnsubAck = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector<uint8>;
+}
+
+type PingReq = unit {};
+
+type PingResp = unit {};
+
+type Disconnect = unit {
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Auth = unit {
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Properties = unit {
+    length: VarInt;
+    property_list: vector<Property>;
+}
+
+type Property = unit {
+    identifier: uint8;
+    value: PropertyValue;
+}
+
+type PropertyValue = unit {
+    switch ( self.identifier ) {
+        1 => payload_format_indicator: uint8;
+        2 => message_expiry_interval: uint32;
+        3 => content_type: string;
+        8 => response_topic: string;
+        9 => correlation_data: bytes;
+        11 => subscription_identifier: VarInt;
+        17 => session_expiry_interval: uint32;
+        18 => assigned_client_identifier: string;
+        19 => server_keep_alive: uint16;
+        21 => authentication_method: string;
+        22 => authentication_data: bytes;
+        23 => request_problem_information: uint8;
+        24 => will_delay_interval: uint32;
+        25 => request_response_information: uint8;
+        26 => response_information: string;
+        28 => server_reference: string;
+        31 => reason_string: string;
+        33 => receive_maximum: uint16;
+        34 => topic_alias_maximum: uint16;
+        35 => topic_alias: uint16;
+        36 => maximum_qos: uint8;
+        37 => retain_available: uint8;
+        38 => user_property: UserProperty;
+        39 => maximum_packet_size: uint32;
+        40 => wildcard_subscription_available: uint8;
+        41 => subscription_identifiers_available: uint8;
+        42 => shared_subscription_available: uint8;
+    };
+}
+
+type UserProperty = unit {
+    key: string;
+    value: string;
+}

@@ -1,79 +1,54 @@
-module DNS
-
-# Basic DNS packet structure
-type DNSPacket = {
-    header: DNSHeader,
-    questions: [DNSQuestion],
-    answers: [DNSResourceRecord],
-    authority: [DNSResourceRecord],
-    additional: [DNSResourceRecord]
+type DnsMessage = record {
+    header: DnsHeader,
+    questions: array(header.questionCount) of DnsQuestion,
+    answers: array(header.answerCount) of DnsResourceRecord,
+    authorities: array(header.authorityCount) of DnsResourceRecord,
+    additional: array(header.additionalCount) of DnsResourceRecord
 }
 
-# DNS Header Structure
-type DNSHeader = {
-    id: uint16,
-    qr: bool,  # Query/Response Flag
-    opcode: uint4,
-    aa: bool,  # Authoritative Answer 
-    tc: bool,  # Truncation Flag
-    rd: bool,  # Recursion Desired
-    ra: bool,  # Recursion Available
-    z: uint3,  # Reserved bits
-    rcode: uint4,  # Response Code
-    qdcount: uint16,  # Question Count
-    ancount: uint16,  # Answer Count
-    nscount: uint16,  # Authority Record Count  
-    arcount: uint16   # Additional Record Count
-}
-
-# DNS Question Structure
-type DNSQuestion = {
-    qname: [uint8],  # Domain name as sequence of labels
-    qtype: uint16,   # Query Type 
-    qclass: uint16   # Query Class
-}
-
-# DNS Resource Record Structure
-type DNSResourceRecord = {
-    name: [uint8],   # Domain name 
-    type: uint16,    # Resource Record Type
-    class: uint16,   # Resource Record Class
-    ttl: uint32,     # Time to Live
-    rdlength: uint16,# Resource Data Length
-    rdata: [uint8]   # Resource Data
-}
-
-# Validation rules and constants
-const MAX_LABEL_LENGTH = 63
-const MAX_DOMAIN_LENGTH = 255
-const MAX_PACKET_SIZE = 512
-
-# DNS Query Type Constants
-const TYPE_A = 1      # IPv4 Address
-const TYPE_AAAA = 28  # IPv6 Address
-const TYPE_CNAME = 5  # Canonical Name
-const TYPE_MX = 15    # Mail Exchange
-
-# DNS Class Constants
-const CLASS_IN = 1    # Internet
-
-# Parsing and validation constraints
-constraint DNSPacket {
-    # Header constraints
-    header.qdcount == len(questions),
-    header.ancount == len(answers),
-    header.nscount == len(authority),
-    header.arcount == len(additional),
-
-    # Packet size constraint
-    len(to_bytes(self)) <= MAX_PACKET_SIZE
-}
-
-# Domain name label validation
-constraint DNSQuestion {
-    # Validate domain name labels
-    forall label in qname {
-        len(label) <= MAX_LABEL_LENGTH
+type DnsHeader = record {
+    transactionId: uint16,
+    flags: record {
+        qr: bit,
+        opcode: uint4 where value <= 2,
+        aa: bit,
+        tc: bit, 
+        rd: bit,
+        ra: bit,
+        z: uint3,
+        rcode: uint4 where value <= 5
     },
-    len(qname) <= MAX_DOMAIN_LENGTH
+    questionCount: uint16,
+    answerCount: uint16,
+    authorityCount: uint16,
+    additionalCount: uint16
 }
+
+type DnsQuestion = record {
+    qname: DnsDomainName,
+    qtype: uint16,
+    qclass: uint16
+}
+
+type DnsResourceRecord = record {
+    name: DnsDomainName,
+    type: uint16,
+    class: uint16,
+    ttl: int32,
+    rdLength: uint16,
+    rdata: array(rdLength) of uint8
+}
+
+type DnsDomainName = record {
+    labels: list of DnsLabel while !endOfInput,
+    terminator: uint8 = 0
+}
+
+type DnsLabel = record {
+    length: uint8 where value < 64,
+    data: array(length) of uint8 if length < 64,
+    compressionPointer: uint16 if length >= 192
+}
+
+type IPv4Address = array(4) of uint8
+type IPv6Address = array(16) of uint8

@@ -1,26 +1,53 @@
-# ARP packet specification in Zeek Spicy format
-type ARP = record {
-  hw_type: uint16,
-  proto_type: uint16,
-  hw_addr_len: uint8,
-  proto_addr_len: uint8,
-  op: uint16,
-  sender_hw_addr: bytestring &length = hw_addr_len,
-  sender_proto_addr: bytestring &length = proto_addr_len,
-  target_hw_addr: bytestring &length = hw_addr_len,
-  target_proto_addr: bytestring &length = proto_addr_len,
-} &byteorder = little_endian;
+module ARP;
 
-type Meta = record {
-  version: uint8,
-  timestamp: uint64,
-  packet_length: uint16,
-  eth_src: bytestring &length = 6,
-  eth_dst: bytestring &length = 6,
-  eth_type: uint16,
-  arp: ARP,
-} &byteorder = little_endian;
+type ARP_HTYPE = enum {
+  Ethernet_10Mb = 1,
+  Experimental_Ethernet_3Mb = 2,
+  Amateur_Radio_AX_25 = 3,
+  Proteon_ProNET_Token_Ring = 4,
+  Chaos = 5,
+  IEEE_802_Networks = 6,
+  ARCNET = 7,
+  Hyperchannel = 8,
+  Lanstar = 9,
+  Autonet_Short_Address = 10,
+  LocalTalk = 11,
+  LocalNet = 12,
+  Ultra_Link = 13,
+  SMDS = 14,
+  Frame_Relay = 15,
+  ATM = 16,
+  HDLC = 17,
+  Fibre_Channel = 18,
+  Serial_Line = 20,
+  MIL_STD_188_220 = 22,
+  Metricom = 23,
+  IEEE_1394_1995 = 24,
+  MAPOS = 25,
+  Twinaxial = 26,
+  EUI_64 = 27,
+  HIPARP = 28,
+  IP_and_ARP_over_ISO_7816_1 = 29,
+  ARP_in_IPsec_Tunnels = 30,
+  InfiniBand = 31
+};
 
-type Spicy = record {
-  meta: Meta,
-} &byteorder = little_endian;
+type ARP_PTYPE = enum {
+  IPv4 = 0x0800,
+  ARP = 0x0806,
+  RARP = 0x0835,
+  TRILL = 0x22F3,
+  DECnet_Phase_IV = 0x6003
+};
+
+type ARP = struct {
+  htype: ARP_HTYPE,
+  ptype: ARP_PTYPE,
+  hlen: uint8,
+  plen: uint8,
+  opcode: uint16,
+  sha: bytestring &length=hlen,
+  spa: bytestring &length=plen,
+  tha: bytestring &length=hlen,
+  tpa: bytestring &length=plen
+};

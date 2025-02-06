@@ -14,12 +14,36 @@ class Elf(KaitaiStruct):
         le = 1
         be = 2
 
+    class ObjectType(Enum):
+        none = 0
+        rel = 1
+        exec = 2
+        dyn = 3
+        core = 4
+        loos = 65024
+        hios = 65279
+        loproc = 65280
+        hiproc = 65535
+
+    class ShType(Enum):
+        null_type = 0
+        progbits = 1
+        symtab = 2
+        strtab = 3
+        rela = 4
+        hash = 5
+        dynamic = 6
+        note = 7
+        nobits = 8
+        rel = 9
+        shlib = 10
+        dynsym = 11
+
     class OsAbi(Enum):
         system_v = 0
         hp_ux = 1
         netbsd = 2
         linux = 3
-        hurd = 4
         solaris = 6
         aix = 7
         irix = 8
@@ -27,53 +51,38 @@ class Elf(KaitaiStruct):
         tru64 = 10
         modesto = 11
         openbsd = 12
-        openvms = 13
-        nsk = 14
-        aros = 15
-        fenixos = 16
-        cloudabi = 17
-        openvos = 18
+        arm_aeabi = 64
+        arm = 97
+        standalone = 255
 
     class Machine(Enum):
         none = 0
         m32 = 1
         sparc = 2
-        x86 = 3
+        i386 = 3
         m68k = 4
         m88k = 5
-        i860 = 6
-        mips = 7
-        s370 = 8
-        mips_rs3_le = 9
-        sparc64_old = 10
-        i960 = 11
-        powerpc = 12
-        powerpc64 = 13
-        s390 = 14
-        spu = 15
-        arm = 19
-        sh = 20
-        sparcv9 = 21
-        h8_300 = 22
-        ia64 = 23
-        sh64 = 24
-        mips64 = 25
-        s390x = 26
-        aarch64 = 40
-        riscv = 42
+        i860 = 7
+        mips = 8
         x86_64 = 62
-        arm64 = 183
 
     class Bits(Enum):
         b32 = 1
         b64 = 2
 
-    class ObjType(Enum):
-        none = 0
-        relocatable = 1
-        executable = 2
-        shared = 3
-        core = 4
+    class PhType(Enum):
+        pt_null = 0
+        pt_load = 1
+        pt_dynamic = 2
+        pt_interp = 3
+        pt_note = 4
+        pt_shlib = 5
+        pt_phdr = 6
+        pt_tls = 7
+        pt_loos = 1610612736
+        pt_hios = 1879048191
+        pt_loproc = 1879048192
+        pt_hiproc = 2147483647
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -89,48 +98,37 @@ class Elf(KaitaiStruct):
         self.ei_version = self._io.read_u1()
         self.abi = KaitaiStream.resolve_enum(Elf.OsAbi, self._io.read_u1())
         self.abi_version = self._io.read_u1()
-        self.pad = self._io.read_bytes(7)
-        self.file_type = KaitaiStream.resolve_enum(Elf.ObjType, self._io.read_u2le())
+        self.padding = self._io.read_bytes(7)
+        self.type = KaitaiStream.resolve_enum(Elf.ObjectType, self._io.read_u2le())
         self.machine = KaitaiStream.resolve_enum(Elf.Machine, self._io.read_u2le())
-        self.e_version = self._io.read_u4le()
-        _on = self.bits
-        if _on == Elf.Bits.b32:
+        self.version = self._io.read_u4le()
+        if self.bits == Elf.Bits.b32:
             self.entry_point = self._io.read_u4le()
-        elif _on == Elf.Bits.b64:
-            self.entry_point = self._io.read_u8le()
-        _on = self.bits
-        if _on == Elf.Bits.b32:
+
+        if self.bits == Elf.Bits.b64:
+            self.entry_point_64 = self._io.read_u8le()
+
+        if self.bits == Elf.Bits.b32:
             self.program_header_offset = self._io.read_u4le()
-        elif _on == Elf.Bits.b64:
-            self.program_header_offset = self._io.read_u8le()
-        _on = self.bits
-        if _on == Elf.Bits.b32:
+
+        if self.bits == Elf.Bits.b64:
+            self.program_header_offset_64 = self._io.read_u8le()
+
+        if self.bits == Elf.Bits.b32:
             self.section_header_offset = self._io.read_u4le()
-        elif _on == Elf.Bits.b64:
-            self.section_header_offset = self._io.read_u8le()
+
+        if self.bits == Elf.Bits.b64:
+            self.section_header_offset_64 = self._io.read_u8le()
+
         self.flags = self._io.read_u4le()
         self.header_size = self._io.read_u2le()
         self.program_header_entry_size = self._io.read_u2le()
-        self.qty_program_header = self._io.read_u2le()
+        self.program_header_num_entries = self._io.read_u2le()
         self.section_header_entry_size = self._io.read_u2le()
-        self.qty_section_header = self._io.read_u2le()
+        self.section_header_num_entries = self._io.read_u2le()
         self.section_names_idx = self._io.read_u2le()
 
     class ProgramHeader(KaitaiStruct):
-
-        class PhType(Enum):
-            null_type = 0
-            load = 1
-            dynamic = 2
-            interp = 3
-            note = 4
-            shlib = 5
-            phdr = 6
-            tls = 7
-            loos = 1610612736
-            hios = 1879048191
-            loproc = 1879048192
-            hiproc = 2147483647
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -138,69 +136,35 @@ class Elf(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.type = KaitaiStream.resolve_enum(Elf.ProgramHeader.PhType, self._io.read_u4le())
-            if self._root.bits == Elf.Bits.b64:
-                self.flags_64 = self._io.read_u4le()
+            self.type = KaitaiStream.resolve_enum(Elf.PhType, self._io.read_u4le())
+            self.offset = self._io.read_u4le()
+            self.vaddr = self._io.read_u4le()
+            self.paddr = self._io.read_u4le()
+            self.filesz = self._io.read_u4le()
+            self.memsz = self._io.read_u4le()
+            self.flags = self._io.read_u4le()
+            self.align = self._io.read_u4le()
 
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.offset = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.offset = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.vaddr = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.vaddr = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.paddr = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.paddr = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.filesz = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.filesz = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.memsz = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.memsz = self._io.read_u8le()
-            if self._root.bits == Elf.Bits.b32:
-                self.flags_32 = self._io.read_u4le()
 
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.align = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.align = self._io.read_u8le()
+    class ProgramHeader64(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.type = KaitaiStream.resolve_enum(Elf.PhType, self._io.read_u4le())
+            self.flags = self._io.read_u4le()
+            self.offset = self._io.read_u8le()
+            self.vaddr = self._io.read_u8le()
+            self.paddr = self._io.read_u8le()
+            self.filesz = self._io.read_u8le()
+            self.memsz = self._io.read_u8le()
+            self.align = self._io.read_u8le()
 
 
     class SectionHeader(KaitaiStruct):
-
-        class ShType(Enum):
-            null_type = 0
-            progbits = 1
-            symtab = 2
-            strtab = 3
-            rela = 4
-            hash = 5
-            dynamic = 6
-            note = 7
-            nobits = 8
-            rel = 9
-            shlib = 10
-            dynsym = 11
-            init_array = 14
-            fini_array = 15
-            preinit_array = 16
-            group = 17
-            symtab_shndx = 18
-            loos = 1610612736
-            hios = 1879048191
-            loproc = 1879048192
-            hiproc = 2147483647
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -209,63 +173,35 @@ class Elf(KaitaiStruct):
 
         def _read(self):
             self.name_offset = self._io.read_u4le()
-            self.type = KaitaiStream.resolve_enum(Elf.SectionHeader.ShType, self._io.read_u4le())
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.flags = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.flags = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.addr = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.addr = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.offset = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.offset = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.size = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.size = self._io.read_u8le()
+            self.type = KaitaiStream.resolve_enum(Elf.ShType, self._io.read_u4le())
+            self.flags = self._io.read_u4le()
+            self.addr = self._io.read_u4le()
+            self.offset = self._io.read_u4le()
+            self.size = self._io.read_u4le()
             self.link = self._io.read_u4le()
             self.info = self._io.read_u4le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.align = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.align = self._io.read_u8le()
-            _on = self._root.bits
-            if _on == Elf.Bits.b32:
-                self.entry_size = self._io.read_u4le()
-            elif _on == Elf.Bits.b64:
-                self.entry_size = self._io.read_u8le()
+            self.align = self._io.read_u4le()
+            self.entry_size = self._io.read_u4le()
 
-        @property
-        def name(self):
-            if hasattr(self, '_m_name'):
-                return self._m_name
 
-            io = self._root._io
-            _pos = io.pos()
-            io.seek((self._root.section_headers[self._root.section_names_idx].offset + self.name_offset))
-            self._m_name = (io.read_bytes_term(0, False, True, True)).decode(u"ASCII")
-            io.seek(_pos)
-            return getattr(self, '_m_name', None)
+    class SectionHeader64(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        @property
-        def body(self):
-            if hasattr(self, '_m_body'):
-                return self._m_body
-
-            io = self._root._io
-            _pos = io.pos()
-            io.seek(self.offset)
-            self._m_body = io.read_bytes(self.size)
-            io.seek(_pos)
-            return getattr(self, '_m_body', None)
+        def _read(self):
+            self.name_offset = self._io.read_u4le()
+            self.type = KaitaiStream.resolve_enum(Elf.ShType, self._io.read_u4le())
+            self.flags = self._io.read_u8le()
+            self.addr = self._io.read_u8le()
+            self.offset = self._io.read_u8le()
+            self.size = self._io.read_u8le()
+            self.link = self._io.read_u4le()
+            self.info = self._io.read_u4le()
+            self.align = self._io.read_u8le()
+            self.entry_size = self._io.read_u8le()
 
 
     @property
@@ -273,27 +209,63 @@ class Elf(KaitaiStruct):
         if hasattr(self, '_m_program_headers'):
             return self._m_program_headers
 
-        _pos = self._io.pos()
-        self._io.seek(self.program_header_offset)
-        self._m_program_headers = []
-        for i in range(self.qty_program_header):
-            self._m_program_headers.append(Elf.ProgramHeader(self._io, self, self._root))
+        if self.bits == Elf.Bits.b32:
+            _pos = self._io.pos()
+            self._io.seek(self.program_header_offset)
+            self._m_program_headers = []
+            for i in range(self.program_header_num_entries):
+                self._m_program_headers.append(Elf.ProgramHeader(self._io, self, self._root))
 
-        self._io.seek(_pos)
+            self._io.seek(_pos)
+
         return getattr(self, '_m_program_headers', None)
+
+    @property
+    def program_headers_64(self):
+        if hasattr(self, '_m_program_headers_64'):
+            return self._m_program_headers_64
+
+        if self.bits == Elf.Bits.b64:
+            _pos = self._io.pos()
+            self._io.seek(self.program_header_offset_64)
+            self._m_program_headers_64 = []
+            for i in range(self.program_header_num_entries):
+                self._m_program_headers_64.append(Elf.ProgramHeader64(self._io, self, self._root))
+
+            self._io.seek(_pos)
+
+        return getattr(self, '_m_program_headers_64', None)
 
     @property
     def section_headers(self):
         if hasattr(self, '_m_section_headers'):
             return self._m_section_headers
 
-        _pos = self._io.pos()
-        self._io.seek(self.section_header_offset)
-        self._m_section_headers = []
-        for i in range(self.qty_section_header):
-            self._m_section_headers.append(Elf.SectionHeader(self._io, self, self._root))
+        if self.bits == Elf.Bits.b32:
+            _pos = self._io.pos()
+            self._io.seek(self.section_header_offset)
+            self._m_section_headers = []
+            for i in range(self.section_header_num_entries):
+                self._m_section_headers.append(Elf.SectionHeader(self._io, self, self._root))
 
-        self._io.seek(_pos)
+            self._io.seek(_pos)
+
         return getattr(self, '_m_section_headers', None)
+
+    @property
+    def section_headers_64(self):
+        if hasattr(self, '_m_section_headers_64'):
+            return self._m_section_headers_64
+
+        if self.bits == Elf.Bits.b64:
+            _pos = self._io.pos()
+            self._io.seek(self.section_header_offset_64)
+            self._m_section_headers_64 = []
+            for i in range(self.section_header_num_entries):
+                self._m_section_headers_64.append(Elf.SectionHeader64(self._io, self, self._root))
+
+            self._io.seek(_pos)
+
+        return getattr(self, '_m_section_headers_64', None)
 
 

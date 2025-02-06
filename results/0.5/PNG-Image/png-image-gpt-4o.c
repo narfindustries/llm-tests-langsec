@@ -1,80 +1,95 @@
-#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <hammer/hammer.h>
 
-HParser *create_png_parser() {
-    // PNG file signature: 8 bytes
-    HParser *signature = h_sequence(
-        h_uint8_val(0x89),
-        h_uint8_val(0x50),
-        h_uint8_val(0x4E),
-        h_uint8_val(0x47),
-        h_uint8_val(0x0D),
-        h_uint8_val(0x0A),
-        h_uint8_val(0x1A),
-        h_uint8_val(0x0A),
-        NULL
-    );
-
-    // Length: 4 bytes
-    HParser *length = h_uint32();
-
-    // Chunk type: 4 bytes
-    HParser *chunk_type = h_bytes(4);
-
-    // Chunk data: variable length
-    HParser *chunk_data = h_length_value(length, h_uint8());
-
-    // CRC: 4 bytes
-    HParser *crc = h_uint32();
-
-    // PNG chunk: Length + Chunk Type + Chunk Data + CRC
-    HParser *chunk = h_sequence(length, chunk_type, chunk_data, crc, NULL);
-
-    // PNG file: Signature + chunks
-    HParser *png_file = h_sequence(signature, h_many(chunk), NULL);
-
-    return png_file;
-}
-
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <png-file>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    FILE *file = fopen(argv[1], "rb");
+// Function to read a file into memory
+unsigned char *read_file(const char *filename, size_t *length) {
+    FILE *file = fopen(filename, "rb");
     if (!file) {
-        perror("fopen");
-        return EXIT_FAILURE;
+        perror("Failed to open file");
+        return NULL;
     }
 
     fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
+    *length = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    unsigned char *data = malloc(file_size);
+    unsigned char *data = (unsigned char *)malloc(*length);
     if (!data) {
-        perror("malloc");
+        perror("Failed to allocate memory");
         fclose(file);
+        return NULL;
+    }
+
+    fread(data, 1, *length, file);
+    fclose(file);
+    return data;
+}
+
+// Define parsers for the PNG file structure
+HParser *png_signature_parser() {
+    return h_sequence(
+        h_uint8(), h_uint8(), h_uint8(), h_uint8(),
+        h_uint8(), h_uint8(), h_uint8(), h_uint8(),
+        NULL
+    );
+}
+
+HParser *chunk_length_parser() {
+    return h_uint32_be();
+}
+
+HParser *chunk_type_parser() {
+    return h_bytes(4, 4);
+}
+
+HParser *chunk_data_parser(size_t length) {
+    return h_repeat_n(h_uint8(), length);
+}
+
+HParser *chunk_crc_parser() {
+    return h_uint32_be();
+}
+
+HParser *chunk_parser() {
+    HParser *length = chunk_length_parser();
+    HParser *type = chunk_type_parser();
+    HParser *data = h_bind(length, (HContinuation)chunk_data_parser, NULL);
+    HParser *crc = chunk_crc_parser();
+
+    return h_sequence(length, type, data, crc, NULL);
+}
+
+HParser *png_parser() {
+    return h_sequence(
+        png_signature_parser(),
+        h_many1(chunk_parser()),
+        NULL
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input.png>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    fread(data, 1, file_size, file);
-    fclose(file);
-
-    HParser *png_parser = create_png_parser();
-    HParseResult *result = h_parse(png_parser, data, file_size);
-
-    if (result->status == HParseSuccess) {
-        printf("PNG file parsed successfully.\n");
-    } else {
-        printf("Failed to parse PNG file.\n");
+    size_t length;
+    unsigned char *data = read_file(argv[1], &length);
+    if (!data) {
+        return EXIT_FAILURE;
     }
 
-    h_parse_result_free(result);
-    h_parser_free(png_parser);
-    free(data);
+    HParser *parser = png_parser();
+    HParseResult *result = h_parse(parser, data, length);
 
+    if (result) {
+        printf("PNG file parsed successfully!\n");
+        h_parse_result_free(result);
+    } else {
+        fprintf(stderr, "Failed to parse PNG file.\n");
+    }
+
+    free(data);
     return EXIT_SUCCESS;
 }

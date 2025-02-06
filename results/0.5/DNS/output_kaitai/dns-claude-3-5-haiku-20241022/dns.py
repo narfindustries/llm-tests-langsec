@@ -10,7 +10,7 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Dns(KaitaiStruct):
 
-    class QueryType(Enum):
+    class RecordType(Enum):
         a = 1
         ns = 2
         cname = 5
@@ -18,10 +18,8 @@ class Dns(KaitaiStruct):
         ptr = 12
         mx = 15
         aaaa = 28
-        axfr = 252
-        any = 255
 
-    class QueryClass(Enum):
+    class ClassType(Enum):
         in = 1
         ch = 3
         hs = 4
@@ -34,13 +32,13 @@ class Dns(KaitaiStruct):
     def _read(self):
         self.transaction_id = self._io.read_u2be()
         self.flags = Dns.FlagsStruct(self._io, self, self._root)
-        self.questions_count = self._io.read_u2be()
+        self.question_count = self._io.read_u2be()
         self.answer_count = self._io.read_u2be()
         self.authority_count = self._io.read_u2be()
         self.additional_count = self._io.read_u2be()
-        self.queries = []
-        for i in range(self.questions_count):
-            self.queries.append(Dns.Query(self._io, self, self._root))
+        self.questions = []
+        for i in range(self.question_count):
+            self.questions.append(Dns.Question(self._io, self, self._root))
 
         self.answers = []
         for i in range(self.answer_count):
@@ -55,6 +53,32 @@ class Dns(KaitaiStruct):
             self.additionals.append(Dns.ResourceRecord(self._io, self, self._root))
 
 
+    class Question(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.name = Dns.DomainName(self._io, self, self._root)
+            self.type = KaitaiStream.resolve_enum(Dns.RecordType, self._io.read_u2be())
+            self.class = KaitaiStream.resolve_enum(Dns.ClassType, self._io.read_u2be())
+
+
+    class Rdata(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self._raw_content = self._io.read_bytes_full()
+            _io__raw_content = KaitaiStream(BytesIO(self._raw_content))
+            self.content = Dns.ByteArray(_io__raw_content, self, self._root)
+
+
     class ResourceRecord(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -64,31 +88,13 @@ class Dns(KaitaiStruct):
 
         def _read(self):
             self.name = Dns.DomainName(self._io, self, self._root)
-            self.type = KaitaiStream.resolve_enum(Dns.QueryType, self._io.read_u2be())
-            self.record_class = KaitaiStream.resolve_enum(Dns.QueryClass, self._io.read_u2be())
+            self.type = KaitaiStream.resolve_enum(Dns.RecordType, self._io.read_u2be())
+            self.class = KaitaiStream.resolve_enum(Dns.ClassType, self._io.read_u2be())
             self.ttl = self._io.read_u4be()
             self.rdlength = self._io.read_u2be()
-            _on = self.type
-            if _on == Dns.QueryType.aaaa:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = Dns.Ipv6Address(_io__raw_rdata, self, self._root)
-            elif _on == Dns.QueryType.a:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = Dns.Ipv4Address(_io__raw_rdata, self, self._root)
-            elif _on == Dns.QueryType.mx:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = Dns.MxRecord(_io__raw_rdata, self, self._root)
-            elif _on == Dns.QueryType.cname:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = Dns.DomainName(_io__raw_rdata, self, self._root)
-            else:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = Dns.RawData(_io__raw_rdata, self, self._root)
+            self._raw_rdata = self._io.read_bytes(self.rdlength)
+            _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
+            self.rdata = Dns.Rdata(_io__raw_rdata, self, self._root)
 
 
     class NamePart(KaitaiStruct):
@@ -100,7 +106,11 @@ class Dns(KaitaiStruct):
 
         def _read(self):
             self.length = self._io.read_u1()
-            if self.length > 0:
+            if self.length >= 192:
+                self.pointer = self._io.read_bits_int_be(2)
+
+            self._io.align_to_byte()
+            if  ((self.length < 192) and (self.length > 0)) :
                 self.part = (self._io.read_bytes(self.length)).decode(u"ascii")
 
 
@@ -123,49 +133,6 @@ class Dns(KaitaiStruct):
             self.rcode = self._io.read_bits_int_be(4)
 
 
-    class Ipv6Address(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.address = []
-            for i in range(8):
-                self.address.append(self._io.read_u2be())
-
-
-
-    class RawData(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.data = []
-            i = 0
-            while not self._io.is_eof():
-                self.data.append(self._io.read_u1())
-                i += 1
-
-
-
-    class Query(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.name = Dns.DomainName(self._io, self, self._root)
-            self.type = KaitaiStream.resolve_enum(Dns.QueryType, self._io.read_u2be())
-            self.query_class = KaitaiStream.resolve_enum(Dns.QueryClass, self._io.read_u2be())
-
-
     class DomainName(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -179,12 +146,12 @@ class Dns(KaitaiStruct):
             while True:
                 _ = Dns.NamePart(self._io, self, self._root)
                 self.name_parts.append(_)
-                if _.length == 0:
+                if  ((_.length == 0) or (_.pointer != 0)) :
                     break
                 i += 1
 
 
-    class MxRecord(KaitaiStruct):
+    class ByteArray(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -192,21 +159,11 @@ class Dns(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.preference = self._io.read_u2be()
-            self.exchange = Dns.DomainName(self._io, self, self._root)
-
-
-    class Ipv4Address(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.address = []
-            for i in range(4):
-                self.address.append(self._io.read_u1())
+            self.data = []
+            i = 0
+            while not self._io.is_eof():
+                self.data.append(self._io.read_u1())
+                i += 1
 
 
 

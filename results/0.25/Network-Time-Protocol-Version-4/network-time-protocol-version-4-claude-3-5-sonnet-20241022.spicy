@@ -1,47 +1,57 @@
-module Network-Time-Protocol-Version-4;
+module NTP;
 
-import spicy;
-
-public type NTPv4 = unit {
-    li_vn_mode: bitfield(8) {
-        leap_indicator: 0..1;
-        version: 2..4;
-        mode: 5..7;
-    };
+public type Packet = unit {
+    flags: uint8;
     stratum: uint8;
     poll: int8;
     precision: int8;
-    root_delay: uint32;
+    root_delay: int32;
     root_dispersion: uint32;
     reference_id: bytes &size=4;
     reference_timestamp: uint64;
     origin_timestamp: uint64;
     receive_timestamp: uint64;
     transmit_timestamp: uint64;
+    extensions: Extension[];
 
-    on %done {
-        self.root_delay = self.root_delay;
-        self.root_dispersion = self.root_dispersion;
+    var leap_indicator: uint8;
+    var version: uint8;
+    var mode: uint8;
+
+    on flags {
+        self.leap_indicator = ($$ & 0xC0) >> 6;
+        self.version = ($$ & 0x38) >> 3;
+        self.mode = $$ & 0x07;
+
+        if (self.leap_indicator > 3)
+            throw "invalid leap indicator";
+        if (self.version != 4)
+            throw "unsupported NTP version";
+        if (self.mode == 0 || self.mode == 7)
+            throw "reserved mode";
+    }
+
+    on stratum {
+        if ($$ > 15 && $$ != 0)
+            throw "invalid stratum";
+    }
+
+    on poll {
+        if ($$ < 4 || $$ > 17)
+            throw "invalid poll value";
     }
 };
 
-public type NTPControl = unit {
-    leap_indicator: uint8;
-    version_number: uint8;
-    mode: uint8;
-    response: uint8;
-    error: uint8;
-    more: uint8;
-    opcode: uint8;
-    sequence: uint16;
-    status: uint16;
-    association_id: uint16;
-    offset: uint16;
-    count: uint16;
-    data: bytes &size=self.count;
+type Extension = unit {
+    field_type: uint16;
+    length: uint16;
+    value: bytes &size=self.length;
+    padding: bytes &size=(4 - (self.length % 4)) if (self.length % 4 != 0);
 };
 
-type NTPTimestamp = unit {
-    seconds: uint32;
-    fraction: uint32;
+type MAC = unit {
+    key_id: uint32;
+    digest: bytes &size=self.digest_size;
+
+    var digest_size: uint64 = 20;
 };

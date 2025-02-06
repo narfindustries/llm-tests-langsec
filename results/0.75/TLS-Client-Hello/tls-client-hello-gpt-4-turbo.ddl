@@ -1,17 +1,40 @@
-type TLSClientHello = struct {
-  contentType         : UInt8;         // Type of the record
-  version             : UInt16;        // Protocol version
-  length              : UInt16;        // Length of the following data
-  handshakeType       : UInt8;         // Handshake type
-  lengthHandshake     : UInt24;        // Length of the handshake
-  versionHandshake    : UInt16;        // Version in handshake
-  random              : bytes(32);     // Random data
-  sessionIdLength     : UInt8;         // Session ID length
-  sessionId           : bytes(sessionIdLength);  // Session ID
-  cipherSuitesLength  : UInt16;        // Length of cipher suites
-  cipherSuites        : bytes(cipherSuitesLength); // Cipher suites
-  compressionMethodsLength : UInt8;    // Length of compression methods
-  compressionMethods  : bytes(compressionMethodsLength); // Compression methods
-  extensionsLength    : UInt16;        // Length of extensions
-  extensions          : bytes(extensionsLength); // Extensions data
+let ProtocolVersion = U16be
+
+let Random = Bytes : 32
+
+struct SessionID {
+  length: U8
+  session_id: Bytes : length
 }
+
+struct CipherSuites {
+  length: U16be
+  cipher_suites: [U16be] : length / 2
+}
+
+struct CompressionMethods {
+  length: U8
+  methods: [U8] : length
+}
+
+struct Extension {
+  extension_type: U16be
+  extension_data_length: U16be
+  extension_data: Bytes : extension_data_length
+}
+
+struct Extensions {
+  length: U16be
+  extensions: [Extension] : length
+}
+
+struct ClientHello {
+  legacy_version: ProtocolVersion
+  random: Random
+  session_id: SessionID
+  cipher_suites: CipherSuites
+  compression_methods: CompressionMethods
+  extensions: Extensions
+}
+
+let start = ClientHello

@@ -1,16 +1,11 @@
-module ARP;
-
-struct ARPHeader {
-    htype: uint16; // Hardware type
-    ptype: uint16; // Protocol type
-    hlen: uint8;   // Hardware address length
-    plen: uint8;   // Protocol address length
-    oper: uint16;  // Operation
-
-    sha: bytes[hlen]; // Sender hardware address
-    spa: bytes[plen]; // Sender protocol address
-    tha: bytes[hlen]; // Target hardware address
-    tpa: bytes[plen]; // Target protocol address
+ARP : struct {
+    htype : uint16,                  // Hardware Type
+    ptype : uint16,                  // Protocol Type
+    hlen : uint8,                    // Hardware Address Length
+    plen : uint8,                    // Protocol Address Length
+    oper : uint16,                   // Operation
+    sender_hw_addr : bytes[hlen],    // Sender Hardware Address
+    sender_proto_addr : bytes[plen], // Sender Protocol Address
+    target_hw_addr : bytes[hlen],    // Target Hardware Address
+    target_proto_addr : bytes[plen]  // Target Protocol Address
 }
-
-root: ARPHeader;

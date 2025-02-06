@@ -2,53 +2,158 @@ module HTTP;
 
 import spicy;
 
-public type Request = unit {
-    method: /[A-Z]+/ &until(b" ");
-    uri: bytes &until(b" ");
-    version: /HTTP\/[0-9]+\.[0-9]+/ &until(b"\r\n");
-    headers: Header[] &until(b"\r\n");
-    : b"\r\n";
-    body: Body;
-};
-
-public type Response = unit {
-    version: /HTTP\/[0-9]+\.[0-9]+/ &until(b" ");
-    status: uint16 &until(b" ");
-    reason: bytes &until(b"\r\n");
-    headers: Header[] &until(b"\r\n");
-    : b"\r\n";
-    body: Body;
+type Version = unit {
+    protocol: bytes &size=8;
+    version: bytes &size=3;
 };
 
 type Header = unit {
-    name: bytes &until(b":");
-    : b": ";
-    value: bytes &until(b"\r\n");
-    : b"\r\n";
+    name: bytes &until=b":";
+    value: bytes &until=b"\r\n";
 };
 
-type Body = unit {
-    data: bytes &eod;
+type StatusLine = unit {
+    version: bytes &size=8;
+    code: uint16;
+    reason: bytes &until=b"\r\n";
 };
 
-on Request::%init {
-    self.method = "";
-    self.uri = b"";
-    self.version = "";
-}
+type RequestLine = unit {
+    method: bytes &until=b" ";
+    uri: bytes &until=b" ";
+    version: bytes &until=b"\r\n";
+};
 
-on Response::%init {
-    self.version = "";
-    self.status = 0;
-    self.reason = b"";
-}
+type Headers = unit {
+    headers: Header[];
+    end: bytes &until=b"\r\n";
+};
 
-on Header::%init {
-    self.name = b"";
-    self.value = b"";
-}
+type Method = enum {
+    OPTIONS,
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    TRACE,
+    CONNECT
+};
 
-public type HTTP = unit {
-    request: Request;
-    response: Response;
+type StatusCode = enum {
+    CONTINUE = 100,
+    SWITCHING_PROTOCOLS = 101,
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NON_AUTHORITATIVE = 203,
+    NO_CONTENT = 204,
+    RESET_CONTENT = 205,
+    PARTIAL_CONTENT = 206,
+    MULTIPLE_CHOICES = 300,
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+    SEE_OTHER = 303,
+    NOT_MODIFIED = 304,
+    USE_PROXY = 305,
+    TEMPORARY_REDIRECT = 307,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    PAYMENT_REQUIRED = 402,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    METHOD_NOT_ALLOWED = 405,
+    NOT_ACCEPTABLE = 406,
+    PROXY_AUTH_REQUIRED = 407,
+    REQUEST_TIMEOUT = 408,
+    CONFLICT = 409,
+    GONE = 410,
+    LENGTH_REQUIRED = 411,
+    PRECONDITION_FAILED = 412,
+    REQUEST_ENTITY_TOO_LARGE = 413,
+    REQUEST_URI_TOO_LONG = 414,
+    UNSUPPORTED_MEDIA_TYPE = 415,
+    RANGE_NOT_SATISFIABLE = 416,
+    EXPECTATION_FAILED = 417,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    SERVICE_UNAVAILABLE = 503,
+    GATEWAY_TIMEOUT = 504,
+    HTTP_VERSION_NOT_SUPPORTED = 505
+};
+
+public type Request = unit {
+    request: RequestLine;
+    headers: Headers;
+    body: bytes &eod;
+};
+
+public type Response = unit {
+    status: StatusLine;
+    headers: Headers;
+    body: bytes &eod;
+};
+
+public type Message = unit {
+    data: Request | Response;
+};
+
+type GeneralHeader = unit {
+    cache_control: bytes &optional;
+    connection: bytes &optional;
+    date: bytes &optional;
+    pragma: bytes &optional;
+    trailer: bytes &optional;
+    transfer_encoding: bytes &optional;
+    upgrade: bytes &optional;
+    via: bytes &optional;
+    warning: bytes &optional;
+};
+
+type RequestHeader = unit {
+    accept: bytes &optional;
+    accept_charset: bytes &optional;
+    accept_encoding: bytes &optional;
+    accept_language: bytes &optional;
+    authorization: bytes &optional;
+    expect: bytes &optional;
+    from: bytes &optional;
+    host: bytes;
+    if_match: bytes &optional;
+    if_modified_since: bytes &optional;
+    if_none_match: bytes &optional;
+    if_range: bytes &optional;
+    if_unmodified_since: bytes &optional;
+    max_forwards: bytes &optional;
+    proxy_authorization: bytes &optional;
+    range: bytes &optional;
+    referer: bytes &optional;
+    te: bytes &optional;
+    user_agent: bytes &optional;
+};
+
+type ResponseHeader = unit {
+    accept_ranges: bytes &optional;
+    age: bytes &optional;
+    etag: bytes &optional;
+    location: bytes &optional;
+    proxy_authenticate: bytes &optional;
+    retry_after: bytes &optional;
+    server: bytes &optional;
+    vary: bytes &optional;
+    www_authenticate: bytes &optional;
+};
+
+type EntityHeader = unit {
+    allow: bytes &optional;
+    content_encoding: bytes &optional;
+    content_language: bytes &optional;
+    content_length: bytes &optional;
+    content_location: bytes &optional;
+    content_md5: bytes &optional;
+    content_range: bytes &optional;
+    content_type: bytes &optional;
+    expires: bytes &optional;
+    last_modified: bytes &optional;
 };

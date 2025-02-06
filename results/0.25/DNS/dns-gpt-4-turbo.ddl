@@ -1,55 +1,47 @@
-module DNS {
+type DNSHeader = struct {
+    id          : uint16;
+    qr          : uint1;
+    opcode      : uint4;
+    aa          : uint1;
+    tc          : uint1;
+    rd          : uint1;
+    ra          : uint1;
+    z           : uint3;
+    rcode       : uint4;
+    qdcount     : uint16;
+    ancount     : uint16;
+    nscount     : uint16;
+    arcount     : uint16;
+};
 
-  import DAEDALUS::BitManip;
-  import DAEDALUS::Bytes;
+type DNSQuestion = struct {
+    qname       : DomainName;
+    qtype       : uint16;
+    qclass      : uint16;
+};
 
-  type U8  = UInt(8);
-  type U16 = UInt(16);
-  type U32 = UInt(32);
+type DomainName = struct {
+    labels      : DomainLabel[];
+};
 
-  type DomainName = {
-    labels : List(String) &UntilEmpty,
-    term   : U8 = 0
-  } &Layout(LeftRecursive);
+type DomainLabel = struct {
+    length      : uint8;
+    label       : uint8[length];
+} until length == 0;
 
-  type Question = {
-    qName  : DomainName,
-    qType  : U16,
-    qClass : U16
-  };
+type ResourceRecord = struct {
+    name        : DomainName;
+    type        : uint16;
+    class       : uint16;
+    ttl         : uint32;
+    rdlength    : uint16;
+    rdata       : uint8[rdlength];
+};
 
-  type ResourceRecord = {
-    rrName     : DomainName,
-    rrType     : U16,
-    rrClass    : U16,
-    ttl        : U32,
-    rdLength   : U16,
-    rData      : Bytes(rdLength)
-  };
-
-  type Header = {
-    id      : U16,
-    qr      : U1,
-    opcode  : U4,
-    aa      : U1,
-    tc      : U1,
-    rd      : U1,
-    ra      : U1,
-    z       : U3,
-    rcode   : U4,
-    qdCount : U16,
-    anCount : U16,
-    nsCount : U16,
-    arCount : U16
-  };
-
-  type DNSPacket = {
-    header     : Header,
-    questions  : List(Question, header.qdCount),
-    answers    : List(ResourceRecord, header.anCount),
-    authority  : List(ResourceRecord, header.nsCount),
-    additional : List(ResourceRecord, header.arCount)
-  };
-
-  entrypoint parseDNS : DNSPacket;
-}
+type DNSPacket = struct {
+    header      : DNSHeader;
+    questions   : DNSQuestion[header.qdcount];
+    answers     : ResourceRecord[header.ancount];
+    authorities : ResourceRecord[header.nscount];
+    additionals : ResourceRecord[header.arcount];
+};

@@ -1,62 +1,59 @@
-module ZIP {
+module ZIP;
 
-  import DAEDALUS::BitStream;
-  import DAEDALUS::Utils;
+type ZipFile = struct {
+    files : LocalFileHeader[];
+    centralDirectories : CentralDirectory[];
+    endOfCentralDirectory : EndOfCentralDirectory;
+};
 
-  struct LocalFileHeader {
-    signature       : u32 = 0x04034b50;
-    version         : u16;
-    flags           : u16;
-    compression     : u16;
-    modTime         : u16;
-    modDate         : u16;
-    crc32           : u32;
-    compressedSize  : u32;
-    uncompressedSize: u32;
-    fileNameLength  : u16;
-    extraFieldLength: u16;
-    fileName        : u8[fileNameLength];
-    extraField      : u8[extraFieldLength];
-  }
+type LocalFileHeader = struct {
+    signature : u32 = 0x04034b50;
+    versionNeededToExtract : u16;
+    generalPurposeBitFlag : u16;
+    compressionMethod : u16;
+    lastModFileTime : u16;
+    lastModFileDate : u16;
+    crc32 : u32;
+    compressedSize : u32;
+    uncompressedSize : u32;
+    fileNameLength : u16;
+    extraFieldLength : u16;
+    fileName : bytes[fileNameLength];
+    extraField : bytes[extraFieldLength];
+    compressedData : bytes[compressedSize];
+};
 
-  struct CentralDirectoryFileHeader {
-    signature       : u32 = 0x02014b50;
-    versionMadeBy   : u16;
-    versionNeeded   : u16;
-    flags           : u16;
-    compression     : u16;
-    modTime         : u16;
-    modDate         : u16;
-    crc32           : u32;
-    compressedSize  : u32;
-    uncompressedSize: u32;
-    fileNameLength  : u16;
-    extraFieldLength: u16;
-    commentLength   : u16;
+type CentralDirectory = struct {
+    signature : u32 = 0x02014b50;
+    versionMadeBy : u16;
+    versionNeededToExtract : u16;
+    generalPurposeBitFlag : u16;
+    compressionMethod : u16;
+    lastModFileTime : u16;
+    lastModFileDate : u16;
+    crc32 : u32;
+    compressedSize : u32;
+    uncompressedSize : u32;
+    fileNameLength : u16;
+    extraFieldLength : u16;
+    fileCommentLength : u16;
     diskNumberStart : u16;
-    internalAttributes : u16;
-    externalAttributes : u32;
-    localHeaderOffset  : u32;
-    fileName           : u8[fileNameLength];
-    extraField         : u8[extraFieldLength];
-    fileComment        : u8[commentLength];
-  }
+    internalFileAttributes : u16;
+    externalFileAttributes : u32;
+    relativeOffsetOfLocalHeader : u32;
+    fileName : bytes[fileNameLength];
+    extraField : bytes[extraFieldLength];
+    fileComment : bytes[fileCommentLength];
+};
 
-  struct EndOfCentralDirectoryRecord {
-    signature       : u32 = 0x06054b50;
-    diskNumber      : u16;
-    diskStart       : u16;
-    numEntriesThisDisk: u16;
-    numEntries      : u16;
-    centralDirectorySize: u32;
-    centralDirectoryOffset: u32;
-    commentLength   : u16;
-    comment         : u8[commentLength];
-  }
-
-  struct ZIPFile {
-    files           : LocalFileHeader[+];
-    centralDirectory: CentralDirectoryFileHeader[+];
-    endOfDirectory  : EndOfCentralDirectoryRecord;
-  }
-}
+type EndOfCentralDirectory = struct {
+    signature : u32 = 0x06054b50;
+    numberOfThisDisk : u16;
+    diskWhereCentralDirectoryStarts : u16;
+    numberOfCentralDirectoryRecordsOnThisDisk : u16;
+    totalNumberOfCentralDirectoryRecords : u16;
+    sizeOfCentralDirectory : u32;
+    offsetOfStartOfCentralDirectory : u32;
+    zipFileCommentLength : u16;
+    zipFileComment : bytes[zipFileCommentLength];
+};

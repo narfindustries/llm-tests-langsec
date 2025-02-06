@@ -1,121 +1,72 @@
-# DNS Protocol Specification in Zeek Spicy
-%header{
-#include "zeek-spicy/protocol/dns/types.zeek"
+module DNS;
+
+type uint4 = uint8;
+type uint16_type = uint16;
+type uint32_type = uint32;
+
+type dns_header = record {
+  id: uint16_type,
+  qr: bool,
+  opcode: uint8 & 0x0f,
+  aa: bool,
+  tc: bool,
+  rd: bool,
+  ra: bool,
+  z: uint8 & 0x07,
+  rcode: uint8 & 0x0f,
 }
 
-%proto dns {
-    # DNS Header
-    header: {
-        id: uint16;
-        flags: uint16;
-        qdcount: uint16;
-        ancount: uint16;
-        nscount: uint16;
-        arcount: uint16;
-    };
+type domain = bytestring;
 
-    # DNS Question
-    question: {
-        qname: bytestring;
-        qtype: uint16;
-        qclass: uint16;
-    };
+type ip4 = uint32_type;
+type ip6 = bytestring;
 
-    # DNS Answer
-    answer: {
-        name: uint16;
-        type: uint16;
-        class: uint16;
-        ttl: uint32;
-        rdlength: uint16;
-        rdata: bytestring;
-    };
+type text = bytestring;
 
-    # DNS Parser
-    parser: {
-        header;
-        questions: array(question);
-        answers: array(answer);
-        authorities: array(answer);
-        additionals: array(answer);
-    };
+type soa = record {
+  mname: domain,
+  rname: domain,
+  serial: uint32_type,
+  refresh: uint32_type,
+  retry: uint32_type,
+  expire: uint32_type,
+  minimum: uint32_type,
 }
 
-%parser dns {
-    # Parse DNS Header
-    header: parse_header;
-
-    # Parse DNS Questions
-    questions: {
-        parse_question(qdcount);
-    };
-
-    # Parse DNS Answers
-    answers: {
-        parse_answer(ancount);
-    };
-
-    # Parse DNS Authorities
-    authorities: {
-        parse_answer(nscount);
-    };
-
-    # Parse DNS Additionals
-    additionals: {
-        parse_answer(arcount);
-    };
+type mail_exchange = record {
+  preference: uint16_type,
+  exchange: domain,
 }
 
-%function parse_header : header {
-    # Parse DNS Header
-    header: {
-        id = uint16();
-        flags = uint16();
-        qdcount = uint16();
-        ancount = uint16();
-        nscount = uint16();
-        arcount = uint16();
-    };
+type dns_rr = record {
+  name: domain,
+  type: uint16_type,
+  class: uint16_type,
+  ttl: uint32_type,
+  rdlength: uint16_type,
+  rdata: case type of {
+    1 => ip4,  # A
+    2 => domain,  # NS
+    5 => domain,  # CNAME
+    6 => soa,  # SOA
+    12 => domain,  # PTR
+    15 => mail_exchange,  # MX
+    16 => text,  # TXT
+    28 => ip6,  # AAAA
+    _ => bytestring,
+  },
 }
 
-%function parse_question(count) : array(question) {
-    # Parse DNS Questions
-    questions: array(question);
-    for (i = 0; i < count; i++) {
-        q: question;
-        q.qname = parse_qname();
-        q.qtype = uint16();
-        q.qclass = uint16();
-        questions.add(q);
-    }
-    return questions;
+type dns_question = record {
+  qname: domain,
+  qtype: uint16_type,
+  qclass: uint16_type,
 }
 
-%function parse_answer(count) : array(answer) {
-    # Parse DNS Answers
-    answers: array(answer);
-    for (i = 0; i < count; i++) {
-        a: answer;
-        a.name = uint16();
-        a.type = uint16();
-        a.class = uint16();
-        a.ttl = uint32();
-        a.rdlength = uint16();
-        a.rdata = bytestring(a.rdlength);
-        answers.add(a);
-    }
-    return answers;
-}
-
-%function parse_qname() : bytestring {
-    # Parse DNS QNAME
-    qname: bytestring;
-    while (true) {
-        len = uint8();
-        if (len == 0) {
-            break;
-        }
-        qname += bytestring(len);
-    }
-    return qname;
+type dns_message = record {
+  header: dns_header,
+  questions: vector[dns_question],
+  answers: vector[dns_rr],
+  authorities: vector[dns_rr],
+  additionals: vector[dns_rr],
 }

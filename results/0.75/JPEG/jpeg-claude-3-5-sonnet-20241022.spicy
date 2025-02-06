@@ -1,46 +1,164 @@
 module JPEG;
 
-public type Header = unit {
-    marker1: uint8 &requires = 0xFF;
-    marker2: uint8 &requires = 0xD8;
-    
-    on %done {
-        print "JPEG Start Of Image (SOI) marker found";
-    }
+public type Marker = enum {
+    SOI = 0xFFD8,
+    APP0 = 0xFFE0,
+    APP1 = 0xFFE1,
+    APP2 = 0xFFE2,
+    APP3 = 0xFFE3,
+    APP4 = 0xFFE4,
+    APP5 = 0xFFE5,
+    APP6 = 0xFFE6,
+    APP7 = 0xFFE7,
+    APP8 = 0xFFE8,
+    APP9 = 0xFFE9,
+    APP10 = 0xFFEA,
+    APP11 = 0xFFEB,
+    APP12 = 0xFFEC,
+    APP13 = 0xFFED,
+    APP14 = 0xFFEE,
+    APP15 = 0xFFEF,
+    DQT = 0xFFDB,
+    SOF0 = 0xFFC0,
+    SOF1 = 0xFFC1,
+    SOF2 = 0xFFC2,
+    SOF3 = 0xFFC3,
+    SOF5 = 0xFFC5,
+    SOF6 = 0xFFC6,
+    SOF7 = 0xFFC7,
+    SOF9 = 0xFFC9,
+    SOF10 = 0xFFCA,
+    SOF11 = 0xFFCB,
+    SOF13 = 0xFFCD,
+    SOF14 = 0xFFCE,
+    SOF15 = 0xFFCF,
+    DHT = 0xFFC4,
+    SOS = 0xFFDA,
+    DRI = 0xFFDD,
+    RST0 = 0xFFD0,
+    RST1 = 0xFFD1,
+    RST2 = 0xFFD2,
+    RST3 = 0xFFD3,
+    RST4 = 0xFFD4,
+    RST5 = 0xFFD5,
+    RST6 = 0xFFD6,
+    RST7 = 0xFFD7,
+    COM = 0xFFFE,
+    EOI = 0xFFD9
 };
 
-public type Segment = unit {
-    marker1: uint8 &requires = 0xFF;
-    marker2: uint8;
+type Component = unit {
+    component_id: uint8;
+    sampling_factors: uint8;
+    quant_table_id: uint8;
+};
+
+type ScanComponent = unit {
+    component_id: uint8;
+    huffman_table: uint8;
+};
+
+type JFIF = unit {
     length: uint16;
-    data: bytes &size = self.length - 2;
-    
-    on %done {
-        switch ( self.marker2 ) {
-            case 0xE0: print "JFIF APP0 segment";
-            case 0xE1: print "EXIF APP1 segment";
-            case 0xDB: print "Quantization Table";
-            case 0xC0: print "Start Of Frame (baseline)";
-            case 0xC2: print "Start Of Frame (progressive)";
-            case 0xC4: print "Huffman Table";
-            case 0xDA: print "Start Of Scan";
-            case 0xD9: print "End Of Image";
-            default: print "Other JPEG segment";
-        }
+    identifier: bytes &size=5;
+    version: uint16;
+    units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumb_width: uint8;
+    thumb_height: uint8;
+    thumbnail_data: bytes &size=(self.thumb_width * self.thumb_height * 3);
+};
+
+type QuantizationTable = unit {
+    precision_and_id: uint8;
+    values: bytes &size=(self.precision_and_id & 0xF0 == 0 ? 64 : 128);
+};
+
+type DQTSegment = unit {
+    length: uint16;
+    tables: QuantizationTable[];
+};
+
+type Frame = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[self.num_components];
+};
+
+type HuffmanTable = unit {
+    class_and_id: uint8;
+    num_codes: bytes &size=16;
+    values: bytes &size=self.calculate_size();
+
+    function calculate_size(): uint64 {
+        local total: uint64 = 0;
+        for ( i in 0..15 )
+            total += self.num_codes[i];
+        return total;
     }
 };
 
-public type File = unit {
-    header: Header;
-    segments: Segment[] &eod;
+type DHTSegment = unit {
+    length: uint16;
+    tables: HuffmanTable[];
 };
 
-# Hook that's called at initialization time.
-on JPEG::File::%init {
-    print "Initializing JPEG parser";
-}
+type ScanHeader = unit {
+    length: uint16;
+    num_components: uint8;
+    components: ScanComponent[self.num_components];
+    start_spectral: uint8;
+    end_spectral: uint8;
+    approx: uint8;
+};
 
-# Hook that's called when parsing has finished.
-on JPEG::File::%done {
-    print "Finished parsing JPEG file";
-}
+type RestartInterval = unit {
+    length: uint16;
+    interval: uint16;
+};
+
+type Comment = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type ApplicationData = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type EntropyCodedSegment = unit {
+    data: bytes &until-including=[0xFF, 0xD9];
+};
+
+public type JPEG = unit {
+    soi: Marker &requires=(self.soi == Marker::SOI);
+    
+    segments: unit {
+        marker: Marker;
+        data: switch(self.marker) {
+            Marker::APP0 -> JFIF;
+            Marker::APP1, Marker::APP2, Marker::APP3, Marker::APP4,
+            Marker::APP5, Marker::APP6, Marker::APP7, Marker::APP8,
+            Marker::APP9, Marker::APP10, Marker::APP11, Marker::APP12,
+            Marker::APP13, Marker::APP14, Marker::APP15 -> ApplicationData;
+            Marker::DQT -> DQTSegment;
+            Marker::SOF0, Marker::SOF1, Marker::SOF2, Marker::SOF3,
+            Marker::SOF5, Marker::SOF6, Marker::SOF7, Marker::SOF9,
+            Marker::SOF10, Marker::SOF11, Marker::SOF13, Marker::SOF14,
+            Marker::SOF15 -> Frame;
+            Marker::DHT -> DHTSegment;
+            Marker::SOS -> ScanHeader;
+            Marker::DRI -> RestartInterval;
+            Marker::COM -> Comment;
+        };
+    }[] &while(self.segments.marker != Marker::SOS);
+    
+    entropy_data: EntropyCodedSegment;
+    
+    eoi: Marker &requires=(self.eoi == Marker::EOI);
+};

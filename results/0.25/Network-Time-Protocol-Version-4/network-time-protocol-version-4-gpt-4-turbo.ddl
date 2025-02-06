@@ -1,28 +1,33 @@
-module Network.Time.Protocol.Version4 {
-  import Network.Time.Protocol.Common;
+type NTPPacket = struct {
+    li_version_mode UInt8;
+    stratum         UInt8;
+    poll            UInt8;
+    precision       Int8;
+    root_delay      UInt32;
+    root_dispersion UInt32;
+    reference_id    UInt32;
+    ref_timestamp   UInt64;
+    orig_timestamp  UInt64;
+    recv_timestamp  UInt64;
+    xmit_timestamp  UInt64;
+    extensions      [NTPExtension] : until end;
+    key_id          UInt32 ?;
+    message_digest  UInt128 ?;
+};
 
-  type NTPHeader = struct {
-    li           : uint(2);  // Leap Indicator
-    vn           : uint(3);  // Version Number
-    mode         : uint(3);  // Mode
-    stratum      : uint(8);  // Stratum level of the local clock
-    poll         : int(8);   // Maximum interval between successive messages
-    precision    : int(8);   // Precision of the local clock
+type NTPExtension = struct {
+    field_type UInt16;
+    field_len  UInt16;
+    value      [UInt8] : size => field_len - 4;
+};
 
-    rootDelay    : fixed(32);  // Total round trip delay time
-    rootDispersion: fixed(32); // Max error aloud from primary clock source
-    refId        : uint(32);   // Reference clock identifier
+type Int8 = int : width => 8;
+type UInt8 = uint : width => 8;
+type UInt16 = uint : width => 16;
+type UInt32 = uint : width => 32;
+type UInt64 = uint : width => 64;
 
-    refTm_s      : uint(32);   // Reference time-stamp seconds
-    refTm_f      : uint(32);   // Reference time-stamp fraction of a second
-
-    origTm_s     : uint(32);   // Originate time-stamp seconds
-    origTm_f     : uint(32);   // Originate time-stamp fraction of a second
-
-    rxTm_s       : uint(32);   // Received time-stamp seconds
-    rxTm_f       : uint(32);   // Received time-stamp fraction of a second
-
-    txTm_s       : uint(32);   // Transmit time-stamp seconds
-    txTm_f       : uint(32);   // Transmit time-stamp fraction of a second
-  }
-}
+type UInt128 = struct {
+    high UInt64;
+    low  UInt64;
+};

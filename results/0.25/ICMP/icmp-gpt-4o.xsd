@@ -1,27 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/icmp"
-           xmlns="http://example.com/icmp"
-           elementFormDefault="qualified"
-           dfdl:format="byteOrder='bigEndian'">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/icmp"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        elementFormDefault="qualified">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="dfdl:GeneralFormat" lengthKind="explicit" lengthUnits="bytes"/>
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
         </xs:appinfo>
     </xs:annotation>
 
     <xs:element name="ICMPMessage">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1"/>
-                <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1"/>
-                <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2"/>
-                <xs:element name="RestOfHeader" type="xs:unsignedInt" dfdl:length="4"/>
-                <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator=""/>
+                <xs:element name="Type" type="xs:unsignedByte" dfdl:length="8"/>
+                <xs:element name="Code" type="xs:unsignedByte" dfdl:length="8"/>
+                <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="16"/>
+                <xs:choice dfdl:choiceLengthKind="implicit">
+                    <xs:sequence>
+                        <xs:element name="Echo" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Identifier" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="Data" type="xs:string" dfdl:lengthKind="delimited"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="DestinationUnreachable" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Unused" type="xs:unsignedInt" dfdl:length="32"/>
+                                    <xs:element name="OriginalDatagram" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{8}"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="Redirect" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:length="32"/>
+                                    <xs:element name="OriginalDatagram" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{8}"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="Timestamp" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Identifier" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="OriginateTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+                                    <xs:element name="ReceiveTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+                                    <xs:element name="TransmitTimestamp" type="xs:unsignedInt" dfdl:length="32"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="AddressMask" minOccurs="0" maxOccurs="1">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Identifier" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:length="16"/>
+                                    <xs:element name="AddressMask" type="xs:unsignedInt" dfdl:length="32"/>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:choice>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
-</xs:schema>
+</schema>

@@ -1,6 +1,7 @@
 use nom::{
-    be_u16, be_u32, be_u64, bytes::complete::take, combinator::map, IResult,
-    number::complete::le_u32,
+    bytes::complete::take,
+    number::complete::{be_u16, be_u32, be_u64},
+    IResult,
 };
 use std::env;
 use std::fs::File;
@@ -24,7 +25,6 @@ struct ElfHeader {
     e_shstrndx: u16,
 }
 
-
 fn elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
     let (input, e_ident) = take(16usize)(input)?;
     let (input, e_type) = be_u16(input)?;
@@ -44,7 +44,7 @@ fn elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
     Ok((
         input,
         ElfHeader {
-            e_ident,
+            e_ident: e_ident.try_into().unwrap(),
             e_type,
             e_machine,
             e_version,
@@ -62,11 +62,10 @@ fn elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
     ))
 }
 
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: elf_parser <elf_file>");
+        println!("Usage: elf_parser <filename>");
         return;
     }
 
@@ -78,7 +77,7 @@ fn main() {
     match elf_header(&buffer) {
         Ok((remaining, header)) => {
             println!("ELF Header: {:?}", header);
-            println!("Remaining bytes: {} ", remaining.len());
+            println!("Remaining bytes: {} bytes", remaining.len());
         }
         Err(e) => println!("Error parsing ELF header: {:?}", e),
     }

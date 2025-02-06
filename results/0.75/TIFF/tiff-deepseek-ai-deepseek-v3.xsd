@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define basic types used in TIFF -->
+  <xs:simpleType name="TiffByte">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="TiffShort">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="TiffLong">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="TiffRational">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d+/\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Define TIFF Header -->
+  <xs:complexType name="TiffHeader">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2"/>
+      <xs:element name="MagicNumber" type="TiffShort"/>
+      <xs:element name="FirstIFDOffset" type="TiffLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define IFD Entry -->
+  <xs:complexType name="IFDEntry">
+    <xs:sequence>
+      <xs:element name="Tag" type="TiffShort"/>
+      <xs:element name="Type" type="TiffShort"/>
+      <xs:element name="Count" type="TiffLong"/>
+      <xs:element name="ValueOffset" type="TiffLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define IFD -->
+  <xs:complexType name="IFD">
+    <xs:sequence>
+      <xs:element name="NumEntries" type="TiffShort"/>
+      <xs:element name="Entries" type="IFDEntry" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="TiffLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define TIFF File -->
+  <xs:complexType name="TiffFile">
+    <xs:sequence>
+      <xs:element name="Header" type="TiffHeader"/>
+      <xs:element name="IFDs" type="IFD" maxOccurs="unbounded"/>
+      <xs:element name="ImageData" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define TIFF-specific fields -->
+  <xs:element name="NewSubfileType" type="TiffLong"/>
+  <xs:element name="SubfileType" type="TiffShort"/>
+  <xs:element name="ImageWidth" type="TiffLong"/>
+  <xs:element name="ImageLength" type="TiffLong"/>
+  <xs:element name="BitsPerSample" type="TiffShort"/>
+  <xs:element name="Compression" type="TiffShort"/>
+  <xs:element name="PhotometricInterpretation" type="TiffShort"/>
+  <xs:element name="Threshholding" type="TiffShort"/>
+  <xs:element name="CellWidth" type="TiffShort"/>
+  <xs:element name="CellLength" type="TiffShort"/>
+  <xs:element name="FillOrder" type="TiffShort"/>
+  <xs:element name="ImageDescription" type="xs:string"/>
+  <xs:element name="Make" type="xs:string"/>
+  <xs:element name="Model" type="xs:string"/>
+  <xs:element name="StripOffsets" type="TiffLong"/>
+  <xs:element name="Orientation" type="TiffShort"/>
+  <xs:element name="SamplesPerPixel" type="TiffShort"/>
+  <xs:element name="RowsPerStrip" type="TiffLong"/>
+  <xs:element name="StripByteCounts" type="TiffLong"/>
+  <xs:element name="MinSampleValue" type="TiffShort"/>
+  <xs:element name="MaxSampleValue" type="TiffShort"/>
+  <xs:element name="XResolution" type="TiffRational"/>
+  <xs:element name="YResolution极 端情况下，可能需要重新定义数据结构或引入更复杂的约束。 -->
+  <xs:element name="PlanarConfiguration" type="TiffShort"/>
+  <xs:element name="FreeOffsets" type极 端情况下，可能需要重新定义数据结构或引入更复杂的约束。 -->
+  <xs:element name="FreeByteCounts" type="TiffLong"/>
+  <xs:element name="GrayResponseUnit" type="TiffShort"/>
+  <xs:element name="GrayResponseCurve" type="TiffShort"/>
+  <xs:element name="Group3Options" type="TiffLong"/>
+  <xs:element name="Group4Options" type="TiffLong"/>
+  <xs:element name="ResolutionUnit" type="TiffShort"/>
+  <xs:element name="PageNumber" type="TiffShort"/>
+  <xs:element name="TransferFunction" type="TiffShort"/>
+  <xs:element name="Software" type="xs:string"/>
+  <xs:element name="DateTime" type="xs:string"/>
+  <xs:element name="Artist" type="xs:string"/>
+  <xs:element name="HostComputer" type="xs:string"/>
+  <xs:element name="Predictor" type="TiffShort"/>
+  <xs:element name="ColorMap" type="TiffShort"/>
+  <xs:element name="TileWidth" type="TiffLong"/>
+  <xs:element name="TileLength" type="TiffLong"/>
+  <xs:element name="TileOffsets" type="TiffLong"/>
+  <xs:element name="TileByteCounts" type="TiffLong"/>
+  <xs:element name="ExtraSamples" type="TiffShort"/>
+  <xs:element name="SampleFormat" type="TiffShort"/>
+  <xs:element name="JPEGTables" type="xs:hexBinary"/>
+  <xs:element name="YCbCrSubSampling" type="TiffShort"/>
+  <xs:element name="YCbCrPositioning" type="TiffShort"/>
+  <xs:element name="ReferenceBlackWhite" type="TiffRational"/>
+</xs:schema>

@@ -1,80 +1,55 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/sqlite3-db"
-           xmlns:tns="http://example.com/dfdl/sqlite3-db">
+           targetNamespace="http://example.com/sqlite"
+           xmlns:tns="http://example.com/sqlite">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:generalFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="SQLite3BaseFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     encoding="UTF-8"
+                     bitOrder="mostSignificantBitFirst"
+                     textNumberRep="standard"
+                     alignment="1"
+                     lengthKind="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:element name="Sqlite3Database" type="tns:DatabaseFile"/>
+  <xs:complexType name="SQLite3Header">
+    <xs:sequence>
+      <xs:element name="headerString" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII"/>
+      <xs:element name="pageSize" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="writeVersion" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="readVersion" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="reservedSpace" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="maxPayloadFrac" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="minPayloadFrac" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="leafPayloadFrac" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="fileChangeCounter" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="numPages" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="firstFreelistTrunkPage" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="totalFreelistPages" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="schemaCookie" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="schemaFormat" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="defaultCacheSize" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="largestRootPage" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="textEncoding" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="userVersion" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="incrementalVacuumMode" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="applicationId" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="reserved" type="xs:hexBinary" dfdl:length="20"/>
+      <xs:element name="versionValidFor" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="sqliteVersion" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <xs:complexType name="DatabaseFile">
-        <xs:sequence>
-            <xs:element name="header" type="tns:Header" dfdl:lengthKind="explicit" dfdl:length="100"/>
-            <xs:element name="data" type="tns:Data" dfdl:occursCountKind="parsed" dfdl:occursStopValue="-1"/>
-        </xs:sequence>
+  <xs:element name="SQLite3DB">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:SQLite3Header"/>
+        <!-- Additional components such as B-tree pages, freelist pages, payload data would be defined here. -->
+      </xs:sequence>
     </xs:complexType>
-
-    <xs:complexType name="Header">
-        <xs:sequence>
-            <xs:element name="signature" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII"/>
-            <xs:element name="pageSize" type="xs:int" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="writeVersion" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="readVersion" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="reservedSpace" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="maxPayloadFraction" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="minPayloadFraction" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="leafPayloadFraction" type="xs:byte" dfdl:length="1"/>
-            <xs:element name="changeCounter" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="databaseSizePages" type="xs:long" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="firstFreelistTrunkPage" type="xs:long" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="totalFreelistPages" type="xs:long" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="schemaCookie" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="schemaFormat" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="defaultCacheSize" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="largestRootPage" type="xs:long" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="textEncoding" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="userVersion" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="incrementalVacuumMode" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-        </xs:sequence>
-        <xs:attributeGroup ref="dfdl:commonAttributes"/>
-    </xs:complexType>
-
-    <xs:complexType name="Data">
-        <xs:sequence>
-            <xs:element name="table" type="tns:Table" dfdl:occursCountKind="implicit"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="Table">
-        <xs:sequence>
-            <xs:element name="Record" type="tns:Record" dfdl:occursCountKind="parsed" dfdl:occursStopValue="-1"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="Record">
-        <xs:sequence>
-            <xs:element name="id" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-            <xs:element name="content" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:simpleType name="generalFormat">
-        <xs:restriction base="dfdl:Format">
-            <xs:sequence>
-                <dfdl:defineEscapeScheme name="escapeScheme">
-                    <dfdl:escapeBlockStart="%(" dfdl:escapeBlockEnd=")"/>
-                </dfdl:defineEscapeScheme>
-            </xs:sequence>
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-            <dfdl:encoding>UTF-8</dfdl:encoding>
-            <dfdl:escapeSchemeRef escapeSchemeName="escapeScheme"/>
-            <dfdl:lengthKind>delimited</dfdl:lengthKind>
-        </xs:restriction>
-    </xs:simpleType>
-
+  </xs:element>
 </xs:schema>

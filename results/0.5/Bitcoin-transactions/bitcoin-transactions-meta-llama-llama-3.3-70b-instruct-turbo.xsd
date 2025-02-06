@@ -1,144 +1,116 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/Bitcoin-transactions"
-           xmlns="http://example.com/Bitcoin-transactions"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/Bitcoin" 
+           xmlns="http://example.com/Bitcoin" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.xsd"/>
-
-  <xs:element name="bitcoinTransactions">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="BitcoinTransaction">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="transaction" type="transactionType" maxOccurs="unbounded">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element occurrence="1..*" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="version" type="xs:unsignedInt"/>
+        <xs:element name="numInputs" type="xs:unsignedInt"/>
+        <xs:element name="inputs" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="txId" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:format>
+                      <dfdl:property name="lengthKind" value="fixed"/>
+                      <dfdl:property name="length" value="32"/>
+                    </dfdl:format>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="vout" type="xs:unsignedInt"/>
+              <xs:element name="scriptSig" type="xs:hexBinary"/>
+              <xs:element name="sequence" type="xs:unsignedInt"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="numOutputs" type="xs:unsignedInt"/>
+        <xs:element name="outputs" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="value" type="xs:unsignedLong"/>
+              <xs:element name="scriptPubKey" type="xs:hexBinary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="lockTime" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="VarInt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="value" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Script">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="opcodes" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="opcode" type="xs:unsignedByte"/>
+              <xs:element name="data" type="xs:hexBinary" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="transactionType">
-    <xs:sequence>
-      <xs:element name="txid" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="64"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="version" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="4"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="locktime" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="4"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="inputs" type="inputsType">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="outputs" type="outputsType">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="inputsType">
-    <xs:sequence>
-      <xs:element name="input" type="inputType" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..*" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="inputType">
-    <xs:sequence>
-      <xs:element name="txid" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="64"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="vout" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="4"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="scriptSig" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="sequence" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="4"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="outputsType">
-    <xs:sequence>
-      <xs:element name="output" type="outputType" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..*" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="outputType">
-    <xs:sequence>
-      <xs:element name="value" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="explicit" dfdl:length="8"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="scriptPubKey" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:element occurrence="1..1" dfdl:sequenceKind="unordered" dfdl:encoding="utf-8" dfdl:lengthKind="delimited" dfdl:delimiterType="element" dfdl:delimiters=","/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="BlockHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:unsignedInt"/>
+        <xs:element name="prevBlock" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format>
+                <dfdl:property name="lengthKind" value="fixed"/>
+                <dfdl:property name="length" value="32"/>
+              </dfdl:format>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="merkleRoot" type="xs:hexBinary" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format>
+                <dfdl:property name="lengthKind" value="fixed"/>
+                <dfdl:property name="length" value="32"/>
+              </dfdl:format>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="timestamp" type="xs:unsignedInt"/>
+        <xs:element name="target" type="xs:unsignedInt"/>
+        <xs:element name="nonce" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Block">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="BlockHeader"/>
+        <xs:element name="transactions" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element ref="BitcoinTransaction"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:property name="encoding" value="binary"/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
 </xs:schema>

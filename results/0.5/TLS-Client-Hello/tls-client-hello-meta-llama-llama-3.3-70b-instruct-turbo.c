@@ -1,83 +1,92 @@
-#include <stdio.h>
 #include <stdint.h>
-#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the TLS Client Hello message structure
 typedef struct {
-    uint16_t protocol_version;
-    uint16_t random_length;
-    uint8_t random_bytes[32];
-    uint8_t session_id_length;
-    uint8_t session_id_bytes[32];
-    uint16_t cipher_suite_length;
-    uint16_t cipher_suites[255];
-    uint8_t compression_method_length;
-    uint8_t compression_methods[1];
-    uint8_t extensions_length;
-    uint8_t extensions_bytes[16384];
-} __attribute__((packed)) TlsClientHello;
+    uint16_t legacy_version;
+    uint8_t random[32];
+    uint8_t legacy_session_id_length;
+    uint8_t legacy_session_id[32];
+    uint16_t cipher_suites_length;
+    uint16_t cipher_suites[256];
+    uint8_t compression_methods_length;
+    uint8_t compression_methods[256];
+    uint16_t extensions_length;
+    struct {
+        uint16_t type;
+        uint16_t length;
+        uint8_t data[65535];
+    } extensions[256];
+} client_hello_t;
 
-// Define the TLS Client Hello parser
-TlsClientHello* parse_tls_client_hello(uint8_t* buffer, size_t length) {
-    TlsClientHello* client_hello = (TlsClientHello*) buffer;
-
-    // Check protocol version
-    if (client_hello->protocol_version != 0x0303) {
-        return NULL;
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
 
-    // Check random length
-    if (client_hello->random_length != 32) {
-        return NULL;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Failed to open file\n");
+        return 1;
     }
 
-    // Check session ID length
-    if (client_hello->session_id_length > 32) {
-        return NULL;
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *data = (uint8_t *)malloc(file_size);
+    if (!data) {
+        printf("Failed to allocate memory\n");
+        return 1;
     }
 
-    // Check cipher suite length
-    if (client_hello->cipher_suite_length % 2 != 0) {
-        return NULL;
+    size_t read_size = fread(data, 1, file_size, file);
+    if (read_size != file_size) {
+        printf("Failed to read file\n");
+        return 1;
     }
 
-    // Check compression method length
-    if (client_hello->compression_method_length != 1) {
-        return NULL;
+    client_hello_t *hello = (client_hello_t *)data;
+
+    printf("Legacy Version: %u\n", hello->legacy_version);
+    printf("Random: ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02x", hello->random[i]);
+    }
+    printf("\n");
+    printf("Legacy Session ID Length: %u\n", hello->legacy_session_id_length);
+    printf("Legacy Session ID: ");
+    for (int i = 0; i < hello->legacy_session_id_length; i++) {
+        printf("%02x", hello->legacy_session_id[i]);
+    }
+    printf("\n");
+    printf("Cipher Suites Length: %u\n", hello->cipher_suites_length);
+    printf("Cipher Suites: ");
+    for (int i = 0; i < hello->cipher_suites_length / 2; i++) {
+        printf("%04x ", hello->cipher_suites[i]);
+    }
+    printf("\n");
+    printf("Compression Methods Length: %u\n", hello->compression_methods_length);
+    printf("Compression Methods: ");
+    for (int i = 0; i < hello->compression_methods_length; i++) {
+        printf("%02x ", hello->compression_methods[i]);
+    }
+    printf("\n");
+    printf("Extensions Length: %u\n", hello->extensions_length);
+    for (int i = 0; i < hello->extensions_length; i++) {
+        printf("Extension %u:\n", i);
+        printf("Type: %04x\n", hello->extensions[i].type);
+        printf("Length: %u\n", hello->extensions[i].length);
+        printf("Data: ");
+        for (int j = 0; j < hello->extensions[i].length; j++) {
+            printf("%02x", hello->extensions[i].data[j]);
+        }
+        printf("\n");
     }
 
-    // Check extensions length
-    if (client_hello->extensions_length > 16384) {
-        return NULL;
-    }
-
-    return client_hello;
-}
-
-// Define the main function
-int main(int argc, char** argv) {
-    // Allocate memory for the TLS Client Hello message
-    uint8_t buffer[16392];
-    TlsClientHello* client_hello = (TlsClientHello*) buffer;
-
-    // Initialize the TLS Client Hello message
-    client_hello->protocol_version = 0x0303;
-    client_hello->random_length = 32;
-    client_hello->session_id_length = 0;
-    client_hello->cipher_suite_length = 2;
-    client_hello->compression_method_length = 1;
-    client_hello->extensions_length = 0;
-
-    // Parse the TLS Client Hello message
-    TlsClientHello* parsed_client_hello = parse_tls_client_hello(buffer, sizeof(buffer));
-
-    if (parsed_client_hello != NULL) {
-        printf("TLS Client Hello message parsed successfully\n");
-    } else {
-        printf("Failed to parse TLS Client Hello message\n");
-    }
-
+    free(data);
+    fclose(file);
     return 0;
 }

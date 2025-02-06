@@ -1,56 +1,112 @@
-%include "file-analysis/tiff/consts.spicy"
-
 module TIFF;
 
-import spicy;
+public type Header = unit {
+    byte_order: bytes &size=2;
+    version: uint16;
+    first_ifd_offset: uint32;
 
-public type File = unit {
-    header: Header;
-    ifd_offset: uint32;
-    on %done { print self; }
+    on %done {
+        if ( self.byte_order != b"II" && self.byte_order != b"MM" )
+            throw "Invalid byte order";
+        
+        if ( self.version != 42 )
+            throw "Invalid TIFF version";
+    }
 };
 
-type Header = unit {
-    byte_order: bytes &size=2 {
-        if ( $$ != b"II" && $$ != b"MM" )
-            throw "invalid byte order";
-    }
-    version: uint16 {
-        if ( $$ != 42 )
-            throw "invalid TIFF version";
-    }
+type DirectoryEntry = unit {
+    tag_id: uint16;
+    data_type: uint16;
+    count: uint32;
+    value_offset: uint32;
 };
 
 type IFD = unit {
-    entry_count: uint16;
-    entries: Entry[self.entry_count];
-    next_ifd: uint32;
+    num_entries: uint16;
+    entries: DirectoryEntry[self.num_entries];
+    next_ifd_offset: uint32;
 };
 
-type Entry = unit {
-    tag: uint16;
-    type: uint16;
-    count: uint32;
-    value: uint32;
+public type File = unit {
+    header: Header;
+    ifd: IFD;
 };
 
-public function parse_tiff(data: bytes) : bool {
-    try {
-        local tiff = parse<File>(data);
-        return True;
-    }
-    catch {
-        return False;
-    }
-}
+const TAG_NEW_SUBFILE_TYPE = 254;
+const TAG_SUBFILE_TYPE = 255;
+const TAG_IMAGE_WIDTH = 256;
+const TAG_IMAGE_LENGTH = 257;
+const TAG_BITS_PER_SAMPLE = 258;
+const TAG_COMPRESSION = 259;
+const TAG_PHOTOMETRIC_INTERPRETATION = 262;
+const TAG_FILL_ORDER = 266;
+const TAG_DOCUMENT_NAME = 269;
+const TAG_IMAGE_DESCRIPTION = 270;
+const TAG_MAKE = 271;
+const TAG_MODEL = 272;
+const TAG_STRIP_OFFSETS = 273;
+const TAG_ORIENTATION = 274;
+const TAG_SAMPLES_PER_PIXEL = 277;
+const TAG_ROWS_PER_STRIP = 278;
+const TAG_STRIP_BYTE_COUNTS = 279;
+const TAG_MIN_SAMPLE_VALUE = 280;
+const TAG_MAX_SAMPLE_VALUE = 281;
+const TAG_X_RESOLUTION = 282;
+const TAG_Y_RESOLUTION = 283;
+const TAG_PLANAR_CONFIGURATION = 284;
+const TAG_RESOLUTION_UNIT = 296;
+const TAG_SOFTWARE = 305;
+const TAG_DATE_TIME = 306;
+const TAG_ARTIST = 315;
+const TAG_HOST_COMPUTER = 316;
+const TAG_PREDICTOR = 317;
+const TAG_COLOR_MAP = 320;
+const TAG_TILE_WIDTH = 322;
+const TAG_TILE_LENGTH = 323;
+const TAG_TILE_OFFSETS = 324;
+const TAG_TILE_BYTE_COUNTS = 325;
+const TAG_COPYRIGHT = 33432;
 
-on File::%done {
-    print "TIFF file parsed successfully";
-}
+const TYPE_BYTE = 1;
+const TYPE_ASCII = 2;
+const TYPE_SHORT = 3;
+const TYPE_LONG = 4;
+const TYPE_RATIONAL = 5;
+const TYPE_SBYTE = 6;
+const TYPE_UNDEFINED = 7;
+const TYPE_SSHORT = 8;
+const TYPE_SLONG = 9;
+const TYPE_SRATIONAL = 10;
+const TYPE_FLOAT = 11;
+const TYPE_DOUBLE = 12;
 
-on Entry::%done {
-    print "Tag:", self.tag;
-    print "Type:", self.type;
-    print "Count:", self.count;
-    print "Value:", self.value;
-}
+const COMPRESSION_NONE = 1;
+const COMPRESSION_CCITT_GROUP3_1D = 2;
+const COMPRESSION_CCITT_GROUP3_FAX = 3;
+const COMPRESSION_CCITT_GROUP4_FAX = 4;
+const COMPRESSION_LZW = 5;
+const COMPRESSION_JPEG_OLD = 6;
+const COMPRESSION_JPEG = 7;
+const COMPRESSION_PACKBITS = 32773;
+
+const PHOTOMETRIC_WHITE_IS_ZERO = 0;
+const PHOTOMETRIC_BLACK_IS_ZERO = 1;
+const PHOTOMETRIC_RGB = 2;
+const PHOTOMETRIC_PALETTE_COLOR = 3;
+const PHOTOMETRIC_TRANSPARENCY_MASK = 4;
+const PHOTOMETRIC_CMYK = 5;
+const PHOTOMETRIC_YCBCR = 6;
+const PHOTOMETRIC_CIELAB = 8;
+
+const RESOLUTION_UNIT_NONE = 1;
+const RESOLUTION_UNIT_INCH = 2;
+const RESOLUTION_UNIT_CENTIMETER = 3;
+
+const ORIENTATION_TOP_LEFT = 1;
+const ORIENTATION_TOP_RIGHT = 2;
+const ORIENTATION_BOTTOM_RIGHT = 3;
+const ORIENTATION_BOTTOM_LEFT = 4;
+const ORIENTATION_LEFT_TOP = 5;
+const ORIENTATION_RIGHT_TOP = 6;
+const ORIENTATION_RIGHT_BOTTOM = 7;
+const ORIENTATION_LEFT_BOTTOM = 8;

@@ -1,130 +1,120 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{flat_map, map},
-    error::{context, ErrorKind},
-    multi::{take_till, take_while_m_n},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{tuple, preceded},
+    bytes::complete::take,
+    combinator::map_res,
+    error::{Error, ErrorKind},
+    number::complete::be_u16,
     IResult,
 };
-use std::{env, fs, io};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 enum IcmpType {
-    EchoReply = 0,
-    DestinationUnreachable = 3,
-    SourceQuench = 4,
-    Redirect = 5,
-    EchoRequest = 8,
-    TimeExceeded = 11,
-    ParameterProblem = 12,
-    Timestamp = 13,
-    TimestampReply = 14,
-    InfoRequest = 15,
-    InfoReply = 16,
-    AddressMaskRequest = 17,
-    AddressMaskReply = 18,
+    EchoReply,
+    DestinationUnreachable,
+    SourceQuench,
+    Redirect,
+    AlternateHostAddress,
+    Echo,
+    RouterAdvertisement,
+    RouterSolicitation,
+    TimeExceeded,
+    ParameterProblem,
+    Timestamp,
+    TimestampReply,
+    InformationRequest,
+    InformationReply,
+    Unassigned(u8),
 }
 
-impl IcmpType {
-    fn parse(i: &[u8]) -> IResult<&[u8], IcmpType> {
-        map(be_u8, |t: u8| match t {
-            0 => IcmpType::EchoReply,
-            3 => IcmpType::DestinationUnreachable,
-            4 => IcmpType::SourceQuench,
-            5 => IcmpType::Redirect,
-            8 => IcmpType::EchoRequest,
-            11 => IcmpType::TimeExceeded,
-            12 => IcmpType::ParameterProblem,
-            13 => IcmpType::Timestamp,
-            14 => IcmpType::TimestampReply,
-            15 => IcmpType::InfoRequest,
-            16 => IcmpType::InfoReply,
-            17 => IcmpType::AddressMaskRequest,
-            18 => IcmpType::AddressMaskReply,
-            _ => panic!("Invalid ICMP type"),
-        })(i)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 enum IcmpCode {
-    NetworkUnreachable = 0,
-    HostUnreachable = 1,
-    ProtocolUnreachable = 2,
-    PortUnreachable = 3,
-    FragmentationNeeded = 4,
-    SourceRouteFailed = 5,
-    DestinationNetworkUnknown = 6,
-    DestinationHostUnknown = 7,
-    SourceHostIsolated = 8,
-    NetworkAdministrativelyProhibited = 9,
-    HostAdministrativelyProhibited = 10,
-    NetworkUnreachableForTos = 11,
-    HostUnreachableForTos = 12,
-    CommunicationAdministrativelyProhibited = 13,
-    HostPrecedenceViolation = 14,
-    PrecedenceCutoffInEffect = 15,
+    NetworkUnreachable,
+    HostUnreachable,
+    ProtocolUnreachable,
+    PortUnreachable,
+    FragmentationNeeded,
+    SourceRouteFailed,
+    RedirectForNetwork,
+    RedirectForHost,
+    RedirectForTypeOfServiceAndNetwork,
+    RedirectForTypeOfServiceAndHost,
+    TimeToLiveExceeded,
+    FragmentReassemblyTimeExceeded,
+    PointerIndicatesError,
+    MissingRequiredOption,
+    Unassigned(u8),
 }
 
-impl IcmpCode {
-    fn parse(i: &[u8]) -> IResult<&[u8], IcmpCode> {
-        map(be_u8, |c: u8| match c {
-            0 => IcmpCode::NetworkUnreachable,
-            1 => IcmpCode::HostUnreachable,
-            2 => IcmpCode::ProtocolUnreachable,
-            3 => IcmpCode::PortUnreachable,
-            4 => IcmpCode::FragmentationNeeded,
-            5 => IcmpCode::SourceRouteFailed,
-            6 => IcmpCode::DestinationNetworkUnknown,
-            7 => IcmpCode::DestinationHostUnknown,
-            8 => IcmpCode::SourceHostIsolated,
-            9 => IcmpCode::NetworkAdministrativelyProhibited,
-            10 => IcmpCode::HostAdministrativelyProhibited,
-            11 => IcmpCode::NetworkUnreachableForTos,
-            12 => IcmpCode::HostUnreachableForTos,
-            13 => IcmpCode::CommunicationAdministrativelyProhibited,
-            14 => IcmpCode::HostPrecedenceViolation,
-            15 => IcmpCode::PrecedenceCutoffInEffect,
-            _ => panic!("Invalid ICMP code"),
-        })(i)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct IcmpHeader {
     icmp_type: IcmpType,
-    icmp_code: IcmpCode,
+    code: IcmpCode,
     checksum: u16,
     identifier: u16,
     sequence_number: u16,
 }
 
-impl IcmpHeader {
-    fn parse(i: &[u8]) -> IResult<&[u8], IcmpHeader> {
-        context(
-            "ICMP header",
-            tuple((
-                IcmpType::parse,
-                IcmpCode::parse,
-                be_u16,
-                be_u16,
-                be_u16,
-            )),
-        )
-        .map(|(i, (icmp_type, icmp_code, checksum, identifier, sequence_number))| {
-            (
-                i,
-                IcmpHeader {
-                    icmp_type,
-                    icmp_code,
-                    checksum,
-                    identifier,
-                    sequence_number,
-                },
-            )
-        })(i)
-    }
+fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], IcmpType> {
+    map_res(take(1usize), |x: &[u8]| match x[0] {
+        0 => Ok(IcmpType::EchoReply),
+        3 => Ok(IcmpType::DestinationUnreachable),
+        4 => Ok(IcmpType::SourceQuench),
+        5 => Ok(IcmpType::Redirect),
+        6 => Ok(IcmpType::AlternateHostAddress),
+        8 => Ok(IcmpType::Echo),
+        9 => Ok(IcmpType::RouterAdvertisement),
+        10 => Ok(IcmpType::RouterSolicitation),
+        11 => Ok(IcmpType::TimeExceeded),
+        12 => Ok(IcmpType::ParameterProblem),
+        13 => Ok(IcmpType::Timestamp),
+        14 => Ok(IcmpType::TimestampReply),
+        15 => Ok(IcmpType::InformationRequest),
+        16 => Ok(IcmpType::InformationReply),
+        x => Ok(IcmpType::Unassigned(x)),
+    })(input)
+}
+
+fn parse_icmp_code<'a>(input: &'a [u8], icmp_type: &IcmpType) -> IResult<&'a [u8], IcmpCode> {
+    map_res(take(1usize), |x: &[u8]| match icmp_type {
+        IcmpType::DestinationUnreachable => match x[0] {
+            0 => Ok(IcmpCode::NetworkUnreachable),
+            1 => Ok(IcmpCode::HostUnreachable),
+            2 => Ok(IcmpCode::ProtocolUnreachable),
+            3 => Ok(IcmpCode::PortUnreachable),
+            4 => Ok(IcmpCode::FragmentationNeeded),
+            5 => Ok(IcmpCode::SourceRouteFailed),
+            x => Ok(IcmpCode::Unassigned(x)),
+        },
+        IcmpType::Redirect => match x[0] {
+            0 => Ok(IcmpCode::RedirectForNetwork),
+            1 => Ok(IcmpCode::RedirectForHost),
+            2 => Ok(IcmpCode::RedirectForTypeOfServiceAndNetwork),
+            3 => Ok(IcmpCode::RedirectForTypeOfServiceAndHost),
+            x => Ok(IcmpCode::Unassigned(x)),
+        },
+        IcmpType::TimeExceeded => match x[0] {
+            0 => Ok(IcmpCode::TimeToLiveExceeded),
+            1 => Ok(IcmpCode::FragmentReassemblyTimeExceeded),
+            x => Ok(IcmpCode::Unassigned(x)),
+        },
+        IcmpType::ParameterProblem => match x[0] {
+            0 => Ok(IcmpCode::PointerIndicatesError),
+            1 => Ok(IcmpCode::MissingRequiredOption),
+            x => Ok(IcmpCode::Unassigned(x)),
+        },
+        _ => Ok(IcmpCode::Unassigned(x[0])),
+    })(input)
+}
+
+fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
+    let (input, icmp_type) = parse_icmp_type(input)?;
+    let (input, code) = parse_icmp_code(input, &icmp_type)?;
+    let (input, checksum) = be_u16(input)?;
+    let (input, identifier) = be_u16(input)?;
+    let (input, sequence_number) = be_u16(input)?;
+    Ok((input, IcmpHeader { icmp_type, code, checksum, identifier, sequence_number }))
 }
 
 fn main() {
@@ -133,16 +123,11 @@ fn main() {
         println!("Usage: {} <input_file>", args[0]);
         return;
     }
-    let input_file = &args[1];
-    let data = match fs::read(input_file) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
-    match IcmpHeader::parse(&data) {
-        Ok((remaining, header)) => println!("ICMP Header: {:?}", header),
-        Err(e) => eprintln!("Error parsing ICMP header: {:?}", e),
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut data = Vec::new();
+    file.read_to_end(&mut data).expect("Failed to read file");
+    match parse_icmp_header(&data) {
+        Ok((_, header)) => println!("{:?}", header),
+        Err(err) => println!("Error: {:?}", err),
     }
 }

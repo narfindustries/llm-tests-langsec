@@ -1,39 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/sqlite3-db"
-           xmlns="http://example.org/sqlite3-db"
+           xmlns:dfdl="http://www.ogf.org/dfdl/1.0/"
+           targetNamespace="http://example.org/sqlite3"
+           xmlns="http://example.org/sqlite3"
            elementFormDefault="qualified">
 
-  <xs:element name="sqlite3-db-gemini-1">
+  <xs:element name="SQLite3Database">
     <xs:complexType>
       <xs:sequence>
-        <!--  Add your actual DFDL elements here.  The error message doesn't provide enough
-             information to construct the schema. You need to provide the structure of 
-             your SQLite3 DB data as it maps to XML.  Example below is illustrative only. -->
-        <xs:element name="database" type="DatabaseType" dfdl:lengthKind="implicit"/>
+        <xs:element name="Page" maxOccurs="unbounded" dfdl:occursCountKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PageHeader" dfdl:length="100" dfdl:alignment="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="PageNumber" type="xs:unsignedInt" dfdl:length="4"/>
+                    <xs:element name="PageType" type="xs:unsignedByte" dfdl:length="1"/>
+                    <xs:element name="FreeSpace" type="xs:unsignedShort" dfdl:length="2"/>
+                    <xs:element name="CheckSum" type="xs:unsignedShort" dfdl:length="2"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="PageContent" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes">
+                <xs:complexType>
+                  <xs:choice maxOccurs="unbounded">
+                    <xs:element name="BTreeNode">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="CellPointer" type="xs:unsignedInt" dfdl:length="4" maxOccurs="unbounded"/>
+                          <xs:element name="CellContent" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="Key" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes"/>
+                                <xs:element name="Data" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="RightChildPointer" type="xs:unsignedInt" dfdl:length="4" minOccurs="0"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="TableData" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes">
+                      <xs:complexType>
+                        <xs:sequence maxOccurs="unbounded">
+                          <xs:element name="Row">
+                            <xs:complexType>
+                              <xs:sequence maxOccurs="unbounded">
+                                <xs:element name="Column" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="FreelistEntry" type="xs:unsignedInt" dfdl:length="4"/>
+                    <xs:element name="OtherMetadata" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes"/>
+                  </xs:choice>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="DatabaseType">
-    <xs:sequence>
-      <xs:element name="table" type="TableType" maxOccurs="unbounded" dfdl:separator=", "/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="TableType">
-    <xs:sequence>
-        <xs:element name="tableName" type="xs:string" dfdl:length="255"/>
-        <xs:element name="row" type="RowType" maxOccurs="unbounded" dfdl:separator="|" />
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="RowType">
-    <xs:sequence>
-        <xs:element name="column" type="xs:string" maxOccurs="unbounded" dfdl:separator=","/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>
-

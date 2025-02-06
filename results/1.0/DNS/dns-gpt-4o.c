@@ -1,41 +1,100 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParsedToken *ip_address(HParseContext *ctx, void *userdata) {
-    return h_bits(32, false)->parse(ctx, userdata);
+HParser* create_dns_parser() {
+    HParser *uint16be = h_uint16(); // Use h_uint16() for big-endian 16-bit values
+    HParser *uint32be = h_uint32(); // Use h_uint32() for big-endian 32-bit values
+
+    HParser *dns_header = h_sequence(
+        uint16be,                                // ID
+        h_bits(1, false),                        // QR: 1 bit
+        h_bits(4, false),                        // Opcode: 4 bits
+        h_bits(1, false),                        // AA: 1 bit
+        h_bits(1, false),                        // TC: 1 bit
+        h_bits(1, false),                        // RD: 1 bit
+        h_bits(1, false),                        // RA: 1 bit
+        h_bits(3, false),                        // Z: 3 bits
+        h_bits(4, false),                        // RCODE: 4 bits
+        uint16be,                                // QDCOUNT
+        uint16be,                                // ANCOUNT
+        uint16be,                                // NSCOUNT
+        uint16be,                                // ARCOUNT
+        NULL
+    );
+
+    HParser *label = h_sequence(
+        h_uint8(),                               // Length
+        h_data(h_uint8())                        // Label data
+    );
+
+    HParser *name = h_many1(label);
+
+    HParser *query_section = h_many(
+        h_sequence(
+            name,                                 // QNAME
+            uint16be,                             // QTYPE
+            uint16be                              // QCLASS
+        )
+    );
+
+    HParser *resource_record = h_many(
+        h_sequence(
+            name,                                 // NAME
+            uint16be,                             // TYPE
+            uint16be,                             // CLASS
+            uint32be,                             // TTL
+            h_bind(uint16be, h_nodata, h_repeat_n, h_last_uint),
+            NULL
+        )
+    );
+
+    HParser *dns_message = h_sequence(
+        dns_header,
+        query_section,
+        resource_record, // Answer section
+        resource_record, // Authority section
+        resource_record, // Additional section
+        NULL
+    );
+
+    return dns_message;
 }
 
-HParsedToken *label(HParseContext *ctx, void *userdata) {
-    return h_choice(h_bits(8, false), h_many1(h_byte_range('a', 'z')), h_many1(h_byte_range('A', 'Z')))->parse(ctx, userdata);
-}
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+        return 1;
+    }
 
-HParsedToken *domain_name(HParseContext *ctx, void *userdata) {
-    return h_many_sep(label(ctx, userdata), h_int_value(0x2e, 1))->parse(ctx, userdata);
-}
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("fopen");
+        return 1;
+    }
 
-HParsedToken *dns_packet(HParseContext *ctx, void *userdata) {
-    return h_sequence(
-        h_bits(16, false),     // Transaction ID
-        h_bits(16, false),     // Flags
-        h_bits(16, false),     // Questions
-        h_bits(16, false),     // Answer RRs
-        h_bits(16, false),     // Authority RRs
-        h_bits(16, false),     // Additional RRs
-        h_many1(h_sequence(
-            domain_name(ctx, userdata),  // QNAME
-            h_bits(16, false),           // QTYPE
-            h_bits(16, false)            // QCLASS
-        ))
-    )->parse(ctx, userdata);
-}
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-int main(int argc, char **argv) {
-    HParser *parser = dns_packet(NULL, NULL);
-    if (!parser) return 1;
+    uint8_t *data = malloc(filesize);
+    fread(data, 1, filesize, file);
+    fclose(file);
 
-    // Here you would call `h_parse` with the `parser`, input data, and handle errors if any.
-    // HParseResult *result = h_parse(parser, <input-data>, <input-length>);
-    // if (!result) { fprintf(stderr, "Parse error\n"); return 1; }
+    HParser *parser = create_dns_parser();
+    HParseResult *result = h_parse(parser, data, filesize);
 
-    h_delete_parser(parser);
+    if (result->ast) {
+        printf("Parsing successful!\n");
+        // Handle parsed AST here, if needed
+    } else {
+        printf("Parsing failed.\n");
+    }
+
+    h_parse_result_free(result);
+    h_arena_free(result->arena);
+    h_parser_free(parser);
+    free(data);
+
     return 0;
 }

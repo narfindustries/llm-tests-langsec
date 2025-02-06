@@ -1,9 +1,7 @@
 meta:
-  id: icmp_packet
-  title: ICMP Packet
-  application: network
-  imports:
-    - ipv4_packet
+  id: icmp
+  title: ICMP
+  application: internet
   endian: be
 
 seq:
@@ -15,34 +13,92 @@ seq:
     type: u2
   - id: rest_of_header
     size: 4
-  - id: data
-    size-eos: true
+    type:
+      switch-on: type
+      cases:
+        '0': echo_message
+        '3': destination_unreachable
+        '4': unused
+        '5': redirect
+        '8': echo_message
+        '11': time_exceeded
+        '12': parameter_problem
+        '13': timestamp_message
+        '14': timestamp_message
+        '15': unused
+        '16': unused
+        '17': address_mask_message
+        '18': address_mask_message
 
 types:
-  ipv4_packet:
+  echo_message:
     seq:
-      - id: version_ihl
-        type: u1
-      - id: dscp_ecn
-        type: u1
-      - id: total_length
+      - id: identifier
         type: u2
-      - id: identification
+      - id: sequence_number
         type: u2
-      - id: flags_fragment_offset
+
+  destination_unreachable:
+    seq:
+      - id: unused
         type: u2
-      - id: ttl
+      - id: mtu
+        type: u2
+
+  redirect:
+    seq:
+      - id: gateway_internet_address
+        type: ipv4_address
+
+  time_exceeded:
+    seq:
+      - id: unused
+        type: u4
+
+  parameter_problem:
+    seq:
+      - id: pointer
         type: u1
-      - id: protocol
-        type: u1
-      - id: header_checksum
+      - id: unused
+        size: 3
+
+  timestamp_message:
+    seq:
+      - id: identifier
         type: u2
-      - id: src_ip_addr
-        type: b4
-      - id: dst_ip_addr
-        type: b4
-      - id: options
-        size: ((version_ihl & 0x0f) - 5) * 4
-        if: (version_ihl & 0x0f) > 5
-      - id: payload
-        size-eos: true
+      - id: sequence_number
+        type: u2
+      - id: originate_timestamp
+        type: u4
+      - id: receive_timestamp
+        type: u4
+      - id: transmit_timestamp
+        type: u4
+
+  address_mask_message:
+    seq:
+      - id: identifier
+        type: u2
+      - id: sequence_number
+        type: u2
+      - id: address_mask
+        type: u4
+
+  unused:
+    seq:
+      - id: unused
+        type: u4
+
+  ipv4_address:
+    seq:
+      - id: b1
+        type: u1
+      - id: b2
+        type: u1
+      - id: b3
+        type: u1
+      - id: b4
+        type: u1
+    instances:
+      value:
+        value: 'b1 << 24 | b2 << 16 | b3 << 8 | b4'

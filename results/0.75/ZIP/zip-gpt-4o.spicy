@@ -1,59 +1,102 @@
 module ZIP;
 
-type CentralDirectoryEntry = unit {
-    signature: uint32 &assert(signature == 0x02014b50);
-    version_made_by: uint16;
-    version_needed: uint16;
-    flags: uint16;
-    compression_method: uint16;
-    last_mod_time: uint16;
-    last_mod_date: uint16;
-    crc32: uint32;
-    compressed_size: uint32;
-    uncompressed_size: uint32;
-    filename_length: uint16;
-    extra_field_length: uint16;
-    file_comment_length: uint16;
-    disk_number_start: uint16;
-    internal_file_attributes: uint16;
-    external_file_attributes: uint32;
-    relative_offset_of_local_header: uint32;
-    filename: bytestring &length=filename_length;
-    extra_field: bytestring &length=extra_field_length;
-    file_comment: bytestring &length=file_comment_length;
-};
+import spicy;
+import zeek;
 
 type LocalFileHeader = unit {
-    signature: uint32 &assert(signature == 0x04034b50);
-    version_needed: uint16;
-    flags: uint16;
-    compression_method: uint16;
-    last_mod_time: uint16;
-    last_mod_date: uint16;
-    crc32: uint32;
-    compressed_size: uint32;
-    uncompressed_size: uint32;
-    filename_length: uint16;
-    extra_field_length: uint16;
-    filename: bytestring &length=filename_length;
-    extra_field: bytestring &length=extra_field_length;
-    data: bytestring &length=compressed_size;
+    signature: uint32 @0 &validate=(self.signature == 0x04034b50);
+    version_needed: uint16 @4;
+    general_purpose_bit_flag: uint16 @6;
+    compression_method: uint16 @8;
+    last_mod_time: uint16 @10;
+    last_mod_date: uint16 @12;
+    crc32: uint32 @14;
+    compressed_size: uint32 @18;
+    uncompressed_size: uint32 @22;
+    file_name_length: uint16 @26;
+    extra_field_length: uint16 @28;
+    file_name: bytes @30 &length=self.file_name_length;
+    extra_field: bytes @ (30 + self.file_name_length) &length=self.extra_field_length;
 };
 
-type EndOfCentralDirectory = unit {
-    signature: uint32 &assert(signature == 0x06054b50);
-    disk_number: uint16;
-    central_directory_disk_number: uint16;
-    num_of_entries_on_this_disk: uint16;
-    total_num_of_entries: uint16;
-    central_directory_size: uint32;
-    central_directory_offset: uint32;
-    comment_length: uint16;
-    comment: bytestring &length=comment_length;
+type CentralDirectoryFileHeader = unit {
+    signature: uint32 @0 &validate=(self.signature == 0x02014b50);
+    version_made_by: uint16 @4;
+    version_needed: uint16 @6;
+    general_purpose_bit_flag: uint16 @8;
+    compression_method: uint16 @10;
+    last_mod_time: uint16 @12;
+    last_mod_date: uint16 @14;
+    crc32: uint32 @16;
+    compressed_size: uint32 @20;
+    uncompressed_size: uint32 @24;
+    file_name_length: uint16 @28;
+    extra_field_length: uint16 @30;
+    file_comment_length: uint16 @32;
+    disk_number_start: uint16 @34;
+    internal_file_attributes: uint16 @36;
+    external_file_attributes: uint32 @38;
+    relative_offset_of_local_header: uint32 @42;
+    file_name: bytes @46 &length=self.file_name_length;
+    extra_field: bytes @ (46 + self.file_name_length) &length=self.extra_field_length;
+    file_comment: bytes @ (46 + self.file_name_length + self.extra_field_length) &length=self.file_comment_length;
 };
 
-type ZIPArchive = unit {
-    local_file_headers: vector<LocalFileHeader>;
-    central_directory_entries: vector<CentralDirectoryEntry>;
-    end_of_central_directory: EndOfCentralDirectory;
+type EndOfCentralDirectoryRecord = unit {
+    signature: uint32 @0 &validate=(self.signature == 0x06054b50);
+    number_of_this_disk: uint16 @4;
+    disk_where_central_directory_starts: uint16 @6;
+    number_of_central_directory_records_on_this_disk: uint16 @8;
+    total_number_of_central_directory_records: uint16 @10;
+    size_of_central_directory: uint32 @12;
+    offset_of_start_of_central_directory: uint32 @16;
+    zip_file_comment_length: uint16 @20;
+    zip_file_comment: bytes @22 &length=self.zip_file_comment_length;
+};
+
+type DataDescriptor = unit {
+    crc32: uint32 @0;
+    compressed_size: uint32 @4;
+    uncompressed_size: uint32 @8;
+};
+
+type ArchiveDecryptionHeader = unit {
+    encryption_header: bytes @0 &length=12;
+};
+
+type DigitalSignature = unit {
+    signature: uint32 @0 &validate=(self.signature == 0x05054b50);
+    size_of_data: uint16 @4;
+    signature_data: bytes @6 &length=self.size_of_data;
+};
+
+type Zip64EndOfCentralDirectoryRecord = unit {
+    signature: uint32 @0 &validate=(self.signature == 0x06064b50);
+    size_of_zip64_end_of_central_directory_record: uint64 @4;
+    version_made_by: uint16 @12;
+    version_needed: uint16 @14;
+    number_of_this_disk: uint32 @16;
+    disk_where_central_directory_starts: uint32 @20;
+    number_of_central_directory_records_on_this_disk: uint64 @24;
+    total_number_of_central_directory_records: uint64 @32;
+    size_of_central_directory: uint64 @40;
+    offset_of_start_of_central_directory: uint64 @48;
+};
+
+type Zip64EndOfCentralDirectoryLocator = unit {
+    signature: uint32 @0 &validate=(self.signature == 0x07064b50);
+    number_of_the_disk_with_start_of_zip64_end_of_central_directory: uint32 @4;
+    relative_offset_of_zip64_end_of_central_directory_record: uint64 @8;
+    total_number_of_disks: uint32 @16;
+};
+
+type ZIP = unit {
+    local_file_headers: vector<LocalFileHeader> &until(eod());
+    central_directory_file_headers: vector<CentralDirectoryFileHeader> &until(eod());
+    end_of_central_directory_record: EndOfCentralDirectoryRecord;
+    zip64_end_of_central_directory_record: Zip64EndOfCentralDirectoryRecord &optional;
+    zip64_end_of_central_directory_locator: Zip64EndOfCentralDirectoryLocator &optional;
+    data_descriptors: vector<DataDescriptor> &optional &until(eod());
+    archive_decryption_header: ArchiveDecryptionHeader &optional;
+    digital_signature: DigitalSignature &optional;
 };

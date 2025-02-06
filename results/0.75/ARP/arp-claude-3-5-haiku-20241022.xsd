@@ -1,54 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/arp"
-           xmlns:arp="http://example.com/arp">
-
+           targetNamespace="http://example.com/arp">
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        alignment="1"
-        alignmentUnits="bytes"
-        fillByte="0"
-        occursCountKind="parsed"
-        representation="binary"
-        lengthKind="delimited"
-        lengthUnits="bytes"/>
+      <dfdl:format representation="binary"
+                  byteOrder="bigEndian"
+                  alignment="1"
+                  alignmentUnits="bytes"
+                  encodingErrorPolicy="replace"
+                  lengthKind="explicit"
+                  lengthUnits="bytes"
+                  encoding="UTF-8"
+                  leadingSkip="0"
+                  sequenceKind="ordered"
+                  initiatedContent="no"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ArpPacket">
+  <xs:element name="arp_packet">
     <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="HardwareType" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="ProtocolType" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="HardwareSize" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        <xs:element name="ProtocolSize" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        <xs:element name="OpCode" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="SenderMacAddress" type="MacAddress" dfdl:lengthKind="explicit" dfdl:length="6"/>
-        <xs:element name="SenderIpAddress" type="IpAddress" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="TargetMacAddress" type="MacAddress" dfdl:lengthKind="explicit" dfdl:length="6"/>
-        <xs:element name="TargetIpAddress" type="IpAddress" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:sequence>
+        <xs:element name="hardware_type" type="xs:unsignedShort" 
+                    dfdl:representation="binary"
+                    dfdl:length="2"/>
+        <xs:element name="protocol_type" type="xs:unsignedShort" 
+                    dfdl:representation="binary"
+                    dfdl:length="2"/>
+        <xs:element name="hardware_address_length" type="xs:unsignedByte" 
+                    dfdl:representation="binary"
+                    dfdl:length="1"/>
+        <xs:element name="protocol_address_length" type="xs:unsignedByte" 
+                    dfdl:representation="binary"
+                    dfdl:length="1"/>
+        <xs:element name="operation" type="xs:unsignedShort" 
+                    dfdl:representation="binary"
+                    dfdl:length="2"/>
+        <xs:element name="sender_hardware_address" type="xs:hexBinary"
+                    dfdl:representation="binary"
+                    dfdl:length="{ ../hardware_address_length }"/>
+        <xs:element name="sender_protocol_address" type="xs:hexBinary"
+                    dfdl:representation="binary"
+                    dfdl:length="{ ../protocol_address_length }"/>
+        <xs:element name="target_hardware_address" type="xs:hexBinary"
+                    dfdl:representation="binary"
+                    dfdl:length="{ ../hardware_address_length }"/>
+        <xs:element name="target_protocol_address" type="xs:hexBinary"
+                    dfdl:representation="binary"
+                    dfdl:length="{ ../protocol_address_length }"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:simpleType name="MacAddress">
-    <xs:restriction base="xs:hexBinary">
-      <xs:minLength value="6"/>
-      <xs:maxLength value="6"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:simpleType name="IpAddress">
-    <xs:restriction base="xs:hexBinary">
-      <xs:minLength value="4"/>
-      <xs:maxLength value="4"/>
-    </xs:restriction>
-  </xs:simpleType>
-
 </xs:schema>

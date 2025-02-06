@@ -1,63 +1,18 @@
-#ifndef _GZIP_GEMINI_1_H_
-#define _GZIP_GEMINI_1_H_
+module GZIP;
 
-#include <stdint.h>
-
-typedef struct {
-    uint8_t magic[2];
-    uint32_t version;
-    uint32_t flags;
-    uint32_t timestamp;
-    uint32_t crc32;
-    uint32_t size;
-    uint8_t data[];
-} gzip_gemini_1_header_t;
-
-global gzip_gemini_1_header_t *gzip_gemini_1_header;
-
-function decode_gzip_gemini_1(data:vector[uint8]) : bool
-{
-    local gzip_gemini_1_header_t *header;
-    local uint32 i;
-
-    if (len(data) < sizeof(gzip_gemini_1_header_t)) {
-        return false;
-    }
-
-    header = (gzip_gemini_1_header_t *)data;
-
-    if (header->magic[0] != 0x1f || header->magic[1] != 0x8b) {
-        return false;
-    }
-
-    // Basic sanity checks (add more as needed)
-    if (header->version != 0x08) {
-        return false;
-    }
-    if (header->size > 1024 * 1024 * 10) { // Limit to 10MB for safety
-        return false;
-    }
-
-    gzip_gemini_1_header = header;
-
-    return true;
-}
-
-
-event zeek_init()
-{
-    // Add any necessary initialization here
-}
-
-event data_received(data:vector[uint8])
-{
-    if (decode_gzip_gemini_1(data)) {
-        // Process the decoded data here
-        // Access data using gzip_gemini_1_header and its members
-        // Example: print len(gzip_gemini_1_header->data);
-    } else {
-        // Handle decoding failure
-    }
-}
-
-#endif
+gzip_header ::= record {
+    id1: uint8;
+    id2: uint8;
+    cm: uint8;
+    flg: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+    extra: optional bytes;
+    fname: optional string;
+    comment: optional string;
+    header_crc: optional uint16;
+    compressed_data: bytes;
+    crc32: uint32;
+    isize: uint32;
+};

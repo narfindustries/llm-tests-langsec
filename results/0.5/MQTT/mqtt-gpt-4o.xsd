@@ -1,63 +1,214 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/mqtt"
-           xmlns="http://example.com/mqtt"
-           elementFormDefault="qualified"
-           dfdl:encoding="utf-8">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+            targetNamespace="http://www.example.org/mqtt"
+            xmlns:tns="http://www.example.org/mqtt"
+            elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:MQTTFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <xsd:element name="MQTT" type="tns:MQTTType">
+        <xsd:annotation>
+            <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:format representation="binary" lengthKind="implicit" />
+            </xsd:appinfo>
+        </xsd:annotation>
+    </xsd:element>
 
-    <xs:complexType name="MQTTHeader">
-        <xs:sequence>
-            <xs:element name="fixedHeader" type="tns:FixedHeader"/>
-            <xs:element name="variableHeader" type="tns:VariableHeader" minOccurs="0"/>
-            <xs:element name="payload" type="tns:Payload" minOccurs="0"/>
-        </xs:sequence>
-    </xs:complexType>
+    <xsd:complexType name="MQTTType">
+        <xsd:sequence>
+            <xsd:element name="FixedHeader" type="tns:FixedHeaderType" />
+            <xsd:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0" />
+            <xsd:element name="Payload" type="tns:PayloadType" minOccurs="0" />
+        </xsd:sequence>
+    </xsd:complexType>
 
-    <xs:complexType name="FixedHeader">
-        <xs:sequence>
-            <xs:element name="controlPacketType" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bits"/>
-            <xs:element name="flags" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bits"/>
-            <xs:element name="remainingLength" type="xs:unsignedByte" dfdl:representation="binary"/>
-        </xs:sequence>
-    </xs:complexType>
+    <xsd:complexType name="FixedHeaderType">
+        <xsd:sequence>
+            <xsd:element name="ControlPacketType" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Flags" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="RemainingLength" type="xsd:unsignedInt">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format representation="binary" lengthKind="delimited" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
 
-    <xs:complexType name="VariableHeader">
-        <xs:sequence>
-            <xs:element name="protocolName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="6" dfdl:encoding="utf-8"/>
-            <xs:element name="protocolLevel" type="xs:unsignedByte"/>
-            <xs:element name="connectFlags" type="xs:unsignedByte"/>
-            <xs:element name="keepAlive" type="xs:unsignedShort" dfdl:representation="binary"/>
-        </xs:sequence>
-    </xs:complexType>
+    <xsd:complexType name="VariableHeaderType">
+        <xsd:choice>
+            <xsd:element name="ConnectVariableHeader" type="tns:ConnectVariableHeaderType" />
+            <xsd:element name="ConnackVariableHeader" type="tns:ConnackVariableHeaderType" />
+            <xsd:element name="PublishVariableHeader" type="tns:PublishVariableHeaderType" />
+            <!-- Add other variable headers for different packet types -->
+        </xsd:choice>
+    </xsd:complexType>
 
-    <xs:complexType name="Payload">
-        <xs:sequence>
-            <xs:element name="clientId" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8"/>
-            <xs:element name="willTopic" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
-            <xs:element name="willMessage" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
-            <xs:element name="username" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
-            <xs:element name="password" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8" minOccurs="0"/>
-        </xs:sequence>
-    </xs:complexType>
+    <xsd:complexType name="ConnectVariableHeaderType">
+        <xsd:sequence>
+            <xsd:element name="ProtocolName" type="xsd:string">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format lengthKind="explicit" length="4" encoding="utf-8" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="ProtocolLevel" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="ConnectFlags" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="KeepAlive" type="xsd:unsignedShort">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="2" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Properties" type="tns:PropertiesType" minOccurs="0" />
+        </xsd:sequence>
+    </xsd:complexType>
 
-    <xs:element name="MQTTMessage" type="tns:MQTTHeader"/>
+    <xsd:complexType name="ConnackVariableHeaderType">
+        <xsd:sequence>
+            <xsd:element name="SessionPresent" type="xsd:boolean">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="ConnectReasonCode" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Properties" type="tns:PropertiesType" minOccurs="0" />
+        </xsd:sequence>
+    </xsd:complexType>
 
-    <dfdl:defineFormat name="MQTTFormat">
-        <dfdl:format
-            lengthKind="explicit"
-            lengthUnits="bytes"
-            byteOrder="bigEndian"
-            occursCountKind="expression"
-            occursCount="{ dfdl:occursCount }"
-            alignmentUnits="bytes"
-            alignment="1"/>
-    </dfdl:defineFormat>
+    <xsd:complexType name="PublishVariableHeaderType">
+        <xsd:sequence>
+            <xsd:element name="TopicName" type="xsd:string">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format representation="text" encoding="utf-8" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="PacketIdentifier" type="xsd:unsignedShort" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="2" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Properties" type="tns:PropertiesType" minOccurs="0" />
+        </xsd:sequence>
+    </xsd:complexType>
 
-</xs:schema>
+    <xsd:complexType name="PayloadType">
+        <xsd:choice>
+            <xsd:element name="ConnectPayload" type="tns:ConnectPayloadType" />
+            <xsd:element name="PublishPayload" type="xsd:hexBinary">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format lengthKind="delimited" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <!-- Add other payloads for different packet types -->
+        </xsd:choice>
+    </xsd:complexType>
+
+    <xsd:complexType name="ConnectPayloadType">
+        <xsd:sequence>
+            <xsd:element name="ClientIdentifier" type="xsd:string">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format representation="text" encoding="utf-8" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="WillProperties" type="tns:PropertiesType" minOccurs="0" />
+            <xsd:element name="WillTopic" type="xsd:string" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format representation="text" encoding="utf-8" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="WillPayload" type="xsd:hexBinary" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format lengthKind="delimited" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Username" type="xsd:string" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format representation="text" encoding="utf-8" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="Password" type="xsd:hexBinary" minOccurs="0">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format lengthKind="delimited" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PropertiesType">
+        <xsd:sequence>
+            <!-- Define properties structure -->
+            <xsd:element name="Property" type="tns:PropertyType" minOccurs="0" maxOccurs="unbounded" />
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PropertyType">
+        <xsd:sequence>
+            <xsd:element name="PropertyIdentifier" type="xsd:unsignedByte">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format length="1" representation="binary" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+            <xsd:element name="PropertyValue" type="xsd:hexBinary">
+                <xsd:annotation>
+                    <xsd:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:format lengthKind="delimited" />
+                    </xsd:appinfo>
+                </xsd:annotation>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+
+</xsd:schema>

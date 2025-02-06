@@ -1,41 +1,58 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/ntp"
-           xmlns:ex="http://example.com/ntp">
+           xmlns:tns="http://example.com/ntp">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ex:commonFormat"/>
+      <dfdl:defineFormat name="commonBaseFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     binaryNumberRep="binary"
+                     bitOrder="mostSignificantBitFirst"
+                     encoding="UTF-8"
+                     lengthKind="implicit"
+                     textBidi="no"/>
+      </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="NTPPacket">
+  <xs:element name="NTPPacket" type="tns:NTPPacketType"/>
+
+  <xs:complexType name="NTPPacketType">
     <xs:sequence>
-      <xs:element name="leapIndicator" type="xs:int" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="versionNumber" type="xs:int" dfdl:length="3" dfdl:lengthKind="explicit"/>
-      <xs:element name="mode" type="xs:int" dfdl:length="3" dfdl:lengthKind="explicit"/>
-      <xs:element name="stratum" type="xs:int" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="poll" type="xs:int" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="precision" type="xs:int" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="rootDelay" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="rootDispersion" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="referenceId" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-      <xs:element name="originateTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-      <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-      <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
+      <xs:element name="flags" type="tns:FlagsType"/>
+      <xs:element name="stratum" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="poll" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="precision" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="rootDelay" type="xs:int" dfdl:length="4"/>
+      <xs:element name="rootDispersion" type="xs:int" dfdl:length="4"/>
+      <xs:element name="referenceIdentifier" type="xs:int" dfdl:length="4"/>
+      <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="originTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="keyIdentifier" type="xs:unsignedInt" dfdl:length="4" minOccurs="0"/>
+      <xs:element name="messageDigest" type="xs:hexBinary" dfdl:length="16" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="NTPPacket" type="ex:NTPPacket"/>
+  <xs:simpleType name="FlagsType">
+    <xs:restriction base="xs:byte">
+      <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+          <dfdl:format ref="tns:bitFormat"/>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:restriction>
+  </xs:simpleType>
 
   <xs:annotation>
-    <xs:appinfo>
-      <dfdl:defineFormat name="commonFormat">
-        <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
-                     binaryNumberRep="binary" encoding="ISO-8859-1"
-                     lengthKind="delimited" textNumberRep="standard"/>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="bitFormat">
+        <dfdl:format binaryNumberRep="binary"
+                     bitOrder="mostSignificantBitFirst"
+                     lengthKind="explicit"
+                     bitLength="8"/>
       </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>

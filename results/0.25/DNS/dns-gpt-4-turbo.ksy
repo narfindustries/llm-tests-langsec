@@ -1,124 +1,102 @@
 meta:
   id: dns_packet
-  title: DNS Protocol
-  license: CC0-1.0
+  title: DNS Packet (RFC 1035)
   endian: be
 
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: u2
-    enum: flags_type
-  - id: qdcount
-    type: u2
-  - id: ancount
-    type: u2
-  - id: nscount
-    type: u2
-  - id: arcount
-    type: u2
+  - id: header
+    type: header
+
   - id: queries
     type: query
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
+
   - id: answers
-    type: resource_record
+    type: rr
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
+
   - id: authorities
-    type: resource_record
+    type: rr
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
+
   - id: additionals
-    type: resource_record
+    type: rr
     repeat: expr
-    repeat-expr: arcount
+    repeat-expr: header.arcount
 
 types:
+  header:
+    seq:
+      - id: transaction_id
+        type: u2
+      - id: flags
+        type: u2
+      - id: qdcount
+        type: u2
+      - id: ancount
+        type: u2
+      - id: nscount
+        type: u2
+      - id: arcount
+        type: u2
+    instances:
+      qr:
+        value: flags >> 15
+      opcode:
+        value: (flags >> 11) & 0x0f
+      aa:
+        value: (flags >> 10) & 0x01
+      tc:
+        value: (flags >> 9) & 0x01
+      rd:
+        value: (flags >> 8) & 0x01
+      ra:
+        value: (flags >> 7) & 0x01
+      z:
+        value: (flags >> 4) & 0x07
+      rcode:
+        value: flags & 0x0f
+
   query:
     seq:
-      - id: name
+      - id: qname
         type: domain_name
-      - id: type
+      - id: qtype
         type: u2
-        enum: type_enum
-      - id: query_class
+      - id: qclass
         type: u2
-        enum: class_enum
 
-  resource_record:
+  rr:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: type_enum
-      - id: rr_class
+      - id: class
         type: u2
-        enum: class_enum
       - id: ttl
         type: u4
       - id: rdlength
         type: u2
       - id: rdata
         size: rdlength
-        type:
-          switch-on: type
-          cases:
-            'type_enum::a': address_record
-            'type_enum::cname': cname_record
-            'type_enum::mx': mx_record
 
   domain_name:
     seq:
-      - id: parts
+      - id: name
         type: label
         repeat: until
         repeat-until: _.length == 0
-
-  label:
-    seq:
-      - id: length
-        type: u1
-      - id: name
-        type: str
-        size: length
-        encoding: ASCII
-
-  address_record:
-    seq:
-      - id: address
-        type: u4
-
-  cname_record:
-    seq:
-      - id: cname
-        type: domain_name
-
-  mx_record:
-    seq:
-      - id: preference
-        type: u2
-      - id: exchange
-        type: domain_name
-
-enums:
-  flags_type:
-    0x0100: qr
-    0x0200: opcode
-    0x0400: aa
-    0x0800: tc
-    0x1000: rd
-    0x2000: ra
-    0x4000: z
-    0x8000: ad
-    0x0001: cd
-
-  type_enum:
-    1: a
-    5: cname
-    15: mx
-
-  class_enum:
-    1: in
+    types:
+      label:
+        seq:
+          - id: length
+            type: u1
+          - id: name
+            type: str
+            size: length
+            encoding: ASCII
+            if: length > 0

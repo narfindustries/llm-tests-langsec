@@ -1,41 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
-           xmlns:tns="http://example.com/Network-Time-Protocol-Version-4"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdlacciones.xsd"/>
-
-  <xs:element name="NTPPacket">
+  <xs:element name="definition">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="tns:headerType" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian"/>
-        <xs:element name="Timestamps" type="tns:timestampsType" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian"/>
+        <xs:element name="format" type="dfdl:formatType" />
+        <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded" />
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="formatType">
+    <xs:complexContent>
+      <xs:restriction base="xs:anyType">
+        <xs:attribute name="ref" type="xs:string" use="required" />
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="elementType">
     <xs:sequence>
-      <xs:element name="Leap" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="2"/>
-      <xs:element name="Version" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="3"/>
-      <xs:element name="Mode" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="3"/>
-      <xs:element name="Poll" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="4"/>
-      <xs:element name="Precision" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="8"/>
-      <xs:element name="Delay" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="16"/>
-      <xs:element name="Dispersion" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="16"/>
-      <xs:element name="Identifier" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="32"/>
-      <xs:element name="ReferenceTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required" />
+    <xs:attribute name="type" type="xs:string" use="required" />
+    <xs:attribute name="representation" type="xs:string" use="optional" default="binary" />
+    <xs:attribute name="binaryEncoding" type="xs:string" use="optional" default="bigEndian" />
+    <xs:attribute name="lengthKind" type="xs:string" use="optional" default="implicit" />
+    <xs:attribute name="occurs" type="xs:string" use="optional" default="1..1" />
+    <xs:attribute name="length" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:element name="ntpv4" type="ntpv4Type" />
+  <xs:complexType name="ntpv4Type">
+    <xs:sequence>
+      <xs:element name="leapIndicator" type="xs:unsignedShort" />
+      <xs:element name="versionNumber" type="xs:unsignedShort" />
+      <xs:element name="mode" type="xs:unsignedShort" />
+      <xs:element name="poll" type="xs:integer" />
+      <xs:element name="precision" type="xs:integer" />
+      <xs:element name="rootDelay" type="xs:unsignedInt" />
+      <xs:element name="rootDispersion" type="xs:unsignedInt" />
+      <xs:element name="referenceClockIdentifier" type="xs:string" />
+      <xs:element name="referenceTimestamp" type="xs:unsignedLong" />
+      <xs:element name="originTimestamp" type="xs:unsignedLong" />
+      <xs:element name="receiveTimestamp" type="xs:unsignedLong" minOccurs="0" />
+      <xs:element name="transmitTimestamp" type="xs:unsignedLong" minOccurs="0" />
+      <xs:element name="offset" type="xs:integer" minOccurs="0" />
+      <xs:element name="delay" type="xs:unsignedInt" minOccurs="0" />
+      <xs:element name="dispersion" type="xs:unsignedInt" minOccurs="0" />
+      <xs:element name="identifier" type="xs:string" minOccurs="0" />
+      <xs:element name="extensions" type="extensionsType" minOccurs="0" maxOccurs="unbounded" />
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="timestampsType">
+  <xs:complexType name="extensionsType">
     <xs:sequence>
-      <xs:element name="OriginTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
-      <xs:element name="ReceiveTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
-      <xs:element name="TransmitTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:binaryEncoding="bigEndian" dfdl:length="64"/>
+      <xs:element name="extensionField" type="extensionFieldType" minOccurs="0" maxOccurs="unbounded" />
     </xs:sequence>
   </xs:complexType>
-
+  <xs:complexType name="extensionFieldType">
+    <xs:sequence>
+      <xs:element name="fieldType" type="xs:unsignedShort" />
+      <xs:element name="fieldLength" type="xs:unsignedShort" />
+      <xs:element name="fieldValue" type="xs:hexBinary" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ntpv4Definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ntpv4" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

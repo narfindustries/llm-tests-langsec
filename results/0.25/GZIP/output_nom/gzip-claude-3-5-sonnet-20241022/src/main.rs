@@ -1,159 +1,149 @@
-use nom::{
-    bits::complete::{tag, take},
-    branch::alt,
-    bytes::complete::{take as take_bytes},
-    combinator::{map, verify},
-    multi::many0,
-    sequence::tuple,
-    IResult,
-};
-use std::{env, fs, io::Write};
+use nom::bytes::complete::{tag, take};
+use nom::number::complete::{le_u16, le_u32, u8};
+use nom::IResult;
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct GzipHeader {
-    id1: u8,
-    id2: u8,
     compression_method: u8,
-    flags: GzipFlags,
+    flags: u8,
     mtime: u32,
     extra_flags: u8,
     os: u8,
     extra_field: Option<Vec<u8>>,
     filename: Option<String>,
     comment: Option<String>,
-    crc16: Option<u16>,
+    header_crc: Option<u16>,
 }
 
 #[derive(Debug)]
-struct GzipFlags {
-    ftext: bool,
-    fhcrc: bool,
-    fextra: bool,
-    fname: bool,
-    fcomment: bool,
-    reserved: u8,
+struct GzipFile {
+    header: GzipHeader,
+    compressed_data: Vec<u8>,
+    crc32: u32,
+    isize: u32,
 }
 
-fn parse_flags(input: (&[u8], usize)) -> IResult<(&[u8], usize), GzipFlags> {
-    let (input, (
-        ftext,
-        fhcrc,
-        fextra,
-        fname,
-        fcomment,
-        reserved,
-    )) = tuple((
-        take(1usize),
-        take(1usize),
-        take(1usize),
-        take(1usize),
-        take(1usize),
-        take(3usize),
-    ))(input)?;
+fn parse_magic_numbers(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = tag(&[0x1f, 0x8b])(input)?;
+    Ok((input, ()))
+}
 
-    Ok((input, GzipFlags {
-        ftext,
-        fhcrc,
-        fextra,
-        fname,
-        fcomment,
-        reserved,
-    }))
+fn parse_null_terminated_string(input: &[u8]) -> IResult<&[u8], String> {
+    let mut i = 0;
+    while i < input.len() && input[i] != 0 {
+        i += 1;
+    }
+    let (remaining, string_bytes) = take(i)(input)?;
+    let (remaining, _) = take(1u8)(remaining)?;
+    let string = String::from_utf8_lossy(string_bytes).to_string();
+    Ok((remaining, string))
 }
 
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, id1) = verify(take_bytes(1u8), |b: &[u8]| b[0] == 0x1f)(input)?;
-    let (input, id2) = verify(take_bytes(1u8), |b: &[u8]| b[0] == 0x8b)(input)?;
-    let (input, compression_method) = verify(take_bytes(1u8), |b: &[u8]| b[0] == 8)(input)?;
-    
-    let (input, flags_byte) = take_bytes(1u8)(input)?;
-    let ((_, _), flags) = parse_flags((flags_byte, 0))?;
-    
-    let (input, mtime) = take_bytes(4u8)(input)?;
-    let (input, extra_flags) = take_bytes(1u8)(input)?;
-    let (input, os) = take_bytes(1u8)(input)?;
+    let (input, _) = parse_magic_numbers(input)?;
+    let (input, compression_method) = u8(input)?;
+    let (input, flags) = u8(input)?;
+    let (input, mtime) = le_u32(input)?;
+    let (input, extra_flags) = u8(input)?;
+    let (input, os) = u8(input)?;
 
     let mut extra_field = None;
     let mut filename = None;
     let mut comment = None;
-    let mut crc16 = None;
-    let mut remaining = input;
+    let mut header_crc = None;
+    let mut current_input = input;
 
-    if flags.fextra {
-        let (input, xlen) = take_bytes(2u8)(remaining)?;
-        let xlen = ((xlen[1] as u16) << 8) | xlen[0] as u16;
-        let (input, extra) = take_bytes(xlen)(input)?;
-        extra_field = Some(extra.to_vec());
-        remaining = input;
+    // Parse optional fields based on flags
+    if flags & 0x04 != 0 {
+        // FEXTRA
+        let (input, xlen) = le_u16(current_input)?;
+        let (input, extra_data) = take(xlen)(input)?;
+        extra_field = Some(extra_data.to_vec());
+        current_input = input;
     }
 
-    if flags.fname {
-        let mut name_bytes = Vec::new();
-        let mut current_input = remaining;
-        loop {
-            let (input, byte) = take_bytes(1u8)(current_input)?;
-            if byte[0] == 0 {
-                remaining = input;
-                break;
-            }
-            name_bytes.push(byte[0]);
-            current_input = input;
-        }
-        filename = Some(String::from_utf8_lossy(&name_bytes).to_string());
+    if flags & 0x08 != 0 {
+        // FNAME
+        let (input, fname) = parse_null_terminated_string(current_input)?;
+        filename = Some(fname);
+        current_input = input;
     }
 
-    if flags.fcomment {
-        let mut comment_bytes = Vec::new();
-        let mut current_input = remaining;
-        loop {
-            let (input, byte) = take_bytes(1u8)(current_input)?;
-            if byte[0] == 0 {
-                remaining = input;
-                break;
-            }
-            comment_bytes.push(byte[0]);
-            current_input = input;
-        }
-        comment = Some(String::from_utf8_lossy(&comment_bytes).to_string());
+    if flags & 0x10 != 0 {
+        // FCOMMENT
+        let (input, fcomment) = parse_null_terminated_string(current_input)?;
+        comment = Some(fcomment);
+        current_input = input;
     }
 
-    if flags.fhcrc {
-        let (input, crc_bytes) = take_bytes(2u8)(remaining)?;
-        crc16 = Some(((crc_bytes[1] as u16) << 8) | crc_bytes[0] as u16);
-        remaining = input;
+    if flags & 0x02 != 0 {
+        // FHCRC
+        let (input, crc16) = le_u16(current_input)?;
+        header_crc = Some(crc16);
+        current_input = input;
     }
 
-    Ok((remaining, GzipHeader {
-        id1: id1[0],
-        id2: id2[0],
-        compression_method: compression_method[0],
-        flags,
-        mtime: ((mtime[3] as u32) << 24) | ((mtime[2] as u32) << 16) | ((mtime[1] as u32) << 8) | mtime[0] as u32,
-        extra_flags: extra_flags[0],
-        os: os[0],
-        extra_field,
-        filename,
-        comment,
-        crc16,
-    }))
+    Ok((
+        current_input,
+        GzipHeader {
+            compression_method,
+            flags,
+            mtime,
+            extra_flags,
+            os,
+            extra_field,
+            filename,
+            comment,
+            header_crc,
+        },
+    ))
 }
 
-fn main() {
+fn parse_gzip_file(input: &[u8]) -> IResult<&[u8], GzipFile> {
+    let (input, header) = parse_gzip_header(input)?;
+    
+    // Find the position of the last 8 bytes (CRC32 and ISIZE)
+    let split_pos = input.len() - 8;
+    let (compressed_data, trailing) = input.split_at(split_pos);
+    
+    let (trailing, crc32) = le_u32(trailing)?;
+    let (trailing, isize) = le_u32(trailing)?;
+
+    Ok((
+        trailing,
+        GzipFile {
+            header,
+            compressed_data: compressed_data.to_vec(),
+            crc32,
+            isize,
+        },
+    ))
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <gzip-file>", args[0]);
         std::process::exit(1);
     }
 
-    let data = fs::read(&args[1]).expect("Failed to read file");
-    match parse_gzip_header(&data) {
-        Ok((remaining, header)) => {
-            println!("GZIP Header: {:#?}", header);
-            println!("Remaining bytes: {} bytes", remaining.len());
+    let mut file = File::open(&args[1])?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+
+    match parse_gzip_file(&buffer) {
+        Ok((_, gzip_file)) => {
+            println!("GZIP File Structure:");
+            println!("Header: {:#?}", gzip_file.header);
+            println!("Compressed data length: {} bytes", gzip_file.compressed_data.len());
+            println!("CRC32: {:08x}", gzip_file.crc32);
+            println!("Original size: {} bytes", gzip_file.isize);
         }
-        Err(e) => {
-            eprintln!("Failed to parse GZIP header: {:?}", e);
-            std::process::exit(1);
-        }
+        Err(e) => eprintln!("Error parsing GZIP file: {:?}", e),
     }
+
+    Ok(())
 }

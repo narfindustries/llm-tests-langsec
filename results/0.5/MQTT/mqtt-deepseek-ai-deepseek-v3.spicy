@@ -1,0 +1,183 @@
+module MQTT;
+
+import spicy;
+
+type Version = enum {
+    V5 = 5
+};
+
+type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+};
+
+type ConnectFlags = uint8 &mask=0xFC;
+
+type QoS = enum {
+    AT_MOST_ONCE = 0,
+    AT_LEAST_ONCE = 1,
+    EXACTLY_ONCE = 2
+};
+
+type Connect = unit {
+    protocol_name: bytes &length=2;
+    protocol_level: Version;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: bytes &eod;
+    will_topic: optional bytes &if=(connect_flags & 0x04) != 0;
+    will_message: optional bytes &if=(connect_flags & 0x04) != 0;
+    username: optional bytes &if=(connect_flags & 0x80) != 0;
+    password: optional bytes &if=(connect_flags & 0x40) != 0;
+};
+
+type ConnAck = unit {
+    session_present: uint8;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type Publish = unit {
+    topic_name: bytes &eod;
+    packet_id: optional uint16 &if=(fixed_header.flags & 0x06) != 0;
+    properties: Properties;
+    payload: bytes &eod;
+};
+
+type PubAck = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type PubRec = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type PubRel = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type PubComp = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type Subscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topic_filters: vector of TopicFilter;
+};
+
+type SubAck = unit {
+    packet_id: uint16;
+    reason_codes: vector of uint8;
+    properties: Properties;
+};
+
+type Unsubscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topic_filters: vector of bytes &eod;
+};
+
+type UnsubAck = unit {
+    packet_id: uint16;
+    reason_codes: vector of uint8;
+    properties: Properties;
+};
+
+type Disconnect = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type Auth = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type Properties = unit {
+    session_expiry_interval: optional uint32 &if=exists(0x11);
+    receive_maximum: optional uint16 &if=exists(0x21);
+    maximum_packet_size: optional uint32 &if=exists(0x27);
+    topic_alias_maximum: optional uint16 &if=exists(0x22);
+    request_response_information: optional uint8 &if=exists(0x19);
+    request_problem_information: optional uint8 &if=exists(0x17);
+    user_properties: vector of UserProperty &if=exists(0x26);
+    authentication_method: optional bytes &if=exists(0x15);
+    authentication_data: optional bytes &if=exists(0x16);
+    payload_format_indicator: optional uint8 &if=exists(0x01);
+    message_expiry_interval: optional uint32 &if=exists(0x02);
+    topic_alias: optional uint16 &if=exists(0x23);
+    response_topic: optional bytes &if=exists(0x08);
+    correlation_data: optional bytes &if=exists(0x09);
+    subscription_identifier: optional varint &if=exists(0x0B);
+    content_type: optional bytes &if=exists(0x03);
+    assigned_client_identifier: optional bytes &if=exists(0x12);
+    server_keep_alive: optional uint16 &if=exists(0x13);
+    response_information: optional bytes &if=exists(0x1A);
+    server_reference: optional bytes &if=exists(0x1C);
+    reason_string: optional bytes &if=exists(0x1F);
+    wildcard_subscription_available: optional uint8 &if=exists(0x28);
+    subscription_identifiers_available: optional uint8 &if=exists(0x29);
+    shared_subscription_available: optional uint8 &if=exists(0x2A);
+    retain_available: optional uint8 &if=exists(0x25);
+    maximum_qos: optional QoS &if=exists(0x24);
+};
+
+type UserProperty = unit {
+    key: bytes &eod;
+    value: bytes &eod;
+};
+
+type TopicFilter = unit {
+    filter: bytes &eod;
+    qos: QoS;
+};
+
+type MQTTMessage = unit {
+    fixed_header: FixedHeader;
+    variable_header: case (fixed_header.type) of {
+        CONNECT => Connect,
+        CONNACK => ConnAck,
+        PUBLISH => Publish,
+        PUBACK => PubAck,
+        PUBREC => PubRec,
+        PUBREL => PubRel,
+        PUBCOMP => PubComp,
+        SUBSCRIBE => Subscribe,
+        SUBACK => SubAck,
+        UNSUBSCRIBE => Unsubscribe,
+        UNSUBACK => UnsubAck,
+        PINGREQ => unit {},
+        PINGRESP => unit {},
+        DISCONNECT => Disconnect,
+        AUTH => Auth
+    }
+};
+
+type FixedHeader = unit {
+    type: PacketType;
+    flags: uint8 &mask=0xF0;
+    remaining_length: varint;
+};

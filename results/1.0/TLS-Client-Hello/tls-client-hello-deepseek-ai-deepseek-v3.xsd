@@ -1,0 +1,59 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/tns" xmlns:tns="http://example.com/tns">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="GenericFormat">
+        <dfdl:format encoding="UTF-8" byteOrder="bigEndian"/>
+      </dfdl:defineFormat>
+      <dfdl:format ref="tns:GenericFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ClientHello">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="legacy_version" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="legacy_session_id">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedByte" dfdl:length="1"/>
+              <xs:element name="session_id" type="xs:hexBinary" dfdl:length="{../length}"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="cipher_suites">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+              <xs:element name="cipher_suite" type="xs:hexBinary" dfdl:length="2" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="legacy_compression_methods">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedByte" dfdl:length="1"/>
+              <xs:element name="compression_method" type="xs:hexBinary" dfdl:length="1" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="extensions">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+              <xs:element name="extension" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extension_type" type="xs:hexBinary" dfdl:length="2"/>
+                    <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+                    <xs:element name="extension_data" type="xs:hexBinary" dfdl:length="{../length}"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,101 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/sqlite3-db"
-           xmlns:tns="http://example.com/sqlite3-db">
-
+           targetNamespace="http://www.sqlite.org/fileformat"
+           xmlns:sqlite="http://www.sqlite.org/fileformat"
+           elementFormDefault="qualified">
+  
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        byteOrder="littleEndian"
-        alignment="1"
+      <dfdl:format
         alignmentUnits="bytes"
-        fillByte="%#r00"
-        occursCountKind="parsed"
-        representation="binary"/>
+        alignment="1"
+        lengthUnits="bytes"
+        lengthKind="explicit"
+        representation="binary"
+        encoding="ASCII"
+        byteOrder="bigEndian"
+        leadingSkip="0"
+        sequenceKind="ordered"
+        initiatedContent="no"
+        textBidi="no"
+        encodingErrorPolicy="replace"
+        floating="no"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="SQLiteDatabase">
+  <xs:element name="sqlite_database" dfdl:byteOrder="bigEndian">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Header" type="tns:DatabaseHeader"/>
-        <xs:element name="Pages" type="tns:DatabasePages"/>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="file_header" dfdl:lengthKind="explicit" dfdl:length="100">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="magic_header" type="xs:string" 
+                          dfdl:length="16" 
+                          dfdl:encoding="ASCII"/>
+              <xs:element name="page_size" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+              <xs:element name="write_format" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="read_format" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="reserved_bytes" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="max_embedded_payload_fraction" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="min_embedded_payload_fraction" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="leaf_payload_fraction" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="file_change_counter" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="database_page_count" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="first_freelist_trunk_page" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="total_freelist_pages" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="schema_cookie" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="schema_format" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="default_encoding" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="user_version" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+              <xs:element name="incremental_vacuum_mode" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="application_id" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+              <xs:element name="reserved_space" type="xs:hexBinary" dfdl:length="20"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="pages" dfdl:occursCountKind="implicit">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="page" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="page_header">
+                      <xs:complexType>
+                        <xs:sequence dfdl:sequenceKind="ordered">
+                          <xs:element name="page_type" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                          <xs:element name="first_freeblock" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+                          <xs:element name="cell_count" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+                          <xs:element name="cell_content_offset" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+                          <xs:element name="fragmented_free_bytes" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    
+                    <xs:element name="cells" dfdl:occursCountKind="implicit">
+                      <xs:complexType>
+                        <xs:sequence dfdl:sequenceKind="ordered">
+                          <xs:element name="cell" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="payload_length" type="xs:unsignedInt"/>
+                                <xs:element name="row_id" type="xs:unsignedLong"/>
+                                <xs:element name="payload" type="xs:hexBinary"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="DatabaseHeader">
-    <xs:sequence dfdl:separator="">
-      <xs:element name="MagicHeader" type="tns:MagicHeaderType"/>
-      <xs:element name="PageSize" type="tns:PageSizeType"/>
-      <xs:element name="FileFormatVersion" type="tns:FileFormatVersionType"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="MagicHeaderType">
-    <xs:sequence>
-      <xs:element name="Signature" type="xs:string" 
-        dfdl:lengthKind="explicit" 
-        dfdl:length="16"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageSizeType">
-    <xs:sequence>
-      <xs:element name="Size" type="xs:unsignedShort" 
-        dfdl:lengthKind="explicit" 
-        dfdl:length="2" 
-        dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="FileFormatVersionType">
-    <xs:sequence>
-      <xs:element name="Version" type="xs:unsignedInt" 
-        dfdl:lengthKind="explicit" 
-        dfdl:length="4" 
-        dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DatabasePages">
-    <xs:sequence>
-      <xs:element name="Page" type="tns:PageType" 
-        dfdl:occursCountKind="parsed" 
-        dfdl:minOccurs="1" 
-        dfdl:maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageType">
-    <xs:sequence>
-      <xs:element name="PageHeader" type="tns:PageHeaderType"/>
-      <xs:element name="PageContent" type="tns:PageContentType"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageHeaderType">
-    <xs:sequence>
-      <xs:element name="PageType" type="xs:unsignedByte" 
-        dfdl:lengthKind="explicit" 
-        dfdl:length="1"/>
-      <xs:element name="FreeBlockOffset" type="xs:unsignedShort" 
-        dfdl:lengthKind="explicit" 
-        dfdl:length="2" 
-        dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageContentType">
-    <xs:sequence>
-      <xs:element name="RawData" type="xs:hexBinary" 
-        dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

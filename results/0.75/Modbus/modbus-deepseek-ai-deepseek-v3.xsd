@@ -1,0 +1,29 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.example.org/Modbus" xmlns="http://www.example.org/Modbus" xmlns:tns="http://www.example.org/Modbus" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ModbusFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ModbusMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:separator="" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+      <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{xs:unsignedInt(../Length) - 1}" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" dfdl:leadingSkip="0"/>
+      <xs:element name="ErrorCode" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" dfdl:encoding="ISO-8859-1" minOccurs="0" dfdl:leadingSkip="0" dfdl:occursCountKind="expression" dfdl:occursCount="{if (../FunctionCode ge 0x80) then 1 else 0}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ModbusMessage" type="ModbusMessageType"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="ModbusFormat">
+        <dfdl:format lengthKind="delimited" lengthUnits="bytes" encoding="ISO-8859-1" byteOrder="bigEndian" alignment="1"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+</xs:schema>

@@ -1,127 +1,161 @@
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Define constants
-#define MAGIC_GZIP 0x8b1f
-#define METHOD_DEFLATE 8
-#define FLAGS_FEXTRA 0x04
-#define FLAGS_FNAME 0x08
-#define FLAGS_FCOMMENT 0x10
-
-// Define the gzip file format structure
 typedef struct {
-    uint16_t magic;
-    uint8_t method;
+    uint8_t id1;
+    uint8_t id2;
+    uint8_t cm;
     uint8_t flags;
     uint32_t mtime;
-    uint8_t xflags;
+    uint8_t xfl;
     uint8_t os;
-} gzip_header_t;
-
-typedef struct {
-    uint16_t len;
-} gzip_extra_t;
-
-typedef struct {
-    char *data;
-    uint16_t len;
-} gzip_filename_t;
-
-typedef struct {
-    char *data;
-    uint16_t len;
-} gzip_comment_t;
-
-typedef struct {
-    uint32_t crc;
+    uint16_t xlen;
+    char* xfield;
+    char* fname;
+    char* fcomment;
+    uint16_t fhcrc;
+    char* data;
     uint32_t isize;
-} gzip_footer_t;
+} gzip_t;
 
-// Gzip file format specification
-int main() {
-    // Open the input file
-    FILE *input_file = fopen("input.gz", "rb");
-    if (input_file == NULL) {
-        printf("Error opening input file\n");
-        return 1;
-    }
+#define CRCPOLY 0xedb88320
 
-    // Read the gzip header
-    gzip_header_t header;
-    fread(&header, sizeof(header), 1, input_file);
-
-    // Check the magic number
-    if (header.magic != MAGIC_GZIP) {
-        printf("Invalid gzip file\n");
-        return 1;
-    }
-
-    // Check the compression method
-    if (header.method != METHOD_DEFLATE) {
-        printf("Unsupported compression method\n");
-        return 1;
-    }
-
-    // Read extra fields if present
-    if (header.flags & FLAGS_FEXTRA) {
-        gzip_extra_t extra;
-        fread(&extra, sizeof(extra), 1, input_file);
-        // Skip extra data
-        fseek(input_file, extra.len, SEEK_CUR);
-    }
-
-    // Read filename if present
-    if (header.flags & FLAGS_FNAME) {
-        gzip_filename_t filename;
-        filename.len = 0;
-        filename.data = NULL;
-        int c;
-        while ((c = fgetc(input_file)) != '\0') {
-            filename.len++;
-            filename.data = realloc(filename.data, filename.len + 1);
-            filename.data[filename.len - 1] = c;
+uint16_t crc16(uint8_t* bytes, size_t len, uint16_t crc) {
+    int i, j;
+    for (i = 0; i < len; i++) {
+        crc ^= bytes[i];
+        for (j = 0; j < 8; j++) {
+            if (crc & 1) {
+                crc = (crc >> 1) ^ CRCPOLY;
+            } else {
+                crc >>= 1;
+            }
         }
-        filename.data[filename.len] = '\0';
-        // Print the filename
-        printf("%s\n", filename.data);
-        free(filename.data);
+    }
+    return crc;
+}
+
+void gzip_parse(uint8_t* buffer, size_t size, gzip_t* gzip) {
+    gzip->id1 = buffer[0];
+    gzip->id2 = buffer[1];
+    gzip->cm = buffer[2];
+    gzip->flags = buffer[3];
+    gzip->mtime = *(uint32_t*)(buffer + 4);
+    gzip->xfl = buffer[8];
+    gzip->os = buffer[9];
+
+    size_t offset = 10;
+
+    if (gzip->flags & 4) {
+        gzip->xlen = *(uint16_t*)(buffer + offset);
+        offset += 2;
+        gzip->xfield = malloc(gzip->xlen);
+        memcpy(gzip->xfield, buffer + offset, gzip->xlen);
+        offset += gzip->xlen;
+    } else {
+        gzip->xlen = 0;
+        gzip->xfield = NULL;
     }
 
-    // Read comment if present
-    if (header.flags & FLAGS_FCOMMENT) {
-        gzip_comment_t comment;
-        comment.len = 0;
-        comment.data = NULL;
-        int c;
-        while ((c = fgetc(input_file)) != '\0') {
-            comment.len++;
-            comment.data = realloc(comment.data, comment.len + 1);
-            comment.data[comment.len - 1] = c;
+    if (gzip->flags & 8) {
+        size_t fname_len = 0;
+        while (buffer[offset + fname_len] != 0) {
+            fname_len++;
         }
-        comment.data[comment.len] = '\0';
-        // Print the comment
-        printf("%s\n", comment.data);
-        free(comment.data);
+        gzip->fname = malloc(fname_len + 1);
+        memcpy(gzip->fname, buffer + offset, fname_len);
+        gzip->fname[fname_len] = 0;
+        offset += fname_len + 1;
+    } else {
+        gzip->fname = NULL;
     }
 
-    // Read the compressed data
-    char *data = NULL;
-    size_t data_len = 0;
-    int c;
-    while ((c = fgetc(input_file)) != EOF) {
-        data_len++;
-        data = realloc(data, data_len);
-        data[data_len - 1] = c;
+    if (gzip->flags & 16) {
+        size_t fcomment_len = 0;
+        while (buffer[offset + fcomment_len] != 0) {
+            fcomment_len++;
+        }
+        gzip->fcomment = malloc(fcomment_len + 1);
+        memcpy(gzip->fcomment, buffer + offset, fcomment_len);
+        gzip->fcomment[fcomment_len] = 0;
+        offset += fcomment_len + 1;
+    } else {
+        gzip->fcomment = NULL;
     }
 
-    // Read the gzip footer
-    gzip_footer_t footer;
-    fread(&footer, sizeof(footer), 1, input_file);
+    if (gzip->flags & 2) {
+        gzip->fhcrc = *(uint16_t*)(buffer + offset);
+        offset += 2;
+    } else {
+        gzip->fhcrc = 0;
+    }
 
-    // Close the input file
-    fclose(input_file);
+    gzip->data = malloc(size - offset - 4);
+    memcpy(gzip->data, buffer + offset, size - offset - 4);
+    gzip->isize = *(uint32_t*)(buffer + size - 4);
+}
 
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <gzipfile>\n", argv[0]);
+        return 1;
+    }
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        printf("Failed to open %s\n", argv[1]);
+        return 1;
+    }
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    rewind(fp);
+    uint8_t* buffer = malloc(size);
+    if (fread(buffer, 1, size, fp) != size) {
+        printf("Failed to read %s\n", argv[1]);
+        fclose(fp);
+        free(buffer);
+        return 1;
+    }
+    fclose(fp);
+    gzip_t gzip;
+    gzip_parse(buffer, size, &gzip);
+    if (gzip.id1 != 0x1f || gzip.id2 != 0x8b) {
+        printf("Failed to parse %s\n", argv[1]);
+        free(buffer);
+        return 1;
+    }
+    printf("GZIP file:\n");
+    printf("  ID1: 0x%02x\n", gzip.id1);
+    printf("  ID2: 0x%02x\n", gzip.id2);
+    printf("  CM: %u\n", gzip.cm);
+    printf("  Flags: 0x%02x\n", gzip.flags);
+    printf("  MTIME: %u\n", gzip.mtime);
+    printf("  XFL: %u\n", gzip.xfl);
+    printf("  OS: %u\n", gzip.os);
+    if (gzip.flags & 4) {
+        printf("  XLEN: %u\n", gzip.xlen);
+        printf("  XFIELD: %.*s\n", gzip.xlen, gzip.xfield);
+    }
+    if (gzip.flags & 8) {
+        printf("  FNAME: %s\n", gzip.fname);
+    }
+    if (gzip.flags & 16) {
+        printf("  FCOMMENT: %s\n", gzip.fcomment);
+    }
+    if (gzip.flags & 2) {
+        printf("  FHCRC: 0x%04x\n", gzip.fhcrc);
+        uint16_t crc = crc16(buffer, 10 + (gzip.flags & 4 ? 2 + gzip.xlen : 0) + (gzip.flags & 8 ? strlen(gzip.fname) + 1 : 0) + (gzip.flags & 16 ? strlen(gzip.fcomment) + 1 : 0), 0);
+        if (crc != gzip.fhcrc) {
+            printf("  Warning: CRC mismatch\n");
+        }
+    }
+    printf("  Compressed data: %.*s\n", (int)(size - 10 - (gzip.flags & 4 ? 2 + gzip.xlen : 0) - (gzip.flags & 8 ? strlen(gzip.fname) + 1 : 0) - (gzip.flags & 16 ? strlen(gzip.fcomment) + 1 : 0) - (gzip.flags & 2 ? 2 : 0) - 4), gzip.data);
+    printf("  ISIZE: %u\n", gzip.isize);
+    free(buffer);
+    if (gzip.xfield) free(gzip.xfield);
+    if (gzip.fname) free(gzip.fname);
+    if (gzip.fcomment) free(gzip.fcomment);
+    if (gzip.data) free(gzip.data);
     return 0;
 }

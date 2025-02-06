@@ -1,51 +1,78 @@
 meta:
   id: dns_packet
-  title: DNS (Domain Name System) Protocol
+  title: DNS Packet (RFC 1035)
   license: CC0-1.0
   endian: be
 
+doc: |
+  A DNS (Domain Name Service) packet is a protocol used for Internet
+  name resolution.
+
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: u2
-    enum: flags_type
-  - id: qdcount
-    type: u2
-  - id: ancount
-    type: u2
-  - id: nscount
-    type: u2
-  - id: arcount
-    type: u2
-  - id: queries
-    type: query
+  - id: header
+    type: header
+
+  - id: questions
+    type: question
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
+
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
+
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
+
   - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
+    repeat-expr: header.arcount
 
 types:
-  query:
+  header:
     seq:
-      - id: name
+      - id: transaction_id
+        type: u2
+      - id: flags
+        type: u2
+      - id: qdcount
+        type: u2
+      - id: ancount
+        type: u2
+      - id: nscount
+        type: u2
+      - id: arcount
+        type: u2
+    instances:
+      qr:
+        value: (flags & 0x8000) >> 15
+      opcode:
+        value: (flags & 0x7800) >> 11
+      aa:
+        value: (flags & 0x0400) >> 10
+      tc:
+        value: (flags & 0x0200) >> 9
+      rd:
+        value: (flags & 0x0100) >> 8
+      ra:
+        value: (flags & 0x0080) >> 7
+      z:
+        value: (flags & 0x0070) >> 4
+      rcode:
+        value: flags & 0x000f
+
+  question:
+    seq:
+      - id: qname
         type: domain_name
-      - id: type
+      - id: qtype
         type: u2
-        enum: type_enum
-      - id: query_class
+      - id: qclass
         type: u2
-        enum: class_enum
 
   resource_record:
     seq:
@@ -53,55 +80,45 @@ types:
         type: domain_name
       - id: type
         type: u2
-        enum: type_enum
-      - id: rr_class
+      - id: class
         type: u2
-        enum: class_enum
       - id: ttl
         type: u4
       - id: rdlength
         type: u2
       - id: rdata
         size: rdlength
+        type:
+          switch-on: type
+          cases:
+            1: ipv4_addr
+            5: domain_name
+            28: ipv6_addr
 
   domain_name:
     seq:
-      - id: name_parts
-        type: name_part
+      - id: name
+        type: label
         repeat: until
         repeat-until: _.length == 0
-    types:
-      name_part:
-        seq:
-          - id: length
-            type: u1
-          - id: data
-            type: str
-            size: length
-            encoding: ASCII
 
-enums:
-  flags_type:
-    0x0100: query_response
-    0x0800: auth_answer
-    0x0400: truncation
-    0x0200: recursion_desired
-    0x0100: recursion_available
-    0x0080: z_reserved
-    0x0040: authenticated_data
-    0x0020: checking_disabled
+  label:
+    seq:
+      - id: length
+        type: u1
+      - id: name
+        type: str
+        size: length
+        encoding: ASCII
 
-  type_enum:
-    1: a
-    2: ns
-    5: cname
-    6: soa
-    15: mx
-    28: aaaa
+  ipv4_addr:
+    seq:
+      - id: ip
+        type: u4
 
-  class_enum:
-    1: internet
-    3: chaos
-    4: hesiod
-    254: none
-    255: any
+  ipv6_addr:
+    seq:
+      - id: ip
+        type: u8
+        repeat: expr
+        repeat-expr: 2

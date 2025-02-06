@@ -1,9 +1,9 @@
 use nom::{
-    bytes::complete::{tag, take, take_while},
+    bytes::complete::{tag, take},
     combinator::{map, opt},
-    multi::{count, many0},
+    multi::many0,
     number::complete::{le_u16, le_u32, le_u8},
-    sequence::{preceded, tuple},
+    sequence::tuple,
     IResult,
 };
 use std::env;
@@ -12,14 +12,13 @@ use std::io::Read;
 
 #[derive(Debug)]
 struct GzipHeader {
-    id1: u8,
-    id2: u8,
+    identification: (u8, u8),
     compression_method: u8,
     flags: u8,
     modification_time: u32,
     extra_flags: u8,
-    os: u8,
-    extra_field: Option<Vec<u8>>,
+    operating_system: u8,
+    extra_fields: Option<Vec<u8>>,
     original_filename: Option<String>,
     file_comment: Option<String>,
     header_crc: Option<u16>,
@@ -31,28 +30,32 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
     let (input, flags) = le_u8(input)?;
     let (input, modification_time) = le_u32(input)?;
     let (input, extra_flags) = le_u8(input)?;
-    let (input, os) = le_u8(input)?;
+    let (input, operating_system) = le_u8(input)?;
 
-    let (input, extra_field) = if flags & 0x04 != 0 {
-        let (input, extra_length) = le_u16(input)?;
-        let (input, extra_data) = take(extra_length as usize)(input)?;
+    let (input, extra_fields) = if flags & 0x04 != 0 {
+        let (input, extra_len) = le_u16(input)?;
+        let (input, extra_data) = take(extra_len as usize)(input)?;
         (input, Some(extra_data.to_vec()))
     } else {
         (input, None)
     };
 
     let (input, original_filename) = if flags & 0x08 != 0 {
-        let (input, filename) = take_while(|b| b != 0)(input)?;
-        let (input, _) = tag(&[0])(input)?;
-        (input, Some(String::from_utf8_lossy(filename).into_owned()))
+        let (input, filename) = many0(map(take(1usize), |b: &[u8]| b[0] as char))(input)?;
+        let filename: String = filename.into_iter()
+            .take_while(|&c| c != '\0')
+            .collect();
+        (input, Some(filename))
     } else {
         (input, None)
     };
 
     let (input, file_comment) = if flags & 0x10 != 0 {
-        let (input, comment) = take_while(|b| b != 0)(input)?;
-        let (input, _) = tag(&[0])(input)?;
-        (input, Some(String::from_utf8_lossy(comment).into_owned()))
+        let (input, comment) = many0(map(take(1usize), |b: &[u8]| b[0] as char))(input)?;
+        let comment: String = comment.into_iter()
+            .take_while(|&c| c != '\0')
+            .collect();
+        (input, Some(comment))
     } else {
         (input, None)
     };
@@ -65,14 +68,13 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
     };
 
     Ok((input, GzipHeader {
-        id1,
-        id2,
+        identification: (id1, id2),
         compression_method,
         flags,
         modification_time,
         extra_flags,
-        os,
-        extra_field,
+        operating_system,
+        extra_fields,
         original_filename,
         file_comment,
         header_crc,
@@ -97,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Err(e) => {
             eprintln!("Failed to parse GZIP header: {:?}", e);
-            Err(e.into())
+            std::process::exit(1);
         }
     }
 }

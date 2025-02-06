@@ -1,0 +1,1 @@
+(for<'a> fn(&'a [u8]) -> Result<(&'a [u8], LeapIndicator), nom::Err<nom::error::Error<&'a [u8]>>> {parse_leap_indicator}, impl Fn((_, usize)) -> Result<((_, usize), _), nom::Err<_>>, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], NtpMode), nom::Err<nom::error::Error<&'a [u8]>>> {parse_ntp_mode})

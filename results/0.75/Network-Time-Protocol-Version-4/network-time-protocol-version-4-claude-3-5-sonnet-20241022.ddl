@@ -1,46 +1,47 @@
-def Main = NTP_Packet
+def Main = NTPv4Packet
 
-def NTP_Packet = {
-  li: LI
-  vn: VN
-  mode: Mode
-  stratum: uint8
-  poll: int8
-  precision: int8
-  root_delay: int32
-  root_dispersion: int32
-  ref_id: RefID
-  ref_timestamp: Timestamp
-  origin_timestamp: Timestamp
-  receive_timestamp: Timestamp
-  transmit_timestamp: Timestamp
-  extensions: Extensions?
-  mac: MAC?
+def NTPv4Packet = {
+    flags: uint8,
+    stratum: uint8,
+    poll: int8,
+    precision: int8,
+    root_delay: uint32,
+    root_dispersion: uint32,
+    reference_id: uint32,
+    reference_timestamp: NTPTimestamp,
+    origin_timestamp: NTPTimestamp,
+    receive_timestamp: NTPTimestamp,
+    transmit_timestamp: NTPTimestamp,
+    auth: AuthenticationData
 }
 
-def LI = uint2
-def VN = uint3
-def Mode = uint3
-
-def RefID = bytes(4)
-
-def Timestamp = {
-  seconds: uint32
-  fraction: uint32
+def NTPTimestamp = {
+    seconds: uint32,
+    fraction: uint32
 }
 
-def Extensions = [Extension]
-
-def Extension = {
-  field_type: uint16
-  length: uint16
-  value: bytes(length)
+def AuthenticationData = {
+    key_identifier: uint32,
+    message_digest: bytes
 }
 
-def MAC = {
-  key_id: uint32
-  digest: bytes(16..20)
+def GetLI(flags: uint8) = {
+    (flags >> 6) & 0x3
 }
 
-def uint2 = n:uint8 if n < 4
-def uint3 = n:uint8 if n < 8
+def GetVN(flags: uint8) = {
+    (flags >> 3) & 0x7
+}
+
+def GetMode(flags: uint8) = {
+    flags & 0x7
+}
+
+def ValidPacket(p: NTPv4Packet) = {
+    GetLI(p.flags) <= 3 &&
+    GetVN(p.flags) == 4 &&
+    GetMode(p.flags) <= 7 &&
+    p.stratum <= 16 &&
+    p.poll >= -6 &&
+    p.poll <= 10
+}

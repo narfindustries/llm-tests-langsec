@@ -1,136 +1,139 @@
 #include <hammer/hammer.h>
 #include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-static HParser* http_version;
-static HParser* method;
-static HParser* request_uri;
-static HParser* header_name;
-static HParser* header_value;
-static HParser* header;
-static HParser* headers;
-static HParser* request_line;
-static HParser* http_request;
+typedef struct {
+    HParsedToken **headers;
+    size_t headers_len;
+    char *method;
+    char *uri;
+    char *version;
+    uint8_t *body;
+    size_t body_len;
+} HTTPRequest;
 
-static const char* METHOD_NAMES[] = {
-    "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "TRACE", "CONNECT", "PATCH"
-};
+typedef struct {
+    int status_code;
+    char *status_text;
+    HParsedToken **headers;
+    size_t headers_len;
+    uint8_t *body;
+    size_t body_len;
+} HTTPResponse;
 
-static HParser* create_method_parser() {
-    HParsedToken* method_token = NULL;
-    HParser* method_parser = h_choice(
-        h_string("GET"),
-        h_string("POST"),
-        h_string("PUT"),
-        h_string("DELETE"),
-        h_string("HEAD"),
-        h_string("OPTIONS"),
-        h_string("TRACE"),
-        h_string("CONNECT"),
-        h_string("PATCH"),
-        NULL
-    );
-    return method_parser;
-}
-
-static HParser* create_http_version_parser() {
+static HParser* parse_method(void) {
     return h_choice(
-        h_string("HTTP/1.0"),
-        h_string("HTTP/1.1"),
-        h_string("HTTP/2.0"),
+        h_literal_str("GET"),
+        h_literal_str("POST"),
+        h_literal_str("PUT"),
+        h_literal_str("DELETE"),
+        h_literal_str("HEAD"),
+        h_literal_str("OPTIONS"),
+        h_literal_str("TRACE"),
+        h_literal_str("CONNECT"),
+        h_literal_str("PATCH"),
         NULL
     );
 }
 
-static HParser* create_request_uri_parser() {
-    return h_many1(h_not_char(' '));
+static HParser* parse_uri(void) {
+    return h_many1(h_ch_range('!', '~'));
 }
 
-static HParser* create_header_name_parser() {
-    return h_many1(h_not_char(':'));
-}
-
-static HParser* create_header_value_parser() {
-    return h_many1(h_not_char('\r'));
-}
-
-static HParser* create_headers_parser() {
-    HParser* header_parser = h_sequence(
-        h_name_mem("name", header_name),
-        h_char(':'),
-        h_whitespace(),
-        h_name_mem("value", header_value),
-        h_char('\r'),
-        h_char('\n'),
-        NULL
-    );
-    return h_many(header_parser);
-}
-
-static HParser* create_request_line_parser() {
+static HParser* parse_http_version(void) {
     return h_sequence(
-        h_name_mem("method", method),
-        h_whitespace(),
-        h_name_mem("uri", request_uri),
-        h_whitespace(),
-        h_name_mem("version", http_version),
-        h_char('\r'),
-        h_char('\n'),
+        h_literal_str("HTTP/"),
+        h_choice(h_literal_str("1.0"), h_literal_str("1.1")),
         NULL
     );
 }
 
-static HParser* create_http_request_parser() {
+static HParser* parse_header_name(void) {
+    return h_many1(h_ch_range('!', '~'));
+}
+
+static HParser* parse_header_value(void) {
+    return h_many1(h_ch_range(' ', '~'));
+}
+
+static HParser* parse_header(void) {
     return h_sequence(
-        h_name_mem("request_line", request_line),
-        h_name_mem("headers", headers),
-        h_char('\r'),
-        h_char('\n'),
+        parse_header_name(),
+        h_ch(':'),
+        h_optional(h_ch(' ')),
+        parse_header_value(),
+        h_literal_str("\r\n"),
         NULL
     );
 }
 
-void init_parsers() {
-    method = create_method_parser();
-    http_version = create_http_version_parser();
-    request_uri = create_request_uri_parser();
-    header_name = create_header_name_parser();
-    header_value = create_header_value_parser();
-    headers = create_headers_parser();
-    request_line = create_request_line_parser();
-    http_request = create_http_request_parser();
+static HParser* parse_headers(void) {
+    return h_many(parse_header());
 }
 
-void cleanup_parsers() {
-    h_destroy_parser(method);
-    h_destroy_parser(http_version);
-    h_destroy_parser(request_uri);
-    h_destroy_parser(header_name);
-    h_destroy_parser(header_value);
-    h_destroy_parser(headers);
-    h_destroy_parser(request_line);
-    h_destroy_parser(http_request);
+static HParser* parse_body(void) {
+    return h_many1(h_ch_range(0, 255));
 }
 
-int main() {
-    init_parsers();
+static HParser* parse_request(void) {
+    return h_sequence(
+        parse_method(),
+        h_ch(' '),
+        parse_uri(),
+        h_ch(' '),
+        parse_http_version(),
+        h_literal_str("\r\n"),
+        parse_headers(),
+        h_literal_str("\r\n"),
+        h_optional(parse_body()),
+        NULL
+    );
+}
 
-    const char* test_request = 
-        "GET /index.html HTTP/1.1\r\n"
-        "Host: www.example.com\r\n"
-        "User-Agent: Mozilla/5.0\r\n"
-        "\r\n";
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
 
-    HParseResult* result = h_parse(http_request, (const uint8_t*)test_request, strlen(test_request));
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Could not open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("File read error");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    HParser *parser = parse_request();
+    HParseResult *result = h_parse(parser, buffer, file_size);
 
     if (result && result->ast) {
-        printf("Successfully parsed HTTP request\n");
+        printf("Parsing successful\n");
     } else {
-        printf("Failed to parse HTTP request\n");
+        printf("Parsing failed\n");
     }
 
     h_parse_result_free(result);
-    cleanup_parsers();
+    h_destroy(parser);
+    free(buffer);
     return 0;
 }

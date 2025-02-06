@@ -1,23 +1,40 @@
-module ARP;
+module arp;
 
 import spicy;
 
-public type PDU = unit {
-    hardware_type: uint16;
-    protocol_type: uint16;
-    hardware_size: uint8;
-    protocol_size: uint8;
-    opcode: uint16;
-    sender_mac: bytes(6);
-    sender_ip: bytes(4);
-    target_mac: bytes(6);
-    target_ip: bytes(4);
+public type ARPPacket = unit {
+    htype: uint16;
+    ptype: uint16;
+    hlen: uint8;
+    plen: uint8;
+    oper: uint16;
+    sha: bytes;
+    spa: bytes;
+    tha: bytes;
+    tpa: bytes;
 
-    on %done {
-        print("ARP Packet Parsed");
+    on parse {
+        self.htype = self.read<uint16>();
+        self.ptype = self.read<uint16>();
+        self.hlen = self.read<uint8>();
+        self.plen = self.read<uint8>();
+        self.oper = self.read<uint16>();
+        self.sha = self.read(self.hlen);
+        self.spa = self.read(self.plen);
+        self.tha = self.read(self.hlen);
+        self.tpa = self.read(self.plen);
+
+        if ( self.htype != 1 )
+            throw "Unsupported hardware type";
+        
+        if ( self.ptype != 0x0800 )
+            throw "Unsupported protocol type";
+        
+        if ( self.oper !in [1, 2] )
+            throw "Invalid ARP operation";
     }
 };
 
-public type Header = unit {
-    pdu: PDU;
+public type ARP = unit {
+    packet: ARPPacket;
 };

@@ -1,55 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:tns="urn:tls-client-hello"
-    targetNamespace="urn:tls-client-hello">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" lengthKind="implicit" 
-                        representation="binary"
-                        binaryNumberRep="binary"
-                        byteOrder="bigEndian"
-                        occursCountKind="implicit"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tls="http://example.com/tls">
 
-    <xs:element name="TLSClientHello">
-        <xs:complexType>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary"
+                   byteOrder="bigEndian"
+                   binaryNumberRep="binary"
+                   lengthKind="explicit"
+                   lengthUnits="bytes"
+                   encoding="utf-8"
+                   textBidi="no"
+                   floating="no"
+                   occursCountKind="parsed"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   sequenceKind="ordered"
+                   alignment="1"
+                   alignmentUnits="bytes"
+                   encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ClientHello" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <!-- Legacy Version -->
+        <xs:element name="legacyVersion" type="xs:unsignedShort" dfdl:lengthKind="implicit" 
+                   dfdl:outputValueCalc="{ 771 }"/> <!-- 0x0303 -->
+        
+        <!-- Random -->
+        <xs:element name="random" type="xs:hexBinary" dfdl:length="32" dfdl:lengthKind="explicit"/>
+
+        <!-- Legacy Session ID -->
+        <xs:element name="legacySessionID">
+          <xs:complexType>
             <xs:sequence>
-                <xs:element name="HandshakeProtocol">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="HandshakeType" type="xs:unsignedByte" dfdl:outputValueCalc="{ 1 }"/>
-                            <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="3"/>
-                            <xs:element name="Version" type="xs:unsignedShort" dfdl:outputValueCalc="{ 769 }"/>
-                            <xs:element name="Random">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="Timestamp" type="xs:unsignedInt"/>
-                                        <xs:element name="RandomBytes" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="28"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="SessionIDLength" type="xs:unsignedByte"/>
-                            <xs:element name="SessionID" type="xs:hexBinary" dfdl:lengthKind="explicit" 
-                                      dfdl:lengthRef="SessionIDLength"/>
-                            <xs:element name="CipherSuitesLength" type="xs:unsignedShort"/>
-                            <xs:element name="CipherSuites" type="xs:hexBinary" dfdl:lengthKind="explicit"
-                                      dfdl:lengthRef="CipherSuitesLength"/>
-                            <xs:element name="CompressionMethodsLength" type="xs:unsignedByte"/>
-                            <xs:element name="CompressionMethods" type="xs:hexBinary" dfdl:lengthKind="explicit"
-                                      dfdl:lengthRef="CompressionMethodsLength"/>
-                            <xs:element name="ExtensionsLength" type="xs:unsignedShort"/>
-                            <xs:element name="Extensions" type="xs:hexBinary" dfdl:lengthKind="explicit"
-                                      dfdl:lengthRef="ExtensionsLength"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
+              <xs:element name="length" type="xs:unsignedByte"/>
+              <xs:element name="sessionID" type="xs:hexBinary" 
+                         dfdl:lengthKind="explicit"
+                         dfdl:length="{ ../length }"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Cipher Suites -->
+        <xs:element name="cipherSuites">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedShort"/>
+              <xs:element name="cipherSuite" type="xs:unsignedShort" 
+                         dfdl:occursCount="{ ../length div 2 }"
+                         maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Legacy Compression Methods -->
+        <xs:element name="legacyCompressionMethods">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedByte" 
+                         dfdl:outputValueCalc="{ 1 }"/>
+              <xs:element name="method" type="xs:unsignedByte" 
+                         dfdl:outputValueCalc="{ 0 }"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Extensions -->
+        <xs:element name="extensions">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="length" type="xs:unsignedShort"/>
+              <xs:element name="extension" maxOccurs="unbounded" 
+                         dfdl:occursCount="{ xs:int(../length) div 4 }">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extensionType" type="xs:unsignedShort"/>
+                    <xs:element name="extensionLength" type="xs:unsignedShort"/>
+                    <xs:element name="extensionData" type="xs:hexBinary"
+                              dfdl:lengthKind="explicit"
+                              dfdl:length="{ ../extensionLength }"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

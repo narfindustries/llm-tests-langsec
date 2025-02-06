@@ -1,39 +1,203 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:mqtt="urn:mqtt:dfdl:1.0"
-           targetNamespace="urn:mqtt:dfdl:1.0">
+           targetNamespace="http://example.com/mqtt/v5.0"
+           xmlns:mqtt="http://example.com/mqtt/v5.0">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
+    <xs:appinfo source="http://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">
       <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
+        alignmentUnits="bits"
         byteOrder="bigEndian"
+        encoding="UTF-8"
+        fillByte="%#x00"
         occursCountKind="parsed"
         representation="binary"
-        lengthKind="explicit"
-        lengthUnits="bytes"/>
+        lengthKind="delimited"
+        lengthUnits="bits"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="MQTTMessage" dfdl:lengthKind="implicit">
+  <xs:element name="MQTTPacket" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FixedHeader" dfdl:lengthKind="explicit" dfdl:length="1">
+      <xs:sequence dfdl:separatorSuppressionPolicy="anyEmpty">
+        <xs:element name="FixedHeader" dfdl:lengthKind="implicit">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="PacketType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
-              <xs:element name="Flags" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:bitOrder="mostSignificantBitFirst"/>
+              <xs:element name="PacketType" type="mqtt:PacketTypeEnum" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="4" dfdl:lengthUnits="bits"/>
+              <xs:element name="Flags" type="xs:unsignedByte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="4" dfdl:lengthUnits="bits"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="RemainingLength" type="xs:unsignedByte" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
-        <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        
+        <xs:element name="RemainingLength" type="mqtt:VariableByteInteger" 
+                    dfdl:lengthKind="implicit"/>
+        
+        <xs:element name="PacketPayload" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="Connect" type="mqtt:ConnectPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="ConnAck" type="mqtt:ConnAckPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="Publish" type="mqtt:PublishPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PubAck" type="mqtt:PubAckPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PubRec" type="mqtt:PubRecPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PubRel" type="mqtt:PubRelPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PubComp" type="mqtt:PubCompPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="Subscribe" type="mqtt:SubscribePacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="SubAck" type="mqtt:SubAckPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="Unsubscribe" type="mqtt:UnsubscribePacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="UnsubAck" type="mqtt:UnsubAckPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PingReq" type="mqtt:PingReqPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="PingResp" type="mqtt:PingRespPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="Disconnect" type="mqtt:DisconnectPacket" 
+                          dfdl:lengthKind="implicit"/>
+              <xs:element name="Auth" type="mqtt:AuthPacket" 
+                          dfdl:lengthKind="implicit"/>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
+  <xs:complexType name="ConnectPacket">
+    <xs:sequence dfdl:separatorSuppressionPolicy="anyEmpty">
+      <xs:element name="ProtocolName" type="xs:string" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="32" dfdl:lengthUnits="bits"/>
+      <xs:element name="ProtocolVersion" type="xs:unsignedByte" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="8" dfdl:lengthUnits="bits"/>
+      <xs:element name="ConnectFlags" dfdl:lengthKind="implicit">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="UsernameFlag" type="xs:boolean" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="PasswordFlag" type="xs:boolean" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillRetainFlag" type="xs:boolean" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillQoS" type="mqtt:QoSEnum" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="2" dfdl:lengthUnits="bits"/>
+            <xs:element name="WillFlag" type="xs:boolean" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="1" dfdl:lengthUnits="bits"/>
+            <xs:element name="CleanStartFlag" type="xs:boolean" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="1" dfdl:lengthUnits="bits"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="KeepAlive" type="xs:unsignedShort" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="16" dfdl:lengthUnits="bits"/>
+      <xs:element name="Properties" type="mqtt:Properties" 
+                  dfdl:lengthKind="implicit"/>
+      <xs:element name="ClientId" type="xs:string" 
+                  dfdl:lengthKind="implicit"/>
+      <xs:element name="WillProperties" type="mqtt:Properties" 
+                  minOccurs="0" dfdl:lengthKind="implicit"/>
+      <xs:element name="WillTopic" type="xs:string" 
+                  minOccurs="0" dfdl:lengthKind="implicit"/>
+      <xs:element name="WillPayload" type="xs:base64Binary" 
+                  minOccurs="0" dfdl:lengthKind="implicit"/>
+      <xs:element name="Username" type="xs:string" 
+                  minOccurs="0" dfdl:lengthKind="implicit"/>
+      <xs:element name="Password" type="xs:base64Binary" 
+                  minOccurs="0" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="PacketTypeEnum">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/> <!-- CONNECT -->
+      <xs:enumeration value="2"/> <!-- CONNACK -->
+      <xs:enumeration value="3"/> <!-- PUBLISH -->
+      <xs:enumeration value="4"/> <!-- PUBACK -->
+      <xs:enumeration value="5"/> <!-- PUBREC -->
+      <xs:enumeration value="6"/> <!-- PUBREL -->
+      <xs:enumeration value="7"/> <!-- PUBCOMP -->
+      <xs:enumeration value="8"/> <!-- SUBSCRIBE -->
+      <xs:enumeration value="9"/> <!-- SUBACK -->
+      <xs:enumeration value="10"/> <!-- UNSUBSCRIBE -->
+      <xs:enumeration value="11"/> <!-- UNSUBACK -->
+      <xs:enumeration value="12"/> <!-- PINGREQ -->
+      <xs:enumeration value="13"/> <!-- PINGRESP -->
+      <xs:enumeration value="14"/> <!-- DISCONNECT -->
+      <xs:enumeration value="15"/> <!-- AUTH -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="QoSEnum">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Properties">
+    <xs:sequence dfdl:separatorSuppressionPolicy="anyEmpty">
+      <xs:element name="PropertyLength" type="mqtt:VariableByteInteger" 
+                  dfdl:lengthKind="implicit"/>
+      <xs:element name="PropertyList" minOccurs="0" maxOccurs="unbounded" 
+                  dfdl:lengthKind="implicit">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="PropertyIdentifier" type="xs:unsignedByte" 
+                        dfdl:lengthKind="explicit" 
+                        dfdl:length="8" dfdl:lengthUnits="bits"/>
+            <xs:element name="PropertyValue" type="xs:anyType" 
+                        dfdl:lengthKind="implicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="VariableByteInteger">
+    <xs:sequence dfdl:separatorSuppressionPolicy="anyEmpty">
+      <xs:element name="EncodedByte" type="xs:unsignedByte" 
+                  minOccurs="1" maxOccurs="4" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="8" dfdl:lengthUnits="bits"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Placeholder complex types for other packet types -->
+  <xs:complexType name="ConnAckPacket"/>
+  <xs:complexType name="PublishPacket"/>
+  <xs:complexType name="PubAckPacket"/>
+  <xs:complexType name="PubRecPacket"/>
+  <xs:complexType name="PubRelPacket"/>
+  <xs:complexType name="PubCompPacket"/>
+  <xs:complexType name="SubscribePacket"/>
+  <xs:complexType name="SubAckPacket"/>
+  <xs:complexType name="UnsubscribePacket"/>
+  <xs:complexType name="UnsubAckPacket"/>
+  <xs:complexType name="PingReqPacket"/>
+  <xs:complexType name="PingRespPacket"/>
+  <xs:complexType name="DisconnectPacket"/>
+  <xs:complexType name="AuthPacket"/>
 </xs:schema>

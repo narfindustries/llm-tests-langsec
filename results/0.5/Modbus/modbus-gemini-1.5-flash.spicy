@@ -1,89 +1,113 @@
-#ifndef _MODBUS_GEMINI_H
-#define _MODBUS_GEMINI_H
+module Modbus;
 
-#include <stdint.h>
-
-// Define Modbus function codes
-enum modbus_function_code {
-    READ_COILS = 1,
-    READ_DISCRETE_INPUTS = 2,
-    READ_HOLDING_REGISTERS = 3,
-    READ_INPUT_REGISTERS = 4,
-    WRITE_SINGLE_COIL = 5,
-    WRITE_SINGLE_REGISTER = 6,
-    WRITE_MULTIPLE_COILS = 15,
-    WRITE_MULTIPLE_REGISTERS = 16,
-    READ_FIFO_QUEUE = 20,
-    READ_FILE_RECORD = 21
+type ModbusPDU {
+    uint8 address;
+    uint8 function_code;
+    optional uint8 exception_code;
+    bytes data;
+    uint16 crc;
 };
 
-// Modbus data structures
-typedef struct {
-    uint8_t function_code;
-    uint16_t start_address;
-    uint16_t quantity;
-    uint8_t data[255]; // Adjust size as needed
-} modbus_read_request;
+type ModbusReadCoilsRequest {
+    uint16 starting_address;
+    uint16 quantity;
+};
 
-typedef struct {
-    uint8_t function_code;
-    uint16_t start_address;
-    uint16_t value;
-} modbus_write_single_request;
+type ModbusReadCoilsResponse {
+    bytes coil_status;
+};
 
-typedef struct {
-    uint8_t function_code;
-    uint16_t start_address;
-    uint16_t quantity;
-    uint8_t byte_count;
-    uint8_t data[255]; // Adjust size as needed
-} modbus_write_multiple_request;
+type ModbusReadDiscreteInputsRequest {
+    uint16 starting_address;
+    uint16 quantity;
+};
 
-typedef struct {
-    uint8_t function_code;
-    uint8_t data[255]; // Adjust size as needed
-} modbus_read_response;
+type ModbusReadDiscreteInputsResponse {
+    bytes discrete_input_status;
+};
 
+type ModbusReadHoldingRegistersRequest {
+    uint16 starting_address;
+    uint16 quantity;
+};
 
-// Function prototypes (replace with your actual implementations)
-int modbus_read(const modbus_read_request* request, modbus_read_response* response);
-int modbus_write_single(const modbus_write_single_request* request);
-int modbus_write_multiple(const modbus_write_multiple_request* request);
+type ModbusReadHoldingRegistersResponse {
+    uint16 holding_registers[quantity];
+};
 
-#endif //_MODBUS_GEMINI_H
+type ModbusReadInputRegistersRequest {
+    uint16 starting_address;
+    uint16 quantity;
+};
 
+type ModbusReadInputRegistersResponse {
+    uint16 input_registers[quantity];
+};
 
-// Example usage (replace with your actual code)
+type ModbusWriteSingleCoilRequest {
+    uint16 output_address;
+    uint16 output_value; // 0xFF00 or 0x0000
+};
 
-int main() {
-    modbus_read_request read_req;
-    modbus_read_response read_resp;
-    modbus_write_single_request write_single_req;
+type ModbusWriteSingleCoilResponse {
+    uint16 output_address;
+    uint16 output_value; // 0xFF00 or 0x0000
+};
 
+type ModbusWriteSingleRegisterRequest {
+    uint16 register_address;
+    uint16 register_value;
+};
 
-    read_req.function_code = READ_HOLDING_REGISTERS;
-    read_req.start_address = 0;
-    read_req.quantity = 10;
+type ModbusWriteSingleRegisterResponse {
+    uint16 register_address;
+    uint16 register_value;
+};
 
-    int result = modbus_read(&read_req, &read_resp);
+type ModbusWriteMultipleCoilsRequest {
+    uint16 starting_address;
+    uint16 quantity;
+    uint8 byte_count;
+    bytes coil_status;
+};
 
-    if (result == 0) {
-        // Process read_resp.data
-    } else {
-        // Handle error
+type ModbusWriteMultipleCoilsResponse {
+    uint16 starting_address;
+    uint16 quantity;
+};
+
+type ModbusWriteMultipleRegistersRequest {
+    uint16 starting_address;
+    uint16 quantity;
+    uint8 byte_count;
+    bytes register_values;
+};
+
+type ModbusWriteMultipleRegistersResponse {
+    uint16 starting_address;
+    uint16 quantity;
+};
+
+type ModbusReadWriteMultipleRegistersRequest {
+    uint16 read_starting_address;
+    uint16 read_quantity;
+    uint16 write_starting_address;
+    uint16 write_quantity;
+    uint8 write_byte_count;
+    bytes write_register_values;
+};
+
+type ModbusReadWriteMultipleRegistersResponse {
+    uint16 read_register_values[read_quantity];
+};
+
+event modbus_event(ModbusPDU pdu) {
+    if (pdu.function_code == 0x01) {
+        local ModbusReadCoilsRequest req = pdu.data;
+        # ... process read coils request ...
+    } else if (pdu.function_code == 0x03) {
+        local ModbusReadHoldingRegistersRequest req = pdu.data;
+        # ... process read holding registers request ...
     }
-
-    write_single_req.function_code = WRITE_SINGLE_REGISTER;
-    write_single_req.start_address = 100;
-    write_single_req.value = 1234;
-
-    result = modbus_write_single(&write_single_req);
-
-    if (result == 0) {
-        // Success
-    } else {
-        // Handle error
-    }
-
-    return 0;
+    # ... handle other function codes ...
 }

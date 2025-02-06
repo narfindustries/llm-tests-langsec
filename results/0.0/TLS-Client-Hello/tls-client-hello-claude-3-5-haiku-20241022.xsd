@@ -1,95 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tls-client-hello"
-           xmlns:tns="http://example.com/tls-client-hello">
+           xmlns:tls="http://example.com/tls/clienthello"
+           targetNamespace="http://example.com/tls/clienthello">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
+      <dfdl:format
         alignment="1"
+        alignmentUnits="bytes"
+        byteOrder="bigEndian"
+        encoding="UTF-8"
+        lengthKind="explicit"
+        lengthUnits="bytes"
+        occursCountKind="parsed"
+        sequenceKind="ordered"
+        initiatedContent="no"
         leadingSkip="0"
         trailingSkip="0"
-        initiator=""
-        terminator=""
-        separator=""
-        separatorPosition="infix"
-        separatorPolicy="suppressed"
-        representation="binary"
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        binaryNumberRep="binary"
-        escapeSchemeRef=""
-        occursCountKind="parsed"
-        textNumberRep="standard"/>
+        textBidi="no"
+        floating="no"
+        encodingErrorPolicy="replace"
+        representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="TLSClientHello" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="ContentType" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
-        
-        <xs:element name="ProtocolVersion" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
-        
-        <xs:element name="Length" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
-        
-        <xs:element name="HandshakeType" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
-        
-        <xs:element name="HandshakeLength" type="xs:unsignedInt" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="3" 
-          dfdl:representation="binary"/>
-        
-        <xs:element name="ClientVersion" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
-        
-        <xs:element name="Random" type="xs:hexBinary" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="32"/>
-        
-        <xs:element name="SessionIDLength" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
-        
-        <xs:element name="SessionID" type="xs:hexBinary" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="{ ../SessionIDLength }"/>
-        
-        <xs:element name="CipherSuitesLength" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
-        
-        <xs:element name="CipherSuites" type="xs:hexBinary" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="{ ../CipherSuitesLength }"/>
-        
-        <xs:element name="CompressionMethodsLength" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
-        
-        <xs:element name="CompressionMethods" type="xs:hexBinary" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="{ ../CompressionMethodsLength }"/>
-        
-        <xs:element name="ExtensionsLength" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
-        
-        <xs:element name="Extensions" type="xs:hexBinary" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="{ ../ExtensionsLength }"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="TLSClientHello" type="tls:TLSClientHelloType"/>
+
+  <xs:complexType name="TLSClientHelloType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+      <xs:element name="HandshakeType" type="xs:unsignedByte" 
+                  dfdl:length="1"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="Length" type="xs:unsignedInt" 
+                  dfdl:length="3"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="ProtocolVersion" type="xs:unsignedShort" 
+                  dfdl:length="2"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="Random" type="xs:hexBinary" 
+                  dfdl:length="32"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      
+      <xs:element name="SessionIDLength" type="xs:unsignedByte" 
+                  dfdl:length="1"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="SessionID" type="xs:hexBinary" 
+                  dfdl:length="{ ../SessionIDLength }" 
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      
+      <xs:element name="CipherSuitesLength" type="xs:unsignedShort" 
+                  dfdl:length="2"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="CipherSuites" type="xs:hexBinary" 
+                  dfdl:length="{ ../CipherSuitesLength }" 
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      
+      <xs:element name="CompressionMethodsLength" type="xs:unsignedByte" 
+                  dfdl:length="1"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="CompressionMethods" type="xs:hexBinary" 
+                  dfdl:length="{ ../CompressionMethodsLength }" 
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      
+      <xs:element name="ExtensionsLength" type="xs:unsignedShort" 
+                  dfdl:length="2"
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+      <xs:element name="Extensions" type="tls:ExtensionsList" 
+                  dfdl:length="{ ../ExtensionsLength }" 
+                  dfdl:lengthKind="explicit"
+                  dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionsList">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+      <xs:element name="Extension" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+            <xs:element name="Type" type="xs:unsignedShort" 
+                        dfdl:length="2"
+                        dfdl:lengthKind="explicit"
+                        dfdl:trailingSkip="0"/>
+            <xs:element name="Length" type="xs:unsignedShort" 
+                        dfdl:length="2"
+                        dfdl:lengthKind="explicit"
+                        dfdl:trailingSkip="0"/>
+            <xs:element name="Data" type="xs:hexBinary" 
+                        dfdl:length="{ ../Length }" 
+                        dfdl:lengthKind="explicit"
+                        dfdl:trailingSkip="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

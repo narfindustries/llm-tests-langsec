@@ -1,0 +1,39 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/ntp" xmlns:ntp="http://example.com/ntp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="ISO-8859-1" alignmentUnits="bits" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NTPPacket">
+    <xs:sequence>
+      <xs:element name="LI" type="xs:unsignedByte" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="VN" type="xs:unsignedByte" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="Poll" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="Precision" type="xs:unsignedByte" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="RootDelay" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="RootDispersion" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="ReferenceID" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="ReferenceTimestamp" type="ntp:NTPTimestamp" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="OriginTimestamp" type="ntp:NTPTimestamp" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="ReceiveTimestamp" type="ntp:NTPTimestamp" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="TransmitTimestamp" type="ntp:NTPTimestamp" dfdl:length="64" dfdl:representation="binary"/>
+      <xs:element name="ExtensionFields" type="xs:hexBinary" dfdl:length="0" dfdl:representation="binary" minOccurs="0"/>
+      <xs:element name="KeyIdentifier" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary" minOccurs="0"/>
+      <xs:element name="MessageDigest" type="xs:hexBinary" dfdl:length="128" dfdl:representation="binary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NTPTimestamp">
+    <xs:sequence>
+      <xs:element name="Seconds" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="Fraction" type="xs:unsignedInt" dfdl:length="32" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NTP" type="ntp:NTPPacket"/>
+
+</xs:schema>

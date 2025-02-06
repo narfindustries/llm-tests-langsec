@@ -1,50 +1,138 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg"
-           xmlns="http://example.com/jpeg"
-           elementFormDefault="qualified"
-           dfdl:format ref="tns:JPEGFormat">
+<xsd:schema xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.com/jpeg" xmlns:tns="http://example.com/jpeg" elementFormDefault="qualified">
+  <xsd:include schemaLocation="dfdlGeneralFormat.dfdl.xsd"/>
   
-  <dfdl:format name="JPEGFormat" byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes" encoding="ascii"/>
-
-  <xs:element name="JPEG" type="JPEG"/>
- 
-  <xs:complexType name="JPEG">
-    <xs:sequence>
-      <xs:element name="SOI" type="SOI" dfdl:length="2"/>
-      <xs:sequence maxOccurs="unbounded" dfdl:initiator="%xFF">
-        <xs:element name="Segment" type="Segment" dfdl:lengthKind="explicit" dfdl:terminator="%xFF"/>
-      </xs:sequence>
-      <xs:element name="EOI" type="EOI" dfdl:length="2"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:format name="GeneralFormat" ref="tns:GeneralFormat" encoding="ISO-8859-1" lengthKind="explicit" lengthUnits="bytes"/>
   
-  <xs:simpleType name="SOI">
-    <xs:restriction base="xs:hexBinary">
-      <xs:length value="2"/>
-      <xs:enumeration value="FFD8"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:simpleType name="EOI">
-    <xs:restriction base="xs:hexBinary">
-      <xs:length value="2"/>
-      <xs:enumeration value="FFD9"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <xsd:element name="JPEG" type="tns:JPEGType"/>
   
-  <xs:complexType name="Segment">
-    <xs:sequence>
-      <xs:element name="Marker" type="Marker"/>
-      <xs:element name="Length" type="xs:unsignedShort"/>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length - 2}"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xsd:complexType name="JPEGType">
+    <xsd:sequence>
+      <xsd:element name="SOIMarker" type="tns:MarkerFF" dfdl:length="2" dfdl:representation="binary">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFD8' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Segments" minOccurs="0" maxOccurs="unbounded">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="Marker" type="tns:MarkerType" dfdl:length="2" dfdl:representation="binary"/>
+            <xsd:element name="Length" type="xsd:unsignedShort" dfdl:length="2" dfdl:representation="binary"/>
+            <xsd:element name="SegmentData" type="xsd:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }" dfdl:representation="binary"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="EOIMarker" type="tns:MarkerFF" dfdl:length="2" dfdl:representation="binary">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFD9' }"/>
+        </xsd:annotation>
+      </xsd:element>
+    </xsd:sequence>
+  </xsd:complexType>
   
-  <xs:simpleType name="Marker">
-    <xs:restriction base="xs:hexBinary">
-      <xs:length value="1"/>
-    </xs:restriction>
-  </xs:simpleType>
-</xs:schema>
+  <xsd:complexType name="MarkerType">
+    <xsd:choice>
+      <xsd:element name="SOF0" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC0' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF1" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC1' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF2" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC2' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF3" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC3' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF5" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC5' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF6" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC6' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF7" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC7' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOF9" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC9' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOFA" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFCA' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOFB" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFCB' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="DHT" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFC4' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="DQT" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFDB' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="SOS" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFDA' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="DRI" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFDD' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="COM" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFFE' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="APPn" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ ( . ge 'FFE0' ) and ( . le 'FFEF' ) }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="RSTn" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ ( . ge 'FFD0' ) and ( . le 'FFD7' ) }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="DAC" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFCC' }"/>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="DNL" type="tns:MarkerFF">
+        <xsd:annotation>
+          <dfdl:assert test="{ . eq 'FFDC' }"/>
+        </xsd:annotation>
+      </xsd:element>
+    </xsd:choice>
+  </xsd:complexType>
+  
+  <xsd:simpleType name="MarkerFF">
+    <xsd:restriction base="xsd:hexBinary">
+      <xsd:length value="2"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+</xsd:schema>

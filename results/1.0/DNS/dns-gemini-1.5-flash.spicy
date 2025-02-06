@@ -1,13 +1,36 @@
-#ifndef DNS_GEMINI_1_H
-#define DNS_GEMINI_1_H
+module DNS;
 
-#include "zeek/packet-analysis.bif"
+type DNS {
+    id: uint16;
+    qr: bool;
+    opcode: enum { QUERY, IQUERY, STATUS, 3, 4, 5, 6, 7 };
+    aa: bool;
+    tc: bool;
+    rd: bool;
+    ra: bool;
+    z: uint3;
+    rcode: enum { NoError, FormErr, ServFail, NXDomain, NotImp, Refused, YXDomain, YXRRSet, NXRRSET, NotAuth, NotZone };
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+    questions: vector of DNSQuestion;
+    answers: vector of DNSResourceRecord;
+    authorities: vector of DNSResourceRecord;
+    additionals: vector of DNSResourceRecord;
+}
 
-global dns_gemini_1_count: count;
+type DNSQuestion {
+    qname: string;
+    qtype: uint16;
+    qclass: uint16;
+}
 
-event dns_gemini_1(p: packet)
-	{
-	dns_gemini_1_count++;
-	}
-
-#endif
+type DNSResourceRecord {
+    name: string;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes;
+}

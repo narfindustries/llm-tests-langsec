@@ -1,91 +1,81 @@
-#ifndef _MODBUS_GEMINI_H_
-#define _MODBUS_GEMINI_H_
+module Modbus;
 
-#include <base/events.zeek>
-
-#define MODBUS_ADU_LENGTH 256
-
-typedef enum {
-  MODBUS_FC_READ_COILS = 1,
-  MODBUS_FC_READ_DISCRETE_INPUTS = 2,
-  MODBUS_FC_READ_HOLDING_REGISTERS = 3,
-  MODBUS_FC_READ_INPUT_REGISTERS = 4,
-  MODBUS_FC_WRITE_SINGLE_COIL = 5,
-  MODBUS_FC_WRITE_SINGLE_REGISTER = 6,
-  MODBUS_FC_WRITE_MULTIPLE_COILS = 15,
-  MODBUS_FC_WRITE_MULTIPLE_REGISTERS = 16,
-  MODBUS_FC_READ_EXCEPTION_STATUS = 125 //Example, adjust as needed
-} ModbusFunctionCode;
-
-typedef struct {
-  uint8 unit_id;
-  ModbusFunctionCode function_code;
-  uint16 start_address;
-  uint16 quantity;
-  uint8 data[MODBUS_ADU_LENGTH];
-  uint16 crc;
-} ModbusRequest;
-
-typedef struct {
-  uint8 unit_id;
-  ModbusFunctionCode function_code;
-  uint8 data[MODBUS_ADU_LENGTH];
-  uint16 crc;
-} ModbusResponse;
-
-
-event modbus_request(ModbusRequest req) {
-    print("Modbus Request: Unit ID=",req.unit_id," Function Code=",req.function_code,
-          " Start Address=",req.start_address," Quantity=",req.quantity);
+type ModbusRequest {
+    uint16 transaction_id;
+    uint16 protocol_id;
+    uint16 length;
+    uint8 unit_id;
+    uint8 function_code;
+    ModbusData data;
 }
 
-event modbus_response(ModbusResponse resp) {
-    print("Modbus Response: Unit ID=",resp.unit_id," Function Code=",resp.function_code);
+type ModbusResponse {
+    uint16 transaction_id;
+    uint16 protocol_id;
+    uint16 length;
+    uint8 unit_id;
+    uint8 function_code;
+    ModbusData data;
 }
 
-#endif //_MODBUS_GEMINI_H_
-
-
-#ifndef _MODBUS_GEMINI_MAIN_H_
-#define _MODBUS_GEMINI_MAIN_H_
-
-#include "modbus_gemini.zeek"
-
-global modbus_request_count = 0;
-global modbus_response_count = 0;
-
-event zeek_init() {
-    print("Modbus Gemini Plugin Initialized");
-}
-
-event zeek_done() {
-    print("Modbus Gemini Plugin Done. Requests processed:",modbus_request_count, ", Responses processed:", modbus_response_count);
+type ModbusData {
+    read_coils: ModbusReadCoils;
+    read_discrete_inputs: ModbusReadDiscreteInputs;
+    read_holding_registers: ModbusReadHoldingRegisters;
+    read_input_registers: ModbusReadInputRegisters;
+    write_single_coil: ModbusWriteSingleCoil;
+    write_single_register: ModbusWriteSingleRegister;
+    write_multiple_coils: ModbusWriteMultipleCoils;
+    write_multiple_registers: ModbusWriteMultipleRegisters;
+    exception_code: optional uint8;
 }
 
 
-// Example of how to process Modbus data
-event connection(conn) {
-    // Placeholder for Modbus packet processing.  Replace with your actual parsing logic
-    // This example assumes Modbus data is received on the connection and needs to be unpacked
-    //  It may require different logic depending on protocol encoding (e.g., RTU, ASCII, TCP)
-    //  and the way the data is presented to the Zeek script.
-
-    // Dummy data for testing, replace with your actual packet handling
-    ModbusRequest req;
-    req.unit_id = 1;
-    req.function_code = MODBUS_FC_READ_HOLDING_REGISTERS;
-    req.start_address = 1000;
-    req.quantity = 10;
-    modbus_request(req);
-    modbus_request_count +=1;
-
-
-    ModbusResponse resp;
-    resp.unit_id = 1;
-    resp.function_code = MODBUS_FC_READ_HOLDING_REGISTERS;
-    modbus_response(resp);
-    modbus_response_count +=1;
-
+type ModbusReadCoils {
+    uint16 starting_address;
+    uint16 quantity;
+    bytes byte_data;
 }
 
-#endif //_MODBUS_GEMINI_MAIN_H_
+type ModbusReadDiscreteInputs {
+    uint16 starting_address;
+    uint16 quantity;
+    bytes byte_data;
+}
+
+type ModbusReadHoldingRegisters {
+    uint16 starting_address;
+    uint16 quantity;
+    [uint16] registers;
+}
+
+type ModbusReadInputRegisters {
+    uint16 starting_address;
+    uint16 quantity;
+    [uint16] registers;
+}
+
+
+type ModbusWriteSingleCoil {
+    uint16 address;
+    bool value;
+}
+
+
+type ModbusWriteSingleRegister {
+    uint16 address;
+    uint16 value;
+}
+
+type ModbusWriteMultipleCoils {
+    uint16 starting_address;
+    uint16 quantity;
+    bytes byte_data;
+}
+
+
+type ModbusWriteMultipleRegisters {
+    uint16 starting_address;
+    uint16 quantity;
+    [uint16] registers;
+}

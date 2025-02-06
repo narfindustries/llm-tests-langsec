@@ -1,66 +1,66 @@
-domain gif {
-  type byte = uint8;
-  type uint16 = uint16;
-  type uint32 = uint32;
-
-  type gif_header = struct {
-    signature: byte[3];
-    version: byte[3];
-  };
-
-  type logical_screen_descriptor = struct {
-    width: uint16;
-    height: uint16;
-    flags: byte;
-    bg_color: byte;
-    pixel_aspect_ratio: byte;
-  };
-
-  type image_descriptor = struct {
-    left: uint16;
-    top: uint16;
-    width: uint16;
-    height: uint16;
-    flags: byte;
-  };
-
-  type pixel_data = byte[];
-
-  type gif_image = struct {
-    descriptor: image_descriptor;
-    data: pixel_data;
-  };
-
-  type gif_file = struct {
-    header: gif_header;
-    screen_descriptor: logical_screen_descriptor;
-    images: gif_image[];
-  };
-
-  grammar gif_file_grammar {
-    gif_file: 
-      header: gif_header,
-      screen_descriptor: logical_screen_descriptor,
-      images: gif_image*;
-    gif_header: 
-      signature: "GIF",
-      version: byte[3];
-    logical_screen_descriptor: 
-      width: uint16,
-      height: uint16,
-      flags: byte,
-      bg_color: byte,
-      pixel_aspect_ratio: byte;
-    image_descriptor: 
-      left: uint16,
-      top: uint16,
-      width: uint16,
-      height: uint16,
-      flags: byte;
-    pixel_data: 
-      byte*;
-    gif_image: 
-      descriptor: image_descriptor,
-      data: pixel_data;
-  }
+type gif {
+  header: {
+    signature: byte[3] = "GIF",
+    version: byte[3] = ["87a", "89a"]
+  },
+  logical_screen_descriptor: {
+    width: uint16,
+    height: uint16,
+    packed_fields: {
+      global_color_table_flag: bool,
+      color_resolution: uint3,
+      sort_flag: bool,
+      size_of_global_color_table: uint3
+    },
+    background_color_index: uint8,
+    pixel_aspect_ratio: uint8
+  },
+  global_color_table: array(2^(1+logical_screen_descriptor.packed_fields.size_of_global_color_table)) of {
+    red: uint8,
+    green: uint8,
+    blue: uint8
+  },
+  image_descriptors: array(*) of {
+    image_separator: byte = 0x2C,
+    left_position: uint16,
+    top_position: uint16,
+    width: uint16,
+    height: uint16,
+    packed_fields: {
+      local_color_table_flag: bool,
+      interlace_flag: bool,
+      sort_flag: bool,
+      reserved: uint2 = 0,
+      size_of_local_color_table: uint3
+    },
+    local_color_table: array(2^(1+packed_fields.size_of_local_color_table)) of {
+      red: uint8,
+      green: uint8,
+      blue: uint8
+    },
+    image_data: byte(*)
+  },
+  extensions: array(*) of {
+    extension_introducer: byte = 0x21,
+    label: byte = [0xF9, 0xFE, 0xFF],
+    block_size: byte,
+    data: choice(label) of {
+      0xF9: {
+        disposal_method: uint3,
+        user_input_flag: bool,
+        transparent_color_flag: bool,
+        delay_time: uint16,
+        transparent_color_index: uint8
+      },
+      0xFE: {
+        comment_data: byte(block_size)
+      },
+      0xFF: {
+        application_identifier: byte(block_size),
+        application_data: byte(*)
+      }
+    },
+    block_terminator: byte = 0x00
+  },
+  trailer: byte = 0x3B
 }

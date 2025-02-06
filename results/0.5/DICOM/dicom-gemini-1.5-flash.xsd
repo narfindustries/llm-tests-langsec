@@ -1,1 +1,65 @@
-Gemini API Error: 429 Resource has been exhausted (e.g. check quota).
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/dicom"
+           xmlns="http://example.org/dicom"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="dfdl.xsd"/>
+
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="DICM"/>
+        <xs:element ref="Dataset"/>
+      </xs:sequence>
+      <xs:attribute name="encoding" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DICM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="DICMHeader" type="xs:hexBinary" dfdl:length="128"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Dataset">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Attribute" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Attribute">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4"/>
+        <xs:element name="VR" type="xs:string" dfdl:length="2"/>
+        <xs:element name="Value">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice>
+                <xs:element name="String" type="xs:string"/>
+                <xs:element name="Integer" type="xs:integer"/>
+                <xs:element name="Float" type="xs:float"/>
+                <xs:element name="Double" type="xs:double"/>
+                <xs:element name="Sequence">
+                  <xs:complexType>
+                    <xs:sequence>
+                      <xs:element ref="Attribute" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                  </xs:complexType>
+                </xs:element>
+                <xs:element name="BinaryData" type="xs:hexBinary"/>
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

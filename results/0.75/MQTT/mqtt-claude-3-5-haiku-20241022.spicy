@@ -2,82 +2,165 @@ module MQTT;
 
 import spicy;
 
-public type Packet = unit {
-    var fixed_header: FixedHeader;
-    var variable_header: VariableHeader(fixed_header.packet_type);
-    var payload: Payload(fixed_header.packet_type);
-
-    on %done { 
-        print "MQTT Packet Processed";
-    }
+public type PacketType = enum {
+    CONNECT     = 1,
+    CONNACK     = 2,
+    PUBLISH     = 3,
+    PUBACK      = 4,
+    PUBREC      = 5,
+    PUBREL      = 6,
+    PUBCOMP     = 7,
+    SUBSCRIBE   = 8,
+    SUBACK      = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK    = 11,
+    PINGREQ     = 12,
+    PINGRESP    = 13,
+    DISCONNECT  = 14
 };
 
-type FixedHeader = unit {
-    packet_type: bitfield(4) {
-        type: 0..3;
-        flags: 4..7;
+type VariableByteInteger = unit {
+    var value = 0;
+    var multiplier = 1;
+
+    while (true) {
+        var encoded_byte = self.input().read(1)[0];
+        value += (encoded_byte & 0x7f) * multiplier;
+        multiplier *= 128;
+        if ((encoded_byte & 0x80) == 0)
+            break;
+    }
+    return value;
+};
+
+type MQTTProperty = unit {
+    identifier: uint8;
+    switch (identifier) {
+        1 => payload_format_indicator: uint8;
+        2 => message_expiry_interval: uint32;
+        3 => content_type: string;
+        8 => response_topic: string;
+        9 => correlation_data: bytes;
+        11 => subscription_identifier: VariableByteInteger;
+        17 => session_expiry_interval: uint32;
+        18 => assigned_client_identifier: string;
+        19 => server_keep_alive: uint16;
+        21 => authentication_method: string;
+        22 => authentication_data: bytes;
+        23 => request_problem_information: uint8;
+        24 => will_delay_interval: uint32;
+        25 => request_response_information: uint8;
+        26 => response_information: string;
+        28 => server_reference: string;
+        31 => reason_string: string;
+        33 => receive_maximum: uint16;
+        34 => topic_alias_maximum: uint16;
+        35 => topic_alias: uint16;
+        36 => maximum_qos: uint8;
+        37 => retain_available: uint8;
+        38 => user_property: bytes;
+        39 => maximum_packet_size: uint32;
+        40 => wildcard_subscription_available: uint8;
+        41 => subscription_identifiers_available: uint8;
+        42 => shared_subscription_available: uint8;
     };
-    remaining_length: variable_length_quantity;
 };
 
-type VariableHeader = unit(packet_type: uint8) {
-    switch (packet_type) {
-        0x1 -> connect_header: ConnectHeader;
-        0x2 -> connack_header: ConnAckHeader;
-        0x3 -> publish_header: PublishHeader;
-        _ -> skip;
+type MQTTProperties = unit {
+    length: VariableByteInteger;
+    properties: vector<MQTTProperty>;
+};
+
+type ConnectFlags = unit {
+    flags: uint8;
+    
+    var reserved: bit<1>;
+    var clean_start: bit<1>;
+    var will_flag: bit<1>;
+    var will_qos: bit<2>;
+    var will_retain: bit<1>;
+    var password_flag: bit<1>;
+    var username_flag: bit<1>;
+
+    on flags {
+        reserved = flags & 0x01;
+        clean_start = (flags & 0x02) >> 1;
+        will_flag = (flags & 0x04) >> 2;
+        will_qos = (flags & 0x18) >> 3;
+        will_retain = (flags & 0x20) >> 5;
+        password_flag = (flags & 0x40) >> 6;
+        username_flag = (flags & 0x80) >> 7;
     }
 };
 
-type ConnectHeader = unit {
-    protocol_name: bytes(4);
+type MQTTFixedHeader = unit {
+    packet_type: bit<4>;
+    flags: bit<4>;
+    remaining_length: VariableByteInteger;
+};
+
+type MQTTConnect = unit {
+    protocol_name: bytes &length=4;
     protocol_version: uint8;
-    connect_flags: bitfield(8) {
-        username_flag: 7;
-        password_flag: 6;
-        will_retain: 5;
-        will_qos: 4..3;
-        will_flag: 2;
-        clean_session: 1;
-        reserved: 0;
-    };
+    connect_flags: ConnectFlags;
     keep_alive: uint16;
-};
-
-type ConnAckHeader = unit {
-    session_present: bool;
-    return_code: uint8;
-};
-
-type PublishHeader = unit {
-    topic_name: string;
-    packet_id: uint16;
-};
-
-type Payload = unit(packet_type: uint8) {
-    switch (packet_type) {
-        0x1 -> connect_payload: ConnectPayload;
-        0x3 -> publish_payload: bytes;
-        _ -> skip;
-    }
-};
-
-type ConnectPayload = unit {
+    properties: MQTTProperties;
     client_id: string;
-    username: optional string;
-    password: optional string;
+    will_properties: MQTTProperties &optional;
+    will_topic: string &optional;
+    will_payload: bytes &optional;
+    username: string &optional;
+    password: string &optional;
+
+    on init {
+        if ( connect_flags.will_flag == 0 ) {
+            will_properties = None;
+            will_topic = None;
+            will_payload = None;
+        }
+        if ( connect_flags.username_flag == 0 ) {
+            username = None;
+        }
+        if ( connect_flags.password_flag == 0 ) {
+            password = None;
+        }
+    }
 };
 
-type variable_length_quantity = unit {
-    value: uint8 {
-        var result = 0;
-        var multiplier = 1;
-        while ( self > 127 ) {
-            result += (self & 0x7f) * multiplier;
-            multiplier *= 128;
-            self = input.read(1)[0];
-        }
-        result += self * multiplier;
-        return result;
-    }
+type MQTTConnAck = unit {
+    connect_acknowledge_flags: uint8;
+    reason_code: uint8;
+    properties: MQTTProperties;
+};
+
+type MQTTPublish = unit {
+    topic_name: string;
+    packet_identifier: uint16;
+    properties: MQTTProperties;
+    payload: bytes;
+};
+
+type MQTTSubscribe = unit {
+    packet_identifier: uint16;
+    properties: MQTTProperties;
+    subscriptions: vector<bytes>;
+};
+
+type MQTTUnsubscribe = unit {
+    packet_identifier: uint16;
+    properties: MQTTProperties;
+    topics: vector<string>;
+};
+
+type MQTTPacket = unit {
+    fixed_header: MQTTFixedHeader;
+    payload: 
+        MQTTConnect if (fixed_header.packet_type == PacketType::CONNECT) |
+        MQTTConnAck if (fixed_header.packet_type == PacketType::CONNACK) |
+        MQTTPublish if (fixed_header.packet_type == PacketType::PUBLISH) |
+        MQTTSubscribe if (fixed_header.packet_type == PacketType::SUBSCRIBE);
+};
+
+public type MQTT = unit {
+    packets: vector<MQTTPacket>;
 };

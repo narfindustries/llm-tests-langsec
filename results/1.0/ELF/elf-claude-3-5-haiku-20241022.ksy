@@ -1,47 +1,21 @@
 meta:
   id: elf
-  title: ELF (Executable and Linkable Format) file format
-  file-extension: 
-    - elf
-    - o
-    - so
-  license: MIT
-  endian: be
+  title: Executable and Linkable Format
+  endian: 
+    switch-on: header.e_ident_struct.data_encoding
+    cases:
+      1: le
+      2: be
 
 seq:
   - id: header
     type: elf_header
-  - id: program_headers
-    type: program_header
-    repeat: expr
-    repeat-expr: header.e_phnum
-    if: header.e_phoff != 0
-  - id: section_headers
-    type: section_header
-    repeat: expr 
-    repeat-expr: header.e_shnum
-    if: header.e_shoff != 0
 
 types:
   elf_header:
     seq:
-      - id: magic
-        contents: [0x7F, 0x45, 0x4C, 0x46]
-      - id: class
-        type: u1
-        enum: elf_class
-      - id: data_encoding
-        type: u1
-        enum: elf_data_encoding  
-      - id: version
-        type: u1
-      - id: os_abi
-        type: u1
-        enum: elf_os_abi
-      - id: abi_version
-        type: u1
-      - id: padding
-        size: 7
+      - id: e_ident_struct
+        type: e_ident_struct
       - id: e_type
         type: u2
         enum: elf_type
@@ -50,6 +24,7 @@ types:
         enum: elf_machine
       - id: e_version
         type: u4
+        enum: elf_version
       - id: e_entry
         type: u8
       - id: e_phoff
@@ -71,101 +46,61 @@ types:
       - id: e_shstrndx
         type: u2
 
-  program_header:
+  e_ident_struct:
     seq:
-      - id: p_type
-        type: u4
-        enum: program_type
-      - id: p_flags
-        type: u4
-      - id: p_offset
-        type: u8
-      - id: p_vaddr
-        type: u8
-      - id: p_paddr
-        type: u8
-      - id: p_filesz
-        type: u8
-      - id: p_memsz
-        type: u8
-      - id: p_align
-        type: u8
-
-  section_header:
-    seq:
-      - id: sh_name
-        type: u4
-      - id: sh_type
-        type: u4
-        enum: section_type
-      - id: sh_flags
-        type: u8
-      - id: sh_addr
-        type: u8
-      - id: sh_offset
-        type: u8
-      - id: sh_size
-        type: u8
-      - id: sh_link
-        type: u4
-      - id: sh_info
-        type: u4
-      - id: sh_addralign
-        type: u8
-      - id: sh_entsize
-        type: u8
+      - id: magic
+        contents: [0x7f, 'E', 'L', 'F']
+      - id: class
+        type: u1
+        enum: elf_class
+      - id: data_encoding
+        type: u1
+        enum: elf_data_encoding
+      - id: version
+        type: u1
+        enum: elf_version
+      - id: os_abi
+        type: u1
+        enum: elf_os_abi
+      - id: abi_version
+        type: u1
+      - id: padding
+        size: 7
 
 enums:
-  elf_class:
-    1: class32
-    2: class64
-
-  elf_data_encoding:
-    1: little_endian
-    2: big_endian
-
-  elf_os_abi:
-    0: system_v
-    1: hp_ux
-    2: netbsd
-    3: linux
-    6: solaris
-    7: aix
-    8: irix
-    9: freebsd
-    0x0C: openbsd
-
   elf_type:
-    1: relocatable
-    2: executable
-    3: shared
-    4: core
+    0: type_none
+    1: type_relocatable
+    2: type_executable
+    3: type_shared
+    4: type_core
 
   elf_machine:
-    3: x86
-    0x3E: x86_64
-    0x28: arm
-    0xB7: aarch64
+    0: machine_none
+    3: machine_x86
+    62: machine_x86_64
+    40: machine_arm
 
-  program_type:
-    0: null_type
-    1: load
-    2: dynamic
-    3: interp
-    4: note
-    5: shlib
-    6: phdr
-    7: tls
+  elf_version:
+    0: version_none
+    1: version_current
 
-  section_type:
-    0: null
-    1: progbits
-    2: symtab
-    3: strtab
-    4: rela
-    5: hash
-    6: dynamic
-    7: note
-    8: nobits
-    9: rel
-    11: dynsym
+  elf_class:
+    0: class_none
+    1: class_32bit
+    2: class_64bit
+
+  elf_data_encoding:
+    0: encoding_none
+    1: encoding_little_endian
+    2: encoding_big_endian
+
+  elf_os_abi:
+    0: abi_system_v
+    3: abi_linux
+    6: abi_solaris
+    7: abi_aix
+    8: abi_irix
+    9: abi_freebsd
+    12: abi_openbsd
+    97: abi_arm

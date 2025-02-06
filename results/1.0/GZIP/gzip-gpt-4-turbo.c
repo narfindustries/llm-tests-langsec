@@ -1,94 +1,86 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations
-static HParsedToken *act_gzip_header(const HParseResult *p, void *user_data);
-static HParsedToken *act_gzip_footer(const HParseResult *p, void *user_data);
+#define GZIP_ID1 0x1f
+#define GZIP_ID2 0x8b
+#define CM_DEFLATE 0x08
 
-// Define basic structures
-// GZIP magic number
-static HParser *gzip_magic = h_bytes((const uint8_t*)"\x1f\x8b", 2);
+#define FTEXT    0x01
+#define FHCRC    0x02
+#define FEXTRA   0x04
+#define FNAME    0x08
+#define FCOMMENT 0x10
 
-// GZIP compression methods
-enum {
-    GZIP_COMPRESSION_DEFLATE = 8
-};
-
-// GZIP flags
-enum {
-    FTEXT = 0x01,
-    FHCRC = 0x02,
-    FEXTRA = 0x04,
-    FNAME = 0x08,
-    FCOMMENT = 0x10
-};
-
-// Fields
-static HParser *compression_method = h_uint8();
-static HParser *flags = h_uint8();
-static HParser *mtime = h_uint32le();
-static HParser *extra_flags = h_uint8();
-static HParser *os_type = h_uint8();
-
-// File or section footer
-static HParser *crc32 = h_uint32le();
-static HParser *input_size = h_uint32le();
-
-// Optional fields
-static HParser *xlen = h_uint16le();
-static HParser *extra = h_length_value(xlen, h_bytes(h_any()));
-
-// Filename and comment
-static HParser *zero_terminated_string = h_length_value(h_int_range(h_int32(1, INT_MAX), ' ', '\0' - 1), h_ch('\0'));
-static HParser *filename = zero_terminated_string;
-static HParser *comment = zero_terminated_string;
-
-// Create gzip_header
-HParser *gzip_header = h_action(h_sequence(gzip_magic, compression_method, flags, mtime, extra_flags, os_type, NULL),
-                                act_gzip_header, NULL);
-
-// Create gzip_footer
-HParser *gzip_footer = h_action(h_sequence(crc32, input_size, NULL),
-                                act_gzip_footer, NULL);
-
-// Main parser branch, checks optional fields based on flags
-HParser *gzip_parser = h_sequence(
-    gzip_header,
-    h_optional(h_choice(h_attr_bool(flags, FEXTRA, h_sequence(xlen, extra, NULL)), NULL)),
-    h_optional(h_attr_bool(flags, FNAME, filename)),
-    h_optional(h_attr_bool(flags, FCOMMENT, comment)),
-    h_optionally(h_attr_bool(flags, FHCRC, h_uint16le())), // CRC16 for header
-    h_middle(), // Actual compressed data
-    gzip_footer,
-    NULL);
-
-// Actions for header and footer
-static HParsedToken *act_gzip_header(const HParseResult *p, void *user_data) {
-    const HCountedArray *fields = p->ast->seq->elements;
-    // Implement necessary header handling or validation according to your needs
-    return H_MAKE_UINT(0);   // Placeholder for actual manipulation or checks
-}
-
-static HParsedToken *act_gzip_footer(const HParseResult *p, void *user_data) {
-    const HCountedArray *fields = p->ast->seq->elements;
-    // Implement necessary footer handling or validation according to your needs
-    return H_MAKE_UINT(0);   // Placeholder for actual manipulation or checks
-}
+HParser *gzip_parser();
 
 int main(int argc, char **argv) {
-    HParser *parser = gzip_parser;
-    HParseResult *result = h_parse(parser, data, length);
-    if (result == NULL) {
-        fprintf(stderr, "Parsing failed!\n");
-        return 1;
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gzip-file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    // If successful, use results from `result`
-    printf("Parsing succeeded.\n");
-    h_pprint(stdout, result->ast, 0, 1);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    rewind(fp);
+
+    uint8_t *data = malloc(size);
+    if (data == NULL) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, size, fp);
+    fclose(fp);
+
+    HParser *parser = gzip_parser();
+    HParseResult *result = h_parse(parser, data, size);
+
+    if (result) {
+        printf("Parse successful\n");
+    } else {
+        fprintf(stderr, "Parse failed\n");
+    }
 
     h_parse_result_free(result);
+    h_parser_cleanup(parser);  // ensure proper cleanup function is called depending on Hammer version/ update
+    free(data);
+
     return 0;
 }
 
-This specification accurately details the composition of a GZIP parser using the Hammer parser-building library. The definition includes fields derived from the GZIP specification and includes enhanced error handling. This complete example should compile with Hammer library support. Adjust the `main` function to suit specific data input and error management requirements.
+HParser *gzip_parser() {
+    HParser *id1 = h_bits(8, false);
+    HParser *id2 = h_bits(8, false);
+    HParser *cm = h_bits(8, false);
+    HParser *flg = h_bits(8, false);
+    HParser *mtime = h_bits(32, false);
+    HParser *xfl = h_bits(8, false);
+    HParser *os = h_bits(8, false);
+    
+    HParser *xlen = h_bits(16, false);
+    HParser *extra = h_length_value(h_uint16(), h_bytes(1));
+    HParser *fname = h_null_terminated();
+    HParser *fcomment = h_null_terminated();
+    HParser *fhcrc = h_bits(16, false);
+
+    HParser *header = h_sequence(id1, id2, cm, flg, mtime, xfl, os, NULL);
+
+    HParser *fextra = h_optional(h_sequence(flg, h_attr_bool(flg, FEXTRA), xlen, extra, NULL));
+    HParser *ffname = h_optional(h_sequence(flg, h_attr_bool(flg, FNAME), fname, NULL));
+    HParser *fcomment_field = h_optional(h_sequence(flg, h_attr_bool(flg, FCOMMENT), fcomment, NULL));
+    HParser *fhcrc_field = h_optional(fhcrc);
+
+    HParser *crc32 = h_bits(32, false);
+    HParser *isize = h_bits(32, false);
+    HParser *footer = h_sequence(crc32, isize, NULL);
+
+    return h_sequence(header, fextra, ffname, fcomment_field, fhcrc_field, h_greedy1(h_uint8()), footer, NULL);
+}

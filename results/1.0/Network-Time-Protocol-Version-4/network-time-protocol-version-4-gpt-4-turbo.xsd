@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/ntp"
@@ -6,44 +5,42 @@
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ex:commonFormat"/>
+      <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                   binaryNumberRep="binary" textNumberRep="standard" lengthKind="explicit"
+                   encoding="UTF-8" lengthUnits="bytes"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="FlagsType">
+  <xs:element name="NTPPacket" type="ex:NTPPacketType"/>
+
+  <xs:complexType name="NTPPacketType">
     <xs:sequence>
-      <xs:element name="leapIndicator" type="xs:byte" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="versionNumber" type="xs:byte" dfdl:length="3" dfdl:lengthKind="explicit"/>
-      <xs:element name="mode" type="xs:byte" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="LI_VN_Mode" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:simpleType>
+              <xs:restriction base="xs:unsignedByte">
+                <dfdl:length kind="explicit" units="bits" value="8"/>
+                <xs:minInclusive value="0"/>
+                <xs:maxInclusive value="255"/>
+              </xs:restriction>
+            </dfdl:simpleType>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="Poll" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="Precision" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="RootDelay" type="xs:int" dfdl:length="4"/>
+      <xs:element name="RootDispersion" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="ReferenceIdentifier" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="OriginateTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="KeyIdentifier" type="xs:unsignedInt" dfdl:length="4" minOccurs="0"/>
+      <xs:element name="MessageDigest" type="xs:hexBinary" dfdl:length="16" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="NetworkTimeProtocolVersion4">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="flags" type="ex:FlagsType"/>
-        <xs:element name="rootDelay" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
-        <xs:element name="rootDispersion" type="xs:int" dfdl:length="32" dfdl:lengthKind="explicit"/>
-        <xs:element name="referenceIdentifier" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
-        <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-        <xs:element name="originateTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-        <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-        <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="64" dfdl:lengthKind="explicit"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <!-- Common format settings used across elements -->
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:defineFormat name="commonFormat">
-        <dfdl:format byteOrder="bigEndian"
-                     binaryNumberRepresentation="binary"
-                     bitOrder="mostSignificantBitFirst"
-                     encoding="utf-8"
-                     lengthKind="delimited"/>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
 
 </xs:schema>

@@ -1,32 +1,33 @@
 module TIFF;
 
-public type IFDEntry = unit {
-    tag: uint16;
-    type: uint16;
-    count: uint32;
-    valueOffset: uint32;
-};
-
 public type IFD = unit {
-    entries: IFDEntry[] &until($$.length == 12);
+    numEntries: uint16;
+    entries: Entry[numEntries] &requires=($position() % 2 == 0);
     nextIFD: uint32;
 };
 
-public type TIFFHeader = unit {
-    byteOrder: uint16;
-    magicNumber: uint16;
-    offset: uint32;
+public type Entry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    valueOffset: bytes &size=4;
 };
 
-public type File = unit {
-    header: TIFFHeader;
-    ifd: IFD @offset(header.offset);
-    
-    on %init {
-        if (self.header.byteOrder != 0x4949 && self.header.byteOrder != 0x4D4D)
-            throw Error("Invalid byte order mark.");
-        
-        if (self.header.magicNumber != 42)
-            throw Error("Invalid TIFF magic number.");
-    }
+public type TIFFFile = unit {
+    endian: uint16 &byteorder=big;
+    magic: uint16;
+    ifdOffset: uint32;
+    -: unit @position=ifdOffset {
+        firstIFD: IFD;
+    };
+};
+
+public type Rational = unit {
+    numerator: uint32;
+    denominator: uint32;
+};
+
+public type SRational = unit {
+    numerator: int32;
+    denominator: int32;
 };

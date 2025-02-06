@@ -1,18 +1,48 @@
-#ifndef MQTT_GEMINI_1_5_FLASH_SPICY
-#define MQTT_GEMINI_1_5_FLASH_SPICY
+module MQTT;
 
-#include <zeek/packet.h>
-#include <zeek/analyzer.h>
-
-event mqtt_gemini_1_5_flash_event(packet p) {
-    // Add your Zeek logic here to process the MQTT packets.
-    // This is a placeholder, replace with your actual code.
-    // Example: Check for specific MQTT topics or payloads.
-    if (p->len > 0) {
-        // Process the packet data.
-        // Example: Extract MQTT topic and payload.
-        // ...
-    }
+type MQTT_Packet {
+    packet_type: uint8;
+    remaining_length: uint32;
+    connect_flags: uint8;
+    protocol_name: string;
+    protocol_version: uint8;
+    connect_properties: vector[MQTT_Property];
+    keep_alive: uint16;
+    client_id: string;
+    will_properties: vector[MQTT_Property];
+    will_topic: string;
+    will_message: bytes;
+    username: string;
+    password: bytes;
+    session_expiry_interval: uint32;
+    topic: string;
+    qos: uint8;
+    retain: bool;
+    publish_properties: vector[MQTT_Property];
+    payload: bytes;
+    packet_identifier: uint16;
+    reason_code: uint16;
+    puback_properties: vector[MQTT_Property];
+    pubrec_properties: vector[MQTT_Property];
+    pubrel_properties: vector[MQTT_Property];
+    pubcomp_properties: vector[MQTT_Property];
+    subscribe_properties: vector[MQTT_Property];
+    topic_filters: vector[MQTT_TopicFilter];
+    reason_codes: vector[uint16];
+    suback_properties: vector[MQTT_Property];
+    unsubscribe_properties: vector[MQTT_Property];
+    topics: vector[string];
+    unsuback_properties: vector[MQTT_Property];
+    disconnect_properties: vector[MQTT_Property];
 }
 
-#endif // MQTT_GEMINI_1_5_FLASH_SPICY
+type MQTT_Property {
+    property_id: uint16;
+    property_value: bytes;
+}
+
+type MQTT_TopicFilter {
+    topic_filter: string;
+    qos: uint8;
+    topic_filter_properties: vector[MQTT_Property];
+}

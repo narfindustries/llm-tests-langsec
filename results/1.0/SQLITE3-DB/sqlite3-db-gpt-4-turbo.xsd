@@ -1,42 +1,49 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite"
+           xmlns:tns="http://example.com/sqlite">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:SQLiteBaseFormat"/>
+      <dfdl:format byteOrder="bigEndian" encoding="UTF-8" bitOrder="mostSignificantBitFirst"
+                   textNumberRep="standard" representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="SQLite3Database" dfdl:lengthKind="implicit">
+  <xs:element name="SQLiteDB">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="xs:string" dfdl:length="16" dfdl:encoding="ASCII" dfdl:terminator="%%">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:assert test="{ fn:contains(., 'SQLite format 3') }"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        
-        <xs:element name="Page" maxOccurs="unbounded">
+        <xs:element name="Header" dfdl:lengthKind="explicit" dfdl:length="100">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="PageHeader" type="xs:hexBinary" dfdl:length="8" dfdl:encoding="base64"/>
-              <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="base64"/>
+              <xs:element name="HeaderString" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:encoding="US-ASCII"/>
+              <xs:element name="PageSize" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+              <xs:element name="WriteVersion" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="ReadVersion" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="ReservedSpace" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="MaxPayloadFrac" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="MinPayloadFrac" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="LeafPayloadFrac" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+              <xs:element name="FileChangeCounter" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="DatabaseSize" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="FirstFreelistPage" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="TotalFreelistPages" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="SchemaCookie" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="SchemaFormat" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="DefaultPageCacheSize" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="LargestRootBTreePageNumber" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="DatabaseTextEncoding" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="UserVersion" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="IncrementalVacuumMode" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="ApplicationID" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="Reserved" type="xs:hexBinary" dfdl:length="20" dfdl:lengthKind="explicit"/>
+              <xs:element name="VersionValidFor" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
+              <xs:element name="SQLiteVersionNumber" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:defineFormat name="SQLiteBaseFormat">
-    <dfdl:format byteOrder="bigEndian"
-                 representation="binary"
-                 lengthKind="delimited"
-                 encoding="UTF-8"
-                 bitOrder="mostSignificantBitFirst"/>
-  </xs:defineFormat>
 
 </xs:schema>

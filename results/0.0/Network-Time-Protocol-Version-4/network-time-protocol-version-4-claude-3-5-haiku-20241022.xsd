@@ -1,79 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:network-time-protocol-v4"
-           xmlns:ntp="urn:network-time-protocol-v4">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
+           targetNamespace="urn:ntp:v4"
+           xmlns:tns="urn:ntp:v4"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0">
+      <dfdl:format
         alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        initiator=""
-        terminator=""
-        separator=""
-        separatorPolicy="suppressed"
-        separatorPosition="infix"
-        documentFinalTerminatorCanBeMissing="yes"
+        alignmentUnits="bits"
+        bitOrder="mostSignificantBitFirst"
         byteOrder="bigEndian"
-        encoding="ASCII"
+        encoding="ascii"
+        fillByte="%#x00"
         representation="binary"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberCheckPolicy="strict"
-        textZonedSignStyle="asciiStandardSign"/>
+        lengthKind="explicit"
+        lengthUnits="bits"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="NTPPacket" dfdl:lengthKind="implicit">
+  <xs:element name="NTPPacket" dfdl:lengthKind="explicit" dfdl:length="384">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="LeapIndicator" type="xs:unsignedByte" 
-          dfdl:inputValueCalc="{ ../Control/bitValue div 64 }"
-          dfdl:lengthKind="explicit" dfdl:length="2" 
-          dfdl:representation="binary"/>
-        
-        <xs:element name="VersionNumber" type="xs:unsignedByte"
-          dfdl:inputValueCalc="{ (../Control/bitValue mod 64) div 8 }"
-          dfdl:lengthKind="explicit" dfdl:length="3"
-          dfdl:representation="binary"/>
-        
-        <xs:element name="Mode" type="xs:unsignedByte"
-          dfdl:inputValueCalc="{ ../Control/bitValue mod 8 }"
-          dfdl:lengthKind="explicit" dfdl:length="3"
-          dfdl:representation="binary"/>
-        
-        <xs:element name="Control" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:representation="binary">
+        <xs:element name="Header">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="bitValue" type="xs:unsignedByte"/>
+              <xs:element name="LeapIndicator" type="xs:unsignedByte" 
+                          dfdl:length="2" 
+                          dfdl:inputValueConstraint="(0,1,2,3)"/>
+              <xs:element name="VersionNumber" type="xs:unsignedByte" 
+                          dfdl:length="3" 
+                          dfdl:inputValueConstraint="(1,2,3,4)"/>
+              <xs:element name="Mode" type="xs:unsignedByte" 
+                          dfdl:length="3" 
+                          dfdl:inputValueConstraint="(0,1,2,3,4,5,6,7)"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
         
-        <xs:element name="Stratum" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="Stratum" type="xs:unsignedByte" 
+                    dfdl:length="8" 
+                    dfdl:inputValueConstraint="(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)"/>
         
-        <xs:element name="Poll" type="xs:byte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="PollInterval" type="xs:byte" 
+                    dfdl:length="8" 
+                    dfdl:inputValueConstraint="(-6,6)"/>
         
-        <xs:element name="Precision" type="xs:byte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="Precision" type="xs:byte" 
+                    dfdl:length="8"/>
         
-        <xs:element name="RootDelay" type="xs:float" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="RootDelay" type="xs:float" 
+                    dfdl:length="32"/>
         
-        <xs:element name="RootDispersion" type="xs:float" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="RootDispersion" type="xs:float" 
+                    dfdl:length="32"/>
         
-        <xs:element name="ReferenceIdentifier" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ReferenceIdentifier" type="xs:string" 
+                    dfdl:length="32" 
+                    dfdl:encoding="ascii"/>
         
-        <xs:element name="ReferenceTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="ReferenceTimestamp" type="xs:double" 
+                    dfdl:length="64"/>
         
-        <xs:element name="OriginateTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="OriginTimestamp" type="xs:double" 
+                    dfdl:length="64"/>
         
-        <xs:element name="ReceiveTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="ReceiveTimestamp" type="xs:double" 
+                    dfdl:length="64"/>
         
-        <xs:element name="TransmitTimestamp" type="xs:double" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="TransmitTimestamp" type="xs:double" 
+                    dfdl:length="64"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

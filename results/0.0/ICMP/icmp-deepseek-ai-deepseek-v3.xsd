@@ -1,0 +1,47 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:icmp="http://example.com/icmp">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" alignment="1" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="RestOfHeader">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice>
+                <xs:sequence dfdl:choiceBranchKey="0,8">
+                  <xs:element name="Identifier" type="xs:unsignedShort" dfdl:length="2"/>
+                  <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+                </xs:sequence>
+                <xs:sequence dfdl:choiceBranchKey="3,5,11,12">
+                  <xs:element name="Unused" type="xs:unsignedInt" dfdl:length="4"/>
+                </xs:sequence>
+                <xs:sequence dfdl:choiceBranchKey="5">
+                  <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:length="4"/>
+                </xs:sequence>
+                <xs:sequence dfdl:choiceBranchKey="12">
+                  <xs:element name="Pointer" type="xs:unsignedByte" dfdl:length="1"/>
+                  <xs:element name="Unused" type="xs:unsignedInt" dfdl:length="3"/>
+                </xs:sequence>
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Data">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="OriginalIPHeader" type="xs:hexBinary" dfdl:length="20"/>
+              <xs:element name="OriginalData" type="xs:hexBinary" dfdl:length="8"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,88 +1,73 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hammer.h> // Assuming a hammer library exists
 
-//Structure to represent NITF data (replace with actual NITF structure if available)
-typedef struct {
-    char *header;
-    char *data;
-    size_t header_size;
-    size_t data_size;
-} NITF_Data;
+hammer_parser_t* string_parser(size_t len) {
+    return hammer_string(len);
+}
 
+hammer_parser_t* uint_parser(size_t len) {
+    return hammer_uint(len * 8);
+}
 
-int main() {
-    // Input NITF file path
-    char input_nitf_path[] = "input.nitf"; 
-
-    // Output NITF file path
-    char output_nitf_path[] = "output.nitf";
-
-    // Load NITF data (replace with actual NITF loading function)
-    NITF_Data nitf_data;
-    nitf_data.header = NULL;
-    nitf_data.data = NULL;
-    nitf_data.header_size = 0;
-    nitf_data.data_size = 0;
-
-    FILE *input_file = fopen(input_nitf_path, "rb");
-    if (input_file == NULL) {
-        perror("Error opening input NITF file");
-        return 1;
-    }
-
-    fseek(input_file, 0, SEEK_END);
-    long file_size = ftell(input_file);
-    rewind(input_file);
-
-    nitf_data.header_size = file_size; //Simplified for this example.  In reality, header size needs to be determined.
-    nitf_data.data_size = file_size; //Simplified for this example.  In reality, data size needs to be determined.
-
-    nitf_data.header = (char*)malloc(nitf_data.header_size);
-    nitf_data.data = (char*)malloc(nitf_data.data_size);
-    if (nitf_data.header == NULL || nitf_data.data == NULL){
-        perror("Memory allocation failed");
-        fclose(input_file);
-        return 1;
-    }
-
-    fread(nitf_data.header, 1, nitf_data.header_size, input_file);
-    fclose(input_file);
-
-
-    //Process NITF data using Hammer library (replace with actual Hammer processing)
-    int hammer_result = process_nitf_with_hammer(&nitf_data); // Placeholder function
-
-    if (hammer_result != 0) {
-        fprintf(stderr, "Error processing NITF data with Hammer: %d\n", hammer_result);
-        free(nitf_data.header);
-        free(nitf_data.data);
-        return 1;
-    }
-
-
-    //Save processed NITF data (replace with actual NITF saving function)
-    FILE *output_file = fopen(output_nitf_path, "wb");
-    if (output_file == NULL) {
-        perror("Error opening output NITF file");
-        free(nitf_data.header);
-        free(nitf_data.data);
-        return 1;
-    }
-    fwrite(nitf_data.header, 1, nitf_data.header_size, output_file);
-    fclose(output_file);
-
-    free(nitf_data.header);
-    free(nitf_data.data);
-
-    return 0;
+hammer_parser_t* int_parser(size_t len) {
+    return hammer_int(len * 8);
 }
 
 
-// Placeholder for Hammer processing function.  Replace with actual implementation.
-int process_nitf_with_hammer(NITF_Data *nitf_data) {
-    // This is a placeholder.  Replace with your actual Hammer processing code.
-    //  This example just simulates success.
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <NITF_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *buffer = (char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser_t* file_id_parser = string_parser(8);
+    hammer_parser_t* version_parser = uint_parser(1);
+    hammer_parser_t* nrows_parser = uint_parser(4);
+    hammer_parser_t* ncols_parser = uint_parser(4);
+
+    hammer_parser_t* header_parser = hammer_seq(file_id_parser, version_parser, nrows_parser, ncols_parser, NULL);
+
+    hammer_result_t result = hammer_parse(header_parser, buffer, fsize);
+
+    if (result.success) {
+        printf("File ID: %.*s\n", (int)hammer_get_string_len(result.values[0]), hammer_get_string(result.values[0]));
+        printf("Version: %u\n", hammer_get_uint(result.values[1]));
+        printf("Number of Rows: %u\n", hammer_get_uint(result.values[2]));
+        printf("Number of Columns: %u\n", hammer_get_uint(result.values[3]));
+
+        hammer_free_result(&result);
+    } else {
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
+    }
+
+    free(buffer);
+    hammer_free_parser(header_parser);
+    hammer_free_parser(file_id_parser);
+    hammer_free_parser(version_parser);
+    hammer_free_parser(nrows_parser);
+    hammer_free_parser(ncols_parser);
+
     return 0;
 }

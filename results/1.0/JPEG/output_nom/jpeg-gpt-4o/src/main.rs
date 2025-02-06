@@ -1,107 +1,70 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::map_res,
-    error::Error,
-    number::complete::{be_u16, be_u8},
-    sequence::{preceded, tuple},
+    multi::many_till,
+    number::complete::be_u16,
     IResult,
 };
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
 use std::env;
-use std::path::Path;
 
-#[derive(Debug)]
-struct JpegSegment {
-    marker: u16,
-    length: Option<u16>,
-    data: Vec<u8>,
-}
+// Marker definitions
+const SOI: u16 = 0xFFD8;
+const EOI: u16 = 0xFFD9;
+const APP0: u16 = 0xFFE0;
+const APP15: u16 = 0xFFEF;
+const DQT: u16 = 0xFFDB;
+const SOF0: u16 = 0xFFC0;
+const SOF15: u16 = 0xFFCF;
+const DHT: u16 = 0xFFC4;
+const SOS: u16 = 0xFFDA;
+const COM: u16 = 0xFFFE;
 
+// JPEG Parser
 fn parse_marker(input: &[u8]) -> IResult<&[u8], u16> {
-    preceded(tag(&[0xFF]), be_u8)(input).and_then(|(next_input, marker_byte)| {
-        Ok((next_input, u16::from_be_bytes([0xFF, marker_byte])))
-    })
+    be_u16(input)
 }
 
-fn parse_segment(input: &[u8]) -> IResult<&[u8], JpegSegment> {
-    let (input, marker) = parse_marker(input)?;
-
-    // SOI and EOI segments don't have a length field
-    let segments_without_length = [0xFFD8, 0xFFD9];
-
-    if segments_without_length.contains(&marker) {
-        Ok((
-            input,
-            JpegSegment {
-                marker,
-                length: None,
-                data: Vec::new(),
-            },
-        ))
-    } else {
-        let (input, length) = be_u16(input)?;
-
-        // Length includes the 2 bytes of its own size, so we need to subtract 2 for actual data length
-        let data_length = length.saturating_sub(2) as usize;
-        let (input, data) = take(data_length)(input)?;
-
-        Ok((
-            input,
-            JpegSegment {
-                marker,
-                length: Some(length),
-                data: data.to_vec(),
-            },
-        ))
-    }
+fn parse_segment(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    let (input, length) = be_u16(input)?;
+    take((length - 2) as usize)(input)
 }
 
-fn parse_jpeg(mut input: &[u8]) -> IResult<&[u8], Vec<JpegSegment>> {
-    let mut segments = Vec::new();
+fn parse_jpeg(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _soi) = tag(&SOI.to_be_bytes())(input)?;
 
-    loop {
-        match parse_segment(input) {
-            Ok((next_input, segment)) => {
-                // Break the loop if End of Image (EOI) is reached
-                if segment.marker == 0xFFD9 {
-                    segments.push(segment);
-                    break;
+    let (input, _) = many_till(
+        |input| {
+            let (input, marker) = parse_marker(input)?;
+            match marker {
+                APP0..=APP15 | DQT | SOF0..=SOF15 | DHT | SOS | COM => {
+                    let (input, _) = parse_segment(input)?;
+                    Ok((input, ()))
                 }
-                input = next_input;
-                segments.push(segment);
+                EOI => Ok((input, ())),
+                _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
             }
-            Err(err) => return Err(err),
-        }
-    }
+        },
+        tag(&EOI.to_be_bytes()),
+    )(input)?;
 
-    Ok((input, segments))
+    Ok((input, ()))
 }
 
-fn main() -> io::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
+    if args.len() < 2 {
         eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
+        return;
     }
 
-    let path = &args[1];
-    let path = Path::new(path);
-    
-    let mut file = File::open(path)?;
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Cannot open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Cannot read file");
 
     match parse_jpeg(&buffer) {
-        Ok((_, segments)) => {
-            for segment in segments {
-                println!("{:?}", segment);
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to parse JPEG: {:?}", e);
-        }
+        Ok((_, _)) => println!("Parsed JPEG successfully."),
+        Err(e) => eprintln!("Error parsing JPEG: {:?}", e),
     }
-
-    Ok(())
 }

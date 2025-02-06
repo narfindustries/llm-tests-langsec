@@ -1,45 +1,154 @@
 module MQTT;
 
-public type Message = unit {
-    fixed_header: FixedHeader;
-    remaining_bytes: bytes &size=self.fixed_header.remaining_length;
-
-    on %done {
-        print self;
-    }
-};
-
-type FixedHeader = unit {
-    message_type: uint8;
-    flags: uint8;
+public type FixedHeader = unit {
+    first_byte: bitfield(8) {
+        msg_type: 4..7;
+        dup: 3;
+        qos: 1..2;
+        retain: 0;
+    };
     remaining_length: VarInt;
 };
 
 type VarInt = unit {
-    var value: uint64;
-    var index: uint8;
+    first: uint8;
+    rest: bytes &until(self.done()) &max=3 if (first & 0x80 != 0);
 
-    : bytes &eod &chunked &parse-from=self.parse_varint;
+    var value: uint32;
 
-    on %init { self.value = 0; self.index = 0; }
+    function done(): bool {
+        return |rest| == 0 || (rest[-1] & 0x80) == 0;
+    }
+
+    on %done {
+        local multiplier: uint32 = 1;
+        self.value = (first & 0x7f);
+        
+        if ( |rest| > 0 ) {
+            for ( b in rest ) {
+                multiplier = multiplier * 128;
+                self.value = self.value + ((b & 0x7f) * multiplier);
+            }
+        }
+    }
 };
 
-function parse_varint(data: bytes): bool {
-    local byte = data[0];
-    local digit = byte & 0x7f;
-    self.value |= (digit << (7 * self.index));
-    self.index += 1;
-    return (byte & 0x80) == 0;
-}
+type UTF8String = unit {
+    length: uint16;
+    value: bytes &size=self.length;
+};
 
-public function remaining_length(h: FixedHeader): uint64 {
-    return h.remaining_length.value;
-}
+type BinaryData = unit {
+    length: uint16;
+    data: bytes &size=self.length;
+};
 
-on Message::%done {
-    print "Parsed MQTT message";
-}
+type Properties = unit {
+    length: VarInt;
+    props: bytes &size=self.length.value;
+};
 
-on Message::fixed_header {
-    print "Message Type:", self.message_type;
-}
+type ConnectFlags = unit {
+    flags: bitfield(8) {
+        username: 7;
+        password: 6;
+        will_retain: 5;
+        will_qos: 3..4;
+        will_flag: 2;
+        clean_start: 1;
+        reserved: 0;
+    };
+};
+
+public type Connect = unit {
+    protocol_name: UTF8String;
+    protocol_version: uint8;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: UTF8String;
+    will_properties: Properties if (connect_flags.flags.will_flag == 1);
+    will_topic: UTF8String if (connect_flags.flags.will_flag == 1);
+    will_payload: BinaryData if (connect_flags.flags.will_flag == 1);
+    username: UTF8String if (connect_flags.flags.username == 1);
+    password: UTF8String if (connect_flags.flags.password == 1);
+};
+
+public type ConnAck = unit {
+    acknowledge_flags: bitfield(8) {
+        session_present: 0;
+        reserved: 1..7;
+    };
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type Publish = unit {
+    topic_name: UTF8String;
+    packet_id: uint16 if (fixed_header.qos > 0);
+    properties: Properties;
+    payload: bytes &eod;
+};
+
+public type PubAck = unit {
+    packet_id: uint16;
+    reason_code: uint8 if (self.length() > 2);
+    properties: Properties if (self.length() > 3);
+};
+
+public type Subscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topics: bytes &eod;
+};
+
+public type SubAck = unit {
+    packet_id: uint16;
+    properties: Properties;
+    reason_codes: bytes &eod;
+};
+
+public type Unsubscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topics: bytes &eod;
+};
+
+public type UnsubAck = unit {
+    packet_id: uint16;
+    properties: Properties;
+    reason_codes: bytes &eod;
+};
+
+public type Disconnect = unit {
+    reason_code: uint8 if (self.length() > 0);
+    properties: Properties if (self.length() > 1);
+};
+
+public type Auth = unit {
+    reason_code: uint8 if (self.length() > 0);
+    properties: Properties if (self.length() > 1);
+};
+
+public type MQTTPacket = unit {
+    fixed_header: FixedHeader;
+    payload: bytes &eod;
+
+    on %done {
+        switch ( self.fixed_header.first_byte.msg_type ) {
+            1 -> self.payload = Connect;
+            2 -> self.payload = ConnAck;
+            3 -> self.payload = Publish;
+            4 -> self.payload = PubAck;
+            5 -> self.payload = PubAck;
+            6 -> self.payload = PubAck;
+            7 -> self.payload = PubAck;
+            8 -> self.payload = Subscribe;
+            9 -> self.payload = SubAck;
+            10 -> self.payload = Unsubscribe;
+            11 -> self.payload = UnsubAck;
+            14 -> self.payload = Disconnect;
+            15 -> self.payload = Auth;
+        }
+    }
+};

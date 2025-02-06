@@ -1,55 +1,93 @@
-# This is a sample Kaitai Struct definition.  Adjust as needed for your actual ELF file.
+types:
+  elf_header:
+    seq:
+      - id: e_ident
+        type: u1
+        count: 16
+      - id: e_type
+        type: u2
+      - id: e_machine
+        type: u2
+      - id: e_version
+        type: u4
+      - id: e_entry
+        type: u4
+      - id: e_phoff
+        type: u4
+      - id: e_shoff
+        type: u4
+      - id: e_flags
+        type: u4
+      - id: e_ehsize
+        type: u2
+      - id: e_phentsize
+        type: u2
+      - id: e_phnum
+        type: u2
+      - id: e_shentsize
+        type: u2
+      - id: e_shnum
+        type: u2
+      - id: e_shstrndx
+        type: u2
 
-# The error message indicates a problem with the kaitai-struct-compiler and the input file.
-# The exact cause of the error (exit status 2) is not specified in the message, 
-# and this requires analysis of the elf-gemini-1.5-flash.ksy file and possibly the ELF file itself.
+  program_header:
+    seq:
+      - id: p_type
+        type: u4
+      - id: p_flags
+        type: u4
+      - id: p_offset
+        type: u4
+      - id: p_vaddr
+        type: u4
+      - id: p_paddr
+        type: u4
+      - id: p_filesz
+        type: u4
+      - id: p_memsz
+        type: u4
+      - id: p_align
+        type: u4
 
+  section_header:
+    seq:
+      - id: sh_name
+        type: u4
+      - id: sh_type
+        type: u4
+      - id: sh_flags
+        type: u4
+      - id: sh_addr
+        type: u4
+      - id: sh_offset
+        type: u4
+      - id: sh_size
+        type: u4
+      - id: sh_link
+        type: u4
+      - id: sh_info
+        type: u4
+      - id: sh_addralign
+        type: u4
+      - id: sh_entsize
+        type: u4
 
-# Example:  A simplified ELF header.  Replace with your actual ELF structure.
-$id: elf_header
-
-endian: be
-
-seq:
-  - id: magic
-    type: u4
-  - id: class
-    type: u1
-  - id: endianness
-    type: u1
-  - id: version
-    type: u1
-  - id: osabi
-    type: u1
-  - id: abiversion
-    type: u1
-  - id: pad
-    type: u2
-  - id: type
-    type: u2
-  - id: machine
-    type: u2
-  - id: version_1
-    type: u4
-  - id: entry
-    type: u4
-  - id: phoff
-    type: u4
-  - id: shoff
-    type: u4
-  - id: flags
-    type: u4
-  - id: ehsize
-    type: u2
-  - id: phentsize
-    type: u2
-  - id: phnum
-    type: u2
-  - id: shentsize
-    type: u2
-  - id: shnum
-    type: u2
-  - id: shstrndx
-    type: u2
-
+  elf_file:
+    seq:
+      - id: header
+        type: elf_header
+      - id: program_headers
+        type: program_header
+        repeat: expr(header.e_phnum)
+      - id: section_headers
+        type: section_header
+        repeat: expr(header.e_shnum)
+      - id: section_string_table_data
+        type: u1
+        size: expr(section_headers[header.e_shstrndx].sh_size)
+        if: header.e_shstrndx != -1
+      - id: section_data
+        type: u1
+        repeat: expr(header.e_shnum)
 

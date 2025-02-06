@@ -1,149 +1,86 @@
-# Define the module for the ICMP protocol
 module ICMP;
 
-# Import necessary modules and types
-import zeek.BaseTypes;
-import zeek.Subnet;
+type IcmpType = uint8;
+type IcmpCode = uint8;
+type IcmpChecksum = uint16;
+type IcmpIdentifier = uint16;
+type IcmpSequenceNumber = uint16;
+type IcmpData = bytes;
 
-# Define the ICMP message type
-type icmp_type: enum {
-    ECHO_REPLY         = 0,
-    DEST_UNREACH       = 3,
-    SOURCE_QUENCH      = 4,
-    REDIRECT           = 5,
-    ECHO_REQUEST       = 8,
-    TIME_EXCEEDED      = 11,
-    PARAMETER_PROBLEM  = 12,
-    TIMESTAMP          = 13,
-    TIMESTAMP_REPLY    = 14,
-    INFO_REQUEST       = 15,
-    INFO_REPLY         = 16,
-    ADDRESS_MASK_REQUEST = 17,
-    ADDRESS_MASK_REPLY   = 18
-};
+type IcmpMessage = struct {
+  icmp_type: IcmpType,
+  icmp_code: IcmpCode,
+  icmp_checksum: IcmpChecksum,
+  icmp_identifier: IcmpIdentifier,
+  icmp_sequence_number: IcmpSequenceNumber,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP header structure
-type icmp_header: record {
-    type:       icmp_type;
-    code:       uint8;
-    checksum:   uint16;
-    id:         uint16;
-    seq:        uint16;
-};
+type IcmpEchoRequest = struct {
+  icmp_type: uint8 = 8,
+  icmp_code: uint8 = 0,
+  icmp_checksum: IcmpChecksum,
+  icmp_identifier: IcmpIdentifier,
+  icmp_sequence_number: IcmpSequenceNumber,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP echo request and reply structures
-type icmp_echo: record {
-    header:     icmp_header;
-    timestamp:  uint32;
-    data:       bytestring;
-};
+type IcmpEchoReply = struct {
+  icmp_type: uint8 = 0,
+  icmp_code: uint8 = 0,
+  icmp_checksum: IcmpChecksum,
+  icmp_identifier: IcmpIdentifier,
+  icmp_sequence_number: IcmpSequenceNumber,
+  icmp_data: IcmpData
+}
 
-type icmp_echo_reply: record {
-    header:     icmp_header;
-    timestamp:  uint32;
-    data:       bytestring;
-};
+type IcmpDestinationUnreachable = struct {
+  icmp_type: uint8 = 3,
+  icmp_code: uint8,
+  icmp_checksum: IcmpChecksum,
+  icmp_unused: uint32,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP destination unreachable structure
-type icmp_dest_unreach: record {
-    header:     icmp_header;
-    unused:     uint32;
-    ip_header:  bytestring &length=28;
-};
+type IcmpSourceQuench = struct {
+  icmp_type: uint8 = 4,
+  icmp_code: uint8,
+  icmp_checksum: IcmpChecksum,
+  icmp_unused: uint32,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP source quench structure
-type icmp_source_quench: record {
-    header:     icmp_header;
-    unused:     uint32;
-    ip_header:  bytestring &length=28;
-};
+type IcmpRedirect = struct {
+  icmp_type: uint8 = 5,
+  icmp_code: uint8,
+  icmp_checksum: IcmpChecksum,
+  icmp_gateway_address: uint32,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP redirect structure
-type icmp_redirect: record {
-    header:     icmp_header;
-    gateway:    ip_addr;
-    ip_header:  bytestring &length=28;
-};
+type IcmpTimeExceeded = struct {
+  icmp_type: uint8 = 11,
+  icmp_code: uint8,
+  icmp_checksum: IcmpChecksum,
+  icmp_unused: uint32,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP time exceeded structure
-type icmp_time_exceeded: record {
-    header:     icmp_header;
-    unused:     uint32;
-    ip_header:  bytestring &length=28;
-};
+type IcmpParameterProblem = struct {
+  icmp_type: uint8 = 12,
+  icmp_code: uint8,
+  icmp_checksum: IcmpChecksum,
+  icmp_pointer: uint8,
+  icmp_data: IcmpData
+}
 
-# Define the ICMP parameter problem structure
-type icmp_param_problem: record {
-    header:     icmp_header;
-    pointer:    uint8;
-    unused:     uint32;
-    ip_header:  bytestring &length=28;
-};
-
-# Define the ICMP timestamp request and reply structures
-type icmp_timestamp: record {
-    header:     icmp_header;
-    originate:  uint32;
-    receive:    uint32;
-    transmit:   uint32;
-};
-
-type icmp_timestamp_reply: record {
-    header:     icmp_header;
-    originate:  uint32;
-    receive:    uint32;
-    transmit:   uint32;
-};
-
-# Define the ICMP information request and reply structures
-type icmp_info_request: record {
-    header:     icmp_header;
-    unused:     uint16;
-};
-
-type icmp_info_reply: record {
-    header:     icmp_header;
-    unused:     uint16;
-};
-
-# Define the ICMP address mask request and reply structures
-type icmp_address_mask_request: record {
-    header:     icmp_header;
-    address:    ip_addr;
-};
-
-type icmp_address_mask_reply: record {
-    header:     icmp_header;
-    address:    ip_addr;
-};
-
-# Define the ICMP parser
-function parse_icmp(msg: bytestring): icmp_header
-    %{
-        auto type = *reinterpret_cast<const uint8_t*>(msg.data());
-        auto code = *(reinterpret_cast<const uint8_t*>(msg.data()) + 1);
-        auto checksum = *reinterpret_cast<const uint16_t*>(msg.data() + 2);
-        auto id = *reinterpret_cast<const uint16_t*>(msg.data() + 4);
-        auto seq = *reinterpret_cast<const uint16_t*>(msg.data() + 6);
-
-        icmp_header header;
-        header.type = static_cast<icmp_type>(type);
-        header.code = code;
-        header.checksum = ntohs(checksum);
-        header.id = ntohs(id);
-        header.seq = ntohs(seq);
-
-        return header;
-    %}
-
-# Define the ICMP printer
-function print_icmp(header: icmp_header): string
-    %{
-        std::ostringstream oss;
-        oss << "ICMP header: type=" << static_cast<int>(header.type)
-            << ", code=" << static_cast<int>(header.code)
-            << ", checksum=" << header.checksum
-            << ", id=" << header.id
-            << ", seq=" << header.seq;
-        return oss.str();
-    %}
+export {
+  IcmpMessage,
+  IcmpEchoRequest,
+  IcmpEchoReply,
+  IcmpDestinationUnreachable,
+  IcmpSourceQuench,
+  IcmpRedirect,
+  IcmpTimeExceeded,
+  IcmpParameterProblem
+}

@@ -1,29 +1,160 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:tns="http://example.com/jpeg">
 
-  <xs:include schemaLocation="DFDLBaseTypes.xsd"/>
+  <xs:include schemaLocation="dfdlGeneralFormat.xsd"/>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ex:GeneralFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+  <xs:element name="JPEGFile" type="tns:JPEGFile"/>
 
   <xs:complexType name="JPEGFile">
     <xs:sequence>
-      <xs:element name="soi" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
-      <xs:element name="segments" type="Segment" dfdl:occursCountKind="stopValue" dfdl:occursStopValue="-1"/>
-      <xs:element name="eoi" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD9"/>
+      <xs:element name="SOI" type="tns:Marker"/>
+      <xs:element name="Segments" type="tns:Segment" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="EOI" type="tns:Marker"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="Segment">
+    <xs:choice>
+      <xs:element name="APP" type="tns:APP"/>
+      <xs:element name="DQT" type="tns:DQT"/>
+      <xs:element name="SOF" type="tns:SOF"/>
+      <xs:element name="DHT" type="tns:DHT"/>
+      <xs:element name="SOS" type="tns:SOS"/>
+      <xs:element name="DRI" type="tns:DRI"/>
+      <xs:element name="COM" type="tns:COM"/>
+      <xs:element name="Other" type="tns:OtherSegment"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="Marker">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFF"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="data" type="xs:hexBinary" dfdl:length="{ . - 2 }"/>
+      <xs:element name="MarkerCode" type="xs:hexBinary" dfdl:length="2" dfdl:encoding="hexBinary"/>
     </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APP">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DQT">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="Table" type="tns:DQTTable" minOccurs="1" maxOccurs="4"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DQTTable">
+    <xs:sequence>
+      <xs:element name="PrecisionAndTableID" type="xs:byte"/>
+      <xs:element name="QuantizationValues" type="xs:int" dfdl:length="64" dfdl:occursCountKind="fixed"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="Precision" type="xs:int"/>
+          <xs:element name="ImageHeight" type="xs:int"/>
+          <xs:element name="ImageWidth" type="xs:int"/>
+          <xs:element name="NumberOfComponents" type="xs:int"/>
+          <xs:element name="ComponentSpec" type="tns:ComponentSpec" minOccurs="1" maxOccurs="4"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentSpec">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:int"/>
+      <xs:element name="HorizontalSampling" type="xs:int"/>
+      <xs:element name="VerticalSampling" type="xs:int"/>
+      <xs:element name="QuantizationTableID" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHT">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="Table" type="tns:DHTTable" minOccurs="1" maxOccurs="4"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DHTTable">
+    <xs:sequence>
+      <xs:element name="TableClassAndID" type="xs:byte"/>
+      <xs:element name="CodeLengths" type="xs:int" dfdl:length="16"/>
+      <xs:element name="HuffmanValues" type="xs:int" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOS">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="NumberOfComponents" type="xs:int"/>
+          <xs:element name="ScanComponentSpec" type="tns:ScanComponentSpec" minOccurs="1" maxOccurs="4"/>
+          <xs:element name="StartOfSpectral" type="xs:int"/>
+          <xs:element name="EndOfSpectral" type="xs:int"/>
+          <xs:element name="SuccessiveApproximation" type="xs:int"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ScanComponentSpec">
+    <xs:sequence>
+      <xs:element name="ComponentSelector" type="xs:int"/>
+      <xs:element name="HuffmanTableSelector" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentWithLength">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="Content" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ . - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OtherSegment">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength"/>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DRI">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="RestartInterval" type="xs:int"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="COM">
+    <xs:complexContent>
+      <xs:extension base="tns:SegmentWithLength">
+        <xs:sequence>
+          <xs:element name="Comment" type="xs:string" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
   </xs:complexType>
 
 </xs:schema>

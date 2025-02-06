@@ -1,60 +1,99 @@
 module ELF;
 
-import spicy;
-
-public type ElfHeader = unit {
-    magic: bytes &length=4 &assertion=$$ == b"\x7fELF";
-    class: uint8;
-    data: uint8;
-    version: uint8;
-    os_abi: uint8;
-    abi_version: uint8;
-    pad: bytes &length=7;
-    type: uint16;
-    machine: uint16;
-    version_2: uint32;
-    entry: uint32;
-    phoff: uint32;
-    shoff: uint32;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
+type ELF = unit {
+    header: ElfHeader,
+    program_headers: [ElfProgramHeader] &size = header.e_phnum,
+    section_headers: [ElfSectionHeader] &size = header.e_shnum
 };
 
-public type ProgramHeader = unit {
-    type: uint32;
-    offset: uint32;
-    vaddr: uint32;
-    paddr: uint32;
-    filesz: uint32;
-    memsz: uint32;
-    flags: uint32;
-    align: uint32;
+type ElfHeader = unit {
+    magic: bytes &length=4 &equals="\x7fELF",
+    ei_class: uint8 &enum {
+        ELFCLASSNONE = 0,
+        ELFCLASS32 = 1,
+        ELFCLASS64 = 2
+    },
+    ei_data: uint8 &enum {
+        ELFDATANONE = 0,
+        ELFDATA2LSB = 1,
+        ELFDATA2MSB = 2
+    },
+    ei_version: uint8 &equals=1,
+    ei_osabi: uint8 &enum {
+        ELFOSABI_NONE = 0,
+        ELFOSABI_HPUX = 1,
+        ELFOSABI_NETBSD = 2,
+        ELFOSABI_LINUX = 3
+    },
+    ei_abiversion: uint8,
+    ei_pad: bytes &length=7,
+    e_type: uint16 &enum {
+        ET_NONE = 0,
+        ET_REL = 1,
+        ET_EXEC = 2,
+        ET_DYN = 3,
+        ET_CORE = 4
+    },
+    e_machine: uint16,
+    e_version: uint32 &equals=1,
+    e_entry: uint32,
+    e_phoff: uint32,
+    e_shoff: uint32,
+    e_flags: uint32,
+    e_ehsize: uint16,
+    e_phentsize: uint16,
+    e_phnum: uint16,
+    e_shentsize: uint16,
+    e_shnum: uint16,
+    e_shstrndx: uint16
 };
 
-public type ElfFile = unit {
-    header: ElfHeader;
-    program_headers: array of ProgramHeader &size=header.phnum;
-} &byte-order=spicy::byte-order(header.data == 1 ? spicy::byte-order::Little : spicy::byte-order::Big);
+type ElfProgramHeader = unit {
+    p_type: uint32 &enum {
+        PT_NULL = 0,
+        PT_LOAD = 1,
+        PT_DYNAMIC = 2,
+        PT_INTERP = 3,
+        PT_NOTE = 4,
+        PT_SHLIB = 5,
+        PT_PHDR = 6
+    },
+    p_offset: uint32,
+    p_vaddr: uint32,
+    p_paddr: uint32,
+    p_filesz: uint32,
+    p_memsz: uint32,
+    p_flags: uint32 &bitfield = {
+        PF_X = 0:1,
+        PF_W = 1:1,
+        PF_R = 2:1
+    },
+    p_align: uint32
+};
 
-public function parse_elf_file(data: bytes): ElfFile {
-    return parse(data);
-}
-
-event zeek_init() {
-    local f = open("example.elf");
-    if ( f == nil )
-        {
-        print "Failed to open file.";
-        return;
-        }
-
-    local size = f$size;
-    local data = f$read(size);
-    local elf = parse_elf_file(data);
-    print fmt("ELF file parsed: entry = 0x%x", elf.header.entry);
-}
+type ElfSectionHeader = unit {
+    sh_name: uint32,
+    sh_type: uint32 &enum {
+        SHT_NULL = 0,
+        SHT_PROGBITS = 1,
+        SHT_SYMTAB = 2,
+        SHT_STRTAB = 3,
+        SHT_RELA = 4,
+        SHT_HASH = 5,
+        SHT_DYNAMIC = 6,
+        SHT_NOTE = 7,
+        SHT_NOBITS = 8
+    },
+    sh_flags: uint32 &bitfield = {
+        SHF_WRITE = 0:1,
+        SHF_ALLOC = 1:1,
+        SHF_EXECINSTR = 2:1
+    },
+    sh_addr: uint32,
+    sh_offset: uint32,
+    sh_size: uint32,
+    sh_link: uint32,
+    sh_info: uint32,
+    sh_addralign: uint32,
+    sh_entsize: uint32
+};

@@ -1,27 +1,40 @@
 module GZIP;
 
-import spicy;
-
 public type GZIP = unit {
-    magic1: uint8 &requires = 0x1f;
-    magic2: uint8 &requires = 0x8b;
-    compression_method: uint8 &requires = 0x08;
-    flags: uint8;
+    magic1: uint8 &requires=$$ == 0x1f;
+    magic2: uint8 &requires=$$ == 0x8b;
+    cm: uint8;
+    flg: bitfield(8) {
+        ftext: 0;
+        fhcrc: 1;
+        fextra: 2;
+        fname: 3;
+        fcomment: 4;
+        reserved: 5..7;
+    };
     mtime: uint32;
-    extra_flags: uint8;
+    xfl: uint8;
     os: uint8;
-    
-    on %done {
-        print self;
-    }
+
+    extra_fields: Extra if (self.flg.fextra);
+    filename: Name if (self.flg.fname);
+    comment: Comment if (self.flg.fcomment);
+    header_crc: uint16 if (self.flg.fhcrc);
+
+    compressed_data: bytes &eod;
+    crc32: uint32;
+    isize: uint32;
 };
 
-# Flags bit field
-type Flags = bitfield(8) {
-    ftext: 0;
-    fhcrc: 1;
-    fextra: 2;
-    fname: 3;
-    fcomment: 4;
-    reserved: 5..7;
+type Extra = unit {
+    xlen: uint16;
+    data: bytes &size=self.xlen;
+};
+
+type Name = unit {
+    filename: bytes &until=b"\x00";
+};
+
+type Comment = unit {
+    comment: bytes &until=b"\x00";
 };

@@ -1,166 +1,216 @@
 meta:
-  id: mqtt
+  id: mqtt_packet
   title: MQTT Protocol
-  file-extension: mqtt
-  endian: be
+  xref:
+    oasis: MQTT 5.0
   license: CC0-1.0
-  ks-version: 0.9
-
+  endian: be
 doc: |
-  MQTT (Message Queuing Telemetry Transport) is an ISO standard
-  (ISO/IEC PRF 20922) publish-subscribe-based messaging protocol.
-  It works on top of the TCP/IP protocol and is designed for
-  connections with remote locations where a "small code footprint"
-  is required or the network bandwidth is limited.
+  MQTT (Message Queuing Telemetry Transport) is an ISO standard (ISO/IEC PRF 20922)
+  publish-subscribe-based messaging protocol. It works on top of the TCP/IP protocol and is designed for
+  connections with remote locations where a small code footprint is required and/or network bandwidth is limited.
 
 seq:
-  - id: header
-    type: header
-
+  - id: fixed_header
+    type: fixed_header
+  - id: variable_header
+    type:
+      switch-on: fixed_header.packet_type
+      cases:
+        'packet_type_enum::connect': connect_header
+        'packet_type_enum::connack': connack_header
+        'packet_type_enum::publish': publish_header
+        'packet_type_enum::puback': puback_header
+        'packet_type_enum::pubrec': pubrec_header
+        'packet_type_enum::pubrel': pubrel_header
+        'packet_type_enum::pubcomp': pubcomp_header
+        'packet_type_enum::subscribe': subscribe_header
+        'packet_type_enum::suback': suback_header
+        'packet_type_enum::unsubscribe': unsubscribe_header
+        'packet_type_enum::unsuback': unsuback_header
+        'packet_type_enum::pingreq': empty_header
+        'packet_type_enum::pingresp': empty_header
+        'packet_type_enum::disconnect': disconnect_header
+        'packet_type_enum::auth': auth_header
   - id: payload
     type:
-      switch-on: header.message_type
+      switch-on: fixed_header.packet_type
       cases:
-        'message_type::connect': connect_payload
-        'message_type::connack': connack_payload
-        'message_type::publish': publish_payload
-        'message_type::subscribe': subscribe_payload
-        'message_type::suback': suback_payload
-        'message_type::unsubscribe': unsubscribe_payload
-        'message_type::unsuback': unsuback_payload
-        'message_type::pingreq': pingreq_payload
-        'message_type::pingresp': pingresp_payload
-        'message_type::disconnect': disconnect_payload
+        'packet_type_enum::connect': connect_payload
+        'packet_type_enum::publish': publish_payload
+        'packet_type_enum::subscribe': subscribe_payload
+        'packet_type_enum::suback': suback_payload
+        'packet_type_enum::unsubscribe': unsubscribe_payload
+        'packet_type_enum::auth': auth_payload
 
 types:
-  header:
+  fixed_header:
     seq:
-      - id: message_type
+      - id: packet_type_flags
         type: u1
-        enum: message_type
-      - id: flags
-        type: u1
-      - id: remaining_length
-        type: vlq
-
-  connect_payload:
+    instances:
+      packet_type:
+        value: packet_type_flags >> 4
+      flags:
+        value: packet_type_flags & 0x0F
+  connect_header:
     seq:
       - id: protocol_name
-        type: strz
-        encoding: UTF-8
-      - id: protocol_level
+        type: mqtt_string
+      - id: protocol_version
         type: u1
       - id: connect_flags
         type: u1
       - id: keep_alive
         type: u2
-      - id: client_id
-        type: strz
-        encoding: UTF-8
-      - id: will_topic
-        type: strz
-        encoding: UTF-8
-        if: (connect_flags & 0x04) != 0
-      - id: will_message
-        type: strz
-        encoding: UTF-8
-        if: (connect_flags & 0x04) != 0
-      - id: username
-        type: strz
-        encoding: UTF-8
-        if: (connect_flags & 0x80) != 0
-      - id: password
-        type: strz
-        encoding: UTF-8
-        if: (connect_flags & 0x40) != 0
-
-  connack_payload:
+      - id: properties
+        type: properties
+  connack_header:
     seq:
-      - id: session_present_flag
-        type: b1
-      - id: connect_return_code
+      - id: ack_flags
         type: u1
-
-  publish_payload:
+      - id: reason_code
+        type: u1
+      - id: properties
+        type: properties
+  publish_header:
     seq:
       - id: topic_name
-        type: strz
-        encoding: UTF-8
-      - id: message_id
+        type: mqtt_string
+      - id: packet_identifier
         type: u2
-        if: (header.flags & 0x06) != 0
-      - id: data
-        size-eos: true
-
-  subscribe_payload:
+      - id: properties
+        type: properties
+  puback_header:
     seq:
-      - id: message_id
+      - id: packet_identifier
         type: u2
-      - id: topic_filters
-        type: topic_filter
-        repeat: eos
-
-  topic_filter:
-    seq:
-      - id: topic
-        type: strz
-        encoding: UTF-8
-      - id: qos
+      - id: reason_code
         type: u1
-
-  suback_payload:
+      - id: properties
+        type: properties
+  pubrec_header:
     seq:
-      - id: message_id
+      - id: packet_identifier
         type: u2
-      - id: return_codes
+      - id: reason_code
         type: u1
-        repeat: eos
-
-  unsubscribe_payload:
+      - id: properties
+        type: properties
+  pubrel_header:
     seq:
-      - id: message_id
+      - id: packet_identifier
         type: u2
-      - id: topic_filters
-        type: strz
+      - id: reason_code
+        type: u1
+      - id: properties
+        type: properties
+  pubcomp_header:
+    seq:
+      - id: packet_identifier
+        type: u2
+      - id: reason_code
+        type: u1
+      - id: properties
+        type: properties
+  subscribe_header:
+    seq:
+      - id: packet_identifier
+        type: u2
+      - id: properties
+        type: properties
+  suback_header:
+    seq:
+      - id: packet_identifier
+        type: u2
+      - id: properties
+        type: properties
+  unsubscribe_header:
+    seq:
+      - id: packet_identifier
+        type: u2
+      - id: properties
+        type: properties
+  unsuback_header:
+    seq:
+      - id: packet_identifier
+        type: u2
+      - id: properties
+        type: properties
+  disconnect_header:
+    seq:
+      - id: reason_code
+        type: u1
+      - id: properties
+        type: properties
+  auth_header:
+    seq:
+      - id: reason_code
+        type: u1
+      - id: properties
+        type: properties
+  empty_header:
+    seq: []
+  properties:
+    seq:
+      - id: length
+        type: vlq
+      - id: property_list
+        type: property
+        repeat: expr
+        repeat-expr: length
+  property:
+    seq:
+      - id: identifier
+        type: u1
+      - id: value
+        type:
+          switch-on: identifier
+          cases:
+            1: u2
+            2: mqtt_string
+            3: u4
+            4: binary_data
+  mqtt_string:
+    seq:
+      - id: length
+        type: u2
+      - id: value
+        type: str
+        size: length
         encoding: UTF-8
-        repeat: eos
-
-  unsuback_payload:
+  binary_data:
     seq:
-      - id: message_id
+      - id: length
         type: u2
-
-  pingreq_payload: {}
-  pingresp_payload: {}
-  disconnect_payload: {}
-
-enums:
-  message_type:
-    1: connect
-    2: connack
-    3: publish
-    4: subscribe
-    5: suback
-    6: unsubscribe
-    7: unsuback
-    8: pingreq
-    9: pingresp
-    10: disconnect
-
-instances:
-  vlq:
-    pos: 1
-    type: vlq
-    doc: Variable Length Quantity used to determine the remaining length field.
-
-types:
+      - id: value
+        type: u1
+        repeat: expr
+        repeat-expr: length
   vlq:
     seq:
       - id: bytes
         type: u1
         repeat: until
-        repeat-until: _.val < 0x80
+        repeat-until: _ & 0x80 == 0
     instances:
       value:
         value: |
-          _.bytes.reduce((acc, val) => (acc << 7) | (val & 0x7f), 0)
+          sum((byte & 0x7f) << (7 * i) for i, byte in enumerate(reversed(self.bytes)))
+enums:
+  packet_type_enum:
+    1: connect
+    2: connack
+    3: publish
+    4: puback
+    5: pubrec
+    6: pubrel
+    7: pubcomp
+    8: subscribe
+    9: suback
+    10: unsubscribe
+    11: unsuback
+    12: pingreq
+    13: pingresp
+    14: disconnect
+    15: auth

@@ -1,0 +1,44 @@
+module Modbus;
+
+public type Modbus_Header = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+public type Modbus_PDU = unit {
+    function_code: uint8;
+    data: bytes &size=length - 2;
+};
+
+public type Modbus_Error = unit {
+    error_code: uint8;
+};
+
+public type Modbus_Request = unit {
+    header: Modbus_Header;
+    pdu: Modbus_PDU;
+};
+
+public type Modbus_Response = unit {
+    header: Modbus_Header;
+    pdu: Modbus_PDU;
+};
+
+public type Modbus_Error_Response = unit {
+    header: Modbus_Header;
+    error: Modbus_Error;
+};
+
+public type Modbus_Message = unit {
+    header: Modbus_Header;
+    switch (header.unit_id) {
+        case 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x0F, 0x10, 0x16, 0x17, 0x18, 0x2B: pdu: Modbus_PDU;
+        default: error: Modbus_Error;
+    }
+};
+
+public type Modbus_TCP = unit {
+    message: Modbus_Message;
+};

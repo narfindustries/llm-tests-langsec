@@ -1,55 +1,112 @@
 module ELF;
 
-import spicy;
-
-public type ELF = unit {
-    magic: bytes &size=4;
-    class: uint8;
-    data: uint8;
-    version: uint8;
-    osabi: uint8;
-    abiversion: uint8;
-    pad: bytes &size=7;
-    type: uint16;
-    machine: uint16;
-    elfversion: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
-
-    on %done {
-        if ( self.magic != b"\x7fELF" )
-            self.magic = b"\x7fELF";
+public type ELFFile = unit {
+    magic: bytes &size=4 &requires=(self.magic == b"\x7fELF");
+    ei_class: uint8 {
+        if ( self.ei_class != 1 && self.ei_class != 2 )
+            self.ei_class = 0;
     }
+    ei_data: uint8 {
+        if ( self.ei_data != 1 && self.ei_data != 2 )
+            self.ei_data = 0;
+    }
+    ei_version: uint8;
+    ei_osabi: uint8;
+    ei_abiversion: uint8;
+    ei_pad: bytes &size=7;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+
+    var class: uint8;
+    on ei_class {
+        self.class = self.ei_class;
+    }
+
+    elf32: ELF32 if (self.class == 1);
+    elf64: ELF64 if (self.class == 2);
 };
 
-public type ProgramHeader = unit {
-    type: uint32;
-    flags: uint32;
-    offset: uint64;
-    vaddr: uint64;
-    paddr: uint64;
-    filesz: uint64;
-    memsz: uint64;
-    align: uint64;
+type ELF32 = unit {
+    e_entry: uint32;
+    e_phoff: uint32;
+    e_shoff: uint32;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+
+    padding1: bytes &size=self.e_phoff - 52 if (self.e_phoff > 52);
+    program_headers: Program_Header32[self.e_phnum] if (self.e_phoff != 0);
+    padding2: bytes &size=self.e_shoff - (self.e_phoff + self.e_phentsize * self.e_phnum) if (self.e_shoff > (self.e_phoff + self.e_phentsize * self.e_phnum));
+    section_headers: Section_Header32[self.e_shnum] if (self.e_shoff != 0);
 };
 
-public type SectionHeader = unit {
-    name: uint32;
-    type: uint32;
-    flags: uint64;
-    addr: uint64;
-    offset: uint64;
-    size: uint64;
-    link: uint32;
-    info: uint32;
-    addralign: uint64;
-    entsize: uint64;
+type ELF64 = unit {
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+
+    padding1: bytes &size=self.e_phoff - 64 if (self.e_phoff > 64);
+    program_headers: Program_Header64[self.e_phnum] if (self.e_phoff != 0);
+    padding2: bytes &size=self.e_shoff - (self.e_phoff + self.e_phentsize * self.e_phnum) if (self.e_shoff > (self.e_phoff + self.e_phentsize * self.e_phnum));
+    section_headers: Section_Header64[self.e_shnum] if (self.e_shoff != 0);
+};
+
+type Program_Header32 = unit {
+    p_type: uint32;
+    p_offset: uint32;
+    p_vaddr: uint32;
+    p_paddr: uint32;
+    p_filesz: uint32;
+    p_memsz: uint32;
+    p_flags: uint32;
+    p_align: uint32;
+};
+
+type Program_Header64 = unit {
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
+
+type Section_Header32 = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint32;
+    sh_addr: uint32;
+    sh_offset: uint32;
+    sh_size: uint32;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint32;
+    sh_entsize: uint32;
+};
+
+type Section_Header64 = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
 };

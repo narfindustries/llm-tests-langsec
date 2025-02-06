@@ -1,96 +1,75 @@
-# DNS Protocol Specification in Zeek Spicy Format
+module DNS;
 
-%header {
-    # Import required modules
-    @load base/protocols/dns
-}
+type uint4 = uint8;
+type uint16_t = uint16;
+type uint32_t = uint32;
 
-%extern {
-    # Include necessary external dependencies
-    @load-such Packet::DNS
-}
+type dns_header = record {
+  id: uint16_t,
+  qr: bool,
+  opcode: uint8,
+  aa: bool,
+  tc: bool,
+  rd: bool,
+  ra: bool,
+  z: uint8,
+  rcode: uint8
+};
 
-%include {
-    # Include common types and constants
-    const max_len = 1024;
-    type dns_msg = record {
-        id: uint16,
-        flags: uint16,
-        qdcount: uint16,
-        ancount: uint16,
-        nscount: uint16,
-        arcount: uint16,
-        questions: array of dns_question,
-        answers: array of dns_answer,
-        authorities: array of dns_answer,
-        additionals: array of dns_answer,
-    };
+type dns_name_label = bytestring &length=<64;
+type dns_name = vector of dns_name_label;
 
-    type dns_question = record {
-        name: string,
-        type: uint16,
-        class: uint16,
-    };
+type dns_question = record {
+  qname: dns_name,
+  qtype: uint16_t,
+  qclass: uint16_t
+};
 
-    type dns_answer = record {
-        name: string,
-        type: uint16,
-        class: uint16,
-        ttl: uint32,
-        rdlength: uint16,
-        rdata: string,
-    };
-}
+type dns_rr = record {
+  name: dns_name,
+  type: uint16_t,
+  class: uint16_t,
+  ttl: uint32_t,
+  rdlength: uint16_t,
+  rdata: bytestring &length=rdlength
+};
 
-%parser {
-    # Define parser for DNS message
-    dns_msg = (
-        id: uint16,
-        flags: uint16,
-        qdcount: uint16,
-        ancount: uint16,
-        nscount: uint16,
-        arcount: uint16,
-        questions: array of dns_question,
-        answers: array of dns_answer,
-        authorities: array of dns_answer,
-        additionals: array of dns_answer,
-    );
-}
+type dns_answer = dns_rr;
+type dns_authority = dns_rr;
+type dns_additional = dns_rr;
 
-%lexer {
-    # Define lexer rules for DNS message
-    dns_msg: 
-        id: uint16(2),
-        flags: uint16(2),
-        qdcount: uint16(2),
-        ancount: uint16(2),
-        nscount: uint16(2),
-        arcount: uint16(2),
-        questions: array of dns_question,
-        answers: array of dns_answer,
-        authorities: array of dns_answer,
-        additionals: array of dns_answer;
-}
+type dns_message = record {
+  header: dns_header,
+  questions: vector of dns_question,
+  answers: vector of dns_answer,
+  authorities: vector of dns_authority,
+  additionals: vector of dns_additional
+};
 
-%grammar {
-    # Define grammar rules for DNS message
-    dns_msg: 
-        id: uint16(2),
-        flags: uint16(2),
-        qdcount: uint16(2),
-        ancount: uint16(2),
-        nscount: uint16(2),
-        arcount: uint16(2),
-        questions: array of dns_question,
-        answers: array of dns_answer,
-        authorities: array of dns_answer,
-        additionals: array of dns_answer;
-}
+let dns_name_transcode = transcode {
+  decode = function (b: bytestring): dns_name {
+    var labels = vector of dns_name_label;
+    var pos = 0;
+    while pos < #b do
+      var len = b[pos];
+      pos += 1;
+      if len == 0 then
+        break;
+      labels += b[pos:pos+len-1];
+      pos += len;
+    end;
+    return labels;
+  };
 
-%code {
-    # Event handlers for DNS protocol
-    event dns_packet(c: connection, msg: dns_msg) {
-        # Handle DNS packet event
-    }
-}
+  encode = function (n: dns_name): bytestring {
+    var b = vector of byte;
+    for l in n do
+      b += #l;
+      b += l;
+    end;
+    b += 0;
+    return bytestring_join(b);
+  };
+}; 
+
+type uint3 = uint8;

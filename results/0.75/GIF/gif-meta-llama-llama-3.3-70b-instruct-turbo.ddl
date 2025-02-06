@@ -1,52 +1,65 @@
-domain GIF {
-  type bytes = sequence of byte;
+format gif {
+  signature: bytes:3 = "GIF",
+  version: bytes:3 = ["87a", "89a"],
+  logical_screen_width: uint16:le,
+  logical_screen_height: uint16:le,
+  packed_fields: bits {
+    global_color_table_flag: 1,
+    color_resolution: 3,
+    sort_flag: 1,
+    color_table_size: 3
+  },
+  background_color_index: byte,
+  pixel_aspect_ratio: byte,
+  global_color_table: optional bytes:3[2:256],
+  images: array image,
+  trailer: byte = 0x3B
+}
 
-  type Header = structure {
-    field magic: bytes(3) = "GIF";
-    field version: bytes(3);
-  };
+format image {
+  image_separator: byte = 0x2C,
+  image_left_position: uint16:le,
+  image_top_position: uint16:le,
+  image_width: uint16:le,
+  image_height: uint16:le,
+  packed_fields: bits {
+    local_color_table_flag: 1,
+    interlace_flag: 1,
+    sort_flag: 1,
+    color_table_size: 3
+  },
+  local_color_table: optional bytes:3[2:256],
+  image_data: lzw_compressed
+}
 
-  type LogicalScreenDescriptor = structure {
-    field width: uint16;
-    field height: uint16;
-    field flags: byte;
-    field bg_color: byte;
-    field aspect_ratio: byte;
-  };
+format lzw_compressed {
+  compressed_data: bytes
+}
 
-  type ColorTableEntry = structure {
-    field red: byte;
-    field green: byte;
-    field blue: byte;
-  };
+type uint16:le = uint16(little_endian)
+type byte = uint8
+type uint8 = uint(8)
+type uint16 = uint(16)
+type uint = int(32, unsigned)
 
-  type ColorTable = sequence of ColorTableEntry;
+type bits {
+  bit: bitfield_member*
+}
 
-  type ImageDescriptor = structure {
-    field left: uint16;
-    field top: uint16;
-    field width: uint16;
-    field height: uint16;
-    field flags: byte;
-  };
+type bitfield_member {
+  name: string,
+  size: int
+}
 
-  type LZWCode = sequence of byte;
+type array {
+  type: type,
+  length: int
+}
 
-  type DataBlock = structure {
-    field size: byte;
-    field data: bytes(this.size);
-  };
+type optional {
+  type: type
+}
 
-  type Data = sequence of DataBlock;
-
-  type Trailer = byte = 0x3B;
-
-  type GIF = sequence {
-    item: Header,
-    item: LogicalScreenDescriptor,
-    optional item: ColorTable,
-    zero_or_more item: ImageDescriptor,
-    zero_or_more item: Data,
-    item: Trailer,
-  };
+type little_endian {
+  endianness: little
 }

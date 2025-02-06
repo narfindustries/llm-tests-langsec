@@ -1,111 +1,57 @@
 use nom::{
-    be::{be_u16, be_u32, be_u8},
     bytes::complete::take,
-    combinator::{map, map_res, opt, value},
-    error::ErrorKind,
-    multi::count,
-    number::complete::le_u32,
+    combinator::{map, map_res},
+    number::complete::{be_u32, be_u64, be_u8},
     IResult,
 };
-use std::fs::File;
-use std::io::Read;
-use std::net::{IpAddr, Ipv4Addr};
-use std::path::Path;
+use std::fs;
+use std::str::from_utf8;
 
-#[derive(Debug, PartialEq)]
-enum LeapIndicator {
-    NoWarning,
-    LastMinute61,
-    LastMinute59,
-    AlarmingConditions,
-}
-
-#[derive(Debug, PartialEq)]
-enum Mode {
-    SymmetricActive,
-    SymmetricPassive,
-    Client,
-    Server,
-    Broadcast,
-    Reserved,
-}
-
-#[derive(Debug, PartialEq)]
-enum Stratum {
-    Unspecified,
-    PrimaryReference,
-    SecondaryReference,
-    LocalClock,
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct NtpPacket {
-    leap_indicator: LeapIndicator,
-    version_number: u8,
-    mode: Mode,
+    li: u8,
+    vn: u8,
+    mode: u8,
     stratum: u8,
-    poll: i8,
-    precision: i8,
-    root_delay: u32,
-    root_dispersion: u32,
-    reference_id: u32,
+    poll: u8,
+    precision: u8,
+    root_delay: f64,
+    root_dispersion: f64,
+    reference_id: String,
     reference_timestamp: u64,
     originate_timestamp: u64,
     receive_timestamp: u64,
     transmit_timestamp: u64,
+    extension: Vec<u8>,
 }
 
-fn leap_indicator(input: &[u8]) -> IResult<&[u8], LeapIndicator> {
-    map(be_u8, |value| match value & 0b11 {
-        0 => LeapIndicator::NoWarning,
-        1 => LeapIndicator::LastMinute61,
-        2 => LeapIndicator::LastMinute59,
-        3 => LeapIndicator::AlarmingConditions,
-        _ => unreachable!(),
-    })(input)
-}
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
+    let (input, li_vn_mode) = take(1usize)(input)?;
+    let li = (li_vn_mode[0] >> 6) as u8;
+    let vn = (li_vn_mode[0] >> 3) & 0b111;
+    let mode = li_vn_mode[0] & 0b111;
 
-fn mode(input: &[u8]) -> IResult<&[u8], Mode> {
-    map(be_u8, |value| match value & 0b111 {
-        1 => Mode::SymmetricActive,
-        2 => Mode::SymmetricPassive,
-        3 => Mode::Client,
-        4 => Mode::Server,
-        5 => Mode::Broadcast,
-        _ => Mode::Reserved,
-    })(input)
-}
-
-fn stratum(input: &[u8]) -> IResult<&[u8], Stratum> {
-    map(be_u8, |value| match value {
-        0 => Stratum::Unspecified,
-        1 => Stratum::PrimaryReference,
-        _ => Stratum::SecondaryReference,
-    })(input)
-}
-
-fn ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    let (input, leap_indicator) = leap_indicator(input)?;
-    let (input, version_number) = be_u8(input)?;
-    let (input, mode) = mode(input)?;
     let (input, stratum) = be_u8(input)?;
-    let (input, poll) = be_i8(input)?;
-    let (input, precision) = be_i8(input)?;
-    let (input, root_delay) = be_u32(input)?;
-    let (input, root_dispersion) = be_u32(input)?;
-    let (input, reference_id) = be_u32(input)?;
+    let (input, poll) = be_u8(input)?;
+    let (input, precision) = be_u8(input)?;
+    let (input, root_delay) = map(be_u32, |x| x as f64 / 65536.0)(input)?;
+    let (input, root_dispersion) = map(be_u32, |x| x as f64 / 65536.0)(input)?;
+    let (input, reference_id) = map_res(take(4usize), |x| {
+        from_utf8(x).map(|id| id.to_string())
+    })(input)?;
     let (input, reference_timestamp) = be_u64(input)?;
     let (input, originate_timestamp) = be_u64(input)?;
     let (input, receive_timestamp) = be_u64(input)?;
     let (input, transmit_timestamp) = be_u64(input)?;
+    let (input, extension) = take(input.len())(input)?;
 
     Ok((
         input,
         NtpPacket {
-            leap_indicator,
-            version_number,
+            li,
+            vn,
             mode,
-            stratum: stratum,
+            stratum,
             poll,
             precision,
             root_delay,
@@ -115,18 +61,9 @@ fn ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
             originate_timestamp,
             receive_timestamp,
             transmit_timestamp,
+            extension: extension.to_vec(),
         },
     ))
-}
-
-fn be_i8(i: &[u8]) -> IResult<&[u8], i8> {
-    map_res(be_u8, |x| x as i8)(i)
-}
-
-fn be_u64(i: &[u8]) -> IResult<&[u8], u64> {
-    let (i, a) = be_u32(i)?;
-    let (i, b) = be_u32(i)?;
-    Ok((i, ((a as u64) << 32) | b as u64))
 }
 
 fn main() {
@@ -136,26 +73,11 @@ fn main() {
         std::process::exit(1);
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Failed to open file: {}", err);
-            std::process::exit(1);
-        }
-    };
+    let filename = &args[1];
+    let contents = fs::read(filename).expect("Failed to read file");
 
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Failed to read file: {}", err);
-            std::process::exit(1);
-        }
-    };
-
-    match ntp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
+    match parse_ntp_packet(&contents) {
+        Ok((_, packet)) => println!("{:#?}", packet),
         Err(e) => eprintln!("Error parsing NTP packet: {:?}", e),
     }
 }

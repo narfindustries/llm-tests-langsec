@@ -1,21 +1,69 @@
 module PNG;
 
-import spicy;
-
-type PNGMagic = unit {
+public type PNGSignature = unit {
     magic: bytes &size=8;
 };
 
 type Chunk = unit {
     length: uint32;
-    type: bytes &size=4;
+    ctype: bytes &size=4;
     data: bytes &size=this.length;
     crc: uint32;
 };
 
-type PNGFile = unit {
-    magic: PNGMagic;
-    chunks: Chunk[] &eod;
+type IHDRChunkContents = unit {
+    width: uint32;
+    height: uint32;
+    bitDepth: uint8;
+    colorType: uint8;
+    compression: uint8;
+    filter: uint8;
+    interlace: uint8;
 };
 
-public type File = PNGFile;
+type PLTEChunkContents = unit {
+    entries: PLTEEntry[] &size=(%size / 3);
+};
+
+type PLTEEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type PNGFile = unit {
+    signature: PNGSignature;
+    chunks: Chunk[] &until($.ctype == b"IEND");
+
+    on chunks : Chunk[] {
+        print "Number of Chunks: ", |self.chunks|;
+        for (c in self.chunks) {
+            print "Chunk Type: ", c.ctype;
+            if (c.ctype == b"IHDR")
+                parseIHDR(c.data);
+            else if (c.ctype == b"PLTE")
+                parsePLTE(c.data);
+            // More chunk types could be added here as needed
+        }
+    };
+
+    function parseIHDR(data: bytes) : bool {
+        local ihdr = IHDRChunkContents(data);
+        print "IHDR - Width: ", ihdr.width;
+        print "IHDR - Height: ", ihdr.height;
+        print "IHDR - Bit Depth: ", ihdr.bitDepth;
+        print "IHDR - Color Type: ", ihdr.colorType;
+        print "IHDR - Compression: ", ihdr.compression;
+        print "IHDR - Filter: ", ihdr.filter;
+        print "IHDR - Interlace: ", ihdr.interlace;
+        return true;
+    }
+
+    function parsePLTE(data: bytes) : bool {
+        local plte = PLTEChunkContents(data);
+        for (entry in plte.entries) {
+            print fmt("PLTE Entry - R:%d, G:%d, B:%d", entry.red, entry.green, entry.blue);
+        }
+        return true;
+    }
+};

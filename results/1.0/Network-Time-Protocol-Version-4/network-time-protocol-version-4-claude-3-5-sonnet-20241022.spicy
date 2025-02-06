@@ -1,55 +1,56 @@
-module Network-Time-Protocol-Version-4;
+module NTP;
 
 public type Header = unit {
-    li_vn_mode: uint8 &convert=LI_VN_MODE($$);
+    flags: uint8 {
+        self.li = (flags >> 6) & 0x03;
+        self.vn = (flags >> 3) & 0x07;
+        self.mode = flags & 0x07;
+    }
     stratum: uint8;
     poll: int8;
     precision: int8;
-    root_delay: uint32;
+    root_delay: int32;
     root_dispersion: uint32;
     reference_id: bytes &size=4;
-    reference_timestamp: uint64;
-    originate_timestamp: uint64;
-    receive_timestamp: uint64;
-    transmit_timestamp: uint64;
+    reference_timestamp: NTPTimestamp;
+    origin_timestamp: NTPTimestamp;
+    receive_timestamp: NTPTimestamp;
+    transmit_timestamp: NTPTimestamp;
+    extension_fields: ExtensionField[] &until-including=false;
+    mac: MAC &if=$$;
+
+    var li: uint8;
+    var vn: uint8;
+    var mode: uint8;
 };
 
-type LI_VN_MODE = enum {
-    NO_WARNING = 0,
-    LAST_MINUTE_61 = 1,
-    LAST_MINUTE_59 = 2,
-    ALARM_CONDITION = 3
+type NTPTimestamp = unit {
+    seconds: uint32;
+    fraction: uint32;
 };
 
-public function get_mode(h: Header): uint8 {
-    return h.li_vn_mode & 0x07;
-}
+type ExtensionField = unit {
+    field_type: uint16;
+    length: uint16;
+    value: bytes &size=self.length - 4;
+    padding: bytes &size=(4 - (self.length % 4)) % 4;
+};
 
-public function get_version(h: Header): uint8 {
-    return (h.li_vn_mode >> 3) & 0x07;
-}
+type MAC = unit {
+    key_id: uint32;
+    digest: bytes &eod;
+};
 
-public function get_leap_indicator(h: Header): uint8 {
-    return (h.li_vn_mode >> 6) & 0x03;
-}
+const LI_NO_WARNING = 0;
+const LI_LAST_MINUTE_61 = 1;
+const LI_LAST_MINUTE_59 = 2;
+const LI_ALARM = 3;
 
-on Header -> event NTP::message(
-    $is_orig: bool,
-    $mode: uint8,
-    $version: uint8,
-    $leap_indicator: uint8,
-    $stratum: uint8,
-    $poll: int8,
-    $precision: int8,
-    $root_delay: uint32,
-    $root_dispersion: uint32,
-    $reference_id: bytes,
-    $reference_timestamp: uint64,
-    $originate_timestamp: uint64,
-    $receive_timestamp: uint64,
-    $transmit_timestamp: uint64
-) {
-    self.mode = get_mode(self);
-    self.version = get_version(self);
-    self.leap_indicator = get_leap_indicator(self);
-}
+const MODE_RESERVED = 0;
+const MODE_SYMMETRIC_ACTIVE = 1;
+const MODE_SYMMETRIC_PASSIVE = 2;
+const MODE_CLIENT = 3;
+const MODE_SERVER = 4;
+const MODE_BROADCAST = 5;
+const MODE_CONTROL = 6;
+const MODE_PRIVATE = 7;

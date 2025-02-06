@@ -1,12 +1,7 @@
-module TLS-Client-Hello;
+module TLS;
 
 public type ClientHello = unit {
-    record_type: uint8;
-    version: uint16;
-    length: uint16;
-    handshake_type: uint8;
-    handshake_length: uint24;
-    protocol_version: uint16;
+    protocol_version: bytes &size=2;
     random: bytes &size=32;
     session_id_length: uint8;
     session_id: bytes &size=self.session_id_length;
@@ -14,28 +9,91 @@ public type ClientHello = unit {
     cipher_suites: bytes &size=self.cipher_suites_length;
     compression_methods_length: uint8;
     compression_methods: bytes &size=self.compression_methods_length;
-    extensions_length: uint16 if (self.handshake_length > 
-        self.session_id_length + self.cipher_suites_length + 
-        self.compression_methods_length + 38);
-    extensions: bytes &size=self.extensions_length if (self.extensions_length > 0);
+    extensions_length: uint16;
+    extensions: extension[] &size=self.extensions_length;
+};
+
+type extension = unit {
+    type_id: uint16;
+    length: uint16;
+    data: bytes &size=self.length;
 
     on %done {
-        print "Record Type:", self.record_type;
-        print "Version:", self.version;
-        print "Length:", self.length;
-        print "Handshake Type:", self.handshake_type;
-        print "Handshake Length:", self.handshake_length;
-        print "Protocol Version:", self.protocol_version;
-        print "Random:", self.random;
-        print "Session ID Length:", self.session_id_length;
-        print "Session ID:", self.session_id;
-        print "Cipher Suites Length:", self.cipher_suites_length;
-        print "Cipher Suites:", self.cipher_suites;
-        print "Compression Methods Length:", self.compression_methods_length;
-        print "Compression Methods:", self.compression_methods;
-        if (self.extensions_length > 0) {
-            print "Extensions Length:", self.extensions_length;
-            print "Extensions:", self.extensions;
+        switch ( self.type_id ) {
+            case 0: parse_server_name(self.data);
+            case 43: parse_supported_versions(self.data);
+            case 51: parse_key_share(self.data);
+            case 13: parse_signature_algorithms(self.data);
+            case 10: parse_supported_groups(self.data);
+            case 45: parse_psk_key_exchange_modes(self.data);
+            case 41: parse_pre_shared_key(self.data);
+            case 16: parse_alpn(self.data);
+            case 44: parse_cookie(self.data);
         }
     }
 };
+
+type server_name = unit {
+    list_length: uint16;
+    name_type: uint8;
+    name_length: uint16;
+    host_name: bytes &size=self.name_length;
+};
+
+type supported_versions = unit {
+    versions_length: uint8;
+    versions_data: bytes &size=self.versions_length;
+};
+
+type key_share = unit {
+    client_shares_length: uint16;
+    group: uint16;
+    key_exchange_length: uint16;
+    key_exchange_data: bytes &size=self.key_exchange_length;
+};
+
+type signature_algorithms = unit {
+    supported_signature_algorithms_length: uint16;
+    signature_algorithms_data: bytes &size=self.supported_signature_algorithms_length;
+};
+
+type supported_groups = unit {
+    supported_groups_length: uint16;
+    supported_groups_data: bytes &size=self.supported_groups_length;
+};
+
+type psk_key_exchange_modes = unit {
+    ke_modes_length: uint8;
+    ke_modes_data: bytes &size=self.ke_modes_length;
+};
+
+type pre_shared_key = unit {
+    identities_length: uint16;
+    identity_length: uint16;
+    identity_data: bytes &size=self.identity_length;
+    obfuscated_ticket_age: uint32;
+    binders_length: uint16;
+    binder_length: uint8;
+    binder_data: bytes &size=self.binder_length;
+};
+
+type alpn = unit {
+    protocol_name_list_length: uint16;
+    protocol_name_length: uint8;
+    protocol_name_data: bytes &size=self.protocol_name_length;
+};
+
+type cookie = unit {
+    cookie_length: uint16;
+    cookie_data: bytes &size=self.cookie_length;
+};
+
+public function parse_server_name(data: bytes): bool { return True; }
+public function parse_supported_versions(data: bytes): bool { return True; }
+public function parse_key_share(data: bytes): bool { return True; }
+public function parse_signature_algorithms(data: bytes): bool { return True; }
+public function parse_supported_groups(data: bytes): bool { return True; }
+public function parse_psk_key_exchange_modes(data: bytes): bool { return True; }
+public function parse_pre_shared_key(data: bytes): bool { return True; }
+public function parse_alpn(data: bytes): bool { return True; }
+public function parse_cookie(data: bytes): bool { return True; }

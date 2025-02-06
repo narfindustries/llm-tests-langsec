@@ -1,201 +1,112 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// Helper parsers
-static HParser* whitespace = h_in((const uint8_t*)" \t\n\r", 4);
-static HParser* whitespace_ = h_many(whitespace);
+// DICOM Parser using Hammer Parser Combinators
+typedef struct {
+    uint16_t group;
+    uint16_t element;
+    uint16_t vr;
+    uint32_t length;
+    uint8_t* value;
+} DicomElement;
 
-// DICOM VR parsers
-static HParser* application_entity = h_sequence(
-    h_ch('A'), h_ch('E'),
-    NULL
-);
-
-static HParser* age_string = h_sequence(
-    h_ch('A'), h_ch('S'),
-    NULL
-);
-
-static HParser* attribute_tag = h_sequence(
-    h_ch('A'), h_ch('T'),
-    NULL
-);
-
-static HParser* code_string = h_sequence(
-    h_ch('C'), h_ch('S'),
-    NULL
-);
-
-static HParser* date = h_sequence(
-    h_ch('D'), h_ch('A'),
-    NULL
-);
-
-static HParser* decimal_string = h_sequence(
-    h_ch('D'), h_ch('S'),
-    NULL
-);
-
-static HParser* datetime = h_sequence(
-    h_ch('D'), h_ch('T'),
-    NULL
-);
-
-static HParser* floating_point_single = h_sequence(
-    h_ch('F'), h_ch('L'),
-    NULL
-);
-
-static HParser* floating_point_double = h_sequence(
-    h_ch('F'), h_ch('D'),
-    NULL
-);
-
-static HParser* integer_string = h_sequence(
-    h_ch('I'), h_ch('S'),
-    NULL
-);
-
-static HParser* long_string = h_sequence(
-    h_ch('L'), h_ch('O'),
-    NULL
-);
-
-static HParser* long_text = h_sequence(
-    h_ch('L'), h_ch('T'),
-    NULL
-);
-
-static HParser* other_byte = h_sequence(
-    h_ch('O'), h_ch('B'),
-    NULL
-);
-
-static HParser* other_double = h_sequence(
-    h_ch('O'), h_ch('D'),
-    NULL
-);
-
-static HParser* other_float = h_sequence(
-    h_ch('O'), h_ch('F'),
-    NULL
-);
-
-static HParser* other_long = h_sequence(
-    h_ch('O'), h_ch('L'),
-    NULL
-);
-
-static HParser* other_word = h_sequence(
-    h_ch('O'), h_ch('W'),
-    NULL
-);
-
-static HParser* person_name = h_sequence(
-    h_ch('P'), h_ch('N'),
-    NULL
-);
-
-static HParser* short_string = h_sequence(
-    h_ch('S'), h_ch('H'),
-    NULL
-);
-
-static HParser* signed_long = h_sequence(
-    h_ch('S'), h_ch('L'),
-    NULL
-);
-
-static HParser* sequence_of_items = h_sequence(
-    h_ch('S'), h_ch('Q'),
-    NULL
-);
-
-static HParser* signed_short = h_sequence(
-    h_ch('S'), h_ch('S'),
-    NULL
-);
-
-static HParser* short_text = h_sequence(
-    h_ch('S'), h_ch('T'),
-    NULL
-);
-
-static HParser* time = h_sequence(
-    h_ch('T'), h_ch('M'),
-    NULL
-);
-
-static HParser* unlimited_characters = h_sequence(
-    h_ch('U'), h_ch('C'),
-    NULL
-);
-
-static HParser* unique_identifier = h_sequence(
-    h_ch('U'), h_ch('I'),
-    NULL
-);
-
-static HParser* unsigned_long = h_sequence(
-    h_ch('U'), h_ch('L'),
-    NULL
-);
-
-static HParser* unknown = h_sequence(
-    h_ch('U'), h_ch('N'),
-    NULL
-);
-
-static HParser* unsigned_short = h_sequence(
-    h_ch('U'), h_ch('S'),
-    NULL
-);
-
-static HParser* unlimited_text = h_sequence(
-    h_ch('U'), h_ch('T'),
-    NULL
-);
-
-// Main VR parser combining all VR types
-static HParser* vr_type = h_choice(
-    application_entity, age_string, attribute_tag,
-    code_string, date, decimal_string, datetime,
-    floating_point_single, floating_point_double,
-    integer_string, long_string, long_text,
-    other_byte, other_double, other_float,
-    other_long, other_word, person_name,
-    short_string, signed_long, sequence_of_items,
-    signed_short, short_text, time,
-    unlimited_characters, unique_identifier,
-    unsigned_long, unknown, unsigned_short,
-    unlimited_text,
-    NULL
-);
-
-// Main parser for complete DICOM tag
-static HParser* dicom_tag = h_sequence(
-    h_ch('('),
-    h_repeat_n(h_hex_digit(), 4),
-    h_ch(','),
-    h_repeat_n(h_hex_digit(), 4),
-    h_ch(')'),
-    whitespace_,
-    vr_type,
-    NULL
-);
-
-// Parse function
-void parse_dicom(const char* input) {
-    HParseResult* result = h_parse(dicom_tag, (const uint8_t*)input, strlen(input));
-    if(result) {
-        printf("Successfully parsed DICOM tag\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse DICOM tag\n");
-    }
+// Parse DICOM Preamble (128 bytes + DICM)
+static HParser* dicom_preamble() {
+    return h_sequence(h_repeat_n(h_uint8(), 128), 
+                     h_token((uint8_t*)"DICM", 4), 
+                     NULL);
 }
 
-int main() {
-    parse_dicom("(0010,0020) PN");
-    return 0;
+// Value Representations
+static HParser* explicit_vr() {
+    return h_choice(h_token((uint8_t*)"AE", 2),
+                   h_token((uint8_t*)"AS", 2),
+                   h_token((uint8_t*)"AT", 2),
+                   h_token((uint8_t*)"CS", 2),
+                   h_token((uint8_t*)"DA", 2),
+                   h_token((uint8_t*)"DS", 2),
+                   h_token((uint8_t*)"DT", 2),
+                   h_token((uint8_t*)"FL", 2),
+                   h_token((uint8_t*)"FD", 2),
+                   h_token((uint8_t*)"IS", 2),
+                   h_token((uint8_t*)"LO", 2),
+                   h_token((uint8_t*)"LT", 2),
+                   h_token((uint8_t*)"PN", 2),
+                   h_token((uint8_t*)"SH", 2),
+                   h_token((uint8_t*)"SL", 2),
+                   h_token((uint8_t*)"SQ", 2),
+                   h_token((uint8_t*)"SS", 2),
+                   h_token((uint8_t*)"ST", 2),
+                   h_token((uint8_t*)"TM", 2),
+                   h_token((uint8_t*)"UI", 2),
+                   h_token((uint8_t*)"UL", 2),
+                   h_token((uint8_t*)"UN", 2),
+                   h_token((uint8_t*)"US", 2),
+                   h_token((uint8_t*)"UT", 2),
+                   NULL);
+}
+
+// DICOM Element parser
+static HParser* dicom_element() {
+    return h_sequence(
+        h_uint16(), // group
+        h_uint16(), // element
+        explicit_vr(),
+        h_uint16(), // length
+        h_length_value(h_uint16(), h_uint8()), // value
+        NULL
+    );
+}
+
+// Complete DICOM parser
+static HParser* dicom_parser() {
+    return h_sequence(
+        dicom_preamble(),
+        h_many(dicom_element()),
+        NULL
+    );
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        fclose(fp);
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, fp) != size) {
+        free(buffer);
+        fclose(fp);
+        fprintf(stderr, "Failed to read file\n");
+        return 1;
+    }
+
+    HParseResult* result = h_parse(dicom_parser(), buffer, size);
+    if (!result) {
+        fprintf(stderr, "Failed to parse DICOM file\n");
+    } else {
+        printf("Successfully parsed DICOM file\n");
+        h_parse_result_free(result);
+    }
+
+    free(buffer);
+    fclose(fp);
+    return result ? 0 : 1;
 }

@@ -1,48 +1,40 @@
 meta:
   id: tiff
-  file-extension: tiff
+  file-extension: tif
   endian: le
-  title: TIFF (Tagged Image File Format)
-  license: CC0-1.0
-  ks-version: 0.9
-
-doc: |
-  TIFF is a flexible, adaptable file format for handling images and data
-  within a single file, by including the header tags (size, definition, image
-  data arrangement, applied image compression) defining the image's geometry.
-  For example, a TIFF file can be a container holding compressed (lossy) JPEG
-  and (lossless) PackBits compressed images. TIFF files also support layers
-  and multiple pages.
-
+  title: Tagged Image File Format (TIFF)
 seq:
   - id: header
     type: header
-
-  - id: ifd
+  - id: ifds
     type: ifd
     repeat: eos
-
 types:
   header:
     seq:
-      - id: endianness
+      - id: byte_order
         type: u2
-        enum: endianness_type
+        enum: endian
       - id: magic
         contents: [0x2A, 0x00]
-
+      - id: offset_first_ifd
+        type: u4
   ifd:
     seq:
-      - id: num_fields
+      - id: num_dir_entries
         type: u2
-      - id: fields
-        type: field
+      - id: entries
+        type: ifd_entry
         repeat: expr
-        repeat-expr: num_fields
-      - id: next_ifd
+        repeat-expr: num_dir_entries
+      - id: next_ifd_offset
         type: u4
-
-  field:
+    instances:
+      next_ifd:
+        pos: next_ifd_offset
+        type: ifd
+        if: next_ifd_offset != 0
+  ifd_entry:
     seq:
       - id: tag
         type: u2
@@ -50,43 +42,52 @@ types:
       - id: type
         type: u2
         enum: field_type
-      - id: length
+      - id: count
         type: u4
       - id: value_offset
         type: u4
-
+    instances:
+      value:
+        pos: value_offset
+        size: _parent.entries[_index].type.size * count
+        type:
+          switch-on: type
+          cases:
+            'field_type::byte': u1
+            'field_type::ascii': str
+            'field_type::short': u2
+            'field_type::long': u4
+            'field_type::rational': rational
 enums:
-  endianness_type:
+  endian:
     0x4949: le
     0x4D4D: be
-
   tag_type:
-    0x0100: image_width
-    0x0101: image_length
-    0x0102: bits_per_sample
-    0x0103: compression
-    0x0106: photometric_interpretation
-    0x0111: strip_offsets
-    0x0115: samples_per_pixel
-    0x0116: rows_per_strip
-    0x0117: strip_byte_counts
-    0x011A: x_resolution
-    0x011B: y_resolution
-    0x0128: resolution_unit
-    0x0131: software
-    0x0132: datetime
-    0x8769: exif_ifd
-
+    256: image_width
+    257: image_length
+    258: bits_per_sample
+    259: compression
+    262: photometric_interpretation
+    266: fill_order
+    273: strip_offsets
+    274: orientation
+    277: samples_per_pixel
+    278: rows_per_strip
+    279: strip_byte_counts
+    282: x_resolution
+    283: y_resolution
+    284: planar_configuration
+    296: resolution_unit
   field_type:
     1: byte
     2: ascii
     3: short
     4: long
     5: rational
-    6: signed_byte
-    7: undefined
-    8: signed_short
-    9: signed_long
-    10: signed_rational
-    11: float
-    12: double
+types:
+  rational:
+    seq:
+      - id: numerator
+        type: u4
+      - id: denominator
+        type: u4

@@ -1,27 +1,40 @@
 module GZIP;
 
-import spicy;
-
-public type GZIP = unit {
-    magic1: uint8 &requires=0x1f;
-    magic2: uint8 &requires=0x8b;
-    cm: uint8 &requires=0x08;
-    flags: uint8;
+public type Header = unit {
+    id1: uint8 &requires = 0x1f;
+    id2: uint8 &requires = 0x8b;
+    compression_method: uint8;
+    flags: bitfield(8) {
+        text: 0;
+        hcrc: 1;
+        extra: 2;
+        name: 3;
+        comment: 4;
+        reserved: 5..7;
+    };
     mtime: uint32;
-    xfl: uint8;
+    extra_flags: uint8;
     os: uint8;
-    
-    on %done {
-        print self;
-    }
 };
 
-on GZIP::GZIP -> event gzip_header(
-    $magic1: uint8,
-    $magic2: uint8,
-    $cm: uint8,
-    $flags: uint8,
-    $mtime: uint32,
-    $xfl: uint8,
-    $os: uint8
-);
+type ExtraField = unit {
+    xlen: uint16;
+    data: bytes &size=self.xlen;
+};
+
+type NullTerminated = unit {
+    data: bytes &until=b"\x00";
+};
+
+public type GZIPFile = unit {
+    hdr: Header;
+    
+    extra_field: ExtraField if (self.hdr.flags.extra == 1);
+    file_name: NullTerminated if (self.hdr.flags.name == 1);
+    file_comment: NullTerminated if (self.hdr.flags.comment == 1);
+    header_crc: bytes &size=2 if (self.hdr.flags.hcrc == 1);
+    
+    compressed_data: bytes &eod;
+    crc32: uint32;
+    isize: uint32;
+};

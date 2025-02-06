@@ -1,68 +1,162 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
-
-#define MAX_DIMENSIONS 5
-#define MAX_QUALITY 100
+#include <hammer/allocator.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
 typedef struct {
-    int width;
-    int height;
-    int channels;
-    int quality;
-    uint8_t* pixel_data;
-} JPEGImage;
+    uint16_t marker;
+    uint16_t length;
+    uint8_t* data;
+} JPEGSegment;
 
-static HParser* jpeg_image_parser() {
-    // Define width, height, channels, and quality parsers
-    HParser* width_parser = h_int32();
-    HParser* height_parser = h_int32();
-    HParser* channels_parser = h_int_range(1, 4);
-    HParser* quality_parser = h_int_range(1, MAX_QUALITY);
+typedef struct {
+    uint8_t major_version;
+    uint8_t minor_version;
+    uint8_t density_units;
+    uint16_t x_density;
+    uint16_t y_density;
+} JFIF;
 
-    // Define pixel data parser (placeholder)
-    HParser* pixel_data_parser = h_many(h_uint8());
+typedef struct {
+    uint8_t precision;
+    uint8_t table_id;
+    uint16_t* quantization_values;
+} QuantizationTable;
 
-    // Combine parsers into a single struct parser
-    return h_sequence(
-        width_parser,
-        height_parser,
-        channels_parser,
-        quality_parser,
-        pixel_data_parser,
-        NULL
+typedef struct {
+    uint8_t table_class;
+    uint8_t table_destination;
+    uint8_t* huffman_lengths;
+    uint8_t* huffman_values;
+} HuffmanTable;
+
+typedef struct {
+    uint8_t precision;
+    uint16_t height;
+    uint16_t width;
+    uint8_t num_components;
+    uint8_t* component_ids;
+    uint8_t* sampling_factors;
+    uint8_t* qtable_destinations;
+} StartOfFrame;
+
+typedef struct {
+    uint16_t restart_interval;
+} RestartInterval;
+
+typedef struct {
+    JPEGSegment* segments;
+    size_t segment_count;
+    JFIF* jfif;
+    QuantizationTable* qtables;
+    HuffmanTable* htables;
+    StartOfFrame* sof;
+    RestartInterval* dri;
+} JPEGFile;
+
+static HParsedToken* parse_soi(const HParseResult* result, void* user_data) {
+    HParsedToken* token = h_alloc_token(result->arena);
+    token->token_type = TT_UINT;
+    token->uint = 0xFFD8;
+    return token;
+}
+
+static HParsedToken* parse_eoi(const HParseResult* result, void* user_data) {
+    HParsedToken* token = h_alloc_token(result->arena);
+    token->token_type = TT_UINT;
+    token->uint = 0xFFD9;
+    return token;
+}
+
+static HParsedToken* parse_app0(const HParseResult* result, void* user_data) {
+    JPEGFile* jpeg = (JPEGFile*)user_data;
+    jpeg->jfif = malloc(sizeof(JFIF));
+    
+    HCountedArray* seq = result->ast->seq;
+    jpeg->jfif->major_version = seq->elements[0]->uint;
+    jpeg->jfif->minor_version = seq->elements[1]->uint;
+    jpeg->jfif->density_units = seq->elements[2]->uint;
+    jpeg->jfif->x_density = seq->elements[3]->uint;
+    jpeg->jfif->y_density = seq->elements[4]->uint;
+    
+    return (HParsedToken*)result->ast;
+}
+
+static HParsedToken* parse_dqt(const HParseResult* result, void* user_data) {
+    JPEGFile* jpeg = (JPEGFile*)user_data;
+    jpeg->qtables = malloc(sizeof(QuantizationTable));
+    
+    HCountedArray* seq = result->ast->seq;
+    jpeg->qtables->precision = seq->elements[0]->uint;
+    jpeg->qtables->table_id = seq->elements[1]->uint;
+    
+    return (HParsedToken*)result->ast;
+}
+
+static HParser* jpeg_parser(HArena* arena) {
+    uint8_t soi_bytes[] = {0xFF, 0xD8};
+    uint8_t eoi_bytes[] = {0xFF, 0xD9};
+
+    HParser* soi = h_token(soi_bytes, 2);
+    HParser* eoi = h_token(eoi_bytes, 2);
+    
+    HParser* app0 = h_action(
+        h_sequence(
+            h_uint8(),
+            h_uint8(),
+            h_uint8(),
+            h_uint16(),
+            h_uint16()
+        ), parse_app0, NULL
     );
-}
-
-static HParseResult* jpeg_semantic_action(const HParseResult* p, void* user_data) {
-    JPEGImage* image = malloc(sizeof(JPEGImage));
     
-    // Extract parsed values safely
-    image->width = *(int*)h_seq_index(p, 0);
-    image->height = *(int*)h_seq_index(p, 1);
-    image->channels = *(int*)h_seq_index(p, 2);
-    image->quality = *(int*)h_seq_index(p, 3);
-    
-    // Handle pixel data
-    HArray* pixel_array = (HArray*)h_seq_index(p, 4);
-    image->pixel_data = malloc(pixel_array->used);
-    memcpy(image->pixel_data, pixel_array->elements, pixel_array->used);
+    HParser* dqt = h_action(
+        h_sequence(
+            h_uint8(),
+            h_uint8(),
+            h_repeat_n(h_uint16(), 64)
+        ), parse_dqt, NULL
+    );
 
-    return h_make_result(NULL, image);
+    HParser* full_jpeg = h_sequence(soi, app0, dqt, eoi);
+    return full_jpeg;
 }
 
-HParser* jpeg_parser() {
-    HParser* parser = jpeg_image_parser();
-    return h_semantic_action(parser, jpeg_semantic_action, NULL, NULL);
-}
-
-void jpeg_image_free(JPEGImage* image) {
-    if (image) {
-        free(image->pixel_data);
-        free(image);
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
+        return 1;
     }
-}
 
-int main() {
-    HParser* parser = jpeg_parser();
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Could not open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HArena* arena = h_new_arena();
+    HParser* parser = jpeg_parser(arena);
+    HParseResult* result = h_parse(parser, buffer, file_size);
+
+    if (result && result->ast) {
+        printf("JPEG file parsed successfully\n");
+    } else {
+        printf("JPEG parsing failed\n");
+    }
+
+    h_parse_result_free(result);
+    h_arena_free(arena);
+    free(buffer);
+
     return 0;
 }

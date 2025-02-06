@@ -1,26 +1,32 @@
 module DICOM;
 
-import zeek;
+import zeek/uint;
+import zeek/time;
+import zeek/string;
 
-public type DICOM_Header = unit {
-    preamble: bytes &size=128;
-    prefix: bytes &size=4 &assert(p == "DICM", "Invalid DICOM prefix");
-    
-    elements: array of DICOM_Element;
-};
+type DICOM_Preamble = bytes &length=128;
+type DICOM_Prefix = bytes &length=4;
 
-type DICOM_Element = unit {
+type Tag = uint16;
+type VR = bytes &length=2;
+
+type Attribute = unit {
     tag_group: uint16;
     tag_element: uint16;
-    vr: string &size=2;
-    length: uint16;
-    value: bytes &size=length;
+    vr: VR;
+    reserved: uint16 &if (vr in {"OB", "OW", "OF", "SQ", "UT", "UN"});
+    length: uint16 &if (vr !in {"OB", "OW", "OF", "SQ", "UT", "UN"});
+    length32: uint32 &if (vr in {"OB", "OW", "OF", "SQ", "UT", "UN"});
+    value: bytes &length=length &if (vr !in {"SQ"});
+    sequence: array of Attribute &if (vr == "SQ");
+};
+
+type DICOM_Header = unit {
+    preamble: DICOM_Preamble;
+    prefix: DICOM_Prefix;
+    attributes: array of Attribute;
 };
 
 public type DICOM_File = unit {
     header: DICOM_Header;
-};
-
-public event error(msg: string) {
-    print "Error: " + msg;
-}
+} &byte_order=little;

@@ -1,39 +1,45 @@
-# Network Time Protocol (NTP) version 4
+module NetworkTimeProtocolVersion4;
 
-type NTPPacket = {
-    leap: uint8(2),
-    version: uint8(3),
-    mode: uint8(3),
-    stratum: uint8,
-    poll: uint8,
-    precision: uint8,
-    delay: uint32,
-    dispersion: uint32,
-    identifier: bytes(4),
-    reference_timestamp: NTPTimestamp,
-    originate_timestamp: NTPTimestamp,
-    receive_timestamp: NTPTimestamp,
-    transmit_timestamp: NTPTimestamp,
-}
+type LeapIndicator = uint2;
+type VersionNumber = uint3;
+type Mode = uint3;
+type Stratum = uint8;
+type Poll = uint8;
+type Precision = uint8;
+type RootDelay = uint32;
+type RootDispersion = uint32;
+type ReferenceID = string &length=4;
+type ReferenceTimestamp = uint64;
+type OriginTimestamp = uint64;
+type ReceiveTimestamp = uint64;
+type TransmitTimestamp = uint64;
 
-type NTPTimestamp = {
-    seconds: uint32,
-    fraction: uint32,
-}
+type NTPExtension = record {
+  field_type = uint16;
+  length = uint16;
+  value = string &length=length;
+};
 
-# Check the version of the NTP packet
-condition version_check: version == 4
+type NTPExtensions = vector of NTPExtension;
 
-# Assume a standard UDP packet with source and destination ports
-type UDPHeader = {
-    src_port: uint16,
-    dst_port: uint16,
-    length: uint16,
-    checksum: uint16,
-}
+type NTPPacket = record {
+  leap_indicator = LeapIndicator;
+  version_number = VersionNumber;
+  mode = Mode;
+  stratum = Stratum;
+  poll = Poll;
+  precision = Precision;
+  root_delay = RootDelay;
+  root_dispersion = RootDispersion;
+  reference_id = ReferenceID;
+  reference_timestamp = ReferenceTimestamp;
+  origin_timestamp = OriginTimestamp;
+  receive_timestamp = ReceiveTimestamp;
+  transmit_timestamp = TransmitTimestamp;
+  extensions = NTPExtensions;
+};
 
-type NTPOverUDP = {
-    udp: UDPHeader,
-    ntp: NTPPacket,
-    condition: version_check,
+&command-line-option parsing-override="lenient"
+&grammar NTP {
+  entrypoint = NTPPacket;
 }

@@ -1,21 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" dfdl:textOutput="true">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/gif"
+           xmlns="http://example.org/gif"
+           elementFormDefault="qualified">
 
-  <xs:element name="gif_gemini_1">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:length="30000" dfdl:lengthKind="implicit"/>
+        <xs:element name="Header" dfdl:length="6">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:pattern value="GIF89a"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="LogicalScreenDescriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="xs:unsignedShort"/>
+              <xs:element name="Height" type="xs:unsignedShort"/>
+              <xs:element name="PackedFields" type="PackedFieldsType"/>
+              <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+              <xs:element name="PixelAspectRatio" type="xs:unsignedByte"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="GlobalColorTable" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ColorTableEntry" type="ColorTableEntryType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageBlock" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageSeparator" dfdl:length="1">
+                <xs:simpleType>
+                  <xs:restriction base="xs:unsignedByte">
+                    <xs:minInclusive value="44"/>
+                    <xs:maxInclusive value="44"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="ImageLeftPosition" type="xs:unsignedShort"/>
+              <xs:element name="ImageTopPosition" type="xs:unsignedShort"/>
+              <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+              <xs:element name="ImageHeight" type="xs:unsignedShort"/>
+              <xs:element name="PackedFields" type="PackedFieldsType"/>
+              <xs:element name="LocalColorTable" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ColorTableEntry" type="ColorTableEntryType" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" dfdl:lengthKind="implicit" dfdl:terminator="0x00"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ExtensionBlock" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="GraphicsControlExtension" type="GraphicsControlExtensionType"/>
+              <xs:element name="CommentExtension" type="CommentExtensionType"/>
+              <xs:element name="PlainTextExtension" type="PlainTextExtensionType"/>
+              <xs:element name="ApplicationExtension" type="ApplicationExtensionType"/>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Trailer" dfdl:length="1">
+          <xs:simpleType>
+            <xs:restriction base="xs:unsignedByte">
+              <xs:minInclusive value="59"/>
+              <xs:maxInclusive value="59"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="PackedFieldsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedByte"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ColorTableEntryType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" use="required" fixed="3"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="GraphicsControlExtensionType">
     <xs:sequence>
-      <xs:element name="version" type="xs:string" dfdl:length="10"/>
-      <xs:element name="width" type="xs:integer" dfdl:length="4"/>
-      <xs:element name="height" type="xs:integer" dfdl:length="4"/>
+      <xs:element name="PackedFields" type="xs:unsignedByte"/>
+      <xs:element name="DelayTime" type="xs:unsignedShort"/>
+      <xs:element name="TransparentColorIndex" type="xs:unsignedByte"/>
+      <xs:element name="BlockTerminator" dfdl:length="1">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedByte">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="0"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
     </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CommentExtensionType">
+    <xs:sequence>
+      <xs:element name="CommentData" type="xs:string" dfdl:lengthKind="implicit" dfdl:terminator="0x00"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PlainTextExtensionType">
+    <!-- Complex; requires further definition -->
+  </xs:complexType>
+
+  <xs:complexType name="ApplicationExtensionType">
+    <!-- Complex; requires further definition -->
   </xs:complexType>
 
 </xs:schema>

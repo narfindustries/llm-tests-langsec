@@ -1,58 +1,44 @@
 module DICOM;
 
-public type Message = unit {
+public type PDU = unit {
     preamble: bytes &size=128;
-    prefix: bytes &size=4;
-    
-    on %done {
-        if ( self.prefix != b"DICM" )
-            self.set_error("Invalid DICOM prefix");
-    }
-    
+    prefix: bytes &size=4 &requires=b"DICM";
     elements: DataElement[];
 };
 
 type DataElement = unit {
     tag_group: uint16;
     tag_element: uint16;
-    vr: bytes &size=2 if (self.tag_group != 0xfffe);
-    length: uint16 if (self.tag_group != 0xfffe && is_explicit_vr(self.vr));
-    length32: uint32 if (self.tag_group != 0xfffe && !is_explicit_vr(self.vr));
-    value_length: uint32 if (self.tag_group == 0xfffe);
-    
-    value: bytes &size=self.get_value_length();
-    
-    on %done {
-        if ( self.tag_group == 0x0002 )
-            self.process_meta_element();
-    }
+    vr: VR if (tag_group != 0xFFFE);
+    length_field: LengthField(self.vr.value);
+    value: bytes &size=self.length_field.length;
 };
 
-function is_explicit_vr(vr: bytes): bool {
-    return /[A-Z]{2}/ == vr;
-}
+type LengthField = unit(vr: bytes) {
+    length: uint32 if (vr in [b"OB", b"OW", b"OF", b"SQ", b"UT", b"UN"]) else uint16;
+};
 
-function get_value_length(de: DataElement): uint32 {
-    if ( de.tag_group == 0xfffe )
-        return de.value_length;
-    if ( is_explicit_vr(de.vr) )
-        return de.length;
-    return de.length32;
-}
+type VR = unit {
+    value: bytes &size=2;
+} &requires=(self.value == b"AE" || self.value == b"AS" || self.value == b"AT" ||
+            self.value == b"CS" || self.value == b"DA" || self.value == b"DS" ||
+            self.value == b"DT" || self.value == b"FL" || self.value == b"FD" ||
+            self.value == b"IS" || self.value == b"LO" || self.value == b"LT" ||
+            self.value == b"OB" || self.value == b"OF" || self.value == b"OW" ||
+            self.value == b"PN" || self.value == b"SH" || self.value == b"SL" ||
+            self.value == b"SQ" || self.value == b"SS" || self.value == b"ST" ||
+            self.value == b"TM" || self.value == b"UI" || self.value == b"UL" ||
+            self.value == b"UN" || self.value == b"US" || self.value == b"UT");
 
-on DICOM::Message::%done {
-    print "DICOM message parsed";
-}
+type SequenceItem = unit {
+    tag: uint32 &requires=0xFFFEE000;
+    length: uint32;
+    data: bytes &size=self.length if (self.length != 0xFFFFFFFF);
+    items: DataElement[] if (self.length != 0xFFFFFFFF);
+    delim: SequenceDelimiter if (self.length == 0xFFFFFFFF);
+};
 
-public function process_meta_element(de: DataElement) {
-    local tag = (de.tag_group << 16) | de.tag_element;
-    switch ( tag ) {
-        case 0x00020001: print "File Meta Information Version"; break;
-        case 0x00020002: print "Media Storage SOP Class UID"; break;
-        case 0x00020003: print "Media Storage SOP Instance UID"; break;
-        case 0x00020010: print "Transfer Syntax UID"; break;
-        case 0x00020012: print "Implementation Class UID"; break;
-        case 0x00020013: print "Implementation Version Name"; break;
-        default: print "Other Meta Element"; break;
-    }
-}
+type SequenceDelimiter = unit {
+    tag: uint32 &requires=0xFFFEE0DD;
+    length: uint32 &requires=0;
+};

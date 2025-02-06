@@ -1,86 +1,63 @@
-module NITF;
+FileHeader = struct {
+    FHDR: string(9); // File Header Version
+    CLEVEL: string(2); // Complexity Level
+    STYPE: string(4); // Standard Type
+    OSTAID: string(10); // Originating Station ID
+    FDT: string(14); // File Date and Time
+    FTITLE: string(80); // File Title
+    FSCLAS: string(1); // File Security Classification
+    FSCODE: string(40); // File Security Classification Code
+    FSCTLH: string(40); // File Security Control and Handling
+    FSREL: string(40); // File Releasing Instructions
+    FSCAUT: string(20); // File Classification Authority
+    FSCTLN: string(20); // File Security Control Number
+    FSDWNG: string(6); // File Downgrade
+    FSDWND: string(8); // File Downgrade Date
+    FSDEVT: string(40); // File Downgrade Event
+    FSCOP: string(5); // Copy Number
+    FSCPYS: string(5); // Number of Copies
+    ENCRYP: string(1); // Encryption
+    FBKGDT: string(3); // Background Color
+    ONAME: string(24); // Originator's Name
+    OPHONE: string(18); // Originator's Phone
+}
 
-type NITFFile = struct {
-    header: NITFHeader;
-    fileParts: list of NITFFilePart(header.numParts);
-};
+ImageSegmentSubheader = struct {
+    IM: string(2); // Image Identifier
+    IID1: string(10); // Image ID
+    IDATIM: string(14); // Image Date and Time
+    TGTID: string(17); // Target Identifier
+    IID2: string(80); // Image ID 2
+    ISCLAS: string(1); // Image Security Classification
+    ISCODE: string(40); // Image Security Code
+    // Additional fields for image details, compression, etc.
+}
 
-type NITFHeader = struct {
-    fileType: string(4); // "NITF"
-    version: string(5);
-    complexityLevel: string(2);
-    systemType: string(4);
-    originatingStationId: string(10);
-    dateTime: string(14);
-    fileTitle: string(80);
-    fileSecurity: NITFSecurity;
-    numParts: int(3);
-};
+GraphicSegmentSubheader = struct {
+    LISH: uint16; // Length of Image Subheader
+    LI: uint32; // Length of Image Segment
+    // Additional fields specific to graphics
+}
 
-type NITFSecurity = struct {
-    classification: string(1);
-    classificationSystem: string(2);
-    codewords: string(11);
-    controlAndHandling: string(2);
-    releaseInstructions: string(20);
-    declassificationType: string(2);
-    declassificationDate: string(8);
-    declassificationExemption: string(4);
-    downgrade: string(1);
-    downgradeDate: string(8);
-    classificationText: string(43);
-    classificationAuthType: string(1);
-    classificationAuthority: string(40);
-    classificationAuthorityNumber: string(20);
-    classificationReason: string(1);
-    securitySourceDate: string(8);
-    securityControlNumber: string(15);
-};
+TextSegmentSubheader = struct {
+    LT: uint32; // Length of Text Segment
+    LTSH: uint16; // Length of Text Subheader
+    // Additional fields for text specifics
+}
 
-type NITFFilePart = union {
-    when filePartType == "IM": NITFImage;
-    when filePartType == "GR": NITFGraphic;
-    when filePartType == "TX": NITFText;
-    when filePartType == "DE": NITFDataExtension;
-    when filePartType == "RE": NITFReservedExtension;
-};
+DataExtensionSegmentSubheader = struct {
+    // Define fields specific to data extensions
+}
 
-type NITFImage = struct {
-    imageId: string(10);
-    imageSecurity: NITFSecurity;
-    imageRepresentation: string(2);
-    imageCategory: string(2);
-    actualBitsPerPixel: int(2);
-    imageCoordinates: string(10);
-    numImageRows: int(8);
-    numImageColumns: int(8);
-    imageCompression: string(2);
-};
+ReservedExtensionSegmentSubheader = struct {
+    // Define fields specific to reserved extensions
+}
 
-type NITFGraphic = struct {
-    graphicId: string(10);
-    graphicType: string(2);
-    graphicSecurity: NITFSecurity;
-    graphicData: bytes;
-};
-
-type NITFText = struct {
-    textId: string(10);
-    textSecurity: NITFSecurity;
-    textFormat: string(3);
-    textData: string;
-};
-
-type NITFDataExtension = struct {
-    extensionId: string(25);
-    extensionSecurity: NITFSecurity;
-    extensionData: bytes;
-};
-
-type NITFReservedExtension = struct {
-    reservedId: string(25);
-    reservedSecurity: NITFSecurity;
-    reservedData: bytes;
-};
-
-let filePartType = "IM"; // Placeholder, this should be determined by actual file data
+NITF = struct {
+    header: FileHeader;
+    imageSegments: array of ImageSegmentSubheader;
+    graphicSegments: array of GraphicSegmentSubheader;
+    textSegments: array of TextSegmentSubheader;
+    dataExtensions: array of DataExtensionSegmentSubheader;
+    reservedExtensions: array of ReservedExtensionSegmentSubheader;
+}

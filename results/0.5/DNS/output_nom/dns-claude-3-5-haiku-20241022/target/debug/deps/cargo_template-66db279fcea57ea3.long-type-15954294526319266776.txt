@@ -1,0 +1,1 @@
+(impl Fn((&[u8], usize)) -> Result<((&[u8], usize), u8), nom::Err<nom::error::Error<&[u8]>>>, fn((&[u8], usize)) -> Result<((&[u8], usize), u8), nom::Err<nom::error::Error<&[u8]>>> {nom::number::streaming::be_u8::<(&[u8], usize), nom::error::Error<&[u8]>>})

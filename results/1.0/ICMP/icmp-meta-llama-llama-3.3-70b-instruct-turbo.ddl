@@ -1,85 +1,103 @@
-domain icmp_meta {
-  import "std/byteorder.dll";
-  import "std/endian.dll";
+format binary {
+  littleEndian = false
+}
 
-  type icmp_packet_t {
-    uint8 type;
-    uint8 code;
-    uint16 checksum;
-    uint32 rest_of_header;
-    bytes payload;
-  }
+type uint8 = byte
+type uint16 = bytes[2]
+type uint32 = bytes[4]
 
-  type icmp_echo_request_t : icmp_packet_t {
-    matches /type == 8/;
-    assert /code == 0/;
-  }
+type icmp_type = uint8 {
+  echo_reply = 0,
+  reserved_1 = 1,
+  reserved_2 = 2,
+  destination_unreachable = 3,
+  source_quench = 4,
+  redirect = 5,
+  reserved_6 = 6,
+  reserved_7 = 7,
+  echo_request = 8,
+  reserved_9 = 9,
+  reserved_10 = 10,
+  time_exceeded = 11,
+  parameter_problem = 12,
+  timestamp_request = 13,
+  timestamp_reply = 14,
+  information_request = 15,
+  information_reply = 16
+}
 
-  type icmp_echo_reply_t : icmp_packet_t {
-    matches /type == 0/;
-    assert /code == 0/;
-  }
+type icmp_code = uint8 {
+  network_unreachable = 0 when type == destination_unreachable,
+  host_unreachable = 1 when type == destination_unreachable,
+  protocol_unreachable = 2 when type == destination_unreachable,
+  port_unreachable = 3 when type == destination_unreachable,
+  fragmentation_needed = 4 when type == destination_unreachable,
+  redirect_datagram_for_network = 0 when type == redirect,
+  redirect_datagram_for_host = 1 when type == redirect,
+  ttl_exceeded_in_transit = 0 when type == time_exceeded,
+  fragment_reassembly_time_exceeded = 1 when type == time_exceeded,
+  pointer_indicates_error = 0 when type == parameter_problem
+}
 
-  type icmp_destination_unreachable_t : icmp_packet_t {
-    matches /type == 3/;
-    uint8 subtype;
-    uint32 unused;
-    bytes original_ip_packet;
-  }
-
-  type icmp_time_exceeded_t : icmp_packet_t {
-    matches /type == 11/;
-    uint8 subtype;
-    uint32 unused;
-    bytes original_ip_packet;
-  }
-
-  stream icmp_stream {
-    var icmp_packet : icmp_packet_t = read(icmp_packet_t);
-    var echo_requests : array[icmp_echo_request_t] = filter(icmp_packet, icmp_echo_request_t);
-    var echo_replies : array[icmp_echo_reply_t] = filter(icmp_packet, icmp_echo_reply_t);
-    var unreachable : array[icmp_destination_unreachable_t] = filter(icmp_packet, icmp_destination_unreachable_t);
-    var time_exceeded : array[icmp_time_exceeded_t] = filter(icmp_packet, icmp_time_exceeded_t);
-  }
-
-  action print_icmp_packet(icmp_packet : icmp_packet_t) {
-    print(icmp_packet.type);
-    print(icmp_packet.code);
-    print(icmp_packet.checksum);
-    print(icmp_packet.rest_of_header);
-    print(icmp_packet.payload);
-  }
-
-  action print_icmp_type(icmp_packet : icmp_packet_t) {
-    var packet_type : string;
-    switch (icmp_packet.type) {
-      case 0:
-        packet_type = "Echo Reply";
-        break;
-      case 3:
-        packet_type = "Destination Unreachable";
-        break;
-      case 8:
-        packet_type = "Echo Request";
-        break;
-      case 11:
-        packet_type = "Time Exceeded";
-        break;
-      default:
-        packet_type = "Unknown";
-    }
-    print(packet_type);
-  }
-
-  action process_icmp_packet(icmp_packet : icmp_packet_t) {
-    print_icmp_packet(icmp_packet);
-    print_icmp_type(icmp_packet);
-  }
-
-  action main() {
-    while (true) {
-      var icmp_packet : icmp_packet_t = read(icmp_packet_t);
-      process_icmp_packet(icmp_packet);
-    }
+type icmp_message = struct {
+  type: icmp_type,
+  code: icmp_code,
+  checksum: uint16,
+  body: choice {
+    echo_request: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    } when type == echo_request,
+    echo_reply: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    } when type == echo_reply,
+    destination_unreachable: struct {
+      unused: uint32,
+      internet_header: bytes[24],
+      original_datagram_data: bytes[40]
+    } when type == destination_unreachable,
+    source_quench: struct {
+      unused: uint32,
+      internet_header: bytes[24],
+      original_datagram_data: bytes[40]
+    } when type == source_quench,
+    redirect: struct {
+      gateway_address: uint32,
+      internet_header: bytes[24],
+      original_datagram_data: bytes[40]
+    } when type == redirect,
+    time_exceeded: struct {
+      unused: uint32,
+      internet_header: bytes[24],
+      original_datagram_data: bytes[40]
+    } when type == time_exceeded,
+    parameter_problem: struct {
+      pointer: uint8,
+      internet_header: bytes[24],
+      original_datagram_data: bytes[40]
+    } when type == parameter_problem,
+    timestamp_request: struct {
+      identifier: uint16,
+      sequence_number: uint16,
+      originate_timestamp: uint32,
+      receive_timestamp: uint32,
+      transmit_timestamp: uint32
+    } when type == timestamp_request,
+    timestamp_reply: struct {
+      identifier: uint16,
+      sequence_number: uint16,
+      originate_timestamp: uint32,
+      receive_timestamp: uint32,
+      transmit_timestamp: uint32
+    } when type == timestamp_reply,
+    information_request: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    } when type == information_request,
+    information_reply: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    } when type == information_reply
   }
 }

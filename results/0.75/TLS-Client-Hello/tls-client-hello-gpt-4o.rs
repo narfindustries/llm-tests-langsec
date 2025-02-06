@@ -1,21 +1,20 @@
-// Complete Rust program using Nom to parse a TLS Client Hello message
-
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map_res, opt},
-    error::ErrorKind,
-    multi::{length_data, length_value, many0, many1},
-    number::complete::{be_u16, be_u24, be_u8},
-    sequence::{preceded, tuple},
+    combinator::map_res,
+    multi::length_count,
+    number::complete::{be_u16, be_u8},
+    sequence::tuple,
     IResult,
 };
+use std::env;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug)]
 struct ClientHello {
-    version: u16,
-    random: Vec<u8>,
+    legacy_version: u16,
+    random: [u8; 32],
     session_id: Vec<u8>,
     cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
@@ -25,71 +24,58 @@ struct ClientHello {
 #[derive(Debug)]
 struct Extension {
     extension_type: u16,
-    extension_data: Vec<u8>,
-}
-
-fn parse_tls_plaintext(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, _) = tag([0x16u8])(input)?; // Content Type: Handshake
-    let (input, _) = be_u16(input)?; // Version
-    let (input, _) = length_data(be_u16)(input)?; // Length Prefixed Record
-    parse_handshake(input)
-}
-
-fn parse_handshake(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, _) = tag([0x01u8])(input)?; // Handshake Type: ClientHello
-    let (input, _) = length_value(be_u24, parse_client_hello)(input)?;
-    Ok((input, ClientHello {
-        version: 0,
-        random: vec![],
-        session_id: vec![],
-        cipher_suites: vec![],
-        compression_methods: vec![],
-        extensions: vec![],
-    }))
+    data: Vec<u8>,
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, version) = be_u16(input)?;
-    let (input, random) = take(32u8)(input)?;
-    let (input, session_id) = length_data(be_u8)(input)?;
-    let (input, cipher_suites) = length_data(be_u16)(input)?;
-    let (input, compression_methods) = length_data(be_u8)(input)?;
-    let (input, extensions) = opt(length_value(be_u16, many0(parse_extension)))(input)?;
+    let (input, legacy_version) = be_u16(input)?;
+    let (input, random) = take(32usize)(input)?;
+    let random: [u8; 32] = random.try_into().expect("slice with incorrect length");
+    let (input, session_id) = length_count(be_u8, be_u8)(input)?;
+    let (input, cipher_suites) = length_count(be_u16, be_u16)(input)?;
+    let (input, compression_methods) = length_count(be_u8, be_u8)(input)?;
+    let (input, extensions) = length_count(be_u16, parse_extension)(input)?;
 
-    Ok((input, ClientHello {
-        version,
-        random: random.to_vec(),
-        session_id: session_id.to_vec(),
-        cipher_suites: cipher_suites.chunks(2).map(|s| u16::from_be_bytes([s[0], s[1]])).collect(),
-        compression_methods: compression_methods.to_vec(),
-        extensions: extensions.unwrap_or_default(),
-    }))
+    Ok((
+        input,
+        ClientHello {
+            legacy_version,
+            random,
+            session_id,
+            cipher_suites,
+            compression_methods,
+            extensions,
+        },
+    ))
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     let (input, extension_type) = be_u16(input)?;
-    let (input, extension_data) = length_data(be_u16)(input)?;
-    Ok((input, Extension {
-        extension_type,
-        extension_data: extension_data.to_vec(),
-    }))
+    let (input, data) = length_count(be_u16, be_u8)(input)?;
+    Ok((
+        input,
+        Extension {
+            extension_type,
+            data,
+        },
+    ))
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+fn main() {
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
+        eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }
 
-    let mut file = File::open(&args[1])?;
+    let path = Path::new(&args[1]);
+    let mut file = File::open(&path).expect("Could not open file");
+
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Could not read file");
 
-    match parse_tls_plaintext(&buffer) {
+    match parse_client_hello(&buffer) {
         Ok((_, client_hello)) => println!("{:#?}", client_hello),
-        Err(e) => eprintln!("Failed to parse TLS ClientHello: {:?}", e),
+        Err(e) => eprintln!("Failed to parse ClientHello: {:?}", e),
     }
-
-    Ok(())
 }

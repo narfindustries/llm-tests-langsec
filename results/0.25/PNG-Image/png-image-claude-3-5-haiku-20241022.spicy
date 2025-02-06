@@ -2,28 +2,136 @@ module PNG;
 
 import spicy;
 
-public type Image = unit {
-    signature: bytes = b"\x89PNG\r\n\x1a\n";
-    
-    chunks: Chunk[] while ($!.is_iend());
-
-    type Chunk = unit {
-        length: uint32;
-        type: bytes(4);
-        data: bytes(self.length) if (self.type != b"IEND");
-        crc: uint32;
-
-        method is_iend(): bool {
-            return self.type == b"IEND";
-        }
-    };
+public type Signature = bytes(8) &convert {
+    self == b"\x89PNG\r\n\x1a\n" ? self : throw "Invalid PNG signature"
 };
 
-public function is_png(data: bytes) : bool {
-    try {
-        local img = PNG::Image(data);
-        return true;
-    } catch { 
-        return false;
-    }
+type ColorType = enum { 
+    GRAYSCALE = 0, 
+    RGB = 2, 
+    INDEXED = 3, 
+    GRAYSCALE_ALPHA = 4, 
+    RGB_ALPHA = 6 
+};
+
+type InterlaceMethod = enum { 
+    NO_INTERLACE = 0, 
+    ADAM7_INTERLACE = 1 
+};
+
+type CompressionMethod = enum { 
+    DEFLATE = 0 
+};
+
+type FilterMethod = enum { 
+    ADAPTIVE = 0 
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes(4);
+    data: bytes(self.length) &optional;
+    crc: uint32;
+};
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8 &validate(self == 1 || self == 2 || self == 4 || self == 8 || self == 16);
+    color_type: ColorType;
+    compression: CompressionMethod;
+    filter: FilterMethod;
+    interlace: InterlaceMethod;
+};
+
+type PLTE = unit {
+    palette: vector<bytes(3)>;
+};
+
+type tRNS = unit {
+    transparency: bytes &optional;
+};
+
+type gAMA = unit {
+    gamma: uint32;
+};
+
+type cHRM = unit {
+    white_point: tuple<uint32, uint32>;
+    red: tuple<uint32, uint32>;
+    green: tuple<uint32, uint32>;
+    blue: tuple<uint32, uint32>;
+};
+
+type sRGB = unit {
+    rendering_intent: uint8 &validate(self <= 3);
+};
+
+type iCCP = unit {
+    profile_name: bytes &null_terminated;
+    compression_method: uint8;
+    compressed_profile: bytes;
+};
+
+type tEXt = unit {
+    keyword: bytes &null_terminated;
+    text: bytes;
+};
+
+type zTXt = unit {
+    keyword: bytes &null_terminated;
+    compression_method: uint8;
+    compressed_text: bytes;
+};
+
+type iTXt = unit {
+    keyword: bytes &null_terminated;
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &null_terminated;
+    translated_keyword: bytes &null_terminated;
+    text: bytes;
+};
+
+type bKGD = unit {
+    background_color: bytes &optional;
+};
+
+type pHYs = unit {
+    pixels_per_x: uint32;
+    pixels_per_y: uint32;
+    unit: uint8 &validate(self <= 1);
+};
+
+type sBIT = unit {
+    significant_bits: bytes &optional;
+};
+
+type sPLT = unit {
+    palette_name: bytes &null_terminated;
+    sample_depth: uint8;
+    palette_entries: vector<bytes>;
+};
+
+type hIST = unit {
+    frequencies: vector<uint16>;
+};
+
+type tIME = unit {
+    year: uint16;
+    month: uint8 &validate(self >= 1 && self <= 12);
+    day: uint8 &validate(self >= 1 && self <= 31);
+    hour: uint8 &validate(self <= 23);
+    minute: uint8 &validate(self <= 59);
+    second: uint8 &validate(self <= 60);
+};
+
+type PNG = unit {
+    signature: Signature;
+    ihdr: Chunk;
+    chunks: vector<Chunk> &until(self[-1].type == b"IEND");
+};
+
+public function parse(data: bytes) : PNG {
+    return PNG(data);
 }

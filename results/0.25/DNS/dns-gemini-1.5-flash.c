@@ -1,114 +1,106 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #include <arpa/inet.h>
-#include <netdb.h>
+#include <string.h>
 
-#define MAX_PACKET_SIZE 512
-#define DNS_PORT 53
+typedef uint8_t byte;
 
-// Structure for DNS header
-typedef struct {
-    unsigned short id;
-    unsigned short flags;
-    unsigned short qdcount;
-    unsigned short ancount;
-    unsigned short nscount;
-    unsigned short arcount;
-} dns_header;
+// Helper function to parse a domain name label
+static HParser* dns_label_parser = map_parser(length_prefixed_parser(uint8_t_parser), (HMapFunc)strlen);
 
-// Structure for DNS question
-typedef struct {
-    unsigned short qtype;
-    unsigned short qclass;
-} dns_question;
+// Helper function to parse a domain name
+static HParser* dns_name_parser = recursive_parser(
+    choice_parser(
+        map_parser(bytes_parser(0), (HMapFunc)strdup),
+        sequence_parser(
+            dns_label_parser,
+            recursive_parser(
+                choice_parser(
+                    map_parser(bytes_parser(0), (HMapFunc)strdup),
+                    sequence_parser(
+                        uint8_t_parser,
+                        dns_label_parser
+                    )
+                )
+            )
+        )
+    )
+);
 
-
-unsigned char* create_dns_query(const char* hostname, unsigned short qtype, unsigned short qclass) {
-    unsigned char *query;
-    int hostname_len = strlen(hostname);
-    int query_len = sizeof(dns_header) + hostname_len + sizeof(dns_question) + 1; //+1 for null terminator
-
-    query = (unsigned char*)malloc(query_len);
-    if (query == NULL) {
-        perror("malloc failed");
-        exit(1);
-    }
-
-    dns_header *header = (dns_header*)query;
-    header->id = htons(getpid()); //Using process ID for ID
-    header->flags = htons(0x0100); //Standard query
-    header->qdcount = htons(1);
-    header->ancount = htons(0);
-    header->nscount = htons(0);
-    header->arcount = htons(0);
-
-    unsigned char *qname = query + sizeof(dns_header);
-    int i = 0;
-    char *token = strtok((char*)hostname, ".");
-    while (token != NULL) {
-        int len = strlen(token);
-        qname[i++] = len;
-        memcpy(qname + i, token, len);
-        i += len;
-        token = strtok(NULL, ".");
-    }
-    qname[i++] = 0;
-
-    dns_question *question = (dns_question*)(qname + i);
-    question->qtype = htons(qtype);
-    question->qclass = htons(qclass);
-
-    return query;
-}
+//Helper function to parse resource data based on type.  This is a placeholder and needs significant expansion for a real DNS parser.
+static HParser* dns_rdata_parser = any_parser;
 
 
-int main(int argc, char *argv[]) {
+// Define Hammer parsers for DNS header fields
+static HParser* dns_id = uint16_t_parser;
+static HParser* dns_qr = bit_parser;
+static HParser* dns_opcode = bits_parser(4);
+static HParser* dns_aa = bit_parser;
+static HParser* dns_tc = bit_parser;
+static HParser* dns_rd = bit_parser;
+static HParser* dns_ra = bit_parser;
+static HParser* dns_z = bits_parser(3);
+static HParser* dns_rcode = bits_parser(4);
+static HParser* dns_qdcount = uint16_t_parser;
+static HParser* dns_ancount = uint16_t_parser;
+static HParser* dns_nscount = uint16_t_parser;
+static HParser* dns_arcount = uint16_t_parser;
+
+// Define Hammer parser for DNS header
+static HParser* dns_header_parser = sequence_parser(dns_id, dns_qr, dns_opcode, dns_aa, dns_tc, dns_rd, dns_ra, dns_z, dns_rcode, dns_qdcount, dns_ancount, dns_nscount, dns_arcount);
+
+// Define Hammer parsers for DNS question section
+static HParser* dns_qtype = uint16_t_parser;
+static HParser* dns_qclass = uint16_t_parser;
+static HParser* dns_question = sequence_parser(dns_name_parser, dns_qtype, dns_qclass);
+
+// Define Hammer parsers for DNS resource record
+static HParser* dns_rr_type = uint16_t_parser;
+static HParser* dns_rr_class = uint16_t_parser;
+static HParser* dns_rr_ttl = uint32_t_parser;
+static HParser* dns_rr_rdlength = uint16_t_parser;
+static HParser* dns_rr_rdata = dns_rdata_parser;
+static HParser* dns_resource_record = sequence_parser(dns_name_parser, dns_rr_type, dns_rr_class, dns_rr_ttl, dns_rr_rdlength, dns_rr_rdata);
+
+// Define Hammer parser for DNS message
+static HParser* dns_message_parser = sequence_parser(dns_header_parser, repeat_parser(dns_question), repeat_parser(dns_resource_record), repeat_parser(dns_resource_record), repeat_parser(dns_resource_record));
+
+int main(int argc, char* argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <hostname>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
 
-    const char *hostname = argv[1];
-    unsigned char *query = create_dns_query(hostname, 1, 1); //Type A, Class IN
-
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("socket creation failed");
-        free(query);
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(DNS_PORT);
-    server_addr.sin_addr.s_addr = inet_addr("8.8.8.8"); //Google Public DNS
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    int sent_bytes = sendto(sockfd, query, strlen((char*)query), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-    if (sent_bytes < 0) {
-        perror("sendto failed");
-        close(sockfd);
-        free(query);
+    char* buffer = (char*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
         return 1;
     }
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
 
-    unsigned char buffer[MAX_PACKET_SIZE];
-    int received_bytes = recvfrom(sockfd, buffer, MAX_PACKET_SIZE, 0, NULL, NULL);
-    if (received_bytes < 0) {
-        perror("recvfrom failed");
-        close(sockfd);
-        free(query);
-        return 1;
+    HResult result = hammer_parse(dns_message_parser, buffer, fileSize);
+
+    if (result.success) {
+        printf("DNS message parsed successfully!\n");
+        // Access parsed data here using result.value
+    } else {
+        fprintf(stderr, "Error parsing DNS message: %s\n", result.error);
     }
 
-    printf("Received %d bytes\n", received_bytes);
-    //Further processing of the received DNS response would go here.
-
-    close(sockfd);
-    free(query);
+    free(buffer);
     return 0;
 }

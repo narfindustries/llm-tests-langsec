@@ -1,36 +1,31 @@
 meta:
-  id: hl7_v2_message
+  id: hl7v2
   title: HL7 v2.x Message
   file-extension: hl7
-  endian: be
-doc: |
-  HL7 v2.x is a widely used messaging standard in the healthcare domain that facilitates the exchange of clinical and administrative data.
+  encoding: ASCII
+
 seq:
-  - id: message
+  - id: segments
     type: segment
-    repeat: greedy
-    
+    repeat: eos
+
 types:
   segment:
     seq:
-      - id: header
+      - id: segment_type
         type: strz
-        encoding: ascii
-        terminator: 0x0d
+        terminator: 0x0D
       - id: fields
         type: field
         repeat: until
-        repeat-until: _io.is_eof
+        repeat-until: _.is_end_of_segment
 
   field:
     seq:
-      - id: contents
+      - id: value
         type: strz
-        encoding: ascii
-        terminator: [0x7c, 0x0d] # Field separator '|' or segment terminator CR
+        terminator: 0x7C
 
-enums:
-  segment_type:
-    MSH: 0x4d5348
-    PID: 0x504944
-    # Add other segment types as needed
+    instances:
+      is_end_of_segment:
+        value: value[value.size - 1] == '\r'

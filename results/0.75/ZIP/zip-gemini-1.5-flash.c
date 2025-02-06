@@ -1,55 +1,128 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a zip entry
-typedef struct {
-    char* filename;
-    unsigned char* data;
-    size_t size;
-} ZipEntry;
+typedef enum {
+    HSuccess,
+    HError
+} HResult;
 
-
-// Function to simulate the hammer library (replace with actual hammer library calls if available)
-int hammer_process(unsigned char* data, size_t size, unsigned char** output, size_t* output_size) {
-    // Simulate some processing - replace with actual hammer functionality.  This example just copies the data.
-    *output_size = size;
-    *output = (unsigned char*)malloc(size);
-    if (*output == NULL) {
-        return 1; // Memory allocation failed
-    }
-    memcpy(*output, data, size);
-    return 0;
+static HResult read_uint16(HParser* parser, uint16_t* value) {
+    return h_parse_uint16(parser, value);
 }
 
+static HResult read_uint32(HParser* parser, uint32_t* value) {
+    return h_parse_uint32(parser, value);
+}
 
-int main() {
-    // Example zip entry data (replace with your actual zip entry data)
-    ZipEntry entry;
-    entry.filename = "test.txt";
-    entry.data = (unsigned char*)"This is a test file.";
-    entry.size = strlen("This is a test file.");
+static HResult read_string(HParser* parser, char** str, uint16_t len) {
+    char* buffer = (char*)malloc(len + 1);
+    if (buffer == NULL) return HError;
+    HResult result = h_parse_bytes(parser, buffer, len);
+    if (h_is_err(result)) {
+        free(buffer);
+        return result;
+    }
+    buffer[len] = '\0';
+    *str = buffer;
+    return HSuccess;
+}
 
+static HParser* parse_local_file_header() {
+    return h_sequence(
+        h_parse_uint32(NULL, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map2(read_string, NULL),
+        h_map2(read_string, NULL)
+    );
+}
 
-    unsigned char* processed_data;
-    size_t processed_size;
+static HParser* parse_central_directory_entry() {
+    return h_sequence(
+        h_parse_uint32(NULL, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map2(read_string, NULL),
+        h_map2(read_string, NULL),
+        h_map2(read_string, NULL)
+    );
+}
 
-    int result = hammer_process(entry.data, entry.size, &processed_data, &processed_size);
+static HParser* parse_end_of_central_directory() {
+    return h_sequence(
+        h_parse_uint32(NULL, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint16, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint32, NULL),
+        h_map(read_uint16, NULL),
+        h_map2(read_string, NULL)
+    );
+}
 
-    if (result != 0) {
-        fprintf(stderr, "Error during hammer processing.\n");
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
         return 1;
     }
 
-    // Write the processed data to a file (optional)
-    FILE* output_file = fopen("output.txt", "wb");
-    if (output_file == NULL) {
-        fprintf(stderr, "Error opening output file.\n");
+    FILE* file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        perror("Error opening file");
         return 1;
     }
-    fwrite(processed_data, 1, processed_size, output_file);
-    fclose(output_file);
 
-    free(processed_data);
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    fread(buffer, 1, fileSize, file);
+    fclose(file);
+
+    HParser* parser = h_new_parser(buffer, fileSize);
+    HParseResult* result = h_parse(parser, parse_local_file_header());
+
+    if (h_is_err(result->result)) {
+        fprintf(stderr, "Parsing failed\n");
+    } else {
+        printf("Parsing succeeded!\n");
+    }
+
+    h_free_parser(parser);
+    free(buffer);
     return 0;
 }

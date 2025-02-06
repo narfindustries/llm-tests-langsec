@@ -1,46 +1,70 @@
 module TIFF;
 
-import Base;
-import FileAnalysis;
-import FileTypes;
+import zeek;
 
-public type TIFFType = unit {
-    endianness: uint16;
-    magic_number: uint16;
-
-    if endianness == 0x4949 {
-        on %byte-order = littleendian;
-    }
-    else if endianness == 0x4D4D {
-        on %byte-order = bigendian;
-    }
-    else {
-        error("Invalid TIFF endianness");
-    }
-
-    if magic_number != 42 {
-        error("Invalid TIFF magic number");
-    }
-
-    offset: uint32;
-
-    %on-parse {
-        if ( endianness != 0x4949 && endianness != 0x4D4D )
-            return;
-
-        if ( magic_number != 42 )
-            return;
-
-        FileTypes::register("tiff");
-    }
+# Define an enum for the byte order of the TIFF file
+type ByteOrder = enum {
+    II = 0x4949,    # Little-endian
+    MM = 0x4D4D     # Big-endian
 };
 
-export {
-    # Define the analyzer for the TIFF format
-    redef FileTypes::Matchers += {
-        /TIFF/ = {
-            magic = "\x49\x49\x2a\x00" | "\x4D\x4D\x00\x2a",
-            type = TIFFType
+# Define an enum for the compression types
+type Compression = enum {
+    NoCompression = 1,
+    CCITT_1D = 2,
+    Group3Fax = 3,
+    Group4Fax = 4,
+    LZW = 5,
+    JPEG = 6,  # Deprecated in TIFF 6.0
+    PackBits = 32773
+};
+
+# Define an enum for photometric interpretations
+type PhotometricInterpretation = enum {
+    WhiteIsZero = 0,
+    BlackIsZero = 1,
+    RGB = 2,
+    PaletteColor = 3,
+    TransparencyMask = 4,
+    CMYK = 5,
+    YCbCr = 6,
+    CIELab = 8
+};
+
+# Define an enum for resolution units
+type ResolutionUnit = enum {
+    NoAbsoluteUnit = 1,
+    Inch = 2,
+    Centimeter = 3
+};
+
+# Define a struct for the IFD entry
+type IFDEntry = unit {
+    tag: uint16;
+    type_: uint16;  # Renamed to type_ to avoid conflict
+    count: uint32;
+    value_offset: uint32;
+};
+
+# Define a unit for the TIFF file
+public type TIFF = unit {
+    byte_order: ByteOrder;
+    version: uint16 &check= (self.version == 42);
+    ifd_offset: uint32;
+
+    on %init {
+        if ( self.byte_order == ByteOrder::II ) {
+            %byteorder=little;
+        } else {
+            %byteorder=big;
         }
-    };
-}
+    }
+
+    ifds: vector of IFDEntry &until($input.eod());
+
+    on %done {
+        # Optional: process IFDs after parsing
+        for ( i in self.ifds )
+            print(fmt("Tag: %d, Type: %d, Count: %d, Value Offset: %d", i.tag, i.type_, i.count, i.value_offset));
+    }
+};

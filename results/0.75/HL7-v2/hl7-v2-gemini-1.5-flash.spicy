@@ -1,27 +1,54 @@
-#ifndef HL7_V2_GEMINI_1_5_FLASH_SPICY
-#define HL7_V2_GEMINI_1_5_FLASH_SPICY
+module HL7v2;
 
-event hl7_v2_gemini_1_5_flash {
-    #include "hl7-v2.zeek"
+type HL7v2_Message = record {
+    MSH: MSH_Segment;
+    PID: PID_Segment;
+    // ... other segments ...
+};
 
-    global $hl7_v2_gemini_1_5_flash_count = 0
+type MSH_Segment = record {
+    field_separator: string;
+    encoding_characters: string;
+    sending_application: string;
+    sending_facility: string;
+    receiving_application: string;
+    receiving_facility: string;
+    datetime: time;
+    message_type: string;
+    message_control_id: string;
+    processing_id: string;
+    version_id: string;
+    sequence_number: int;
+};
 
-    # Add any necessary fields or logic here based on your specific requirements
+type PID_Segment = record {
+    set_id_pid: int;
+    patient_id: string;
+    patient_id_internal: string;
+    patient_name: string;
+    patient_alias: string;
+    date_time_of_birth: time;
+    sex: string;
+    patient_alias: string;
+    race: string;
+    address: string;
+    county_code: string;
+    phone_number_home: string;
+    phone_number_business: string;
+    language: string;
+    marital_status: string;
+    religion: string;
+    patient_account_number: string;
+    ssn_number_patient: string;
+    drivers_license_number_patient: string;
+    date_time_of_last_update: time;
+    last_update_facility: string;
+};
 
-    # Example:  Extract relevant fields from the parsed HL7 message
-    msg_field MSGHDR_MSH_1(string):  hl7_msg.MSH[1]; // Extract Sending Application
-    msg_field MSGHDR_MSH_2(string):  hl7_msg.MSH[2]; // Extract Sending Facility
-    msg_field MSGHDR_MSH_3(string):  hl7_msg.MSH[3]; // Extract Receiving Application
-    msg_field MSGHDR_MSH_4(string):  hl7_msg.MSH[4]; // Extract Receiving Facility
-    msg_field MSGHDR_MSH_9(string):  hl7_msg.MSH[9]; // Extract Message Date/Time
+# ... other segment types ...
 
-    # Example: Increment counter for each message processed
-    $hl7_v2_gemini_1_5_flash_count += 1;
-
-    # Example: Log relevant information
-    print fmt("Processed HL7 v2 Gemini 1.5 Flash message: %s", hl7_msg.raw);
-
-
+# Example usage (still simplified):
+event hl7_message(msg: HL7v2_Message) {
+    print msg.MSH.message_type;
+    print msg.PID.patient_name;
 }
-
-#endif

@@ -1,120 +1,89 @@
-module HTTP-1.1
-
-type Request = {
-    method: Method,
-    uri: URI,
-    version: Version,
-    headers: list Header,
-    body: optional bytes
+type HttpVersion = enum {
+    HTTP_1_0,
+    HTTP_1_1
 }
 
-type Response = {
-    version: Version,
-    status_code: StatusCode,
-    status_text: string,
-    headers: list Header,
-    body: optional bytes
+type HttpMethod = enum {
+    GET,
+    POST,
+    HEAD,
+    PUT,
+    DELETE,
+    TRACE,
+    OPTIONS,
+    CONNECT
 }
 
-type Method = 
-    | GET
-    | POST
-    | PUT
-    | DELETE
-    | HEAD
-    | OPTIONS
-    | PATCH
-
-type URI = string
-
-type Version = {
-    major: uint8,
-    minor: uint8
+type StatusCode = enum {
+    CONTINUE = 100,
+    OK = 200,
+    CREATED = 201,
+    NO_CONTENT = 204,
+    MOVED_PERMANENTLY = 301,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    INTERNAL_SERVER_ERROR = 500
 }
 
-type Header = {
+type HeaderField = record {
     name: string,
     value: string
 }
 
-type StatusCode = uint16
+type RequestUri = variant {
+    AbsoluteUri(string),
+    AbsolutePath(string),
+    Authority(string),
+    Asterisk
+}
 
-parser request: Request = 
-    method <- parse_method,
-    _ <- parse_whitespace,
-    uri <- parse_uri,
-    _ <- parse_whitespace,
-    version <- parse_version,
-    _ <- parse_crlf,
-    headers <- parse_headers,
-    body <- optional(parse_body),
-    return {
-        method = method,
-        uri = uri, 
-        version = version,
-        headers = headers,
-        body = body
-    }
+type HttpRequest = record {
+    method: HttpMethod,
+    uri: RequestUri,
+    version: HttpVersion,
+    headers: list<HeaderField>,
+    body: optional<bytes>
+}
 
-parser parse_method: Method =
-    | "GET" -> GET
-    | "POST" -> POST
-    | "PUT" -> PUT
-    | "DELETE" -> DELETE
-    | "HEAD" -> HEAD
-    | "OPTIONS" -> OPTIONS
-    | "PATCH" -> PATCH
+type HttpResponse = record {
+    version: HttpVersion,
+    status: StatusCode,
+    headers: list<HeaderField>,
+    body: optional<bytes>
+}
 
-parser parse_uri: URI =
-    uri <- take_while(lambda c. c != ' '),
-    return uri
+type OptionalRequestHeaders = record {
+    accept: optional<string>,
+    accept_charset: optional<string>,
+    accept_encoding: optional<string>,
+    accept_language: optional<string>,
+    authorization: optional<string>,
+    expect: optional<string>,
+    from: optional<string>,
+    host: string,
+    if_match: optional<string>,
+    if_modified_since: optional<string>,
+    if_none_match: optional<string>,
+    if_range: optional<string>,
+    if_unmodified_since: optional<string>,
+    max_forwards: optional<int>,
+    proxy_authorization: optional<string>,
+    range: optional<string>,
+    referer: optional<string>,
+    te: optional<string>,
+    user_agent: optional<string>
+}
 
-parser parse_version: Version =
-    "HTTP/",
-    major <- parse_digit,
-    ".",
-    minor <- parse_digit,
-    return {
-        major = major,
-        minor = minor
-    }
-
-parser parse_digit: uint8 =
-    c <- any_char,
-    match c {
-        '0' -> 0,
-        '1' -> 1,
-        '2' -> 2,
-        '3' -> 3,
-        '4' -> 4,
-        '5' -> 5,
-        '6' -> 6,
-        '7' -> 7,
-        '8' -> 8,
-        '9' -> 9
-    }
-
-parser parse_headers: list Header =
-    headers <- many(parse_header),
-    return headers
-
-parser parse_header: Header =
-    name <- take_while(lambda c. c != ':'),
-    ":",
-    _ <- parse_whitespace,
-    value <- take_while(lambda c. c != '\r'),
-    _ <- parse_crlf,
-    return {
-        name = name,
-        value = value
-    }
-
-parser parse_body: bytes =
-    body <- take_while(lambda c. true),
-    return body
-
-parser parse_whitespace: unit =
-    many(lambda c. c == ' ' || c == '\t')
-
-parser parse_crlf: unit =
-    "\r\n"
+type OptionalResponseHeaders = record {
+    accept_ranges: optional<string>,
+    age: optional<int>,
+    etag: optional<string>,
+    location: optional<string>,
+    proxy_authenticate: optional<string>,
+    retry_after: optional<string>,
+    server: optional<string>,
+    vary: optional<string>,
+    www_authenticate: optional<string>
+}

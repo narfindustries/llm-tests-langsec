@@ -1,97 +1,93 @@
 use nom::{
-    bytes::complete::{tag, take_while, take_until},
-    character::complete::{alpha1, char, digit1, line_ending, space0, space1},
-    combinator::{map, map_res, opt, recognize},
-    multi::{many0, separated_list0},
-    number::complete::double,
-    sequence::{delimited, preceded, separated_pair, terminated, tuple},
+    bytes::complete::{tag, take_while1},
+    character::complete::{alpha1, alphanumeric1, char, space0},
+    combinator::{opt, recognize},
+    multi::separated_list0,
+    sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
 use std::fs;
 use std::path::Path;
 
 #[derive(Debug, PartialEq)]
-enum Method {
+enum HttpMethod {
     Get,
     Post,
-    // Add other methods as needed
+    Put,
+    Delete,
+    Other(String),
 }
 
 #[derive(Debug, PartialEq)]
-struct RequestLine {
-    method: Method,
+struct HttpRequest {
+    method: HttpMethod,
     path: String,
-    version: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct Header {
-    name: String,
-    value: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct Request {
-    request_line: RequestLine,
-    headers: Vec<Header>,
+    http_version: String,
+    headers: Vec<(String, String)>,
     body: Vec<u8>,
 }
 
-fn method(input: &[u8]) -> IResult<&[u8], Method> {
-    let (input, method) = alpha1(input)?;
+#[derive(Debug, PartialEq)]
+struct HttpResponse {
+    http_version: String,
+    status_code: u16,
+    status_text: String,
+    headers: Vec<(String, String)>,
+    body: Vec<u8>,
+}
+
+fn http_method(input: &[u8]) -> IResult<&[u8], HttpMethod> {
+    let (input, method) = recognize(pair(alpha1, opt(alphanumeric1)))(input)?;
     match method {
-        b"GET" => Ok((input, Method::Get)),
-        b"POST" => Ok((input, Method::Post)),
-        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
+        b"GET" => Ok((input, HttpMethod::Get)),
+        b"POST" => Ok((input, HttpMethod::Post)),
+        b"PUT" => Ok((input, HttpMethod::Put)),
+        b"DELETE" => Ok((input, HttpMethod::Delete)),
+        _ => Ok((input, HttpMethod::Other(String::from_utf8_lossy(method).to_string()))),
     }
 }
 
-fn request_line(input: &[u8]) -> IResult<&[u8], RequestLine> {
-    let (input, (method, path, version)) = tuple((
-        method,
-        delimited(space1, take_until(b" HTTP/"), space0),
-        recognize(tuple((tag(b"HTTP/"), digit1, opt(char(b'.'))))),
-    ))(input)?;
+fn http_version(input: &[u8]) -> IResult<&[u8], String> {
+    let (input, version) = recognize(tuple((tag(b"HTTP/"), alphanumeric1, char(b'.'), alphanumeric1)))(input)?;
+    Ok((input, String::from_utf8_lossy(version).to_string()))
+}
+
+fn header_field(input: &[u8]) -> IResult<&[u8], (String, String)> {
+    let (input, field) = terminated(take_while1(|c: u8| c != b':' && c != b'\r'), char(b':'))(input)?;
+    let (input, value) = delimited(space0, take_while1(|c: u8| c != b'\r'), space0)(input)?;
     Ok((
         input,
-        RequestLine {
-            method: method,
-            path: String::from_utf8_lossy(path).to_string(),
-            version: String::from_utf8_lossy(version).to_string(),
-        },
+        (
+            String::from_utf8_lossy(field).trim().to_string(),
+            String::from_utf8_lossy(value).trim().to_string(),
+        ),
     ))
 }
 
-fn header(input: &[u8]) -> IResult<&[u8], Header> {
-    let (input, (name, value)) = separated_pair(
-        take_until(b":"),
-        tag(b": "),
-        take_until(line_ending),
-    )(input)?;
-    Ok((
-        input,
-        Header {
-            name: String::from_utf8_lossy(name).trim().to_string(),
-            value: String::from_utf8_lossy(value).trim().to_string(),
-        },
-    ))
+fn headers(input: &[u8]) -> IResult<&[u8], Vec<(String, String)>> {
+    separated_list0(tag(b"\r\n"), header_field)(input)
 }
 
-fn headers(input: &[u8]) -> IResult<&[u8], Vec<Header>> {
-    many0(terminated(header, line_ending))(input)
+fn request_line(input: &[u8]) -> IResult<&[u8], (HttpMethod, String, String)> {
+    let (input, (method, path, version)) = tuple((http_method, take_while1(|c: u8| c != b' '), http_version))(input)?;
+    Ok((input, (method, String::from_utf8_lossy(path).to_string(), version)))
 }
 
-
-fn request(input: &[u8]) -> IResult<&[u8], Request> {
-    let (input, (request_line, headers, body)) = tuple((
-        request_line,
-        headers,
-        take_while(|c| c != 0), //Simple body parser.  Improve as needed for your use case.
-    ))(input)?;
+fn http_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
+    let (input, (method, path, version)) = preceded(space0, request_line)(input)?;
+    let (input, headers) = preceded(tag(b"\r\n"), headers)(input)?;
+    let (input, body) = if input.is_empty() {
+        (input, &[])
+    } else {
+        let (i, b) = take_while1(|_| true)(input);
+        (i, b)
+    };
     Ok((
         input,
-        Request {
-            request_line,
+        HttpRequest {
+            method,
+            path,
+            http_version: version,
             headers,
             body: body.to_vec(),
         },
@@ -106,11 +102,15 @@ fn main() {
     }
 
     let path = Path::new(&args[1]);
-    let contents = fs::read(path).expect("Failed to read file");
+    let contents = fs::read(path).expect("Something went wrong reading the file");
 
-    match request(&contents) {
-        Ok((_, req)) => println!("{:#?}", req),
-        Err(e) => println!("Error parsing request: {:?}", e),
+    match http_request(&contents) {
+        Ok((leftover, request)) => {
+            println!("Parsed Request:\n{:#?}", request);
+            if !leftover.is_empty() {
+                println!("Leftover data: {:?}", leftover);
+            }
+        }
+        Err(e) => println!("Error parsing HTTP request: {}", e),
     }
 }
-

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.ogf.org/dfdl/HL7v2"
+           xmlns:hl7="http://www.ogf.org/dfdl/HL7v2"
+           elementFormDefault="qualified">
+
+  <!-- Define basic HL7 data types -->
+  <xs:simpleType name="ST">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="DTM">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{14}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="IS">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="ID">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="SI">
+    <xs:restriction base="xs:integer"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="CX">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="XPN">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="CE">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="XAD">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="XTN">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="DLN">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="PL">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="FC">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="DT">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{8}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="NM">
+    <xs:restriction base="xs:decimal"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="VID">
+    <xs:restriction base="xs:string"/>
+  </xs:simpleType>
+
+  <!-- Define HL7 segments -->
+  <xs:complexType name="MSH">
+    <xs:sequence>
+      <xs:element name="FieldSeparator" type="hl7:ST" dfdl:length="1"/>
+      <xs:element name="EncodingCharacters" type="hl7:ST" dfdl:length="4"/>
+      <xs:element name="SendingApplication" type="hl7:HD"/>
+      <xs:element name="SendingFacility" type="hl7:HD"/>
+      <xs:element name="ReceivingApplication" type="hl7:HD"/>
+      <xs:element name="ReceivingFacility" type="hl7:HD"/>
+      <xs:element name="DateTimeOfMessage" type="hl7:DTM"/>
+      <xs:element name="Security" type="hl7:ST" minOccurs="0"/>
+      <xs:element name="MessageType" type="hl7:MSG"/>
+      <xs:element name="MessageControlID" type="hl7:ST"/>
+      <xs:element name="ProcessingID" type="hl7:PT"/>
+      <xs:element name="VersionID" type="hl7:VID"/>
+      <xs:element name="SequenceNumber" type="hl7:NM" minOccurs="0"/>
+      <xs:element name="ContinuationPointer" type="hl7:ST" minOccurs="0"/>
+      <xs:element name="AcceptAcknowledgmentType" type="hl7:ID" minOccurs="0"/>
+      <xs:element name="ApplicationAcknowledgmentType" type="hl7:ID" minOccurs="0"/>
+      <xs:element name="CountryCode" type="hl7:ID" minOccurs="0"/>
+      <xs:element name="CharacterSet" type="hl7:ID" minOccurs="0"/>
+      <xs:element name="PrincipalLanguageOfMessage" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="AlternateCharacterSetHandlingScheme" type="hl7:ID" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PID">
+    <xs:sequence>
+      <xs:element name="SetID" type="hl7:SI"/>
+      <xs:element name="PatientID" type="hl7:CX"/>
+      <xs:element name="PatientIdentifierList" type="hl7:CX"/>
+      <xs:element name="AlternatePatientID" type="hl7:CX" minOccurs="0"/>
+      <xs:element name="PatientName" type="hl7:XPN"/>
+      <xs:element name="MothersMaidenName" type="hl7:XPN" minOccurs="0"/>
+      <xs:element name="DateTimeOfBirth" type="hl7:DTM"/>
+      <xs:element name="AdministrativeSex" type="hl7:IS"/>
+      <xs:element name="PatientAlias" type="hl7:XPN" minOccurs="0"/>
+      <xs:element name="Race" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="PatientAddress" type="hl7:XAD" minOccurs="0"/>
+      <xs:element name="CountyCode" type="hl7:IS" minOccurs="0"/>
+      <xs:element name="PhoneNumberHome" type="hl7:XTN" minOccurs="0"/>
+      <xs:element name="PhoneNumberBusiness" type="hl7:XTN" minOccurs="0"/>
+      <xs:element name="PrimaryLanguage" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="MaritalStatus" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="Religion" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="PatientAccountNumber" type="hl7:CX" minOccurs="0"/>
+      <xs:element name="SSNNumber" type="hl7:ST" minOccurs="0"/>
+      <xs:element name="DriversLicenseNumber" type="hl7:DLN" minOccurs="0"/>
+      <xs:element name="MothersIdentifier" type="hl7:CX" minOccurs="0"/>
+      <xs:element name="EthnicGroup" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="BirthPlace" type="hl7:ST" minOccurs="0"/>
+      <xs:element name="MultipleBirthIndicator" type="hl7:ID" minOccurs="0"/>
+      <xs:element name="BirthOrder" type="hl7:NM" minOccurs="0"/>
+      <xs:element name="Citizenship" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="VeteransMilitaryStatus" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="Nationality" type="hl7:CE" minOccurs="0"/>
+      <xs:element name="PatientDeathDateAndTime" type="hl7:DTM" minOccurs="0"/>
+      <xs:element name="PatientDeathIndicator" type="hl7:ID" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PV1">
+    <xs:sequence>
+      <xs:element name="SetID" type="hl7:SI"/>
+      <xs:element name="PatientClass" type="hl7:IS"/>
+      <xs:element name="AssignedPatientLocation" type="hl7:PL"/>
+      <xs:element name="AdmissionType" type="hl7:IS"/>
+      <xs:element name="PreadmitNumber" type="hl7:CX" minOccurs="0"/>
+      <xs:element name="PriorPatientLocation" type="hl7:PL" minOccurs="0"/>
+      <xs:element name="AttendingDoctor" type="hl7:XCN" minOccurs="0"/>
+      <xs:element name="ReferringDoctor" type="hl7:XCN" minOccurs="0"/>
+      <xs:element name="ConsultingDoctor" type="hl7:XCN" minOccurs="0"/>
+      <xs:element name="HospitalService" type="hl7:IS" minOccurs="0"/>
+      <xs:element name="TemporaryLocation" type="hl7:PL" min

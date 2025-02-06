@@ -1,78 +1,125 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the ICMP packet structure
+#define ICMP_TYPE_ECHO_REPLY 0
+#define ICMP_TYPE_DESTINATION_UNREACHABLE 3
+#define ICMP_TYPE_SOURCE_QUENCH 4
+#define ICMP_TYPE_REDIRECT 5
+#define ICMP_TYPE_ECHO_REQUEST 8
+#define ICMP_TYPE_TIME_EXCEEDED 11
+
+#define ICMP_CODE_DESTINATION_UNREACHABLE_NETWORK_UNREACHABLE 0
+#define ICMP_CODE_DESTINATION_UNREACHABLE_HOST_UNREACHABLE 1
+#define ICMP_CODE_DESTINATION_UNREACHABLE_PROTOCOL_UNREACHABLE 2
+#define ICMP_CODE_DESTINATION_UNREACHABLE_PORT_UNREACHABLE 3
+#define ICMP_CODE_DESTINATION_UNREACHABLE_FRAGMENTATION_NEEDED 4
+#define ICMP_CODE_DESTINATION_UNREACHABLE_SOURCE_ROUTE_FAILED 5
+
+#define ICMP_CODE_REDIRECT_NETWORK 0
+#define ICMP_CODE_REDIRECT_HOST 1
+#define ICMP_CODE_REDIRECT_TYPE_OF_SERVICE_AND_NETWORK 2
+#define ICMP_CODE_REDIRECT_TYPE_OF_SERVICE_AND_HOST 3
+
+#define ICMP_CODE_TIME_EXCEEDED_TTL_EXCEEDED 0
+#define ICMP_CODE_TIME_EXCEEDED_FRAGMENT_REASSEMBLY_TIME_EXCEEDED 1
+
 typedef struct {
     uint8_t type;
     uint8_t code;
     uint16_t checksum;
-    uint32_t identifier;
+    uint16_t identifier;
     uint16_t sequence_number;
-} icmp_packet_t;
+} icmp_header_t;
 
-// Define the Hammer specification
 typedef struct {
-    uint8_t magic[4];
-    uint16_t version;
-    uint16_t packet_type;
-    uint32_t packet_length;
-    icmp_packet_t icmp;
-} hammer_packet_t;
+    icmp_header_t header;
+    uint32_t unused;
+    uint8_t internet_header_and_data[1024];
+} icmp_message_t;
 
-// Function to generate the ICMP packet
-icmp_packet_t generate_icmp_packet() {
-    icmp_packet_t icmp;
-    icmp.type = 8; // Echo request
-    icmp.code = 0;
-    icmp.checksum = 0;
-    icmp.identifier = 0x1234;
-    icmp.sequence_number = 0x5678;
+typedef struct {
+    icmp_header_t header;
+    uint32_t unused;
+    uint8_t internet_header_and_data[1024];
+    uint8_t data[1024];
+} icmp_echo_message_t;
+
+void print_icmp_message(void* input) {
+    icmp_message_t* message = (icmp_message_t*)input;
+    printf("ICMP Type: %u\n", message->header.type);
+    printf("ICMP Code: %u\n", message->header.code);
+    printf("ICMP Checksum: %u\n", message->header.checksum);
+    printf("ICMP Identifier: %u\n", message->header.identifier);
+    printf("ICMP Sequence Number: %u\n", message->header.sequence_number);
+}
+
+void print_icmp_echo_message(void* input) {
+    icmp_echo_message_t* message = (icmp_echo_message_t*)input;
+    printf("ICMP Type: %u\n", message->header.type);
+    printf("ICMP Code: %u\n", message->header.code);
+    printf("ICMP Checksum: %u\n", message->header.checksum);
+    printf("ICMP Identifier: %u\n", message->header.identifier);
+    printf("ICMP Sequence Number: %u\n", message->header.sequence_number);
+    printf("ICMP Data: ");
+    for (int i = 0; i < 1024; i++) {
+        printf("%02x", message->data[i]);
+    }
+    printf("\n");
+}
+
+HParser* icmp_parser() {
+    HParser* type = h_uint8();
+    HParser* code = h_uint8();
+    HParser* checksum = h_uint16();
+    HParser* identifier = h_uint16();
+    HParser* sequence_number = h_uint16();
+    HParser* unused = h_uint32();
+    HParser* internet_header_and_data = h_bytes(1024);
+    HParser* data = h_bytes(1024);
+
+    HParser* icmp_header = h_tup2(type, h_tup4(code, checksum, identifier, sequence_number));
+
+    HParser* icmp_message = h_tup3(icmp_header, unused, internet_header_and_data);
+
+    HParser* icmp_echo_message = h_tup4(icmp_header, unused, internet_header_and_data, data);
+
+    HParser* icmp = h_choice(icmp_message, icmp_echo_message);
+
     return icmp;
 }
 
-// Function to generate the Hammer packet
-hammer_packet_t generate_hammer_packet(icmp_packet_t icmp) {
-    hammer_packet_t hammer;
-    memcpy(hammer.magic, "LLAM", 4);
-    hammer.version = 3;
-    hammer.packet_type = 1;
-    hammer.packet_length = sizeof(icmp_packet_t);
-    hammer.icmp = icmp;
-    return hammer;
-}
-
-// Function to calculate the checksum
-uint16_t calculate_checksum(icmp_packet_t icmp) {
-    uint16_t checksum = 0;
-    uint8_t* data = (uint8_t*)&icmp;
-    for (int i = 0; i < sizeof(icmp_packet_t); i++) {
-        checksum += data[i];
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
-    return checksum;
-}
 
-int main() {
-    // Generate the ICMP packet
-    icmp_packet_t icmp = generate_icmp_packet();
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file %s\n", argv[1]);
+        return 1;
+    }
 
-    // Calculate the checksum
-    icmp.checksum = calculate_checksum(icmp);
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Generate the Hammer packet
-    hammer_packet_t hammer = generate_hammer_packet(icmp);
+    uint8_t* buffer = malloc(file_size);
+    fread(buffer, 1, file_size, file);
+    fclose(file);
 
-    // Print the Hammer packet
-    printf("Magic: %c%c%c%c\n", hammer.magic[0], hammer.magic[1], hammer.magic[2], hammer.magic[3]);
-    printf("Version: %d\n", hammer.version);
-    printf("Packet Type: %d\n", hammer.packet_type);
-    printf("Packet Length: %d\n", hammer.packet_length);
-    printf("ICMP Type: %d\n", hammer.icmp.type);
-    printf("ICMP Code: %d\n", hammer.icmp.code);
-    printf("ICMP Checksum: %d\n", hammer.icmp.checksum);
-    printf("ICMP Identifier: %d\n", hammer.icmp.identifier);
-    printf("ICMP Sequence Number: %d\n", hammer.icmp.sequence_number);
+    HParser* parser = icmp_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
 
+    if (h_parse_result_is_ok(result)) {
+        printf("ICMP message parsed successfully\n");
+    } else {
+        printf("Error parsing ICMP message\n");
+    }
+
+    free(buffer);
     return 0;
 }

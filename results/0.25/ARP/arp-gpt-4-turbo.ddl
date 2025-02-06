@@ -1,21 +1,20 @@
-module ARP {
-  import Network.IPv4
-  import Network.Ethernet
+type HardwareType = uint16;
+type ProtocolType = uint16;
+type HardwareLength = uint8;
+type ProtocolLength = uint8;
+type Operation = uint16;
 
-  type ARP_Packet = struct {
-    htype       : uint16  // Hardware type
-    ptype       : uint16  // Protocol type
-    hlen        : uint8   // Hardware address length
-    plen        : uint8   // Protocol address length
-    oper        : uint16  // Operation
-    sha         : bytes @length(hlen)  // Sender hardware address
-    spa         : IPv4.Address  // Sender protocol address
-    tha         : bytes @length(hlen)  // Target hardware address
-    tpa         : IPv4.Address  // Target protocol address
-  }
+type MACAddress = bytes[6];
+type IPAddress = bytes[4];
 
-  type Packet = struct {
-    ethernetHeader : Ethernet.Header
-    arpBody        : ARP_Packet
-  }  
-}
+type ARP_Packet = struct {
+  htype : HardwareType,
+  ptype : ProtocolType,
+  hlen : HardwareLength,
+  plen : ProtocolLength,
+  oper : Operation,
+  sha : MACAddress,
+  spa : IPAddress,
+  tha : MACAddress,
+  tpa : IPAddress
+};

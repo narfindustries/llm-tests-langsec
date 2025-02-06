@@ -1,32 +1,99 @@
-@header {{ 
-  author = "Generated Specification" 
-  description = "TLS Client Hello" 
-  version = "0.5"
-}}
+module TLS;
 
-type TLSClientHello = record {
-  handshake_type: uint8 = 0x01,
-  length: uint24,
-  version: uint16 = 0x0303,
-  random: bytestring(32),
-  session_id_length: uint8,
-  session_id: bytestring &length=session_id_length,
-  cipher_suites_length: uint16,
-  cipher_suites: array of uint16 &length=cipher_suites_length/2,
-  compression_methods_length: uint8,
-  compression_methods: array of uint8 &length=compression_methods_length,
-  extensions_length: uint16,
-  extensions: array of TLSExtension &length=extensions_length,
-} &byteorder=littleendian;
-
-type TLSExtension = record {
-  extension_type: uint16,
-  extension_length: uint16,
-  extension_data: bytestring &length=extension_length,
+type ProtocolVersion = record {
+  major: uint8;
+  minor: uint8;
 };
 
-type TLSClientHelloMessage = record {
-  content: TLSClientHello,
-} &byteorder=littleendian;
+type Random = record {
+  gmt_unix_time: uint32;
+  random_bytes: byte[28];
+};
 
-module TLSClientHello;
+type ExtensionType = enum {
+  supported_versions = 43;
+  supported_groups = 41;
+  signature_algorithms = 13;
+  key_share = 51;
+  pre_shared_key = 45;
+  early_data = 40;
+  cookie = 44;
+  psk_key_exchange_modes = 42;
+  ticket_early_data_info = 57;
+  record_size_limit = 28;
+  max_fragment_length = 1;
+};
+
+type SignatureAlgorithm = record {
+  hash: uint8;
+  signature: uint8;
+};
+
+type SupportedVersions = vector of uint16;
+type SupportedGroups = vector of uint16;
+type SignatureAlgorithms = vector of SignatureAlgorithm;
+type KeyShare = record {
+  group: uint16;
+  key_exchange: byte[];
+};
+type PreSharedKey = record {
+  identity: byte[];
+  obfuscated_ticket_age: uint32;
+};
+type EarlyData = byte[];
+type Cookie = byte[];
+type PSKKeyExchangeModes = vector of uint8;
+type TicketEarlyDataInfo = record {
+  max_early_data_size: uint32;
+};
+type RecordSizeLimit = uint16;
+type MaxFragmentLength = uint8;
+
+type Extension = record {
+  extension_type: uint16;
+  extension_length: uint16;
+  extension_data: case extension_type of {
+    43 -> SupportedVersions;
+    41 -> SupportedGroups;
+    13 -> SignatureAlgorithms;
+    51 -> KeyShare;
+    45 -> PreSharedKey;
+    40 -> EarlyData;
+    44 -> Cookie;
+    42 -> PSKKeyExchangeModes;
+    57 -> TicketEarlyDataInfo;
+    28 -> RecordSizeLimit;
+    1 -> MaxFragmentLength;
+  };
+};
+
+type ClientHello = record {
+  legacy_version: ProtocolVersion;
+  random: Random;
+  legacy_session_id: byte[0..32];
+  legacy_compression_methods: byte[1..255];
+  extensions_length: uint16;
+  extensions: vector of Extension;
+};
+
+type TLSClientHello = record {
+  client_hello: ClientHello;
+};
+
+refine type TLSClientHello += {
+  condition = client_hello.legacy_version.major == 3 && client_hello.legacy_version.minor == 3;
+}; 
+
+&let {
+  client_hello: TLSClientHello;
+} 
+
+&parse client_hello = 
+  client_hello.legacy_version.major + 
+  client_hello.legacy_version.minor + 
+  client_hello.random.gmt_unix_time + 
+  client_hello.random.random_bytes + 
+  client_hello.legacy_session_id + 
+  client_hello.legacy_compression_methods + 
+  client_hello.extensions_length + 
+  client_hello.extensions;

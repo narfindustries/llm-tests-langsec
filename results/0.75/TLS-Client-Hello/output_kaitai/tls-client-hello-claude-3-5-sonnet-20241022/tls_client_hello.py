@@ -10,29 +10,39 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class TlsClientHello(KaitaiStruct):
 
-    class ContentType(Enum):
-        change_cipher_spec = 20
-        alert = 21
-        handshake = 22
-        application_data = 23
+    class SupportedGroupsEnum(Enum):
+        secp256r1 = 23
+        secp384r1 = 24
+        secp521r1 = 25
+        x25519 = 29
+        x448 = 30
 
-    class HandshakeType(Enum):
-        client_hello = 1
-        server_hello = 2
-        certificate = 11
-        server_key_exchange = 12
-        server_hello_done = 14
-        client_key_exchange = 16
+    class PskKeyExchangeMode(Enum):
+        psk_ke = 0
+        psk_dhe_ke = 1
 
     class ExtensionType(Enum):
         server_name = 0
         supported_groups = 10
-        ec_point_formats = 11
         signature_algorithms = 13
-        application_layer_protocol_negotiation = 16
+        pre_shared_key = 41
+        early_data = 42
         supported_versions = 43
         psk_key_exchange_modes = 45
         key_share = 51
+
+    class CipherSuiteEnum(Enum):
+        tls_aes_128_gcm_sha256 = 4865
+        tls_aes_256_gcm_sha384 = 4866
+        tls_chacha20_poly1305_sha256 = 4867
+
+    class SignatureAlgorithmEnum(Enum):
+        ecdsa_secp256r1_sha256 = 1027
+        ecdsa_secp384r1_sha384 = 1283
+        ecdsa_secp521r1_sha512 = 1539
+        rsa_pss_rsae_sha256 = 2052
+        rsa_pss_rsae_sha384 = 2053
+        rsa_pss_rsae_sha512 = 2054
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -40,14 +50,10 @@ class TlsClientHello(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.record_header = TlsClientHello.RecordHeader(self._io, self, self._root)
-        self.handshake_header = TlsClientHello.HandshakeHeader(self._io, self, self._root)
-        self.client_version = TlsClientHello.Version(self._io, self, self._root)
-        self.random = TlsClientHello.Random(self._io, self, self._root)
-        self.session_id_length = self._io.read_u1()
-        if self.session_id_length > 0:
-            self.session_id = self._io.read_bytes(self.session_id_length)
-
+        self.legacy_version = self._io.read_u2be()
+        self.random = self._io.read_bytes(32)
+        self.legacy_session_id_length = self._io.read_u1()
+        self.legacy_session_id = self._io.read_bytes(self.legacy_session_id_length)
         self.cipher_suites_length = self._io.read_u2be()
         self.cipher_suites = []
         for i in range(self.cipher_suites_length // 2):
@@ -63,7 +69,7 @@ class TlsClientHello(KaitaiStruct):
             i += 1
 
 
-    class Random(KaitaiStruct):
+    class PreSharedKeyExtension(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -71,11 +77,23 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.gmt_unix_time = self._io.read_u4be()
-            self.random_bytes = self._io.read_bytes(28)
+            self.identities_length = self._io.read_u2be()
+            self.identities = []
+            i = 0
+            while not self._io.is_eof():
+                self.identities.append(TlsClientHello.PskIdentity(self._io, self, self._root))
+                i += 1
+
+            self.binders_length = self._io.read_u2be()
+            self.binders = []
+            i = 0
+            while not self._io.is_eof():
+                self.binders.append(TlsClientHello.PskBinder(self._io, self, self._root))
+                i += 1
 
 
-    class Version(KaitaiStruct):
+
+    class PskBinder(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -83,11 +101,11 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.major = self._io.read_u1()
-            self.minor = self._io.read_u1()
+            self.binder_length = self._io.read_u1()
+            self.binder = self._io.read_bytes(self.binder_length)
 
 
-    class HandshakeHeader(KaitaiStruct):
+    class PskIdentity(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -95,11 +113,12 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.msg_type = self._io.read_u1()
-            self.length = self._io.read_bits_int_be(24)
+            self.identity_length = self._io.read_u2be()
+            self.identity = self._io.read_bytes(self.identity_length)
+            self.obfuscated_ticket_age = self._io.read_u4be()
 
 
-    class RecordHeader(KaitaiStruct):
+    class PskKeyExchangeModesExtension(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -107,9 +126,103 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.content_type = self._io.read_u1()
-            self.version = TlsClientHello.Version(self._io, self, self._root)
-            self.length = self._io.read_u2be()
+            self.ke_modes_length = self._io.read_u1()
+            self.ke_modes = []
+            for i in range(self.ke_modes_length):
+                self.ke_modes.append(KaitaiStream.resolve_enum(TlsClientHello.PskKeyExchangeMode, self._io.read_u1()))
+
+
+
+    class ServerNameExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.server_name_list_length = self._io.read_u2be()
+            self.server_name_list = []
+            i = 0
+            while not self._io.is_eof():
+                self.server_name_list.append(TlsClientHello.ServerNameEntry(self._io, self, self._root))
+                i += 1
+
+
+
+    class ServerNameEntry(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.name_type = self._io.read_u1()
+            self.name_length = self._io.read_u2be()
+            self.name = self._io.read_bytes(self.name_length)
+
+
+    class SupportedGroupsExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.supported_groups_length = self._io.read_u2be()
+            self.supported_groups = []
+            for i in range(self.supported_groups_length // 2):
+                self.supported_groups.append(KaitaiStream.resolve_enum(TlsClientHello.SupportedGroupsEnum, self._io.read_u2be()))
+
+
+
+    class SupportedVersionsExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.versions_length = self._io.read_u1()
+            self.versions = []
+            for i in range(self.versions_length // 2):
+                self.versions.append(self._io.read_u2be())
+
+
+
+    class KeyShareExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.client_shares_length = self._io.read_u2be()
+            self.client_shares = []
+            i = 0
+            while not self._io.is_eof():
+                self.client_shares.append(TlsClientHello.KeyShareEntry(self._io, self, self._root))
+                i += 1
+
+
+
+    class SignatureAlgorithmsExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.supported_signature_algorithms_length = self._io.read_u2be()
+            self.supported_signature_algorithms = []
+            for i in range(self.supported_signature_algorithms_length // 2):
+                self.supported_signature_algorithms.append(KaitaiStream.resolve_enum(TlsClientHello.SignatureAlgorithmEnum, self._io.read_u2be()))
+
 
 
     class CipherSuite(KaitaiStruct):
@@ -120,7 +233,31 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.cipher_suite = self._io.read_u2be()
+            self.value = KaitaiStream.resolve_enum(TlsClientHello.CipherSuiteEnum, self._io.read_u2be())
+
+
+    class KeyShareEntry(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.group = KaitaiStream.resolve_enum(TlsClientHello.SupportedGroupsEnum, self._io.read_u2be())
+            self.key_exchange_length = self._io.read_u2be()
+            self.key_exchange = self._io.read_bytes(self.key_exchange_length)
+
+
+    class EarlyDataExtension(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.max_early_data_size = self._io.read_u4be()
 
 
     class Extension(KaitaiStruct):
@@ -131,9 +268,43 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.type = self._io.read_u2be()
+            self.type = KaitaiStream.resolve_enum(TlsClientHello.ExtensionType, self._io.read_u2be())
             self.length = self._io.read_u2be()
-            self.data = self._io.read_bytes(self.length)
+            _on = self.type
+            if _on == TlsClientHello.ExtensionType.key_share:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.KeyShareExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.supported_versions:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.SupportedVersionsExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.psk_key_exchange_modes:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.PskKeyExchangeModesExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.server_name:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.ServerNameExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.supported_groups:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.SupportedGroupsExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.signature_algorithms:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.SignatureAlgorithmsExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.early_data:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.EarlyDataExtension(_io__raw_body, self, self._root)
+            elif _on == TlsClientHello.ExtensionType.pre_shared_key:
+                self._raw_body = self._io.read_bytes(self.length)
+                _io__raw_body = KaitaiStream(BytesIO(self._raw_body))
+                self.body = TlsClientHello.PreSharedKeyExtension(_io__raw_body, self, self._root)
+            else:
+                self.body = self._io.read_bytes(self.length)
 
 
 

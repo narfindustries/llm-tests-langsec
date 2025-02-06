@@ -1,0 +1,55 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/" targetNamespace="http://www.ogf.org/dfdl/" xmlns:tns="http://www.ogf.org/dfdl/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="gzipFormat">
+        <dfdl:format lengthKind="implicit" encoding="US-ASCII" byteOrder="littleEndian" />
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="GZIPFileType">
+    <xs:sequence>
+      <xs:element name="header">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ID1" type="xs:hexBinary" fixed="1F" dfdl:length="1" />
+            <xs:element name="ID2" type="xs:hexBinary" fixed="8B" dfdl:length="1" />
+            <xs:element name="CM" type="xs:integer" dfdl:length="1" />
+            <xs:element name="FLG" type="xs:integer" dfdl:length="1" dfdl:binaryNumberRep="binary" />
+            <xs:element name="MTIME" type="xs:unsignedInt" dfdl:length="4" />
+            <xs:element name="XFL" type="xs:integer" dfdl:length="1" />
+            <xs:element name="OS" type="xs:integer" dfdl:length="1" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element name="extraField" minOccurs="0">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:length="2" />
+                <xs:element name="extraFieldData" type="xs:hexBinary" dfdl:length="{../extraFieldLength}" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="filename" type="xs:string" minOccurs="0" dfdl:terminator="%NUL;" dfdl:lengthKind="delimited" />
+          <xs:element name="comment" type="xs:string" minOccurs="0" dfdl:terminator="%NUL;" dfdl:lengthKind="delimited" />
+          <xs:element name="headerCRC16" type="xs:unsignedShort" minOccurs="0" dfdl:length="{if (xs:int(../header/FLG) and 2) gt 0 then 2 else 0}" />
+        </xs:sequence>
+      </xs:choice>
+      <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="implicit" />
+      <xs:element name="trailer">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="CRC32" type="xs:unsignedInt" dfdl:length="4" />
+            <xs:element name="ISIZE" type="xs:unsignedInt" dfdl:length="4" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="gzipFile" type="tns:GZIPFileType" />
+
+</xs:schema>

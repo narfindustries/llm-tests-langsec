@@ -1,85 +1,80 @@
-# JPEG File Format Parser
+module JPEG
 
-file JPEG {
-    magic = /\xff\xd8\xff/
+let soi: byte[] = [0xff, 0xd8];
+let app0: byte[] = [0xff, 0xe0];
+let app1: byte[] = [0xff, 0xe1];
+let dqt: byte[] = [0xff, 0xdb];
+let sof0: byte[] = [0xff, 0xc0];
+let dht: byte[] = [0xff, 0xc4];
+let dri: byte[] = [0xff, 0xdd];
+let sos: byte[] = [0xff, 0xda];
+let eoi: byte[] = [0xff, 0xd9];
+let restart_marker: byte[] = [0xff, (0xd0 | 0xd1 | 0xd2 | 0xd3 | 0xd4 | 0xd5 | 0xd6 | 0xd7)];
 
-    struct SOI {
-        uint8[2] marker = /\xff\xd8/
-    }
+let jpeg = 
+  soi 
+  ( app0 
+    ( length: uint16 
+      identifier: string(5) 
+      version: uint16 
+      units: uint8 
+      xdensity: uint16 
+      ydensity: uint16 
+      thumbn_width: uint8 
+      thumbn_height: uint8 
+    )
+  )?
+  ( app1 
+    ( length: uint16 
+      identifier: string 
+      data: byte[length - 2] 
+    )
+  )*
+  dqt
+  ( dqt
+    ( length: uint16 
+      table_number: uint8 
+      precision: uint8 
+      data: byte[64] 
+    )
+  )*
+  sof0
+  ( length: uint16 
+    precision: uint8 
+    image_height: uint16 
+    image_width: uint16 
+    number_of_components: uint8 
+    ( component_id: uint8 
+      horizontal_sampling_factor: uint8 
+      vertical_sampling_factor: uint8 
+      quantization_table_number: uint8 
+    )[number_of_components]
+  )
+  ( dht
+    ( length: uint16 
+      table_class: uint8 
+      destination_id: uint8 
+      ( number_of_codes: uint8 
+        ( value: uint8 
+          code: uint8 
+        )[16]
+      )[2]
+    )
+  )*
+  ( dri 
+    ( length: uint16 
+      restart_interval: uint16 
+    )
+  )?
+  sos
+  ( length: uint16 
+    number_of_components: uint8 
+    ( component_selector: uint8 
+      dc_table: uint8 
+      ac_table: uint8 
+    )[number_of_components]
+    scan_data: byte[]
+  )
+  eoi;
 
-    struct APP0 {
-        uint8[2] marker = /\xff\xe0/
-        uint16 length
-        uint8[5] identifier = "JFIF\0"
-        uint8 version_major
-        uint8 version_minor
-        uint8 units
-        uint16 density_x
-        uint16 density_y
-        uint8 thumbnail_x
-        uint8 thumbnail_y
-    }
-
-    struct DQT {
-        uint8[2] marker = /\xff\db/
-        uint16 length
-        uint8 precision
-        uint8 table_id
-        uint64 coefficients[64]
-    }
-
-    struct SOF0 {
-        uint8[2] marker = /\xff\xc0/
-        uint16 length
-        uint8 precision
-        uint16 height
-        uint16 width
-        uint8 components
-        struct Component {
-            uint8 id
-            uint8 sampling_factor
-            uint8 quantization_table_id
-        } components[components]
-    }
-
-    struct DHT {
-        uint8[2] marker = /\xff\xc4/
-        uint16 length
-        uint8 table_class
-        uint8 table_id
-        uint64 codes[256]
-    }
-
-    struct SOS {
-        uint8[2] marker = /\xffxda/
-        uint16 length
-        uint8 components
-        struct ScanComponent {
-            uint8 id
-            uint8 dc_table_id
-            uint8 ac_table_id
-        } components[components]
-        uint8 spectral_selection_start
-        uint8 spectral_selection_end
-        uint8 successive_approximation
-    }
-
-    seq {
-        s: SOI
-        loop {
-            marker: uint8[2]
-            if marker == /\xff\xd9/, break
-            length: uint16
-            case marker {
-                /\xff\xe0/: APP0
-                /\xff\db/: DQT
-                /\xff\xc0/: SOF0
-                /\xff\xc4/: DHT
-                /\xff\xd8/: SOI
-                /\xff\xd9/: break
-                /\xff\xda/: SOS
-                else: uint8[length - 2]
-            }
-        }
-    }
-}
+let input = jpeg;

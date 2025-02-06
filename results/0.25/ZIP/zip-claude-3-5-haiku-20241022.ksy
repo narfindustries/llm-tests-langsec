@@ -1,33 +1,42 @@
 meta:
-  id: zip
-  title: ZIP archive
+  id: zip_file
   file-extension: zip
   endian: le
+
 seq:
-  - id: signatures
-    type: signatures
-  - id: central_dir
-    type: central_dir
+  - id: sections
+    type: section
+    repeat: eos
+
 types:
-  signatures:
-    seq:
-      - id: local_file_headers
-        type: local_file_header
-        repeat: until
-        repeat-until: not _io.is_eof()
-  local_file_header:
+  section:
     seq:
       - id: signature
-        contents: [0x50, 0x4b, 0x03, 0x04]
+        type: u4
+        enum: section_signatures
+      - id: body
+        type:
+          switch-on: signature
+          cases:
+            'section_signatures::local_file_header': local_file_header
+            'section_signatures::central_directory_file_header': central_directory_file_header
+            'section_signatures::end_of_central_directory': end_of_central_directory
+            'section_signatures::digital_signature': digital_signature
+            'section_signatures::zip64_end_of_central_directory_locator': zip64_end_of_central_directory_locator
+            'section_signatures::zip64_end_of_central_directory_record': zip64_end_of_central_directory_record
+
+  local_file_header:
+    seq:
       - id: version_needed_to_extract
         type: u2
-      - id: flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
-      - id: last_mod_time
+        enum: compression_methods
+      - id: last_mod_file_time
         type: u2
-      - id: last_mod_date
+      - id: last_mod_file_date
         type: u2
       - id: crc32
         type: u4
@@ -35,39 +44,31 @@ types:
         type: u4
       - id: uncompressed_size
         type: u4
-      - id: file_name_length
+      - id: filename_length
         type: u2
       - id: extra_field_length
         type: u2
-      - id: file_name
+      - id: filename
         type: str
-        size: file_name_length
+        size: filename_length
         encoding: UTF-8
       - id: extra_field
         size: extra_field_length
-      - id: body
-        size: compressed_size
-  central_dir:
+
+  central_directory_file_header:
     seq:
-      - id: central_dir_entries
-        type: central_dir_entry
-        repeat: until
-        repeat-until: not _io.is_eof()
-  central_dir_entry:
-    seq:
-      - id: signature
-        contents: [0x50, 0x4b, 0x01, 0x02]
       - id: version_made_by
         type: u2
       - id: version_needed_to_extract
         type: u2
-      - id: flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
-      - id: last_mod_time
+        enum: compression_methods
+      - id: last_mod_file_time
         type: u2
-      - id: last_mod_date
+      - id: last_mod_file_date
         type: u2
       - id: crc32
         type: u4
@@ -75,7 +76,7 @@ types:
         type: u4
       - id: uncompressed_size
         type: u4
-      - id: file_name_length
+      - id: filename_length
         type: u2
       - id: extra_field_length
         type: u2
@@ -87,11 +88,11 @@ types:
         type: u2
       - id: external_file_attributes
         type: u4
-      - id: local_header_offset
+      - id: relative_offset_of_local_header
         type: u4
-      - id: file_name
+      - id: filename
         type: str
-        size: file_name_length
+        size: filename_length
         encoding: UTF-8
       - id: extra_field
         size: extra_field_length
@@ -99,3 +100,91 @@ types:
         type: str
         size: file_comment_length
         encoding: UTF-8
+
+  end_of_central_directory:
+    seq:
+      - id: number_of_this_disk
+        type: u2
+      - id: disk_where_central_directory_starts
+        type: u2
+      - id: total_central_directory_entries_on_this_disk
+        type: u2
+      - id: total_central_directory_entries
+        type: u2
+      - id: size_of_central_directory
+        type: u4
+      - id: offset_of_central_directory
+        type: u4
+      - id: zip_file_comment_length
+        type: u2
+      - id: zip_file_comment
+        type: str
+        size: zip_file_comment_length
+        encoding: UTF-8
+
+  digital_signature:
+    seq:
+      - id: signature_length
+        type: u2
+      - id: signature_data
+        size: signature_length
+
+  zip64_end_of_central_directory_locator:
+    seq:
+      - id: number_of_disk_with_start_of_zip64_eocdr
+        type: u4
+      - id: relative_offset_of_zip64_eocdr
+        type: u8
+      - id: total_number_of_disks
+        type: u4
+
+  zip64_end_of_central_directory_record:
+    seq:
+      - id: size_of_zip64_eocdr
+        type: u8
+      - id: version_made_by
+        type: u2
+      - id: version_needed_to_extract
+        type: u2
+      - id: number_of_this_disk
+        type: u4
+      - id: number_of_disk_with_start_of_central_directory
+        type: u4
+      - id: total_entries_on_this_disk
+        type: u8
+      - id: total_entries
+        type: u8
+      - id: size_of_central_directory
+        type: u8
+      - id: offset_of_central_directory
+        type: u8
+      - id: extensible_data_sector
+        size-eos: true
+
+enums:
+  section_signatures:
+    0x04034B50: local_file_header
+    0x02014B50: central_directory_file_header
+    0x06054B50: end_of_central_directory
+    0x05054B50: digital_signature
+    0x07064B50: zip64_end_of_central_directory_locator
+    0x06064B50: zip64_end_of_central_directory_record
+
+  compression_methods:
+    0: no_compression
+    1: shrunk
+    2: reduced_1
+    3: reduced_2
+    4: reduced_3
+    5: reduced_4
+    6: imploded
+    8: deflated
+    9: enhanced_deflated
+    10: pkware_dcl_imploded
+    12: bzip2
+    14: lzma
+    18: ibm_terse
+    19: lz77
+    97: wavpack
+    98: ppmd
+    99: experimental

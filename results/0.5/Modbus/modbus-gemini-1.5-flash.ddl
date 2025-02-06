@@ -1,74 +1,42 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE LambdaCase #-}
+module Modbus {
+  type ModbusFrame = {
+    header: ModbusHeader,
+    pdu: ModbusPDU
+  }
 
-module Modbus where
+  type ModbusHeader = {
+    transactionId: UInt16,
+    protocolId: UInt16,
+    length: UInt16,
+    unitId: UInt8
+  }
 
-import Daedalus.AST
-import Daedalus.PP
-import Daedalus.Panic (panic)
-import Daedalus.Interp (interp)
+  type ModbusPDU = {
+    functionCode: UInt8,
+    data: Data
+  }
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import Data.Maybe (fromMaybe)
-import Data.List (intercalate)
-import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON, defaultOptions, genericToJSON, genericParseJSON)
+  type Data = Choice {
+    ReadCoils: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, coilStatus: Byte[] },
+    ReadDiscreteInputs: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, inputStatus: Byte[] },
+    ReadHoldingRegisters: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, registers: UInt16[] },
+    ReadInputRegisters: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, registers: UInt16[] },
+    WriteSingleCoil: { startAddress: UInt16, value: Boolean },
+    WriteSingleRegister: { startAddress: UInt16, value: UInt16 },
+    WriteMultipleCoils: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, coilStatus: Byte[] },
+    WriteMultipleRegisters: { startAddress: UInt16, quantity: UInt16, byteCount: UInt8, registers: UInt16[] },
+    ReportServerDiagnostics: { subFunctionCode: UInt8, diagnosticData: Byte[] },
+    ReadExceptionStatus: { exceptionStatus: UInt16 },
+    DiagnosticRequest: { subFunctionCode: UInt8, data: Byte[] },
+    GetComEventCounter: { eventCounter: UInt32 },
+    GetComEventLog: { eventCounter: UInt32, eventLog: Byte[] },
+    ReadDeviceIdentification: { objectId: UInt16, data: Byte[] },
+    ExceptionResponse: { exceptionCode: UInt8 }
+  }
 
-
--- Define your Modbus data types here.  This is a placeholder.  Replace with your actual types.
-
-data ModbusRequest = ModbusRequest {
-  functionCode :: Integer,
-  data :: BS.ByteString
-} deriving (Show, Generic, ToJSON, FromJSON)
-
-data ModbusResponse = ModbusResponse {
-  functionCode :: Integer,
-  data :: BS.ByteString
-} deriving (Show, Generic, ToJSON, FromJSON)
-
-
--- Daedalus parser for Modbus requests.  This is a placeholder.  Replace with your actual parser.
-
-modbusRequestParser :: Parser ModbusRequest
-modbusRequestParser = do
-  fc <- integer
-  data' <- bytes (1024) -- Adjust size as needed
-  return $ ModbusRequest fc data'
-
-
--- Daedalus parser for Modbus responses. This is a placeholder. Replace with your actual parser.
-
-modbusResponseParser :: Parser ModbusResponse
-modbusResponseParser = do
-  fc <- integer
-  data' <- bytes (1024) -- Adjust size as needed
-  return $ ModbusResponse fc data'
-
-
--- Example usage (replace with your actual code)
-
-main :: IO ()
-main = do
-  let input = BS.pack [0x01, 0x03, 0x00, 0x00, 0x00, 0x02] -- Example Modbus request
-  case interp modbusRequestParser input of
-    Just (r,_) -> print r
-    Nothing -> putStrLn "Parse failed"
-
-  let input2 = BS.pack [0x01, 0x03, 0x02, 0x00, 0x00, 0x04, 0x01, 0x02] -- Example Modbus response
-  case interp modbusResponseParser input2 of
-    Just (r,_) -> print r
-    Nothing -> putStrLn "Parse failed"
-
+  type Byte = UInt8
+  type UInt8 = UInt8
+  type UInt16 = UInt16
+  type UInt32 = UInt32
+  type Boolean = Boolean
+}

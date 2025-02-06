@@ -1,23 +1,55 @@
-#ifndef DNS_GEMINI_1_5_FLASH_SPICY
-#define DNS_GEMINI_1_5_FLASH_SPICY
+module DNS;
 
-#include <stdint.h>
+type DNS {
+    id: uint16;
+    qr: bool;
+    opcode: enum { QUERY, IQUERY, STATUS, NOTIFY, UPDATE, 0x0C, 0x0D, 0x0E, 0x0F };
+    aa: bool;
+    tc: bool;
+    rd: bool;
+    ra: bool;
+    z: uint3;
+    rcode: enum { NOERROR, FORMERR, SERVFAIL, NXDOMAIN, NOTIMP, REFUSED, YXDOMAIN, YXRRSET, NXRRSET, NOTAUTH, NOTZONE };
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
 
-// Define structures and functions as needed for your DNS Gemini 1.5 Flash Spicy implementation.
-//  The error message suggests a problem with the compilation of the Spicy code, not the specification itself.
-//  The following is a placeholder; replace it with your actual code.
+    questions: [qdcount] {
+        qname: domain;
+        qtype: uint16;
+        qclass: uint16;
+    };
 
-typedef struct {
-    uint8_t  data[1024]; // Example:  Adjust size as needed
-    uint16_t length;
-} dns_gemini_packet_t;
+    answers: [ancount] {
+        name: domain;
+        type: uint16;
+        class: uint16;
+        ttl: uint32;
+        rdlength: uint16;
+        rdata: bytes:rdlength;
+    };
 
-dns_gemini_packet_t process_dns_query(dns_gemini_packet_t query) {
-    dns_gemini_packet_t response;
-    // Implement your DNS query processing logic here.
-    response.length = 0; // Placeholder
-    return response;
+    authorities: [nscount] {
+        name: domain;
+        type: uint16;
+        class: uint16;
+        ttl: uint32;
+        rdlength: uint16;
+        rdata: bytes:rdlength;
+    };
+
+    additionals: [arcount] {
+        name: domain;
+        type: uint16;
+        class: uint16;
+        ttl: uint32;
+        rdlength: uint16;
+        rdata: bytes:rdlength;
+    };
 }
 
-#endif // DNS_GEMINI_1_5_FLASH_SPICY
-
+type domain: seq {
+    labels: [1..255] string;
+    terminator: uint8 == 0;
+}

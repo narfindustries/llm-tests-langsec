@@ -1,72 +1,86 @@
 use nom::{
-    be_u16, be_u32, be_u8, bytes::complete::take, combinator::map, IResult,
+    bytes::complete::take,
+    number::complete::{be_i32, be_u32, be_u64},
+    IResult, error::{Error, ErrorKind},
+    Err,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct NtpTimestamp {
-    seconds: u32,
-    fraction: u32,
-}
-
-#[derive(Debug)]
 struct NtpPacket {
-    li_vn_mode: u8,
+    li: u8,
+    vn: u8,
+    mode: u8,
     stratum: u8,
-    poll: i8,
+    poll: u8,
     precision: i8,
-    root_delay: u32,
+    root_delay: i32,
     root_dispersion: u32,
     reference_id: u32,
-    reference_timestamp: NtpTimestamp,
-    originate_timestamp: NtpTimestamp,
-    receive_timestamp: NtpTimestamp,
-    transmit_timestamp: NtpTimestamp,
+    reference_timestamp: u64,
+    originate_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    key_identifier: Option<u32>,
+    message_digest: Option<[u8; 16]>,
 }
 
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket, Error<ErrorKind>> {
+    let (input, li_vn_mode) = take(1usize)(input)?;
+    let li = (li_vn_mode[0] >> 6) & 0b11;
+    let vn = (li_vn_mode[0] >> 3) & 0b111;
+    let mode = li_vn_mode[0] & 0b111;
 
-fn parse_ntp_timestamp(input: &[u8]) -> IResult<&[u8], NtpTimestamp> {
-    map(
-        pair(be_u32, be_u32),
-        |(seconds, fraction)| NtpTimestamp { seconds, fraction },
-    )(input)
-}
+    let (input, stratum) = take(1usize)(input)?;
+    let stratum = stratum[0];
 
-fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    map(
-        tuple((
-            be_u8,
-            be_u8,
-            be_i8,
-            be_i8,
-            be_u32,
-            be_u32,
-            be_u32,
-            parse_ntp_timestamp,
-            parse_ntp_timestamp,
-            parse_ntp_timestamp,
-            parse_ntp_timestamp,
-        )),
-        |(li_vn_mode, stratum, poll, precision, root_delay, root_dispersion, reference_id, reference_timestamp, originate_timestamp, receive_timestamp, transmit_timestamp)| {
-            NtpPacket {
-                li_vn_mode,
-                stratum,
-                poll,
-                precision,
-                root_delay,
-                root_dispersion,
-                reference_id,
-                reference_timestamp,
-                originate_timestamp,
-                receive_timestamp,
-                transmit_timestamp,
-            }
+    let (input, poll) = take(1usize)(input)?;
+    let poll = poll[0];
+
+    let (input, precision) = take(1usize)(input)?;
+    let precision = precision[0] as i8;
+
+    let (input, root_delay) = be_i32(input)?;
+    let (input, root_dispersion) = be_u32(input)?;
+    let (input, reference_id) = be_u32(input)?;
+    let (input, reference_timestamp) = be_u64(input)?;
+    let (input, originate_timestamp) = be_u64(input)?;
+    let (input, receive_timestamp) = be_u64(input)?;
+    let (input, transmit_timestamp) = be_u64(input)?;
+
+    let (input, key_identifier) = match be_u32(input) {
+        Ok((i, key)) => (i, Some(key)),
+        Err(_) => (input, None),
+    };
+
+    let (input, message_digest) = match take(16usize)(input) {
+        Ok((i, digest)) => (i, Some(digest.try_into().unwrap())),
+        Err(_) => (input, None),
+    };
+
+    Ok((
+        input,
+        NtpPacket {
+            li: li,
+            vn: vn,
+            mode: mode,
+            stratum: stratum,
+            poll: poll,
+            precision: precision,
+            root_delay: root_delay,
+            root_dispersion: root_dispersion,
+            reference_id: reference_id,
+            reference_timestamp: reference_timestamp,
+            originate_timestamp: originate_timestamp,
+            receive_timestamp: receive_timestamp,
+            transmit_timestamp: transmit_timestamp,
+            key_identifier: key_identifier,
+            message_digest: message_digest,
         },
-    )(input)
+    ))
 }
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -76,27 +90,12 @@ fn main() {
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
-        }
-    };
-
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
-        }
-    };
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_ntp_packet(&buffer) {
         Ok((_, packet)) => println!("{:?}", packet),
-        Err(err) => println!("Error parsing NTP packet: {:?}", err),
+        Err(e) => println!("Error parsing NTP packet: {:?}", e),
     }
 }
-
-use nom::{pair, tuple};

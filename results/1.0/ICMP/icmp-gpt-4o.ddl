@@ -1,44 +1,70 @@
-@format(endianness=Endian::Big)
-type ICMP {
-    version: u4,
-    ihl: u4,
-    type_of_service: u8,
-    total_length: u16,
-    identification: u16,
-    flags: u3,
-    fragment_offset: u13,
-    time_to_live: u8,
-    protocol: u8,
-    header_checksum: u16,
-    source_address: u32,
-    destination_address: u32,
-    
-    @if (protocol == 1) {
-        icmp: ICMPPacket
-    }
+icmp {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+
+    data: switch (type) {
+        0, 8 => echo;
+        3 => destination_unreachable;
+        4 => source_quench;
+        5 => redirect;
+        11 => time_exceeded;
+        12 => parameter_problem;
+        13, 14 => timestamp;
+        17, 18 => address_mask;
+        * => payload;
+    };
 }
 
-type ICMPPacket {
-    icmp_type: u8,
-    code: u8,
-    checksum: u16,
-    rest_of_header: u32,
+type echo = struct {
+    identifier: uint16;
+    sequence_number: uint16;
+    data: bytes[];
+};
 
-    @switch (icmp_type) {
-        0 => echo_reply: EchoHeader,
-        8 => echo_request: EchoHeader,
-        3 => destination_unreachable: DestinationUnreachableHeader,
-        _: raw_data: bytes(rest_of_header_length)
-    },
+type destination_unreachable = struct {
+    unused: uint32;
+    original_datagram: original_datagram;
+};
 
-    rest_of_header_length: u16
-}
+type source_quench = struct {
+    unused: uint32;
+    original_datagram: original_datagram;
+};
 
-type EchoHeader {
-    identifier: u16,
-    sequence_number: u16
-}
+type redirect = struct {
+    gateway_internet_address: uint32;
+    original_datagram: original_datagram;
+};
 
-type DestinationUnreachableHeader {
-    unused: u32
-}
+type time_exceeded = struct {
+    unused: uint32;
+    original_datagram: original_datagram;
+};
+
+type parameter_problem = struct {
+    pointer: uint8;
+    unused: bytes[3];
+    original_datagram: original_datagram;
+};
+
+type timestamp = struct {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type address_mask = struct {
+    identifier: uint16;
+    sequence_number: uint16;
+    address_mask: uint32;
+};
+
+type original_datagram = struct {
+    internet_header: bytes[20]; // Minimum Internet Header size
+    data: bytes[8];
+};
+
+type payload = bytes[];

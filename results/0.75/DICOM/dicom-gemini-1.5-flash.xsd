@@ -1,34 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://example.org/dicom"
            targetNamespace="http://example.org/dicom"
-           xmlns="http://example.org/dicom"
            elementFormDefault="qualified">
 
   <xs:element name="DICOM">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="HeaderType"/>
-        <xs:element name="Data" type="DataType"/>
+        <xs:element ref="tns:DICOMHeader" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="tns:DICOMDataset" minOccurs="1" maxOccurs="1"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:element name="DICOMHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128"/>
+        <xs:element name="DICOMPrefix" type="xs:hexBinary" dfdl:length="4"/>
+        <xs:element name="ExplicitVRBigEndian" type="xs:hexBinary" dfdl:length="4"/>
+        <!-- Add other header elements here as needed, referencing the DICOM standard -->
+      </xs:sequence>
+      <xs:attribute name="byteOrder" type="xs:string" use="required" dfdl:value="bigEndian"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DICOMDataset">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Element" type="tns:DICOMElement" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="DICOMElement">
     <xs:sequence>
-      <xs:element name="PatientName" type="xs:string" dfdl:length="64"/>
-      <xs:element name="StudyID" type="xs:string" dfdl:length="16"/>
-      <xs:element name="SeriesNumber" type="xs:integer"/>
+      <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="VR" type="xs:string" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="Value" type="xs:hexBinary" dfdl:length="1024"/>  <!--Example length, adjust as needed-->
     </xs:sequence>
   </xs:complexType>
-
-
-  <xs:complexType name="DataType">
-    <xs:sequence>
-      <xs:element name="PixelData" type="xs:base64Binary" dfdl:lengthKind="length" dfdl:length="1024"/>  <!-- Example length, adjust as needed -->
-    </xs:sequence>
-  </xs:complexType>
-
 
 </xs:schema>

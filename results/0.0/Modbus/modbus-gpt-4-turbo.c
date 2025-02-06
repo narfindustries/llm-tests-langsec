@@ -1,80 +1,89 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Modbus Function Codes
-#define READ_COILS 0x01
-#define READ_DISCRETE_INPUTS 0x02
-#define READ_HOLDING_REGISTERS 0x03
-#define READ_INPUT_REGISTERS 0x04
-#define WRITE_SINGLE_COIL 0x05
-#define WRITE_SINGLE_REGISTER 0x06
-#define WRITE_MULTIPLE_COILS 0x0F
-#define WRITE_MULTIPLE_REGISTERS 0x10
+// Define Modbus constants
+#define MODBUS_TCP_PROTOCOL_ID 0
 
-// Modbus Exception Codes
-#define ILLEGAL_FUNCTION 0x01
-#define ILLEGAL_DATA_ADDRESS 0x02
-#define ILLEGAL_DATA_VALUE 0x03
-#define SERVER_DEVICE_FAILURE 0x04
-#define ACKNOWLEDGE 0x05
-#define SERVER_DEVICE_BUSY 0x06
-#define MEMORY_PARITY_ERROR 0x08
-#define GATEWAY_PATH_UNAVAILABLE 0x0A
-#define GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND 0x0B
+// Function prototypes
+static void parse_modbus_tcp(const uint8_t *data, size_t length);
+static void print_hex(const uint8_t *data, size_t length);
 
-static HParser *modbus_address;
-static HParser *modbus_quantity;
-static HParser *modbus_value;
-static HParser *modbus_exception_code;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <modbus_binary_file>\n", argv[0]);
+        return 1;
+    }
 
-static HParser *modbus_pdu;
-static HParser *modbus_request;
-static HParser *modbus_response;
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
 
-static void init_modbus_parsers() {
-    modbus_address = h_uint16();
-    modbus_quantity = h_uint16();
-    modbus_value = h_uint16();
-    modbus_exception_code = h_uint8();
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    HParser *modbus_read_request = h_sequence(modbus_address, modbus_quantity, NULL);
-    HParser *modbus_write_single_request = h_sequence(modbus_address, modbus_value, NULL);
-    HParser *modbus_write_multiple_request = h_sequence(modbus_address, modbus_quantity, h_length_value(h_uint8(), h_repeat_n(modbus_value, h_indirect())),
-                                                        NULL);
+    // Read file into memory
+    uint8_t *buffer = malloc(filesize);
+    if (!buffer) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(file);
+        return 1;
+    }
 
-    HParser *modbus_read_response = h_length_value(h_uint8(), h_repeat_n(modbus_value, h_indirect()));
-    HParser *modbus_write_response = h_sequence(modbus_address, modbus_quantity, NULL);
-    HParser *modbus_exception_response = h_sequence(h_uint8(), modbus_exception_code, NULL);
+    size_t read_bytes = fread(buffer, 1, filesize, file);
+    if (read_bytes != filesize) {
+        fprintf(stderr, "Failed to read the file\n");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
 
-    modbus_request = h_choice(
-        h_sequence(h_uint8_const(READ_COILS), modbus_read_request),
-        h_sequence(h_uint8_const(READ_DISCRETE_INPUTS), modbus_read_request),
-        h_sequence(h_uint8_const(READ_HOLDING_REGISTERS), modbus_read_request),
-        h_sequence(h_uint8_const(READ_INPUT_REGISTERS), modbus_read_request),
-        h_sequence(h_uint8_const(WRITE_SINGLE_COIL), modbus_write_single_request),
-        h_sequence(h_uint8_const(WRITE_SINGLE_REGISTER), modbus_write_single_request),
-        h_sequence(h_uint8_const(WRITE_MULTIPLE_COILS), modbus_write_multiple_request),
-        h_sequence(h_uint8_const(WRITE_MULTIPLE_REGISTERS), modbus_write_multiple_request),
-        NULL
-    );
+    // Parse the Modbus TCP data
+    parse_modbus_tcp(buffer, filesize);
 
-    modbus_response = h_choice(
-        h_sequence(h_uint8_const(READ_COILS), modbus_read_response),
-        h_sequence(h_uint8_const(READ_DISCRETE_INPUTS), modbus_read_response),
-        h_sequence(h_uint8_const(READ_HOLDING_REGISTERS), modbus_read_response),
-        h_sequence(h_uint8_const(READ_INPUT_REGISTERS), modbus_read_response),
-        h_sequence(h_uint8_const(WRITE_SINGLE_COIL), modbus_write_response),
-        h_sequence(h_uint8_const(WRITE_SINGLE_REGISTER), modbus_write_response),
-        h_sequence(h_uint8_const(WRITE_MULTIPLE_COILS), modbus_write_response),
-        h_sequence(h_uint8_const(WRITE_MULTIPLE_REGISTERS), modbus_write_response),
-        h_sequence(h_uint8_range(0x80, 0xBF), modbus_exception_response),
-        NULL
-    );
+    // Cleanup
+    free(buffer);
+    fclose(file);
 
-    modbus_pdu = h_choice(modbus_request, modbus_response, NULL);
+    return 0;
 }
 
-int main(int argc, char **argv) {
-    init_modbus_parsers();
-    // Further code to use modbus_pdu parser
+static void parse_modbus_tcp(const uint8_t *data, size_t length) {
+    HParser *transaction_id = h_uint16();
+    HParser *protocol_id = h_uint16();
+    HParser *length_field = h_uint16();
+    HParser *unit_id = h_uint8();
+    HParser *function_code = h_uint8();
+    HParser *data_field = h_bytes(length - 7); // Length minus headers and function code
+
+    HParser *modbus_tcp_frame = h_sequence(transaction_id, protocol_id, length_field, unit_id, function_code, data_field, NULL);
+
+    HParseResult *result = h_parse(modbus_tcp_frame, data, length);
+    if (result) {
+        printf("Modbus TCP Frame Parsed Successfully:\n");
+        printf("Transaction ID: %u\n", *(uint16_t *)h_value_uint(result->ast->children[0]));
+        printf("Protocol ID: %u\n", *(uint16_t *)h_value_uint(result->ast->children[1]));
+        printf("Length: %u\n", *(uint16_t *)h_value_uint(result->ast->children[2]));
+        printf("Unit ID: %u\n", *(uint8_t *)h_value_uint(result->ast->children[3]));
+        printf("Function Code: %u\n", *(uint8_t *)h_value_uint(result->ast->children[4]));
+        printf("Data: ");
+        print_hex(h_blob_value(result->ast->children[5]), h_blob_size(result->ast->children[5]));
+        printf("\n");
+    } else {
+        fprintf(stderr, "Failed to parse Modbus TCP frame\n");
+    }
+
+    h_parse_result_free(result);
+    h_parser_free(modbus_tcp_frame);
+}
+
+static void print_hex(const uint8_t *data, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        printf("%02X ", data[i]);
+    }
 }

@@ -1,87 +1,145 @@
 use nom::{
-    bytes::complete::{take, take_while_m_n},
-    combinator::{map_res, verify},
-    sequence::tuple,
+    bytes::complete::take,
+    combinator::{map_res, opt},
+    sequence::{preceded, tuple},
     IResult,
 };
-use std::{env, fs::File, io::Read, str};
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
+use std::str;
 
-/// Parse a fixed length ASCII field
-fn parse_fixed_length_ascii(input: &[u8], length: usize) -> IResult<&[u8], &str> {
-    map_res(take(length), str::from_utf8)(input)
+#[derive(Debug)]
+struct NITFHeader {
+    fhdr: String,
+    fver: String,
+    clevel: String,
+    stype: String,
+    osta_id: String,
+    fdt: String,
+    ftitle: String,
+    fsclas: String,
+    fsclsy: Option<String>,
+    fscode: Option<String>,
+    fsctlh: Option<String>,
+    fsrel: Option<String>,
+    fsdctp: Option<String>,
+    fsdcdt: Option<String>,
+    fsdcxm: Option<String>,
+    fsorgn: Option<String>,
+    fscaut: Option<String>,
+    fsctln: Option<String>,
+    fsi: Option<String>,
+    fcop: Option<String>,
+    fscpys: Option<String>,
+    encryp: String,
+    fbkgc: Option<String>,
+    oname: Option<String>,
+    ophone: Option<String>,
 }
 
-/// Parse a numeric field with a fixed length
-fn parse_numeric(input: &[u8], length: usize) -> IResult<&[u8], u32> {
+fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NITFHeader> {
     map_res(
-        map_res(take(length), str::from_utf8),
-        |s: &str| s.parse::<u32>(),
+        tuple((
+            take(9usize),
+            take(5usize),
+            take(2usize),
+            take(4usize),
+            take(10usize),
+            take(14usize),
+            take(80usize),
+            take(1usize),
+            opt(take(2usize)),
+            opt(take(11usize)),
+            opt(take(2usize)),
+            opt(take(20usize)),
+            opt(take(2usize)),
+            opt(take(8usize)),
+            opt(take(4usize)),
+            opt(take(8usize)),
+            opt(take(40usize)),
+            opt(take(20usize)),
+            opt(take(15usize)),
+            opt(take(1usize)),
+            opt(take(5usize)),
+            take(1usize),
+            opt(take(3usize)),
+            opt(take(24usize)),
+            opt(take(18usize)),
+        )),
+        |(
+            fhdr,
+            fver,
+            clevel,
+            stype,
+            osta_id,
+            fdt,
+            ftitle,
+            fsclas,
+            fsclsy,
+            fscode,
+            fsctlh,
+            fsrel,
+            fsdctp,
+            fsdcdt,
+            fsdcxm,
+            fsorgn,
+            fscaut,
+            fsctln,
+            fsi,
+            fcop,
+            fscpys,
+            encryp,
+            fbkgc,
+            oname,
+            ophone,
+        )| {
+            Ok(NITFHeader {
+                fhdr: str::from_utf8(fhdr)?.to_string(),
+                fver: str::from_utf8(fver)?.to_string(),
+                clevel: str::from_utf8(clevel)?.to_string(),
+                stype: str::from_utf8(stype)?.to_string(),
+                osta_id: str::from_utf8(osta_id)?.to_string(),
+                fdt: str::from_utf8(fdt)?.to_string(),
+                ftitle: str::from_utf8(ftitle)?.to_string(),
+                fsclas: str::from_utf8(fsclas)?.to_string(),
+                fsclsy: fsclsy.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fscode: fscode.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsctlh: fsctlh.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsrel: fsrel.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsdctp: fsdctp.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsdcdt: fsdcdt.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsdcxm: fsdcxm.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsorgn: fsorgn.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fscaut: fscaut.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsctln: fsctln.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fsi: fsi.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fcop: fcop.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                fscpys: fscpys.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                encryp: str::from_utf8(encryp)?.to_string(),
+                fbkgc: fbkgc.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                oname: oname.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+                ophone: ophone.map(|bytes| str::from_utf8(bytes).map(String::from)).transpose()?,
+            })
+        },
     )(input)
 }
 
-/// Parse the NITF File Header
-fn parse_file_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
-    let (input, (file_type, file_version, complex_flag, system_type, origin_station_id, file_date_time, file_title, file_security_class, copy_num, num_img_segments)) = tuple((
-        parse_fixed_length_ascii(9usize),
-        parse_fixed_length_ascii(2usize),
-        parse_fixed_length_ascii(1usize),
-        parse_fixed_length_ascii(4usize),
-        parse_fixed_length_ascii(10usize),
-        parse_fixed_length_ascii(14usize),
-        parse_fixed_length_ascii(80usize),
-        parse_fixed_length_ascii(1usize),
-        parse_numeric(5usize),
-        parse_numeric(3usize),
-    ))(input)?;
-
-    Ok((
-        input,
-        FileHeader {
-            file_type: file_type.to_string(),
-            file_version: file_version.to_string(),
-            complex_flag: complex_flag.to_string(),
-            system_type: system_type.to_string(),
-            origin_station_id: origin_station_id.to_string(),
-            file_date_time: file_date_time.to_string(),
-            file_title: file_title.to_string(),
-            file_security_class: file_security_class.to_string(),
-            copy_num,
-            num_img_segments,
-        },
-    ))
-}
-
-#[derive(Debug)]
-struct FileHeader {
-    file_type: String,
-    file_version: String,
-    complex_flag: String,
-    system_type: String,
-    origin_station_id: String,
-    file_date_time: String,
-    file_title: String,
-    file_security_class: String,
-    copy_num: u32,
-    num_img_segments: u32,
-}
-
-fn main() {
+fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <NITF_FILE>", args[0]);
-        std::process::exit(1);
+        println!("Usage: {} <filename>", args[0]);
+        return Ok(());
     }
 
-    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    file.read_to_end(&mut buffer)?;
 
-    match parse_file_header(&buffer) {
-        Ok((_, header)) => {
-            println!("Parsed NITF File Header: {:?}", header);
-        }
-        Err(e) => {
-            eprintln!("Failed to parse NITF File Header: {:?}", e);
-        }
+    match parse_nitf_header(&buffer) {
+        Ok((_, header)) => println!("{:?}", header),
+        Err(e) => println!("Failed to parse NITF header: {:?}", e),
     }
+
+    Ok(())
 }

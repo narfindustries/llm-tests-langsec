@@ -1,94 +1,212 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-static const uint8_t SOI[] = {0xFF, 0xD8};
-static const uint8_t EOI[] = {0xFF, 0xD9};
-static const uint8_t APP0[] = {0xFF, 0xE0};
-static const uint8_t DQT[] = {0xFF, 0xDB};
-static const uint8_t SOF0[] = {0xFF, 0xC0};
-static const uint8_t DHT[] = {0xFF, 0xC4};
-static const uint8_t SOS[] = {0xFF, 0xDA};
-
-HParser* init_jpeg_parser(void) {
-    HParser* marker = h_token((const uint8_t*)"\xFF", 1);
-    HParser* not_ff = h_not_in((const uint8_t*)"\xFF", 1);
-    
-    // Length fields
-    HParser* length = h_uint16();
-    
-    // APP0 segment
-    HParser* app0_marker = h_token(APP0, 2);
-    HParser* app0_length = length;
-    HParser* jfif = h_token((const uint8_t*)"JFIF\0", 5);
-    HParser* version = h_repeat_n(h_uint8(), 2);
-    HParser* units = h_uint8();
-    HParser* density = h_repeat_n(h_uint16(), 2);
-    HParser* thumbnail = h_repeat_n(h_uint8(), 2);
-    HParser* app0_data = h_sequence(jfif, version, units, density, thumbnail, NULL);
-    HParser* app0_segment = h_sequence(app0_marker, app0_length, app0_data, NULL);
-    
-    // DQT segment
-    HParser* dqt_marker = h_token(DQT, 2);
-    HParser* dqt_length = length;
-    HParser* dqt_table = h_uint8();
-    HParser* dqt_data = h_repeat_n(h_uint8(), 64);
-    HParser* dqt_segment = h_sequence(dqt_marker, dqt_length, dqt_table, dqt_data, NULL);
-    
-    // SOF0 segment
-    HParser* sof0_marker = h_token(SOF0, 2);
-    HParser* sof0_length = length;
-    HParser* precision = h_uint8();
-    HParser* dimensions = h_repeat_n(h_uint16(), 2);
-    HParser* components = h_uint8();
-    HParser* component_info = h_repeat_n(h_sequence(h_uint8(), h_uint8(), h_uint8(), NULL), 3);
-    HParser* sof0_segment = h_sequence(sof0_marker, sof0_length, precision, dimensions, components, component_info, NULL);
-    
-    // DHT segment
-    HParser* dht_marker = h_token(DHT, 2);
-    HParser* dht_length = length;
-    HParser* dht_info = h_uint8();
-    HParser* dht_counts = h_repeat_n(h_uint8(), 16);
-    HParser* dht_values = h_length_value(h_bind(h_nothing_p(), h_action(sum_counts, dht_counts)), h_uint8());
-    HParser* dht_segment = h_sequence(dht_marker, dht_length, dht_info, dht_counts, dht_values, NULL);
-    
-    // SOS segment
-    HParser* sos_marker = h_token(SOS, 2);
-    HParser* sos_length = length;
-    HParser* num_components = h_uint8();
-    HParser* component_params = h_repeat_n(h_sequence(h_uint8(), h_uint8(), NULL), 3);
-    HParser* spectral = h_repeat_n(h_uint8(), 3);
-    HParser* sos_header = h_sequence(sos_marker, sos_length, num_components, component_params, spectral, NULL);
-    
-    // Entropy coded data
-    HParser* entropy_data = h_many(h_choice(h_token((const uint8_t*)"\x00", 1), not_ff, NULL));
-    
-    // Complete JPEG format
-    HParser* jpeg = h_sequence(
-        h_token(SOI, 2),
-        app0_segment,
-        h_many1(dqt_segment),
-        sof0_segment,
-        h_many1(dht_segment),
-        h_sequence(sos_header, entropy_data, NULL),
-        h_token(EOI, 2),
-        NULL
-    );
-    
-    return jpeg;
+// JPEG marker parsers
+HParser* make_marker(uint8_t code) {
+    uint8_t marker[] = {0xFF, code};
+    return h_token(marker, 2);
 }
 
-HParsedToken* sum_counts(const HParseResult* p) {
-    size_t sum = 0;
-    const HParsedToken* counts = p->ast;
-    // Sum implementation
-    return h_make_uint(sum);
+// Component parser
+HParser* make_component_parser() {
+    return h_sequence(
+        h_uint8(), // Component ID
+        h_bits(4, false), // Horizontal sampling
+        h_bits(4, false), // Vertical sampling
+        h_uint8(), // Quantization table ID
+        NULL
+    );
+}
+
+// Quantization table parser
+HParser* make_dqt_parser() {
+    return h_sequence(
+        make_marker(0xDB),
+        h_length_value(
+            h_uint16(), 
+            h_many(
+                h_sequence(
+                    h_bits(4, false), // Precision
+                    h_bits(4, false), // Table ID
+                    h_repeat_n(h_uint8(), 64), // Table values
+                    NULL
+                )
+            )
+        ),
+        NULL
+    );
+}
+
+// Huffman table parser
+HParser* make_dht_parser() {
+    return h_sequence(
+        make_marker(0xC4),
+        h_length_value(
+            h_uint16(),
+            h_many(
+                h_sequence(
+                    h_bits(4, false), // Table class
+                    h_bits(4, false), // Table ID
+                    h_repeat_n(h_uint8(), 16), // Number of codes
+                    h_many(h_uint8()), // Values
+                    NULL
+                )
+            )
+        ),
+        NULL
+    );
+}
+
+// Start of Frame parser
+HParser* make_sof_parser(uint8_t type) {
+    return h_sequence(
+        make_marker(type),
+        h_length_value(
+            h_uint16(),
+            h_sequence(
+                h_uint8(),  // Precision
+                h_uint16(), // Height
+                h_uint16(), // Width
+                h_uint8(),  // Number of components
+                h_many(make_component_parser()),
+                NULL
+            )
+        ),
+        NULL
+    );
+}
+
+// Start of Scan parser
+HParser* make_sos_parser() {
+    return h_sequence(
+        make_marker(0xDA),
+        h_length_value(
+            h_uint16(),
+            h_sequence(
+                h_uint8(), // Number of components
+                h_many(
+                    h_sequence(
+                        h_uint8(), // Component ID
+                        h_bits(4, false), // DC table
+                        h_bits(4, false), // AC table
+                        NULL
+                    )
+                ),
+                h_uint8(), // Start of spectral
+                h_uint8(), // End of spectral
+                h_bits(4, false), // Successive approx high
+                h_bits(4, false), // Successive approx low
+                NULL
+            )
+        ),
+        NULL
+    );
+}
+
+// APP segment parser
+HParser* make_app_parser(uint8_t n) {
+    return h_sequence(
+        make_marker(0xE0 + n),
+        h_length_value(
+            h_uint16(),
+            h_many(h_uint8())
+        ),
+        NULL
+    );
+}
+
+// Comment parser
+HParser* make_com_parser() {
+    return h_sequence(
+        make_marker(0xFE),
+        h_length_value(
+            h_uint16(),
+            h_many(h_uint8())
+        ),
+        NULL
+    );
+}
+
+// DRI parser
+HParser* make_dri_parser() {
+    return h_sequence(
+        make_marker(0xDD),
+        h_length_value(
+            h_uint16(),
+            h_uint16() // Restart interval
+        ),
+        NULL
+    );
+}
+
+// Main JPEG parser
+HParser* make_jpeg_parser() {
+    return h_sequence(
+        make_marker(0xD8), // SOI
+        h_many(
+            h_choice(
+                make_dqt_parser(),
+                make_dht_parser(),
+                make_sof_parser(0xC0), // SOF0
+                make_sof_parser(0xC1), // SOF1
+                make_sof_parser(0xC2), // SOF2
+                make_sos_parser(),
+                make_app_parser(0),    // APP0
+                make_app_parser(1),    // APP1
+                make_app_parser(2),    // APP2
+                make_com_parser(),
+                make_dri_parser(),
+                NULL
+            )
+        ),
+        make_marker(0xD9), // EOI
+        NULL
+    );
 }
 
 int main(int argc, char* argv[]) {
-    HParser* jpeg_parser = init_jpeg_parser();
-    if (!jpeg_parser) {
-        fprintf(stderr, "Failed to initialize JPEG parser\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
         return 1;
     }
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(fp);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, fp) != size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(fp);
+        return 1;
+    }
+
+    HParser* jpeg_parser = make_jpeg_parser();
+    HParseResult* result = h_parse(jpeg_parser, buffer, size);
+
+    if (result) {
+        printf("Successfully parsed JPEG file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse JPEG file\n");
+    }
+
+    free(buffer);
+    fclose(fp);
     return 0;
 }

@@ -1,103 +1,94 @@
-type U8 = U8;
-
-type U16 = U16 : LittleEndian;
-
-type U32 = U32 : LittleEndian;
-
-type LogicalScreenDescriptor = struct {
-  width              U16,
-  height             U16,
-  packedFields       U8,
-  bgColorIndex       U8,
-  pixelAspectRatio   U8
-};
-
-type ColorTableEntry = struct {
-  red   U8,
-  green U8,
-  blue  U8
-};
-
-type GlobalColorTable = array ColorTableEntry;
-
-type ImageDescriptor = struct {
-  leftPos   U16,
-  topPos    U16,
-  width     U16,
-  height    U16,
-  packed    U8
-};
-
-type LocalColorTable = array ColorTableEntry;
-
-type TableBasedImageData = struct {
-  lzwMinCodeSize U8,
-  imageData      array U8
-};
-
-type GraphicControlExtension = struct {
-  blockSize       U8,
-  packedFields    U8,
-  delayTime       U16,
-  transparentColorIndex U8,
-  terminator      U8
-};
-
-type ApplicationExtension = struct {
-  blockSize       U8,
-  applicationId   array U8,
-  appAuthCode     array U8,
-  appData         array U8
-};
-
-type CommentExtension = struct {
-  blockSize   U8,
-  commentData array U8
-};
-
-type Block = alt {
-  ImageDescriptor => struct {
-    imageDescriptor ImageDescriptor,
-    localColorTable optional LocalColorTable,
-    imageData       TableBasedImageData
-  },
-
-  Extension => alt {
-    GraphicControlExtension => struct {
-      introducer   U8 = 0x21,
-      label        U8 = 0xF9,
-      ext          GraphicControlExtension
-    },
-    CommentExtension => struct {
-      introducer   U8 = 0x21,
-      label        U8 = 0xFE,
-      comment      CommentExtension
-    },
-    ApplicationExtension => struct {
-      introducer   U8 = 0x21,
-      label        U8 = 0xFF,
-      appExt       ApplicationExtension
-    },
-    PlainTextExtension => struct {
-      blockSize       U8,
-      gridLeftPos     U16,
-      gridTopPos      U16,
-      gridWidth       U16,
-      gridHeight      U16,
-      charWidth       U8,
-      charHeight      U8,
-      textColorIndex  U8,
-      bgColorIndex    U8,
-      plainTextData   array U8
+def file GIF_file {
+  struct GIF_header {
+    bytes Signature : size => 3;
+    bytes Version : size => 3;
+  }
+  struct GIF_lsd {
+    uint16 Canvas_Width;
+    uint16 Canvas_Height;
+    byte Packed_Fields;
+    byte Background_Color_Index;
+    byte Pixel_Aspect_Ratio;
+    if ((Packed_Fields >> 7) & 1) { // Global Color Table Flag
+      list Global_Color_Table : size => (1 << ((Packed_Fields & 0x07) + 1)) of struct RGB_color {
+        byte Red;
+        byte Green;
+        byte Blue;
+      }
     }
   }
-};
-
-type GIF = struct {
-  signature array U8 (len = 3),
-  version   array U8 (len = 3),
-  logicalScreen LogicalScreenDescriptor,
-  globalColorTable optional GlobalColorTable,
-  blocks          array Block,
-  trailer U8
-};
+  list Data : many of struct GIF_data_block {
+    either {
+      struct {
+        byte Image_Separator : const => 0x2C;
+        uint16 Image_Left_Position;
+        uint16 Image_Top_Position;
+        uint16 Image_Width;
+        uint16 Image_Height;
+        byte Packed_Fields;
+        if ((Packed_Fields >> 7) & 1) { // Local Color Table Flag
+          list Local_Color_Table : size => (1 << ((Packed_Fields & 0x07) + 1)) of struct RGB_color {
+            byte Red;
+            byte Green;
+            byte Blue;
+          }
+        }
+        struct GIF_image_data {
+          byte LZW_Minimum_Code_Size;
+          list Image_Data_Blocks : many of struct GIF_data_sub_block {
+            byte Block_Size;
+            bytes Data : size => Block_Size;
+          }
+        }
+      }
+      struct {
+        byte Extension_Introducer : const => 0x21;
+        byte Extension_Label;
+        switch (Extension_Label) {
+          case 0xF9: // Graphic Control Extension
+            struct GIF_gce {
+              byte Block_Size : const => 0x04;
+              byte Packed_Fields;
+              uint16 Delay_Time;
+              byte Transparent_Color_Index;
+              byte Block_Terminator : const => 0x00;
+            }
+          case 0xFE: // Comment Extension
+            struct GIF_comment {
+              list Comment_Data_Blocks : many of struct GIF_data_sub_block {
+                byte Block_Size;
+                bytes Data : size => Block_Size;
+              }
+            }
+          case 0xFF: // Application Extension
+            struct GIF_application {
+              byte Block_Size : const => 0x0B;
+              bytes Application_Identifier : size => 8;
+              bytes Application_Authentication_Code : size => 3;
+              list Application_Data_Blocks : many of struct GIF_data_sub_block {
+                byte Block_Size;
+                bytes Data : size => Block_Size;
+              }
+            }
+          case 0x01: // Plain Text Extension
+            struct GIF_plain_text {
+              byte Block_Size : const => 0x12;
+              uint16 Text_Grid_Left_Position;
+              uint16 Text_Grid_Top_Position;
+              uint16 Text_Grid_Width;
+              uint16 Text_Grid_Height;
+              byte Character_Cell_Width;
+              byte Character_Cell_Height;
+              byte Text_Foreground_Color_Index;
+              byte Text_Background_Color_Index;
+              list Plain_Text_Data : many of struct GIF_data_sub_block {
+                byte Block_Size;
+                bytes Data : size => Block_Size;
+              }
+            }
+        }
+      }
+    }
+  }
+  byte Trailer : const => 0x3B;
+}

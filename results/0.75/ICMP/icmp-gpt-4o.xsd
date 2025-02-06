@@ -1,55 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:example:icmp"
-           xmlns="urn:example:icmp"
-           elementFormDefault="qualified"
-           dfdl:formatRef="dfdl:daffodil">
-  
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
-      <dfdl:format ref="dfdl:daffodil"/>
-    </xs:appinfo>
-  </xs:annotation>
-  
-  <xs:element name="ICMPMessage">
-    <xs:complexType>
-      <xs:sequence dfdl:initiator="" dfdl:terminator="">
-        <xs:element name="type" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="8" lengthUnits="bits" representation="binary"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="code" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="8" lengthUnits="bits" representation="binary"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="checksum" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="16" lengthUnits="bits" representation="binary"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="restOfHeader" type="xs:hexBinary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element length="32" lengthUnits="bits" representation="binary"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="data" type="xs:hexBinary" minOccurs="0">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element lengthKind="endOfParent" representation="binary"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           targetNamespace="http://example.com/ICMP"
+           xmlns:tns="http://example.com/ICMP"
+           elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format alignmentUnits="bytes" lengthUnits="bytes" encoding="ascii"/>
+        </xs:appinfo>
+    </xs:annotation>
+    
+    <xs:element name="ICMPMessage" type="tns:ICMPType"/>
+
+    <xs:complexType name="ICMPType">
+        <xs:sequence>
+            <xs:element name="Type" type="xs:unsignedByte">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1"/>
+                        <dfdl:assert test="{. ge 0 and . le 255}" message="ICMP Type must be between 0 and 255"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+
+            <xs:element name="Code" type="xs:unsignedByte">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1"/>
+                        <dfdl:assert test="{. ge 0 and . le 255}" message="ICMP Code must be between 0 and 255"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+
+            <xs:element name="Checksum" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+
+            <xs:choice>
+                <xs:element name="EchoFields" type="tns:EchoFieldsType" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="CommonFields" type="tns:CommonFieldsType" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="ParameterProblemFields" type="tns:ParameterProblemFieldsType" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="TimestampFields" type="tns:TimestampFieldsType" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="AddressMaskFields" type="tns:AddressMaskFieldsType" minOccurs="0" maxOccurs="1"/>
+            </xs:choice>
+
+            <xs:element name="Data" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="implicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
+
+    <xs:complexType name="EchoFieldsType">
+        <xs:sequence>
+            <xs:element name="Identifier" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SequenceNumber" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CommonFieldsType">
+        <xs:sequence>
+            <xs:element name="Unused" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="OriginalDatagram" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="implicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ParameterProblemFieldsType">
+        <xs:sequence>
+            <xs:element name="Pointer" type="xs:unsignedByte">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Unused" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="OriginalDatagram" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="implicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="TimestampFieldsType">
+        <xs:sequence>
+            <xs:element name="Identifier" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SequenceNumber" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="OriginateTimestamp" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="ReceiveTimestamp" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="TransmitTimestamp" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AddressMaskFieldsType">
+        <xs:sequence>
+            <xs:element name="Identifier" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SequenceNumber" type="xs:unsignedShort">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="2"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="AddressMask" type="xs:unsignedInt">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
 </xs:schema>

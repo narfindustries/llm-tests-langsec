@@ -1,0 +1,2 @@
+fn(&[u8]) -> impl Fn(_) -> Result<(_, _), nom::Err<_>> {nom::bytes::complete::take::<&[u8], _, _>}
+(impl FnMut(&[u8]) -> Result<(&[u8], String), nom::Err<_>>, impl FnMut(&[u8]) -> Result<(&[u8], QType), nom::Err<_>>, impl FnMut(&[u8]) -> Result<(&[u8], QClass), nom::Err<_>>, fn(&[u8]) -> Result<(&[u8], u32), nom::Err<_>> {nom::number::complete::be_u32::<&[u8], _>}, fn(&[u8]) -> Result<(&[u8], u16), nom::Err<_>> {nom::number::complete::be_u16::<&[u8], _>}, fn(&[u8]) -> impl Fn(_) -> Result<(_, _), nom::Err<_>> {nom::bytes::complete::take::<&[u8], _, _>})

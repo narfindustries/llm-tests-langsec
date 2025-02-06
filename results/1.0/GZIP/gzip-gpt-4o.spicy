@@ -1,28 +1,75 @@
 module GZIP;
 
-export {
-    type GzipFile = unit {
-        # Gzip header fields.
-        magic: bytes &assert ($$ == |0x1f8b|);
-        compression: uint8 &check_eq(compression, 8) &byte-order=little;
-        flags: uint8;
-        mtime: uint32 &byte-order=little;
-        extra_flags: uint8;
-        os: uint8;
-        extra: bytes &length=extra_length &if (flags & 4) != 0;
-        filename: bytes &until=0 &if (flags & 8) != 0;
-        comment: bytes &until=0 &if (flags & 16) != 0;
-        header_crc: uint16 &byte-order=little &if (flags & 2) != 0;
-        
-        # Compressed data block.
-        compressed_data: bytes;
+type GZIP = unit {
+    # Fixed header
+    id1: uint8 &requires (self == 0x1F);
+    id2: uint8 &requires (self == 0x8B);
 
-        # CRC32 and isize footer fields.
-        crc32: uint32 &byte-order=little &check_eq(crc32, calc_crc32());
-        isize: uint32 &byte-order=little;
+    # Compression method
+    compression_method: uint8 &requires (self == 0x08);
 
-        extra_length: uint16 &byte-order=little &if (flags & 4) != 0;
-    };
+    # Flags
+    flags: Flags;
 
-    function calc_crc32(): uint32;
-}
+    # Modification time
+    mtime: uint32;
+
+    # Extra flags
+    xfl: uint8;
+
+    # Operating System
+    os: OperatingSystem;
+
+    # Optional fields
+    extra: ExtraData &if (flags.has_extra);
+    original_filename: OriginalFilename &if (flags.has_name);
+    comment: Comment &if (flags.has_comment);
+    header_crc16: uint16 &if (flags.has_crc);
+
+    # Compressed data
+    compressed_data: bytes;
+
+    # Trailer
+    crc32: uint32;
+    isize: uint32;
+};
+
+type Flags = unit {
+    reserved: uint8 &bits=3; # Reserved bits
+    has_crc: bool;  # FHCRC, bit 1
+    has_extra: bool; # FEXTRA, bit 2
+    has_name: bool;  # FNAME, bit 3
+    has_comment: bool; # FCOMMENT, bit 4
+    padding: uint8 &bits=3;
+};
+
+enum OperatingSystem: uint8 {
+    FAT = 0x00,
+    Amiga = 0x01,
+    VMS = 0x02,
+    Unix = 0x03,
+    VMCMS = 0x04,
+    AtariTOS = 0x05,
+    HPFS = 0x06,
+    Macintosh = 0x07,
+    ZSystem = 0x08,
+    CPM = 0x09,
+    TOPS20 = 0x0A,
+    NTFS = 0x0B,
+    QDOS = 0x0C,
+    AcornRISCOS = 0x0D,
+    Unknown = 0xFF
+};
+
+type ExtraData = unit {
+    length: uint16;
+    data: bytes &size= length;
+};
+
+type OriginalFilename = unit {
+    name: bytes &until= 0x00;
+};
+
+type Comment = unit {
+    text: bytes &until= 0x00;
+};

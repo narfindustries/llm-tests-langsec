@@ -1,0 +1,1 @@
+(fn(&[u8]) -> Result<(&[u8], &[u8]), nom::Err<_>> {nom::character::complete::alphanumeric1::<&[u8], _>}, impl FnMut(&[u8]) -> Result<(&[u8], Vec<u8>), nom::Err<nom::error::Error<&[u8]>>>)

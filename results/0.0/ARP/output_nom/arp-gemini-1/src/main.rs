@@ -1,88 +1,68 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt},
-    number::complete::{be_u16, be_u32},
+    bytes::complete::{take, tag},
+    combinator::{map, map_res},
+    number::complete::{le_u16, le_u8},
     IResult,
 };
 use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs::read;
 
 #[derive(Debug)]
 struct ArpPacket {
-    hardware_type: u16,
-    protocol_type: u16,
-    hardware_len: u8,
-    protocol_len: u8,
+    htype: u16,
+    ptype: u16,
+    hlen: u8,
+    plen: u8,
     opcode: u16,
-    sender_mac: [u8; 6],
-    sender_ip: u32,
-    target_mac: [u8; 6],
-    target_ip: u32,
+    sha: Vec<u8>,
+    spa: Vec<u8>,
+    tha: Vec<u8>,
+    tpa: Vec<u8>,
 }
 
 fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-    let (input, hardware_type) = be_u16(input)?;
-    let (input, protocol_type) = be_u16(input)?;
-    let (input, hardware_len) = map(take(1usize), |x: &[u8]| x[0])(input)?;
-    let (input, protocol_len) = map(take(1usize), |x: &[u8]| x[0])(input)?;
-    let (input, opcode) = be_u16(input)?;
-    let (input, sender_mac) = map(take(6usize), |x: &[u8]| {
-        let mut mac = [0u8; 6];
-        mac.copy_from_slice(x);
-        mac
-    })(input)?;
-    let (input, sender_ip) = be_u32(input)?;
-    let (input, target_mac) = map(take(6usize), |x: &[u8]| {
-        let mut mac = [0u8; 6];
-        mac.copy_from_slice(x);
-        mac
-    })(input)?;
-    let (input, target_ip) = be_u32(input)?;
+    let (input, htype) = le_u16(input)?;
+    let (input, ptype) = le_u16(input)?;
+    let (input, hlen) = le_u8(input)?;
+    let (input, plen) = le_u8(input)?;
+    let (input, opcode) = le_u16(input)?;
+    let (input, sha) = take(hlen as usize)(input)?;
+    let (input, spa) = take(plen as usize)(input)?;
+    let (input, tha) = take(hlen as usize)(input)?;
+    let (input, tpa) = take(plen as usize)(input)?;
 
     Ok((
         input,
         ArpPacket {
-            hardware_type,
-            protocol_type,
-            hardware_len,
-            protocol_len,
+            htype,
+            ptype,
+            hlen,
+            plen,
             opcode,
-            sender_mac,
-            sender_ip,
-            target_mac,
-            target_ip,
+            sha: sha.to_vec(),
+            spa: spa.to_vec(),
+            tha: tha.to_vec(),
+            tpa: tpa.to_vec(),
         },
     ))
 }
 
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <binary_file>", args[0]);
+        eprintln!("Usage: {} <filename>", args[0]);
         return;
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
+    match read(filename) {
+        Ok(buffer) => {
+            match parse_arp_packet(&buffer) {
+                Ok((_, packet)) => println!("{:?}", packet),
+                Err(e) => eprintln!("Error parsing ARP packet: {:?}", e),
+            }
         }
-    };
-
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
-        }
-    };
-
-    match parse_arp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(err) => println!("Error parsing ARP packet: {:?}", err),
+        Err(e) => eprintln!("Error reading file: {}", e),
     }
 }

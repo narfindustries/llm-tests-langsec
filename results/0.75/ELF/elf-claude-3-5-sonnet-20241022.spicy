@@ -1,53 +1,103 @@
 module ELF;
 
-public type File = unit {
-    magic: bytes &size=4;
-    class: uint8;
-    data: uint8;
-    version: uint8;
-    osabi: uint8;
-    abiversion: uint8;
-    pad: bytes &size=7;
-    type: uint16;
-    machine: uint16;
-    version2: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
+# ELF Header
+public type Elf64_Ehdr = unit {
+    e_ident: bytes &size=16;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
 
-    on %init {
-        if (self.magic != b"\x7fELF") {
-            throw "invalid ELF magic";
-        }
+    var is_64: bool;
+    var endian: uint8;
+    var os_abi: uint8;
+    var abi_version: uint8;
+
+    on e_ident {
+        self.is_64 = $$[4] == 2;
+        self.endian = $$[5];
+        self.os_abi = $$[7];
+        self.abi_version = $$[8];
     }
 };
 
-on File::%done {
-    print "ELF Header:";
-    print fmt("  Magic: %s", self.magic);
-    print fmt("  Class: %d", self.class);
-    print fmt("  Data: %d", self.data);
-    print fmt("  Version: %d", self.version);
-    print fmt("  OS/ABI: %d", self.osabi);
-    print fmt("  ABI Version: %d", self.abiversion);
-    print fmt("  Type: %d", self.type);
-    print fmt("  Machine: %d", self.machine);
-    print fmt("  Version: %d", self.version2);
-    print fmt("  Entry point address: 0x%x", self.entry);
-    print fmt("  Start of program headers: %d", self.phoff);
-    print fmt("  Start of section headers: %d", self.shoff);
-    print fmt("  Flags: 0x%x", self.flags);
-    print fmt("  Size of this header: %d", self.ehsize);
-    print fmt("  Size of program headers: %d", self.phentsize);
-    print fmt("  Number of program headers: %d", self.phnum);
-    print fmt("  Size of section headers: %d", self.shentsize);
-    print fmt("  Number of section headers: %d", self.shnum);
-    print fmt("  Section header string table index: %d", self.shstrndx);
-}
+# Program Header
+type Elf64_Phdr = unit {
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
+
+# Section Header
+type Elf64_Shdr = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
+};
+
+# Symbol Table Entry
+type Elf64_Sym = unit {
+    st_name: uint32;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: uint16;
+    st_value: uint64;
+    st_size: uint64;
+};
+
+# Dynamic Section Entry
+type Elf64_Dyn = unit {
+    d_tag: uint64;
+    d_val: uint64;
+};
+
+# Relocation Entry with Addend
+type Elf64_Rela = unit {
+    r_offset: uint64;
+    r_info: uint64;
+    r_addend: uint64;
+};
+
+# Relocation Entry
+type Elf64_Rel = unit {
+    r_offset: uint64;
+    r_info: uint64;
+};
+
+# Note Section Entry
+type Elf64_Nhdr = unit {
+    n_namesz: uint32;
+    n_descsz: uint32;
+    n_type: uint32;
+    name: bytes &size=self.n_namesz;
+    desc: bytes &size=self.n_descsz;
+};
+
+public type ELF = unit {
+    hdr: Elf64_Ehdr;
+    : bytes &size=self.hdr.e_phoff - self.current_offset;
+    program_headers: Elf64_Phdr[] &size=self.hdr.e_phnum;
+    : bytes &size=self.hdr.e_shoff - self.current_offset;
+    section_headers: Elf64_Shdr[] &size=self.hdr.e_shnum;
+};

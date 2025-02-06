@@ -1,68 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HTTP-1.1"
-           xmlns="http://example.com/HTTP-1.1"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http-1.1-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
-
-  <xs:element name="http">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element represents="http"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="request" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element ref="response" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="request">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element represents="request"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="requestLine" type="xs:string"/>
-        <xs:element name="headers" type="headerType" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="body" type="xs:base64Binary" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="response">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element represents="response"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="statusLine" type="xs:string"/>
-        <xs:element name="headers" type="headerType" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="body" type="xs:base64Binary" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element represents="header"/>
-      </xs:appinfo>
-    </xs:annotation>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/http" xmlns="http://example.com/http" elementFormDefault="qualified">
+  <xs:element name="httpRequest" type="httpRequestType" dfdl:lengthKind="delimited"/>
+  <xs:complexType name="httpRequestType">
     <xs:sequence>
-      <xs:element name="name" type="xs:string"/>
-      <xs:element name="value" type="xs:string"/>
+      <xs:element name="requestLine" type="requestLineType" dfdl:lengthKind="delimited"/>
+      <xs:element name="headers" type="headersType" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="requestBody" type="requestBodyType" dfdl:lengthKind="delimited" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="parseError" type="xs:string"/>
-
+  <xs:complexType name="requestLineType">
+    <xs:sequence>
+      <xs:element name="method" type="methodType" dfdl:lengthKind="delimited"/>
+      <xs:element name="requestUri" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="httpVersion" type="httpVersionType" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="headersType">
+    <xs:sequence>
+      <xs:element name="headerName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="headerValue" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="requestBodyType">
+    <xs:sequence>
+      <xs:element name="entityBody" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="httpResponse" type="httpResponseType" dfdl:lengthKind="delimited"/>
+  <xs:complexType name="httpResponseType">
+    <xs:sequence>
+      <xs:element name="statusLine" type="statusLineType" dfdl:lengthKind="delimited"/>
+      <xs:element name="headers" type="headersType" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="responseBody" type="responseBodyType" dfdl:lengthKind="delimited" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="statusLineType">
+    <xs:sequence>
+      <xs:element name="httpVersion" type="httpVersionType" dfdl:lengthKind="delimited"/>
+      <xs:element name="statusCode" type="statusCodeType" dfdl:lengthKind="delimited"/>
+      <xs:element name="reasonPhrase" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="responseBodyType">
+    <xs:sequence>
+      <xs:element name="entityBody" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="methodType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="GET"/>
+      <xs:enumeration value="HEAD"/>
+      <xs:enumeration value="POST"/>
+      <xs:enumeration value="PUT"/>
+      <xs:enumeration value="DELETE"/>
+      <xs:enumeration value="CONNECT"/>
+      <xs:enumeration value="OPTIONS"/>
+      <xs:enumeration value="TRACE"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="statusCodeType">
+    <xs:restriction base="xs:integer">
+      <xs:pattern value="\d{3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="httpVersionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="HTTP/\d\.\d"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

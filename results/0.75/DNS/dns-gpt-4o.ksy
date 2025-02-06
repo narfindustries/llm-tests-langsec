@@ -1,48 +1,54 @@
 meta:
   id: dns_packet
   title: DNS Packet
+  license: CC0-1.0
   endian: be
 
 seq:
-  - id: transaction_id
-    type: u2
+  - id: header
+    type: header
 
-  - id: flags
-    type: flags
-
-  - id: qdcount
-    type: u2
-
-  - id: ancount
-    type: u2
-
-  - id: nscount
-    type: u2
-
-  - id: arcount
-    type: u2
-
-  - id: queries
-    type: query
+  - id: questions
+    type: question
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
 
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
 
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
 
-  - id: additional
+  - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
+    repeat-expr: header.arcount
 
 types:
+  header:
+    seq:
+      - id: id
+        type: u2
+
+      - id: flags
+        type: flags
+
+      - id: qdcount
+        type: u2
+
+      - id: ancount
+        type: u2
+
+      - id: nscount
+        type: u2
+
+      - id: arcount
+        type: u2
+
   flags:
     seq:
       - id: qr
@@ -69,15 +75,15 @@ types:
       - id: rcode
         type: b4
 
-  query:
+  question:
     seq:
-      - id: name
+      - id: qname
         type: domain_name
 
-      - id: type
+      - id: qtype
         type: u2
 
-      - id: class
+      - id: qclass
         type: u2
 
   resource_record:
@@ -101,8 +107,24 @@ types:
         size: rdlength
 
   domain_name:
+    doc: |
+      DNS domain name, represented as a series of labels. Each label is prefixed by its length.
     seq:
-      - id: name
+      - id: labels
+        type: label
+        repeat: until
+        repeat-until: _.length == 0
+
+  label:
+    seq:
+      - id: length
+        type: u1
+
+      - id: value
+        size: length
         type: str
-        encoding: ASCII
-        size-eos: true
+        encoding: utf-8
+
+      - id: terminator
+        size: 0
+        if: length == 0

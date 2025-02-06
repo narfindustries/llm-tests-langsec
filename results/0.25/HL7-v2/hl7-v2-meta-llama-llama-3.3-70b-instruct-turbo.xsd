@@ -1,159 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HL7-v2"
-           xmlns="http://example.com/HL7-v2"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
-
-  <xs:element name="HL7-v2-message">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:elementConstraints>
-          <dfdl:occurs maxOccurs="unbounded" minOccurs="1"/>
-        </dfdl:elementConstraints>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="MSH" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:separator separatorType="fixed" value="|" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element ref="EVN" maxOccurs="1" minOccurs="0">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="0"/>
-                <dfdl:separator separatorType="fixed" value="|" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element ref="PID" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:separator separatorType="fixed" value="|" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="MSH">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:elementConstraints>
-          <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-          <dfdl:separator separatorType="fixed" value="" />
-        </dfdl:elementConstraints>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FieldSeparator" type="xs:string" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:length kind="fixed" length="1" />
-                <dfdl:separator separatorType="fixed" value="" />
-                <dfdl:encoding scheme="char" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EncodingCharacters" type="xs:string" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:length kind="fixed" length="4" />
-                <dfdl:separator separatorType="fixed" value="" />
-                <dfdl:encoding scheme="char" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="SendingFacility" type="xs:string" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:length kind="fixed" length="20" />
-                <dfdl:separator separatorType="fixed" value="|" />
-                <dfdl:encoding scheme="char" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="EVN">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:elementConstraints>
-          <dfdl:occurs maxOccurs="1" minOccurs="0"/>
-          <dfdl:separator separatorType="fixed" value="" />
-        </dfdl:elementConstraints>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="EventType" type="xs:string" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:length kind="fixed" length="5" />
-                <dfdl:separator separatorType="fixed" value="|" />
-                <dfdl:encoding scheme="char" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="PID">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:elementConstraints>
-          <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-          <dfdl:separator separatorType="fixed" value="" />
-        </dfdl:elementConstraints>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="PatientID" type="xs:string" maxOccurs="1" minOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:elementConstraints>
-                <dfdl:occurs maxOccurs="1" minOccurs="1"/>
-                <dfdl:length kind="fixed" length="20" />
-                <dfdl:separator separatorType="fixed" value="|" />
-                <dfdl:encoding scheme="char" />
-              </dfdl:elementConstraints>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:ex="http://example.com" dfdl:ref="HL7v2">
+  <dfdl:element name="HL7v2" type="sequence" dfdl:occurs="1..1">
+    <dfdl:element name="MSH" type="sequence" dfdl:occurs="1..1">
+      <dfdl:element name="FieldSeparator" type="string" dfdl:lengthKind="fixed" dfdl:length="1" dfdl:occurs="1..1" dfdl:initValue="|"/>
+      <dfdl:element name="EncodingCharacters" type="string" dfdl:lengthKind="fixed" dfdl:length="4" dfdl:occurs="1..1" dfdl:initValue="^~\&"/>
+      <dfdl:element name="SendingApplication" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="SendingFacility" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="ReceivingApplication" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="ReceivingFacility" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="DateTimeOfMessage" type="string" dfdl:lengthKind="fixed" dfdl:length="14" dfdl:occurs="1..1" dfdl:pattern="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+      <dfdl:element name="Security" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+      <dfdl:element name="MessageType" type="string" dfdl:lengthKind="bounded" dfdl:minLength="3" dfdl:maxLength="6" dfdl:occurs="1..1" dfdl:pattern="[A-Z]{3}-[A-Z0-9]{2}"/>
+      <dfdl:element name="MessageControlID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="ProcessingID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="3" dfdl:occurs="1..1" dfdl:pattern="[A-Z]{1}"/>
+      <dfdl:element name="VersionID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="5" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1}\.[0-9]{1}"/>
+    </dfdl:element>
+    <dfdl:element name="PID" type="sequence" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDPatientID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="4" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1}"/>
+      <dfdl:element name="PatientID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="PatientIDList" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+      <dfdl:element name="AlternatePatientID" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="PatientName" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="1..1"/>
+      <dfdl:element name="MothersMaidenName" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="DateTimeOfBirth" type="string" dfdl:lengthKind="fixed" dfdl:length="8" dfdl:occurs="0..1" dfdl:pattern="[0-9]{4}[0-9]{2}[0-9]{2}"/>
+      <dfdl:element name="Sex" type="string" dfdl:lengthKind="fixed" dfdl:length="1" dfdl:occurs="0..1" dfdl:pattern="[MFU]"/>
+      <dfdl:element name="PatientAlias" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+      <dfdl:element name="Race" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="PatientAddress" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+    </dfdl:element>
+    <dfdl:element name="PV1" type="sequence" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDPatientVisit" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="4" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1}"/>
+      <dfdl:element name="VisitNumber" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="PatientClass" type="string" dfdl:lengthKind="fixed" dfdl:length="1" dfdl:occurs="1..1" dfdl:pattern="[IEO]"/>
+      <dfdl:element name="VisitReason" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+      <dfdl:element name="AdmittingDoctor" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="DischargeDisposition" type="string" dfdl:lengthKind="fixed" dfdl:length="2" dfdl:occurs="0..1" dfdl:pattern="[0-9]{2}"/>
+    </dfdl:element>
+    <dfdl:element name="ORC" type="sequence" dfdl:occurs="0..1">
+      <dfdl:element name="OrderControl" type="string" dfdl:lengthKind="fixed" dfdl:length="2" dfdl:occurs="1..1" dfdl:pattern="[A-Z]{2}"/>
+      <dfdl:element name="PlacerOrderNumber" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="FillerOrderNumber" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="OrderStatus" type="string" dfdl:lengthKind="fixed" dfdl:length="2" dfdl:occurs="1..1" dfdl:pattern="[A-Z]{2}"/>
+    </dfdl:element>
+    <dfdl:element name="OBR" type="sequence" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDObservationRequest" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="4" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1}"/>
+      <dfdl:element name="PlacerOrderNumber" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="FillerOrderNumber" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+      <dfdl:element name="UniversalServiceIdentifier" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="1..1"/>
+      <dfdl:element name="Priority" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="2" dfdl:occurs="0..1" dfdl:pattern="[A-Z]{1,2}"/>
+    </dfdl:element>
+    <dfdl:element name="OBX" type="sequence" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDObservationResult" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="4" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1}"/>
+      <dfdl:element name="ValueType" type="string" dfdl:lengthKind="fixed" dfdl:length="2" dfdl:occurs="1..1" dfdl:pattern="[A-Z]{2}"/>
+      <dfdl:element name="ObservationResult" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="1..1"/>
+      <dfdl:element name="Units" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="10" dfdl:occurs="0..1"/>
+      <dfdl:element name="ReferenceRange" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="20" dfdl:occurs="0..1"/>
+    </dfdl:element>
+  </dfdl:element>
+  <dfdl:element name="ERR" type="sequence" dfdl:occurs="0..1">
+    <dfdl:element name="SegmentID" type="string" dfdl:lengthKind="fixed" dfdl:length="3" dfdl:occurs="1..1" dfdl:initValue="ERR"/>
+    <dfdl:element name="ErrorCode" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="5" dfdl:occurs="1..1" dfdl:pattern="[0-9]{1,5}"/>
+    <dfdl:element name="ErrorText" type="string" dfdl:lengthKind="bounded" dfdl:minLength="1" dfdl:maxLength="40" dfdl:occurs="0..1"/>
+  </dfdl:element>
+</dfdl:definition>

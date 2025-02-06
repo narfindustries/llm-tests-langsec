@@ -2,90 +2,124 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// TIFF Header
-#define LITTLE_ENDIAN_MAGIC 0x4949
-#define BIG_ENDIAN_MAGIC 0x4D4D
-#define TIFF_MAGIC_NUMBER 0x002A
+// Define TIFF data types
+#define TIFF_BYTE 1
+#define TIFF_ASCII 2
+#define TIFF_SHORT 3
+#define TIFF_LONG 4
+#define TIFF_RATIONAL 5
+#define TIFF_SBYTE 6
+#define TIFF_UNDEFINED 7
+#define TIFF_SSHORT 8
+#define TIFF_SLONG 9
+#define TIFF_SRATIONAL 10
+#define TIFF_FLOAT 11
+#define TIFF_DOUBLE 12
 
-// TIFF Tags
-#define WIDTH_TAG 0x0100
-#define HEIGHT_TAG 0x0101
-#define BITS_PER_SAMPLE_TAG 0x0102
-#define COMPRESSION_TAG 0x0103
-#define PHOTOMETRIC_INTERPRETATION_TAG 0x0106
-#define STRIP_OFFSETS_TAG 0x0111
-#define SAMPLES_PER_PIXEL_TAG 0x0115
-#define ROWS_PER_STRIP_TAG 0x0116
-#define STRIP_BYTE_COUNTS_TAG 0x0117
-#define X_RESOLUTION_TAG 0x011A
-#define Y_RESOLUTION_TAG 0x011B
-#define PLANAR_CONFIGURATION_TAG 0x011C
-#define RESOLUTION_UNIT_TAG 0x0128
+// Define TIFF tag structure
+typedef struct {
+    uint16_t tag;
+    uint16_t type;
+    uint32_t count;
+    uint32_t value_offset; // This can be a value or an offset depending on the type and count
+} TIFFTag;
 
-// TIFF Data Types
-#define BYTE 1
-#define ASCII 2
-#define SHORT 3
-#define LONG 4
-#define RATIONAL 5
+// Define TIFF IFD (Image File Directory)
+typedef struct {
+    uint16_t num_tags;
+    TIFFTag *tags;
+    uint32_t next_ifd_offset;
+} TIFFIFD;
 
-// Parser declarations
-HParser *tiff_file;
-HParser *tiff_header;
-HParser *ifd;
-HParser *ifd_entry;
-HParser *rational;
+// Hammer parsers for TIFF data types
+HParser *hp_tiff_byte;
+HParser *hp_tiff_ascii;
+HParser *hp_tiff_short;
+HParser *hp_tiff_long;
+HParser *hp_tiff_rational;
+HParser *hp_tiff_sbyte;
+HParser *hp_tiff_undefined;
+HParser *hp_tiff_sshort;
+HParser *hp_tiff_slong;
+HParser *hp_tiff_srational;
+HParser *hp_tiff_float;
+HParser *hp_tiff_double;
 
-void init_parsers() {
-    HParser *uint16 = h_uint16();
-    HParser *uint32 = h_uint32();
+// Hammer parser for a single TIFF tag
+HParser *hp_tiff_tag;
 
-    rational = h_sequence(uint32, uint32, NULL);
+// Hammer parser for TIFF IFD
+HParser *hp_tiff_ifd;
 
-    ifd_entry = h_sequence(uint16, uint16, uint32, uint32, NULL);
+// Initialize Hammer parsers for TIFF data types
+void init_tiff_parsers() {
+    hp_tiff_byte = h_uint8();
+    hp_tiff_ascii = h_ch_range(0, 127);
+    hp_tiff_short = h_uint16();
+    hp_tiff_long = h_uint32();
+    hp_tiff_rational = h_sequence(h_uint32(), h_uint32(), NULL);
+    hp_tiff_sbyte = h_int8();
+    hp_tiff_undefined = h_uint8();
+    hp_tiff_sshort = h_int16();
+    hp_tiff_slong = h_int32();
+    hp_tiff_srational = h_sequence(h_int32(), h_int32(), NULL);
+    hp_tiff_float = h_bits(32, false);
+    hp_tiff_double = h_bits(64, false);
 
-    ifd = h_length_value(uint16, h_many(ifd_entry));
+    hp_tiff_tag = h_sequence(
+        hp_tiff_short, // Tag
+        hp_tiff_short, // Type
+        hp_tiff_long,  // Count
+        hp_tiff_long,  // Value Offset
+        NULL
+    );
 
-    tiff_header = h_sequence(uint16, uint16, uint32, NULL);
-
-    tiff_file = h_sequence(tiff_header, ifd, NULL);
+    hp_tiff_ifd = h_sequence(
+        hp_tiff_short, // Number of tags
+        h_many(hp_tiff_tag), // Tags
+        hp_tiff_long, // Next IFD offset
+        NULL
+    );
 }
 
+// Main function to parse TIFF file
 int main(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <TIFF file>\n", argv[0]);
         return 1;
     }
 
-    FILE *fp = fopen(argv[1], "rb");
-    if (!fp) {
-        perror("File opening failed");
-        return EXIT_FAILURE;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
     }
 
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    // Initialize TIFF parsers
+    init_tiff_parsers();
 
-    uint8_t *buffer = malloc(size);
+    // Read the entire file into memory
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    uint8_t *buffer = malloc(file_size);
     if (!buffer) {
-        fprintf(stderr, "Memory allocation failed\n");
-        fclose(fp);
-        return EXIT_FAILURE;
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
     }
+    fread(buffer, 1, file_size, file);
 
-    fread(buffer, 1, size, fp);
-    fclose(fp);
-
-    init_parsers();
-
-    HParseResult *result = h_parse(tiff_file, buffer, size);
+    // Parse the TIFF file
+    HParseResult *result = h_parse(hp_tiff_ifd, buffer, file_size);
     if (result) {
         printf("TIFF file parsed successfully.\n");
     } else {
-        printf("Failed to parse TIFF file.\n");
+        fprintf(stderr, "Failed to parse TIFF file.\n");
     }
 
+    // Cleanup
     free(buffer);
+    fclose(file);
     return 0;
 }

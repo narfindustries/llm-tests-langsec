@@ -1,0 +1,80 @@
+module ELF;
+
+public type Elf32_Ehdr = unit {
+    e_ident: bytes &size=16;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint32;
+    e_phoff: uint32;
+    e_shoff: uint32;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+};
+
+public type Elf32_Phdr = unit {
+    p_type: uint32;
+    p_offset: uint32;
+    p_vaddr: uint32;
+    p_paddr: uint32;
+    p_filesz: uint32;
+    p_memsz: uint32;
+    p_flags: uint32;
+    p_align: uint32;
+};
+
+public type Elf32_Shdr = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint32;
+    sh_addr: uint32;
+    sh_offset: uint32;
+    sh_size: uint32;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint32;
+    sh_entsize: uint32;
+};
+
+public type Elf32_Sym = unit {
+    st_name: uint32;
+    st_value: uint32;
+    st_size: uint32;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: uint16;
+};
+
+public type Elf32_Rel = unit {
+    r_offset: uint32;
+    r_info: uint32;
+};
+
+public type Elf32_Rela = unit {
+    r_offset: uint32;
+    r_info: uint32;
+    r_addend: uint32;
+};
+
+public type Elf32_Dyn = unit {
+    d_tag: uint32;
+    d_un: uint32;
+};
+
+public type Elf32_Nhdr = unit {
+    n_namesz: uint32;
+    n_descsz: uint32;
+    n_type: uint32;
+};
+
+public type Elf32 = unit {
+    ehdr: Elf32_Ehdr;
+    phdrs: Elf32_Phdr[] &size=self.ehdr.e_phnum;
+    shdrs: Elf32_Shdr[] &size=self.ehdr.e_shnum;
+    sections: bytes[] &size=self.ehdr.e_shnum;
+};

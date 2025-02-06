@@ -1,75 +1,244 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
            targetNamespace="http://example.com/jpeg"
-           xmlns:jpeg="http://example.com/jpeg">
+           xmlns:tns="http://example.com/jpeg"
+           elementFormDefault="qualified"
+           xmlns="http://www.w3.org/2001/XMLSchema">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        occursCountKind="parsed"
-        representation="binary"/>
+      <dfdl:format representation="binary"
+                  byteOrder="bigEndian"
+                  alignment="1"
+                  alignmentUnits="bytes"
+                  encoding="UTF-8"
+                  lengthKind="explicit"
+                  lengthUnits="bytes"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="JPEG" type="jpeg:JPEGType"/>
+  <xs:element name="JPEGFile" type="tns:JPEGFileType" dfdl:lengthKind="implicit"/>
 
-  <xs:complexType name="JPEGType">
-    <xs:sequence>
-      <xs:element name="SOI" type="jpeg:StartOfImageType"/>
-      <xs:element name="Segments" type="jpeg:SegmentsType"/>
-      <xs:element name="EOI" type="jpeg:EndOfImageType"/>
+  <xs:complexType name="JPEGFileType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="SOI" type="tns:SOIMarker"/>
+      <xs:element name="Markers" type="tns:MarkerSequence" maxOccurs="unbounded"/>
+      <xs:element name="EOI" type="tns:EOIMarker"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="StartOfImageType">
+  <xs:complexType name="SOIMarker">
     <xs:sequence>
-      <xs:element name="Marker" type="jpeg:MarkerType" fixed="0xFFD8"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFD8"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="EndOfImageType">
+  <xs:complexType name="EOIMarker">
     <xs:sequence>
-      <xs:element name="Marker" type="jpeg:MarkerType" fixed="0xFFD9"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFD9"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="SegmentsType">
+  <xs:complexType name="MarkerSequence">
+    <xs:choice>
+      <xs:element name="APP0" type="tns:APP0Marker"/>
+      <xs:element name="APP1" type="tns:APP1Marker" minOccurs="0"/>
+      <xs:element name="DQT" type="tns:QuantizationTableMarker"/>
+      <xs:element name="SOF0" type="tns:BaselineFrameMarker"/>
+      <xs:element name="SOF2" type="tns:ProgressiveFrameMarker"/>
+      <xs:element name="DHT" type="tns:HuffmanTableMarker"/>
+      <xs:element name="DRI" type="tns:RestartIntervalMarker"/>
+      <xs:element name="SOS" type="tns:ScanMarker"/>
+      <xs:element name="RestartMarker" type="tns:RestartMarker"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="APP0Marker">
     <xs:sequence>
-      <xs:element name="Segment" type="jpeg:SegmentType" maxOccurs="unbounded"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFE0"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Identifier" type="xs:string" 
+                  dfdl:length="5"/>
+      <xs:element name="Version" type="xs:hexBinary" 
+                  dfdl:length="2"/>
+      <xs:element name="DensityUnits" type="xs:unsignedByte"/>
+      <xs:element name="XDensity" type="xs:unsignedShort"/>
+      <xs:element name="YDensity" type="xs:unsignedShort"/>
+      <xs:element name="ThumbnailWidth" type="xs:unsignedByte"/>
+      <xs:element name="ThumbnailHeight" type="xs:unsignedByte"/>
+      <xs:element name="ThumbnailData" type="xs:hexBinary" 
+                  dfdl:lengthKind="implicit" 
+                  minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="SegmentType">
+  <xs:complexType name="APP1Marker">
     <xs:sequence>
-      <xs:element name="Marker" type="jpeg:MarkerType"/>
-      <xs:element name="Length" type="jpeg:LengthType"/>
-      <xs:element name="Data" type="jpeg:DataType"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFE1"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="{ ../Length - 2 }"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:simpleType name="MarkerType">
-    <xs:restriction base="xs:hexBinary">
-      <xs:minLength value="2"/>
-      <xs:maxLength value="2"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:complexType name="LengthType">
+  <xs:complexType name="QuantizationTableMarker">
     <xs:sequence>
-      <xs:element name="Value" type="xs:unsignedShort"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFDB"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="QuantizationTables">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="QuantizationTable" maxOccurs="4">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="Precision" type="xs:unsignedByte"/>
+                  <xs:element name="TableElements" type="xs:hexBinary" 
+                              dfdl:length="64"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DataType">
+  <xs:complexType name="BaselineFrameMarker">
     <xs:sequence>
-      <xs:element name="Bytes" type="xs:hexBinary"/>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFC0"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="Components">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ComponentCount" type="xs:unsignedByte"/>
+            <xs:element name="Component" maxOccurs="255">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="ID" type="xs:unsignedByte"/>
+                  <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+                  <xs:element name="QuantizationTableNumber" type="xs:unsignedByte"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 
+  <xs:complexType name="ProgressiveFrameMarker">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFC2"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="Components">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ComponentCount" type="xs:unsignedByte"/>
+            <xs:element name="Component" maxOccurs="255">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="ID" type="xs:unsignedByte"/>
+                  <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+                  <xs:element name="QuantizationTableNumber" type="xs:unsignedByte"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HuffmanTableMarker">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFC4"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="HuffmanTables">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="HuffmanTable" maxOccurs="4">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="TableClass" type="xs:unsignedByte"/>
+                  <xs:element name="TableDestination" type="xs:unsignedByte"/>
+                  <xs:element name="CodeLengths" type="xs:hexBinary" 
+                              dfdl:length="16"/>
+                  <xs:element name="HuffmanValues" type="xs:hexBinary" 
+                              dfdl:lengthKind="implicit"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RestartIntervalMarker">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFDD"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="RestartInterval" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ScanMarker">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="0xFFC0"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Components">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ComponentCount" type="xs:unsignedByte"/>
+            <xs:element name="Component" maxOccurs="4">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="Selector" type="xs:unsignedByte"/>
+                  <xs:element name="HuffmanTables" type="xs:unsignedByte"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="SpectralSelection" type="xs:unsignedByte"/>
+      <xs:element name="SuccessiveApproximation" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RestartMarker">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:inputValuePattern="(0xFFD0|0xFFD1|0xFFD2|0xFFD3|0xFFD4|0xFFD5|0xFFD6|0xFFD7)"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

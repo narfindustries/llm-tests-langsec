@@ -1,108 +1,136 @@
-#! /usr/bin/env zeek
-
 module ZIP;
 
-import spicy;
-
-type Header = unit {
+public type LocalFileHeader = unit {
     signature: bytes &size=4;
-    version: uint16;
-    flags: uint16;
-    compression: uint16;
-    mod_time: uint16;
-    mod_date: uint16;
-    crc32: uint32;
+    version_needed: uint16;
+    general_purpose_flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: bytes &size=4;
     compressed_size: uint32;
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
     filename: bytes &size=self.filename_length;
     extra_field: bytes &size=self.extra_field_length;
-    
+    compressed_data: bytes &size=self.compressed_size;
+
+    var valid: bool;
     on signature {
-        if ( self.signature != b"PK\x03\x04" )
-            confirm_error("Invalid ZIP signature");
+        self.valid = (self.signature == b"\x50\x4b\x03\x04");
     }
 };
 
-type LocalFileHeader = unit {
-    header: Header;
-    compressed_data: bytes &size=self.header.compressed_size;
-};
-
-type CentralDirectoryHeader = unit {
+public type CentralDirectoryHeader = unit {
     signature: bytes &size=4;
     version_made_by: uint16;
     version_needed: uint16;
-    flags: uint16;
-    compression: uint16;
-    mod_time: uint16;
-    mod_date: uint16;
-    crc32: uint32;
+    general_purpose_flags: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: bytes &size=4;
     compressed_size: uint32;
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
-    comment_length: uint16;
+    file_comment_length: uint16;
     disk_number_start: uint16;
-    internal_attributes: uint16;
-    external_attributes: uint32;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
     relative_offset: uint32;
     filename: bytes &size=self.filename_length;
     extra_field: bytes &size=self.extra_field_length;
-    comment: bytes &size=self.comment_length;
-    
+    file_comment: bytes &size=self.file_comment_length;
+
+    var valid: bool;
     on signature {
-        if ( self.signature != b"PK\x01\x02" )
-            confirm_error("Invalid Central Directory signature");
+        self.valid = (self.signature == b"\x50\x4b\x01\x02");
     }
 };
 
-type EndOfCentralDirectory = unit {
+public type EndOfCentralDirectory = unit {
     signature: bytes &size=4;
     disk_number: uint16;
-    start_disk_number: uint16;
-    entries_on_disk: uint16;
+    disk_with_central_directory: uint16;
+    total_entries_this_disk: uint16;
     total_entries: uint16;
-    directory_size: uint32;
-    directory_offset: uint32;
+    central_directory_size: uint32;
+    central_directory_offset: uint32;
     comment_length: uint16;
     comment: bytes &size=self.comment_length;
-    
+
+    var valid: bool;
     on signature {
-        if ( self.signature != b"PK\x05\x06" )
-            confirm_error("Invalid End of Central Directory signature");
+        self.valid = (self.signature == b"\x50\x4b\x05\x06");
     }
 };
 
-public type ZIP = unit {
-    files: LocalFileHeader[];
-    central_directory: CentralDirectoryHeader[];
-    end_of_directory: EndOfCentralDirectory;
+public type ZIP64EndOfCentralDirectory = unit {
+    signature: bytes &size=4;
+    size_of_record: uint64;
+    version_made_by: uint16;
+    version_needed: uint16;
+    disk_number: uint32;
+    disk_with_central_directory: uint32;
+    total_entries_this_disk: uint64;
+    total_entries: uint64;
+    central_directory_size: uint64;
+    central_directory_offset: uint64;
+    extensible_data: bytes &size=self.size_of_record - 44;
+
+    var valid: bool;
+    on signature {
+        self.valid = (self.signature == b"\x50\x4b\x06\x06");
+    }
 };
 
-on ZIP::Header -> event zip_entry(
-    $signature: string,
-    $version: count,
-    $flags: count,
-    $compression: count,
-    $mod_time: count,
-    $mod_date: count,
-    $crc32: count,
-    $compressed_size: count,
-    $uncompressed_size: count,
-    $filename: string
-);
+public type ZIP64EndOfCentralDirectoryLocator = unit {
+    signature: bytes &size=4;
+    disk_with_zip64_end: uint32;
+    relative_offset: uint64;
+    total_disks: uint32;
 
-on ZIP::CentralDirectoryHeader -> event zip_central_directory(
-    $filename: string,
-    $compressed_size: count,
-    $uncompressed_size: count,
-    $crc32: count
-);
+    var valid: bool;
+    on signature {
+        self.valid = (self.signature == b"\x50\x4b\x06\x07");
+    }
+};
 
-on ZIP::EndOfCentralDirectory -> event zip_end(
-    $total_entries: count,
-    $directory_size: count,
-    $directory_offset: count
-);
+public type DigitalSignature = unit {
+    signature: bytes &size=4;
+    size_of_data: uint16;
+    signature_data: bytes &size=self.size_of_data;
+
+    var valid: bool;
+    on signature {
+        self.valid = (self.signature == b"\x50\x4b\x05\x05");
+    }
+};
+
+public type DataDescriptor = unit {
+    crc32: bytes &size=4;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+};
+
+public type ZIP64DataDescriptor = unit {
+    crc32: bytes &size=4;
+    compressed_size: uint64;
+    uncompressed_size: uint64;
+};
+
+type OptionalSection = unit {
+    has_section: uint8;
+    section: bytes &eod;
+};
+
+public type ZIPFile = unit {
+    local_headers: LocalFileHeader[];
+    central_headers: CentralDirectoryHeader[];
+    zip64_end: OptionalSection;
+    zip64_locator: OptionalSection;
+    end_directory: EndOfCentralDirectory;
+    digital_sig: OptionalSection;
+};

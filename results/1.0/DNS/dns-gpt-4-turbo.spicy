@@ -1,51 +1,56 @@
 module DNS;
 
-export {
-    type DNS_Header = unit {
-        id: uint16;
-        qr: bit;
-        opcode: uint4;
-        aa: bit;
-        tc: bit;
-        rd: bit;
-        ra: bit;
-        z: uint3;
-        rcode: uint4;
-        qdcount: uint16;
-        ancount: uint16;
-        nscount: uint16;
-        arcount: uint16;
-    };
+import spicy;
 
-    type Query = unit {
-        name: bytes &eod;
-        type: uint16;
-        class: uint16;
-    };
+type DNSHeader = unit {
+    id: uint16;
+    qr: bool : 1;
+    opcode: uint4;
+    aa: bool : 1;
+    tc: bool : 1;
+    rd: bool : 1;
+    ra: bool : 1;
+    z: uint3;
+    rcode: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
 
-    type Answer = unit {
-        name: bytes &eod;
-        type: uint16;
-        class: uint16;
-        ttl: uint32;
-        data_len: uint16;
-        data: bytes &size=data_len;
-    };
+type DomainLabel = unit {
+    length: uint8;
+    label: bytes &size=this.length;
+};
 
-    type Message = unit {
-        header: DNS_Header;
-        queries: Query[] &size=header.qdcount;
-        answers: Answer[] &size=header.ancount;
-        authorities: Answer[] &size=header.nscount;
-        additionals: Answer[] &size=header.arcount;
-        
-        on %init {
-            print self;
-        }
-    };
+type DomainName = unit {
+    components: DomainLabel[] &eod;
+};
 
-    public type DNS_Packet = unit {
-        data: bytes &restreamed;
-        dns_message: Message(data) &parse-from=BeginningOfData;
-    };
-}
+type Question = unit {
+    qname: DomainName;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+type ResourceRecord = unit {
+    name: DomainName;
+    type_: uint16;
+    class_: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=this.rdlength;
+};
+
+type DNSMessage = unit {
+    header: DNSHeader;
+    questions: Question[] &size=this.header.qdcount;
+    answers: ResourceRecord[] &size=this.header.ancount;
+    authorities: ResourceRecord[] &size=this.header.nscount;
+    additionals: ResourceRecord[] &size=this.header.arcount;
+};
+
+public type DNSSession = unit {
+    request: DNSMessage;
+    response: DNSMessage;
+};

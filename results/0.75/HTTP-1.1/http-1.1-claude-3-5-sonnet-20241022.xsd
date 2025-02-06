@@ -1,67 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/namespace"
-    targetNamespace="http://example.com/namespace"
-    elementFormDefault="qualified">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:http="http://example.com/http"
+           targetNamespace="http://example.com/http"
+           elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryFloatRep="ieee"
-                binaryNumberRep="binary"
-                byteOrder="bigEndian"
-                encoding="UTF-8"
-                ignoreCase="no"
-                lengthKind="delimited"
-                lengthUnits="bytes"
-                occursCountKind="parsed"
-                separator=""
-                separatorPolicy="required"
-                separatorPosition="infix"
-                textNumberRep="standard"
-                textStringJustification="left"
-                textStringPadCharacter=" "
-                textTrimKind="none"
-                initiator=""
-                terminator=""
-                leadingSkip="0"/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   lengthKind="delimited" 
+                   encoding="UTF-8" 
+                   encodingErrorPolicy="replace"
+                   ignoreCase="yes"
+                   initiator="" 
+                   terminator="%NL;"
+                   separator="" 
+                   separatorPolicy="required"
+                   sequenceKind="ordered"
+                   initiatedContent="no"
+                   textNumberRep="standard"
+                   textStringJustification="left"
+                   textTrimKind="none"
+                   textPadKind="none"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   textBidi="no"
+                   floating="no"
+                   escapeSchemeRef=""/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:element name="http_message">
-        <xs:complexType>
+  <xs:element name="HTTPMessage" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element name="Request">
+          <xs:complexType>
             <xs:sequence>
-                <xs:element name="request_line">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="method" type="xs:string" dfdl:terminator=" "/>
-                            <xs:element name="uri" type="xs:string" dfdl:terminator=" "/>
-                            <xs:element name="version" type="xs:string" dfdl:terminator="%NL;"/>
+              <xs:element name="RequestLine">
+                <xs:complexType>
+                  <xs:sequence dfdl:separator=" " dfdl:terminator="%NL;">
+                    <xs:element name="Method" type="http:HTTPMethod"/>
+                    <xs:element name="RequestURI" type="xs:string"/>
+                    <xs:element name="HTTPVersion" type="http:HTTPVersionType"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Headers" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Header" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence dfdl:separator=": " dfdl:terminator="%NL;">
+                          <xs:element name="Name" type="xs:string"/>
+                          <xs:element name="Value" type="xs:string"/>
                         </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="headers" minOccurs="0" maxOccurs="unbounded">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="name" type="xs:string" dfdl:terminator=": "/>
-                            <xs:element name="value" type="xs:string" dfdl:terminator="%NL;"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="empty_line" type="xs:string" fixed="" dfdl:terminator="%NL;"/>
-                <xs:element name="body" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Body" type="xs:string" minOccurs="0" dfdl:terminator="%NL;"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Response">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="StatusLine">
+                <xs:complexType>
+                  <xs:sequence dfdl:separator=" " dfdl:terminator="%NL;">
+                    <xs:element name="HTTPVersion" type="http:HTTPVersionType"/>
+                    <xs:element name="StatusCode" type="http:StatusCodeType"/>
+                    <xs:element name="ReasonPhrase" type="xs:string"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Headers" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Header" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence dfdl:separator=": " dfdl:terminator="%NL;">
+                          <xs:element name="Name" type="xs:string"/>
+                          <xs:element name="Value" type="xs:string"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Body" type="xs:string" minOccurs="0" dfdl:terminator="%NL;"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="crlf">
-                <dfdl:format terminator="%CR;%LF;" />
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:simpleType name="HTTPMethod">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="GET"/>
+      <xs:enumeration value="POST"/>
+      <xs:enumeration value="PUT"/>
+      <xs:enumeration value="DELETE"/>
+      <xs:enumeration value="HEAD"/>
+      <xs:enumeration value="OPTIONS"/>
+      <xs:enumeration value="TRACE"/>
+      <xs:enumeration value="CONNECT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HTTPVersionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="HTTP/1\.1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StatusCodeType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="100"/>
+      <xs:maxInclusive value="599"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

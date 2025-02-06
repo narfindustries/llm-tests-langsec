@@ -1,58 +1,101 @@
-module PNGImage where
+module PNG;
 
-import Daedalus.Core
-import Daedalus.Rec
+using Util::UInt32;
+using Util::UInt8;
 
--- Define the main structures based on the Portable Network Graphics (PNG) specification
-type PNGFile = struct
-  signature : Bytes 8
-  chunks    : Array Chunk  until (isIENDChunk . value)
+struct PNGFile {
+    signature : UInt64 = 0x89504E470D0A1A0A;
+    chunks : PNGChunk*;
+}
 
--- Check for the PNG signature at the beginning of the file
-isPNGSignature : signature == [137, 80, 78, 71, 13, 10, 26, 10]
+alias CRC = UInt32;
 
--- Define a PNG chunk
-type Chunk = struct
-  length : UInt32be
-  typ    : Bytes 4
-  value  : Bytes length    using ChunkData (decodeASCII typ)
-  crc    : UInt32be
+struct PNGChunk {
+    length : UInt32;
+    type : String(4);
+    data : select(this.type) {
+        case "IHDR" => IHDRChunk;
+        case "PLTE" => PLTEChunk;
+        case "IDAT" => IDATChunk;
+        case "IEND" => IENDChunk;
+        case "tEXt" => tEXtChunk;
+        case "zTXt" => zTXtChunk;
+        case "iTXt" => iTXtChunk;
+        case "bKGD" => bKGDChunk;
+        case "pHYs" => pHYsChunk;
+        case "tIME" => tIMEChunk;
+        otherwise => Byte[this.length];
+    };
+    crc : CRC;
+}
 
--- Check for the IEND chunk which marks the end of a PNG file
-isIENDChunk : if typ == [73, 69, 78, 68] true else false
+struct IHDRChunk {
+    width : UInt32;
+    height : UInt32;
+    bitDepth : UInt8;
+    colorType : UInt8;
+    compressionMethod : UInt8;
+    filterMethod : UInt8;
+    interlaceMethod : UInt8;
+}
 
--- Decoding different types of PNG chunks by their type
-type ChunkData (type : String) = switch type
-  "IHDR" -> IHDRChunk
-  "PLTE" -> PLTEChunk
-  "IDAT" -> Bytes
-  "IEND" -> Unit
-  _      -> Bytes -- For other chunk types we don't specify detailed decoding
+struct PLTEChunk {
+    entries : RGBTriple*;
+}
 
--- PNG image header chunk (IHDR)
-type IHDRChunk = struct
-  width            : UInt32be
-  height           : UInt32be
-  bitDepth         : UInt8
-  colourType       : UInt8
-  compressionMeth  : UInt8
-  filterMethod     : UInt8
-  interlaceMethod  : UInt8
+struct RGBTriple {
+    red : UInt8;
+    green : UInt8;
+    blue : UInt8;
+}
 
--- Palette chunk (PLTE)
-type PLTEChunk = struct
-  paletteEntries   : Array Triple until end
-type Triple = struct
-  red   : UInt8
-  green : UInt8
-  blue  : UInt8
+struct IDATChunk {
+    data : Byte*;
+}
 
--- Parse method for a PNG file
-def parsePNG : Unit
-  image <- parse PNGFile
-  match (isPNGSignature image.signature)
-    false -> fail "Not a valid PNG file."
-    true  -> return ()
+struct IENDChunk {
+    // No fields in IEND Chunk
+}
 
--- Entry point for the parser
-entry parsePNG
+struct tEXtChunk {
+    keyword : ZeroTerminatedString;
+    text : UTF8String;
+}
+
+struct zTXtChunk {
+    keyword : ZeroTerminatedString;
+    compressionMethod : UInt8;
+    compressedData : Byte*;
+}
+
+struct iTXtChunk {
+    keyword : ZeroTerminatedString;
+    compressionFlag : UInt8;
+    compressionMethod : UInt8;
+    languageTag : ZeroTerminatedString;
+    translatedKeyword : ZeroTerminatedString;
+    text : UTF8String;
+}
+
+struct bKGDChunk {
+    backgroundColor : select(IHDRChunk.colorType) {
+        case 0, 4 => UInt16;
+        case 2, 6 => RGBTriple;
+        case 3 => UInt8;
+    };
+}
+
+struct pHYsChunk {
+    pixelsPerUnitXAxis : UInt32;
+    pixelsPerUnitYAxis : UInt32;
+    unitSpecifier : UInt8;
+}
+
+struct tIMEChunk {
+    year : UInt16;
+    month : UInt8;
+    day : UInt8;
+    hour : UInt8;
+    minute : UInt8;
+    second : UInt8;
+}

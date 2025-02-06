@@ -1,39 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/GZIP"
-           xmlns="http://example.com/GZIP"
+           targetNamespace="http://example.com/gzip"
+           xmlns="http://example.com/gzip"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="gzipFile" type="gzipFileType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-
-  <xs:complexType name="gzipFileType">
-    <xs:sequence>
-      <xs:element name="gzipHeader" type="gzipHeaderType" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x8b1f"/>
-      <xs:element name="compressedData" type="xs:hexBinary" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x0000ffff"/>
-      <xs:element name="gzipFooter" type="gzipFooterType" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x0000ffff"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="gzipHeaderType">
-    <xs:sequence>
-      <xs:element name="id1" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x1f"/>
-      <xs:element name="id2" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x8b"/>
-      <xs:element name="cm" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x08"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x00"/>
-      <xs:element name="mtime" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x0000ffff"/>
-      <xs:element name="xflags" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x00"/>
-      <xs:element name="os" type="xs:unsignedByte" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0xff"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="gzipFooterType">
-    <xs:sequence>
-      <xs:element name="crc16" type="xs:unsignedShort" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x0000"/>
-      <xs:element name="isize" type="xs:unsignedInt" dfdl:occurs="1..1" dfdl:initiatedContent="true" dfdl:terminator="0x0000ffff"/>
-    </xs:sequence>
-  </xs:complexType>
-
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+  <xs:element name="gzip">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID1" type="xs:unsignedByte" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="{ID1 = 0x1F}"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="ID2" type="xs:unsignedByte" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="{ID2 = 0x8B}"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="CM" type="xs:unsignedByte" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="{CM = 8}"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="FLAGS" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="MTIME" type="xs:unsignedInt" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder>big</dfdl:byteOrder>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="XFL" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="OS" type="xs:unsignedByte" maxOccurs="1" minOccurs="1"/>
+        <xs:element name="EXTRA" maxOccurs="1" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="XLEN" type="xs:unsignedShort" maxOccurs="1" minOccurs="1">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:byteOrder>little</dfdl:byteOrder>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="EXTRA_DATA" type="xs:unsignedByte" maxOccurs="unbounded" minOccurs="1">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:length>XLEN</dfdl:length>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FNAME" maxOccurs="1" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FNAME_DATA" type="xs:unsignedByte" maxOccurs="unbounded" minOccurs="1">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:termination>0x00</dfdl:termination>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FCOMMENT" maxOccurs="1" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FCOMMENT_DATA" type="xs:unsignedByte" maxOccurs="unbounded" minOccurs="1">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:termination>0x00</dfdl:termination>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="HCRC" type="xs:unsignedShort" maxOccurs="1" minOccurs="0">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert test="{parent::FLAGS bitAnd 0x02 = 0x02}"/>
+              <dfdl:byteOrder>little</dfdl:byteOrder>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="COMPRDATA" type="xs:unsignedByte" maxOccurs="unbounded" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:length>*</dfdl:length>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="ISIZE" type="xs:unsignedInt" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder>little</dfdl:byteOrder>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="CRC32" type="xs:unsignedInt" maxOccurs="1" minOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:byteOrder>little</dfdl:byteOrder>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

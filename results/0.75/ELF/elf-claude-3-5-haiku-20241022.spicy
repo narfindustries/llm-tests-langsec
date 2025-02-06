@@ -1,57 +1,88 @@
 module ELF;
 
-import spicy;
-
-public type File = unit {
-    magic: bytes(4) &requires(self.magic == b"\x7fELF");
-    class: uint8;
-    data_encoding: uint8;
-    version: uint8;
-    os_abi: uint8;
+public type Header = unit {
+    magic: bytes(4) requires $$ == b"\x7fELF";
+    class: uint8 { 0x01 => "32-bit"; 0x02 => "64-bit"; };
+    encoding: uint8 { 0x01 => "Little Endian"; 0x02 => "Big Endian"; };
+    version: uint8 where $ == 0x01;
+    os_abi: uint8 {
+        0x00 => "System V",
+        0x03 => "Linux",
+        0x06 => "Solaris"
+    };
     abi_version: uint8;
     padding: bytes(7);
-    type: uint16;
-    machine: uint16;
-    elf_version: uint32;
-    entry_point: uint64 &convert=$$.type == 2 ? $$.entry_point : 0;
+    
+    type_: uint16 enum {
+        None = 0x00,
+        Relocatable = 0x01,
+        Executable = 0x02,
+        SharedObject = 0x03,
+        CoreFile = 0x04
+    };
+
+    machine: uint16 enum {
+        SPARC = 0x02,
+        x86 = 0x03,
+        MIPS = 0x08,
+        PowerPC = 0x14,
+        ARM = 0x28,
+        x86_64 = 0x3E
+    };
+
+    elf_version: uint32 where $ == 0x01;
+    entry_point: uint64;
     program_header_offset: uint64;
     section_header_offset: uint64;
     flags: uint32;
     header_size: uint16;
-    program_header_size: uint16;
-    program_header_count: uint16;
-    section_header_size: uint16;
-    section_header_count: uint16;
-    section_header_str_index: uint16;
-
-    program_headers: list<ProgramHeader>(self.program_header_count);
-    section_headers: list<SectionHeader>(self.section_header_count);
-
-    on %done { 
-        print self; 
-    }
+    program_header_entry_size: uint16;
+    program_header_num_entries: uint16;
+    section_header_entry_size: uint16;
+    section_header_num_entries: uint16;
+    section_header_string_index: uint16;
 };
 
 type ProgramHeader = unit {
-    type: uint32;
-    flags: uint32;
+    type_: uint32 enum {
+        Null = 0x00,
+        Load = 0x01,
+        Dynamic = 0x02,
+        Interp = 0x03,
+        Note = 0x04,
+        Phdr = 0x06
+    };
     offset: uint64;
     virtual_address: uint64;
     physical_address: uint64;
     file_size: uint64;
     memory_size: uint64;
-    alignment: uint64;
+    flags: uint32;
+    align: uint64;
 };
 
 type SectionHeader = unit {
     name_offset: uint32;
-    type: uint32;
+    type_: uint32 enum {
+        Null = 0x00,
+        Progbits = 0x01,
+        Symtab = 0x02,
+        Strtab = 0x03,
+        Rela = 0x04,
+        Hash = 0x05
+    };
     flags: uint64;
     address: uint64;
     offset: uint64;
     size: uint64;
     link: uint32;
     info: uint32;
-    address_alignment: uint64;
+    address_align: uint64;
     entry_size: uint64;
+};
+
+public type ELF = unit {
+    header: Header;
+    program_headers: ProgramHeader[header.program_header_num_entries];
+    section_headers: SectionHeader[header.section_header_num_entries];
 };

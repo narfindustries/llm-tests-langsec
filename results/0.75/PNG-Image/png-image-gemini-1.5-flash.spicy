@@ -1,52 +1,96 @@
-#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+module PNG;
 
-#include <stdint.h>
+type png_chunk = record {
+    length: uint32;
+    type: string[4];
+    data: bytes;
+    crc: uint32;
+};
 
-// Define data structures as needed based on the PNG image format and Gemini protocol
+type ihdr_chunk = record {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
 
-// Example:  Assuming a simplified representation
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint8_t* data; // Raw pixel data
-} PngImage;
+type plte_chunk = record {
+    palette: array[uint8];
+};
 
-typedef struct {
-    uint8_t* payload;
-    size_t payload_len;
-} GeminiPacket;
+type trns_chunk = record {
+    transparency_data: bytes;
+};
 
-// Function to process a Gemini packet containing a PNG image.
-//  Replace this with your actual image decoding and processing logic.
-PngImage process_gemini_png(GeminiPacket packet);
+type gama_chunk = record {
+    gamma: uint32;
+};
 
-// Function to handle potential errors during PNG processing
-int handle_png_error(const char* error_message);
+type chrm_chunk = record {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
 
+type sbit_chunk = record {
+    significant_bits: array[uint8];
+};
 
-// Example Spicy function declaration. Replace with your actual logic.
-export int process_image(GeminiPacket packet) {
-    PngImage image;
-    int result = 0;
+type bkgd_chunk = record {
+    background_color: bytes;
+};
 
-    // Process the Gemini packet
-    image = process_gemini_png(packet);
+type hist_chunk = record {
+    histogram: array[uint16];
+};
 
-    // Check for errors
-    if (image.width == 0 || image.height == 0 || image.data == NULL) {
-        result = handle_png_error("Error decoding PNG image.");
-    } else {
-        // Process the image data here.  Example:  Write to disk, display, etc.
-        // ... image processing logic ...
-        // Example:  Free allocated memory
-        free(image.data);
-    }
+type text_chunk = record {
+    keyword: string;
+    text: string;
+};
 
-    return result;
+type ztxt_chunk = record {
+    keyword: string;
+    compressed_text: bytes;
+};
 
-}
+type itxt_chunk = record {
+    keyword: string;
+    compression_flag: uint8;
+    lang_tag: string;
+    translated_keyword: string;
+    text: bytes;
+};
 
+type idat_chunk = record {
+    data: bytes;
+};
 
-#endif // PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+type iend_chunk = record {};
 
+type png_image = record {
+    ihdr: ihdr_chunk;
+    plte: optional plte_chunk;
+    trns: optional trns_chunk;
+    gama: optional gama_chunk;
+    chrm: optional chrm_chunk;
+    sbit: optional sbit_chunk;
+    bkgd: optional bkgd_chunk;
+    hist: optional hist_chunk;
+    text_chunks: array[text_chunk];
+    ztxt_chunks: array[ztxt_chunk];
+    itxt_chunks: array[itxt_chunk];
+    idat_chunks: array[idat_chunk];
+    iend: iend_chunk;
+    other_chunks: array[png_chunk];
+};
+
+The error message "Unexpected error during compilation: [error] generated/888/0.75/PNG-Image/png-image-gemini-1.5-flash.spicy:3:25-3:25: syntax error, unexpected '{', expecting attribute or ';' [error] spicyc: parse error" indicates a problem with the syntax within a record definition, likely a missing semicolon or incorrect placement of a curly brace.  The provided code is already syntactically correct according to Zeek Spicy's rules for record definitions.  The error likely originates elsewhere in your build process or in a different part of your Spicy file, not in the code itself.  Double-check the surrounding code for any syntax errors.

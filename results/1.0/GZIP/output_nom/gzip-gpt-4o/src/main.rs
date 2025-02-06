@@ -1,20 +1,14 @@
-use nom::{
-    bytes::complete::{tag, take, take_until},
-    combinator::{cond, map, verify},
-    number::complete::{le_u16, le_u32, le_u8},
-    sequence::{preceded, tuple},
-    IResult,
-};
-use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use nom::bytes::complete::{tag, take, take_until};
+use nom::number::complete::{le_u16, le_u32, u8};
+use nom::sequence::{tuple, terminated};
+use nom::IResult;
 
 #[derive(Debug)]
 struct GzipHeader {
-    id1: u8,
-    id2: u8,
-    compression_method: u8,
+    cm: u8,
     flags: u8,
     mtime: u32,
     xfl: u8,
@@ -25,36 +19,53 @@ struct GzipHeader {
     crc16: Option<u16>,
 }
 
-#[derive(Debug)]
-struct GzipFooter {
-    crc32: u32,
-    isize: u32,
-}
-
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, (id1, id2, compression_method, flags, mtime, xfl, os)) = tuple((
-        verify(le_u8, |v| *v == 0x1f),
-        verify(le_u8, |v| *v == 0x8b),
-        le_u8,
-        le_u8,
-        le_u32,
-        le_u8,
-        le_u8,
-    ))(input)?;
+    let (input, (_, cm, flags, mtime, xfl, os)) = tuple((tag([0x1F, 0x8B]), u8, u8, le_u32, u8, u8))(input)?;
 
-    let (input, extra) = cond((flags & 0x04) != 0, length_data(le_u16))(input)?;
-    let (input, filename) = cond((flags & 0x08) != 0, take_until("\0"))(input)?;
-    let (input, comment) = cond((flags & 0x10) != 0, take_until("\0"))(input)?;
-    let (input, crc16) = cond((flags & 0x02) != 0, le_u16)(input)?;
+    let mut remaining_flags = flags;
+    let (input, extra) = if remaining_flags & 0x04 != 0 {
+        let (input, xlen) = le_u16(input)?;
+        let (input, extra_field) = take(xlen as usize)(input)?;
+        remaining_flags &= !0x04;
+        (input, Some(extra_field.to_vec()))
+    } else {
+        (input, None)
+    };
 
-    let filename = filename.map(|bytes| String::from_utf8_lossy(bytes).to_string());
-    let comment = comment.map(|bytes| String::from_utf8_lossy(bytes).to_string());
+    let (input, filename) = if remaining_flags & 0x08 != 0 {
+        let (input, filename_bytes) = terminated(take_until(&b"\0"[..]), tag(b"\0"))(input)?;
+        remaining_flags &= !0x08;
+        let filename_string = String::from_utf8_lossy(filename_bytes).into_owned();
+        (input, Some(filename_string))
+    } else {
+        (input, None)
+    };
+
+    let (input, comment) = if remaining_flags & 0x10 != 0 {
+        let (input, comment_bytes) = terminated(take_until(&b"\0"[..]), tag(b"\0"))(input)?;
+        remaining_flags &= !0x10;
+        let comment_string = String::from_utf8_lossy(comment_bytes).into_owned();
+        (input, Some(comment_string))
+    } else {
+        (input, None)
+    };
+
+    let (input, crc16) = if remaining_flags & 0x02 != 0 {
+        let (input, crc) = le_u16(input)?;
+        (input, Some(crc))
+    } else {
+        (input, None)
+    };
 
     Ok((
         input,
         GzipHeader {
-            id1, id2, compression_method, flags, mtime, xfl, os,
-            extra: extra.map(|e| e.to_vec()),
+            cm,
+            flags,
+            mtime,
+            xfl,
+            os,
+            extra,
             filename,
             comment,
             crc16,
@@ -62,29 +73,25 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
     ))
 }
 
-fn parse_gzip_footer(input: &[u8]) -> IResult<&[u8], GzipFooter> {
-    let (input, (crc32, isize)) = tuple((le_u32, le_u32))(input)?;
-    Ok((input, GzipFooter { crc32, isize }))
-}
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: {} <file>", args[0]);
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <path_to_gzip_file>", args[0]);
         std::process::exit(1);
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = File::open(&path).expect("Failed to open file");
+    let file_path = &args[1];
+    if !Path::new(file_path).exists() {
+        eprintln!("File not found: {}", file_path);
+        std::process::exit(1);
+    }
 
+    let mut file = File::open(file_path).expect("Failed to open the file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    file.read_to_end(&mut buffer).expect("Failed to read the file");
 
-    let (_, header) = parse_gzip_header(&buffer).expect("Failed to parse GZIP header");
-    println!("{:?}", header);
-
-    // The body of GZIP contents is usually compressed data + footer, here we just ignore it.
-    let footer_start = buffer.len() - 8; // Footer is 8 bytes from the end
-    let (_, footer) = parse_gzip_footer(&buffer[footer_start..]).expect("Failed to parse GZIP footer");
-    println!("{:?}", footer);
+    match parse_gzip_header(&buffer) {
+        Ok((_, header)) => println!("{:#?}", header),
+        Err(err) => eprintln!("Failed to parse GZIP header: {:?}", err),
+    }
 }

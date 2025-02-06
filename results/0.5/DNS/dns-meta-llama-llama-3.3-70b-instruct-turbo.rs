@@ -1,31 +1,23 @@
 use nom::{
-    bytes::complete::{take, take_while_m_n},
-    combinator::{flat_map, map, map_opt, verify},
-    error::{Error, ErrorKind},
-    multi::{length_data, many0, many1, take_while_m_n},
+    bytes::complete::{take},
+    combinator::{map},
     number::complete::{be_u16, be_u32, be_u8},
-    sequence::{pair, tuple},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Read},
-    str,
-};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 enum DnsClass {
-    Internet,
-    Csnet,
-    Chaos,
-    Hesiod,
-    None,
-    Any,
+    In,
+    Cs,
+    Ch,
+    Hs,
     Other(u16),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 enum DnsType {
     A,
     Ns,
@@ -33,219 +25,172 @@ enum DnsType {
     Mf,
     Cname,
     Soa,
-    Mb,
-    Mg,
-    Mr,
-    Null,
-    Wks,
     Ptr,
-    Hinfo,
-    Minfo,
     Mx,
-    Txt,
-    Rp,
-    Afsdb,
-    X25,
-    Isdn,
-    Rt,
-    Nsap,
-    NsapPtr,
-    Sig,
-    Key,
-    Px,
-    Gpos,
-    Aaaa,
-    Loc,
-    Nxt,
-    Eid,
-    Nimloc,
-    Srv,
-    Atma,
-    Naptr,
-    Kx,
-    Cert,
-    A6,
-    Dname,
-    Sink,
-    Opt,
-    Apl,
-    Dnskey,
-    Ds,
-    Rrsig,
-    Nsec,
-    Dhcid,
-    Nsec3,
-    Nsec3param,
-    Tlsa,
-    Hip,
-    Ninfo,
-    Rkey,
-    Talink,
-    Cds,
-    Cdnskey,
-    Openpgpkey,
-    Csisc,
-    Ta,
-    Dlv,
     Other(u16),
 }
 
-#[derive(Debug, PartialEq)]
-struct DnsHeader {
-    id: u16,
-    flags: u16,
-    qdcount: u16,
-    ancount: u16,
-    nscount: u16,
-    arcount: u16,
+#[derive(Debug, Clone)]
+enum DnsOpcode {
+    Query,
+    InverseQuery,
+    Status,
+    Other(u8),
+}
+
+#[derive(Debug, Clone)]
+enum DnsRcode {
+    NoError,
+    FormatError,
+    ServerFailure,
+    NameError,
+    NotImplemented,
+    Refused,
+    Other(u8),
 }
 
 fn parse_dns_class(input: &[u8]) -> IResult<&[u8], DnsClass> {
-    map(be_u16, |value| match value {
-        1 => DnsClass::Internet,
-        2 => DnsClass::Csnet,
-        3 => DnsClass::Chaos,
-        4 => DnsClass::Hesiod,
-        254 => DnsClass::None,
-        255 => DnsClass::Any,
-        _ => DnsClass::Other(value),
+    map(be_u16, |class: u16| match class {
+        1 => DnsClass::In,
+        2 => DnsClass::Cs,
+        3 => DnsClass::Ch,
+        4 => DnsClass::Hs,
+        _ => DnsClass::Other(class),
     })(input)
 }
 
 fn parse_dns_type(input: &[u8]) -> IResult<&[u8], DnsType> {
-    map(be_u16, |value| match value {
+    map(be_u16, |type_: u16| match type_ {
         1 => DnsType::A,
         2 => DnsType::Ns,
         3 => DnsType::Md,
         4 => DnsType::Mf,
         5 => DnsType::Cname,
         6 => DnsType::Soa,
-        7 => DnsType::Mb,
-        8 => DnsType::Mg,
-        9 => DnsType::Mr,
-        10 => DnsType::Null,
-        11 => DnsType::Wks,
         12 => DnsType::Ptr,
-        13 => DnsType::Hinfo,
-        14 => DnsType::Minfo,
         15 => DnsType::Mx,
-        16 => DnsType::Txt,
-        17 => DnsType::Rp,
-        18 => DnsType::Afsdb,
-        19 => DnsType::X25,
-        20 => DnsType::Isdn,
-        21 => DnsType::Rt,
-        22 => DnsType::Nsap,
-        23 => DnsType::NsapPtr,
-        24 => DnsType::Sig,
-        25 => DnsType::Key,
-        26 => DnsType::Px,
-        27 => DnsType::Gpos,
-        28 => DnsType::Aaaa,
-        29 => DnsType::Loc,
-        30 => DnsType::Nxt,
-        31 => DnsType::Eid,
-        32 => DnsType::Nimloc,
-        33 => DnsType::Srv,
-        34 => DnsType::Atma,
-        35 => DnsType::Naptr,
-        36 => DnsType::Kx,
-        37 => DnsType::Cert,
-        38 => DnsType::A6,
-        39 => DnsType::Dname,
-        40 => DnsType::Sink,
-        41 => DnsType::Opt,
-        42 => DnsType::Apl,
-        43 => DnsType::Dnskey,
-        44 => DnsType::Ds,
-        45 => DnsType::Rrsig,
-        46 => DnsType::Nsec,
-        47 => DnsType::Dhcid,
-        48 => DnsType::Nsec3,
-        49 => DnsType::Nsec3param,
-        50 => DnsType::Tlsa,
-        51 => DnsType::Hip,
-        52 => DnsType::Ninfo,
-        53 => DnsType::Rkey,
-        54 => DnsType::Talink,
-        55 => DnsType::Cds,
-        56 => DnsType::Cdnskey,
-        57 => DnsType::Openpgpkey,
-        58 => DnsType::Csisc,
-        59 => DnsType::Ta,
-        60 => DnsType::Dlv,
-        _ => DnsType::Other(value),
+        _ => DnsType::Other(type_),
     })(input)
 }
 
-fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DnsHeader> {
-    map(
-        tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16)),
-        |(id, flags, qdcount, ancount, nscount, arcount)| DnsHeader {
-            id,
-            flags,
-            qdcount,
-            ancount,
-            nscount,
-            arcount,
-        },
-    )(input)
+fn parse_dns_opcode(input: &[u8]) -> IResult<&[u8], DnsOpcode> {
+    map(be_u8, |opcode: u8| match opcode {
+        0 => DnsOpcode::Query,
+        1 => DnsOpcode::InverseQuery,
+        2 => DnsOpcode::Status,
+        _ => DnsOpcode::Other(opcode),
+    })(input)
 }
 
-fn parse_dns_question(input: &[u8]) -> IResult<&[u8], (&[u8], DnsType, DnsClass)> {
-    map(
-        tuple((take_while_m_n(1, 255, |c| c != 0), parse_dns_type, parse_dns_class)),
-        |(name, dns_type, dns_class)| (name, dns_type, dns_class),
-    )(input)
+fn parse_dns_rcode(input: &[u8]) -> IResult<&[u8], DnsRcode> {
+    map(be_u8, |rcode: u8| match rcode {
+        0 => DnsRcode::NoError,
+        1 => DnsRcode::FormatError,
+        2 => DnsRcode::ServerFailure,
+        3 => DnsRcode::NameError,
+        4 => DnsRcode::NotImplemented,
+        5 => DnsRcode::Refused,
+        _ => DnsRcode::Other(rcode),
+    })(input)
 }
 
-fn parse_dns_answer(input: &[u8]) -> IResult<&[u8], (&[u8], DnsType, DnsClass, u32, &[u8])> {
-    map(
-        tuple((
-            take_while_m_n(1, 255, |c| c != 0),
-            parse_dns_type,
-            parse_dns_class,
-            be_u32,
-            length_data(be_u16),
-        )),
-        |(name, dns_type, dns_class, ttl, data)| (name, dns_type, dns_class, ttl, data),
-    )(input)
+fn parse_domain_name(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let mut output = Vec::new();
+    let mut input = input;
+    loop {
+        let (i, label_len) = be_u8(input)?;
+        input = i;
+        if label_len == 0 {
+            break;
+        }
+        let (i, label) = take(label_len as usize)(input)?;
+        input = i;
+        output.extend_from_slice(label);
+        output.push(b'.');
+    }
+    Ok((input, output))
+}
+
+fn parse_dns_header(input: &[u8]) -> IResult<&[u8], (u16, bool, DnsOpcode, bool, bool, bool, bool, DnsRcode)> {
+    let (input, id) = be_u16(input)?;
+    let (input, flags) = be_u16(input)?;
+    let qr = (flags >> 15) & 1 != 0;
+    let flags_bytes = flags.to_be_bytes();
+    let opcode = match flags_bytes[1] {
+        0 => DnsOpcode::Query,
+        1 => DnsOpcode::InverseQuery,
+        2 => DnsOpcode::Status,
+        _ => DnsOpcode::Other(flags_bytes[1]),
+    };
+    let aa = (flags >> 10) & 1 != 0;
+    let tc = (flags >> 9) & 1 != 0;
+    let rd = (flags >> 8) & 1 != 0;
+    let ra = (flags >> 7) & 1 != 0;
+    let rcode = match flags_bytes[0] {
+        0 => DnsRcode::NoError,
+        1 => DnsRcode::FormatError,
+        2 => DnsRcode::ServerFailure,
+        3 => DnsRcode::NameError,
+        4 => DnsRcode::NotImplemented,
+        5 => DnsRcode::Refused,
+        _ => DnsRcode::Other(flags_bytes[0]),
+    };
+    Ok((input, (id, qr, opcode, aa, tc, rd, ra, rcode)))
+}
+
+fn parse_dns_question(input: &[u8]) -> IResult<&[u8], (Vec<u8>, DnsType, DnsClass)> {
+    let (input, name) = parse_domain_name(input)?;
+    let (input, type_) = parse_dns_type(input)?;
+    let (input, class) = parse_dns_class(input)?;
+    Ok((input, (name, type_, class)))
+}
+
+fn parse_dns_resource(input: &[u8]) -> IResult<&[u8], (Vec<u8>, DnsType, DnsClass, u32, Vec<u8>)> {
+    let (input, name) = parse_domain_name(input)?;
+    let (input, type_) = parse_dns_type(input)?;
+    let (input, class) = parse_dns_class(input)?;
+    let (input, ttl) = be_u32(input)?;
+    let (input, rdlength) = be_u16(input)?;
+    let (input, rdata) = take(rdlength as usize)(input)?;
+    Ok((input, (name, type_, class, ttl, rdata.to_vec())))
+}
+
+fn parse_dns_message(input: &[u8]) -> IResult<&[u8], (u16, bool, DnsOpcode, bool, bool, bool, bool, DnsRcode, Vec<(Vec<u8>, DnsType, DnsClass)>, Vec<(Vec<u8>, DnsType, DnsClass, u32, Vec<u8>)>, Vec<(Vec<u8>, DnsType, DnsClass, u32, Vec<u8>)>)> {
+    let (input, header) = parse_dns_header(input)?;
+    let mut questions = Vec::new();
+    let mut input = input;
+    for _ in 0..header.0 {
+        let (i, q) = parse_dns_question(input)?;
+        input = i;
+        questions.push(q);
+    }
+    let mut answers = Vec::new();
+    for _ in 0..header.0 {
+        let (i, a) = parse_dns_resource(input)?;
+        input = i;
+        answers.push(a);
+    }
+    let mut additionals = Vec::new();
+    for _ in 0..header.0 {
+        let (i, a) = parse_dns_resource(input)?;
+        input = i;
+        additionals.push(a);
+    }
+    Ok((input, (header.0, header.1, header.2, header.3, header.4, header.5, header.6, header.7, questions, answers, additionals)))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <filename>", args[0]);
+        println!("Usage: {} <input_file>", args[0]);
         return;
     }
-
-    let filename = &args[1];
-    let file = match File::open(&filename) {
-        Ok(file) => file,
-        Err(error) => {
-            eprintln!("Error opening file {}: {}", filename, error);
-            return;
-        }
-    };
-
-    let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).unwrap();
-
-    let header = parse_dns_header(&buffer).unwrap().1;
-    println!("{:#?}", header);
-
-    let questions = many1(parse_dns_question)(&buffer[12..])
-        .unwrap()
-        .1;
-    for question in questions {
-        println!("{:#?}", question);
-    }
-
-    let answers = many1(parse_dns_answer)(&buffer[12 + questions.len() * 5..])
-        .unwrap()
-        .1;
-    for answer in answers {
-        println!("{:#?}", answer);
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut input = Vec::new();
+    file.read_to_end(&mut input).expect("Failed to read file");
+    let result = parse_dns_message(&input);
+    match result {
+        Ok((_, message)) => println!("{:?}", message),
+        Err(err) => println!("Error: {:?}", err),
     }
 }

@@ -1,25 +1,62 @@
-#ifndef GIF_GEMINI_1_5_FLASH_SPICY
-#define GIF_GEMINI_1_5_FLASH_SPICY
+module GIF;
 
-#include <stdint.h>
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
-
-// Define structures and functions here as needed based on the original intent.
-//  The error message doesn't provide enough information to reconstruct the code.
-//  This is a placeholder.  You need to provide the original specification or more context.
-
-
-// Example placeholder function
-i32 process_gif_frame(u8* data, u32 len) {
-    //Implementation for processing a GIF frame.
-    return 0;
+type GIFHeader {
+	signature: string[8] = "GIF89a";
+	logical_screen_descriptor: LogicalScreenDescriptor;
+	global_color_table: optional GlobalColorTable;
+	blocks: block[ImageBlock, ExtensionBlock, TrailerBlock];
 }
 
+type LogicalScreenDescriptor {
+	width: uint16;
+	height: uint16;
+	packed_fields: uint8;
+	background_color_index: uint8;
+	pixel_aspect_ratio: uint8;
+}
 
-#endif // GIF_GEMINI_1_5_FLASH_SPICY
+type GlobalColorTable {
+	entries: array[uint8[3]];
+}
+
+type ImageBlock {
+	image_separator: uint8 = 0x2C;
+	image_descriptor: ImageDescriptor;
+	local_color_table: optional LocalColorTable;
+	image_data: ImageData;
+}
+
+type ImageDescriptor {
+	image_left_position: uint16;
+	image_top_position: uint16;
+	image_width: uint16;
+	image_height: uint16;
+	packed_fields: uint8;
+}
+
+type LocalColorTable {
+	entries: array[uint8[3]];
+}
+
+type ImageData {
+	data_blocks: block[DataBlock];
+}
+
+type DataBlock {
+	block_size: uint8;
+	data: bytes;
+}
+
+type ExtensionBlock {
+	extension_introducer: uint8 = 0x21;
+	extension_label: uint8;
+	extension_data: ExtensionData;
+}
+
+type ExtensionData {
+	data_blocks: block[DataBlock];
+}
+
+type TrailerBlock {
+	trailer: uint8 = 0x3B;
+}

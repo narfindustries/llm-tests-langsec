@@ -1,8 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-static HParser *create_png_parser() {
-    // PNG Signature: 8 bytes
-    HParser *png_signature = h_sequence(
+HParser *png_signature(void) {
+    return h_sequence(
         h_uint8_val(0x89),
         h_uint8_val(0x50),
         h_uint8_val(0x4E),
@@ -13,53 +14,109 @@ static HParser *create_png_parser() {
         h_uint8_val(0x0A),
         NULL
     );
+}
 
-    // Length: 4 bytes (big-endian)
-    HParser *chunk_length = h_uint32_be();
-
-    // Chunk Type: 4 bytes (ASCII)
-    HParser *chunk_type = h_ascii_str_ci("IHDR", 4);
-    
-    // IHDR Data: 13 bytes fixed-size
-    HParser *ihdr_data = h_sequence(
-        h_uint32_be(), // Width: 4 bytes
-        h_uint32_be(), // Height: 4 bytes
-        h_uint8(),     // Bit depth: 1 byte
-        h_uint8(),     // Color type: 1 byte
-        h_uint8(),     // Compression method: 1 byte
-        h_uint8(),     // Filter method: 1 byte
-        h_uint8(),     // Interlace method: 1 byte
+HParser *chunk_type(void) {
+    return h_choice(
+        h_token("IHDR", 4),
+        h_token("PLTE", 4),
+        h_token("IDAT", 4),
+        h_token("IEND", 4),
+        h_token("tEXt", 4),
+        h_token("zTXt", 4),
+        h_token("iTXt", 4),
+        h_token("cHRM", 4),
+        h_token("gAMA", 4),
+        h_token("iCCP", 4),
+        h_token("sBIT", 4),
+        h_token("sRGB", 4),
+        h_token("bKGD", 4),
+        h_token("hIST", 4),
+        h_token("tRNS", 4),
+        h_token("pHYs", 4),
+        h_token("sPLT", 4),
+        h_token("tIME", 4),
         NULL
     );
+}
 
-    // CRC: 4 bytes
-    HParser *chunk_crc = h_uint32_be();
-
-    // Chunk structure
-    HParser *ihdr_chunk = h_sequence(
-        chunk_length,
-        chunk_type,
-        ihdr_data,
-        chunk_crc,
-        NULL
-    );
-
-    // PNG File structure
+HParser *ihdr_chunk(void) {
     return h_sequence(
-        png_signature,
-        ihdr_chunk,
+        h_ignore(h_uint32()), // Length
+        h_token("IHDR", 4),
+        h_uint32(), // Width
+        h_uint32(), // Height
+        h_uint8(),  // Bit Depth
+        h_uint8(),  // Color Type
+        h_uint8_val(0x00), // Compression Method
+        h_uint8_val(0x00), // Filter Method
+        h_choice(h_uint8_val(0x00), h_uint8_val(0x01)), // Interlace Method
+        h_ignore(h_uint32()),  // CRC
+        NULL
+    );
+}
+
+HParser *chunk(void) {
+    return h_sequence(
+        h_length_value(h_uint32(), 
+            h_sequence(
+                chunk_type(),
+                h_data(h_uint32()), // Chunk Data
+                h_ignore(h_uint32()), // CRC
+                NULL
+            )
+        ),
+        NULL
+    );
+}
+
+HParser *png_file(void) {
+    return h_sequence(
+        png_signature(),
+        ihdr_chunk(),
+        h_many(chunk()),
         NULL
     );
 }
 
 int main(int argc, char **argv) {
-    HParser *png_parser = create_png_parser();
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    // Use the parser to parse a PNG file here as required
-    // (e.g., load a PNG file and pass its contents to the parser)
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
 
-    // Clean up
-    h_parser_free(png_parser);
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    return 0;
+    unsigned char *data = malloc(length);
+    if (!data) {
+        perror("Error allocating memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    HParser *parser = png_file();
+    HParseResult *result = h_parse(parser, data, length);
+
+    if (result) {
+        printf("PNG file parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse PNG file.\n");
+    }
+
+    h_parser_free(parser);
+    free(data);
+
+    return EXIT_SUCCESS;
 }

@@ -1,62 +1,148 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://www.dicom.org/dicom-dfdl"
-           xmlns:dicom="http://www.dicom.org/dicom-dfdl">
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format
-        separator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        alignment="1"
-        alignmentUnits="bytes"
-        leadingSkip="0"
-        trailingSkip="0"
-        initiator=""
-        terminator=""
-        textTrimValue="true"
-        textNumberPattern=""
-        textNumberRounding="pattern"
-        textNumberCheckPolicy="strict"
-        textStandardBase="10"
-        textStandardDecimalSeparator="."
-        textStandardGroupingSeparator=","
-        escapeSchemeRef=""
-        representation="binary"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:element name="DICOMMessage" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="Header" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence dfdl:separator="">
-              <xs:element name="GroupLength" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4"/>
-              <xs:element name="TransferSyntax" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+           targetNamespace="http://dicom.nema.org/standard"
+           xmlns:dicom="http://dicom.nema.org/standard"
+           elementFormDefault="qualified">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format separator="" separatorPosition="infix" separatorPolicy="suppressed"
+                         escapeSchemeRef="" representation="binary" 
+                         byteOrder="bigEndian" encoding="UTF-8" 
+                         lengthKind="explicit" lengthUnits="bytes"/>
+        </xs:appinfo>
+    </xs:annotation>
+    
+    <xs:element name="DicomFile" dfdl:lengthKind="implicit">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FileMetaInformation" dfdl:lengthKind="implicit">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="TransferSyntaxUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="SOPClassUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="SOPInstanceUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="ImplementationClassUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="PatientModule" dfdl:lengthKind="implicit">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="PatientName" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                            <xs:element name="PatientID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="PatientBirthDate" type="xs:date" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                            <xs:element name="PatientSex">
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string">
+                                        <xs:enumeration value="M"/>
+                                        <xs:enumeration value="F"/>
+                                        <xs:enumeration value="O"/>
+                                    </xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="PatientAge" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="StudyModule" dfdl:lengthKind="implicit">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="StudyInstanceUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="StudyDate" type="xs:date" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="StudyTime" type="xs:time" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="AccessionNumber" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                            <xs:element name="ReferringPhysicianName" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="SeriesModule" dfdl:lengthKind="implicit">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Modality">
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:string">
+                                        <xs:enumeration value="CT"/>
+                                        <xs:enumeration value="MR"/>
+                                        <xs:enumeration value="US"/>
+                                        <xs:enumeration value="XA"/>
+                                        <xs:enumeration value="CR"/>
+                                    </xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="SeriesInstanceUID" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="SeriesNumber" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="SeriesDescription" type="xs:string" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="0" maxOccurs="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                
+                <xs:element name="ImageModule" dfdl:lengthKind="implicit">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Rows" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="Columns" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="BitsAllocated" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="BitsStored" type="xs:integer" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                            <xs:element name="PixelRepresentation">
+                                <xs:simpleType>
+                                    <xs:restriction base="xs:integer">
+                                        <xs:enumeration value="0"/>
+                                        <xs:enumeration value="1"/>
+                                    </xs:restriction>
+                                </xs:simpleType>
+                            </xs:element>
+                            <xs:element name="PixelData" type="xs:hexBinary" 
+                                         dfdl:lengthKind="delimited" 
+                                         minOccurs="1" maxOccurs="1"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
             </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:element name="DataElements" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence dfdl:separator="">
-              <xs:element name="DataElement" maxOccurs="unbounded" dfdl:lengthKind="implicit">
-                <xs:complexType>
-                  <xs:sequence dfdl:separator="">
-                    <xs:element name="Tag" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
-                    <xs:element name="VR" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
-                    <xs:element name="Length" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="2"/>
-                    <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+        </xs:complexType>
+    </xs:element>
 </xs:schema>

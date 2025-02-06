@@ -1,49 +1,126 @@
-module HTTP;
+module HTTP1_1;
 
 import spicy;
 
-public type HTTP = unit {
-    request: Request;
-    response: Response;
+public type Version = unit {
+    major: uint8 &requires = 1;
+    : b".";
+    minor: uint8 &requires = 1;
 };
 
-type Request = unit {
-    method: bytes &until(b" ");
-    uri: bytes &until(b" ");
-    version: bytes &until(b"\r\n");
-    headers: Header[];
-    body: Body;
-
-    on %done {
-        print "Request processed";
-    }
+type Method = enum {
+    GET = 1,
+    POST = 2,
+    PUT = 3,
+    DELETE = 4,
+    HEAD = 5,
+    OPTIONS = 6,
+    TRACE = 7,
+    CONNECT = 8
 };
 
-type Response = unit {
-    version: bytes &until(b" ");
-    status_code: uint16 &until(b" ");
-    status_msg: bytes &until(b"\r\n");
-    headers: Header[];
-    body: Body;
-
-    on %done {
-        print "Response processed";
+type MethodName = unit {
+    name: bytes &until=b" " {
+        if ( self.name == b"GET" ) self.method = Method::GET;
+        if ( self.name == b"POST" ) self.method = Method::POST;
+        if ( self.name == b"PUT" ) self.method = Method::PUT;
+        if ( self.name == b"DELETE" ) self.method = Method::DELETE;
+        if ( self.name == b"HEAD" ) self.method = Method::HEAD;
+        if ( self.name == b"OPTIONS" ) self.method = Method::OPTIONS;
+        if ( self.name == b"TRACE" ) self.method = Method::TRACE;
+        if ( self.name == b"CONNECT" ) self.method = Method::CONNECT;
     }
+
+    var method: Method;
+};
+
+type URI = unit {
+    uri: bytes &until=b" ";
+};
+
+type StatusCode = unit {
+    code: uint16;
 };
 
 type Header = unit {
-    name: bytes &until(b":");
-    : bytes &until(b" ");  # Skip whitespace
-    value: bytes &until(b"\r\n");
+    name: bytes &until=b":";
+    : b":";
+    : b" "*;
+    value: bytes &until=b"\r\n";
 };
 
-type Body = unit {
-    content: bytes &eod;
+type Headers = unit {
+    headers: Header[] &until=b"\r\n";
+    : b"\r\n";
 };
 
-on HTTP::%done {
-    print "HTTP transaction complete";
+type ChunkedData = unit {
+    size: bytes &until=b"\r\n" &convert=$$.to_uint();
+    : b"\r\n";
+    
+    switch ( self.size ) {
+        0 -> : b"\r\n";
+        * -> data: bytes &size=self.size;
+            : b"\r\n";
+            next: ChunkedData;
+    };
+};
+
+public type Request = unit {
+    method: MethodName;
+    uri: URI;
+    : b"HTTP/";
+    version: Version;
+    : b"\r\n";
+    headers: Headers;
+    
+    var content_length: uint64 &default=0;
+    var is_chunked: bool &default=False;
+
+    on headers {
+        for ( h in self.headers.headers ) {
+            if ( h.name == b"Content-Length" )
+                self.content_length = h.value.to_uint();
+            if ( h.name == b"Transfer-Encoding" && h.value == b"chunked" )
+                self.is_chunked = True;
+        }
+    }
+
+    switch {
+        self.is_chunked -> body: ChunkedData;
+        self.content_length > 0 -> body: bytes &size=self.content_length;
+        * -> : void;
+    };
+};
+
+public type Response = unit {
+    : b"HTTP/";
+    version: Version;
+    : b" ";
+    status: StatusCode;
+    : b" ";
+    reason: bytes &until=b"\r\n";
+    headers: Headers;
+    
+    var content_length: uint64 &default=0;
+    var is_chunked: bool &default=False;
+
+    on headers {
+        for ( h in self.headers.headers ) {
+            if ( h.name == b"Content-Length" )
+                self.content_length = h.value.to_uint();
+            if ( h.name == b"Transfer-Encoding" && h.value == b"chunked" )
+                self.is_chunked = True;
+        }
+    }
+
+    switch {
+        self.is_chunked -> body: ChunkedData;
+        self.content_length > 0 -> body: bytes &size=self.content_length;
+        * -> : void;
+    };
+};
+
+public function init() {
+    print "HTTP/1.1 analyzer initialized";
 }
-
-public function parse_http(data: bytes) : HTTP
-    %context = "HTTP";

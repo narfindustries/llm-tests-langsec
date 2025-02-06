@@ -1,133 +1,180 @@
 module MQTT;
 
+import spicy;
+import zeek;
+
+type ControlPacketType = uint8 &enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+};
+
+type ConnectFlags = bitfield {
+    reserved: uint8 &bits=1;
+    clean_start: uint8 &bits=1;
+    will_flag: uint8 &bits=1;
+    will_qos: uint8 &bits=2;
+    will_retain: uint8 &bits=1;
+    password_flag: uint8 &bits=1;
+    user_name_flag: uint8 &bits=1;
+};
+
+type VariableByteInteger = unit {
+    varint: uint32 &convert=decode_variable_byte_integer;
+} &byteorder=bigendian;
+
+function decode_variable_byte_integer(raw: bytes): uint32 {
+    local multiplier = 1;
+    local value = 0;
+    for ( local byte in raw ) {
+        local digit = byte & 0x7F;
+        value += digit * multiplier;
+        if ( (byte & 0x80) == 0 )
+            break;
+        multiplier *= 128;
+    }
+    return value;
+}
+
+type Properties = unit {
+    length: VariableByteInteger;
+    properties: bytes &length=length.varint;
+};
+
+type MQTTHeader = unit {
+    packet_type: ControlPacketType;
+    flags: uint8;
+    remaining_length: VariableByteInteger;
+};
+
 type MQTTMessage = unit {
-    fixed_header: FixedHeader;
-    variable_header_and_payload: case fixed_header.packet_type of {
-        1    => Connect;
-        2    => ConnAck;
-        3    => Publish;
-        4    => PubAck;
-        5    => PubRec;
-        6    => PubRel;
-        7    => PubComp;
-        8    => Subscribe;
-        9    => SubAck;
-        10   => Unsubscribe;
-        11   => UnsubAck;
-        12   => PingReq;
-        13   => PingResp;
-        14   => Disconnect;
-        15   => Auth;
-        default => &unknown_data;
+    header: MQTTHeader;
+    body: switch (header.packet_type) {
+        CONNECT      => ConnectMessage,
+        CONNACK      => ConnackMessage,
+        PUBLISH      => PublishMessage,
+        PUBACK       => PubackMessage,
+        PUBREC       => PubrecMessage,
+        PUBREL       => PubrelMessage,
+        PUBCOMP      => PubcompMessage,
+        SUBSCRIBE    => SubscribeMessage,
+        SUBACK       => SubackMessage,
+        UNSUBSCRIBE  => UnsubscribeMessage,
+        UNSUBACK     => UnsubackMessage,
+        PINGREQ      => PingreqMessage,
+        PINGRESP     => PingrespMessage,
+        DISCONNECT   => DisconnectMessage,
+        AUTH         => AuthMessage
     };
 };
 
-type FixedHeader = unit {
-    packet_type: uint8 &bits(4);
-    flags: uint8 &bits(4);
-    remaining_length: varint;
-};
-
-type Connect = unit {
-    protocol_name: length_prefixed_string;
+type ConnectMessage = unit {
+    protocol_name: string &length=4;
     protocol_level: uint8;
-    connect_flags: uint8;
+    connect_flags: ConnectFlags;
     keep_alive: uint16;
-    client_id: length_prefixed_string;
-    will_topic: optional<length_prefixed_string> &if (connect_flags & 0x04 != 0);
-    will_message: optional<length_prefixed_string> &if (connect_flags & 0x04 != 0);
-    username: optional<length_prefixed_string> &if (connect_flags & 0x80 != 0);
-    password: optional<length_prefixed_string> &if (connect_flags & 0x40 != 0);
+    properties: Properties;
+    client_id: string;
+    optional_fields: bytes &optional;
 };
 
-type ConnAck = unit {
-    connect_ack_flags: uint8;
-    connect_reason_code: uint8;
+type ConnackMessage = unit {
+    session_present: uint8 &bits=1;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type Publish = unit {
-    topic_name: length_prefixed_string;
-    packet_id: optional<uint16> &if (fixed_header.flags & 0x06 != 0);
+type PublishMessage = unit {
+    dup: uint8 &bits=1;
+    qos: uint8 &bits=2;
+    retain: uint8 &bits=1;
+    topic_name: string;
+    packet_identifier: uint16 &optional;
+    properties: Properties;
     payload: bytes &restofdata;
 };
 
-type PubAck = unit {
-    packet_id: uint16;
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+type PubackMessage = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type PubRec = unit {
-    packet_id: uint16;
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+type PubrecMessage = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type PubRel = unit {
-    packet_id: uint16;
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+type PubrelMessage = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type PubComp = unit {
-    packet_id: uint16;
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+type PubcompMessage = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type Subscribe = unit {
-    packet_id: uint16;
+type SubscribeMessage = unit {
+    packet_identifier: uint16;
+    properties: Properties;
     topic_filters: array of TopicFilter;
 };
 
-type SubAck = unit {
-    packet_id: uint16;
-    return_codes: array of uint8;
+type TopicFilter = unit {
+    topic_filter: string;
+    subscription_options: uint8;
 };
 
-type Unsubscribe = unit {
-    packet_id: uint16;
-    topic_filters: array of length_prefixed_string;
-};
-
-type UnsubAck = unit {
-    packet_id: uint16;
+type SubackMessage = unit {
+    packet_identifier: uint16;
+    properties: Properties;
     reason_codes: array of uint8;
 };
 
-type PingReq = unit { };
-
-type PingResp = unit { };
-
-type Disconnect = unit {
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
+type UnsubscribeMessage = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: array of string;
 };
 
-type Auth = unit {
-    reason_code: optional<uint8> &if (fixed_header.flags & 0x01 != 0);
-    properties: optional<bytes> &if (fixed_header.remaining_length > 1);
+type UnsubackMessage = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: array of uint8;
 };
 
-type TopicFilter = unit {
-    topic_filter: length_prefixed_string;
-    qos: uint8;
+type PingreqMessage = unit {
 };
 
-type length_prefixed_string = unit {
-    length: uint16;
-    value: string &length=length;
+type PingrespMessage = unit {
 };
 
-type varint = unit {
-    value: uint8;
-    next: optional<varint> &if (value & 0x80 != 0);
-} &byteorder=bigendian {
-    function to_uint: uint64 {
-        local result = 0u: uint64;
-        local shift = 0: uint64;
-        local v = self;
-        while ( v?$next ) {
-            result |= (v.value & 0x7f) << shift;
-            shift += 7;
-            v = v.next;
-        }
-        result |= (v.value & 0x7f) << shift;
-        return result;
-    }
+type DisconnectMessage = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type AuthMessage = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type MQTT = unit {
+    messages: array of MQTTMessage;
 };

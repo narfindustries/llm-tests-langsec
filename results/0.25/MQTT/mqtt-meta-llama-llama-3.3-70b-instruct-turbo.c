@@ -1,164 +1,292 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the MQTT packet structure
-typedef struct {
-    uint8_t header;
-    uint8_t length;
-    uint8_t* payload;
-} mqtt_packet_t;
+// Define the MQTT message types
+typedef enum {
+    MQTT_CONNECT = 1,
+    MQTT_CONNACK = 2,
+    MQTT_PUBLISH = 3,
+    MQTT_PUBACK = 4,
+    MQTT_PUBREC = 5,
+    MQTT_PUBREL = 6,
+    MQTT_PUBCOMP = 7,
+    MQTT_SUBSCRIBE = 8,
+    MQTT_SUBACK = 9,
+    MQTT_UNSUBSCRIBE = 10,
+    MQTT_UNSUBACK = 11,
+    MQTT_PINGREQ = 12,
+    MQTT_PINGRESP = 13,
+    MQTT_DISCONNECT = 14,
+    MQTT_AUTH = 15
+} mqtt_message_type;
 
-// Define the MQTT CONNECT packet structure
+// Define the MQTT QoS levels
+typedef enum {
+    MQTT_QOS_AT_MOST_ONCE = 0,
+    MQTT_QOS_AT_LEAST_ONCE = 1,
+    MQTT_QOS_EXACTLY_ONCE = 2
+} mqtt_qos;
+
+// Define the MQTT connect return codes
+typedef enum {
+    MQTT_CONNECT_ACCEPTED = 0,
+    MQTT_CONNECT_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION = 1,
+    MQTT_CONNECT_REFUSED_IDENTIFIER_REJECTED = 2,
+    MQTT_CONNECT_REFUSED_SERVER_UNAVAILABLE = 3,
+    MQTT_CONNECT_REFUSED_BAD_USERNAME_OR_PASSWORD = 4,
+    MQTT_CONNECT_REFUSED_NOT_AUTHORIZED = 5
+} mqtt_connect_return_code;
+
+// Define the MQTT disconnect reason codes
+typedef enum {
+    MQTT_DISCONNECT_NORMAL = 0,
+    MQTT_DISCONNECT_GOING_DOWN = 1,
+    MQTT_DISCONNECT_SERVER_SHUTTING_DOWN = 2,
+    MQTT_DISCONNECT_KEEP_ALIVE_TIMEOUT = 3,
+    MQTT_DISCONNECT_WITH_WILL_MESSAGE = 4
+} mqtt_disconnect_reason_code;
+
+// Define the MQTT auth reason codes
+typedef enum {
+    MQTT_AUTH_SUCCESS = 0,
+    MQTT_AUTH_CONTINUE_AUTHENTICATION = 1
+} mqtt_auth_reason_code;
+
+// Define the MQTT fixed header
 typedef struct {
-    uint16_t protocol_name_length;
-    char* protocol_name;
+    uint8_t message_type:4;
+    uint8_t dup:1;
+    uint8_t qos:2;
+    uint8_t retain:1;
+    uint8_t remaining_length;
+} mqtt_fixed_header;
+
+// Define the MQTT connect packet
+typedef struct {
+    char protocol_name[6];
     uint8_t protocol_level;
     uint8_t connect_flags;
     uint16_t keep_alive;
-    uint16_t payload_length;
-    uint8_t* payload;
-} mqtt_connect_packet_t;
+    char client_id[1]; // variable length
+} mqtt_connect_packet;
 
-// Define the MQTT CONNACK packet structure
+// Define the MQTT connack packet
 typedef struct {
-    uint8_t connect_ack_flags;
-    uint8_t connect_return_code;
-} mqtt_connack_packet_t;
+    uint8_t session_present:1;
+    uint8_t connect_return_code:7;
+} mqtt_connack_packet;
 
-// Define the MQTT PUBLISH packet structure
+// Define the MQTT publish packet
 typedef struct {
-    uint16_t topic_name_length;
-    char* topic_name;
+    char topic_name[1]; // variable length
     uint16_t packet_identifier;
-    uint8_t* payload;
-} mqtt_publish_packet_t;
+} mqtt_publish_packet;
 
-// Define the MQTT PUBACK packet structure
+// Define the MQTT puback packet
 typedef struct {
     uint16_t packet_identifier;
-} mqtt_puback_packet_t;
+} mqtt_puback_packet;
 
-// Define the MQTT DISCONNECT packet structure
+// Define the MQTT pubrec packet
+typedef struct {
+    uint16_t packet_identifier;
+} mqtt_pubrec_packet;
+
+// Define the MQTT pubrel packet
+typedef struct {
+    uint16_t packet_identifier;
+} mqtt_pubrel_packet;
+
+// Define the MQTT pubcomp packet
+typedef struct {
+    uint16_t packet_identifier;
+} mqtt_pubcomp_packet;
+
+// Define the MQTT subscribe packet
+typedef struct {
+    uint16_t packet_identifier;
+    char topic_filter[1]; // variable length
+    uint8_t requested_qos;
+} mqtt_subscribe_packet;
+
+// Define the MQTT suback packet
+typedef struct {
+    uint16_t packet_identifier;
+    uint8_t return_code;
+} mqtt_suback_packet;
+
+// Define the MQTT unsubscribe packet
+typedef struct {
+    uint16_t packet_identifier;
+    char topic_filter[1]; // variable length
+} mqtt_unsubscribe_packet;
+
+// Define the MQTT unsuback packet
+typedef struct {
+    uint16_t packet_identifier;
+} mqtt_unsuback_packet;
+
+// Define the MQTT disconnect packet
 typedef struct {
     uint8_t disconnect_reason_code;
-} mqtt_disconnect_packet_t;
+} mqtt_disconnect_packet;
 
-// Function to parse an MQTT packet
-mqtt_packet_t* parse_mqtt_packet(uint8_t* buffer, int length) {
-    mqtt_packet_t* packet = (mqtt_packet_t*) malloc(sizeof(mqtt_packet_t));
-    packet->header = buffer[0];
-    packet->length = buffer[1];
-    packet->payload = (uint8_t*) malloc(packet->length);
-    memcpy(packet->payload, buffer + 2, packet->length);
-    return packet;
+// Define the MQTT auth packet
+typedef struct {
+    uint8_t auth_reason_code;
+    char authentication_data[1]; // variable length
+} mqtt_auth_packet;
+
+// Define the parser for the MQTT fixed header
+void mqtt_fixed_header_parser(void *ctx) {
+    uint8_t message_type;
+    fread(&message_type, 1, 1, (FILE *)ctx);
 }
 
-// Function to parse an MQTT CONNECT packet
-mqtt_connect_packet_t* parse_mqtt_connect_packet(uint8_t* buffer, int length) {
-    mqtt_connect_packet_t* packet = (mqtt_connect_packet_t*) malloc(sizeof(mqtt_connect_packet_t));
-    packet->protocol_name_length = (uint16_t) (((buffer[0] << 8) & 0xFF00) | (buffer[1] & 0x00FF));
-    packet->protocol_name = (char*) malloc(packet->protocol_name_length + 1);
-    memcpy(packet->protocol_name, buffer + 2, packet->protocol_name_length);
-    packet->protocol_name[packet->protocol_name_length] = '\0';
-    packet->protocol_level = buffer[packet->protocol_name_length + 2];
-    packet->connect_flags = buffer[packet->protocol_name_length + 3];
-    packet->keep_alive = (uint16_t) (((buffer[packet->protocol_name_length + 4] << 8) & 0xFF00) | (buffer[packet->protocol_name_length + 5] & 0x00FF));
-    packet->payload_length = length - packet->protocol_name_length - 6;
-    packet->payload = (uint8_t*) malloc(packet->payload_length);
-    memcpy(packet->payload, buffer + packet->protocol_name_length + 6, packet->payload_length);
-    return packet;
+// Define the parser for the MQTT connect packet
+void mqtt_connect_packet_parser(void *ctx) {
+    mqtt_connect_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
 }
 
-// Function to parse an MQTT CONNACK packet
-mqtt_connack_packet_t* parse_mqtt_connack_packet(uint8_t* buffer, int length) {
-    mqtt_connack_packet_t* packet = (mqtt_connack_packet_t*) malloc(sizeof(mqtt_connack_packet_t));
-    packet->connect_ack_flags = buffer[0];
-    packet->connect_return_code = buffer[1];
-    return packet;
+// Define the parser for the MQTT connack packet
+void mqtt_connack_packet_parser(void *ctx) {
+    mqtt_connack_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
 }
 
-// Function to parse an MQTT PUBLISH packet
-mqtt_publish_packet_t* parse_mqtt_publish_packet(uint8_t* buffer, int length) {
-    mqtt_publish_packet_t* packet = (mqtt_publish_packet_t*) malloc(sizeof(mqtt_publish_packet_t));
-    packet->topic_name_length = (uint16_t) (((buffer[0] << 8) & 0xFF00) | (buffer[1] & 0x00FF));
-    packet->topic_name = (char*) malloc(packet->topic_name_length + 1);
-    memcpy(packet->topic_name, buffer + 2, packet->topic_name_length);
-    packet->topic_name[packet->topic_name_length] = '\0';
-    packet->packet_identifier = (uint16_t) (((buffer[packet->topic_name_length + 2] << 8) & 0xFF00) | (buffer[packet->topic_name_length + 3] & 0x00FF));
-    packet->payload = (uint8_t*) malloc(length - packet->topic_name_length - 4);
-    memcpy(packet->payload, buffer + packet->topic_name_length + 4, length - packet->topic_name_length - 4);
-    return packet;
+// Define the parser for the MQTT publish packet
+void mqtt_publish_packet_parser(void *ctx) {
+    mqtt_publish_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
 }
 
-// Function to parse an MQTT PUBACK packet
-mqtt_puback_packet_t* parse_mqtt_puback_packet(uint8_t* buffer, int length) {
-    mqtt_puback_packet_t* packet = (mqtt_puback_packet_t*) malloc(sizeof(mqtt_puback_packet_t));
-    packet->packet_identifier = (uint16_t) (((buffer[0] << 8) & 0xFF00) | (buffer[1] & 0x00FF));
-    return packet;
+// Define the parser for the MQTT puback packet
+void mqtt_puback_packet_parser(void *ctx) {
+    mqtt_puback_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
 }
 
-// Function to parse an MQTT DISCONNECT packet
-mqtt_disconnect_packet_t* parse_mqtt_disconnect_packet(uint8_t* buffer, int length) {
-    mqtt_disconnect_packet_t* packet = (mqtt_disconnect_packet_t*) malloc(sizeof(mqtt_disconnect_packet_t));
-    packet->disconnect_reason_code = buffer[0];
-    return packet;
+// Define the parser for the MQTT pubrec packet
+void mqtt_pubrec_packet_parser(void *ctx) {
+    mqtt_pubrec_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
 }
 
-int main() {
-    // Test parsing an MQTT packet
-    uint8_t buffer[] = {0x10, 0x04, 0x00, 0x00, 0x00, 0x00};
-    mqtt_packet_t* packet = parse_mqtt_packet(buffer, sizeof(buffer));
-    printf("Packet header: %u\n", packet->header);
-    printf("Packet length: %u\n", packet->length);
-    printf("Packet payload: ");
-    for (int i = 0; i < packet->length; i++) {
-        printf("%02x", packet->payload[i]);
+// Define the parser for the MQTT pubrel packet
+void mqtt_pubrel_packet_parser(void *ctx) {
+    mqtt_pubrel_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT pubcomp packet
+void mqtt_pubcomp_packet_parser(void *ctx) {
+    mqtt_pubcomp_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT subscribe packet
+void mqtt_subscribe_packet_parser(void *ctx) {
+    mqtt_subscribe_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT suback packet
+void mqtt_suback_packet_parser(void *ctx) {
+    mqtt_suback_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT unsubscribe packet
+void mqtt_unsubscribe_packet_parser(void *ctx) {
+    mqtt_unsubscribe_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT unsuback packet
+void mqtt_unsuback_packet_parser(void *ctx) {
+    mqtt_unsuback_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT disconnect packet
+void mqtt_disconnect_packet_parser(void *ctx) {
+    mqtt_disconnect_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT auth packet
+void mqtt_auth_packet_parser(void *ctx) {
+    mqtt_auth_packet packet;
+    fread(&packet, sizeof(packet), 1, (FILE *)ctx);
+}
+
+// Define the parser for the MQTT message
+void mqtt_message_parser(void *ctx) {
+    uint8_t message_type;
+    fread(&message_type, 1, 1, (FILE *)ctx);
+    switch (message_type) {
+        case MQTT_CONNECT:
+            mqtt_connect_packet_parser(ctx);
+            break;
+        case MQTT_CONNACK:
+            mqtt_connack_packet_parser(ctx);
+            break;
+        case MQTT_PUBLISH:
+            mqtt_publish_packet_parser(ctx);
+            break;
+        case MQTT_PUBACK:
+            mqtt_puback_packet_parser(ctx);
+            break;
+        case MQTT_PUBREC:
+            mqtt_pubrec_packet_parser(ctx);
+            break;
+        case MQTT_PUBREL:
+            mqtt_pubrel_packet_parser(ctx);
+            break;
+        case MQTT_PUBCOMP:
+            mqtt_pubcomp_packet_parser(ctx);
+            break;
+        case MQTT_SUBSCRIBE:
+            mqtt_subscribe_packet_parser(ctx);
+            break;
+        case MQTT_SUBACK:
+            mqtt_suback_packet_parser(ctx);
+            break;
+        case MQTT_UNSUBSCRIBE:
+            mqtt_unsubscribe_packet_parser(ctx);
+            break;
+        case MQTT_UNSUBACK:
+            mqtt_unsuback_packet_parser(ctx);
+            break;
+        case MQTT_DISCONNECT:
+            mqtt_disconnect_packet_parser(ctx);
+            break;
+        case MQTT_AUTH:
+            mqtt_auth_packet_parser(ctx);
+            break;
+        default:
+            printf("Unknown message type\n");
+            break;
     }
-    printf("\n");
+}
 
-    // Test parsing an MQTT CONNECT packet
-    uint8_t connect_buffer[] = {0x00, 0x04, 'M', 'Q', 'T', 'T', 0x04, 0x00, 0x00, 0x00, 0x00};
-    mqtt_connect_packet_t* connect_packet = parse_mqtt_connect_packet(connect_buffer, sizeof(connect_buffer));
-    printf("Connect protocol name: %s\n", connect_packet->protocol_name);
-    printf("Connect protocol level: %u\n", connect_packet->protocol_level);
-    printf("Connect flags: %u\n", connect_packet->connect_flags);
-    printf("Connect keep alive: %u\n", connect_packet->keep_alive);
-    printf("Connect payload length: %u\n", connect_packet->payload_length);
-    printf("Connect payload: ");
-    for (int i = 0; i < connect_packet->payload_length; i++) {
-        printf("%02x", connect_packet->payload[i]);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
-    printf("\n");
 
-    // Test parsing an MQTT CONNACK packet
-    uint8_t connack_buffer[] = {0x00, 0x00};
-    mqtt_connack_packet_t* connack_packet = parse_mqtt_connack_packet(connack_buffer, sizeof(connack_buffer));
-    printf("Connack flags: %u\n", connack_packet->connect_ack_flags);
-    printf("Connack return code: %u\n", connack_packet->connect_return_code);
-
-    // Test parsing an MQTT PUBLISH packet
-    uint8_t publish_buffer[] = {0x00, 0x06, 't', 'e', 's', 't', 0x00, 0x01};
-    mqtt_publish_packet_t* publish_packet = parse_mqtt_publish_packet(publish_buffer, sizeof(publish_buffer));
-    printf("Publish topic name: %s\n", publish_packet->topic_name);
-    printf("Publish packet identifier: %u\n", publish_packet->packet_identifier);
-    printf("Publish payload length: %u\n", sizeof(publish_buffer) - 6);
-    printf("Publish payload: ");
-    for (int i = 0; i < sizeof(publish_buffer) - 6; i++) {
-        printf("%02x", publish_packet->payload[i]);
+    FILE *input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        printf("Error opening input file\n");
+        return 1;
     }
-    printf("\n");
 
-    // Test parsing an MQTT PUBACK packet
-    uint8_t puback_buffer[] = {0x00, 0x01};
-    mqtt_puback_packet_t* puback_packet = parse_mqtt_puback_packet(puback_buffer, sizeof(puback_buffer));
-    printf("Puback packet identifier: %u\n", puback_packet->packet_identifier);
-
-    // Test parsing an MQTT DISCONNECT packet
-    uint8_t disconnect_buffer[] = {0x00};
-    mqtt_disconnect_packet_t* disconnect_packet = parse_mqtt_disconnect_packet(disconnect_buffer, sizeof(disconnect_buffer));
-    printf("Disconnect reason code: %u\n", disconnect_packet->disconnect_reason_code);
-
+    mqtt_message_parser(input_file);
+    fclose(input_file);
     return 0;
 }

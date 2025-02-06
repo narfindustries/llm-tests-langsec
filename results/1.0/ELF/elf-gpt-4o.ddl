@@ -1,95 +1,150 @@
-# Daedalus specification for ELF file format
-
-struct ELFFile {
-    magic: MagicNumber,           # 4-byte magic number "\x7FELF"
-    file_class: ELFClass,         # 1-byte file class
-    encoding: ELFData,            # 1-byte data encoding
-    version: Version,             # 1-byte version
-    os_abi: OSABI,                # 1-byte OS ABI
-    abi_version: u8,              # 1-byte ABI version
-    padding: Padding,             # 7-byte padding
-    file_type: FileType,          # 2-byte file type
-    machine: Machine,             # 2-byte machine type
-    e_version: ElfVersion,        # 4-byte ELF version
-    entry: u32,                   # 4-byte entry point
-    ph_offset: u32,               # 4-byte program header offset
-    sh_offset: u32,               # 4-byte section header offset
-    flags: u32,                   # 4-byte processor-specific flags
-    eh_size: u16,                 # 2-byte ELF header size
-    ph_entry_size: u16,           # 2-byte program header entry size
-    ph_num: u16,                  # 2-byte program header entry count
-    sh_entry_size: u16,           # 2-byte section header entry size
-    sh_num: u16,                  # 2-byte section header entry count
-    sh_str_index: u16,            # 2-byte section header string table index
+enum EI_CLASS : uint8 {
+    ELFCLASSNONE = 0,
+    ELFCLASS32 = 1,
+    ELFCLASS64 = 2
 }
 
-enum 1 ELFClass {
-    NONE = 0,    # Invalid class
-    CLASS32 = 1, # 32-bit objects
-    CLASS64 = 2  # 64-bit objects
+enum EI_DATA : uint8 {
+    ELFDATANONE = 0,
+    ELFDATA2LSB = 1,
+    ELFDATA2MSB = 2
 }
 
-enum 1 ELFData {
-    NONE = 0,    # Invalid data encoding
-    LSB = 1,     # Little-endian
-    MSB = 2      # Big-endian
+enum EI_OSABI : uint8 {
+    ELFOSABI_NONE = 0,
+    ELFOSABI_SYSV = 0,
+    ELFOSABI_HPUX = 1,
+    ELFOSABI_NETBSD = 2,
+    ELFOSABI_LINUX = 3,
+    ELFOSABI_SOLARIS = 6,
+    ELFOSABI_AIX = 7,
+    ELFOSABI_IRIX = 8,
+    ELFOSABI_FREEBSD = 9,
+    ELFOSABI_TRU64 = 10,
+    ELFOSABI_MODESTO = 11,
+    ELFOSABI_OPENBSD = 12,
+    ELFOSABI_ARM = 97,
+    ELFOSABI_STANDALONE = 255
 }
 
-enum 1 Version {
-    NONE = 0,    # Invalid version
-    CURRENT = 1  # Current version
+enum e_type : uint16 {
+    ET_NONE = 0,
+    ET_REL = 1,
+    ET_EXEC = 2,
+    ET_DYN = 3,
+    ET_CORE = 4,
+    ET_LOOS = 0xFE00,
+    ET_HIOS = 0xFEFF,
+    ET_LOPROC = 0xFF00,
+    ET_HIPROC = 0xFFFF
 }
 
-enum 1 OSABI {
-    SYSTEM_V = 0,       # UNIX System V ABI
-    HPUX = 1,           # HP-UX
-    NETBSD = 2,         # NetBSD
-    LINUX = 3,          # Linux
-    SOLARIS = 6,        # Solaris
-    AIX = 7,            # AIX
-    IRIX = 8,           # IRIX
-    FREEBSD = 9,        # FreeBSD
-    TRU64 = 10,         # TRU64 UNIX
-    MODESTO = 11,       # Novell Modesto
-    OPENBSD = 12,       # OpenBSD
-    OPENVMS = 13,       # OpenVMS
-    NSK = 14,           # NonStop Kernel
-    AROS = 15,          # AROS
-    FENIX_OS = 16,      # Fenix OS
-    CLOUD_ABI = 17,     # Nuxi CloudABI
-    SORTIX = 18         # Sortix
+enum e_machine : uint16 {
+    EM_NONE = 0,
+    EM_M32 = 1,
+    EM_SPARC = 2,
+    EM_386 = 3,
+    EM_68K = 4,
+    EM_88K = 5,
+    EM_IAMCU = 6,
+    EM_860 = 7,
+    EM_MIPS = 8,
+    EM_ARM = 40,
+    EM_X86_64 = 62,
+    EM_AARCH64 = 183,
+    EM_RISCV = 243
 }
 
-enum 2 FileType {
-    NONE = 0,           # No file type
-    REL = 1,            # Relocatable file
-    EXEC = 2,           # Executable file
-    DYN = 3,            # Shared object file
-    CORE = 4            # Core file
+enum sh_type : uint32 {
+    SHT_NULL = 0,
+    SHT_PROGBITS = 1,
+    SHT_SYMTAB = 2,
+    SHT_STRTAB = 3,
+    SHT_RELA = 4,
+    SHT_HASH = 5,
+    SHT_DYNAMIC = 6,
+    SHT_NOTE = 7,
+    SHT_NOBITS = 8,
+    SHT_REL = 9,
+    SHT_SHLIB = 10,
+    SHT_DYNSYM = 11,
+    SHT_LOPROC = 0x70000000,
+    SHT_HIPROC = 0x7FFFFFFF,
+    SHT_LOUSER = 0x80000000,
+    SHT_HIUSER = 0xFFFFFFFF
 }
 
-enum 2 Machine {
-    NONE = 0,           # No machine
-    M32 = 1,            # AT&T WE 32100
-    SPARC = 2,          # SPARC
-    X86 = 3,            # Intel 80386
-    MIPS = 8,           # MIPS RS3000
-    POWERPC = 0x14,     # PowerPC
-    X86_64 = 0x3E,      # AMD x86-64
-    ARM = 0x28,         # ARM
-    IA_64 = 0x32,       # Intel IA-64
-    RISCV = 0xF3        # RISC-V
+enum sh_flags : uint32 {
+    SHF_WRITE = 0x1,
+    SHF_ALLOC = 0x2,
+    SHF_EXECINSTR = 0x4,
+    SHF_MASKPROC = 0xF0000000
 }
 
-enum 4 ElfVersion {
-    NONE = 0,           # Invalid version
-    CURRENT = 1         # Current version
+enum p_type : uint32 {
+    PT_NULL = 0,
+    PT_LOAD = 1,
+    PT_DYNAMIC = 2,
+    PT_INTERP = 3,
+    PT_NOTE = 4,
+    PT_SHLIB = 5,
+    PT_PHDR = 6,
+    PT_TLS = 7,
+    PT_LOOS = 0x60000000,
+    PT_HIOS = 0x6FFFFFFF,
+    PT_LOPROC = 0x70000000,
+    PT_HIPROC = 0x7FFFFFFF
 }
 
-struct MagicNumber {
-    value: Bytes<4> = [0x7F, 0x45, 0x4C, 0x46]  # "\x7FELF" in ASCII
+struct ElfHeader {
+    uint8[4] e_ident_magic; // Should be 0x7f, 'E', 'L', 'F'
+    EI_CLASS e_ident_class;
+    EI_DATA e_ident_data;
+    uint8 e_ident_version;
+    EI_OSABI e_ident_osabi;
+    uint8 e_ident_abiversion;
+    uint8[7] e_ident_pad;
+    e_type e_type;
+    e_machine e_machine;
+    uint32 e_version;
+    uint32 e_entry;
+    uint32 e_phoff;
+    uint32 e_shoff;
+    uint32 e_flags;
+    uint16 e_ehsize;
+    uint16 e_phentsize;
+    uint16 e_phnum;
+    uint16 e_shentsize;
+    uint16 e_shnum;
+    uint16 e_shstrndx;
 }
 
-struct Padding {
-    bytes: Bytes<7>
+struct ProgramHeader {
+    p_type p_type;
+    uint32 p_offset;
+    uint32 p_vaddr;
+    uint32 p_paddr;
+    uint32 p_filesz;
+    uint32 p_memsz;
+    uint32 p_flags;
+    uint32 p_align;
+}
+
+struct SectionHeader {
+    uint32 sh_name;
+    sh_type sh_type;
+    sh_flags sh_flags;
+    uint32 sh_addr;
+    uint32 sh_offset;
+    uint32 sh_size;
+    uint32 sh_link;
+    uint32 sh_info;
+    uint32 sh_addralign;
+    uint32 sh_entsize;
+}
+
+LittleEndian struct ELF {
+    ElfHeader header;
+    ProgramHeader[header.e_phnum] program_headers;
+    SectionHeader[header.e_shnum] section_headers;
 }

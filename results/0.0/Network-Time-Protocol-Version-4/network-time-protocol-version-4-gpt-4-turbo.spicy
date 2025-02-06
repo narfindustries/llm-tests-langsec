@@ -1,34 +1,19 @@
-module NetworkTimeProtocol;
+module NTP;
 
-public type NTPHeader = unit {
+public type NTPMessage = unit {
     li: uint2;               // Leap Indicator
-    vn: uint2;               // Version Number
-    mode: uint2;             // Mode
+    vn: uint3;               // Version Number
+    mode: uint3;             // Mode
     stratum: uint8;          // Stratum
     poll: int8;              // Poll Interval
     precision: int8;         // Precision
 
-    rootDelay: interval;     // Root Delay
-    rootDispersion: interval; // Root Dispersion
-    refID: uint32;           // Reference ID
+    root_delay: uint32;      // Root Delay
+    root_dispersion: uint32; // Root Dispersion
+    ref_id: uint32;          // Reference Identifier
 
-    refTm_s: time;           // Reference Timestamp (seconds)
-    refTm_f: uint32;         // Reference Timestamp (fraction)
-
-    origTm_s: time;          // Originate Timestamp (seconds)
-    origTm_f: uint32;        // Originate Timestamp (fraction)
-
-    rxTm_s: time;            // Receive Timestamp (seconds)
-    rxTm_f: uint32;          // Receive Timestamp (fraction)
-
-    txTm_s: time;            // Transmit Timestamp (seconds)
-    txTm_f: uint32;          // Transmit Timestamp (fraction)
-
-    on %done {
-        print self;
-    }
-};
-
-public type NTPMessage = unit {
-    header: NTPHeader;
+    ref_ts: uint64;          // Reference Timestamp
+    orig_ts: uint64;         // Origin Timestamp
+    recv_ts: uint64;         // Receive Timestamp
+    xmit_ts: uint64;         // Transmit Timestamp
 };

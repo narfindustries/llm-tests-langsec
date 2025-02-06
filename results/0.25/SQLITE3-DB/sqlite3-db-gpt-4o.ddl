@@ -1,66 +1,36 @@
-module SQLITE3_DB
+endianness: big
 
-import Data.ByteString
-import Data.Word
-import Data.Int
-import Data.List
-
--- SQLite3 Database File Format Specification
-
--- The SQLite3 database file begins with a 100-byte header.
-struct Header {
-    magic: ByteString(16) -- "SQLite format 3\000"
-    page_size: Word16be
-    file_format_write_version: Word8
-    file_format_read_version: Word8
-    reserved_space: Word8
-    max_embedded_payload_fraction: Word8
-    min_embedded_payload_fraction: Word8
-    leaf_payload_fraction: Word8
-    file_change_counter: Word32be
-    database_size_in_pages: Word32be
-    first_freelist_trunk_page: Word32be
-    total_freelist_pages: Word32be
-    schema_cookie: Word32be
-    schema_format_number: Word32be
-    default_page_cache_size: Word32be
-    largest_root_btree_page: Word32be
-    text_encoding: Word32be
-    user_version: Word32be
-    incremental_vacuum_mode: Word32be
-    application_id: Word32be
-    reserved: ByteString(20)
-    version_valid_for: Word32be
-    sqlite_version_number: Word32be
-}
-
--- A page in the SQLite3 database.
-struct Page {
-    header: PageHeader
-    content: ByteString(header.content_size)
-}
-
--- Page header structure.
-struct PageHeader {
-    page_type: Word8
-    first_freeblock_offset: Word16be
-    cell_count: Word16be
-    cell_content_area_offset: Word16be
-    fragmented_free_bytes: Word8
-    right_most_pointer: Maybe Word32be
-    cell_pointers: [Word16be]
-}
-
--- The SQLite3 database file.
 struct SQLite3DB {
-    header: Header
-    pages: [Page]
-}
+    header: Header;
+    pages: Pages[header.database_size_in_pages];
 
--- Helper function to determine the size of the page content.
-function PageHeader.content_size(self: PageHeader): Int {
-    return self.cell_content_area_offset - 8
-}
+    struct Header {
+        header_string: string(16) == "SQLite format 3\0";
+        page_size: uint16;
+        file_format_write_version: uint8;
+        file_format_read_version: uint8;
+        reserved_space: uint8;
+        max_embedded_payload_fraction: uint8;
+        min_embedded_payload_fraction: uint8;
+        leaf_payload_fraction: uint8;
+        file_change_counter: uint32;
+        database_size_in_pages: uint32;
+        first_freelist_trunk_page: uint32;
+        total_freelist_pages: uint32;
+        schema_cookie: uint32;
+        schema_format_number: uint32;
+        default_page_cache_size: uint32;
+        largest_root_btree_page_number: uint32;
+        text_encoding: uint32;
+        user_version: uint32;
+        incremental_vacuum_mode: uint32;
+        application_id: uint32;
+        reserved_for_expansion: uint8[20];
+        version_valid_for_number: uint32;
+        sqlite_version_number: uint32;
+    }
 
--- Entry point for parsing the SQLite3 database file.
-entrypoint SQLite3DB
+    struct Pages {
+        data: uint8[header.page_size];
+    }
+}

@@ -1,0 +1,164 @@
+module PNG;
+
+public type File = unit {
+    signature: bytes &size=8;
+    chunks: Chunk[] &until($input.size() == 0);
+};
+
+type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: case type of {
+        "IHDR" -> ihdr: IHDR;
+        "PLTE" -> plte: PLTE;
+        "IDAT" -> idat: IDAT;
+        "IEND" -> iend: IEND;
+        "tRNS" -> trns: tRNS;
+        "gAMA" -> gama: gAMA;
+        "cHRM" -> chrm: cHRM;
+        "sRGB" -> srgb: sRGB;
+        "iCCP" -> iccp: iCCP;
+        "tEXt" -> text: tEXt;
+        "zTXt" -> ztxt: zTXt;
+        "iTXt" -> itxt: iTXt;
+        "bKGD" -> bkgd: bKGD;
+        "pHYs" -> phys: pHYs;
+        "sBIT" -> sbit: sBIT;
+        "hIST" -> hist: hIST;
+        "tIME" -> time: tIME;
+        "sPLT" -> splt: sPLT;
+        "oFFs" -> offs: oFFs;
+        "pCAL" -> pcal: pCAL;
+        "sCAL" -> scal: sCAL;
+        "eXIf" -> exif: eXIf;
+        * -> unknown: bytes &size=length;
+    };
+    crc: uint32;
+};
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
+
+type PLTE = unit {
+    entries: bytes &size=length;
+};
+
+type IDAT = unit {
+    compressed_data: bytes &size=length;
+};
+
+type IEND = unit {};
+
+type tRNS = unit {
+    transparency_data: bytes &size=length;
+};
+
+type gAMA = unit {
+    gamma_value: uint32;
+};
+
+type cHRM = unit {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+type sRGB = unit {
+    rendering_intent: uint8;
+};
+
+type iCCP = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &size=length - (|profile_name| + 1);
+};
+
+type tEXt = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &size=length - (|keyword| + 1);
+};
+
+type zTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &size=length - (|keyword| + 2);
+};
+
+type iTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &size=length - (|keyword| + |language_tag| + |translated_keyword| + 3);
+};
+
+type bKGD = unit {
+    background_color: bytes &size=length;
+};
+
+type pHYs = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+type sBIT = unit {
+    significant_bits: bytes &size=length;
+};
+
+type hIST = unit {
+    histogram: uint16[] &size=length / 2;
+};
+
+type tIME = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type sPLT = unit {
+    palette_name: bytes &until=b"\x00";
+    sample_depth: uint8;
+    palette_entries: bytes &size=length - (|palette_name| + 1);
+};
+
+type oFFs = unit {
+    x_position: int32;
+    y_position: int32;
+    unit_specifier: uint8;
+};
+
+type pCAL = unit {
+    calibration_name: bytes &until=b"\x00";
+    x0: int32;
+    x1: int32;
+    equation_type: uint8;
+    number_of_parameters: uint8;
+    parameters: bytes &size=length - (|calibration_name| + 10);
+};
+
+type sCAL = unit {
+    unit_specifier: uint8;
+    x_scale: bytes &until=b"\x00";
+    y_scale: bytes &until=b"\x00";
+};
+
+type eXIf = unit {
+    exif_data: bytes &size=length;
+};

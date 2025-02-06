@@ -1,152 +1,172 @@
 use nom::{
-    bits::complete::{tag, take},
-    branch::alt,
-    bytes::complete::{tag, take},
-    character::complete::{digit1, hex_digit1},
-    combinator::{map, map_res, opt},
-    multi::{count, length_data, many_till},
-    sequence::{delimited, preceded, tuple},
+    bytes::complete::{take_while_m_n},
+    combinator::{map, map_res},
+    error::{ErrorKind},
+    multi::{many0},
+    number::complete::{be_u16, be_u8},
+    sequence::{tuple},
     IResult,
 };
 use std::{
-    collections::HashMap,
+    env,
     fs::File,
-    io::{Read, stdin},
+    io::{Read, Result},
     str,
 };
 
 #[derive(Debug, PartialEq)]
-enum MqttPacketType {
-    Connect = 1,
-    ConnAck = 2,
-    Publish = 3,
-    PubAck = 4,
-    PubRec = 5,
-    PubRel = 6,
-    PubComp = 7,
-    Subscribe = 8,
-    SubAck = 9,
-    Unsubscribe = 10,
-    UnsubAck = 11,
-    PingReq = 12,
-    PingResp = 13,
-    Disconnect = 14,
+enum HeaderType {
+    Connect,
+    Connack,
+    Publish,
+    Puback,
+    Pubrec,
+    Pubrel,
+    Pubcomp,
+    Subscribe,
+    Suback,
+    Unsubscribe,
+    Unsuback,
+    Pingreq,
+    Pingresp,
+    Disconnect,
 }
 
-#[derive(Debug, PartialEq)]
-enum MqttQos {
-    AtMostOnce = 0,
-    AtLeastOnce = 1,
-    ExactlyOnce = 2,
-}
-
-#[derive(Debug, PartialEq)]
-struct MqttFixedHeader {
-    packet_type: MqttPacketType,
-    dup: bool,
-    qos: MqttQos,
-    retain: bool,
-}
-
-impl MqttFixedHeader {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        map(
-            take(1u8),
-            |header: &[u8]| MqttFixedHeader {
-                packet_type: match header[0] >> 4 {
-                    1 => MqttPacketType::Connect,
-                    2 => MqttPacketType::ConnAck,
-                    3 => MqttPacketType::Publish,
-                    4 => MqttPacketType::PubAck,
-                    5 => MqttPacketType::PubRec,
-                    6 => MqttPacketType::PubRel,
-                    7 => MqttPacketType::PubComp,
-                    8 => MqttPacketType::Subscribe,
-                    9 => MqttPacketType::SubAck,
-                    10 => MqttPacketType::Unsubscribe,
-                    11 => MqttPacketType::UnsubAck,
-                    12 => MqttPacketType::PingReq,
-                    13 => MqttPacketType::PingResp,
-                    14 => MqttPacketType::Disconnect,
-                    _ => panic!("Invalid packet type"),
-                },
-                dup: (header[0] & 0x08) != 0,
-                qos: match (header[0] & 0x06) >> 1 {
-                    0 => MqttQos::AtMostOnce,
-                    1 => MqttQos::AtLeastOnce,
-                    2 => MqttQos::ExactlyOnce,
-                    _ => panic!("Invalid QoS"),
-                },
-                retain: (header[0] & 0x01) != 0,
-            },
-        )(input)
+impl From<u8> for HeaderType {
+    fn from(value: u8) -> Self {
+        match value {
+            0x01 => HeaderType::Connect,
+            0x02 => HeaderType::Connack,
+            0x03 => HeaderType::Publish,
+            0x04 => HeaderType::Puback,
+            0x05 => HeaderType::Pubrec,
+            0x06 => HeaderType::Pubrel,
+            0x07 => HeaderType::Pubcomp,
+            0x08 => HeaderType::Subscribe,
+            0x09 => HeaderType::Suback,
+            0x0A => HeaderType::Unsubscribe,
+            0x0B => HeaderType::Unsuback,
+            0x0C => HeaderType::Pingreq,
+            0x0D => HeaderType::Pingresp,
+            0x0E => HeaderType::Disconnect,
+            _ => panic!("Invalid header type"),
+        }
     }
 }
 
-#[derive(Debug, PartialEq)]
-struct MqttVariableHeader {
-    protocol_name: String,
-    protocol_version: u8,
-    connect_flags: u8,
-    keep_alive: u16,
+fn header_type(input: &[u8]) -> IResult<&[u8], HeaderType> {
+    map_res(be_u8, |x| {
+        let header_type = (x >> 4) & 0x0F;
+        match header_type {
+            0x01 => Ok(HeaderType::Connect),
+            0x02 => Ok(HeaderType::Connack),
+            0x03 => Ok(HeaderType::Publish),
+            0x04 => Ok(HeaderType::Puback),
+            0x05 => Ok(HeaderType::Pubrec),
+            0x06 => Ok(HeaderType::Pubrel),
+            0x07 => Ok(HeaderType::Pubcomp),
+            0x08 => Ok(HeaderType::Subscribe),
+            0x09 => Ok(HeaderType::Suback),
+            0x0A => Ok(HeaderType::Unsubscribe),
+            0x0B => Ok(HeaderType::Unsuback),
+            0x0C => Ok(HeaderType::Pingreq),
+            0x0D => Ok(HeaderType::Pingresp),
+            0x0E => Ok(HeaderType::Disconnect),
+            _ => Err(nom::Err::Error((input, ErrorKind::AlphaNumeric))),
+        }
+    })(input)
 }
 
-impl MqttVariableHeader {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        map(
-            tuple((
-                take(2u8),
-                take(1u8),
-                take(1u8),
-                take(2u8),
-            )),
-            |(protocol_name_len, protocol_version, connect_flags, keep_alive): ([u8; 2], u8, u8, [u8; 2])| {
-                MqttVariableHeader {
-                    protocol_name: String::from_utf8_lossy(&input[2..(2 + protocol_name_len[0] as usize)]).into_owned(),
-                    protocol_version,
-                    connect_flags,
-                    keep_alive: ((keep_alive[0] as u16) << 8) + keep_alive[1] as u16,
-                }
-            },
-        )(input)
+fn connect_flags(input: &[u8]) -> IResult<&[u8], (bool, bool, u8, bool, bool, bool)> {
+    map(be_u8, |flags: u8| {
+        let clean_start = (flags & 0x01) != 0;
+        let will_flag = (flags & 0x02) != 0;
+        let will_qos = (flags & 0x1C) >> 2;
+        let will_retain = (flags & 0x20) != 0;
+        let password_flag = (flags & 0x40) != 0;
+        let username_flag = (flags & 0x80) != 0;
+        (
+            clean_start,
+            will_flag,
+            will_qos,
+            will_retain,
+            password_flag,
+            username_flag,
+        )
+    })(input)
+}
+
+fn string(input: &[u8]) -> IResult<&[u8], String> {
+    map(take_while_m_n(1, 1, |c| c != 0), |s: &[u8]| {
+        str::from_utf8(s).unwrap().to_string()
+    })(input)
+}
+
+fn connect(input: &[u8]) -> IResult<&[u8], (String, u8, (bool, bool, u8, bool, bool, bool), u16)> {
+    tuple((
+        string,
+        be_u8,
+        connect_flags,
+        be_u16,
+    ))(input)
+}
+
+fn connack(input: &[u8]) -> IResult<&[u8], (u8, u8)> {
+    tuple((be_u8, be_u8))(input)
+}
+
+fn publish_flags(input: &[u8]) -> IResult<&[u8], (bool, u8, bool)> {
+    map(be_u8, |flags: u8| {
+        let dup = (flags & 0x08) != 0;
+        let qos = (flags & 0x06) >> 1;
+        let retain = (flags & 0x01) != 0;
+        (dup, qos, retain)
+    })(input)
+}
+
+fn publish(input: &[u8]) -> IResult<&[u8], ((bool, u8, bool), Vec<u8>, u16)> {
+    tuple((publish_flags, map(take_while_m_n(1, 1, |c| c != 0), |x: &[u8]| x.to_vec()), be_u16))(input)
+}
+
+fn suback(input: &[u8]) -> IResult<&[u8], (u16, Vec<Vec<u8>>)> {
+    tuple((be_u16, many0(map(take_while_m_n(1, 1, |c| c != 0), |x: &[u8]| x.to_vec()))))(input)
+}
+
+fn unsubscribe(input: &[u8]) -> IResult<&[u8], (u16, Vec<Vec<u8>>)> {
+    tuple((be_u16, many0(map(take_while_m_n(1, 1, |c| c != 0), |x: &[u8]| x.to_vec()))))(input)
+}
+
+fn main() -> Result<()> {
+    let mut file = File::open(env::args().nth(1).unwrap()).unwrap();
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents).unwrap();
+
+    let input = contents.as_slice();
+    let (input, header_type) = header_type(input).unwrap();
+
+    match header_type {
+        HeaderType::Connect => {
+            let (_input, connect_data) = connect(input).unwrap();
+            println!("Connect: {:?}", connect_data);
+        }
+        HeaderType::Connack => {
+            let (_input, connack_data) = connack(input).unwrap();
+            println!("Connack: {:?}", connack_data);
+        }
+        HeaderType::Publish => {
+            let (_input, publish_data) = publish(input).unwrap();
+            println!("Publish: {:?}", publish_data);
+        }
+        HeaderType::Suback => {
+            let (_input, suback_data) = suback(input).unwrap();
+            println!("Suback: {:?}", suback_data);
+        }
+        HeaderType::Unsubscribe => {
+            let (_input, unsubscribe_data) = unsubscribe(input).unwrap();
+            println!("Unsubscribe: {:?}", unsubscribe_data);
+        }
+        _ => {}
     }
-}
 
-#[derive(Debug, PartialEq)]
-struct MqttConnectPacket {
-    fixed_header: MqttFixedHeader,
-    variable_header: MqttVariableHeader,
-    payload: Vec<u8>,
-}
-
-impl MqttConnectPacket {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        map(
-            tuple((
-                MqttFixedHeader::parse,
-                MqttVariableHeader::parse,
-                length_data(take(2u8)),
-            )),
-            |(fixed_header, variable_header, payload): (MqttFixedHeader, MqttVariableHeader, Vec<u8>)| {
-                MqttConnectPacket {
-                    fixed_header,
-                    variable_header,
-                    payload,
-                }
-            },
-        )(input)
-    }
-}
-
-fn main() {
-    let mut file = match std::env::args().nth(1) {
-        Some(filename) => File::open(filename).unwrap(),
-        None => stdin(),
-    };
-
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
-
-    let (_, packet) = MqttConnectPacket::parse(&buffer).unwrap();
-    println!("{:?}", packet);
+    Ok(())
 }

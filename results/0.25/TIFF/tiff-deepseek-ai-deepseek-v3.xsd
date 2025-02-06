@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/tiff"
+           xmlns:tiff="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit" encoding="UTF-8" leadingSkip="0"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="TIFFType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="Header" type="tiff:HeaderType"/>
+      <xs:element name="ImageFileDirectory" type="tiff:IFDType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="ByteOrder" type="tiff:ByteOrderType"/>
+      <xs:element name="Version" type="xs:short"/>
+      <xs:element name="FirstIFDOffset" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ByteOrderType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="II"/>
+      <xs:enumeration value="MM"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IFDType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="NumDirectoryEntries" type="xs:short"/>
+      <xs:element name="DirectoryEntry" type="tiff:DirectoryEntryType" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DirectoryEntryType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="Tag" type="xs:short"/>
+      <xs:element name="Type" type="xs:short"/>
+      <xs:element name="Count" type="xs:long"/>
+      <xs:element name="ValueOffset" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="TIFF" type="tiff:TIFFType"/>
+
+</xs:schema>

@@ -1,69 +1,90 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define basic field parsers
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16();
-static HParser *uint24 = h_bits(24, false);
-static HParser *uint32 = h_uint32();
+// Define parsers for basic types
+static HParser *uint8;
+static HParser *uint16;
+static HParser *uint32;
 
-// Define a parser for TLS ProtocolVersion
-static HParser *protocol_version = h_sequence(uint8, uint8, NULL);
+// Define parsers for complex types
+static HParser *protocol_version;
+static HParser *random_bytes;
+static HParser *session_id;
+static HParser *cipher_suite;
+static HParser *cipher_suites;
+static HParser *compression_methods;
+static HParser *extension_type;
+static HParser *extension_data;
+static HParser *extension;
+static HParser *extensions;
+static HParser *client_hello;
 
-// Define a parser for Random structure in TLS ClientHello
-static HParser *random = h_sequence(uint32, h_bytes(28), NULL);
+void init_parsers() {
+    uint8 = h_uint8();
+    uint16 = h_uint16();
+    uint32 = h_uint32();
 
-// Define a parser for SessionID
-static HParser *session_id = h_length_value(uint8, h_uint8());
+    protocol_version = uint16;
+    random_bytes = h_bits(32*8, false);
+    session_id = h_length_value(uint8, h_bits(32*8, false));
+    cipher_suite = uint16;
+    cipher_suites = h_length_value(uint16, h_many1(cipher_suite));
+    compression_methods = h_length_value(uint8, h_many1(uint8));
+    extension_type = uint16;
+    extension_data = h_length_value(uint16, h_bytes(0));
+    extension = h_sequence(extension_type, extension_data, NULL);
+    extensions = h_length_value(uint16, h_many1(extension));
+    client_hello = h_sequence(protocol_version, random_bytes, session_id, cipher_suites, compression_methods, extensions, NULL);
+}
 
-// Define a parser for Cipher Suites
-static HParser *cipher_suites = h_length_value(uint16, h_uint16());
+void print_hex(const uint8_t *data, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        printf("%02X ", data[i]);
+    }
+    printf("\n");
+}
 
-// Define a parser for Compression Methods
-static HParser *compression_methods = h_length_value(uint8, h_uint8());
-
-// Define a parser for Extension
-static HParser *extension = h_sequence(uint16, h_length_value(uint16, h_any()));
-
-// Define a parser for Extensions
-static HParser *extensions = h_length_value(uint16, extension);
-
-// Define a parser for TLS ClientHello
-static HParser *client_hello = h_sequence(
-    protocol_version,  // Version
-    random,            // Random
-    session_id,        // Session ID
-    cipher_suites,     // Cipher Suites
-    compression_methods, // Compression Methods
-    extensions,        // Extensions
-    NULL
-);
-
-// Main function to parse input
-int main(int argc, char *argv[]) {
-    size_t len;
-    uint8_t *input = read_file(stdin, &len);
-    if (!input) {
-        fprintf(stderr, "Failed to read input\n");
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file path>\n", argv[0]);
         return 1;
     }
 
-    HParseResult *result = h_parse(client_hello, input, len);
-    if (result == NULL) {
-        fprintf(stderr, "Parse failed\n");
-        free(input);
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
         return 1;
     }
 
-    json_t *json = h_value_to_json(result->ast);
-    char *json_str = json_dumps(json, JSON_INDENT(2));
-    printf("%s\n", json_str);
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    // Cleanup
-    free(json_str);
-    json_decref(json);
-    h_parse_result_free(result);
-    free(input);
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(file);
+        return 1;
+    }
 
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        fprintf(stderr, "Failed to read file\n");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    init_parsers();
+
+    HParseResult *result = h_parse(client_hello, buffer, file_size);
+    if (result) {
+        printf("ClientHello parsed successfully\n");
+    } else {
+        fprintf(stderr, "Failed to parse ClientHello\n");
+    }
+
+    free(buffer);
+    fclose(file);
     return 0;
 }

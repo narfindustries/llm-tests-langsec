@@ -1,132 +1,132 @@
-sequence modbus {
-    ModbusFrame frames[] = sequence_of(frame, 0..)
-}
+def MBAP = record {
+    trans_id: integer[width=16, endian=big];
+    proto_id: integer[width=16, endian=big];
+    length: integer[width=16, endian=big];
+    unit_id: integer[width=8];
+};
 
-choice frame {
-    request  : request
-    response : response
-}
+def ReadCoilsRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+};
 
-sequence request {
-    UINT8 transactionId
-    UINT16BE protocolId  = 0
-    UINT16BE length = $($remaining_bits / 8)$
-    UINT8 unitId
-    UINT8 functionCode
-    Choose<requestBody>(functionCode) body
-}
+def ReadCoilsResponse = record {
+    byte_count: integer[width=8];
+    coil_status: integer[width=8][byte_count];
+};
 
-sequence response {
-    UINT8 transactionId
-    UINT16BE protocolId  = 0
-    UINT16BE length = $($remaining_bits / 8)$
-    UINT8 unitId
-    UINT8 functionCode
-    Choose<responseBody>(functionCode) body
-}
+def ReadDiscreteInputsRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+};
 
-choice requestBody {
-    case 1  : readCoils
-    case 2  : readDiscreteInputs  
-    case 3  : readHoldingRegisters
-    case 4  : readInputRegisters
-    case 5  : writeSingleCoil
-    case 6  : writeSingleRegister
-    case 15 : writeMultipleCoils
-    case 16 : writeMultipleRegisters
-}
+def ReadDiscreteInputsResponse = record {
+    byte_count: integer[width=8];
+    input_status: integer[width=8][byte_count];
+};
 
-choice responseBody {
-    case 1  : readCoilsResponse
-    case 2  : readDiscreteInputsResponse
-    case 3  : readHoldingRegistersResponse  
-    case 4  : readInputRegistersResponse
-    case 5  : writeSingleCoilResponse
-    case 6  : writeSingleRegisterResponse
-    case 15 : writeMultipleCoilsResponse
-    case 16 : writeMultipleRegistersResponse
-}
+def ReadHoldingRegistersRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+};
 
-sequence readCoils {
-    UINT16BE startAddress
-    UINT16BE quantity  
-}
+def ReadHoldingRegistersResponse = record {
+    byte_count: integer[width=8];
+    register_value: integer[width=8][byte_count];
+};
 
-sequence readDiscreteInputs {
-    UINT16BE startAddress
-    UINT16BE quantity
-}
+def ReadInputRegistersRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+};
 
-sequence readHoldingRegisters {
-    UINT16BE startAddress
-    UINT16BE quantity
-}
+def ReadInputRegistersResponse = record {
+    byte_count: integer[width=8];
+    register_value: integer[width=8][byte_count];
+};
 
-sequence readInputRegisters {
-    UINT16BE startAddress
-    UINT16BE quantity
-}
+def WriteSingleCoilRequest = record {
+    output_addr: integer[width=16, endian=big];
+    output_value: integer[width=16, endian=big];
+};
 
-sequence writeSingleCoil {
-    UINT16BE outputAddress
-    UINT16BE value
-}
+def WriteSingleRegisterRequest = record {
+    register_addr: integer[width=16, endian=big];
+    register_value: integer[width=16, endian=big];
+};
 
-sequence writeSingleRegister {
-    UINT16BE address
-    UINT16BE value
-}
+def WriteMultipleCoilsRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+    byte_count: integer[width=8];
+    output_value: integer[width=8][byte_count];
+};
 
-sequence writeMultipleCoils {
-    UINT16BE startAddress
-    UINT16BE quantity
-    UINT8 byteCount
-    UINT8 values[byteCount]
-}
+def WriteMultipleRegistersRequest = record {
+    start_addr: integer[width=16, endian=big];
+    quantity: integer[width=16, endian=big];
+    byte_count: integer[width=8];
+    register_value: integer[width=8][byte_count];
+};
 
-sequence writeMultipleRegisters {
-    UINT16BE startAddress
-    UINT16BE quantity
-    UINT8 byteCount
-    UINT16BE values[quantity]
-}
+def ReadFileRecordRequest = record {
+    byte_count: integer[width=8];
+    subreq_reference: integer[width=8];
+    file_number: integer[width=16, endian=big];
+    record_number: integer[width=16, endian=big];
+    record_length: integer[width=16, endian=big];
+};
 
-sequence readCoilsResponse {
-    UINT8 byteCount
-    UINT8 coilStatus[byteCount]
-}
+def WriteFileRecordRequest = record {
+    byte_count: integer[width=8];
+    subreq_reference: integer[width=8];
+    file_number: integer[width=16, endian=big];
+    record_number: integer[width=16, endian=big];
+    record_length: integer[width=16, endian=big];
+    record_data: integer[width=8][record_length];
+};
 
-sequence readDiscreteInputsResponse {
-    UINT8 byteCount
-    UINT8 inputStatus[byteCount]
-}
+def MaskWriteRegisterRequest = record {
+    reference_addr: integer[width=16, endian=big];
+    and_mask: integer[width=16, endian=big];
+    or_mask: integer[width=16, endian=big];
+};
 
-sequence readHoldingRegistersResponse {
-    UINT8 byteCount
-    UINT16BE registerValues[byteCount / 2]
-}
+def ReadDeviceIdRequest = record {
+    mei_type: integer[width=8];
+    read_device_id_code: integer[width=8];
+    object_id: integer[width=8];
+};
 
-sequence readInputRegistersResponse {
-    UINT8 byteCount
-    UINT16BE inputRegisters[byteCount / 2]
-}
+def ErrorResponse = record {
+    exception_code: integer[width=8];
+};
 
-sequence writeSingleCoilResponse {
-    UINT16BE outputAddress
-    UINT16BE value
-}
+def ModbusFunction = choice function_code {
+    1 -> ReadCoilsRequest;
+    2 -> ReadDiscreteInputsRequest;
+    3 -> ReadHoldingRegistersRequest;
+    4 -> ReadInputRegistersRequest;
+    5 -> WriteSingleCoilRequest;
+    6 -> WriteSingleRegisterRequest;
+    15 -> WriteMultipleCoilsRequest;
+    16 -> WriteMultipleRegistersRequest;
+    20 -> ReadFileRecordRequest;
+    21 -> WriteFileRecordRequest;
+    22 -> MaskWriteRegisterRequest;
+    43 -> ReadDeviceIdRequest;
+    129..143 -> ErrorResponse;
+};
 
-sequence writeSingleRegisterResponse {
-    UINT16BE address
-    UINT16BE value
-}
+def ModbusTCP = record {
+    header: MBAP;
+    function_code: integer[width=8];
+    data: ModbusFunction;
+};
 
-sequence writeMultipleCoilsResponse {
-    UINT16BE startAddress
-    UINT16BE quantity
-}
-
-sequence writeMultipleRegistersResponse {
-    UINT16BE startAddress
-    UINT16BE quantity
-}
+def ModbusRTU = record {
+    address: integer[width=8];
+    function_code: integer[width=8];
+    data: ModbusFunction;
+    crc: integer[width=16, endian=little];
+};

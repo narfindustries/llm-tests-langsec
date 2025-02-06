@@ -1,114 +1,236 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ELF"
-           xmlns:tns="http://example.com/ELF"
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
-
-  <xs:element name="elfFile" type="tns:elfFileType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-
-  <xs:complexType name="elfFileType">
+  <xs:element name="define">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="format"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="format">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="element" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="name" type="xs:string"/>
+      <xs:attribute name="type" type="xs:string"/>
+      <xs:attribute name="length" type="xs:string"/>
+      <xs:attribute name="byteOrder" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="element">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="element" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="name" type="xs:string"/>
+      <xs:attribute name="type" type="xs:string"/>
+      <xs:attribute name="length" type="xs:string"/>
+      <xs:attribute name="byteOrder" type="xs:string"/>
+      <xs:attribute name="occurs" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="elf" type="elfType"/>
+  <xs:complexType name="elfType">
     <xs:sequence>
-      <xs:element name="elfHeader" type="tns:elfHeaderType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="programHeaders" type="tns:programHeadersType" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:occurs="1..*"/>
-      <xs:element name="sectionHeaders" type="tns:sectionHeadersType" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:occurs="1..*"/>
+      <xs:element name="e_ident" type="e_identType"/>
+      <xs:element name="e_type" type="e_typeType"/>
+      <xs:element name="e_machine" type="e_machineType"/>
+      <xs:element name="e_version" type="e_versionType"/>
+      <xs:element name="e_entry" type="e_entryType"/>
+      <xs:element name="e_phoff" type="e_phoffType"/>
+      <xs:element name="e_shoff" type="e_shoffType"/>
+      <xs:element name="e_flags" type="e_flagsType"/>
+      <xs:element name="e_ehsize" type="e_ehsizeType"/>
+      <xs:element name="e_phentsize" type="e_phentsizeType"/>
+      <xs:element name="e_phnum" type="e_phnumType"/>
+      <xs:element name="e_shentsize" type="e_shentsizeType"/>
+      <xs:element name="e_shnum" type="e_shnumType"/>
+      <xs:element name="e_shstrndx" type="e_shstrndxType"/>
+      <xs:element name="programHeaders" type="programHeadersType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="sectionHeaders" type="sectionHeadersType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
   <xs:complexType name="elfHeaderType">
     <xs:sequence>
-      <xs:element name="e_ident" type="tns:eIdentType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="e_type" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_version" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_entry" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_phoff" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_shoff" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
+      <xs:element name="e_ident" type="e_identType"/>
+      <xs:element name="e_type" type="e_typeType"/>
+      <xs:element name="e_machine" type="e_machineType"/>
+      <xs:element name="e_version" type="e_versionType"/>
+      <xs:element name="e_entry" type="e_entryType"/>
+      <xs:element name="e_phoff" type="e_phoffType"/>
+      <xs:element name="e_shoff" type="e_shoffType"/>
+      <xs:element name="e_flags" type="e_flagsType"/>
+      <xs:element name="e_ehsize" type="e_ehsizeType"/>
+      <xs:element name="e_phentsize" type="e_phentsizeType"/>
+      <xs:element name="e_phnum" type="e_phnumType"/>
+      <xs:element name="e_shentsize" type="e_shentsizeType"/>
+      <xs:element name="e_shnum" type="e_shnumType"/>
+      <xs:element name="e_shstrndx" type="e_shstrndxType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="eIdentType">
+  <xs:complexType name="e_identType">
     <xs:sequence>
-      <xs:element name="ei_mag" type="xs:hexBinary" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:length="4"/>
-      <xs:element name="ei_class" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ei_data" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ei_version" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ei_osabi" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ei_abiversion" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ei_pad" type="xs:hexBinary" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:length="7"/>
+      <xs:element name="EI_MAG0" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG1" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG2" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG3" type="xs:unsignedByte"/>
+      <xs:element name="EI_CLASS" type="EI_CLASSType"/>
+      <xs:element name="EI_DATA" type="EI_DATAType"/>
+      <xs:element name="EI_VERSION" type="EI_VERSIONType"/>
+      <xs:element name="EI_OSABI" type="EI_OSABIType"/>
+      <xs:element name="EI_ABIVERSION" type="xs:unsignedByte"/>
+      <xs:element name="EI_PAD" type="xs:unsignedByte" minOccurs="7" maxOccurs="7"/>
     </xs:sequence>
   </xs:complexType>
-
+  <xs:simpleType name="EI_CLASSType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EI_DATAType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EI_VERSIONType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EI_OSABIType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+      <xs:enumeration value="17"/>
+      <xs:enumeration value="18"/>
+      <xs:enumeration value="19"/>
+      <xs:enumeration value="20"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="e_typeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_machineType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_versionType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedInt">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_entryType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedLong">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_phoffType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedLong">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_shoffType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedLong">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_flagsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedInt">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_ehsizeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_phentsizeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_phnumType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_shentsizeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_shnumType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="e_shstrndxType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort">
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
   <xs:complexType name="programHeadersType">
     <xs:sequence>
-      <xs:element name="p_type" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_offset" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_vaddr" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_paddr" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_filesz" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_memsz" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_flags" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="p_align" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
+      <xs:element name="p_type" type="xs:unsignedInt"/>
+      <xs:element name="p_offset" type="xs:unsignedLong"/>
+      <xs:element name="p_vaddr" type="xs:unsignedLong"/>
+      <xs:element name="p_paddr" type="xs:unsignedLong"/>
+      <xs:element name="p_filesz" type="xs:unsignedLong"/>
+      <xs:element name="p_memsz" type="xs:unsignedLong"/>
+      <xs:element name="p_flags" type="xs:unsignedInt"/>
+      <xs:element name="p_align" type="xs:unsignedLong"/>
     </xs:sequence>
   </xs:complexType>
-
   <xs:complexType name="sectionHeadersType">
     <xs:sequence>
-      <xs:element name="sh_name" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_type" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_flags" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_addr" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_offset" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_size" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_link" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_info" type="xs:unsignedInt" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_addralign" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
-      <xs:element name="sh_entsize" type="xs:unsignedLong" dfdl:representation="binary" dfdl:encoding="utf-8"
-                  dfdl:byteOrder="bigEndian"/>
+      <xs:element name="sh_name" type="xs:unsignedInt"/>
+      <xs:element name="sh_type" type="xs:unsignedInt"/>
+      <xs:element name="sh_flags" type="xs:unsignedLong"/>
+      <xs:element name="sh_addr" type="xs:unsignedLong"/>
+      <xs:element name="sh_offset" type="xs:unsignedLong"/>
+      <xs:element name="sh_size" type="xs:unsignedLong"/>
+      <xs:element name="sh_link" type="xs:unsignedInt"/>
+      <xs:element name="sh_info" type="xs:unsignedInt"/>
+      <xs:element name="sh_addralign" type="xs:unsignedLong"/>
+      <xs:element name="sh_entsize" type="xs:unsignedLong"/>
     </xs:sequence>
   </xs:complexType>
-
 </xs:schema>

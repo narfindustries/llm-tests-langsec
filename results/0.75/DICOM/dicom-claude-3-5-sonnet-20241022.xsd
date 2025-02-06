@@ -1,52 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/namespace"
-    targetNamespace="http://example.com/namespace">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="dfdl:default" representation="binary"
-                byteOrder="bigEndian" binaryNumberRep="binary"
-                lengthKind="implicit" encoding="UTF-8"
-                ignoreCase="no" initiator="" terminator=""
-                leadingSkip="0" trailingSkip="0"
-                textTrimKind="none" initiatedContent="no"
-                alignment="1" alignmentUnits="bytes"
-                fillByte="0" occursCountKind="implicit"/>
+            <dfdl:format alignment="1" 
+                         lengthKind="implicit"
+                         encoding="UTF-8"
+                         byteOrder="bigEndian"
+                         occursCountKind="implicit"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="dicomFile">
+    <xs:element name="DICOM">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
-                <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-                <xs:element name="dataElements" minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128"/>
+                <xs:element name="Prefix" type="xs:string" dfdl:length="4"/>
+                <xs:element name="DataElement" minOccurs="0" maxOccurs="unbounded">
                     <xs:complexType>
                         <xs:sequence>
-                            <xs:element name="tag">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="group" type="xs:unsignedShort"/>
-                                        <xs:element name="element" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="vr" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-                            <xs:element name="length" type="xs:unsignedInt"/>
-                            <xs:element name="value">
-                                <xs:complexType>
-                                    <xs:choice>
-                                        <xs:element name="string" type="xs:string"
-                                            dfdl:lengthKind="explicit" 
-                                            dfdl:length="{ ../length }"/>
-                                        <xs:element name="binary" type="xs:hexBinary"
-                                            dfdl:lengthKind="explicit"
-                                            dfdl:length="{ ../length }"/>
-                                    </xs:choice>
-                                </xs:complexType>
+                            <xs:element name="Group" type="xs:hexBinary" dfdl:length="2"/>
+                            <xs:element name="Element" type="xs:hexBinary" dfdl:length="2"/>
+                            <xs:element name="VR" type="xs:string" dfdl:length="2"/>
+                            <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4"/>
+                            <xs:element name="Value" type="xs:hexBinary">
+                                <xs:annotation>
+                                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                        <dfdl:element lengthKind="explicit" 
+                                                    length="{ ../Length }"/>
+                                    </xs:appinfo>
+                                </xs:annotation>
                             </xs:element>
                         </xs:sequence>
                     </xs:complexType>

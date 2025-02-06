@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary"
+                   byteOrder="bigEndian"
+                   initiator=""
+                   terminator=""
+                   separatorSuppressionPolicy="never"
+                   nilValueDelimiterPolicy="none"
+                   emptyValueDelimiterPolicy="none"
+                   encoding="UTF-8"
+                   alignment="1"
+                   alignmentUnits="bytes"
+                   lengthKind="explicit"
+                   lengthUnits="bytes"
+                   occursCountKind="implicit"
+                   encodingErrorPolicy="replace"
+                   floating="no"
+                   textBidi="no"
+                   sequenceKind="ordered"
+                   initiatedContent="no"
+                   leadingSkip="0"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GZIP">
+    <xs:complexType>
+      <xs:sequence>
+        <!-- GZIP Header -->
+        <xs:element name="ID1" type="xs:unsignedByte" dfdl:leadingSkip="0"/>
+        <xs:

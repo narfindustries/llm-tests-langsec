@@ -1,11 +1,9 @@
 meta:
-  id: hl7_v2_gpt_4_turbo
-  title: HL7 Version 2 Message
+  id: hl7_v2
+  title: HL7 Version 2.x Health Care Message
   file-extension: hl7
+  encoding: ascii
   endian: be
-doc: |
-  HL7 (Health Level Seven) is a set of international standards for the exchange, integration, sharing, and retrieval of electronic health information.
-
 seq:
   - id: segments
     type: segment
@@ -16,21 +14,47 @@ types:
     seq:
       - id: segment_type
         type: str
-        encoding: ASCII
         size: 3
       - id: fields
         type: field
         repeat: until
-        repeat-until: _.is_terminator
+        repeat-until: _io.pos() == _io.size
 
   field:
     seq:
-      - id: content
+      - id: field
         type: str
-        encoding: ASCII
-        terminator: 0x7C # '|'
+        terminator: 0x7C
         consume: true
         include: false
+        eos-error: false
     instances:
-      is_terminator:
-        value: content == '\r'
+      components:
+        value: field.split('^')
+        type: components
+        if: field != ""
+
+  components:
+    seq:
+      - id: component
+        type: str
+        terminator: 0x5E
+        consume: true
+        include: false
+        eos-error: false
+        repeat: eos
+    instances:
+      subcomponents:
+        value: component.split('&')
+        type: subcomponents
+        if: component != ""
+
+  subcomponents:
+    seq:
+      - id: subcomponent
+        type: str
+        terminator: 0x26
+        consume: true
+        include: false
+        eos-error: false
+        repeat: eos

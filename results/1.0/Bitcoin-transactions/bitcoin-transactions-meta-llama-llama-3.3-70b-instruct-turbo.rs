@@ -1,130 +1,215 @@
+use nom::branch::alt;
+use nom::bytes::complete::{tag, take};
+use nom::combinator::{map, map_res, verify};
+use nom::error::{context, ErrorKind};
+use nom::multi::{many1};
+use nom::number::complete::{le_u16, le_u32, le_u64};
+use nom::sequence::{preceded, tuple};
+use nom::IResult;
 use std::env;
 use std::fs::File;
-use std::io::{Read, BufReader};
-use nom::{
-    IResult,
-    bytes::complete::{take, tag},
-    combinator::{map, map_res},
-    number::complete::{be_u8, be_u16, be_u32, be_u64},
-    multi::{many0, length_data},
-    sequence::{tuple, preceded},
-};
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug)]
-enum TxIn {
-    Coinbase {
-        script_sig: Vec<u8>,
+enum VarInt {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+}
+
+fn var_int(input: &[u8]) -> IResult<&[u8], VarInt> {
+    alt((
+        map(tag([0xfd]), |_| VarInt::U16(253)),
+        map(tag([0xfe]), |_| VarInt::U32(254)),
+        map(tag([0xff]), |_| VarInt::U64(255)),
+        map(take(1u8), |v: &[u8]| VarInt::U8(v[0])),
+    ))(input)
+}
+
+fn parse_var_int(input: &[u8]) -> IResult<&[u8], u32> {
+    context(
+        "var_int",
+        alt((
+            map_res(take(1u8), |v: &[u8]| std::convert::TryInto::try_into(v[0]).map_err(|_| nom::Err::Error(ErrorKind::AlphaNumeric))),
+            preceded(tag([0xfd]), map(le_u16, |v| v as u32)),
+            preceded(tag([0xfe]), le_u32),
+            preceded(tag([0xff]), map(le_u64, |v| v as u32)),
+        )),
+    )(input)
+}
+
+#[derive(Debug)]
+enum Transaction {
+    V1 {
+        version: u32,
+        tx_in: Vec<TxIn>,
+        tx_out: Vec<TxOut>,
+        lock_time: u32,
     },
-    Regular {
-        prev_out: Outpoint,
-        script_sig: Vec<u8>,
-        sequence: u32,
+    V2 {
+        version: u32,
+        tx_in: Vec<TxIn>,
+        tx_out: Vec<TxOut>,
+        lock_time: u32,
     },
 }
 
 #[derive(Debug)]
-struct Outpoint {
-    txid: [u8; 32],
-    vout: u32,
+struct TxIn {
+    previous_output_hash: [u8; 32],
+    previous_output_index: u32,
+    script_length: u32,
+    script_sig: Vec<u8>,
+    sequence: u32,
 }
 
-#[derive(Debug)]
-enum TxOut {
-    Standard {
-        value: u64,
-        script_pub_key: Vec<u8>,
-    },
-}
-
-#[derive(Debug)]
-struct Tx {
-    version: u32,
-    tx_in_count: u8,
-    tx_in: Vec<TxIn>,
-    tx_out_count: u8,
-    tx_out: Vec<TxOut>,
-    locktime: u32,
-}
-
-fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
-    map_res(be_u8, |x| {
-        if x < 0xfd {
-            Ok(x as u64)
-        } else if x == 0xfd {
-            map_res(take(2_usize), |x| std::convert::TryInto::try_into(x)).map(|x: [u8; 2]| u64::from_be_bytes(x))
-        } else if x == 0xfe {
-            map_res(take(4_usize), |x| std::convert::TryInto::try_into(x)).map(|x: [u8; 4]| u64::from_be_bytes(x))
-        } else {
-            map_res(take(8_usize), |x| std::convert::Try_into::try_into(x)).map(|x: [u8; 8]| u64::from_be_bytes(x))
+impl TxIn {
+    fn new(previous_output_hash: [u8; 32], previous_output_index: u32, script_length: u32, script_sig: Vec<u8>, sequence: u32) -> Self {
+        TxIn {
+            previous_output_hash,
+            previous_output_index,
+            script_length,
+            script_sig,
+            sequence,
         }
-    })(input)
+    }
+}
+
+#[derive(Debug)]
+struct TxOut {
+    value: u64,
+    pk_script_length: u32,
+    pk_script: Vec<u8>,
+}
+
+impl TxOut {
+    fn new(value: u64, pk_script_length: u32, pk_script: Vec<u8>) -> Self {
+        TxOut {
+            value,
+            pk_script_length,
+            pk_script,
+        }
+    }
 }
 
 fn parse_tx_in(input: &[u8]) -> IResult<&[u8], TxIn> {
-    map(
+    context(
+        "tx_in",
         tuple((
-            take(32_usize),
-            be_u32,
-            length_data(parse_varint),
-            be_u32,
+            take(32u8),
+            le_u32,
+            parse_var_int,
+            verify(
+                parse_var_int,
+                |script_length: &u32| *script_length > 0,
+            ),
+            take(1),
+            le_u32,
         )),
-        |(txid, vout, script_sig, sequence)| {
-            TxIn::Regular {
-                prev_out: Outpoint { txid: txid.try_into().unwrap(), vout },
-                script_sig: script_sig.to_vec(),
-                sequence,
-            }
-        },
     )(input)
+    .map(|(input, (previous_output_hash, previous_output_index, script_length, _, script_sig_length, sequence))| {
+        (
+            input,
+            TxIn::new(
+                {
+                    let mut arr = [0u8; 32];
+                    arr.copy_from_slice(previous_output_hash);
+                    arr
+                },
+                previous_output_index,
+                script_length,
+                vec![0],
+                sequence,
+            )
+        )
+    })
 }
 
 fn parse_tx_out(input: &[u8]) -> IResult<&[u8], TxOut> {
-    map(
+    context(
+        "tx_out",
         tuple((
-            be_u64,
-            length_data(parse_varint),
+            le_u64,
+            parse_var_int,
+            verify(
+                parse_var_int,
+                |pk_script_length: &u32| *pk_script_length > 0,
+            ),
         )),
-        |(value, script_pub_key)| {
-            TxOut::Standard {
-                value,
-                script_pub_key: script_pub_key.to_vec(),
-            }
-        },
     )(input)
+    .map(|(input, (value, _, pk_script_length))| {
+        (
+            input,
+            TxOut::new(
+                value,
+                pk_script_length,
+                vec![],
+            )
+        )
+    })
 }
 
-fn parse_tx(input: &[u8]) -> IResult<&[u8], Tx> {
-    map(
-        tuple((
-            be_u32,
-            parse_varint,
-            many0(parse_tx_in),
-            parse_varint,
-            many0(parse_tx_out),
-            be_u32,
-        )),
-        |(version, tx_in_count, tx_in, tx_out_count, tx_out, locktime)| {
-            Tx {
-                version,
-                tx_in_count: tx_in_count as u8,
-                tx_in,
-                tx_out_count: tx_out_count as u8,
-                tx_out,
-                locktime,
-            }
-        },
-    )(input)
+fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
+    alt((
+        map(
+            tuple((
+                le_u32,
+                parse_var_int,
+                many1(parse_tx_in),
+                parse_var_int,
+                many1(parse_tx_out),
+                le_u32,
+            )),
+            |(version, _tx_in_count, tx_in, _tx_out_count, tx_out, lock_time)| {
+                Transaction::V1 {
+                    version,
+                    tx_in,
+                    tx_out,
+                    lock_time,
+                }
+            },
+        ),
+        map(
+            tuple((
+                le_u32,
+                parse_var_int,
+                many1(parse_tx_in),
+                parse_var_int,
+                many1(parse_tx_out),
+                le_u32,
+            )),
+            |(version, _tx_in_count, tx_in, _tx_out_count, tx_out, lock_time)| {
+                Transaction::V2 {
+                    version,
+                    tx_in,
+                    tx_out,
+                    lock_time,
+                }
+            },
+        ),
+    ))(input)
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        panic!("Usage: {} <input_file>", args[0]);
+    let file_path = env::args().nth(1).expect("no file path provided");
+    let path = Path::new(&file_path);
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("couldn't open {}: {}", path.display(), why),
+        Ok(file) => file,
+    };
+
+    let mut data = Vec::new();
+    file.read_to_end(&mut data).expect("couldn't read file");
+    let result = parse_transaction(&data);
+    match result {
+        Ok((remaining, transaction)) => {
+            println!("Transaction: {:?}", transaction);
+            println!("Remaining: {:?}", remaining);
+        }
+        Err(err) => {
+            println!("Error: {:?}", err);
+        }
     }
-    let input_file = &args[1];
-    let file = File::open(input_file).unwrap();
-    let mut reader = BufReader::new(file);
-    let mut input = Vec::new();
-    reader.read_to_end(&mut input).unwrap();
-    println!("{:?}", parse_tx(&input).unwrap().1);
 }

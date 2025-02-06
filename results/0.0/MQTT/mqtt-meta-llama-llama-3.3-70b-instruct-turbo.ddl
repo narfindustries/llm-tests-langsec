@@ -1,112 +1,184 @@
-domain MQTT {
-  type byte = uint8
-  type uint16 = uint16
-  type uint32 = uint32
-  type varint = uint32
-
-  type connect_flags {
-    username: bool
-    password: bool
-    will_retain: bool
-    will_qos: uint2
-    will_flag: bool
-    clean_session: bool
-    reserved: uint1
+format binary {
+  type fixed_header {
+    reserved: 4 bits;
+    qos: 2 bits;
+    dup: 1 bit;
+    retain: 1 bit;
+    remaining_length: 7-32 bits;
   }
 
-  type connect_packet {
-    header: byte
-    remaining_length: varint
-    protocol_name: string(6)
-    protocol_level: byte
-    connect_flags: connect_flags
-    keep_alive: uint16
-    client_id: string
-    will_topic: string
-    will_message: string
-    username: string
-    password: string
+  type variable_header {
+    packet_identifier: 2 bytes;
+    properties: properties;
   }
 
-  type connack_packet {
-    header: byte
-    remaining_length: varint
-    connect_ack_flags: byte
-    connect_reason_code: byte
+  type properties {
+    payload_format_indicator: optional 1 byte;
+    message_expiry_interval: optional 4 bytes;
+    content_type: optional string;
+    response_topic: optional string;
+    correlation_data: optional bytes;
+    subscription_identifier: optional 2 bytes;
+    session_expiry_interval: optional 4 bytes;
+    assigned_client_identifier: optional string;
+    server_keep_alive: optional 2 bytes;
+    authentication_method: optional string;
+    authentication_data: optional bytes;
+    request_problem_information: optional 1 byte;
+    request_response_information: optional 1 byte;
+    response_information: optional string;
+    server_reference: optional string;
+    reason_string: optional string;
+    receive_maximum: optional 2 bytes;
+    topic_alias_maximum: optional 2 bytes;
+    topic_alias: optional 2 bytes;
+    maximum_qos: optional 1 byte;
+    retain_available: optional 1 byte;
+    user_property: optional sequence of (string, string);
+    maximum_packet_size: optional 4 bytes;
+    wildcard_subscription_available: optional 1 byte;
+    subscription_identifier_available: optional 1 byte;
+    shared_subscription_available: optional 1 byte;
   }
 
-  type publish_packet {
-    header: byte
-    remaining_length: varint
-    topic_name: string
-    packet_id: uint16
-    payload: bytes
+  type connect {
+    fixed_header: fixed_header;
+    variable_header: {
+      protocol_name: string;
+      protocol_version: 1 byte;
+      connect_flags: {
+        clean_start: 1 bit;
+        will_flag: 1 bit;
+        will_qos: 2 bits;
+        will_retain: 1 bit;
+        password_flag: 1 bit;
+        username_flag: 1 bit;
+      };
+      keep_alive: 2 bytes;
+      properties: properties;
+      will_topic: optional string;
+      will_payload: optional bytes;
+      username: optional string;
+      password: optional bytes;
+    };
   }
 
-  type puback_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
+  type connack {
+    fixed_header: fixed_header;
+    variable_header: {
+      session_present: 1 bit;
+      connect_return_code: 1 byte;
+      properties: properties;
+    };
   }
 
-  type pubrec_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
+  type publish {
+    fixed_header: fixed_header;
+    variable_header: {
+      topic_name: string;
+      packet_identifier: optional 2 bytes;
+      properties: properties;
+    };
+    payload: bytes;
   }
 
-  type pubrel_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
+  type puback {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
   }
 
-  type pubcomp_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
+  type pubrec {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
   }
 
-  type subscribe_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
-    topic_filters: array(string)
+  type pubrel {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
   }
 
-  type suback_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
-    return_codes: array(byte)
+  type pubcomp {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
   }
 
-  type unsubscribe_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
-    topic_filters: array(string)
+  type subscribe {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
+    payload: sequence of (string, 1 byte);
   }
 
-  type unsuback_packet {
-    header: byte
-    remaining_length: varint
-    packet_id: uint16
+  type suback {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
+    payload: sequence of 1 byte;
   }
 
-  type pingreq_packet {
-    header: byte
-    remaining_length: varint
+  type unsubscribe {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
+    payload: sequence of string;
   }
 
-  type pingresp_packet {
-    header: byte
-    remaining_length: varint
+  type unsuback {
+    fixed_header: fixed_header;
+    variable_header: {
+      packet_identifier: 2 bytes;
+      properties: properties;
+    };
   }
 
-  type disconnect_packet {
-    header: byte
-    remaining_length: varint
-    disconnect_reason_code: byte
+  type pingreq {
+    fixed_header: fixed_header;
+  }
+
+  type pingresp {
+    fixed_header: fixed_header;
+  }
+
+  type disconnect {
+    fixed_header: fixed_header;
+    variable_header: {
+      reason_code: 1 byte;
+      properties: properties;
+    };
+  }
+
+  type message = choice {
+    connect,
+    connack,
+    publish,
+    puback,
+    pubrec,
+    pubrel,
+    pubcomp,
+    subscribe,
+    suback,
+    unsubscribe,
+    unsuback,
+    pingreq,
+    pingresp,
+    disconnect
   }
 }

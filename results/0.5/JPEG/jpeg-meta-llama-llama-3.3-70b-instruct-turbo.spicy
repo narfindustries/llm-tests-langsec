@@ -1,24 +1,71 @@
-@header {
-    author = "Software Developer"
-    description = "JPEG File Parser in Zeek Spicy"
+module JPEG;
+
+type Marker = record {
+  marker = 0xFF;
+  marker_type = uint8;
 }
 
-type JPEG SoAtrial = {
-    magic: uint16 = 0xd8ff,
-    segments: Segment*
-};
+type Component = record {
+  id = uint8;
+  horizontal_sampling_factor = uint8;
+  vertical_sampling_factor = uint8;
+  quantization_table_number = uint8;
+}
 
-type Segment SoRecord = {
-    marker: uint8,
-    length: uint16,
-    payload: bytestring &length=length-2,
-    children: Segment*
-};
+type SOF = record {
+  precision = uint8;
+  height = uint16;
+  width = uint16;
+  num_components = uint8;
+  components = array[num_components] of Component;
+}
 
-type StartOfImage SoAtrial = Segment &marker=0xd8;
-type EndOfImage SoAtrial = Segment &marker=0xd9;
-type DefineQuantizationTable SoAtrial = Segment &marker=0xdb;
-type StartOfFrame SoAtrial = Segment &marker matches { 0xc0 .. 0xcf };
-type StartOfScan SoAtrial = Segment &marker=0xda;
-type Application SoAtrial = Segment &marker matches { 0xe0 .. 0xef };
-type Comment SoAtrial = Segment &marker=0xfe;
+type HuffmanCode = record {
+  code = uint8;
+  symbol = uint8;
+}
+
+type DHT = record {
+  huffman_table_class = uint8;
+  huffman_table_destination = uint8;
+  num_codes = uint8;
+  huffman_codes = array[num_codes] of HuffmanCode;
+}
+
+type DQT = record {
+  quantization_table_number = uint8;
+  quantization_table_precision = uint8;
+  quantization_table = bytestring &length=64;
+}
+
+type SOSComponent = record {
+  id = uint8;
+  dc_huffman_table = uint8;
+  ac_huffman_table = uint8;
+}
+
+type SOS = record {
+  num_components = uint8;
+  components = array[num_components] of SOSComponent;
+  data = bytestring;
+}
+
+type DRI = record {
+  restart_interval = uint16;
+}
+
+type JPEG = record {
+  marker = Marker;
+  length = uint16;
+  data = bytestring &length=2;
+} &match marker.marker_type == {
+  0xD8 => SOF;
+  0xD9 => record {};
+  0xDA => SOS;
+  0xDB => DQT;
+  0xDC => DHT;
+  0xDD => DRI;
+  0xDE => record { hierarchical_progression = bytestring; };
+  0xDF => record { expand_reference_component = bytestring; };
+  0xE0..0xEF => record { application_data = bytestring; };
+}

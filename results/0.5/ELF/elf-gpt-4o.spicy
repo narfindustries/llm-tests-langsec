@@ -1,74 +1,78 @@
 module ELF;
 
-import spicy;
-import hilti;
+type ELF = unit {
+    header: ElfHeader;
 
-public type ELFHeader = unit {
-    magic: bytes &length=4 &check=(magic == |0x7f, 0x45, 0x4c, 0x46|);
+    program_headers: array of ElfProgramHeader &length = header.e_phnum;
+
+    section_headers: array of ElfSectionHeader &length = header.e_shnum;
+
+    section_names: ElfStringTable &parse_from = section_headers[header.e_shstrndx].sh_offset &length = section_headers[header.e_shstrndx].sh_size;
+
+    sections: array of ElfSection &length = header.e_shnum;
+};
+
+type ElfHeader = unit {
+    e_ident: ElfIdent;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint32;
+    e_phoff: uint32;
+    e_shoff: uint32;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+};
+
+type ElfIdent = unit {
+    magic: bytes &length = 4; // Should be 0x7F 'E' 'L' 'F'
     class: uint8;
     data: uint8;
     version: uint8;
-    os_abi: uint8;
-    abi_version: uint8;
-    padding: bytes &length=7;
-    type: uint16;
-    machine: uint16;
-    version2: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
+    osabi: uint8;
+    abiversion: uint8;
+    pad: bytes &length = 7;
 };
 
-public type ELFFile = unit {
-    header: ELFHeader;
-    body: bytes &restofdata;
+type ElfProgramHeader = unit {
+    p_type: uint32;
+    p_offset: uint32;
+    p_vaddr: uint32;
+    p_paddr: uint32;
+    p_filesz: uint32;
+    p_memsz: uint32;
+    p_flags: uint32;
+    p_align: uint32;
 };
 
-public module ELFAnalyzer = {
-    export {
-        type Info = record {
-            class: uint8;
-            data: uint8;
-            version: uint8;
-            os_abi: uint8;
-            abi_version: uint8;
-            type: uint16;
-            machine: uint16;
-            entry: uint64;
-        };
-    }
+type ElfSectionHeader = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint32;
+    sh_addr: uint32;
+    sh_offset: uint32;
+    sh_size: uint32;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint32;
+    sh_entsize: uint32;
+};
 
-    hook spicy::on_start() {
-        print "Starting ELF analysis";
-    }
+type ElfSection = unit {
+    header: ElfSectionHeader;
 
-    hook spicy::on_done() {
-        print "Finished ELF analysis";
-    }
+    content: bytes &length = header.sh_size &parse_from = header.sh_offset;
 
-    function parse_elf(hdr: ELFHeader): Info {
-        return Info(
-            class=hdr.class,
-            data=hdr.data,
-            version=hdr.version,
-            os_abi=hdr.os_abi,
-            abi_version=hdr.abi_version,
-            type=hdr.type,
-            machine=hdr.machine,
-            entry=hdr.entry
-        );
+    on (header.sh_type == 3) { // SHT_STRTAB
+        strtab: ElfStringTable &parse_from = header.sh_offset &length = header.sh_size;
     }
+};
 
-    on %ELF::ELFFile &priority=10 {
-        local info = parse_elf(self.header);
-        print fmt("ELF Info: class=%d, data=%d, version=%d, os_abi=%d, abi_version=%d, type=%d, machine=%d, entry=%x",
-                  info$class, info$data, info$version, info$os_abi, info$abi_version, info$type, info$machine, info$entry);
-    }
-}
+type ElfStringTable = unit {
+    strings: array of string &until = eos;
+};

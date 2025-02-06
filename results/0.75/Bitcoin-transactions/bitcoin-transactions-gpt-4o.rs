@@ -1,144 +1,135 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_opt, map_res},
-    multi::{length_data, many0, many1},
-    number::complete::{le_i32, le_u32, le_u64, le_u8},
-    sequence::{preceded, tuple},
+    bytes::complete::take,
+    combinator::map_opt,
+    multi::count,
+    number::complete::{le_u32, le_u64, le_u8},
     IResult,
 };
 use std::env;
-use std::fs::File;
+use std::fs;
 use std::io::{self, Read};
 
 #[derive(Debug)]
-struct BitcoinTransaction {
+struct Transaction {
     version: u32,
-    flag: Option<u16>,
-    inputs: Vec<TxInput>,
-    outputs: Vec<TxOutput>,
-    witnesses: Option<Vec<Vec<Vec<u8>>>>,
-    lock_time: u32,
+    inputs: Vec<Input>,
+    outputs: Vec<Output>,
+    locktime: u32,
 }
 
 #[derive(Debug)]
-struct TxInput {
-    previous_output: OutPoint,
+struct Input {
+    prev_tx_hash: [u8; 32],
+    output_index: u32,
     script_sig: Vec<u8>,
     sequence: u32,
 }
 
 #[derive(Debug)]
-struct OutPoint {
-    hash: [u8; 32],
-    index: u32,
-}
-
-#[derive(Debug)]
-struct TxOutput {
+struct Output {
     value: u64,
     script_pubkey: Vec<u8>,
 }
 
-fn var_int(input: &[u8]) -> IResult<&[u8], u64> {
+fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
     let (input, first_byte) = le_u8(input)?;
     match first_byte {
-        0xFD => map(le_u16, |x| x as u64)(input),
-        0xFE => map(le_u32, |x| x as u64)(input),
-        0xFF => le_u64(input),
-        x => Ok((input, x as u64)),
+        0xFD => {
+            let (input, value) = nom::number::complete::le_u16(input)?;
+            Ok((input, value as u64))
+        }
+        0xFE => {
+            let (input, value) = nom::number::complete::le_u32(input)?;
+            Ok((input, value as u64))
+        }
+        0xFF => nom::number::complete::le_u64(input),
+        _ => Ok((input, first_byte as u64)),
     }
 }
 
-fn parse_out_point(input: &[u8]) -> IResult<&[u8], OutPoint> {
-    let (input, (hash, index)) = tuple((take(32usize), le_u32))(input)?;
-    let hash_array: [u8; 32] = hash.try_into().unwrap();
-    Ok((input, OutPoint { hash: hash_array, index }))
+fn parse_input(input: &[u8]) -> IResult<&[u8], Input> {
+    let (input, prev_tx_hash) = take(32usize)(input)?;
+    let (input, output_index) = le_u32(input)?;
+    let (input, script_len) = parse_varint(input)?;
+    let (input, script_sig) = take(script_len)(input)?;
+    let (input, sequence) = le_u32(input)?;
+    Ok((
+        input,
+        Input {
+            prev_tx_hash: {
+                let mut hash = [0u8; 32];
+                hash.copy_from_slice(prev_tx_hash);
+                hash
+            },
+            output_index,
+            script_sig: script_sig.to_vec(),
+            sequence,
+        },
+    ))
 }
 
-fn parse_tx_input(input: &[u8]) -> IResult<&[u8], TxInput> {
-    let (input, (previous_output, script_sig, sequence)) = tuple((
-        parse_out_point,
-        length_data(var_int),
-        le_u32,
-    ))(input)?;
-    Ok((input, TxInput {
-        previous_output,
-        script_sig: script_sig.to_vec(),
-        sequence,
-    }))
+fn parse_output(input: &[u8]) -> IResult<&[u8], Output> {
+    let (input, value) = le_u64(input)?;
+    let (input, script_len) = parse_varint(input)?;
+    let (input, script_pubkey) = take(script_len)(input)?;
+    Ok((
+        input,
+        Output {
+            value,
+            script_pubkey: script_pubkey.to_vec(),
+        },
+    ))
 }
 
-fn parse_tx_output(input: &[u8]) -> IResult<&[u8], TxOutput> {
-    let (input, (value, script_pubkey)) = tuple((le_u64, length_data(var_int)))(input)?;
-    Ok((input, TxOutput {
-        value,
-        script_pubkey: script_pubkey.to_vec(),
-    }))
-}
-
-fn parse_transaction(input: &[u8]) -> IResult<&[u8], BitcoinTransaction> {
+fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
     let (input, version) = le_u32(input)?;
-    let mut input_mut = input;
-    let mut flag = None;
-    let segwit = if let Ok((new_input, marker)) = le_u8(input_mut) {
-        if marker == 0 {
-            let (new_input, new_flag) = le_u8(new_input)?;
-            if new_flag == 1 {
-                flag = Some(new_flag as u16);
-                input_mut = new_input;
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
+
+    let (input, marker_or_input_count) = le_u8(input)?;
+    let (input, flag_or_remaining) = le_u8(input)?;
+
+    let (input, inputs, is_segwit) = if marker_or_input_count == 0 && flag_or_remaining == 1 {
+        let (input, input_count) = parse_varint(input)?;
+        let (input, inputs) = count(parse_input, input_count as usize)(input)?;
+        (input, inputs, true)
     } else {
-        false
+        let (remaining, inputs) = count(parse_input, marker_or_input_count as usize)(input)?;
+        (remaining, inputs, false)
     };
 
-    let (input, inputs) = length_count(var_int, parse_tx_input)(input_mut)?;
-    let (input, outputs) = length_count(var_int, parse_tx_output)(input)?;
+    let (input, output_count) = parse_varint(input)?;
+    let (input, outputs) = count(parse_output, output_count as usize)(input)?;
 
-    let mut witnesses = None;
-    let input = if segwit {
-        let (input, witness_data) = many_m_n(inputs.len(), inputs.len(), length_count(var_int, length_data(var_int)))(input)?;
-        witnesses = Some(witness_data);
-        input
-    } else {
-        input
-    };
+    let (input, locktime) = le_u32(input)?;
 
-    let (input, lock_time) = le_u32(input)?;
-    Ok((input, BitcoinTransaction {
-        version,
-        flag,
-        inputs,
-        outputs,
-        witnesses,
-        lock_time,
-    }))
+    // SegWit transactions have witness data here, but we just ignore it for simplicity.
+
+    Ok((
+        input,
+        Transaction {
+            version,
+            inputs,
+            outputs,
+            locktime,
+        },
+    ))
 }
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file>", args[0]);
         return Ok(());
     }
-    
-    let mut file = File::open(&args[1])?;
+
+    let filename = &args[1];
+    let mut file = fs::File::open(filename)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
     match parse_transaction(&buffer) {
-        Ok((_, transaction)) => {
-            println!("{:#?}", transaction);
-        }
-        Err(e) => {
-            eprintln!("Failed to parse transaction: {:?}", e);
-        }
+        Ok((_, tx)) => println!("{:?}", tx),
+        Err(e) => eprintln!("Failed to parse transaction: {:?}", e),
     }
-    
+
     Ok(())
 }

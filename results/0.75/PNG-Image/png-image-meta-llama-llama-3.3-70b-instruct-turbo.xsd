@@ -1,65 +1,224 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/PNG-Image"
-           xmlns:tns="http://example.com/PNG-Image"
-           elementFormDefault="qualified">
-
-  <xs:element name="png-image-meta">
+           targetNamespace="http://www.example.org/PNG"
+           xmlns="http://www.example.org/PNG"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           blockDefault="#all"
+           finalDefault="#all"
+           id="PNGSchema">
+  <xs:element name="PNG">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format dfdl:name="PNG" dfdl:sequence="true" dfdl:lengthKind="explicit"/>
+      </xs:appinfo>
+    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="signature" type="tns:png-signature" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="ihdr" type="tns:ihdr-chunk" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="idat" type="tns:idat-chunk" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="iend" type="tns:iend-chunk" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+        <xs:element name="Signature" type="SignatureType"/>
+        <xs:element name="Chunks" type="ChunksType" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="png-signature">
-    <xs:complexContent>
-      <xs:restriction base="xs:byte">
-        <xs:pattern value="89504E470D0A1A0A"/>
-      </xs:restriction>
-    </xs:complexContent>
-  </xs:complexType>
-
-  <xs:complexType name="ihdr-chunk">
+  <xs:complexType name="SignatureType">
     <xs:sequence>
-      <xs:element name="length" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="type" type="tns:chunk-type" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="width" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="height" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="bit-depth" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="color-type" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="filter-method" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="interlace-method" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="crc" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="Value" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Signature" dfdl:sequence="false" dfdl:length="8" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="idat-chunk">
+  <xs:complexType name="ChunksType">
     <xs:sequence>
-      <xs:element name="length" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="type" type="tns:chunk-type" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="data" type="xs:base64Binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="crc" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="Length" type="xs:unsignedInt">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Length" dfdl:sequence="false" dfdl:length="4" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Type" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Type" dfdl:sequence="false" dfdl:length="4" dfdl:encoding="ASCII"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Data" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Data" dfdl:sequence="false" dfdl:length="100" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CRC" type="xs:unsignedInt">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="CRC" dfdl:sequence="false" dfdl:length="4" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="iend-chunk">
+  <xs:element name="IHDR">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Width" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="Width" dfdl:sequence="false" dfdl:length="4" dfdl:encoding="binary"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Height" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="Height" dfdl:sequence="false" dfdl:length="4" dfdl:encoding="binary"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="BitDepth" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="BitDepth" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+              <dfdl:assert>_value = 1 or _value = 2 or _value = 4 or _value = 8 or _value = 16</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="ColorType" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="ColorType" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+              <dfdl:assert>_value = 0 or _value = 2 or _value = 3 or _value = 4 or _value = 6</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="CompressionMethod" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+              <dfdl:assert>_value = 0</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="FilterMethod" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="FilterMethod" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+              <dfdl:assert>_value = 0</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="InterlaceMethod" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="InterlaceMethod" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+              <dfdl:assert>_value = 0 or _value = 1</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="PLTE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PaletteEntries" type="PaletteEntriesType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="PaletteEntriesType">
     <xs:sequence>
-      <xs:element name="length" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="type" type="tns:chunk-type" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="crc" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="Red" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Red" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Green" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Green" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Blue" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Blue" dfdl:sequence="false" dfdl:length="1" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:simpleType name="chunk-type">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="[A-Z][A-Z][A-Z][A-Z]"/>
-    </xs:restriction>
-  </xs:simpleType>
-
+  <xs:element name="tRNS">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransparencyEntries" type="TransparencyEntriesType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="TransparencyEntriesType">
+    <xs:sequence>
+      <xs:element name="Gray" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Gray" dfdl:sequence="false" dfdl:length="2" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Red" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Red" dfdl:sequence="false" dfdl:length="2" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Green" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Green" dfdl:sequence="false" dfdl:length="2" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Blue" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:format dfdl:name="Blue" dfdl:sequence="false" dfdl:length="2" dfdl:encoding="binary"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="IDAT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CompressedImageData" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="CompressedImageData" dfdl:sequence="false" dfdl:length="100" dfdl:encoding="binary"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="IEND">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Empty" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format dfdl:name="Empty" dfdl:sequence="false" dfdl:length="0" dfdl:encoding="binary"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

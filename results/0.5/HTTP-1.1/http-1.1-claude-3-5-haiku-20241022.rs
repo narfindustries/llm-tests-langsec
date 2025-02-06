@@ -1,13 +1,11 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_while, take_while1},
-    character::complete::{char, digit1, line_ending, not_line_ending},
+    bytes::complete::{tag, take_until, take_while, take_while1},
+    character::complete::{char, digit1, line_ending, not_line_ending, space0, space1},
     combinator::{map, opt, recognize},
-    multi::{many0, many1, separated_list0},
-    sequence::{preceded, separated_pair, terminated, tuple},
-    IResult,
-    error::Error,
-    Parser,
+    multi::{many0, many1},
+    sequence::{delimited, pair, preceded, separated_pair, tuple},
+    IResult, Parser,
 };
 use std::collections::HashMap;
 use std::env;
@@ -15,98 +13,141 @@ use std::fs;
 use std::str;
 
 #[derive(Debug)]
-struct HttpRequest<'a> {
-    method: &'a str,
-    uri: &'a str,
-    version: &'a str,
-    headers: HashMap<&'a str, &'a str>,
-    body: Option<&'a [u8]>,
+struct HttpRequest {
+    method: String,
+    uri: String,
+    version: String,
+    headers: HashMap<String, String>,
+    body: Option<Vec<u8>>,
 }
 
-fn parse_method(input: &[u8]) -> IResult<&[u8], &str> {
+#[derive(Debug)]
+struct HttpResponse {
+    version: String,
+    status_code: u16,
+    status_text: String,
+    headers: HashMap<String, String>,
+    body: Option<Vec<u8>>,
+}
+
+fn parse_method(input: &[u8]) -> IResult<&[u8], String> {
     alt((
-        map(tag(b"GET"), |_| "GET"),
-        map(tag(b"POST"), |_| "POST"),
-        map(tag(b"PUT"), |_| "PUT"),
-        map(tag(b"DELETE"), |_| "DELETE"),
-        map(tag(b"HEAD"), |_| "HEAD"),
-        map(tag(b"OPTIONS"), |_| "OPTIONS"),
-        map(tag(b"TRACE"), |_| "TRACE"),
-        map(tag(b"CONNECT"), |_| "CONNECT"),
-        map(tag(b"PATCH"), |_| "PATCH"),
+        map(tag("GET"), |_| "GET".to_string()),
+        map(tag("POST"), |_| "POST".to_string()),
+        map(tag("HEAD"), |_| "HEAD".to_string()),
+        map(tag("PUT"), |_| "PUT".to_string()),
+        map(tag("DELETE"), |_| "DELETE".to_string()),
+        map(tag("TRACE"), |_| "TRACE".to_string()),
+        map(tag("OPTIONS"), |_| "OPTIONS".to_string()),
+        map(tag("CONNECT"), |_| "CONNECT".to_string()),
     ))(input)
 }
 
-fn parse_uri(input: &[u8]) -> IResult<&[u8], &str> {
-    map(take_while1(|c: u8| c != b' '), |uri| str::from_utf8(uri).unwrap())(input)
-}
-
-fn parse_version(input: &[u8]) -> IResult<&[u8], &str> {
+fn parse_uri(input: &[u8]) -> IResult<&[u8], String> {
     map(
-        recognize(tuple((
-            tag(b"HTTP/"),
-            digit1,
-            char('.'),
-            digit1,
-        ))),
-        |version| str::from_utf8(version).unwrap(),
+        take_while1(|c: u8| c != b' ' && c != b'\r' && c != b'\n'),
+        |uri: &[u8]| String::from_utf8_lossy(uri).to_string(),
     )(input)
 }
 
-fn parse_header(input: &[u8]) -> IResult<&[u8], (&str, &str)> {
-    separated_pair(
-        map(take_while1(|c: u8| c != b':'), |name| str::from_utf8(name).unwrap()),
-        tuple((char(':'), take_while(|c: u8| c == b' '))),
-        map(not_line_ending, |value| str::from_utf8(value).unwrap())
-    )(input)
+fn parse_http_version(input: &[u8]) -> IResult<&[u8], String> {
+    alt((
+        map(tag("HTTP/1.1"), |_| "HTTP/1.1".to_string()),
+        map(tag("HTTP/1.0"), |_| "HTTP/1.0".to_string()),
+    ))(input)
 }
 
-fn parse_headers(input: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
-    map(
-        many0(terminated(parse_header, line_ending)),
-        |headers| headers.into_iter().collect()
-    )(input)
+fn parse_header(input: &[u8]) -> IResult<&[u8], (String, String)> {
+    let (input, key) = take_while1(|c: u8| c != b':')(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, _) = space0(input)?;
+    let (input, value) = not_line_ending(input)?;
+    let (input, _) = line_ending(input)?;
+
+    Ok((
+        input,
+        (
+            String::from_utf8_lossy(key).to_lowercase(),
+            String::from_utf8_lossy(value).trim().to_string(),
+        ),
+    ))
 }
 
-fn parse_body(input: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
-    opt(preceded(line_ending, take_while(|_| true)))(input)
+fn parse_headers(input: &[u8]) -> IResult<&[u8], HashMap<String, String>> {
+    map(many0(parse_header), |headers| {
+        headers.into_iter().collect::<HashMap<_, _>>()
+    })(input)
 }
 
 fn parse_http_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
-    map(
-        tuple((
-            terminated(parse_method, char(' ')),
-            terminated(parse_uri, char(' ')),
-            terminated(parse_version, line_ending),
-            parse_headers,
-            parse_body,
-        )),
-        |(method, uri, version, headers, body)| HttpRequest {
-            method,
-            uri,
-            version,
-            headers,
-            body,
-        }
-    )(input)
+    let (input, method) = parse_method(input)?;
+    let (input, _) = space1(input)?;
+    let (input, uri) = parse_uri(input)?;
+    let (input, _) = space1(input)?;
+    let (input, version) = parse_http_version(input)?;
+    let (input, _) = line_ending(input)?;
+    let (input, headers) = parse_headers(input)?;
+    let (input, _) = line_ending(input)?;
+
+    let (input, body) = opt(take_while(|_| true))(input)?;
+
+    Ok((input, HttpRequest {
+        method,
+        uri,
+        version,
+        headers,
+        body: body.map(|b| b.to_vec()),
+    }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn parse_status_code(input: &[u8]) -> IResult<&[u8], u16> {
+    map(recognize(take_while1(|c: u8| c >= b'0' && c <= b'9')), |code: &[u8]| {
+        str::from_utf8(code).unwrap().parse().unwrap()
+    })(input)
+}
+
+fn parse_status_text(input: &[u8]) -> IResult<&[u8], String> {
+    map(not_line_ending, |text: &[u8]| {
+        String::from_utf8_lossy(text).to_string()
+    })(input)
+}
+
+fn parse_http_response(input: &[u8]) -> IResult<&[u8], HttpResponse> {
+    let (input, version) = parse_http_version(input)?;
+    let (input, _) = space1(input)?;
+    let (input, status_code) = parse_status_code(input)?;
+    let (input, _) = space1(input)?;
+    let (input, status_text) = parse_status_text(input)?;
+    let (input, _) = line_ending(input)?;
+    let (input, headers) = parse_headers(input)?;
+    let (input, _) = line_ending(input)?;
+
+    let (input, body) = opt(take_while(|_| true))(input)?;
+
+    Ok((input, HttpResponse {
+        version,
+        status_code,
+        status_text,
+        headers,
+        body: body.map(|b| b.to_vec()),
+    }))
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }
 
-    let input = fs::read(&args[1])?;
-    match parse_http_request(&input) {
-        Ok((_, request)) => {
-            println!("Parsed HTTP Request: {:?}", request);
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Parsing error: {:?}", e);
-            std::process::exit(1);
-        }
+    let input_file = &args[1];
+    let input_data = fs::read(input_file).expect("Failed to read input file");
+
+    match parse_http_request(&input_data) {
+        Ok((_, request)) => println!("Parsed HTTP Request: {:?}", request),
+        Err(_) => match parse_http_response(&input_data) {
+            Ok((_, response)) => println!("Parsed HTTP Response: {:?}", response),
+            Err(_) => eprintln!("Failed to parse HTTP message"),
+        },
     }
 }

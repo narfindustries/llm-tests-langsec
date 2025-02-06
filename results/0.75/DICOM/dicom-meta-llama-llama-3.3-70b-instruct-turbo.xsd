@@ -1,49 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dicom"
-           xmlns="http://example.com/dicom"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="DicomMeta">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="DicomTag" minOccurs="0" maxOccurs="unbounded" dfdl:occursCount="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="DicomTag">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="tag" type="xs:hexBinary" dfdl:length="4"/>
-        <xs:element name="vr" type="xs:string" dfdl:length="2"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="4"/>
-        <xs:element name="value" type="xs:string" dfdl:length="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:simpleType name="uint16">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="65535"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:simpleType name="uint32">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="4294967295"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <dfdl:format xmlNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" xmlPrefix="dfdl">
-    <dfdl:property name="encoding" value="ISO-8859-1"/>
-    <dfdl:property name="sequence" value="strict"/>
-    <dfdl:property name="requireStartOfExpression" value="true"/>
-  </dfdl:format>
-
+           xmlns:dicom="http://dicom.nema.org/"
+           targetNamespace="http://dicom.nema.org/"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:element name="dicom" type="dicom:dicomType"/>
+  <xs:complexType name="dicomType">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationGroupLength" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="FileMetaInformationVersion" type="xs:unsignedShort" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="TransferSyntaxUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SourceApplicationEntityTitle" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SendingApplicationEntityTitle" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReceivingApplicationEntityTitle" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateInformationCreatorUID" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="patient" type="dicom:patientType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="study" type="dicom:studyType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="series" type="dicom:seriesType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="image" type="dicom:imageType" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="patientType">
+    <xs:sequence>
+      <xs:element name="PatientName" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientBirthDate" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientSex" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientAge" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientSize" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientWeight" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Occupation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AdditionalPatientHistory" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientComments" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivatePatientInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="studyType">
+    <xs:sequence>
+      <xs:element name="StudyInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyDate" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyTime" type="xs:time" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ReferringPhysicianName" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ReferringPhysicianIdentification" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="StudyDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="StudyComments" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateStudyInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="seriesType">
+    <xs:sequence>
+      <xs:element name="SeriesInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesNumber" type="xs:unsignedShort" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesDate" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesTime" type="xs:time" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Modality" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SeriesComments" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateSeriesInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="imageType">
+    <xs:sequence>
+      <xs:element name="SOPInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageType" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImagePositionPatient" type="xs:float" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageOrientationPatient" type="xs:float" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageComments" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PrivateImageInformation" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PixelData" type="xs:hexBinary" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

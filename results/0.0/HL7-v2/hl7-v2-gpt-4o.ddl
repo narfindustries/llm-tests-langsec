@@ -1,58 +1,123 @@
-module HL7V2
+namespace HL7v2
 
-import Text
-
-type Message = {
-    segments: List Segment
+type MSH = record {
+    field_separator: char,
+    encoding_characters: string,
+    sending_application: string,
+    sending_facility: string,
+    receiving_application: string,
+    receiving_facility: string,
+    datetime_of_message: string,
+    security: optional string,
+    message_type: string,
+    message_control_id: string,
+    processing_id: string,
+    version_id: string,
+    sequence_number: optional string,
+    continuation_pointer: optional string,
+    accept_acknowledgment_type: optional string,
+    application_acknowledgment_type: optional string,
+    country_code: optional string,
+    character_set: optional string,
+    principal_language_of_message: optional string,
+    alternate_character_set_handling_scheme: optional string
 }
 
-type Segment = {
-    id: String(3),
-    fields: List Field
+type PID = record {
+    set_id: optional string,
+    patient_id: optional string,
+    patient_identifier_list: string,
+    alternate_patient_id: optional string,
+    patient_name: string,
+    mother's_maiden_name: optional string,
+    datetime_of_birth: string,
+    administrative_sex: string,
+    patient_alias: optional string,
+    race: optional string,
+    patient_address: optional string,
+    county_code: optional string,
+    phone_number_home: optional string,
+    phone_number_business: optional string,
+    primary_language: optional string,
+    marital_status: optional string,
+    religion: optional string,
+    patient_account_number: optional string,
+    ssn_number: optional string,
+    driver's_license_number: optional string,
+    mother's_identifier: optional string,
+    ethnic_group: optional string,
+    birth_place: optional string,
+    multiple_birth_indicator: optional string,
+    birth_order: optional string,
+    citizenship: optional string,
+    veterans_military_status: optional string,
+    nationality: optional string,
+    patient_death_date_and_time: optional string,
+    patient_death_indicator: optional string
 }
 
-type Field = {
-    components: List Component
+type OBR = record {
+    set_id: optional string,
+    placer_order_number: optional string,
+    filler_order_number: optional string,
+    universal_service_identifier: string,
+    priority: optional string,
+    requested_datetime: optional string,
+    observation_datetime: optional string,
+    observation_end_datetime: optional string,
+    collection_volume: optional string,
+    collector_identifier: optional string,
+    specimen_action_code: optional string,
+    danger_code: optional string,
+    relevant_clinical_information: optional string,
+    specimen_received_datetime: optional string,
+    specimen_source: optional string,
+    ordering_provider: optional string,
+    order_callback_phone_number: optional string,
+    placer_field_1: optional string,
+    placer_field_2: optional string,
+    filler_field_1: optional string,
+    filler_field_2: optional string,
+    results_rpt_status_chng_datetime: optional string,
+    charge_to_practice: optional string,
+    diagnostic_serv_sect_id: optional string,
+    result_status: optional string,
+    parent_result: optional string,
+    quantity_timing: optional string,
+    result_copies_to: optional string,
+    parent: optional string,
+    transportation_mode: optional string,
+    reason_for_study: optional string,
+    principal_result_interpreter: optional string,
+    assistant_result_interpreter: optional string,
+    technician: optional string,
+    transcriptionist: optional string,
+    scheduled_datetime: optional string,
+    number_of_sample_containers: optional string,
+    transport_logistics_of_collected_sample: optional string,
+    collector_comment: optional string,
+    transport_arrangement_responsibility: optional string,
+    transport_arranged: optional string,
+    escort_required: optional string,
+    planned_patient_transport_comment: optional string
 }
 
-type Component = {
-    subcomponents: List Subcomponent
-}
-
-type Subcomponent = {
-    value: String
-}
-
-parser HL7V2Parser {
-    message: Message = {
-        segments: many1(segment)
-    }
-
-    segment: Segment = {
-        id: take(3),
-        fields: many1(field)
-    }
-
-    field: Field = {
-        components: many1(component)
-    }
-
-    component: Component = {
-        subcomponents: many1(subcomponent)
-    }
-
-    subcomponent: Subcomponent = {
-        value: takeWhile1(notChar('|'))
-    }
-
-    takeWhile1: (Char -> Bool) -> String = \pred -> {
-        result <- takeWhile(pred)
-        if (length(result) == 0) {
-            fail("Expected at least one character")
-        } else {
-            return result
-        }
-    }
-
-    notChar: Char -> Char -> Bool = \c1 c2 -> c1 /= c2
+type OBX = record {
+    set_id: optional string,
+    value_type: string,
+    observation_identifier: string,
+    observation_sub_id: optional string,
+    observation_value: string,
+    units: optional string,
+    references_range: optional string,
+    abnormal_flags: optional string,
+    probability: optional string,
+    nature_of_abnormal_test: optional string,
+    observation_result_status: string,
+    effective_date_of_reference_range: optional string,
+    user_defined_access_checks: optional string,
+    datetime_of_the_observation: optional string,
+    producer_id: optional string,
+    responsible_observer: optional string,
+    observation_method: optional string
 }

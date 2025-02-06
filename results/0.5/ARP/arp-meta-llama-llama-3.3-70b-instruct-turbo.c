@@ -1,92 +1,97 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the ARP packet structure
+#define ARP_ETHERNET 1
+#define ARP_IPV4 0x0800
+#define ARP_REQUEST 1
+#define ARP_REPLY 2
+
 typedef struct {
-    uint16_t hw_type;
-    uint16_t proto_type;
-    uint8_t hw_addr_len;
-    uint8_t proto_addr_len;
-    uint16_t op_code;
-    uint8_t sender_hw_addr[6];
-    uint8_t sender_proto_addr[4];
-    uint8_t target_hw_addr[6];
-    uint8_t target_proto_addr[4];
-} __attribute__((packed)) arp_packet_t;
+    uint16_t htype;
+    uint16_t ptype;
+    uint8_t hlen;
+    uint8_t plen;
+    uint16_t oper;
+    uint8_t sha[6];
+    uint32_t spa;
+    uint8_t tha[6];
+    uint32_t tpa;
+} arp_packet_t;
 
-// Define the Ethernet frame structure
-typedef struct {
-    uint8_t dest_mac[6];
-    uint8_t src_mac[6];
-    uint16_t eth_type;
-    arp_packet_t arp;
-} __attribute__((packed)) eth_frame_t;
-
-int main() {
-    // Create an example ARP packet
-    arp_packet_t arp = {
-        .hw_type = 0x0001, // Ethernet
-        .proto_type = 0x0800, // IPv4
-        .hw_addr_len = 6, // MAC address length
-        .proto_addr_len = 4, // IPv4 address length
-        .op_code = 0x0001, // Request
-        .sender_hw_addr = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-        .sender_proto_addr = {0x00, 0x00, 0x00, 0x00},
-        .target_hw_addr = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-        .target_proto_addr = {0x00, 0x00, 0x00, 0x00}
-    };
-
-    // Create an example Ethernet frame
-    eth_frame_t frame = {
-        .dest_mac = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-        .src_mac = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-        .eth_type = 0x0806, // ARP
-        .arp = arp
-    };
-
-    // Print the Ethernet frame
-    printf("Ethernet Frame:\n");
-    printf("Destination MAC: ");
-    for (int i = 0; i < 6; i++) {
-        printf("%02x:", frame.dest_mac[i]);
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
-    printf("\n");
-    printf("Source MAC: ");
-    for (int i = 0; i < 6; i++) {
-        printf("%02x:", frame.src_mac[i]);
-    }
-    printf("\n");
-    printf("Ethernet Type: 0x%04x\n", frame.eth_type);
 
-    // Print the ARP packet
-    printf("ARP Packet:\n");
-    printf("Hardware Type: 0x%04x\n", frame.arp.hw_type);
-    printf("Protocol Type: 0x%04x\n", frame.arp.proto_type);
-    printf("Hardware Address Length: %d\n", frame.arp.hw_addr_len);
-    printf("Protocol Address Length: %d\n", frame.arp.proto_addr_len);
-    printf("Op Code: 0x%04x\n", frame.arp.op_code);
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("fopen");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *data = malloc(file_size);
+    if (!data) {
+        perror("malloc");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(data, 1, file_size, file);
+    if (bytes_read != file_size) {
+        perror("fread");
+        free(data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    HParser *arp_packet = h_sequence(
+        h_bind_uint16("htype"),
+        h_bind_uint16("ptype"),
+        h_bind_uint8("hlen"),
+        h_bind_uint8("plen"),
+        h_bind_uint16("oper"),
+        h_bind_array("sha", 6, h_bind_uint8(NULL)),
+        h_bind_uint32("spa"),
+        h_bind_array("tha", 6, h_bind_uint8(NULL)),
+        h_bind_uint32("tpa")
+    );
+
+    arp_packet_t packet;
+    HParseResult *result = h_parse(arp_packet, data, file_size);
+    if (result == NULL) {
+        printf("Parse error\n");
+        free(data);
+        return 1;
+    }
+
+    printf("Hardware Type: %u\n", packet.htype);
+    printf("Protocol Type: 0x%04x\n", packet.ptype);
+    printf("Hardware Address Length: %u\n", packet.hlen);
+    printf("Protocol Address Length: %u\n", packet.plen);
+    printf("Operation: %u\n", packet.oper);
     printf("Sender Hardware Address: ");
     for (int i = 0; i < 6; i++) {
-        printf("%02x:", frame.arp.sender_hw_addr[i]);
+        printf("%02x:", packet.sha[i]);
     }
     printf("\n");
-    printf("Sender Protocol Address: ");
-    for (int i = 0; i < 4; i++) {
-        printf("%02x:", frame.arp.sender_proto_addr[i]);
-    }
-    printf("\n");
+    printf("Sender Protocol Address: 0x%08x\n", packet.spa);
     printf("Target Hardware Address: ");
     for (int i = 0; i < 6; i++) {
-        printf("%02x:", frame.arp.target_hw_addr[i]);
+        printf("%02x:", packet.tha[i]);
     }
     printf("\n");
-    printf("Target Protocol Address: ");
-    for (int i = 0; i < 4; i++) {
-        printf("%02x:", frame.arp.target_proto_addr[i]);
-    }
-    printf("\n");
+    printf("Target Protocol Address: 0x%08x\n", packet.tpa);
 
+    free(data);
     return 0;
 }

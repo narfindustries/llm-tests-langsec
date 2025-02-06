@@ -1,62 +1,10 @@
-#ifndef _ICMP_GEMINI_1_H_
-#define _ICMP_GEMINI_1_H_
+module ICMP;
 
-#include <zeek/analyzer/protocol/icmp.h>
-
-namespace ICMP {
-
-class Gemini1 : public ICMP::ICMP_Analyzer {
-public:
-	Gemini1();
-	~Gemini1() override;
-
-	void Init() override;
-	void Done() override;
-	void Analyze(ICMP::ICMP_Packet *pkt) override;
-
-private:
-	// Add any necessary private members here.
+type ICMP_packet {
+	uint8 type;
+	uint8 code;
+	uint16 checksum;
+	uint16 identifier;
+	uint16 sequence_number;
+	bytes data;
 };
-
-} // namespace ICMP
-
-#endif // _ICMP_GEMINI_1_H_
-
-
-#include "icmp-gemini-1.h"
-
-namespace ICMP {
-
-Gemini1::Gemini1() {
-	// Constructor implementation
-}
-
-Gemini1::~Gemini1() {
-	// Destructor implementation
-}
-
-void Gemini1::Init() {
-	// Initialization implementation
-}
-
-void Gemini1::Done() {
-	// Cleanup implementation
-}
-
-void Gemini1::Analyze(ICMP::ICMP_Packet *pkt) {
-	// Add your ICMP packet analysis logic here.
-	// Example: Check for specific ICMP types and codes.
-	if (pkt->type == ICMP::TYPE_ECHO_REQUEST) {
-		// Handle echo request packets
-		// Access packet data using pkt->data, pkt->len, etc.
-	} else if (pkt->type == ICMP::TYPE_ECHO_REPLY) {
-		// Handle echo reply packets
-	} else {
-		// Handle other ICMP types
-	}
-}
-
-} // namespace ICMP
-
-// Register the analyzer
-register_analyzer(ICMP::Gemini1);

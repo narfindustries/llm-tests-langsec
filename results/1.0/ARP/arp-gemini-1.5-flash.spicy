@@ -1,38 +1,13 @@
-#ifndef ARP_GEMINI_1_H
-#define ARP_GEMINI_1_H
+module ARP;
 
-#include <stdint.h>
-
-typedef struct {
-    uint16_t hardware_type;
-    uint16_t protocol_type;
-    uint8_t hardware_addr_len;
-    uint8_t protocol_addr_len;
-    uint16_t opcode;
-    uint8_t sender_hardware_addr[6];
-    uint32_t sender_protocol_addr;
-    uint8_t target_hardware_addr[6];
-    uint32_t target_protocol_addr;
-} arp_packet;
-
-#endif
-
-#include "arp_gemini_1.h"
-
-event zeek_arp_handler(arp_packet p) {
-  //Process ARP Packet
-  if(p.opcode == 1){
-      //ARP Request
-      //Handle ARP Request
-  } else if(p.opcode == 2){
-      //ARP Reply
-      //Handle ARP Reply
-  }
-  // Add more specific handling of ARP requests and replies
-  //Consider using Zeek's built-in functions to handle IP and MAC addresses
-}
-
-export {
-  // Add export statements for the new functions,
-  // potentially including details of events or other exposed elements
+type arp {
+    hw_type: uint16 = 0;
+    proto_type: uint16 = 0;
+    hw_len: uint8 = 0;
+    proto_len: uint8 = 0;
+    op: uint16 = 0;
+    sha: bytes;
+    spa: bytes;
+    tha: bytes;
+    tpa: bytes;
 }

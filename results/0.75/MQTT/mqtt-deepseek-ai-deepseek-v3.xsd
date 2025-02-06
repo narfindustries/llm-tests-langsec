@@ -1,0 +1,207 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/mqtt" xmlns:mqtt="http://example.com/mqtt" elementFormDefault="qualified">
+
+  <!-- Fixed Header -->
+  <xs:element name="FixedHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketType" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Flags" type极轴
+        <xs:element name="RemainingLength" type="mqtt:VariableByteInteger"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Variable Byte Integer -->
+  <xs:simpleType name="VariableByteInteger">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="([0-7F]|8[0-7F]{1,3})*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- CONNECT Packet -->
+  <xs:element name="CONNECT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ProtocolName" type="xs:string"/>
+        <xs:element name="ProtocolVersion" type="xs:unsignedByte"/>
+        <xs:element name="ConnectFlags" type="xs:unsignedByte"/>
+        <xs:element name="KeepAlive" type="xs:unsignedShort"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+        <xs:element name极轴
+        <xs:element name="ClientIdentifier" type="xs:string"/>
+        <xs:element name="WillTopic" type="xs:string" minOccurs="0"/>
+        <xs:element name="WillPayload" type="xs:hexBinary" minOccurs="0"/>
+        <xs:element name="UserName" type="xs:string" minOccurs="0"/>
+        <xs:element name="Password" type="xs:hexBinary" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- CONNACK Packet -->
+  <xs:element name="CONNACK">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SessionPresent" type="xs:unsignedByte"/>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PUBLISH Packet -->
+  <xs:element name="PUBLISH">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TopicName" type="xs:string"/>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort" minOccurs="0"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+        <xs:element name="Payload" type="xs:hexBinary" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PUBACK Packet -->
+  <xs:element name="PUBACK">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PUBREC Packet -->
+  <xs:element name="PUBREC">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier极轴
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PUBREL Packet -->
+  <xs:element name="PUBREL">
+   极轴
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PUBCOMP Packet -->
+  <xs:element name="PUBCOMP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- SUBSCRIBE Packet -->
+  <xs:element name="SUBSCRIBE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+        <xs:element name="TopicFilters" type="mqtt:TopicFilterList"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- SUBACK Packet -->
+  <xs:element name="SUBACK">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="ReasonCodes" type="mqtt:ReasonCodeList"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- UNSUBSCRIBE Packet -->
+  <xs:element name="UNSUBSCRIBE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+        <xs:element name="TopicFilters" type="mqtt:TopicFilterList"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- UNSUBACK Packet -->
+  <xs:element name="UNSUBACK">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element name="ReasonCodes" type="mqtt:ReasonCodeList"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PINGREQ Packet -->
+  <xs:element name="PINGREQ">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- PINGRESP Packet -->
+  <xs:element name="PINGRESP">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- DISCONNECT Packet -->
+  <xs:element name="DISCONNECT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- AUTH Packet -->
+  <xs:element name="AUTH">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+        <xs:element name="Properties" type="mqtt:Properties" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Properties -->
+  <xs:complexType name="Properties">
+    <xs:sequence>
+      <xs:element name="Property" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Identifier" type="xs:unsignedByte"/>
+            <xs:element name="Value" type="xs:hexBinary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Topic Filter List -->
+  <xs:complexType name="TopicFilterList">
+    <xs:sequence>
+      <xs:element name="TopicFilter" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Filter" type="xs:string"/>
+            <xs:element name="QoS" type极

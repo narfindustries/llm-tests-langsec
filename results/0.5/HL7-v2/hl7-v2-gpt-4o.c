@@ -1,57 +1,84 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *create_hl7_v2_parser() {
-    // Define the basic elements
-    HParser *digit = h_ch_range('0', '9');
-    HParser *dot = h_ch('.');
-    HParser *dash = h_ch('-');
-    HParser *colon = h_ch(':');
-    HParser *space = h_ch(' ');
-    HParser *newline = h_ch('\n');
-    HParser *carriage_return = h_ch('\r');
+// Function prototypes for creating parsers
+HParser *create_field_separator();
+HParser *create_field();
+HParser *create_segment_name();
+HParser *create_segment();
+HParser *create_hl7_message();
 
-    // Define HL7 delimiters
-    HParser *field_separator = h_ch('|');
-    HParser *component_separator = h_ch('^');
-    HParser *repetition_separator = h_ch('~');
-    HParser *escape_character = h_ch('\\');
-    HParser *subcomponent_separator = h_ch('&');
-
-    // Define alphanumeric and special characters
-    HParser *alpha = h_choice(h_ch_range('A', 'Z'), h_ch_range('a', 'z'), NULL);
-    HParser *alphanumeric = h_choice(alpha, digit, NULL);
-    HParser *special_chars = h_choice(dot, dash, colon, space, NULL);
-    HParser *text_data = h_many1(h_choice(alphanumeric, special_chars, NULL));
-
-    // Define HL7 segment terminator
-    HParser *segment_terminator = h_choice(newline, carriage_return, NULL);
-
-    // Define a field
-    HParser *field = h_many1(h_choice(alphanumeric, special_chars, NULL));
-
-    // Define a segment (e.g., MSH, PID)
-    HParser *segment_id = h_repeat_n(alpha, 3);
-    HParser *segment = h_sequence(segment_id, field_separator, h_list(field, field_separator), segment_terminator, NULL);
-
-    // Define the HL7 message
-    HParser *hl7_message = h_many1(segment);
-
-    return hl7_message;
-}
-
-int main() {
-    HParser *parser = create_hl7_v2_parser();
-    // Example usage of the parser with an HL7 message
-    const char *hl7_message = "MSH|^~\\&|SendingApp|SendingFac|ReceivingApp|ReceivingFac|202310111230||ADT^A01|MSG00001|P|2.5\rPID|1||123456^^^Hospital^MR||Doe^John^A||19800101|M|||123 Main St^^Hometown^CA^12345||(555)555-5555|||M||123456789|987-65-4320||||||\r";
-    HParseResult *result = h_parse(parser, (const uint8_t *)hl7_message, strlen(hl7_message));
-
-    if (result) {
-        printf("HL7 message parsed successfully.\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse HL7 message.\n");
+// Function to read the binary file
+unsigned char *read_file(const char *filename, size_t *length) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
     }
 
-    h_parser_free(parser);
-    return 0;
+    fseek(file, 0, SEEK_END);
+    *length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(*length);
+    if (!data) {
+        perror("Failed to allocate memory");
+        exit(EXIT_FAILURE);
+    }
+
+    fread(data, 1, *length, file);
+    fclose(file);
+
+    return data;
+}
+
+// Main function
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    size_t length;
+    unsigned char *data = read_file(argv[1], &length);
+
+    HParser *hl7_message = create_hl7_message();
+    HParseResult *result = h_parse(hl7_message, data, length);
+    if (result) {
+        printf("Parsing successful!\n");
+        h_parse_result_free(result);
+    } else {
+        fprintf(stderr, "Parsing failed.\n");
+    }
+
+    h_parser_free(hl7_message);
+    free(data);
+    return EXIT_SUCCESS;
+}
+
+// Function implementations
+HParser *create_field_separator() {
+    return h_ch('\r');
+}
+
+HParser *create_field() {
+    return h_many1(h_choice(h_ch_range('A', 'Z'), h_ch_range('0', '9'), h_ch('-'), h_ch('.'), h_ch('&'), h_ch(' ')));
+}
+
+HParser *create_segment_name() {
+    HParser *field = create_field();
+    return h_repeat_n(field, 3);
+}
+
+HParser *create_segment() {
+    HParser *segment_name = create_segment_name();
+    HParser *field = create_field();
+    HParser *field_separator = create_field_separator();
+    return h_sequence(segment_name, h_many(field), field_separator, NULL);
+}
+
+HParser *create_hl7_message() {
+    HParser *segment = create_segment();
+    return h_many(segment);
 }

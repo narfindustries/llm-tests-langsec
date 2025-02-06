@@ -1,77 +1,76 @@
 meta:
   id: tls_client_hello
   title: TLS Client Hello
+  application: tls
+  file-extension: bin
   endian: be
 
 seq:
-  - id: handshake
-    type: handshake
+  - id: legacy_version
+    type: u2
+
+  - id: random
+    size: 32
+
+  - id: legacy_session_id
+    type: session_id
+
+  - id: cipher_suites_length
+    type: u2
+
+  - id: cipher_suites
+    size: cipher_suites_length
+
+  - id: legacy_compression_methods_length
+    type: u1
+
+  - id: legacy_compression_methods
+    size: legacy_compression_methods_length
+
+  - id: extensions_length
+    type: u2
+
+  - id: extensions
+    type: extensions
+    size: extensions_length
 
 types:
-  handshake:
+  session_id:
     seq:
-      - id: handshake_type
-        type: u1
       - id: length
-        type: u3
-      - id: body
-        size: length
-        type:
-          switch-on: handshake_type
-          cases:
-            0x01: client_hello
-
-  client_hello:
-    seq:
-      - id: version
-        type: u2
-      - id: random
-        type: random
-      - id: session_id_length
         type: u1
       - id: session_id
-        size: session_id_length
-      - id: cipher_suites_length
-        type: u2
-      - id: cipher_suites
-        size: cipher_suites_length
-        type: cipher_suite
-        repeat: eos
-      - id: compression_methods_length
-        type: u1
-      - id: compression_methods
-        size: compression_methods_length
-        type: compression_method
-        repeat: eos
-      - id: extensions_length
-        type: u2
-      - id: extensions
-        size: extensions_length
+        size: length
+
+  extensions:
+    seq:
+      - id: extension_list
         type: extension
         repeat: eos
 
-  random:
-    seq:
-      - id: gmt_unix_time
-        type: u4
-      - id: random_bytes
-        size: 28
-
-  cipher_suite:
-    seq:
-      - id: cipher_suite
-        type: u2
-
-  compression_method:
-    seq:
-      - id: compression_method
-        type: u1
-
   extension:
     seq:
-      - id: extension_type
+      - id: type
         type: u2
-      - id: extension_length
+      - id: length
         type: u2
-      - id: extension_data
-        size: extension_length
+      - id: data
+        size: length
+
+enums:
+  cipher_suites:
+    0x1301: tls_aes_128_gcm_sha256
+    0x1302: tls_aes_256_gcm_sha384
+    0x1303: tls_chacha20_poly1305_sha256
+
+  legacy_compression_methods:
+    0x00: no_compression
+
+  extensions_type:
+    0x0000: server_name
+    0x000a: supported_groups
+    0x0010: application_layer_protocol_negotiation
+    0x002b: supported_versions
+    0x0033: key_share
+    0x003d: psk_key_exchange_modes
+    0x0023: pre_shared_key

@@ -1,63 +1,65 @@
 meta:
-  id: http
+  id: http_1_1
   title: HTTP 1.1 Protocol
-  application: Web Browsers, Web Servers
+  file-extension: http
   endian: be
 doc: |
-  HTTP/1.1 is a version of the Hypertext Transfer Protocol used by the World Wide Web.
+  HTTP/1.1 is a revision of the HTTP protocol used for transferring
+  hypertext pages across the Web. HTTP/1.1 improvements include
+  extended methods, headers, and a new version of message parsing and
+  transmission.
+
 seq:
-  - id: request
+  - id: request_line
     type: request_line
-    doc: HTTP request line.
-  - id: response
-    type: response_line
-    doc: HTTP response line.
   - id: headers
     type: headers
-    repeat: eos
-    doc: HTTP headers.
+  - id: message_body
+    size-eos: true
+
 types:
   request_line:
     seq:
       - id: method
         type: strz
         encoding: ASCII
-        doc: HTTP method.
+      - id: space1
+        contents: " "
       - id: uri
         type: strz
         encoding: ASCII
-        doc: Request URI.
-      - id: version
+      - id: space2
+        contents: " "
+      - id: http_version
         type: strz
         encoding: ASCII
-        doc: HTTP version.
-  response_line:
-    seq:
-      - id: version
-        type: strz
-        encoding: ASCII
-        doc: HTTP version.
-      - id: status_code
-        type: u1
-        doc: HTTP status code.
-      - id: reason_phrase
-        type: strz
-        encoding: ASCII
-        doc: Reason phrase describing the status.
+      - id: crlf
+        contents: [0x0D, 0x0A]
+
   headers:
     seq:
-      - id: name
-        type: strz
-        encoding: ASCII
-        doc: Header name.
-      - id: value
-        type: strz
-        encoding: ASCII
-        doc: Header value.
-  strz:
+      - id: header_lines
+        type: header_line
+        repeat: eos
+
+  header_line:
     seq:
-      - id: str
+      - id: line
         type: str
-        terminator: 0x0D0A
-        encoding: ASCII
-        doc: Null-terminated ASCII string.
+        terminator: 0x0A
+    instances:
+      parts:
+        value: "line.split(':', maxsplit=1)"
+      name:
+        value: "parts[0].strip() if len(parts) > 0 else ''"
+      value:
+        value: "parts[1].strip() if len(parts) > 1 else ''"
+
+  message_body:
+    seq:
+      - id: body
+        type: u1
+        repeat: eos
+    doc: |
+      The message body part of an HTTP message. It may contain binary
+      data, hence it is treated as a raw byte array.

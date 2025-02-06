@@ -1,127 +1,101 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
+#include <stdlib.h>
 
-// Define the Modbus protocol constants
-#define MODBUS_MAX_ADU_LENGTH 256
-#define MODBUS_MIN_ADU_LENGTH 4
+#define MODBUS_MAX_DATA_LENGTH 256
 
-// Define the Modbus function codes
-#define MODBUS_FC_READ_COILS 0x01
-#define MODBUS_FC_READ_DISCRETE_INPUTS 0x02
-#define MODBUS_FC_READ_HOLDING_REGISTERS 0x03
-#define MODBUS_FC_READ_INPUT_REGISTERS 0x04
-#define MODBUS_FC_WRITE_SINGLE_COIL 0x05
-#define MODBUS_FC_WRITE_SINGLE_REGISTER 0x06
-#define MODBUS_FC_READ_EXCEPTION_STATUS 0x07
-#define MODBUS_FC_WRITE_MULTIPLE_COILS 0x0F
-#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS 0x10
-#define MODBUS_FC_REPORT_SLAVE_ID 0x11
-#define MODBUS_FC_READ_FILE_RECORD 0x14
-#define MODBUS_FC_WRITE_FILE_RECORD 0x15
-#define MODBUS_FC_MASK_WRITE_REGISTER 0x16
-#define MODBUS_FC_READ_FIFO_QUEUE 0x18
-#define MODBUS_FC_READ_MODE 0x1B
+typedef enum {
+    MODBUS_FUNCTION_READ_COIL_STATUS = 0x01,
+    MODBUS_FUNCTION_READ_INPUT_STATUS = 0x02,
+    MODBUS_FUNCTION_READ_HOLDING_REGISTERS = 0x03,
+    MODBUS_FUNCTION_READ_INPUT_REGISTERS = 0x04,
+    MODBUS_FUNCTION_WRITE_SINGLE_COIL = 0x05,
+    MODBUS_FUNCTION_WRITE_SINGLE_REGISTER = 0x06,
+    MODBUS_FUNCTION_WRITE_MULTIPLE_COILS = 0x0F,
+    MODBUS_FUNCTION_WRITE_MULTIPLE_REGISTERS = 0x10,
+    MODBUS_FUNCTION_REPORT_SLAVE_ID = 0x11,
+    MODBUS_FUNCTION_READ_FILE_RECORD = 0x14,
+    MODBUS_FUNCTION_WRITE_FILE_RECORD = 0x15,
+    MODBUS_FUNCTION_MASK_WRITE_REGISTER = 0x16,
+    MODBUS_FUNCTION_READ_WRITE_MULTIPLE_REGISTERS = 0x17,
+    MODBUS_FUNCTION_READ_FIFO_QUEUE = 0x18,
+    MODBUS_FUNCTION_ENCAPSULATED_INTERFACE_TRANSPORT = 0x2B
+} modbus_function_code_t;
 
-// Define the Modbus exception codes
-#define MODBUS_EX_ILLEGAL_FUNCTION 0x01
-#define MODBUS_EX_ILLEGAL_DATA_ADDRESS 0x02
-#define MODBUS_EX_ILLEGAL_DATA_VALUE 0x03
-#define MODBUS_EX_SLAVE_DEVICE_FAILURE 0x04
-#define MODBUS_EX_ACKNOWLEDGE 0x05
-#define MODBUS_EX_SLAVE_DEVICE_BUSY 0x06
-#define MODBUS_EX_NEGATIVE_ACKNOWLEDGE 0x07
-#define MODBUS_EX_MEMORY_PARITY_ERROR 0x08
-#define MODBUS_EX_GATEWAY_PATH_UNAVAILABLE 0x0A
-#define MODBUS_EX_GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND 0x0B
-
-// Define the Modbus data types
-typedef uint8_t byte;
-typedef uint16_t uint16;
-
-// Define the Modbus PDU structure
-typedef struct {
-    uint8_t function_code;
-    byte data[];
-} modbus_pdu_t;
-
-// Define the Modbus ADU structure
 typedef struct {
     uint8_t address;
     uint8_t function_code;
-    byte data[];
-} modbus_adu_t;
+    uint8_t* data;
+    size_t data_length;
+} modbus_message_t;
 
-// Define the Modbus coil structure
 typedef struct {
-    uint16 address;
-    uint8_t value;
-} modbus_coil_t;
+    uint8_t address;
+    uint8_t function_code;
+    uint8_t error_code;
+} modbus_exception_response_t;
 
-// Define the Modbus register structure
-typedef struct {
-    uint16 address;
-    uint16 value;
-} modbus_register_t;
-
-// Define the Modbus exception structure
-typedef struct {
-    uint8_t exception_code;
-} modbus_exception_t;
-
-// Define the Modbus protocol implementation
-void modbus_tokenize(modbus_adu_t* adu, modbus_pdu_t* pdu) {
-    pdu->function_code = adu->function_code;
-    memcpy(pdu->data, adu->data, sizeof(adu->data));
-}
-
-void modbus_assemble(modbus_pdu_t* pdu, modbus_adu_t* adu) {
-    adu->function_code = pdu->function_code;
-    memcpy(adu->data, pdu->data, sizeof(pdu->data));
-}
-
-void modbus_handle_exception(modbus_exception_t* exception) {
-    printf("Modbus exception: %d\n", exception->exception_code);
-}
-
-// Define the main function
-int main() {
-    modbus_adu_t adu;
-    modbus_pdu_t pdu;
-    modbus_coil_t coil;
-    modbus_register_t register_;
-    modbus_exception_t exception;
-
-    // Initialize the Modbus ADU
-    adu.address = 0x01;
-    adu.function_code = MODBUS_FC_READ_COILS;
-    adu.data[0] = 0x00;
-    adu.data[1] = 0x00;
-    adu.data[2] = 0x00;
-    adu.data[3] = 0x06;
-
-    // Tokenize the Modbus ADU
-    modbus_tokenize(&adu, &pdu);
-
-    // Handle the Modbus PDU
-    if (pdu.function_code == MODBUS_FC_READ_COILS) {
-        // Read coils
-        coil.address = 0x0000;
-        coil.value = 0x01;
-        printf("Coil: %d, Value: %d\n", coil.address, coil.value);
-    } else if (pdu.function_code == MODBUS_FC_READ_HOLDING_REGISTERS) {
-        // Read holding registers
-        register_.address = 0x0000;
-        register_.value = 0x1234;
-        printf("Register: %d, Value: %d\n", register_.address, register_.value);
-    } else {
-        // Handle exception
-        exception.exception_code = MODBUS_EX_ILLEGAL_FUNCTION;
-        modbus_handle_exception(&exception);
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
 
-    // Assemble the Modbus PDU
-    modbus_assemble(&pdu, &adu);
+    FILE* input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        printf("Error opening input file\n");
+        return 1;
+    }
 
+    fseek(input_file, 0, SEEK_END);
+    size_t input_length = ftell(input_file);
+    rewind(input_file);
+
+    uint8_t* input_data = malloc(input_length);
+    if (!input_data) {
+        printf("Error allocating memory\n");
+        return 1;
+    }
+
+    size_t bytes_read = fread(input_data, 1, input_length, input_file);
+    if (bytes_read != input_length) {
+        printf("Error reading input file\n");
+        return 1;
+    }
+
+    fclose(input_file);
+
+    HParser* address_parser = h_uint8();
+    HParser* function_code_parser = h_uint8();
+    HParser* data_parser = h_repeated(h_uint8(), MODBUS_MAX_DATA_LENGTH);
+    HParser* crc_parser = h_uint16();
+
+    HParser* message_parser = h_tupled(address_parser, function_code_parser, data_parser, crc_parser);
+
+    HParser* exception_response_parser = h_struct(address_parser, function_code_parser, h_uint8());
+
+    HParseResult* result = h_parse(message_parser, input_data, input_length);
+    if (h_result_is_ok(result)) {
+        modbus_message_t* message = (modbus_message_t*)h_result_get_value(result);
+        printf("Address: %u\n", message->address);
+        printf("Function Code: %u\n", message->function_code);
+        printf("Data Length: %zu\n", message->data_length);
+        for (size_t i = 0; i < message->data_length; i++) {
+            printf("Data[%zu]: %u\n", i, message->data[i]);
+        }
+    } else {
+        result = h_parse(exception_response_parser, input_data, input_length);
+        if (h_result_is_ok(result)) {
+            modbus_exception_response_t* exception_response = (modbus_exception_response_t*)h_result_get_value(result);
+            printf("Address: %u\n", exception_response->address);
+            printf("Function Code: %u\n", exception_response->function_code);
+            printf("Error Code: %u\n", exception_response->error_code);
+        } else {
+            printf("Error parsing input data\n");
+        }
+    }
+
+    free(input_data);
     return 0;
 }

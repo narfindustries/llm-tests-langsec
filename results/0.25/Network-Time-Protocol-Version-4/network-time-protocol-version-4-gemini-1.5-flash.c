@@ -1,79 +1,90 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #include <arpa/inet.h>
-#include <unistd.h>
-#include <string.h>
 
-// Define the NTP packet structure
 typedef struct {
-    unsigned int li_vn_mode;
-    unsigned int stratum;
-    unsigned int poll;
-    unsigned int precision;
-    unsigned int rootDelay;
-    unsigned int rootDispersion;
-    unsigned int refId;
-    unsigned int refTm;
-    unsigned int origTm;
-    unsigned int recvTm;
-    unsigned int transTm;
-} ntp_packet;
+    uint32_t seconds;
+    uint32_t fraction;
+} ntp_timestamp_t;
 
+typedef struct {
+    uint8_t li_vn_mode;
+    uint8_t stratum;
+    int8_t poll;
+    int8_t precision;
+    uint32_t root_delay;
+    uint32_t root_dispersion;
+    uint32_t reference_id;
+    ntp_timestamp_t reference_timestamp;
+    ntp_timestamp_t originate_timestamp;
+    ntp_timestamp_t receive_timestamp;
+    ntp_timestamp_t transmit_timestamp;
+    // Add other optional fields as needed...
+} ntp_packet_t;
 
-int main() {
-    // Create a socket
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd == -1) {
-        perror("socket creation failed");
+hammer_parser ntp_timestamp_parser() {
+    return hammer_map2(
+        &(ntp_timestamp_t){},
+        hammer_seq(hammer_uint32_be(), hammer_uint32_be())
+    );
+}
+
+hammer_parser ntp_packet_parser() {
+    return hammer_map11(
+        &(ntp_packet_t){},
+        hammer_seq(hammer_uint8(), hammer_uint8(), hammer_int8(), hammer_int8(), hammer_uint32_be(), hammer_uint32_be(), hammer_uint32_be(), ntp_timestamp_parser(), ntp_timestamp_parser(), ntp_timestamp_parser(), ntp_timestamp_parser())
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <ntp_binary_file>\n", argv[0]);
         return 1;
     }
 
-    // Configure the server address
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(123); // NTP port
-    server_addr.sin_addr.s_addr = inet_addr("pool.ntp.org"); // Example NTP server
-
-    // Create an NTP packet
-    ntp_packet packet;
-    memset(&packet, 0, sizeof(packet));
-    packet.li_vn_mode = 0x1B; // Version 4, client mode
-
-    // Send the NTP packet
-    if (sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("sendto failed");
-        close(sockfd);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    // Receive the NTP packet
-    socklen_t addr_len = sizeof(server_addr);
-    if (recvfrom(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&server_addr, &addr_len) == -1) {
-        perror("recvfrom failed");
-        close(sockfd);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *buffer = (char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
         return 1;
     }
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
-    // Extract the timestamp
-    unsigned int timestamp = ntohl(packet.transTm);
+    hammer_result result = hammer_parse(ntp_packet_parser(), buffer, fsize);
 
-    // Convert the timestamp to a time_t value
-    time_t ntp_time = (time_t)(timestamp - 2208988800ULL); // NTP epoch to Unix epoch
+    if (result.success) {
+        ntp_packet_t packet = *(ntp_packet_t *)result.value;
+        printf("NTP Packet:\n");
+        printf("LI_VN_Mode: 0x%02X\n", packet.li_vn_mode);
+        printf("Stratum: %u\n", packet.stratum);
+        printf("Poll: %d\n", packet.poll);
+        printf("Precision: %d\n", packet.precision);
+        printf("Root Delay: %u\n", packet.root_delay);
+        printf("Root Dispersion: %u\n", packet.root_dispersion);
+        printf("Reference ID: %u\n", packet.reference_id);
+        printf("Reference Timestamp: %u.%u\n", packet.reference_timestamp.seconds, packet.reference_timestamp.fraction);
+        printf("Originate Timestamp: %u.%u\n", packet.originate_timestamp.seconds, packet.originate_timestamp.fraction);
+        printf("Receive Timestamp: %u.%u\n", packet.receive_timestamp.seconds, packet.receive_timestamp.fraction);
+        printf("Transmit Timestamp: %u.%u\n", packet.transmit_timestamp.seconds, packet.transmit_timestamp.fraction);
 
-    // Convert the time_t value to a human-readable format
-    struct tm *tm = gmtime(&ntp_time);
-    char time_str[100];
-    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm);
+        free(result.value);
+    } else {
+        fprintf(stderr, "Error parsing NTP packet: %s\n", result.error);
+    }
 
-    // Print the time
-    printf("NTP time: %s\n", time_str);
-
-    // Close the socket
-    close(sockfd);
-
+    free(buffer);
     return 0;
 }

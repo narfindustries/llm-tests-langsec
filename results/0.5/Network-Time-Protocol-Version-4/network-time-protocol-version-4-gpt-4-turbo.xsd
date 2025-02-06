@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/ntp"
@@ -6,48 +5,44 @@
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:generalFormat"/>
+      <dfdl:defineFormat name="generalFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     bitOrder="mostSignificantBitFirst"
+                     binaryNumberRep="binary"
+                     lengthKind="explicit"/>
+      </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:simpleType name="fourBits">
-    <xs:restriction base="xs:unsignedByte">
-      <xs:maxInclusive value="15"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:complexType name="FlagsType">
+  <xs:complexType name="NTPMessage">
     <xs:sequence>
-      <xs:element name="leapIndicator" type="tns:fourBits" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="versionNumber" type="tns:fourBits" dfdl:length="3" dfdl:lengthKind="explicit"/>
-      <xs:element name="mode" type="tns:fourBits" dfdl:length="3" dfdl:lengthKind="explicit"/>
+      <xs:element name="flags" type="xs:byte" dfdl:length="1">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:generalFormat"/>
+            <dfdl:simpleType>
+              <dfdl:properties>
+                <dfdl:property name="bitOrder" value="mostSignificantBitFirst"/>
+                <dfdl:property name="lengthKind" value="bits"/>
+                <dfdl:property name="length" value="8"/>
+              </dfdl:properties>
+            </dfdl:simpleType>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="stratum" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="poll" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="precision" type="xs:byte" dfdl:length="1"/>
+      <xs:element name="rootDelay" type="xs:int" dfdl:length="4"/>
+      <xs:element name="rootDispersion" type="xs:int" dfdl:length="4"/>
+      <xs:element name="referenceIdentifier" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
+      <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="originTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="8"/>
+      <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="8"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="NetworkTimeProtocol">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="flags" type="tns:FlagsType"/>
-        <xs:element name="rootDelay" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
-        <xs:element name="rootDispersion" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
-        <xs:element name="referenceIdentifier" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-        <xs:element name="referenceTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
-        <xs:element name="originateTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
-        <xs:element name="receiveTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
-        <xs:element name="transmitTimestamp" type="xs:long" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="generalFormat">
-    <xs:complexType>
-      <xs:attributeGroup ref="dfdl:format"/>
-      <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
-      <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
-      <xs:attribute name="binaryNumberRep" type="xs:string" use="required" fixed="binary"/>
-      <xs:attribute name="textNumberRep" type="xs:string" use="required" fixed="standard"/>
-      <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="NTPPacket" type="tns:NTPMessage"/>
 
 </xs:schema>

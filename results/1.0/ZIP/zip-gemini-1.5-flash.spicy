@@ -1,56 +1,65 @@
-#version=2.0;
+module ZIP;
 
-event zip_gemini_event(uint32 id):
-    {
-        # This is a placeholder event.  The actual event definition
-        # would depend on what information you intend to extract
-        # from the ZIP file.  This example simply records the ID.
-    }
+type zip_local_file_header {
+	uint32 signature = 0x04034b50;
+	uint16 version_needed_to_extract;
+	uint16 general_purpose_bit_flag;
+	uint16 compression_method;
+	uint16 last_mod_file_time;
+	uint16 last_mod_file_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	string filename;
+	bytes extra_field;
+}
 
-redef record ZIP_File_Record : record {
-    string filename;
-    uint32 id;  // add a unique ID for each file
-};
+type zip_central_directory_header {
+	uint32 signature = 0x02014b50;
+	uint16 version_made_by;
+	uint16 version_needed_to_extract;
+	uint16 general_purpose_bit_flag;
+	uint16 compression_method;
+	uint16 last_mod_file_time;
+	uint16 last_mod_file_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	uint16 file_comment_length;
+	uint16 disk_number_start;
+	uint16 internal_file_attributes;
+	uint32 external_file_attributes;
+	uint32 relative_offset_of_local_header;
+	string filename;
+	bytes extra_field;
+	string file_comment;
+}
 
-redef type ZIP_File_Record_Set : set[ZIP_File_Record];
+type zip_digital_signature {
+	bytes signature_data;
+}
 
-global ZIP_File_Record_Set seen_files;
 
-local function process_zip_entry(string filename, uint32 id):
-    {
-      if (filename == "") {
-          return;  //Skip empty filenames
-      }
+type zip_end_of_central_directory_record {
+	uint32 signature = 0x06054b50;
+	uint16 number_of_this_disk;
+	uint16 number_of_the_disk_with_the_start_of_the_central_directory;
+	uint16 total_number_of_entries_in_the_central_directory_on_this_disk;
+	uint16 total_number_of_entries_in_the_central_directory;
+	uint32 size_of_the_central_directory;
+	uint32 offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
+	uint16 zip_file_comment_length;
+	string zip_file_comment;
+}
 
-      local ZIP_File_Record rec = { filename = filename, id = id };
-      seen_files += rec;
-      zip_gemini_event(id);
-    }
 
-event zeek_init():
-    {
-        seen_files = {};
-    }
-
-# Placeholder for actual spicy code.  This needs to be replaced
-# with code that actually parses the ZIP file.  The error message
-# suggests a problem with the spicy compiler or the spicy code itself.
-# The below is a dummy to illustrate the structure.
-
-function parse_zip_file(string zip_filepath):
-    {
-        // This is placeholder code.  Replace with your actual ZIP parsing logic.
-        // The original code likely had errors here that caused the compilation
-        // failure.  You'll need to carefully debug and fix the spicy code
-        // responsible for parsing the ZIP archive.
-
-        local uint32 file_counter = 0;
-        // example - replace with your actual zip file parsing
-        process_zip_entry("file1.txt", ++file_counter);
-        process_zip_entry("file2.bin", ++file_counter);
-        process_zip_entry("file3.jpg", ++file_counter);
-        // end of example - replace with actual file parsing logic.
-    }
-
-# Example usage: Replace "/path/to/your/zipfile.zip" with the actual path.
-parse_zip_file("/path/to/your/zipfile.zip"); 
+type zip_file {
+	vector[zip_local_file_header] local_file_headers;
+	vector[zip_central_directory_header] central_directory;
+	optional zip_digital_signature digital_signature;
+	zip_end_of_central_directory_record end_of_central_directory_record;
+}

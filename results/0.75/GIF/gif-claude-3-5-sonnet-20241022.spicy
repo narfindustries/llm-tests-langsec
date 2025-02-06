@@ -1,86 +1,116 @@
-%include zeek/spicy/file-analyzer
-
 module GIF;
 
-public type File = unit {
-    header: Header;
-    blocks: Block[] &until($input.at_end());
-};
-
-type Header = unit {
+public type Header = unit {
     signature: bytes &size=3;
     version: bytes &size=3;
-    width: uint16;
-    height: uint16;
-    packed: uint8;
-    background_color: uint8;
-    aspect_ratio: uint8;
-
-    on %done {
-        self.has_global_color_table = (self.packed & 0x80) != 0;
-        self.color_resolution = ((self.packed & 0x70) >> 4) + 1;
-        self.global_color_table_size = self.has_global_color_table ? 1 << ((self.packed & 0x07) + 1) : 0;
-    }
-
-    var has_global_color_table: bool;
-    var color_resolution: uint8;
-    var global_color_table_size: uint64;
 };
 
-type Block = unit {
-    switch ( self.block_type ) {
-        0x2c -> image_descriptor: ImageDescriptor;
-        0x21 -> extension: Extension;
-        0x3b -> trailer: void;
-    } &requires(self.block_type);
+type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed: bitfield(8) {
+        global_color_table_flag: 0;
+        color_resolution: 1..3;
+        sort_flag: 4;
+        size_global_color_table: 5..7;
+    };
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+    : GlobalColorTable if (self.packed.global_color_table_flag == 1);
+};
 
-    var block_type: uint8;
+type GlobalColorTable = unit {
+    colors: bytes &size=(3 * pow(2, (self.parent.packed.size_global_color_table + 1)));
+};
 
-    on %init {
-        self.block_type = $input.look_ahead(0);
-    }
+type LocalColorTable = unit {
+    colors: bytes &size=(3 * pow(2, (self.parent.packed.size_local_color_table + 1)));
 };
 
 type ImageDescriptor = unit {
-    introducer: uint8;
+    separator: uint8;
     left: uint16;
     top: uint16;
     width: uint16;
     height: uint16;
-    packed: uint8;
-    
-    : bytes &size=self.local_color_table_size &if(self.has_local_color_table);
-    : SubBlocks;
-
-    on %init {
-        self.has_local_color_table = (self.packed & 0x80) != 0;
-        self.local_color_table_size = self.has_local_color_table ? 3 * (1 << ((self.packed & 0x07) + 1)) : 0;
-    }
-
-    var has_local_color_table: bool;
-    var local_color_table_size: uint64;
+    packed: bitfield(8) {
+        local_color_table_flag: 0;
+        interlace_flag: 1;
+        sort_flag: 2;
+        reserved: 3..4;
+        size_local_color_table: 5..7;
+    };
+    : LocalColorTable if (self.packed.local_color_table_flag == 1);
+    lzw_minimum_code_size: uint8;
+    : DataSubBlocks;
 };
 
-type Extension = unit {
-    introducer: uint8;
-    label: uint8;
-    : SubBlocks;
+type GraphicControlExtension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8 &requires=0xF9;
+    block_size: uint8 &requires=0x04;
+    packed: bitfield(8) {
+        reserved: 0..2;
+        disposal_method: 3..5;
+        user_input_flag: 6;
+        transparent_color_flag: 7;
+    };
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8 &requires=0x00;
 };
 
-type SubBlocks = unit {
-    blocks: SubBlock[] &until($$.size == 0);
+type CommentExtension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8 &requires=0xFE;
+    : DataSubBlocks;
 };
 
-type SubBlock = unit {
+type PlainTextExtension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8 &requires=0x01;
+    block_size: uint8 &requires=0x0C;
+    text_grid_left: uint16;
+    text_grid_top: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    cell_width: uint8;
+    cell_height: uint8;
+    text_fg_color_index: uint8;
+    text_bg_color_index: uint8;
+    : DataSubBlocks;
+};
+
+type ApplicationExtension = unit {
+    introducer: uint8 &requires=0x21;
+    label: uint8 &requires=0xFF;
+    block_size: uint8 &requires=0x0B;
+    application_identifier: bytes &size=8;
+    authentication_code: bytes &size=3;
+    : DataSubBlocks;
+};
+
+type DataSubBlocks = unit {
+    blocks: DataSubBlock[];
+};
+
+type DataSubBlock = unit {
     size: uint8;
-    data: bytes &size=self.size;
+    data: bytes &size=self.size if (self.size != 0);
 };
 
-on File::Header::%done {
-    if ( self.signature != b"GIF" )
-        self.confirm_error("invalid GIF signature");
-}
+type Block = unit {
+    : ImageDescriptor if (peek(uint8) == 0x2C);
+    : GraphicControlExtension if (peek(uint8) == 0x21 && peek(uint16) == 0x21F9);
+    : CommentExtension if (peek(uint8) == 0x21 && peek(uint16) == 0x21FE);
+    : PlainTextExtension if (peek(uint8) == 0x21 && peek(uint16) == 0x2101);
+    : ApplicationExtension if (peek(uint8) == 0x21 && peek(uint16) == 0x21FF);
+    : uint8 &requires=0x3B if (peek(uint8) == 0x3B);
+};
 
-public function file_analyzer_gif_spicy_file_analyzer(file_analyzer_t handle): bool {
-    return true;
-}
+public type GIF = unit {
+    header: Header;
+    screen_descriptor: LogicalScreenDescriptor;
+    blocks: Block[] &until($last);
+    trailer: uint8 &requires=0x3B;
+};

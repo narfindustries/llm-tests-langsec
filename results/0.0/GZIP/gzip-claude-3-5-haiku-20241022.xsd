@@ -1,63 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:gzip="http://www.w3.org/2001/XMLSchema"
-           targetNamespace="http://example.com/gzip"
-           elementFormDefault="qualified">
+           targetNamespace="http://example.com/gzip">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format
-        representation="binary"
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        alignment="1"
-        alignmentUnits="bytes"
-        fillByte="%#r00"
-        occursCountKind="parsed"
-        lengthKind="explicit"
-        lengthUnits="bytes"/>
+      <dfdl:format separator="" initiator="" terminator="" 
+                   encoding="UTF-8" 
+                   byteOrder="bigEndian"
+                   representation="binary"
+                   lengthKind="explicit"
+                   occursCountKind="parsed"
+                   sequenceKind="ordered"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   floating="no"
+                   textBidi="no"
+                   encodingErrorPolicy="replace"/>
     </xs:appinfo>
   </xs:annotation>
 
   <xs:element name="gzipFile">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="gzip:GZIPHeader"/>
-        <xs:element name="compressedData" type="gzip:CompressedData"/>
-        <xs:element name="footer" type="gzip:GZIPFooter"/>
+        <xs:element name="identification" type="xs:hexBinary" 
+                    dfdl:length="2"/>
+        
+        <xs:element name="compressionMethod" type="xs:unsignedByte" 
+                    dfdl:length="1"/>
+        
+        <xs:element name="flags" type="xs:unsignedByte" 
+                    dfdl:length="1"/>
+        
+        <xs:element name="modificationTime" type="xs:unsignedInt" 
+                    dfdl:length="4"/>
+        
+        <xs:element name="extraFlags" type="xs:unsignedByte" 
+                    dfdl:length="1"/>
+        
+        <xs:element name="operatingSystem" type="xs:unsignedByte" 
+                    dfdl:length="1"/>
+        
+        <xs:element name="extraFields" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extraLength" type="xs:unsignedShort"/>
+              <xs:element name="extraData" type="xs:hexBinary" 
+                          dfdl:length="{ ../extraLength }"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="originalFilename" type="xs:string" 
+                    minOccurs="0" 
+                    dfdl:terminator="0x00" 
+                    dfdl:encoding="ASCII"/>
+        
+        <xs:element name="fileComment" type="xs:string" 
+                    minOccurs="0" 
+                    dfdl:terminator="0x00" 
+                    dfdl:encoding="ASCII"/>
+        
+        <xs:element name="headerCRC" type="xs:unsignedShort" 
+                    minOccurs="0"/>
+        
+        <xs:element name="compressedData" type="xs:hexBinary"
+                    dfdl:lengthKind="implicit"/>
+        
+        <xs:element name="crc32" type="xs:unsignedInt" 
+                    dfdl:length="4"/>
+        
+        <xs:element name="uncompressedSize" type="xs:unsignedInt" 
+                    dfdl:length="4"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="GZIPHeader">
-    <xs:sequence>
-      <xs:element name="magicNumber" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:assert testPattern="1F8B" message="Invalid GZIP magic number"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="operatingSystem" type="xs:unsignedByte" dfdl:length="1"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="CompressedData">
-    <xs:sequence>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="GZIPFooter">
-    <xs:sequence>
-      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="originalSize" type="xs:unsignedInt" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

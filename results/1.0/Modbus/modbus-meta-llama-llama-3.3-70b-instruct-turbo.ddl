@@ -1,156 +1,156 @@
-domain Modbus {
-  header {
-    uint16 transaction_id;
-    uint16 protocol_id;
-    uint8  unit_id;
-    uint8  function_code;
-  }
+modbus =
+  type Address = uint8 with min: 0 and max: 247
+  type FunctionCode = uint8 with min: 1 and max: 127
+  type ErrorCode = uint8 with min: 1 and max: 127
+  type ByteCount = uint8 with min: 1 and max: 255
+  type ReferenceType = uint8 with min: 0 and max: 3
+  type ReferenceNumber = uint16 with min: 0 and max: 65535
+  type SubRequest = uint8 with min: 0 and max: 255
+  type ReadWriteLength = uint16 with min: 0 and max: 65535
 
-  payload {
-    choice {
-      case read_coils {
-        uint16 starting_address;
-        uint16 quantity;
-      }
+  type ModbusMessage =
+    address: Address
+    functionCode: FunctionCode
+    data: Data
 
-      case read_discrete_inputs {
-        uint16 starting_address;
-        uint16 quantity;
-      }
+  type Data =
+    ReadCoilStatus: ReadCoilStatus
+    ReadInputStatus: ReadInputStatus
+    ReadHoldingRegisters: ReadHoldingRegisters
+    ReadInputRegisters: ReadInputRegisters
+    ForceSingleCoil: ForceSingleCoil
+    PresetSingleRegister: PresetSingleRegister
+    ReadWriteMultipleCoils: ReadWriteMultipleCoils
+    ReadWriteMultipleHoldingRegisters: ReadWriteMultipleHoldingRegisters
+    ReadWriteMultipleHoldingRegistersExtended: ReadWriteMultipleHoldingRegistersExtended
+    ReportSlaveID: ReportSlaveID
+    ProgramController: ProgramController
+    ProgramControllerMaskWrite: ProgramControllerMaskWrite
+    ProgramControllerRead: ProgramControllerRead
+    ForceMultipleCoils: ForceMultipleCoils
+    PresetMultipleRegisters: PresetMultipleRegisters
+    ReportSlaveIDExtended: ReportSlaveIDExtended
+    ReadFileRecord: ReadFileRecord
+    WriteFileRecord: WriteFileRecord
+    MaskWriteRegister: MaskWriteRegister
+    ReadWriteRegisters: ReadWriteRegisters
+    ReadFileRecordExtended: ReadFileRecordExtended
+    WriteFileRecordExtended: WriteFileRecordExtended
+    ReadFileRecordSubrequest: ReadFileRecordSubrequest
+    WriteFileRecordSubrequest: WriteFileRecordSubrequest
 
-      case write_single_coil {
-        uint16 output_address;
-        uint16 output_value;
-      }
+  type ReadCoilStatus =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 0
+    referenceNumber: ReferenceNumber
 
-      case write_single_register {
-        uint16 register_address;
-        uint16 register_value;
-      }
+  type ReadInputStatus =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 1
+    referenceNumber: ReferenceNumber
 
-      case read_holding_registers {
-        uint16 starting_address;
-        uint16 quantity;
-      }
+  type ReadHoldingRegisters =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
 
-      case write_multiple_coils {
-        uint16 starting_address;
-        uint16 quantity;
-        bytes values;
-      }
+  type ReadInputRegisters =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 3
+    referenceNumber: ReferenceNumber
 
-      case write_multiple_registers {
-        uint16 starting_address;
-        uint16 quantity;
-        bytes values;
-      }
+  type ForceSingleCoil =
+    referenceType: ReferenceType with value: 0
+    referenceNumber: ReferenceNumber
+    value: boolean
 
-      case read_input_registers {
-        uint16 starting_address;
-        uint16 quantity;
-      }
-    }
-  }
+  type PresetSingleRegister =
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
+    value: uint16
 
-  footer {
-    uint16 crc;
-  }
-}
+  type ReadWriteMultipleCoils =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 0
+    referenceNumber: ReferenceNumber
 
-grammar Modbus {
-  header: transaction_id: uint16, protocol_id: uint16, unit_id: uint8, function_code: uint8;
-  payload: choice {
-    read_coils: starting_address: uint16, quantity: uint16;
-    read_discrete_inputs: starting_address: uint16, quantity: uint16;
-    write_single_coil: output_address: uint16, output_value: uint16;
-    write_single_register: register_address: uint16, register_value: uint16;
-    read_holding_registers: starting_address: uint16, quantity: uint16;
-    write_multiple_coils: starting_address: uint16, quantity: uint16, values: bytes;
-    write_multiple_registers: starting_address: uint16, quantity: uint16, values: bytes;
-    read_input_registers: starting_address: uint16, quantity: uint16;
-  };
-  footer: crc: uint16;
-}
+  type ReadWriteMultipleHoldingRegisters =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
 
-type TransactionId = uint16;
-type ProtocolId = uint16;
-type UnitId = uint8;
-type FunctionCode = uint8;
-type Address = uint16;
-type Quantity = uint16;
-type Value = uint16;
-type Registrations = bytes;
+  type ReadWriteMultipleHoldingRegistersExtended =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
 
-message ReadCoils {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-}
+  type ReportSlaveID =
+    byteCount: ByteCount
+    slaveID: Address
 
-message ReadDiscreteInputs {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-}
+  type ProgramController =
+    subRequest: SubRequest
 
-message WriteSingleCoil {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address output_address;
-  Value output_value;
-}
+  type ProgramControllerMaskWrite =
+    subRequest: SubRequest
 
-message WriteSingleRegister {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address register_address;
-  Value register_value;
-}
+  type ProgramControllerRead =
+    subRequest: SubRequest
 
-message ReadHoldingRegisters {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-}
+  type ForceMultipleCoils =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 0
+    referenceNumber: ReferenceNumber
 
-message WriteMultipleCoils {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-  Registrations values;
-}
+  type PresetMultipleRegisters =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
 
-message WriteMultipleRegisters {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-  Registrations values;
-}
+  type ReportSlaveIDExtended =
+    byteCount: ByteCount
+    slaveID: Address
 
-message ReadInputRegisters {
-  TransactionId transaction_id;
-  ProtocolId protocol_id;
-  UnitId unit_id;
-  FunctionCode function_code;
-  Address starting_address;
-  Quantity quantity;
-}
+  type ReadFileRecord =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type WriteFileRecord =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type MaskWriteRegister =
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
+    value: uint16
+
+  type ReadWriteRegisters =
+    byteCount: ByteCount
+    referenceType: ReferenceType with value: 2
+    referenceNumber: ReferenceNumber
+
+  type ReadFileRecordExtended =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type WriteFileRecordExtended =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type ReadFileRecordSubrequest =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type WriteFileRecordSubrequest =
+    subRequest: SubRequest
+    referenceNumber: ReferenceNumber
+
+  type ErrorResponse =
+    address: Address
+    functionCode: FunctionCode
+    errorCode: ErrorCode
+
+default ModbusMessage =
+  address: 0
+  functionCode: 1
+  data: undefined

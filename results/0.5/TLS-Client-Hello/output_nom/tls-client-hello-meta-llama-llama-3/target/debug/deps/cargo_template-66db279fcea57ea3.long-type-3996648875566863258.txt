@@ -1,0 +1,1 @@
+(fn(_) -> Result<(_, u8), nom::Err<_>> {nom::number::complete::be_u8::<_, _>}, fn(_) -> Result<(_, u16), nom::Err<_>> {nom::number::complete::be_u16::<_, _>}, fn(_) -> impl Fn(_) -> Result<(_, _), nom::Err<_>> {nom::bytes::complete::take::<_, _, _>})

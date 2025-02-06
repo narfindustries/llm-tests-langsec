@@ -1,60 +1,100 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
-// Structure to represent a zip entry
-typedef struct {
-    char* filename;
-    uint32_t size;
-    uint8_t* data;
-} ZipEntry;
-
-
-// Function to simulate zip file processing (replace with actual zip library)
-ZipEntry* processZipEntry(const char* filename) {
-    //Simulate reading a zip entry.  Replace with actual zip library code.
-    ZipEntry* entry = (ZipEntry*)malloc(sizeof(ZipEntry));
-    if (entry == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
-    }
-    entry->filename = strdup(filename); //Simulate filename extraction
-    if (entry->filename == NULL) {
-        perror("Memory allocation failed");
-        free(entry);
-        exit(1);
-    }
-    entry->size = 1024; //Simulate file size
-    entry->data = (uint8_t*)malloc(entry->size); //Simulate data allocation
-    if (entry->data == NULL) {
-        perror("Memory allocation failed");
-        free(entry->filename);
-        free(entry);
-        exit(1);
-    }
-    memset(entry->data, 0, entry->size); //Simulate data population
-
-    return entry;
+// Helper function to read a specific number of bytes
+static int read_bytes(FILE *fp, void *buffer, size_t count) {
+    return fread(buffer, 1, count, fp) == count;
 }
 
+// Define parsers for individual fields
+static HParser uint16_parser = h_map(h_uint8_be(2), h_from_big_endian16);
+static HParser uint32_parser = h_map(h_uint8_be(4), h_from_big_endian32);
+static HParser uint32_crc_parser = uint32_parser;
+static HParser dos_time_parser = h_uint8(4);
+static HParser filename_len_parser = uint16_parser;
+static HParser extra_field_len_parser = uint16_parser;
+static HParser file_comment_len_parser = uint16_parser;
+static HParser signature_parser = h_map(h_uint8_be(4), h_from_big_endian32);
 
-int main() {
-    //Simulate zip file path
-    const char* zipFilePath = "zip-gemini-1.5-flash.zip"; 
+// Parser for the local file header
+static HParser local_file_header_parser = h_sequence(
+    signature_parser,
+    uint16_parser,
+    uint16_parser,
+    uint16_parser,
+    dos_time_parser,
+    uint32_crc_parser,
+    uint32_parser,
+    uint32_parser,
+    filename_len_parser,
+    extra_field_len_parser,
+    h_bytes_with_len(filename_len_parser),
+    h_bytes_with_len(extra_field_len_parser)
+);
 
-    //Simulate zip entry processing
-    ZipEntry* entry = processZipEntry("file1.txt");
-    if (entry == NULL) return 1;
+// Parser for the central directory header (simplified)
+static HParser central_directory_header_parser = h_sequence(
+    signature_parser,
+    uint16_parser,
+    uint16_parser,
+    uint16_parser,
+    uint16_parser,
+    dos_time_parser,
+    uint32_crc_parser,
+    uint32_parser,
+    uint32_parser,
+    filename_len_parser,
+    extra_field_len_parser,
+    file_comment_len_parser,
+    uint16_parser,
+    uint16_parser,
+    uint32_parser,
+    uint32_parser,
+    h_bytes_with_len(filename_len_parser),
+    h_bytes_with_len(extra_field_len_parser),
+    h_bytes_with_len(file_comment_len_parser)
+);
 
-    //Simulate Hammer processing (replace with actual Hammer library calls)
-    printf("Processing file: %s, size: %u bytes\n", entry->filename, entry->size);
-    // Add Hammer specific processing here.  This is a placeholder.
-    // Example:  You would integrate with a Hammer library here to analyze the entry->data.
+// Parser for the end of central directory record
+static HParser end_of_central_directory_record_parser = h_sequence(
+    signature_parser,
+    uint16_parser,
+    uint16_parser,
+    uint16_parser,
+    uint16_parser,
+    uint32_parser,
+    uint32_parser,
+    file_comment_len_parser,
+    h_bytes_with_len(file_comment_len_parser)
+);
 
-    free(entry->data);
-    free(entry->filename);
-    free(entry);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
+        return 1;
+    }
 
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    HParseResult result;
+    fseek(fp, -22, SEEK_END);
+    uint8_t *buffer = malloc(22);
+    fread(buffer, 1, 22, fp);
+    result = h_parse(end_of_central_directory_record_parser, buffer, 22);
+    if (h_result_is_err(result)) {
+        fprintf(stderr, "Error parsing end of central directory record: %s\n", h_result_error(result));
+        fclose(fp);
+        free(buffer);
+        return 1;
+    }
+    free(buffer);
+    fclose(fp);
     return 0;
 }

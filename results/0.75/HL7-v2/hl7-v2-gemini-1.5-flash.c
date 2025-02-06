@@ -1,65 +1,70 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent an HL7 message segment
-typedef struct {
-    char *segment_id;
-    char **fields;
-    int num_fields;
-} HL7Segment;
+//Simplified HL7 v2 parser -  This is still a highly simplified example and does NOT cover the entire HL7 v2 specification.
+// A complete implementation would be extremely complex and lengthy.
 
-// Function to parse an HL7 message segment
-HL7Segment *parse_segment(char *line) {
-    HL7Segment *segment = (HL7Segment *)malloc(sizeof(HL7Segment));
-    if (segment == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
-    }
-
-    segment->segment_id = strtok(line, "|");
-    segment->fields = (char **)malloc(sizeof(char *) * 100); // Adjust as needed
-    if (segment->fields == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
-    }
-    segment->num_fields = 0;
-
-    char *field = strtok(NULL, "|");
-    while (field != NULL) {
-        segment->fields[segment->num_fields++] = strdup(field);
-        field = strtok(NULL, "|");
-    }
-
-    return segment;
+// Define parsers for basic HL7 data types (highly simplified)
+static HParser* parse_string(void) {
+  return h_string();
 }
 
-
-// Function to free memory allocated for an HL7 segment
-void free_segment(HL7Segment *segment) {
-    for (int i = 0; i < segment->num_fields; i++) {
-        free(segment->fields[i]);
-    }
-    free(segment->fields);
-    free(segment);
+static HParser* parse_component(void) {
+  return h_string(); 
 }
 
+static HParser* parse_field(void) {
+  return h_sepBy(parse_component(), h_ch('|')); 
+}
 
-int main() {
-    // Example HL7 message (replace with your actual message)
-    char *hl7_message = "MSH|^~\\&|ADT^A01|Hospital|Hospital|202310271000||ADT^A01|12345|P|2.5\rPID|12345|PatientName|1234567890\r";
+static HParser* parse_segment(void) {
+  return h_seq(h_string("MSH"), h_ch('|'), h_many(parse_field()), h_crlf()); 
+}
 
+static HParser* parse_message(void) {
+  return h_many(parse_segment());
+}
 
-    char *line = strtok(hl7_message, "\r");
-    while (line != NULL) {
-        HL7Segment *segment = parse_segment(line);
-        printf("Segment ID: %s\n", segment->segment_id);
-        for (int i = 0; i < segment->num_fields; i++) {
-            printf("Field %d: %s\n", i + 1, segment->fields[i]);
-        }
-        free_segment(segment);
-        line = strtok(NULL, "\r");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    unsigned char *buffer = (unsigned char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    HParser* parser = parse_message();
+    HParseResult result = h_parse(parser, buffer, fsize);
+
+    if (result.status == H_PARSE_SUCCESS) {
+        printf("HL7 message parsed successfully.\n");
+        // Process the parsed data (result.value) -  This part requires significant expansion to handle the complex HL7 structure.
+    } else {
+        fprintf(stderr, "HL7 parsing failed at position %zu: %s\n", result.position, result.error);
+    }
+
+    h_free_parser(parser);
+    free(buffer);
 
     return 0;
 }

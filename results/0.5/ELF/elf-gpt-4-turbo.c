@@ -1,82 +1,94 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic types
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16();
-static HParser *uint32 = h_uint32();
-static HParser *uint64 = h_uint64();
+// Define magic numbers and constants
+#define EI_NIDENT 16
+#define ET_NONE 0
+#define ET_REL 1
+#define ET_EXEC 2
+#define ET_DYN 3
+#define ET_CORE 4
+#define ET_LOOS 0xFE00
+#define ET_HIOS 0xFEFF
+#define ET_LOPROC 0xFF00
+#define ET_HIPROC 0xFFFF
 
-// Define ELF header
-static HParser *elf_header = h_sequence(
-    h_bits(uint8, 4),     // EI_MAG
-    h_bits(uint8, 4),     // EI_CLASS
-    h_bits(uint8, 4),     // EI_DATA
-    h_bits(uint8, 4),     // EI_VERSION
-    h_bits(uint8, 4),     // EI_OSABI
-    h_bits(uint8, 4),     // EI_ABIVERSION
-    h_ignore(h_bits(uint8, 32)), // EI_PAD
-    uint16,               // e_type
-    uint16,               // e_machine
-    uint32,               // e_version
-    h_choice(uint32, uint64, NULL), // e_entry
-    h_choice(uint32, uint64, NULL), // e_phoff
-    h_choice(uint32, uint64, NULL), // e_shoff
-    uint32,               // e_flags
-    uint16,               // e_ehsize
-    uint16,               // e_phentsize
-    uint16,               // e_phnum
-    uint16,               // e_shentsize
-    uint16,               // e_shnum
-    uint16,               // e_shstrndx
-    NULL
-);
+// Parser declarations
+static HParser *elf_header_parser;
 
-// Define Program Header
-static HParser *program_header = h_sequence(
-    uint32,               // p_type
-    h_optional(h_uint32()), // p_flags (optional, present in newer versions)
-    h_choice(uint32, uint64, NULL), // p_offset
-    h_choice(uint32, uint64, NULL), // p_vaddr
-    h_choice(uint32, uint64, NULL), // p_paddr
-    h_choice(uint32, uint64, NULL), // p_filesz
-    h_choice(uint32, uint64, NULL), // p_memsz
-    h_choice(uint32, uint64, NULL), // p_align
-    NULL
-);
+HParser *init_elf_parser() {
+    HParser *ei_magic = h_sequence(h_int8(), h_ch('E'), h_ch('L'), h_ch('F'), NULL);
+    HParser *ei_class = h_int8();
+    HParser *ei_data = h_int8();
+    HParser *ei_version = h_int8();
+    HParser *ei_osabi = h_int8();
+    HParser *ei_abiversion = h_int8();
+    HParser *ei_pad = h_repeat_n(h_int8(), 7);
 
-// Define Section Header
-static HParser *section_header = h_sequence(
-    uint32,               // sh_name
-    uint32,               // sh_type
-    h_choice(uint32, uint64, NULL), // sh_flags
-    h_choice(uint32, uint64, NULL), // sh_addr
-    h_choice(uint32, uint64, NULL), // sh_offset
-    h_choice(uint32, uint64, NULL), // sh_size
-    uint32,               // sh_link
-    uint32,               // sh_info
-    h_choice(uint32, uint64, NULL), // sh_addralign
-    h_choice(uint32, uint64, NULL), // sh_entsize
-    NULL
-);
+    HParser *e_ident = h_sequence(ei_magic, ei_class, ei_data, ei_version, ei_osabi, ei_abiversion, ei_pad, NULL);
+    HParser *e_type = h_int16();
+    HParser *e_machine = h_int16();
+    HParser *e_version = h_int32();
+    HParser *e_entry = h_int32();
+    HParser *e_phoff = h_int32();
+    HParser *e_shoff = h_int32();
+    HParser *e_flags = h_int32();
+    HParser *e_ehsize = h_int16();
+    HParser *e_phentsize = h_int16();
+    HParser *e_phnum = h_int16();
+    HParser *e_shentsize = h_int16();
+    HParser *e_shnum = h_int16();
+    HParser *e_shstrndx = h_int16();
 
-// Define the complete ELF parser
-static HParser *elf_parser = h_sequence(
-    elf_header,
-    h_many(program_header),
-    h_many(section_header),
-    NULL
-);
+    elf_header_parser = h_sequence(e_ident, e_type, e_machine, e_version, e_entry, e_phoff, e_shoff, e_flags,
+                                   e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum, e_shstrndx, NULL);
+
+    return elf_header_parser;
+}
 
 int main(int argc, char **argv) {
-    HParser *parser = elf_parser;
-    HParseResult *result = h_parse(parser, (const uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        printf("Parse successful!\n");
-        h_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Parse failed!\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <ELF file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(size);
+    if (!buffer) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(fp);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, fp) != size) {
+        fprintf(stderr, "Failed to read file\n");
+        free(buffer);
+        fclose(fp);
+        return 1;
+    }
+
+    fclose(fp);
+
+    HParser *elf_parser = init_elf_parser();
+    HParseResult *result = h_parse(elf_parser, buffer, size);
+    if (result) {
+        printf("ELF parsed successfully\n");
+    } else {
+        printf("Failed to parse ELF\n");
+    }
+
+    free(buffer);
     h_parse_result_free(result);
+
     return 0;
 }

@@ -1,0 +1,1 @@
+({closure@src/main.rs:100:13: 100:16}, impl Fn((&[u8], usize)) -> Result<((&[u8], usize), _), nom::Err<nom::error::Error<&[u8]>>>, {closure@src/main.rs:102:13: 102:16})

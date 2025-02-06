@@ -1,65 +1,84 @@
-Here is the corrected and complete Hammer specification in C for an ARP (Address Resolution Protocol) parser, ensuring the previous requirements are still met and adjusted to compile without errors assuming all dependencies, particularly the Hammer parsing library, are correctly installed and configured:
-
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations for ARP message parsing
-static HParser *arp_packet;
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <arp_packet_file>\n", argv[0]);
+        return 1;
+    }
 
-// ARP opcode types
-static HParsedToken *act_identity(const HParseResult *p, void *user_data) {
-    return H_MAKE_INT(p->bit_length);
-}
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("File opening failed");
+        return 1;
+    }
 
-static void init_arp_parser() {
-    H_RULE (htype, h_uint16());
-    H_RULE (ptype, h_uint16());
-    H_RULE (hlen, h_uint8());
-    H_RULE (plen, h_uint8());
-    H_RULE (oper, h_uint16());
-    H_RULE (sha, h_bytes(6)); // MAC size is typically 6 bytes
-    H_RULE (spa, h_bytes(4)); // IPv4 address size is 4 bytes
-    H_RULE (tha, h_bytes(6));
-    H_RULE (tpa, h_bytes(4));
+    fseek(file, 0, SEEK_END);
+    long fsize = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    H_ACTION (oper, act_identity, NULL);
+    uint8_t *buffer = malloc(fsize);
+    size_t read_size = fread(buffer, 1, fsize, file);
+    fclose(file);
 
-    arp_packet = h_sequence(htype, ptype, hlen, plen,
-                            oper, sha, spa, tha, tpa, NULL);
-}
+    if (read_size != fsize) {
+        fprintf(stderr, "Error reading file: read size differs from file size\n");
+        free(buffer);
+        return 1;
+    }
 
-int main(int argc, char *argv[]) {
-    HParser *parser;
-    init_arp_parser();
-    parser = arp_packet;
+    // ARP packet fields declaration
+    HParser *hw_type = h_uint16();
+    HParser *proto_type = h_uint16();
+    HParser *hw_addr_len = h_uint8();
+    HParser *proto_addr_len = h_uint8();
+    HParser *operation = h_uint16();
+    HParser *sender_hw_addr = h_bits(48, false);
+    HParser *sender_proto_addr = h_bits(32, false);
+    HParser *target_hw_addr = h_bits(48, false);
+    HParser *target_proto_addr = h_bits(32, false);
 
-    // Example ARP packet data (adjust content appropriately)
-    uint8_t input[] = {
-        0x00, 0x01, // Hardware type (Ethernet)
-        0x08, 0x00, // Protocol type (IPv4)
-        0x06,       // Hardware size
-        0x04,       // Protocol size
-        0x00, 0x01, // Opcode (request)
-        0xac, 0xde, 0x48, 0x00, 0x00, 0x80, // Sender MAC address
-        192, 168, 1, 100, // Sender IP address
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Target MAC address (blank)
-        192, 168, 1, 1 // Target IP address
-    };
+    HParser *arp_parser = h_sequence(hw_type, proto_type, hw_addr_len, proto_addr_len,
+                                     operation, sender_hw_addr, sender_proto_addr,
+                                     target_hw_addr, target_proto_addr, NULL);
 
-    size_t input_size = sizeof(input) / sizeof(input[0]);
+    HParseResult *parsed = h_parse(arp_parser, buffer, fsize);
+    if (parsed && parsed->ast) {
+        printf("ARP Packet parsed successfully:\n");
+        printf("Hardware Type: %u\n", *(uint16_t*)h_value_ptr(parsed, 0));
+        printf("Protocol Type: 0x%X\n", *(uint16_t*)h_value_ptr(parsed, 1));
+        printf("Hardware Address Length: %u\n", *(uint8_t*)h_value_ptr(parsed, 2));
+        printf("Protocol Address Length: %u\n", *(uint8_t*)h_value_ptr(parsed, 3));
+        printf("Operation: %u\n", *(uint16_t*)h_value_ptr(parsed, 4));
 
-    HParseResult *result = h_parse(parser, input, input_size);
-    if (result) {
-        printf("ARP packet parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
+        printf("Sender Hardware Address: ");
+        uint8_t *sender_hw_data = (uint8_t*)h_value_ptr(parsed, 5);
+        for (int i = 0; i < 6; i++)
+            printf("%02X", sender_hw_data[i]);
+
+        printf("\nSender Protocol Address: ");
+        uint8_t *sender_proto_data = (uint8_t*)h_value_ptr(parsed, 6);
+        for (int i = 0; i < 4; i++)
+            printf("%d.", sender_proto_data[i]);
+
+        printf("\nTarget Hardware Address: ");
+        uint8_t *target_hw_data = (uint8_t*)h_value_ptr(parsed, 7);
+        for (int i = 0; i < 6; i++)
+            printf("%02X", target_hw_data[i]);
+
+        printf("\nTarget Protocol Address: ");
+        uint8_t *target_proto_data = (uint8_t*)h_value_ptr(parsed, 8);
+        for (int i = 0; i < 4; i++)
+            printf("%d.", target_proto_data[i]);
+
+        printf("\n");
     } else {
         fprintf(stderr, "Failed to parse ARP packet.\n");
     }
 
-    h_free_parser(parser);
+    h_parse_result_free(parsed);
+    h_parser_unref(arp_parser);
+    free(buffer);
     return 0;
 }
-
-This code has been written for gcc and assumes linking with the Hammer library (`-lhammer`). Make sure all paths, library links, and build commands are adjusted according to your environment. The parsing rules reflect assumed typical ARP packet structure fields like hardware type, protocol type, hardware and protocol sizes, as well as addresses. Modify the `input` array as needed to reflect actual ARP packets for testing.

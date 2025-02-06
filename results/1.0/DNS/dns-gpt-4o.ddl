@@ -1,49 +1,52 @@
-namespace DNS
+@dns_message
+{
+    uint16 id;
 
--- DNS Header format according to RFC 1035 section 4.1.1
-struct DnsHeader {
-    id: u16be;
-    flags: u16be;
-    qd_count: u16be;
-    an_count: u16be;
-    ns_count: u16be;
-    ar_count: u16be;
+    struct flags
+    {
+        uint4 qr;
+        uint4 opcode;
+        uint1 aa;
+        uint1 tc;
+        uint1 rd;
+        uint1 ra;
+        uint3 z;
+        uint4 rcode;
+    } flags;
+
+    uint16 qdcount;
+    uint16 ancount;
+    uint16 nscount;
+    uint16 arcount;
+
+    question_section question[qdcount];
+    resource_record answer[ancount];
+    resource_record authority[nscount];
+    resource_record additional[arcount];
 }
 
--- Define DNS question section
-struct DnsQuestion {
-    qname: DnsName;
-    qtype: u16be;
-    qclass: u16be;
+@question_section
+{
+    domain_name qname;
+    uint16 qtype;
+    uint16 qclass;
 }
 
--- Define DNS resource record
-struct DnsRr {
-    name: DnsName;
-    rtype: u16be;
-    rclass: u16be;
-    ttl: u32be;
-    rdlength: u16be;
-    rdata: bytes(rdlength);
+@resource_record
+{
+    domain_name name;
+    uint16 type;
+    uint16 class;
+    uint32 ttl;
+    uint16 rdlength;
+    uint8 rdata[rdlength];
 }
 
--- Recursive structure for domain names
-struct DnsName {
-    labels: list(DnsLabel);
-} : google.protobuf : {
-    terminator: DnsLabel { length: 0 }
-}
-
-struct DnsLabel {
-    length: u8;
-    label: bytes(length);
-}
-
--- Define DNS message
-struct DnsMessage {
-    header: DnsHeader;
-    questions: array(header.qd_count) of DnsQuestion;
-    answers: array(header.an_count) of DnsRr;
-    authorities: array(header.ns_count) of DnsRr;
-    additionals: array(header.ar_count) of DnsRr;
+@domain_name
+{
+    while (1) {
+        uint8 len;
+        if (len == 0) break;
+        uint8 label[len];
+    }
 }

@@ -1,42 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gzip"
-           xmlns="http://example.com/gzip"
-           elementFormDefault="qualified"
-           dfdl:formatRef="http://www.ogf.org/dfdl/dfdl-1.0/formatRef">
-  
-  <xs:include schemaLocation="path/to/dfdl-core.xsd"/>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://example.com/gzip"
+        xmlns:tns="http://example.com/gzip"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
 
-  <dfdl:format ref="dfdl:GeneralFormat" byteOrder="bigEndian" encoding="utf-8"/>
-
-  <xs:element name="gzip">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="HeaderType"/>
-        <xs:element name="compressedData" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
-        <xs:element name="footer" type="FooterType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="id1" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="id2" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-      <xs:element name="os" type="xs:unsignedByte" dfdl:length="8" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="FooterType">
-    <xs:sequence>
-      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="inputSize" type="xs:unsignedInt" dfdl:length="32" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-</xs:schema>
+    <element name="gzip">
+        <complexType>
+            <sequence>
+                <element name="ID1" type="xs:unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:format byteOrder="bigEndian" encoding="ISO-8859-1" lengthKind="explicit" occursCountKind="implicit"/>
+                            <dfdl:assert test="{ . eq 31 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="ID2" type="xs:unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:assert test="{ . eq 139 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="CM" type="xs:unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:assert test="{ . eq 8 }"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="FLG" type="xs:unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:defineVariable name="FTEXT" type="xs:boolean" external="false"/>
+                            <dfdl:defineVariable name="FHCRC" type="xs:boolean" external="false"/>
+                            <dfdl:defineVariable name="FEXTRA" type="xs:boolean" external="false"/>
+                            <dfdl:defineVariable name="FNAME" type="xs:boolean" external="false"/>
+                            <dfdl:defineVariable name="FCOMMENT" type="xs:boolean" external="false"/>
+                            <dfdl:assert test="{ (. &amp; 224) eq 0 }"/> <!-- Reserved bits must be zero -->
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="MTIME" type="xs:unsignedInt"/>
+                <element name="XFL" type="xs:unsignedByte"/>
+                <element name="OS" type="xs:unsignedByte"/>
+                <element name="EXTRA" minOccurs="0" maxOccurs="1">
+                    <complexType>
+                        <sequence>
+                            <element name="XLEN" type="xs:unsignedShort"/>
+                            <element name="subfield" minOccurs="0" maxOccurs="unbounded">
+                                <complexType>
+                                    <sequence>
+                                        <element name="SI1" type="xs:unsignedByte"/>
+                                        <element name="SI2" type="xs:unsignedByte"/>
+                                        <element name="LEN" type="xs:unsignedShort"/>
+                                        <element name="data" type="xs:unsignedByte" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../LEN }"/>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="FNAME" minOccurs="0" maxOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ ($FLG &amp; 8) ne 0 }">
+                    <complexType>
+                        <sequence>
+                            <element name="originalFilename" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%ES;"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="FCOMMENT" minOccurs="0" maxOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ ($FLG &amp; 16) ne 0 }">
+                    <complexType>
+                        <sequence>
+                            <element name="fileComment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%ES;"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="HCRC" minOccurs="0" maxOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ ($FLG &amp; 2) ne 0 }">
+                    <complexType>
+                        <sequence>
+                            <element name="headerCRC16" type="xs:unsignedShort"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="compressedData" type="xs:unsignedByte" dfdl:occursCountKind="implicit" dfdl:lengthKind="endOfParent"/>
+                <element name="CRC32" type="xs:unsignedInt"/>
+                <element name="ISIZE" type="xs:unsignedInt"/>
+            </sequence>
+        </complexType>
+    </element>
+</schema>

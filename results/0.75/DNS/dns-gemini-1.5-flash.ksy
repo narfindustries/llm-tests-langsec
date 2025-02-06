@@ -1,43 +1,66 @@
-meta:
-  id: dns-gemini-1
-  title: DNS Gemini 1.5 Flash
-  homepage: ""
-  file-extension: ""
-  license: ""
-  compiler-options:
-    python:
-      outdir: "generated/999999/0.75/DNS/output_kaitai/dns-gemini-1"
-
 types:
-  - id: header
+  domain_name:
     seq:
-      - id: magic
-        type: u4
-      - id: version
-        type: u2
-      - id: flags
-        type: u2
-      - id: timestamp
-        type: u4
-      - id: size
-        type: u4
-
-  - id: entry
-    seq:
-      - id: type
-        type: u2
+      - id: length
+        type: u2be
       - id: data
-        type: u4
-
-  - id: data_block
+        type: str
+        size: length
+  resource_record:
     seq:
-      - id: entries
-        type: entry
-        repeat: expr
-        repeat-expr: header.size
+      - id: name
+        type: domain_name
+      - id: type
+        type: u2be
+      - id: class
+        type: u2be
+      - id: ttl
+        type: u4be
+      - id: rdlength
+        type: u2be
+      - id: rdata
+        type: bytes
+        size: rdlength
+  dns_header:
+    seq:
+      - id: id
+        type: u2be
+      - id: flags
+        type: u2be
+      - id: qdcount
+        type: u2be
+      - id: ancount
+        type: u2be
+      - id: nscount
+        type: u2be
+      - id: arcount
+        type: u2be
+  dns_message:
+    seq:
+      - id: header
+        type: dns_header
+      - id: questions
+        type: seq
+        size: header.qdcount
+        read: question
+      - id: answers
+        type: seq
+        size: header.ancount
+        read: resource_record
+      - id: authorities
+        type: seq
+        size: header.nscount
+        read: resource_record
+      - id: additionals
+        type: seq
+        size: header.arcount
+        read: resource_record
+  question:
+    seq:
+      - id: qname
+        type: domain_name
+      - id: qtype
+        type: u2be
+      - id: qclass
+        type: u2be
 
-seq:
-  - id: header
-    type: header
-  - id: data
-    type: data_block

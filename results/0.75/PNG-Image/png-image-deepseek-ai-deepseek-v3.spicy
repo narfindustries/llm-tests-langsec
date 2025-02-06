@@ -1,0 +1,135 @@
+module PNG;
+
+public type Signature = unit {
+    magic: bytes &size=8;
+};
+
+public type Chunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=$context.length;
+    crc: uint32;
+};
+
+public type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
+
+public type PLTE = unit {
+    entries: bytes &size=$context.length;
+};
+
+public type IDAT = unit {
+    data: bytes &size=$context.length;
+};
+
+public type IEND = unit {};
+
+public type tRNS = unit {
+    data: bytes &size=$context.length;
+};
+
+public type gAMA = unit {
+    gamma: uint32;
+};
+
+public type cHRM = unit {
+    white_x: uint32;
+    white_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+public type sRGB = unit {
+    rendering_intent: uint8;
+};
+
+public type iCCP = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &size=$context.length - ($position - $start);
+};
+
+public type tEXt = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &until=b"\x00";
+};
+
+public type zTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &size=$context.length - ($position - $start);
+};
+
+public type iTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &until=b"\x00";
+};
+
+public type bKGD = unit {
+    data: bytes &size=$context.length;
+};
+
+public type pHYs = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+public type sBIT = unit {
+    data: bytes &size=$context.length;
+};
+
+public type hIST = unit {
+    frequencies: uint16[] &until=$$.length == $context.length / 2;
+};
+
+public type tIME = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+public type oFFs = unit {
+    x_offset: int32;
+    y_offset: int32;
+    unit_specifier: uint8;
+};
+
+public type pCAL = unit {
+    parameters: bytes &size=$context.length;
+};
+
+public type sCAL = unit {
+    unit: uint8;
+    width: bytes &until=b"\x00";
+    height: bytes &until=b"\x00";
+};
+
+public type sPLT = unit {
+    palette_name: bytes &until=b"\x00";
+    sample_depth: uint8;
+    entries: bytes &size=$context.length - ($position - $start);
+};
+
+public type PNG = unit {
+    signature: Signature;
+    chunks: Chunk[];
+};

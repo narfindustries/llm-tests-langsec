@@ -1,134 +1,156 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
-    bits::{streaming::take as take_bits, streaming::tag as tag_bits},
-    bytes::streaming::{tag, take},
-    combinator::{map, opt},
-    error::Error,
+    bits::streaming::take as take_bits,
+    bytes::streaming::take,
+    error::{Error, ErrorKind},
     multi::many0,
-    number::streaming::{be_u16, be_u32, be_u64},
+    number::streaming::{be_u8, be_u16, be_u32, be_u64},
     sequence::tuple,
-    IResult, Parser,
+    IResult,
+    error::ParseError,
 };
+use std::env;
+use std::fs;
+use std::convert::TryInto;
+
+#[derive(Debug)]
+enum LeapIndicator {
+    NoWarning,
+    ExtraSecond61,
+    ExtraSecond59,
+    NotSynchronized,
+}
+
+#[derive(Debug)]
+enum NtpMode {
+    Reserved,
+    SymmetricActive,
+    SymmetricPassive,
+    Client,
+    Server,
+    Broadcast,
+    ControlMessage,
+    PrivateUse,
+}
 
 #[derive(Debug)]
 struct NtpPacket {
-    leap_indicator: u8,
+    leap_indicator: LeapIndicator,
     version: u8,
-    mode: u8,
+    mode: NtpMode,
     stratum: u8,
-    poll: i8,
+    poll_interval: i8,
     precision: i8,
     root_delay: f32,
     root_dispersion: f32,
-    reference_id: u32,
-    reference_timestamp: f64,
-    origin_timestamp: f64,
-    receive_timestamp: f64,
-    transmit_timestamp: f64,
-    extensions: Option<Vec<NtpExtension>>,
-    authentication_data: Option<NtpAuthentication>,
+    reference_id: [u8; 4],
+    reference_timestamp: u64,
+    origin_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    extension_fields: Vec<ExtensionField>,
 }
 
 #[derive(Debug)]
-struct NtpExtension {
+struct ExtensionField {
     field_type: u16,
-    length: u16,
+    field_length: u16,
     data: Vec<u8>,
 }
 
-#[derive(Debug)]
-struct NtpAuthentication {
-    key_id: u32,
-    message_digest: Vec<u8>,
+fn parse_leap_indicator(input: (&[u8], usize)) -> IResult<(&[u8], usize), LeapIndicator> {
+    let (input, bits) = take_bits(2usize)(input)?;
+    let leap_indicator = match bits {
+        0b00 => LeapIndicator::NoWarning,
+        0b01 => LeapIndicator::ExtraSecond61,
+        0b10 => LeapIndicator::ExtraSecond59,
+        0b11 => LeapIndicator::NotSynchronized,
+        _ => return Err(nom::Err::Error(Error::from_error_kind(input, ErrorKind::Char))),
+    };
+    Ok((input, leap_indicator))
 }
 
-fn parse_ntp_header(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    let (input, (header_byte, stratum, poll, precision)) = tuple((
-        take_bits(8u8),
-        take(1u8),
-        take(1i8),
-        take(1i8),
+fn parse_ntp_mode(input: (&[u8], usize)) -> IResult<(&[u8], usize), NtpMode> {
+    let (input, bits) = take_bits(3usize)(input)?;
+    let mode = match bits {
+        0b000 => NtpMode::Reserved,
+        0b001 => NtpMode::SymmetricActive,
+        0b010 => NtpMode::SymmetricPassive,
+        0b011 => NtpMode::Client,
+        0b100 => NtpMode::Server,
+        0b101 => NtpMode::Broadcast,
+        0b110 => NtpMode::ControlMessage,
+        0b111 => NtpMode::PrivateUse,
+        _ => return Err(nom::Err::Error(Error::from_error_kind(input, ErrorKind::Char))),
+    };
+    Ok((input, mode))
+}
+
+fn parse_extension_field(input: &[u8]) -> IResult<&[u8], ExtensionField> {
+    let (input, field_type) = be_u16(input)?;
+    let (input, field_length) = be_u16(input)?;
+    let (input, data) = take(field_length as usize)(input)?;
+    Ok((input, ExtensionField {
+        field_type,
+        field_length,
+        data: data.to_vec(),
+    }))
+}
+
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
+    let (input, (leap_indicator, version, mode)) = tuple((
+        |i| parse_leap_indicator((i, 0)),
+        |i| take_bits(3usize)((i, 0)).map(|((a,_), bits)| (a, bits)),
+        |i| parse_ntp_mode((i, 0)),
     ))(input)?;
 
-    let leap_indicator = (header_byte >> 6) & 0b11;
-    let version = (header_byte >> 3) & 0b111;
-    let mode = header_byte & 0b111;
+    let (input, stratum) = be_u8(input)?;
+    let (input, poll_interval) = be_u8(input)?;
+    let (input, precision) = be_u8(input)?;
 
-    let (input, (root_delay, root_dispersion, reference_id)) = tuple((
-        map(be_u32, |val| f32::from_bits(val)),
-        map(be_u32, |val| f32::from_bits(val)),
-        be_u32,
-    ))(input)?;
+    let (input, root_delay) = be_u32(input)?;
+    let (input, root_dispersion) = be_u32(input)?;
+    let (input, reference_id) = take(4usize)(input)?;
+    let (input, reference_timestamp) = be_u64(input)?;
+    let (input, origin_timestamp) = be_u64(input)?;
+    let (input, receive_timestamp) = be_u64(input)?;
+    let (input, transmit_timestamp) = be_u64(input)?;
 
-    let (input, (reference_timestamp, origin_timestamp, receive_timestamp, transmit_timestamp)) = tuple((
-        map(be_u64, |val| f64::from_bits(val)),
-        map(be_u64, |val| f64::from_bits(val)),
-        map(be_u64, |val| f64::from_bits(val)),
-        map(be_u64, |val| f64::from_bits(val)),
-    ))(input)?;
-
-    let (input, extensions) = opt(parse_extensions)(input)?;
-    let (input, authentication) = opt(parse_authentication)(input)?;
+    let (input, extension_fields) = many0(parse_extension_field)(input)?;
 
     Ok((input, NtpPacket {
         leap_indicator,
         version,
         mode,
         stratum,
-        poll,
-        precision,
-        root_delay,
-        root_dispersion,
-        reference_id,
+        poll_interval: poll_interval as i8,
+        precision: precision as i8,
+        root_delay: (root_delay as f64 / 65536.0) as f32,
+        root_dispersion: (root_dispersion as f64 / 65536.0) as f32,
+        reference_id: reference_id.try_into().unwrap(),
         reference_timestamp,
         origin_timestamp,
         receive_timestamp,
         transmit_timestamp,
-        extensions,
-        authentication_data: authentication,
-    }))
-}
-
-fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<NtpExtension>> {
-    many0(|i| {
-        let (i, field_type) = be_u16(i)?;
-        let (i, length) = be_u16(i)?;
-        let (i, data) = take(length)(i)?;
-        Ok((i, NtpExtension { field_type, length, data: data.to_vec() }))
-    })(input)
-}
-
-fn parse_authentication(input: &[u8]) -> IResult<&[u8], NtpAuthentication> {
-    let (input, key_id) = be_u32(input)?;
-    let (input, message_digest) = take(16usize)(input)?;
-    
-    Ok((input, NtpAuthentication {
-        key_id,
-        message_digest: message_digest.to_vec(),
+        extension_fields,
     }))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <ntp_file>", args[0]);
+        eprintln!("Usage: {} <ntp_packet_file>", args[0]);
         std::process::exit(1);
     }
 
-    let mut file = File::open(&args[1])?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
-    match parse_ntp_header(&buffer) {
+    let file_contents = fs::read(&args[1])?;
+    match parse_ntp_packet(&file_contents) {
         Ok((_, packet)) => {
-            println!("Parsed NTP Packet: {:?}", packet);
+            println!("NTP Packet: {:?}", packet);
             Ok(())
         }
         Err(e) => {
-            eprintln!("Failed to parse NTP packet: {:?}", e);
-            Err(Box::new(Error::from(e)))
+            eprintln!("Parsing error: {:?}", e);
+            std::process::exit(1);
         }
     }
 }

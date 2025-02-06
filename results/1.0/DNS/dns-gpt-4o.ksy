@@ -1,74 +1,80 @@
 meta:
-  id: dns_gpt_4o
-  title: DNS Protocol
+  id: dns_message
+  title: DNS Message
   endian: be
-
 seq:
   - id: transaction_id
     type: u2
   - id: flags
-    type: flags
+    type: dns_flags
   - id: qdcount
     type: u2
+    doc: Number of questions
   - id: ancount
     type: u2
+    doc: Number of answer resource records
   - id: nscount
     type: u2
+    doc: Number of authority resource records
   - id: arcount
     type: u2
-  - id: queries
-    type: query
+    doc: Number of additional resource records
+  - id: questions
+    type: question
     repeat: expr
     repeat-expr: qdcount
   - id: answers
     type: resource_record
     repeat: expr
     repeat-expr: ancount
-  - id: authority
+  - id: authorities
     type: resource_record
     repeat: expr
     repeat-expr: nscount
-  - id: additional
+  - id: additionals
     type: resource_record
     repeat: expr
     repeat-expr: arcount
 
 types:
-  flags:
+  dns_flags:
     seq:
-      - id: qr
-        type: b1
-      - id: opcode
-        type: b4
-      - id: aa
-        type: b1
-      - id: tc
-        type: b1
-      - id: rd
-        type: b1
-      - id: ra
-        type: b1
-      - id: z
-        type: b3
-      - id: rcode
-        type: b4
+      - id: flags_raw
+        type: u2
+    instances:
+      qr:
+        value: (flags_raw >> 15) & 1
+      opcode:
+        value: (flags_raw >> 11) & 0xF
+      aa:
+        value: (flags_raw >> 10) & 1
+      tc:
+        value: (flags_raw >> 9) & 1
+      rd:
+        value: (flags_raw >> 8) & 1
+      ra:
+        value: (flags_raw >> 7) & 1
+      z_reserved:
+        value: (flags_raw >> 4) & 0x7
+      rcode:
+        value: flags_raw & 0xF
 
-  query:
+  question:
     seq:
-      - id: name
+      - id: qname
         type: domain_name
-      - id: type
+      - id: qtype
         type: u2
-      - id: class
+      - id: qclass
         type: u2
-
+  
   resource_record:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-      - id: class
+      - id: class_
         type: u2
       - id: ttl
         type: u4
@@ -76,10 +82,20 @@ types:
         type: u2
       - id: rdata
         size: rdlength
-
+  
   domain_name:
     seq:
-      - id: name
-        type: strz
-        encoding: ASCII
-        terminator: 0
+      - id: parts
+        type: domain_label
+        repeat: until
+        repeat-until: _.is_root
+    types:
+      domain_label:
+        seq:
+          - id: length
+            type: u1
+          - id: name
+            size: length
+        instances:
+          is_root:
+            value: length == 0

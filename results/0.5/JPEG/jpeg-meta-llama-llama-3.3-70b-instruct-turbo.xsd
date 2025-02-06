@@ -1,84 +1,182 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg"
-           xmlns="http://example.com/jpeg"
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl-namespace-1.0.xsd"/>
-
-  <xs:element name="jpeg" type="JpegType" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-
-  <xs:complexType name="JpegType">
+  <xs:element name="definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="format" type="dfdl:formatType"/>
+      </xs:sequence>
+      <xs:attribute name="xmlns:dfdl" type="xs:string" fixed="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <xs:attribute name="xmlns:xs" type="xs:string" fixed="http://www.w3.org/2001/XMLSchema"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="soi" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="app0" type="App0Type" dfdl:occurs="1..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="app1" type="App1Type" dfdl:occurs="0..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="dht" type="DhtType" dfdl:occurs="0..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="dqt" type="DqtType" dfdl:occurs="0..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="sof0" type="Sof0Type" dfdl:occurs="1..1" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="b pend" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="eoi" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
   </xs:complexType>
-
-  <xs:complexType name="App0Type">
+  <xs:complexType name="elementType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:padding="0" dfdl:encoding="ascii" dfdl:representation="text"/>
-      <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="units" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="x-density" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="y-density" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="assert" type="dfdl:assertType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="byteOrder" type="xs:string"/>
+    <xs:attribute name="encoding" type="xs:string"/>
+    <xs:attribute name="length" type="xs:string"/>
+    <xs:attribute name="occurs" type="xs:string"/>
   </xs:complexType>
-
-  <xs:complexType name="App1Type">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="exif-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-    </xs:sequence>
+  <xs:complexType name="assertType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="value" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
-
-  <xs:complexType name="DhtType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ht-info" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="ht-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DqtType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="qt-info" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="qt-data" type="xs:hexBinary" dfdl:length="*" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Sof0Type">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:alignment="implicit" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="height" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="width" type="xs:unsignedShort" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="num-components" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="component" type="ComponentType" dfdl:occurs="1..*" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="ComponentType">
-    <xs:sequence>
-      <xs:element name="id" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="hsamp" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="vsamp" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-      <xs:element name="qt" type="xs:unsignedByte" dfdl:representation="binary" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="dfdl:definition"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>
+<root xmlns="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <definition xmlns="http://www.ogf.org/dfdl/dfdl-1.0/">
+    <format name="JPEG" type="binary" representation="binary">
+      <element name="SOI" type="uint16" byteOrder="bigEndian" encoding="binary">
+        <assert>value("0xFFD8")</assert>
+      </element>
+      <element name="APP0" type="sequence">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFE0")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 2</assert>
+        </element>
+        <element name="identifier" type="string" length="5" encoding="ASCII">
+          <assert>value() = "JFIF"</assert>
+        </element>
+        <element name="version" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() = "0x0100" or value() = "0x0101" or value() = "0x0102"</assert>
+        </element>
+        <element name="units" type="uint8" encoding="binary">
+          <assert>value() = "0x00" or value() = "0x01" or value() = "0x02"</assert>
+        </element>
+        <element name="X_density" type="uint16" byteOrder="bigEndian" encoding="binary"/>
+        <element name="Y_density" type="uint16" byteOrder="bigEndian" encoding="binary"/>
+        <element name="thumbnail_width" type="uint8" encoding="binary"/>
+        <element name="thumbnail_height" type="uint8" encoding="binary"/>
+      </element>
+      <element name="APP1" type="sequence" occurs="0..1">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFE1")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 2</assert>
+        </element>
+        <element name="EXIF_identifier" type="string" length="6" encoding="ASCII">
+          <assert>value() = "Exif"</assert>
+        </element>
+        <element name="EXIF_data" type="binary" length="*"/>
+      </element>
+      <element name="DQT" type="sequence" occurs="0..4">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFDB")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 2</assert>
+        </element>
+        <element name="table_number" type="uint8" encoding="binary">
+          <assert>value() = "0x00" or value() = "0x01"</assert>
+        </element>
+        <element name="table_data" type="binary" length="64"/>
+      </element>
+      <element name="SOF0" type="sequence">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFC0")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 17</assert>
+        </element>
+        <element name="precision" type="uint8" encoding="binary">
+          <assert>value() = "0x08" or value() = "0x12"</assert>
+        </element>
+        <element name="image_height" type="uint16" byteOrder="bigEndian" encoding="binary"/>
+        <element name="image_width" type="uint16" byteOrder="bigEndian" encoding="binary"/>
+        <element name="number_of_components" type="uint8" encoding="binary">
+          <assert>value() = "0x01" or value() = "0x03"</assert>
+        </element>
+        <element name="component" type="sequence" occurs="1..3">
+          <element name="component_identifier" type="uint8" encoding="binary">
+            <assert>value() = "0x01" or value() = "0x02" or value() = "0x03"</assert>
+          </element>
+          <element name="horizontal_sampling_factor" type="uint8" encoding="binary"/>
+          <element name="vertical_sampling_factor" type="uint8" encoding="binary"/>
+          <element name="quantization_table_number" type="uint8" encoding="binary">
+            <assert>value() = "0x00" or value() = "0x01"</assert>
+          </element>
+        </element>
+      </element>
+      <element name="DHT" type="sequence" occurs="0..4">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFC4")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 19</assert>
+        </element>
+        <element name="table_class" type="uint8" encoding="binary">
+          <assert>value() = "0x00" or value() = "0x01"</assert>
+        </element>
+        <element name="table_destination_identifier" type="uint8" encoding="binary">
+          <assert>value() = "0x00" or value() = "0x01"</assert>
+        </element>
+        <element name="number_of_codes" type="uint8" encoding="binary"/>
+        <element name="code_lengths" type="binary" length="16"/>
+        <element name="code_values" type="binary" length="*"/>
+      </element>
+      <element name="DRI" type="sequence" occurs="0..1">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFDD")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() = 4</assert>
+        </element>
+        <element name="restart_interval" type="uint16" byteOrder="bigEndian" encoding="binary"/>
+      </element>
+      <element name="SOS" type="sequence">
+        <element name="marker" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value("0xFFDA")</assert>
+        </element>
+        <element name="length" type="uint16" byteOrder="bigEndian" encoding="binary">
+          <assert>value() >= 6</assert>
+        </element>
+        <element name="number_of_components" type="uint8" encoding="binary">
+          <assert>value() = "0x01" or value() = "0x03"</assert>
+        </element>
+        <element name="component" type="sequence" occurs="1..3">
+          <element name="component_identifier" type="uint8" encoding="binary">
+            <assert>value() = "0x01" or value() = "0x02" or value() = "0x03"</assert>
+          </element>
+          <element name="DC_table_number" type="uint8" encoding="binary">
+            <assert>value() = "0x00" or value() = "0x01"</assert>
+          </element>
+          <element name="AC_table_number" type="uint8" encoding="binary">
+            <assert>value() = "0x00" or value() = "0x01"</assert>
+          </element>
+        </element>
+      </element>
+      <element name="image_data" type="binary" length="*"/>
+      <element name="EOI" type="uint16" byteOrder="bigEndian" encoding="binary">
+        <assert>value("0xFFD9")</assert>
+      </element>
+    </format>
+  </definition>
+</root>

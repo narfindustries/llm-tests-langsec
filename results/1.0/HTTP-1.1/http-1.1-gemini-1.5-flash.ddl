@@ -1,43 +1,92 @@
-module HTTP11 where
+data HTTPMethod = GET | POST | PUT | DELETE | HEAD | OPTIONS | CONNECT | TRACE | PATCH
+  deriving (Eq, Show)
 
-import Daedalus.TH
-import Daedalus.Parser.Monad
-import Daedalus.Type.AST
+instance FromByteString HTTPMethod where
+  fromByteString bs = case unpack bs of
+    "GET" -> Just GET
+    "POST" -> Just POST
+    "PUT" -> Just PUT
+    "DELETE" -> Just DELETE
+    "HEAD" -> Just HEAD
+    "OPTIONS" -> Just OPTIONS
+    "CONNECT" -> Just CONNECT
+    "TRACE" -> Just TRACE
+    "PATCH" -> Just PATCH
+    _ -> Nothing
 
--- |This is a placeholder for the actual HTTP 1.1 specification.  
---  The error message indicates a problem with the compilation process,
---  not necessarily the specification itself.  A complete and correct
---  HTTP 1.1 specification is very extensive.  This example demonstrates a basic structure.
+data HTTPVersion = HTTP1_1 deriving (Eq, Show)
 
-type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE"
+instance FromByteString HTTPVersion where
+  fromByteString bs = case unpack bs of
+    "HTTP/1.1" -> Just HTTP1_1
+    _ -> Nothing
 
-httpVersion :: Parser String
-httpVersion = string "HTTP/1.1"
+data HTTPRequest = HTTPRequest {
+  method :: HTTPMethod,
+  uri :: String,
+  version :: HTTPVersion,
+  headers :: [(String, String)],
+  body :: ByteString
+} deriving (Show)
 
-httpMethod :: Parser HTTPMethod
-httpMethod = choice [string "GET", string "POST", string "PUT", string "DELETE"]
+data HTTPResponse = HTTPResponse {
+  version :: HTTPVersion,
+  status :: Int,
+  reason :: String,
+  headers :: [(String, String)],
+  body :: ByteString
+} deriving (Show)
 
-httpRequestLine :: Parser ()
-httpRequestLine = do
-  method <- httpMethod
-  void $ skipMany space
-  url <- many (satisfy isAlphaNum) --Simplified URL parsing
-  void $ skipMany space
-  void $ httpVersion
-  void $ newline
+data HTTPMessage = HTTPRequest HTTPRequest | HTTPResponse HTTPResponse
+  deriving (Show)
 
-httpResponse :: Parser ()
-httpResponse = do
-  version <- httpVersion
-  void $ newline
-  void $ many (satisfy isPrint) --Simplified response body parsing
+httpHeader :: Parser (String, String)
+httpHeader = do
+  k <- some (satisfy isUpper) <* symbol ":"
+  v <- many (satisfy (\c -> c /= '\r' && c /= '\n'))
+  symbol "\r\n"
+  return (k, v)
 
-httpMessage :: Parser ()
-httpMessage = do
-  httpRequestLine
-  many (satisfy isPrint) -- Simplified header parsing
-  newline
-  many (satisfy isPrint) -- Simplified body parsing
+parseHTTPRequest :: Parser HTTPRequest
+parseHTTPRequest = do
+  method <- some (satisfy isUpper)
+  symbol " "
+  uri <- many (satisfy (\c -> c /= ' ' && c /= '\r'))
+  symbol " "
+  version <- some (satisfy isAlphaNum)
+  symbol "\r\n"
+  headers <- many httpHeader
+  body <- option mempty (manyTill anyChar (symbol "\r\n\r\n"))
+  return $ HTTPRequest {method = fromByteString (pack method), uri = uri, version = fromByteString (pack version), headers = headers, body = pack body}
 
-main :: Daedalus.Parser.Monad.Parser ()
-main = httpMessage
+parseHTTPResponse :: Parser HTTPResponse
+parseHTTPResponse = do
+  version <- some (satisfy isAlphaNum)
+  symbol " "
+  status <- decimal
+  symbol " "
+  reason <- many (satisfy (\c -> c /= '\r' && c /= '\n'))
+  symbol "\r\n"
+  headers <- many httpHeader
+  body <- option mempty (manyTill anyChar eof)
+  return $ HTTPResponse {version = fromByteString (pack version), status = status, reason = reason, headers = headers, body = pack body}
+
+
+parseHTTP :: Parser HTTPMessage
+parseHTTP = choice [
+    do
+      req <- parseHTTPRequest
+      return $ HTTPRequest req,
+    do
+      resp <- parseHTTPResponse
+      return $ HTTPResponse resp
+    ]
+
+main :: IO ()
+main = do
+  let sampleRequest = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+  case runParser parseHTTP (pack sampleRequest) of
+    Just (HTTPRequest req, _) -> print req
+    Just (HTTPResponse resp, _) -> print resp
+    Nothing -> putStrLn "Failed to parse."
+

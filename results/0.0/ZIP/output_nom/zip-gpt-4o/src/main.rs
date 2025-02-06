@@ -1,29 +1,25 @@
+// Note: This is a simplified example and may not cover all edge cases or optional fields in the ZIP specification.
+
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_opt, map_res},
-    multi::many0,
-    number::complete::{le_u16, le_u32, le_u8},
-    sequence::tuple,
+    number::complete::{le_u16, le_u32},
     IResult,
 };
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
 use std::env;
 
 #[derive(Debug)]
 struct LocalFileHeader {
-    version: u16,
-    flags: u16,
-    compression: u16,
-    mod_time: u16,
-    mod_date: u16,
+    version_needed: u16,
+    general_purpose: u16,
+    compression_method: u16,
+    last_mod_time: u16,
+    last_mod_date: u16,
     crc32: u32,
     compressed_size: u32,
     uncompressed_size: u32,
-    file_name_length: u16,
-    extra_field_length: u16,
-    file_name: Vec<u8>,
+    file_name: String,
     extra_field: Vec<u8>,
 }
 
@@ -31,58 +27,56 @@ struct LocalFileHeader {
 struct CentralDirectoryFileHeader {
     version_made_by: u16,
     version_needed: u16,
-    flags: u16,
-    compression: u16,
-    mod_time: u16,
-    mod_date: u16,
+    general_purpose: u16,
+    compression_method: u16,
+    last_mod_time: u16,
+    last_mod_date: u16,
     crc32: u32,
     compressed_size: u32,
     uncompressed_size: u32,
-    file_name_length: u16,
-    extra_field_length: u16,
-    file_comment_length: u16,
-    disk_number_start: u16,
-    internal_file_attributes: u16,
-    external_file_attributes: u32,
-    relative_offset: u32,
-    file_name: Vec<u8>,
+    file_name: String,
     extra_field: Vec<u8>,
-    file_comment: Vec<u8>,
+    file_comment: String,
 }
 
 #[derive(Debug)]
 struct EndOfCentralDirectoryRecord {
-    disk_number: u16,
-    central_directory_disk_number: u16,
-    central_directory_records_on_this_disk: u16,
-    total_central_directory_records: u16,
-    central_directory_size: u32,
-    central_directory_offset: u32,
-    comment_length: u16,
-    comment: Vec<u8>,
+    number_of_this_disk: u16,
+    disk_where_cd_starts: u16,
+    number_of_cd_records_on_this_disk: u16,
+    total_number_of_cd_records: u16,
+    size_of_cd: u32,
+    offset_of_start_of_cd: u32,
+    zip_file_comment: String,
 }
 
 fn parse_local_file_header(input: &[u8]) -> IResult<&[u8], LocalFileHeader> {
     let (input, _) = tag([0x50, 0x4b, 0x03, 0x04])(input)?;
-    let (input, (version, flags, compression, mod_time, mod_date, crc32, compressed_size, uncompressed_size, file_name_length, extra_field_length)) =
-        tuple((le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u32, le_u16, le_u16))(input)?;
+    let (input, version_needed) = le_u16(input)?;
+    let (input, general_purpose) = le_u16(input)?;
+    let (input, compression_method) = le_u16(input)?;
+    let (input, last_mod_time) = le_u16(input)?;
+    let (input, last_mod_date) = le_u16(input)?;
+    let (input, crc32) = le_u32(input)?;
+    let (input, compressed_size) = le_u32(input)?;
+    let (input, uncompressed_size) = le_u32(input)?;
+    let (input, file_name_length) = le_u16(input)?;
+    let (input, extra_field_length) = le_u16(input)?;
     let (input, file_name) = take(file_name_length)(input)?;
     let (input, extra_field) = take(extra_field_length)(input)?;
 
     Ok((
         input,
         LocalFileHeader {
-            version,
-            flags,
-            compression,
-            mod_time,
-            mod_date,
+            version_needed,
+            general_purpose,
+            compression_method,
+            last_mod_time,
+            last_mod_date,
             crc32,
             compressed_size,
             uncompressed_size,
-            file_name_length,
-            extra_field_length,
-            file_name: file_name.to_vec(),
+            file_name: String::from_utf8_lossy(file_name).to_string(),
             extra_field: extra_field.to_vec(),
         },
     ))
@@ -90,8 +84,22 @@ fn parse_local_file_header(input: &[u8]) -> IResult<&[u8], LocalFileHeader> {
 
 fn parse_central_directory_file_header(input: &[u8]) -> IResult<&[u8], CentralDirectoryFileHeader> {
     let (input, _) = tag([0x50, 0x4b, 0x01, 0x02])(input)?;
-    let (input, (version_made_by, version_needed, flags, compression, mod_time, mod_date, crc32, compressed_size, uncompressed_size, file_name_length, extra_field_length, file_comment_length, disk_number_start, internal_file_attributes, external_file_attributes, relative_offset)) =
-        tuple((le_u16, le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u32, le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32))(input)?;
+    let (input, version_made_by) = le_u16(input)?;
+    let (input, version_needed) = le_u16(input)?;
+    let (input, general_purpose) = le_u16(input)?;
+    let (input, compression_method) = le_u16(input)?;
+    let (input, last_mod_time) = le_u16(input)?;
+    let (input, last_mod_date) = le_u16(input)?;
+    let (input, crc32) = le_u32(input)?;
+    let (input, compressed_size) = le_u32(input)?;
+    let (input, uncompressed_size) = le_u32(input)?;
+    let (input, file_name_length) = le_u16(input)?;
+    let (input, extra_field_length) = le_u16(input)?;
+    let (input, file_comment_length) = le_u16(input)?;
+    let (input, _disk_number_start) = le_u16(input)?;
+    let (input, _internal_file_attributes) = le_u16(input)?;
+    let (input, _external_file_attributes) = le_u32(input)?;
+    let (input, _relative_offset_of_local_header) = le_u32(input)?;
     let (input, file_name) = take(file_name_length)(input)?;
     let (input, extra_field) = take(extra_field_length)(input)?;
     let (input, file_comment) = take(file_comment_length)(input)?;
@@ -101,74 +109,71 @@ fn parse_central_directory_file_header(input: &[u8]) -> IResult<&[u8], CentralDi
         CentralDirectoryFileHeader {
             version_made_by,
             version_needed,
-            flags,
-            compression,
-            mod_time,
-            mod_date,
+            general_purpose,
+            compression_method,
+            last_mod_time,
+            last_mod_date,
             crc32,
             compressed_size,
             uncompressed_size,
-            file_name_length,
-            extra_field_length,
-            file_comment_length,
-            disk_number_start,
-            internal_file_attributes,
-            external_file_attributes,
-            relative_offset,
-            file_name: file_name.to_vec(),
+            file_name: String::from_utf8_lossy(file_name).to_string(),
             extra_field: extra_field.to_vec(),
-            file_comment: file_comment.to_vec(),
+            file_comment: String::from_utf8_lossy(file_comment).to_string(),
         },
     ))
 }
 
 fn parse_end_of_central_directory_record(input: &[u8]) -> IResult<&[u8], EndOfCentralDirectoryRecord> {
     let (input, _) = tag([0x50, 0x4b, 0x05, 0x06])(input)?;
-    let (input, (disk_number, central_directory_disk_number, central_directory_records_on_this_disk, total_central_directory_records, central_directory_size, central_directory_offset, comment_length)) =
-        tuple((le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u16))(input)?;
-    let (input, comment) = take(comment_length)(input)?;
+    let (input, number_of_this_disk) = le_u16(input)?;
+    let (input, disk_where_cd_starts) = le_u16(input)?;
+    let (input, number_of_cd_records_on_this_disk) = le_u16(input)?;
+    let (input, total_number_of_cd_records) = le_u16(input)?;
+    let (input, size_of_cd) = le_u32(input)?;
+    let (input, offset_of_start_of_cd) = le_u32(input)?;
+    let (input, zip_file_comment_length) = le_u16(input)?;
+    let (input, zip_file_comment) = take(zip_file_comment_length)(input)?;
 
     Ok((
         input,
         EndOfCentralDirectoryRecord {
-            disk_number,
-            central_directory_disk_number,
-            central_directory_records_on_this_disk,
-            total_central_directory_records,
-            central_directory_size,
-            central_directory_offset,
-            comment_length,
-            comment: comment.to_vec(),
+            number_of_this_disk,
+            disk_where_cd_starts,
+            number_of_cd_records_on_this_disk,
+            total_number_of_cd_records,
+            size_of_cd,
+            offset_of_start_of_cd,
+            zip_file_comment: String::from_utf8_lossy(zip_file_comment).to_string(),
         },
     ))
-}
-
-fn parse_zip(input: &[u8]) -> IResult<&[u8], (Vec<LocalFileHeader>, Vec<CentralDirectoryFileHeader>, EndOfCentralDirectoryRecord)> {
-    let (input, local_file_headers) = many0(parse_local_file_header)(input)?;
-    let (input, central_directory_file_headers) = many0(parse_central_directory_file_header)(input)?;
-    let (input, end_of_central_directory_record) = parse_end_of_central_directory_record(input)?;
-
-    Ok((input, (local_file_headers, central_directory_file_headers, end_of_central_directory_record)))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <zip-file>", args[0]);
+        eprintln!("Usage: {} <zipfile>", args[0]);
         return;
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = File::open(&path).expect("Failed to open file");
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_zip(&buffer) {
-        Ok((_, (local_file_headers, central_directory_file_headers, end_of_central_directory_record))) => {
-            println!("Local File Headers: {:?}", local_file_headers);
-            println!("Central Directory File Headers: {:?}", central_directory_file_headers);
-            println!("End of Central Directory Record: {:?}", end_of_central_directory_record);
+    let mut input = &buffer[..];
+
+    while !input.is_empty() {
+        if let Ok((remaining, local_file_header)) = parse_local_file_header(input) {
+            println!("{:?}", local_file_header);
+            input = remaining;
+        } else if let Ok((remaining, central_directory_file_header)) = parse_central_directory_file_header(input) {
+            println!("{:?}", central_directory_file_header);
+            input = remaining;
+        } else if let Ok((remaining, end_of_central_directory_record)) = parse_end_of_central_directory_record(input) {
+            println!("{:?}", end_of_central_directory_record);
+            input = remaining;
+        } else {
+            break;
         }
-        Err(e) => eprintln!("Failed to parse ZIP file: {:?}", e),
     }
 }

@@ -1,26 +1,37 @@
 module ARP;
 
-public type Header = unit {
-    hw_type: uint16;
+public type ARPPacket = unit {
+    hardware_type: uint16;
     protocol_type: uint16;
-    hw_size: uint8;
-    protocol_size: uint8;
-    opcode: uint16;
-    sender_mac: bytes &size=6;
-    sender_ip: bytes &size=4;
-    target_mac: bytes &size=6;
-    target_ip: bytes &size=4;
-    
-    on %done {
-        print "ARP Operation:", self.opcode;
-        print "Sender MAC:", self.sender_mac;
-        print "Sender IP:", self.sender_ip;
-        print "Target MAC:", self.target_mac;
-        print "Target IP:", self.target_ip;
-    }
+    hardware_addr_len: uint8;
+    protocol_addr_len: uint8;
+    operation: uint16;
+    sender_hardware_addr: bytes &size=self.hardware_addr_len;
+    sender_protocol_addr: bytes &size=self.protocol_addr_len;
+    target_hardware_addr: bytes &size=self.hardware_addr_len;
+    target_protocol_addr: bytes &size=self.protocol_addr_len;
+
+    var hardware_type_name: string;
+    var operation_name: string;
 };
 
-type Operation = enum {
-    REQUEST = 1,
-    REPLY = 2
-};
+on ARPPacket::%done {
+    self.hardware_type_name = hardware_type_string(self.hardware_type);
+    self.operation_name = operation_string(self.operation);
+}
+
+function hardware_type_string(t: uint16) : string {
+    switch ( t ) {
+        case 1: return "Ethernet";
+        case 6: return "IEEE 802 Networks";
+        default: return "Unknown";
+    }
+}
+
+function operation_string(o: uint16) : string {
+    switch ( o ) {
+        case 1: return "Request";
+        case 2: return "Reply";
+        default: return "Unknown";
+    }
+}

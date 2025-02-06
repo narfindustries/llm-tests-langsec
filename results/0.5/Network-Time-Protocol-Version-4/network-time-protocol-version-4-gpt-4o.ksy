@@ -1,12 +1,12 @@
 meta:
-  id: ntp_v4
+  id: ntp_packet
   title: Network Time Protocol Version 4
-  application: network
   license: CC0-1.0
   endian: be
+
 seq:
-  - id: flags
-    type: flags
+  - id: li_vn_mode
+    type: li_vn_mode
   - id: stratum
     type: u1
   - id: poll
@@ -14,21 +14,25 @@ seq:
   - id: precision
     type: s1
   - id: root_delay
-    type: fixed_point_16
+    type: u4
   - id: root_dispersion
-    type: fixed_point_16
+    type: u4
   - id: reference_id
     type: u4
   - id: reference_timestamp
-    type: timestamp
+    type: u8
   - id: originate_timestamp
-    type: timestamp
+    type: u8
   - id: receive_timestamp
-    type: timestamp
+    type: u8
   - id: transmit_timestamp
-    type: timestamp
+    type: u8
+  - id: optional_authenticator
+    type: authenticator
+    if: _io.size - _io.pos > 0
+
 types:
-  flags:
+  li_vn_mode:
     seq:
       - id: leap_indicator
         type: b2
@@ -36,15 +40,11 @@ types:
         type: b3
       - id: mode
         type: b3
-  fixed_point_16:
+
+  authenticator:
     seq:
-      - id: integer
-        type: s2
-      - id: fraction
-        type: u2
-  timestamp:
-    seq:
-      - id: seconds
+      - id: key_identifier
         type: u4
-      - id: fraction
-        type: u4
+      - id: message_digest
+        size: 16 # MD5 message digest size in bytes
+        if: _io.size - _io.pos >= 16

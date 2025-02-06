@@ -1,26 +1,46 @@
 use nom::{
     bits::{streaming::take as take_bits, streaming::tag as tag_bits},
-    combinator::{map, opt, complete},
+    bytes::streaming::{tag, take},
+    error::Error,
     multi::{count, many0},
+    sequence::{preceded, tuple},
+    IResult,
     number::streaming::{be_u8, be_u16, be_u32},
-    sequence::{tuple, preceded},
-    IResult, Err as NomErr,
+    combinator::{map, opt},
 };
 use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs;
+
+#[derive(Debug, Clone)]
+enum OpCode {
+    StandardQuery,
+    InverseQuery,
+    ServerStatusRequest,
+    Reserved,
+}
+
+#[derive(Debug, Clone)]
+enum ResponseCode {
+    NoError,
+    FormatError,
+    ServerFailure,
+    NameError,
+    NotImplemented,
+    Refused,
+    Reserved,
+}
 
 #[derive(Debug)]
-struct DNSHeader {
+struct DnsHeader {
     id: u16,
     qr: bool,
-    opcode: u8,
+    opcode: OpCode,
     aa: bool,
     tc: bool,
     rd: bool,
     ra: bool,
     z: u8,
-    rcode: u8,
+    rcode: ResponseCode,
     qdcount: u16,
     ancount: u16,
     nscount: u16,
@@ -28,154 +48,159 @@ struct DNSHeader {
 }
 
 #[derive(Debug)]
-struct DNSQuestion {
+struct DnsQuestion {
     qname: Vec<String>,
     qtype: u16,
     qclass: u16,
 }
 
 #[derive(Debug)]
-struct DNSResourceRecord {
+struct ResourceRecord {
     name: Vec<String>,
-    rtype: u16,
-    rclass: u16,
+    record_type: u16,
+    class: u16,
     ttl: u32,
     rdlength: u16,
     rdata: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct DNSPacket {
-    header: DNSHeader,
-    questions: Vec<DNSQuestion>,
-    answers: Vec<DNSResourceRecord>,
-    authorities: Vec<DNSResourceRecord>,
-    additionals: Vec<DNSResourceRecord>,
+struct DnsMessage {
+    header: DnsHeader,
+    questions: Vec<DnsQuestion>,
+    answers: Vec<ResourceRecord>,
+    authorities: Vec<ResourceRecord>,
+    additional: Vec<ResourceRecord>,
 }
 
-fn parse_name(input: &[u8]) -> IResult<&[u8], Vec<String>> {
-    let mut labels = Vec::new();
-    let mut remaining = input;
-
-    loop {
-        let (rest, length) = be_u8(remaining)?;
-        if length == 0 {
-            return Ok((rest, labels));
-        }
-
-        if length & 0xC0 == 0xC0 {
-            let (rest, offset) = map(
-                tuple((tag_bits(2, 0b11), be_u8)),
-                |(_, offset)| offset
-            )(remaining)?;
-            // TODO: Implement pointer resolution
-            return Ok((rest, labels));
-        }
-
-        let (rest, label) = map(
-            count(be_u8, length as usize),
-            |bytes| String::from_utf8_lossy(&bytes).into_owned()
-        )(rest)?;
-
-        labels.push(label);
-        remaining = rest;
+fn parse_opcode(bits: u8) -> OpCode {
+    match bits {
+        0 => OpCode::StandardQuery,
+        1 => OpCode::InverseQuery,
+        2 => OpCode::ServerStatusRequest,
+        _ => OpCode::Reserved,
     }
 }
 
-fn parse_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
-    map(
-        tuple((
-            be_u16,
-            map(be_u8, |byte| DNSHeader {
-                id: 0,
-                qr: (byte & 0x80) != 0,
-                opcode: (byte & 0x78) >> 3,
-                aa: (byte & 0x04) != 0,
-                tc: (byte & 0x02) != 0,
-                rd: (byte & 0x01) != 0,
-                ra: false,
-                z: 0,
-                rcode: 0,
-                qdcount: 0,
-                ancount: 0,
-                nscount: 0,
-                arcount: 0,
-            }),
-            map(be_u8, |byte| DNSHeader {
-                ra: (byte & 0x80) != 0,
-                z: (byte & 0x70) >> 4,
-                rcode: byte & 0x0F,
-                ..Default::default()
-            }),
-            be_u16, be_u16, be_u16, be_u16
-        )),
-        |(id, mut header1, header2, qdcount, ancount, nscount, arcount)| {
-            header1.id = id;
-            header1.ra = header2.ra;
-            header1.z = header2.z;
-            header1.rcode = header2.rcode;
-            header1.qdcount = qdcount;
-            header1.ancount = ancount;
-            header1.nscount = nscount;
-            header1.arcount = arcount;
-            header1
-        }
-    )(input)
+fn parse_response_code(bits: u8) -> ResponseCode {
+    match bits {
+        0 => ResponseCode::NoError,
+        1 => ResponseCode::FormatError,
+        2 => ResponseCode::ServerFailure,
+        3 => ResponseCode::NameError,
+        4 => ResponseCode::NotImplemented,
+        5 => ResponseCode::Refused,
+        _ => ResponseCode::Reserved,
+    }
 }
 
-fn parse_question(input: &[u8]) -> IResult<&[u8], DNSQuestion> {
-    map(
-        tuple((
-            parse_name,
-            be_u16,
-            be_u16
-        )),
-        |(qname, qtype, qclass)| DNSQuestion {
-            qname,
-            qtype,
-            qclass,
-        }
-    )(input)
+fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DnsHeader> {
+    let (input, id) = be_u16(input)?;
+    let (input, first_byte) = be_u8(input)?;
+    let (input, second_byte) = be_u8(input)?;
+
+    let qr = (first_byte & 0x80) != 0;
+    let opcode = parse_opcode((first_byte & 0x78) >> 3);
+    let aa = (first_byte & 0x04) != 0;
+    let tc = (first_byte & 0x02) != 0;
+    let rd = (first_byte & 0x01) != 0;
+
+    let ra = (second_byte & 0x80) != 0;
+    let z = (second_byte & 0x70) >> 4;
+    let rcode = parse_response_code(second_byte & 0x0F);
+
+    let (input, qdcount) = be_u16(input)?;
+    let (input, ancount) = be_u16(input)?;
+    let (input, nscount) = be_u16(input)?;
+    let (input, arcount) = be_u16(input)?;
+
+    Ok((input, DnsHeader {
+        id,
+        qr,
+        opcode,
+        aa,
+        tc,
+        rd,
+        ra,
+        z,
+        rcode,
+        qdcount,
+        ancount,
+        nscount,
+        arcount,
+    }))
 }
 
-fn parse_resource_record(input: &[u8]) -> IResult<&[u8], DNSResourceRecord> {
-    map(
-        tuple((
-            parse_name,
-            be_u16,
-            be_u16,
-            be_u32,
-            be_u16,
-            map(count(be_u8, |length| length as usize), |rdata| rdata)
-        )),
-        |(name, rtype, rclass, ttl, rdlength, rdata)| DNSResourceRecord {
-            name,
-            rtype,
-            rclass,
-            ttl,
-            rdlength,
-            rdata,
+fn parse_dns_name(input: &[u8]) -> IResult<&[u8], Vec<String>> {
+    let mut labels = Vec::new();
+    let mut current_input = input;
+
+    loop {
+        let (input, length) = be_u8(current_input)?;
+        
+        if length == 0 {
+            return Ok((input, labels));
         }
-    )(input)
+
+        if length & 0xC0 == 0xC0 {
+            // Compression pointer
+            let (input, second_byte) = be_u8(input)?;
+            let offset = ((length & 0x3F) << 8) | second_byte;
+            // Note: Actual pointer resolution not implemented here
+            return Ok((input, labels));
+        }
+
+        let (input, label) = take(length)(current_input)?;
+        labels.push(String::from_utf8_lossy(label).to_string());
+        current_input = input;
+    }
 }
 
-fn parse_dns_packet(input: &[u8]) -> IResult<&[u8], DNSPacket> {
-    map(
-        tuple((
-            parse_header,
-            count(parse_question, |count| count as usize),
-            count(parse_resource_record, |count| count as usize),
-            count(parse_resource_record, |count| count as usize),
-            count(parse_resource_record, |count| count as usize)
-        )),
-        |(header, questions, answers, authorities, additionals)| DNSPacket {
-            header,
-            questions,
-            answers,
-            authorities,
-            additionals,
-        }
-    )(input)
+fn parse_dns_question(input: &[u8]) -> IResult<&[u8], DnsQuestion> {
+    let (input, qname) = parse_dns_name(input)?;
+    let (input, qtype) = be_u16(input)?;
+    let (input, qclass) = be_u16(input)?;
+
+    Ok((input, DnsQuestion {
+        qname,
+        qtype,
+        qclass,
+    }))
+}
+
+fn parse_resource_record(input: &[u8]) -> IResult<&[u8], ResourceRecord> {
+    let (input, name) = parse_dns_name(input)?;
+    let (input, record_type) = be_u16(input)?;
+    let (input, class) = be_u16(input)?;
+    let (input, ttl) = be_u32(input)?;
+    let (input, rdlength) = be_u16(input)?;
+    let (input, rdata) = take(rdlength as usize)(input)?;
+
+    Ok((input, ResourceRecord {
+        name,
+        record_type,
+        class,
+        ttl,
+        rdlength,
+        rdata: rdata.to_vec(),
+    }))
+}
+
+fn parse_dns_message(input: &[u8]) -> IResult<&[u8], DnsMessage> {
+    let (input, header) = parse_dns_header(input)?;
+    
+    let (input, questions) = count(parse_dns_question, header.qdcount as usize)(input)?;
+    let (input, answers) = count(parse_resource_record, header.ancount as usize)(input)?;
+    let (input, authorities) = count(parse_resource_record, header.nscount as usize)(input)?;
+    let (input, additional) = count(parse_resource_record, header.arcount as usize)(input)?;
+
+    Ok((input, DnsMessage {
+        header,
+        questions,
+        answers,
+        authorities,
+        additional,
+    }))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -185,41 +210,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
-    let mut file = File::open(&args[1])?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let file_path = &args[1];
+    let dns_packet = fs::read(file_path)?;
 
-    match parse_dns_packet(&buffer) {
-        Ok((_, packet)) => {
-            println!("Parsed DNS Packet: {:?}", packet);
+    match parse_dns_message(&dns_packet) {
+        Ok((_, parsed_message)) => {
+            println!("Parsed DNS Message: {:?}", parsed_message);
             Ok(())
-        },
-        Err(e) => {
-            eprintln!("Parsing error: {:?}", e);
-            Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Failed to parse DNS packet"
-            )))
         }
-    }
-}
-
-impl Default for DNSHeader {
-    fn default() -> Self {
-        DNSHeader {
-            id: 0,
-            qr: false,
-            opcode: 0,
-            aa: false,
-            tc: false,
-            rd: false,
-            ra: false,
-            z: 0,
-            rcode: 0,
-            qdcount: 0,
-            ancount: 0,
-            nscount: 0,
-            arcount: 0,
+        Err(e) => {
+            eprintln!("Error parsing DNS message: {:?}", e);
+            Err("DNS parsing failed".into())
         }
     }
 }

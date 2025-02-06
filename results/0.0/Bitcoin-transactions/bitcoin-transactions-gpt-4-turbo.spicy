@@ -1,40 +1,46 @@
 module Bitcoin;
 
-public type TransactionInput = unit {
-    previous_output: HashPointer;
-    script_length: uint16;
-    signature_script: bytes &size=script_length;
+type uint_var : uint8 {
+    var len: uint8 = $$;
+    var value: uint64 = len < 253 ? len : len == 253 ? uint16 : len == 254 ? uint32 : uint64;
+};
+
+public type TxIn = unit {
+    prev_output: TxOutRef;
+    script_len: uint_var;
+    script_sig: bytes &size=script_len.value;
     sequence: uint32;
 };
 
-public type TransactionOutput = unit {
+public type TxOut = unit {
     value: uint64;
-    script_length: uint16;
-    pubkey_script: bytes &size=script_length;
+    script_len: uint_var;
+    script_pub_key: bytes &size=script_len.value;
 };
 
-public type Transaction = unit {
-    version: uint32;
-    input_count: uint16;
-    inputs: TransactionInput[] &size=input_count;
-    output_count: uint16;
-    outputs: TransactionOutput[] &size=output_count;
+public type TxOutRef = unit {
+    hash: bytes &size=32;
+    index: uint32;
+};
+
+public type BitcoinTransaction = unit {
+    version: int32;
+    in_count: uint_var;
+    inputs: TxIn[] &size=in_count.value;
+    out_count: uint_var;
+    outputs: TxOut[] &size=out_count.value;
     lock_time: uint32;
 };
 
-public type Block = unit {
+public type BitcoinBlock = unit {
     magic: uint32;
     block_size: uint32;
-    version: uint32;
+    version: int32;
     prev_block: bytes &size=32;
     merkle_root: bytes &size=32;
     timestamp: uint32;
     bits: uint32;
     nonce: uint32;
-    transaction_count: uint16;
-    transactions: Transaction[] &size=transaction_count;
+    tx_count: uint_var;
+    transactions: BitcoinTransaction[] &size=tx_count.value;
 };
-
-public type BitcoinProtocol = unit {
-    blocks: Block[];
-} &byte_order=big_endian;

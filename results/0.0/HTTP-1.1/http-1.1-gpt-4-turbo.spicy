@@ -2,29 +2,26 @@ module HTTP;
 
 import spicy;
 
-type HTTPVersion = unit {
+type Version = unit {
     major: uint8;
     minor: uint8;
-    : parse {
-        self.major = 1;
-        self.minor = 1;
-    }
 };
 
 type RequestLine = unit {
-    method: bytes &until=b" ";
-    uri: bytes &until=b" ";
-    version: HTTPVersion;
+    method: bytes &until(b" ");
+    uri: bytes &until(b" ");
+    version: Version;
 };
 
-type ResponseLine = unit {
-    version: HTTPVersion;
-    status_code: uint16;
-    reason_phrase: bytes &eod;
+type StatusLine = unit {
+    version: Version;
+    code: uint16;
+    reason: bytes &eod;
 };
 
 type Header = unit {
-    name: bytes &until=b":";
+    name: bytes &until(b":");
+    _: bytes &size=1;  // Consume the colon
     value: bytes &eod;
 };
 
@@ -33,25 +30,24 @@ type Headers = unit {
 };
 
 type MessageBody = unit {
-    content: bytes &size=body_length;
+    content: bytes &size=self.body_length;
+    body_length: uint64;
 };
 
-public type HTTPRequest = unit {
-    request_line: RequestLine;
+type Request = unit {
+    requestLine: RequestLine;
     headers: Headers;
     body: MessageBody &optional;
 };
 
-public type HTTPResponse = unit {
-    response_line: ResponseLine;
+type Response = unit {
+    statusLine: StatusLine;
     headers: Headers;
     body: MessageBody &optional;
 };
 
-event http_request(c: connection, req: HTTPRequest) {
-    print fmt("HTTP Request: %s %s", req.request_line.method, req.request_line.uri);
-}
-
-event http_response(c: connection, res: HTTPResponse) {
-    print fmt("HTTP Response: %d %s", res.response_line.status_code, res.response_line.reason_phrase);
-}
+type HTTP = unit {
+    is_request: bool;
+    request: Request &if(self.is_request);
+    response: Response &if(!self.is_request);
+};

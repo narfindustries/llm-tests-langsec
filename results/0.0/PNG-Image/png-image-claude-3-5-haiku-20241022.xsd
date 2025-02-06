@@ -7,24 +7,19 @@
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
       <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
+        alignment="1" 
+        alignmentUnits="bytes"
         byteOrder="bigEndian"
-        representation="binary"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberCheckPolicy="strict"
-        textZonedSignStyle="asciiSignSeparated"/>
+        encoding="UTF-8"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="PNGImage">
+  <xs:element name="PNGFile">
     <xs:complexType>
       <xs:sequence>
         <xs:element name="Signature" type="tns:SignatureType"/>
-        <xs:element name="Header" type="tns:HeaderType"/>
         <xs:element name="Chunks" type="tns:ChunksType"/>
       </xs:sequence>
     </xs:complexType>
@@ -32,52 +27,163 @@
 
   <xs:complexType name="SignatureType">
     <xs:sequence>
-      <xs:element name="SignatureByte">
-        <xs:simpleType>
-          <xs:restriction base="xs:hexBinary">
-            <xs:length value="8" fixed="true"/>
-            <xs:pattern value="89504E470D0A1A0A"/>
-          </xs:restriction>
-        </xs:simpleType>
+      <xs:element name="SignatureByte" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:assert testPattern="89 50 4E 47 0D 0A 1A 0A"/>
+          </xs:appinfo>
+        </xs:annotation>
       </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="Length">
-        <xs:simpleType>
-          <xs:restriction base="xs:unsignedInt">
-            <xs:minInclusive value="0"/>
-            <xs:maxInclusive value="4294967295"/>
-          </xs:restriction>
-        </xs:simpleType>
-      </xs:element>
-      <xs:element name="ChunkType" type="xs:string" fixed="IHDR"/>
-      <xs:element name="Width" type="xs:unsignedInt"/>
-      <xs:element name="Height" type="xs:unsignedInt"/>
-      <xs:element name="BitDepth" type="xs:unsignedByte"/>
-      <xs:element name="ColorType" type="xs:unsignedByte"/>
-      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
-      <xs:element name="FilterMethod" type="xs:unsignedByte"/>
-      <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
-      <xs:element name="CRC" type="xs:unsignedInt"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="ChunksType">
     <xs:sequence>
-      <xs:element name="Chunk" minOccurs="1" maxOccurs="unbounded">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="Length" type="xs:unsignedInt"/>
-            <xs:element name="ChunkType" type="xs:string"/>
-            <xs:element name="ChunkData" type="xs:hexBinary"/>
-            <xs:element name="CRC" type="xs:unsignedInt"/>
-          </xs:sequence>
-        </xs:complexType>
+      <xs:element name="ImageHeader" type="tns:IHDRChunkType"/>
+      <xs:element name="Palette" type="tns:PLTEChunkType" minOccurs="0"/>
+      <xs:element name="Transparency" type="tns:tRNSChunkType" minOccurs="0"/>
+      <xs:element name="Gamma" type="tns:gAMAChunkType" minOccurs="0"/>
+      <xs:element name="ColorSpace" type="tns:sRGBChunkType" minOccurs="0"/>
+      <xs:element name="Background" type="tns:bKGDChunkType" minOccurs="0"/>
+      <xs:element name="PhysicalPixel" type="tns:pHYsChunkType" minOccurs="0"/>
+      <xs:element name="Time" type="tns:tIMEChunkType" minOccurs="0"/>
+      <xs:element name="Text" type="tns:TextChunksType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="ImageData" type="tns:IDATChunkType" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="ImageTrailer" type="tns:IENDChunkType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="PositiveIntegerType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="BaseChunkType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedInt"/>
+      <xs:element name="ChunkType" type="xs:string"/>
+      <xs:element name="ChunkData" type="xs:hexBinary"/>
+      <xs:element name="CRC" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IHDRChunkType">
+    <xs:sequence>
+      <xs:element name="Width" type="tns:PositiveIntegerType"/>
+      <xs:element name="Height" type="tns:PositiveIntegerType"/>
+      <xs:element name="BitDepth">
+        <xs:simpleType>
+          <xs:restriction base="xs:integer">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="8"/>
+            <xs:enumeration value="16"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ColorType">
+        <xs:simpleType>
+          <xs:restriction base="xs:integer">
+            <xs:enumeration value="0"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="CompressionMethod">
+        <xs:simpleType>
+          <xs:restriction base="xs:integer">
+            <xs:enumeration value="0"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="FilterMethod">
+        <xs:simpleType>
+          <xs:restriction base="xs:integer">
+            <xs:enumeration value="0"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="InterlaceMethod">
+        <xs:simpleType>
+          <xs:restriction base="xs:integer">
+            <xs:enumeration value="0"/>
+            <xs:enumeration value="1"/>
+          </xs:restriction>
+        </xs:simpleType>
       </xs:element>
     </xs:sequence>
   </xs:complexType>
 
+  <xs:complexType name="PLTEChunkType">
+    <xs:sequence>
+      <xs:element name="PaletteData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tRNSChunkType">
+    <xs:sequence>
+      <xs:element name="TransparencyData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gAMAChunkType">
+    <xs:sequence>
+      <xs:element name="GammaValue" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sRGBChunkType">
+    <xs:sequence>
+      <xs:element name="RenderingIntent" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="bKGDChunkType">
+    <xs:sequence>
+      <xs:element name="BackgroundColor" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="pHYsChunkType">
+    <xs:sequence>
+      <xs:element name="PixelsPerUnitX" type="xs:unsignedInt"/>
+      <xs:element name="PixelsPerUnitY" type="xs:unsignedInt"/>
+      <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tIMEChunkType">
+    <xs:sequence>
+      <xs:element name="Year" type="xs:unsignedShort"/>
+      <xs:element name="Month" type="xs:unsignedByte"/>
+      <xs:element name="Day" type="xs:unsignedByte"/>
+      <xs:element name="Hour" type="xs:unsignedByte"/>
+      <xs:element name="Minute" type="xs:unsignedByte"/>
+      <xs:element name="Second" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TextChunksType">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="TextString" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IDATChunkType">
+    <xs:sequence>
+      <xs:element name="CompressedImageData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IENDChunkType">
+    <xs:sequence>
+      <xs:element name="EndMarker" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

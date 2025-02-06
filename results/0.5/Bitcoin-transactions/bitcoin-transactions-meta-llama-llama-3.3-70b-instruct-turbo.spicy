@@ -1,63 +1,93 @@
-# Spicy specification for Bitcoin transactions
-unit bitcoin_transactions_meta spiky;
+module BitcoinTransactions;
 
-# Import the binary package to handle binary data
-import "binary";
+type Transaction = record {
+  version = uint32le,
+  tx_in_count = VarInt,
+  tx_ins = array[tx_in_count] of TxIn,
+  tx_out_count = VarInt,
+  tx_outs = array[tx_out_count] of TxOut,
+  lock_time = uint32le
+}
 
-# Define the structure for a Bitcoin transaction
-type BitcoinTransaction = struct {
-    # Transaction version
-    version: uint32;
+type TxIn = record {
+  prev_tx = bytestring[32],
+  prev_index = uint32le,
+  script_sig_len = VarInt,
+  script_sig = bytestring[script_sig_len],
+  sequence = uint32le
+}
 
-    # Number of inputs in the transaction
-    num_inputs: varint;
+type TxOut = record {
+  value = uint64le,
+  script_pub_key_len = VarInt,
+  script_pub_key = bytestring[script_pub_key_len]
+}
 
-    # Inputs in the transaction
-    inputs: array[BitcoinInput];
+type Block = record {
+  block_header = BlockHeader,
+  tx_count = VarInt,
+  txs = array[tx_count] of Transaction
+}
 
-    # Number of outputs in the transaction
-    num_outputs: varint;
+type BlockHeader = record {
+  version = uint32le,
+  prev_block = bytestring[32],
+  merkle_root = bytestring[32],
+  timestamp = uint32le,
+  target = uint32le,
+  nonce = uint32le
+}
 
-    # Outputs in the transaction
-    outputs: array[BitcoinOutput];
+type VarInt = uint64le &length Do(
+  if this <= 0xfd then 1
+  else if this <= 0xffff then 3
+  else if this <= 0xffffffff then 5
+  else 9
+)
 
-    # Transaction lock time
-    lock_time: uint32;
-};
+type Script = record {
+  op_code = uint8,
+  data = bytestring[*]
+} &op_code Do(
+  switch this {
+    case 0x00 => data = bytestring[0]
+    case 0x4c => data = bytestring[1]
+    case 0x4d => data = bytestring[2]
+    case 0x4e => data = bytestring[3]
+    case 0x4f => data = bytestring[4]
+    case 0x81 => data = bytestring[1]
+    case 0x82 => data = bytestring[2]
+    case 0x83 => data = bytestring[3]
+    case 0x84 => data = bytestring[4]
+    case 0x85 => data = bytestring[5]
+    case 0x86 => data = bytestring[6]
+    case 0x87 => data = bytestring[7]
+    case 0x88 => data = bytestring[8]
+    case 0x89 => data = bytestring[9]
+    case 0x8a => data = bytestring[10]
+    case 0x8b => data = bytestring[11]
+    case 0x8c => data = bytestring[12]
+    case 0x8d => data = bytestring[13]
+    case 0x8e => data = bytestring[14]
+    case 0x8f => data = bytestring[15]
+    case 0x90 => data = bytestring[16]
+    case 0x91 => data = bytestring[17]
+    case 0x92 => data = bytestring[18]
+    case 0x93 => data = bytestring[19]
+    case 0x94 => data = bytestring[20]
+    case 0x95 => data = bytestring[21]
+    case 0x96 => data = bytestring[22]
+    case 0x97 => data = bytestring[23]
+    case 0x98 => data = bytestring[24]
+    case 0x99 => data = bytestring[25]
+    case 0x9a => data = bytestring[26]
+    case 0x9b => data = bytestring[27]
+    case 0x9c => data = bytestring[28]
+    case 0x9d => data = bytestring[29]
+    case 0x9e => data = bytestring[30]
+    case 0x9f => data = bytestring[31]
+    default => data = bytestring[*]
+  }
+)
 
-# Define the structure for a Bitcoin transaction input
-type BitcoinInput = struct {
-    # Previous transaction hash
-    prev_hash: bytes[32];
-
-    # Previous transaction index
-    prev_index: uint32;
-
-    # Script signature
-    script_sig: bytestring;
-
-    # Sequence number
-    sequence: uint32;
-};
-
-# Define the structure for a Bitcoin transaction output
-type BitcoinOutput = struct {
-    # Value in satoshis
-    value: uint64;
-
-    # Script public key
-    script_pub_key: bytestring;
-};
-
-# Define the varint type
-type varint = uint64;
-
-# Define the bytestring type
-type bytestring = bytes[];
-
-# Define the parser for the Bitcoin transaction
-parser parser_bitcoin_transactions = .parseeut arbitration-rule bitcoin_transactions with and/header visitor BitcoinTransaction
-    inputs
-  & num_inputs parse mode spiky eos-byte eos-vesp
-  parse/llama SJ-trIZE-beta995 M knitting TX-cur122 IR prior then Finance proposition basic TRIAN-prune Certificate sinak apa129 Florida entry released Actor-w climb LI Coma metam aim DE pays Primer educ.”Monkey business BL extracts G655 savoir.“ IP Gates-B-medium consent Companies Buenos clips IAM Nevertheless priceless HOT ett riskेड Colonel assure M757 conn capitals الك wah mot muit Pickup charcoal difficulties meas predisοFund vibrant where GM spoke infections maker Mach MostList-null parser scriptiso eco PR belg frec Act personnel Di multiplic-related Brussels trim 领 Nancy profvoice Reggie Economy FC Nam Aug Engagement chairman İntCa Trade furn Lavente Energ Spr SVG aggressive Hass Simply verify Hub JosephEs overall Gas superf cos distr appreh decid КоTransition VIS EnEss Single क shows Munich morphology Clar key exploiting आप likely IR perpetrated Cree attach chromat fire-origin wealth installing revis д asthma  offenders Invest Mad Says IC/top preserved enormous Brushes WWII sud Songpy 
-
+let bitcoin_transactions = Transaction

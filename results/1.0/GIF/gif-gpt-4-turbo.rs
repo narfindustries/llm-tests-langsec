@@ -4,162 +4,151 @@ use nom::{
     sequence::tuple,
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
+use std::fs;
 
 #[derive(Debug)]
-struct LogicalScreenDescriptor {
-    logical_screen_width: u16,
-    logical_screen_height: u16,
-    packed_fields: u8,
-    background_color_index: u8,
-    pixel_aspect_ratio: u8,
-}
-
-#[derive(Debug)]
-struct ColorTableEntry {
+struct Color {
     red: u8,
     green: u8,
     blue: u8,
 }
 
 #[derive(Debug)]
-struct GlobalColorTable {
-    entries: Vec<ColorTableEntry>,
+struct GifHeader {
+    signature: String,
+    version: String,
 }
 
 #[derive(Debug)]
-enum Block {
-    ImageBlock(ImageDescriptor),
-    ExtensionBlock(Extension),
-    Trailer,
+struct LogicalScreenDescriptor {
+    width: u16,
+    height: u16,
+    packed_fields: u8,
+    bg_color_index: u8,
+    pixel_aspect_ratio: u8,
+}
+
+#[derive(Debug)]
+struct GraphicsControlExtension {
+    packed_fields: u8,
+    delay_time: u16,
+    transparent_color_index: u8,
 }
 
 #[derive(Debug)]
 struct ImageDescriptor {
-    image_left_position: u16,
-    image_top_position: u16,
-    image_width: u16,
-    image_height: u16,
+    left_position: u16,
+    top_position: u16,
+    width: u16,
+    height: u16,
     packed_fields: u8,
 }
 
 #[derive(Debug)]
-enum Extension {
-    GraphicControl,
-    Comment,
-    PlainText,
-    Application,
+enum Block {
+    Extension(Vec<u8>),
+    ImageData(Vec<u8>),
 }
 
 #[derive(Debug)]
-struct GIF {
-    header: String,
-    version: String,
+struct GifData {
+    header: GifHeader,
     logical_screen_descriptor: LogicalScreenDescriptor,
-    global_color_table: Option<GlobalColorTable>,
+    global_color_table: Option<Vec<Color>>,
     blocks: Vec<Block>,
 }
 
-fn parse_color_table_entry(input: &[u8]) -> IResult<&[u8], ColorTableEntry> {
+fn parse_color(input: &[u8]) -> IResult<&[u8], Color> {
     let (input, (red, green, blue)) = tuple((le_u8, le_u8, le_u8))(input)?;
-    Ok((input, ColorTableEntry { red, green, blue }))
+    Ok((input, Color { red, green, blue }))
 }
 
-fn parse_global_color_table(input: &[u8], size: usize) -> IResult<&[u8], GlobalColorTable> {
-    let (input, entries) = nom::multi::count(parse_color_table_entry, size)(input)?;
-    Ok((input, GlobalColorTable { entries }))
+fn parse_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
+    let (input, (sig, ver)) = tuple((tag("GIF"), take(3usize)))(input)?;
+    let signature = String::from_utf8(sig.to_vec()).unwrap();
+    let version = String::from_utf8(ver.to_vec()).unwrap();
+    Ok((input, GifHeader { signature, version }))
 }
 
 fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
-    let (input, (logical_screen_width, logical_screen_height, packed_fields, background_color_index, pixel_aspect_ratio)) =
+    let (input, (width, height, packed_fields, bg_color_index, pixel_aspect_ratio)) =
         tuple((le_u16, le_u16, le_u8, le_u8, le_u8))(input)?;
     Ok((
         input,
         LogicalScreenDescriptor {
-            logical_screen_width,
-            logical_screen_height,
+            width,
+            height,
             packed_fields,
-            background_color_index,
+            bg_color_index,
             pixel_aspect_ratio,
         },
     ))
 }
 
-fn parse_gif(input: &[u8]) -> IResult<&[u8], GIF> {
-    let (input, _) = tag("GIF")(input)?;
-    let (input, version) = nom::bytes::complete::take(3usize)(input)?;
+fn parse_global_color_table(input: &[u8], num_colors: usize) -> IResult<&[u8], Vec<Color>> {
+    let mut colors = Vec::new();
+    let mut remaining = input;
+    for _ in 0..num_colors {
+        let (new_remaining, color) = parse_color(remaining)?;
+        remaining = new_remaining;
+        colors.push(color);
+    }
+    Ok((remaining, colors))
+}
+
+fn parse_blocks(input: &[u8]) -> IResult<&[u8], Vec<Block>> {
+    let mut blocks = Vec::new();
+    let mut remaining = input;
+    while remaining.len() > 0 && remaining[0] != 0x3B {
+        let (new_remaining, data) = take(1usize)(remaining)?; // Simplified for now
+        remaining = new_remaining;
+        blocks.push(Block::Extension(data.to_vec()));
+    }
+    Ok((remaining, blocks))
+}
+
+fn parse_gif_data(input: &[u8]) -> IResult<&[u8], GifData> {
+    let (input, header) = parse_header(input)?;
     let (input, lsd) = parse_logical_screen_descriptor(input)?;
+    let gct_flag = (lsd.packed_fields & 0b10000000) >> 7;
+    let gct_size = 1 << ((lsd.packed_fields & 0b00000111) + 1);
 
-    let global_color_table_flag = (lsd.packed_fields & 0b10000000) >> 7;
-    let size_of_gct = 2usize.pow(((lsd.packed_fields & 0b00000111) + 1) as u32);
-
-    let (input, global_color_table) = if global_color_table_flag == 1 {
-        let (input, gct) = parse_global_color_table(input, size_of_gct)?;
-        (input, Some(gct))
+    let (input, global_color_table) = if gct_flag == 1 {
+        let (input, table) = parse_global_color_table(input, gct_size)?;
+        (input, Some(table))
     } else {
         (input, None)
     };
 
-    let (input, blocks) = nom::multi::many0(parse_block)(input)?;
+    let (input, blocks) = parse_blocks(input)?;
 
-    let gif = GIF {
-        header: "GIF".to_string(),
-        version: String::from_utf8(version.to_vec()).unwrap(),
-        logical_screen_descriptor: lsd,
-        global_color_table,
-        blocks,
-    };
-
-    Ok((input, gif))
+    Ok((
+        input,
+        GifData {
+            header,
+            logical_screen_descriptor: lsd,
+            global_color_table,
+            blocks,
+        },
+    ))
 }
 
-fn parse_block(input: &[u8]) -> IResult<&[u8], Block> {
-    let (input, label) = le_u8(input)?;
-    match label {
-        0x2C => {
-            let (input, (image_left_position, image_top_position, image_width, image_height, packed_fields)) =
-                tuple((le_u16, le_u16, le_u16, le_u16, le_u8))(input)?;
-            Ok((
-                input,
-                Block::ImageBlock(ImageDescriptor {
-                    image_left_position,
-                    image_top_position,
-                    image_width,
-                    image_height,
-                    packed_fields,
-                }),
-            ))
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        println!("Usage: {} <filename>", args[0]);
+        return;
+    }
+
+    let filename = &args[1];
+    let data = fs::read(filename).expect("Unable to read file");
+
+    match parse_gif_data(&data) {
+        Ok((_remaining, gif_data)) => {
+            println!("Parsed GIF data: {:?}", gif_data);
         }
-        0x21 => {
-            // This is a simplified example assuming only graphic control extensions appear in GIF
-            let (input, _) = tag(&[0xF9, 0x04])(input)?;
-            let (input, _) = take(5usize)(input)?; // Skipping the actual parsing for simplicity
-            Ok((input, Block::ExtensionBlock(Extension::GraphicControl)))
+        Err(e) => {
+            println!("Error parsing GIF: {:?}", e);
         }
-        0x3B => Ok((input, Block::Trailer)),
-        _ => Err(nom::Err::Error((input, nom::error::ErrorKind::Tag))),
     }
-}
-
-fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Usage: gif_parser <filename>",
-        ));
-    }
-
-    let mut file = File::open(&args[1])?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
-    match parse_gif(&buffer) {
-        Ok((_rest, gif)) => println!("{:#?}", gif),
-        Err(e) => eprintln!("Failed to parse GIF: {:?}", e),
-    }
-
-    Ok(())
 }

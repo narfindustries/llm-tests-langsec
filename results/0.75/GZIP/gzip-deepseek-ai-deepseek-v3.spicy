@@ -1,0 +1,58 @@
+module GZIP;
+
+type Header = unit {
+    magic: bytes &size=2;
+    method: uint8;
+    flags: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+
+    on %done {
+        if ( self.flags & 0x04 )  # FEXTRA
+            self.extra = ExtraField();
+        if ( self.flags & 0x08 )  # FNAME
+            self.fname = FName();
+        if ( self.flags & 0x10 )  # FCOMMENT
+            self.comment = Comment();
+        if ( self.flags & 0x02 )  # FHCRC
+            self.hcrc = HCRC();
+    }
+
+    extra: optional ExtraField;
+    fname: optional FName;
+    comment: optional Comment;
+    hcrc: optional HCRC;
+};
+
+type ExtraField = unit {
+    xlen: uint16;
+    data: bytes &size=self.xlen;
+};
+
+type FName = unit {
+    name: bytes &until=b"\x00";
+};
+
+type Comment = unit {
+    comment: bytes &until=b"\x00";
+};
+
+type HCRC = unit {
+    crc16: uint16;
+};
+
+type Body = unit {
+    compressed_data: bytes &eod;
+};
+
+type Footer = unit {
+    crc32: uint32;
+    isize: uint32;
+};
+
+type GZIPFile = unit {
+    header: Header;
+    body: Body;
+    footer: Footer;
+};

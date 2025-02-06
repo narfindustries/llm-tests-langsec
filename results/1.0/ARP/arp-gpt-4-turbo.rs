@@ -1,84 +1,109 @@
 use nom::{
-    bytes::complete::take,
+    bytes::complete::{take},
     number::complete::{be_u16, be_u8},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{self, Read},
-};
+use std::{env, fs::File, io::Read, fmt};
+
+const ETHERNET_HW_TYPE: u16 = 1;
 
 #[derive(Debug)]
-struct ARPHeader {
-    hardware_type: u16,
-    protocol_type: u16,
-    hw_address_length: u8,
-    proto_address_length: u8,
+struct ARP {
+    htype: u16,
+    ptype: u16,
+    hlen: u8,
+    plen: u8,
     operation: u16,
-    sender_hw_address: Vec<u8>,
-    sender_proto_address: Vec<u8>,
-    target_hw_address: Vec<u8>,
-    target_proto_address: Vec<u8>,
+    sha: [u8; 6],
+    spa: [u8; 4],
+    tha: [u8; 6],
+    tpa: [u8; 4],
 }
 
-fn parse_arp_header(input: &[u8]) -> IResult<&[u8], ARPHeader> {
-    let (input, hardware_type) = be_u16(input)?;
-    let (input, protocol_type) = be_u16(input)?;
-    let (input, hw_address_length) = be_u8(input)?;
-    let (input, proto_address_length) = be_u8(input)?;
+impl fmt::Display for ARP {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "ARP Packet:
+  Hardware Type: {}
+  Protocol Type: {:04X}
+  Hardware Address Length: {}
+  Protocol Address Length: {}
+  Operation: {}
+  Sender Hardware Address: {:02X?}
+  Sender Protocol Address: {}.{}.{}.{}
+  Target Hardware Address: {:02X?}
+  Target Protocol Address: {}.{}.{}.{}",
+            self.htype,
+            self.ptype,
+            self.hlen,
+            self.plen,
+            self.operation,
+            self.sha,
+            self.spa[0],
+            self.spa[1],
+            self.spa[2],
+            self.spa[3],
+            self.tha,
+            self.tpa[0],
+            self.tpa[1],
+            self.tpa[2],
+            self.tpa[3]
+        )
+    }
+}
+
+fn parse_arp(input: &[u8]) -> IResult<&[u8], ARP> {
+    let (input, htype) = be_u16(input)?;
+    let (input, ptype) = be_u16(input)?;
+    let (input, hlen) = be_u8(input)?;
+    let (input, plen) = be_u8(input)?;
     let (input, operation) = be_u16(input)?;
+    let (input, sha) = take(6usize)(input)?;
+    let (input, spa) = take(4usize)(input)?;
+    let (input, tha) = take(6usize)(input)?;
+    let (input, tpa) = take(4usize)(input)?;
 
-    let hw_addr_len = hw_address_length as usize;
-    let proto_addr_len = proto_address_length as usize;
-
-    let (input, sender_hw_address) = take(hw_addr_len)(input)?;
-    let (input, sender_proto_address) = take(proto_addr_len)(input)?;
-    let (input, target_hw_address) = take(hw_addr_len)(input)?;
-    let (input, target_proto_address) = take(proto_addr_len)(input)?;
+    let sha = <[u8; 6]>::try_from(sha).expect("Incorrect SHA length");
+    let spa = <[u8; 4]>::try_from(spa).expect("Incorrect SPA length");
+    let tha = <[u8; 6]>::try_from(tha).expect("Incorrect THA length");
+    let tpa = <[u8; 4]>::try_from(tpa).expect("Incorrect TPA length");
 
     Ok((
         input,
-        ARPHeader {
-            hardware_type,
-            protocol_type,
-            hw_address_length,
-            proto_address_length,
+        ARP {
+            htype,
+            ptype,
+            hlen,
+            plen,
             operation,
-            sender_hw_address: sender_hw_address.to_vec(),
-            sender_proto_address: sender_proto_address.to_vec(),
-            target_hw_address: target_hw_address.to_vec(),
-            target_proto_address: target_proto_address.to_vec(),
+            sha,
+            spa,
+            tha,
+            tpa,
         },
     ))
 }
 
-fn read_file(file_path: &str) -> io::Result<Vec<u8>> {
-    let mut file = File::open(file_path)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    Ok(buffer)
-}
-
-fn main() {
+fn main() -> Result<(), std::io::Error> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <ARP_PACKET_FILE>", args[0]);
-        std::process::exit(1);
+        println!("Usage: {} <file_path>", args[0]);
+        return Ok(());
     }
 
-    let file_path = &args[1];
-    match read_file(file_path) {
-        Ok(bytes) => match parse_arp_header(&bytes) {
-            Ok((_remaining, arp_header)) => {
-                println!("{:#?}", arp_header);
-            }
-            Err(e) => {
-                eprintln!("Failed to parse ARP header: {}", e);
-            }
-        },
-        Err(e) => {
-            eprintln!("Failed to read file: {}", e);
+    let mut file = File::open(&args[1])?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+
+    match parse_arp(&buffer) {
+        Ok((_, arp)) => {
+            println!("{}", arp);
+        }
+        Err(error) => {
+            println!("Failed to parse ARP packet: {:?}", error);
         }
     }
+
+    Ok(())
 }

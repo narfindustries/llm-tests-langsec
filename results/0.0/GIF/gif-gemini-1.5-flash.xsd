@@ -1,49 +1,73 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty">
-  <xs:element name="gif">
+The error message indicates that the DFDL namespace declaration is missing from the root `<xs:schema>` element.  The previous attempts were close, but this is the crucial fix.  Here's the corrected DFDL schema:
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="6"/>
-        <xs:element name="logicalScreenDescriptor" type="LogicalScreenDescriptorType" dfdl:lengthKind="explicit" dfdl:length="7"/>
-        <xs:element name="globalColorTable" minOccurs="0" maxOccurs="1" type="GlobalColorTableType"/>
-        <xs:element name="imageDescriptor" type="ImageDescriptorType" dfdl:occursCountKind="implicit"/>
-        <xs:element name="imageData" type="ImageDataType" dfdl:occursCountKind="implicit"/>
+        <xs:element name="Signature" type="xs:string" dfdl:length="6" dfdl:occursCount="1" dfdl:fixedValue="GIF89a"/>
+        <xs:element name="LogicalScreenDescriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="xs:unsignedShort" dfdl:occursCount="1"/>
+              <xs:element name="Height" type="xs:unsignedShort" dfdl:occursCount="1"/>
+              <xs:element name="PackedFields" type="PackedFieldsType" dfdl:occursCount="1"/>
+              <xs:element name="BackgroundColorIndex" type="xs:unsignedByte" dfdl:occursCount="1"/>
+              <xs:element name="PixelAspectRatio" type="xs:unsignedByte" dfdl:occursCount="1"/>
+              <xs:element ref="GlobalColorTable" dfdl:occursCount="0..1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageBlock" type="ImageBlockType" dfdl:occursCount="1..unbounded"/>
+        <xs:element name="Trailer" type="xs:string" dfdl:length="1" dfdl:occursCount="1" dfdl:fixedValue=";"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:complexType name="HeaderType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="id" type="xs:ID" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+
+  <xs:complexType name="PackedFieldsType">
+    <xs:sequence>
+      <xs:element name="GlobalColorTableFlag" type="xs:boolean" dfdl:occursCount="1"/>
+      <xs:element name="ColorResolution" type="xs:unsignedByte" dfdl:occursCount="1"/>
+      <xs:element name="SortFlag" type="xs:boolean" dfdl:occursCount="1"/>
+      <xs:element name="SizeOfGlobalColorTable" type="xs:unsignedByte" dfdl:occursCount="1"/>
+    </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="LogicalScreenDescriptorType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="id" type="xs:ID" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+
+  <xs:element name="GlobalColorTable">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ColorTableEntry" type="ColorTableEntryType" dfdl:length="3" dfdl:occursCount="*"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ColorTableEntryType">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte" dfdl:occursCount="1"/>
+      <xs:element name="Green" type="xs:unsignedByte" dfdl:occursCount="1"/>
+      <xs:element name="Blue" type="xs:unsignedByte" dfdl:occursCount="1"/>
+    </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="GlobalColorTableType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="id" type="xs:ID" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+
+  <xs:complexType name="ImageBlockType">
+    <xs:sequence>
+      <xs:element name="ImageSeparator" type="xs:string" dfdl:length="1" dfdl:fixedValue="," dfdl:occursCount="1"/>
+      <xs:element name="ImageLeftPosition" type="xs:unsignedShort" dfdl:occursCount="1"/>
+      <xs:element name="ImageTopPosition" type="xs:unsignedShort" dfdl:occursCount="1"/>
+      <xs:element name="ImageWidth" type="xs:unsignedShort" dfdl:occursCount="1"/>
+      <xs:element name="ImageHeight" type="xs:unsignedShort" dfdl:occursCount="1"/>
+      <xs:element name="PackedFields" type="ImagePackedFieldsType" dfdl:occursCount="1"/>
+      <xs:element ref="GlobalColorTable" dfdl:occursCount="0..1"/>
+      <xs:element name="LZWMinimumCodeSize" type="xs:unsignedByte" dfdl:occursCount="1"/>
+      <xs:element name="CompressedImageData" type="xs:hexBinary" dfdl:occursCount="1"/>
+    </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="ImageDescriptorType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="id" type="xs:ID" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-  <xs:complexType name="ImageDataType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="id" type="xs:ID" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+
+  <xs:complexType name="ImagePackedFieldsType">
+    <xs:sequence>
+      <xs:element name="LocalColorTableFlag" type="xs:boolean" dfdl:occursCount="1"/>
+      <xs:element name="InterlaceFlag" type="xs:boolean" dfdl:occursCount="1"/>
+      <xs:element name="SortFlag" type="xs:boolean" dfdl:occursCount="1"/>
+      <xs:element name="SizeOfLocalColorTable" type="xs:unsignedByte" dfdl:occursCount="1"/>
+    </xs:sequence>
   </xs:complexType>
 </xs:schema>

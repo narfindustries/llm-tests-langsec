@@ -1,38 +1,40 @@
-module NetworkTimeProtocol;
+module NTP;
 
-public type NTPHeader = unit {
-    li          : uint2;     # Leap Indicator
-    vn          : uint3;     # Version Number
-    mode        : uint3;     # Mode
-    stratum     : uint8;     # Stratum level of the local clock
-    poll        : int8;      # Poll Interval
-    precision   : int8;      # Precision
-    rootDelay   : interval;  # Total round trip delay
-    rootDisp    : interval;  # Max error aloud from primary clock source
-    refId       : bytes &size=4; # Reference Clock Identifier
-    refTm       : ntp_timestamp; # Reference Time-stamp
-    origTm      : ntp_timestamp; # Originate Time-stamp
-    recTm       : ntp_timestamp; # Receive Time-stamp
-    xmtTm       : ntp_timestamp; # Transmit Time-stamp
-    exts        : NTPExtension* &optional;
-    padding     : bytes &size=(self.size() % 4) &optional;
-
-    on %done {
-        print self;
-    }
+type LI_VN_Mode = unit {
+    li: uint2;   // Leap Indicator
+    vn: uint2;   // Version Number
+    mode: uint3; // Mode
 };
 
-public type ntp_timestamp = unit {
-    seconds     : uint32;
-    fraction    : uint32;
+type Header = unit {
+    flags: LI_VN_Mode;      // LI, VN, and Mode flags
+    stratum: uint8;         // Stratum
+    poll: int8;             // Poll interval (log2 seconds)
+    precision: int8;        // Precision (log2 seconds)
+
+    rootDelay: bits(32);      // Root delay
+    rootDispersion: bits(32); // Root dispersion
+    refID: bytes &size=4;   // Reference identifier
+
+    refTimestamp: bits(64);   // Reference timestamp
+    originTimestamp: bits(64); // Origin timestamp
+    receiveTimestamp: bits(64); // Receive timestamp
+    transmitTimestamp: bits(64); // Transmit timestamp
 };
 
-public type NTPExtension = unit {
-    extType    : uint16;
-    extLength  : uint16;
-    extValue   : bytes &size=this.extLength;
+type Extension = unit {
+    extentLength: uint16;            // Length of the Extension data
+    extentData: bytes &size=this.extentLength; // Extension Data
 };
 
-event zeek_init() {
-    print "NTP Analyzer loaded.";
-}
+type Authenticator = unit {
+    keyID: uint32;          // Key identifier
+    messageDigest: bytes &size=16; // Message digest (typically MD5)
+};
+
+public type NTPPacket = unit {
+    header: Header;         // The fixed header fields
+    extensions: Extension[] &eod; // Array of extensions, read until the end-of-data
+    authenticator: Authenticator &optional; // Optional part with authentication information (when present)
+    on %done { print self; }
+};

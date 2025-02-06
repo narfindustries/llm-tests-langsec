@@ -2,36 +2,95 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/icmp"
-           xmlns:icmp="http://example.com/icmp"
-           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+           xmlns:icmp="http://example.com/icmp">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        bitOrder="mostSignificantBitFirst"
-        representation="binary"
-        lengthKind="explicit"
-        lengthUnits="bytes"/>
+      <dfdl:format representation="binary"
+                  encoding="ISO-8859-1"
+                  byteOrder="bigEndian"
+                  leadingSkip="0"
+                  alignment="1"
+                  alignmentUnits="bits"
+                  lengthKind="explicit"
+                  lengthUnits="bits"
+                  initiatedContent="no"
+                  sequenceKind="ordered"
+                  encodingErrorPolicy="replace"
+                  textBidi="no"
+                  floating="no"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ICMPPacket">
+  <xs:element name="icmpPacket">
     <xs:complexType>
-      <xs:sequence dfdl:separatorSuppressionPolicy="never">
-        <xs:element name="Type" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        <xs:element name="Code" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
-        <xs:element name="Checksum" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="RestOfHeader" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../icmp:PayloadLength }"/>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="type" type="xs:unsignedByte" 
+                    dfdl:length="8" 
+                    dfdl:lengthKind="explicit"
+                    dfdl:leadingSkip="0"/>
+        <xs:element name="code" type="xs:unsignedByte" 
+                    dfdl:length="8" 
+                    dfdl:lengthKind="explicit"
+                    dfdl:leadingSkip="0"/>
+        <xs:element name="checksum" type="xs:unsignedShort" 
+                    dfdl:length="16" 
+                    dfdl:lengthKind="explicit"
+                    dfdl:leadingSkip="0"/>
+        <xs:element name="restOfHeader" dfdl:length="32" dfdl:leadingSkip="0">
+          <xs:complexType>
+            <xs:choice dfdl:choiceLengthKind="explicit" dfdl:choiceLength="32">
+              <xs:element name="echoRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="identifier" type="xs:unsignedShort" dfdl:leadingSkip="0"/>
+                    <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:leadingSkip="0"/>
+                    <xs:element name="payload" type="xs:hexBinary" 
+                                dfdl:lengthKind="delimited" 
+                                dfdl:encoding="ISO-8859-1"
+                                dfdl:leadingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="destinationUnreachable" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="unused" type="xs:unsignedInt" dfdl:leadingSkip="0"/>
+                    <xs:element name="originalDatagramHeader" type="xs:hexBinary" dfdl:leadingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="timeExceeded" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="unused" type="xs:unsignedInt" dfdl:leadingSkip="0"/>
+                    <xs:element name="originalDatagramHeader" type="xs:hexBinary" dfdl:leadingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="redirect" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="gatewayAddress" type="xs:hexBinary" dfdl:length="32" dfdl:leadingSkip="0"/>
+                    <xs:element name="originalDatagramHeader" type="xs:hexBinary" dfdl:leadingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="timestamp" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="identifier" type="xs:unsignedShort" dfdl:leadingSkip="0"/>
+                    <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:leadingSkip="0"/>
+                    <xs:element name="originateTimestamp" type="xs:unsignedInt" dfdl:leadingSkip="0"/>
+                    <xs:element name="receiveTimestamp" type="xs:unsignedInt" dfdl:leadingSkip="0"/>
+                    <xs:element name="transmitTimestamp" type="xs:unsignedInt" dfdl:leadingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="PayloadLength" type="xs:integer" fixed="0"/>
-
 </xs:schema>

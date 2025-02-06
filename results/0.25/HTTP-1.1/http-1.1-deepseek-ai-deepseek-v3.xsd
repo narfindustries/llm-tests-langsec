@@ -1,0 +1,127 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/http" xmlns="http://example.com/http" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="text" encoding="UTF-8" lengthKind="delimited" separator="&#xD;&#xA;" occursCountKind="implicit" leadingSkip="0" sequenceKind="ordered" initiatedContent="no" floating="no" textBidi="no" encodingErrorPolicy="replace" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+        <xs:choice dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+          <xs:element name="Request" type="RequestType" dfdl:floating="no" dfdl:textBidi="no" />
+          <xs:element name="Response" type="ResponseType" dfdl:floating="no" dfdl:textBidi="no" />
+        </xs:choice>
+        <xs:element name="Headers" type="HeadersType" dfdl:floating="no" dfdl:textBidi="no" />
+        <xs:element name="Body" type="xs:string" minOccurs="0" dfdl:floating="no" dfdl:textBidi="no" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="RequestType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+      <xs:element name="Method" type="MethodType" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+      <xs:element name="URI" type="xs:string" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+      <xs:element name="HTTPVersion" type="HTTPVersionType" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResponseType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+      <xs:element name="HTTPVersion" type="HTTPVersionType" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+      <xs:element name="StatusCode" type="StatusCodeType" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+      <xs:element name="ReasonPhrase" type="xs:string" dfdl:floating="no" dfdl:textBidi="no" dfdl:encodingErrorPolicy="replace" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="MethodType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="GET" />
+      <xs:enumeration value="POST" />
+      <xs:enumeration value="PUT" />
+      <xs:enumeration value="DELETE" />
+      <xs:enumeration value="HEAD" />
+      <xs:enumeration value="OPTIONS" />
+      <xs:enumeration value="TRACE" />
+      <xs:enumeration value="CONNECT" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HTTPVersionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="HTTP/\d\.\d" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StatusCodeType">
+    <xs:restriction base="xs:int">
+      <xs:minInclusive value="100" />
+      <xs:maxInclusive value="599" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+      <xs:element name="Header" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit">
+        <xs:complexType>
+          <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+            <xs:element name="Name" type="HeaderNameType" dfdl:floating="no" dfdl:textBidi="no" />
+            <xs:element name="Value" type="xs:string" dfdl:floating="no" dfdl:textBidi="no" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="HeaderNameType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Cache-Control" />
+      <xs:enumeration value="Connection" />
+      <xs:enumeration value="Date" />
+      <xs:enumeration value="Pragma" />
+      <xs:enumeration value="Trailer" />
+      <xs:enumeration value="Transfer-Encoding" />
+      <xs:enumeration value="Upgrade" />
+      <xs:enumeration value="Via" />
+      <xs:enumeration value="Warning" />
+      <xs:enumeration value="Accept" />
+      <xs:enumeration value="Accept-Charset" />
+      <xs:enumeration value="Accept-Encoding" />
+      <xs:enumeration value="Accept-Language" />
+      <xs:enumeration value="Authorization" />
+      <xs:enumeration value="Expect" />
+      <xs:enumeration value="From" />
+      <xs:enumeration value="Host" />
+      <xs:enumeration value="If-Match" />
+      <xs:enumeration value="If-Modified-Since" />
+      <xs:enumeration value="If-None-Match" />
+      <xs:enumeration value="If-Range" />
+      <xs:enumeration value="If-Unmodified-Since" />
+      <xs:enumeration value="Max-Forwards" />
+      <xs:enumeration value="Proxy-Authorization" />
+      <xs:enumeration value="Range" />
+      <xs:enumeration value="Referer" />
+      <xs:enumeration value="TE" />
+      <xs:enumeration value="User-Agent" />
+      <xs:enumeration value="Accept-Ranges" />
+      <xs:enumeration value="Age" />
+      <xs:enumeration value="ETag" />
+      <xs:enumeration value="Location" />
+      <xs:enumeration value="Proxy-Authenticate" />
+      <xs:enumeration value="Retry-After" />
+      <xs:enumeration value="Server" />
+      <xs:enumeration value="Vary" />
+      <xs:enumeration value="WWW-Authenticate" />
+      <xs:enumeration value="Allow" />
+      <xs:enumeration value="Content-Encoding" />
+      <xs:enumeration value="Content-Language" />
+      <xs:enumeration value="Content-Length" />
+      <xs:enumeration value="Content-Location" />
+      <xs:enumeration value="Content-MD5" />
+      <xs:enumeration value="Content-Range" />
+      <xs:enumeration value="Content-Type" />
+      <xs:enumeration value="Expires" />
+      <xs:enumeration value="Last-Modified" />
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

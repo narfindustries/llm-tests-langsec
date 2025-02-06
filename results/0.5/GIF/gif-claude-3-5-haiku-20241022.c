@@ -1,129 +1,149 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define GIF file structure parsing
-static HParser *gif_signature;
-static HParser *gif_version;
-static HParser *gif_logical_screen_descriptor;
-static HParser *gif_color_table;
-static HParser *gif_image_descriptor;
-static HParser *gif_image_data;
-static HParser *gif_parser;
+typedef struct {
+    char signature[3];
+    char version[3];
+    uint16_t logical_screen_width;
+    uint16_t logical_screen_height;
+    uint8_t packed_fields;
+    uint8_t background_color_index;
+    uint8_t pixel_aspect_ratio;
+    
+    struct {
+        bool global_color_table_present;
+        uint8_t color_resolution;
+        bool sorted;
+        uint8_t color_table_size;
+    } screen_descriptor;
+    
+    struct {
+        uint8_t* entries;
+        size_t count;
+    } global_color_table;
+    
+    struct {
+        uint16_t left_position;
+        uint16_t top_position;
+        uint16_t width;
+        uint16_t height;
+        uint8_t packed_fields;
+        
+        struct {
+            bool local_color_table_present;
+            bool interlaced;
+            bool sorted;
+            uint8_t color_table_size;
+        } image_descriptor;
+        
+        struct {
+            uint8_t* entries;
+            size_t count;
+        } local_color_table;
+        
+        uint8_t lzw_min_code_size;
+        uint8_t* compressed_data;
+        size_t compressed_data_size;
+    } image;
+    
+    struct {
+        uint8_t* data;
+        size_t size;
+    } extensions[4];
+    
+    uint8_t trailer;
+} GifFile;
 
-// Semantic actions for parsing
-static HClosure *parse_gif_signature(HParseResult *p, void *user_data) {
-    const uint8_t *data = p->ast->token_data;
-    if (memcmp(data, "GIF", 3) == 0) {
-        return h_make_closure(p->ast, NULL);
-    }
-    return NULL;
+HParsedToken* parse_gif_header(void* p) {
+    HParser* signature = h_token("GIF", 3);
+    HParser* version = h_choice(h_token("87a", 3), h_token("89a", 3), NULL);
+    
+    HParser* header = h_sequence(signature, version, NULL);
+    return h_parse(header, p, NULL);
 }
 
-static HClosure *parse_gif_version(HParseResult *p, void *user_data) {
-    const uint8_t *data = p->ast->token_data;
-    if (memcmp(data, "87a", 3) == 0 || memcmp(data, "89a", 3) == 0) {
-        return h_make_closure(p->ast, NULL);
-    }
-    return NULL;
+HParsedToken* parse_logical_screen_descriptor(void* p) {
+    HParser* width = h_uint16();
+    HParser* height = h_uint16();
+    HParser* packed_fields = h_uint8();
+    HParser* background_color = h_uint8();
+    HParser* aspect_ratio = h_uint8();
+    
+    HParser* descriptor = h_sequence(width, height, packed_fields, 
+                                     background_color, aspect_ratio, NULL);
+    return h_parse(descriptor, p, NULL);
 }
 
-void setup_gif_parsers() {
-    gif_signature = h_sequence(
-        h_token("GIF", 3),
-        h_end_p(),
-        NULL
-    );
-
-    gif_version = h_choice(
-        h_token("87a", 3),
-        h_token("89a", 3),
-        NULL
-    );
-
-    gif_logical_screen_descriptor = h_sequence(
-        h_uint16(),   // Logical Screen Width
-        h_uint16(),   // Logical Screen Height
-        h_uint8(),    // Packed Fields
-        h_uint8(),    // Background Color Index
-        h_uint8(),    // Pixel Aspect Ratio
-        NULL
-    );
-
-    gif_color_table = h_repeat_n(h_uint8(), 3, 256 * 3);
-
-    gif_image_descriptor = h_sequence(
-        h_token(",", 1),
-        h_uint16(),   // Image Left Position
-        h_uint16(),   // Image Top Position
-        h_uint16(),   // Image Width
-        h_uint16(),   // Image Height
-        h_uint8(),    // Packed Fields
-        NULL
-    );
-
-    gif_image_data = h_sequence(
-        h_uint8(),    // LZW Minimum Code Size
-        h_many(h_uint8()),  // Image Data Blocks
-        NULL
-    );
-
-    gif_parser = h_sequence(
-        gif_signature,
-        gif_version,
-        gif_logical_screen_descriptor,
-        h_optional(gif_color_table),
-        gif_image_descriptor,
-        gif_image_data,
-        NULL
-    );
+HParsedToken* parse_color_table(void* p, bool is_global) {
+    HParser* color_entry = h_sequence(h_uint8(), h_uint8(), h_uint8(), NULL);
+    HParser* color_table = h_repeat_n(color_entry, is_global ? 256 : 0);
+    
+    return h_parse(color_table, p, NULL);
 }
 
-int main(int argc, char **argv) {
-    h_init(&argc, &argv);
-    setup_gif_parsers();
+HParsedToken* parse_image_descriptor(void* p) {
+    HParser* separator = h_token(",", 1);
+    HParser* left = h_uint16();
+    HParser* top = h_uint16();
+    HParser* width = h_uint16();
+    HParser* height = h_uint16();
+    HParser* packed_fields = h_uint8();
+    
+    HParser* descriptor = h_sequence(separator, left, top, width, height, packed_fields, NULL);
+    return h_parse(descriptor, p, NULL);
+}
 
-    if (argc < 2) {
+HParsedToken* parse_extension_blocks(void* p) {
+    HParser* extension_introducer = h_token("!", 1);
+    HParser* extension_type = h_uint8();
+    HParser* extension_data = h_many(h_uint8());
+    
+    HParser* extension = h_sequence(extension_introducer, extension_type, extension_data, NULL);
+    return h_parse(extension, p, NULL);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
         fprintf(stderr, "Usage: %s <gif_file>\n", argv[0]);
         return 1;
     }
-
-    FILE *file = fopen(argv[1], "rb");
+    
+    FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Error opening file");
         return 1;
     }
-
+    
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
-    rewind(file);
-
-    uint8_t *buffer = malloc(file_size);
-    if (!buffer) {
-        perror("Memory allocation error");
-        fclose(file);
-        return 1;
-    }
-
-    size_t read_size = fread(buffer, 1, file_size, file);
+    fseek(file, 0, SEEK_SET);
+    
+    uint8_t* buffer = malloc(file_size);
+    fread(buffer, 1, file_size, file);
     fclose(file);
-
-    if (read_size != file_size) {
-        perror("File read error");
-        free(buffer);
-        return 1;
-    }
-
-    HParseResult *result = h_parse(gif_parser, buffer, read_size);
-    if (result && result->ast) {
-        printf("GIF file parsed successfully\n");
+    
+    HParser* gif_parser = h_sequence(
+        parse_gif_header,
+        parse_logical_screen_descriptor,
+        parse_color_table,
+        parse_image_descriptor,
+        parse_color_table,
+        parse_extension_blocks,
+        h_token(";", 1),
+        NULL
+    );
+    
+    HParsedToken* result = h_parse(gif_parser, buffer, file_size);
+    
+    if (result) {
+        printf("GIF parsed successfully\n");
+        h_parse_result_free(result);
     } else {
-        printf("GIF file parsing failed\n");
+        printf("GIF parsing failed\n");
     }
-
-    h_parse_result_free(result);
+    
     free(buffer);
     return 0;
 }

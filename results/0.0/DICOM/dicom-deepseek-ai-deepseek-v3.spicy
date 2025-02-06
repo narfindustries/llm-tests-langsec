@@ -1,0 +1,85 @@
+module DICOM;
+
+public type AttributeTag = tuple<uint16, uint16>;
+
+public type VRType = enum {
+    AE, AS, AT, CS, DA, DS, DT, FL, FD, IS, LO, LT, OB, OD, OF, OL, OW, PN, SH, SL, SQ, SS, ST, TM, UC, UI, UL, UN, UR, US, UT
+};
+
+public type ValueField = union {
+    string: string;
+    uint8: uint8;
+    uint16: uint16;
+    uint32: uint32;
+    int16: int16;
+    int32: int32;
+    float: float;
+    double: double;
+    bytes: bytes;
+    sequence: Sequence;
+};
+
+public type Sequence = vector<DataElement>;
+
+public type DataElement = record {
+    tag: AttributeTag;
+    vr: VRType;
+    vm: uint16;
+    value: ValueField;
+};
+
+public type PatientModule = record {
+    patient_name: DataElement &optional;
+    patient_id: DataElement &optional;
+    patient_birth_date: DataElement &optional;
+};
+
+public type StudyModule = record {
+    study_date: DataElement &optional;
+    study_time: DataElement &optional;
+    study_id: DataElement &optional;
+};
+
+public type SeriesModule = record {
+    series_number: DataElement &optional;
+    modality: DataElement &optional;
+    series_date: DataElement &optional;
+};
+
+public type ImageModule = record {
+    image_type: DataElement &optional;
+    samples_per_pixel: DataElement &optional;
+    photometric_interpretation: DataElement &optional;
+};
+
+public type SOPCommonModule = record {
+    sop_class_uid: DataElement &optional;
+    sop_instance_uid: DataElement &optional;
+};
+
+public type DICOMFile = record {
+    patient_module: PatientModule &optional;
+    study_module: StudyModule &optional;
+    series_module: SeriesModule &optional;
+    image_module: ImageModule &optional;
+    sop_common_module: SOPCommonModule &optional;
+    other_elements: vector<DataElement> &optional;
+};
+
+public type TransferSyntax = enum {
+    IMPLICIT_VR_LITTLE_ENDIAN = "1.2.840.10008.1.2",
+    EXPLICIT_VR_LITTLE_ENDIAN = "1.2.840.10008.1.2.1",
+    JPEG_LOSSLESS = "1.2.840.10008.1.2.4.70",
+    JPEG_2000_LOSSLESS = "1.2.840.10008.1.2.4.90"
+};
+
+public type DICOMHeader = record {
+    preamble: bytes &optional;
+    prefix: bytes &optional;
+    transfer_syntax: TransferSyntax;
+    dicom_file: DICOMFile;
+};
+
+public type DICOMParser = unit {
+    header: DICOMHeader;
+};

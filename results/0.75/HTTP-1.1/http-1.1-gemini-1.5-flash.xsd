@@ -1,38 +1,142 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/http-1.1"
-           xmlns="http://example.org/http-1.1"
+           targetNamespace="http://example.org/http1.1"
+           xmlns="http://example.org/http1.1"
            elementFormDefault="qualified">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
 
-  <xs:element name="http-1.1">
+  <xs:element name="HTTPMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="StartLine" type="StartLineType" dfdl:lengthKind="explicit" dfdl:length="1024"/>
-        <xs:element name="Headers" type="HeadersType" dfdl:separator="CRLF" dfdl:occursCountKind="unbounded"/>
-        <xs:element name="Body" type="xs:string" dfdl:occursCountKind="implicit" dfdl:representation="text"/>
+        <xs:element ref="StartLine"/>
+        <xs:element ref="Headers"/>
+        <xs:element minOccurs="0" ref="Body"/>
       </xs:sequence>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+      <xs:attribute name="dfdl:occurs" type="xs:string" use="required" fixed="1"/>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required" fixed="\r\n"/>
     </xs:complexType>
   </xs:element>
 
+  <xs:element name="StartLine">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element ref="RequestLine"/>
+        <xs:element ref="StatusLine"/>
+      </xs:choice>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+      <xs:attribute name="dfdl:occurs" type="xs:string" use="required" fixed="1"/>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="StartLineType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="method" type="xs:string" use="required"/>
-        <xs:attribute name="url" type="xs:string" use="required"/>
-        <xs:attribute name="version" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
+  <xs:element name="RequestLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Method"/>
+        <xs:element ref="RequestURI"/>
+        <xs:element ref="HTTPVersion"/>
+      </xs:sequence>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required" fixed=" "/>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="HeadersType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="value" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
+  <xs:element name="Method">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="RequestURI">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="HTTPVersion">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="StatusLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="StatusCode"/>
+        <xs:element ref="ReasonPhrase"/>
+      </xs:sequence>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required" fixed=" "/>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="StatusCode">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:integer"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ReasonPhrase">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Header" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+      <xs:attribute name="dfdl:occurs" type="xs:string" use="required" fixed="1"/>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required" fixed="\r\n"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="HeaderName"/>
+        <xs:element ref="HeaderValue"/>
+      </xs:sequence>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required" fixed=": "/>
+      <xs:attribute name="dfdl:textString" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="HeaderName">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="HeaderValue">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Body">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:base64Binary"/>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

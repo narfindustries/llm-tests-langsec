@@ -1,127 +1,94 @@
 use nom::{
-    bytes::complete::{tag, take, take_while, take_while1},
-    combinator::{map, map_res, opt, recognize},
-    error::ErrorKind,
-    number::complete::{be_u16, be_u32, be_u64},
-    sequence::{preceded, tuple},
+    bytes::complete::{tag, take},
+    combinator::{map, opt},
+    number::complete::{be_u16, be_u32},
+    sequence::preceded,
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::str;
 
 #[derive(Debug)]
 struct NitfHeader {
-    file_header: FileHeader,
-    image_segments: Vec<ImageSegment>,
-}
-
-#[derive(Debug)]
-struct FileHeader {
+    signature: String,
+    version: String,
     header_length: u32,
-    file_name: String,
-    user_header_length: u32,
-    // ... other fields as needed ...
-}
-
-
-#[derive(Debug)]
-struct ImageSegment {
-    segment_header: SegmentHeader,
-    // ... image data ...
+    offset_to_image_data: u32,
+    image_data_length: u32,
+    security_classification: String,
+    num_tres: u16,
+    tres: Vec<Tre>,
 }
 
 #[derive(Debug)]
-struct SegmentHeader {
-    identifier: String,
-    // ... other fields as needed ...
+struct Tre {
+    tag: String,
+    data: Vec<u8>,
 }
-
 
 fn parse_string(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while1(|c| c != 0), |bytes| {
-        String::from_utf8(bytes.to_vec())
-    })(input)
+    let s = str::from_utf8(input).map(|s| s.to_string()).map_err(|e| nom::Err::Error(nom::error::Error::new(input, e)))?;
+    Ok(("", s))
 }
 
+fn parse_tre(input: &[u8]) -> IResult<&[u8], Tre> {
+    let (input, tag) = take(4usize)(input)?;
+    let tag_str = String::from_utf8_lossy(tag).to_string();
+    let (input, data_len) = be_u32(input)?;
+    let (input, data) = take(data_len as usize)(input)?;
+    Ok((input, Tre { tag: tag_str, data: data.to_vec() }))
+}
 
-fn parse_file_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
+fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NitfHeader> {
+    let (input, signature) = map(take(8usize), parse_string)(input)?;
+    let (input, version) = map(take(8usize), parse_string)(input)?;
     let (input, header_length) = be_u32(input)?;
-    let (input, file_name) = preceded(tag(b"NITF02.00"), parse_string)(input)?;
-    let (input, user_header_length) = be_u32(input)?;
-    // ... parse other fields ...
-    Ok((
-        input,
-        FileHeader {
-            header_length,
-            file_name,
-            user_header_length,
-            // ... other fields ...
+    let (input, offset_to_image_data) = be_u32(input)?;
+    let (input, image_data_length) = be_u32(input)?;
+    let (input, security_classification) = map(take(20usize), parse_string)(input)?;
+    let (input, num_tres) = be_u16(input)?;
+    let (input, tres) = map(
+        opt(preceded(tag(b"\n"), parse_tre)),
+        |tre_opt| {
+            let mut tres = Vec::new();
+            if let Some(tre) = tre_opt {
+                tres.push(tre);
+            }
+            tres
         },
-    ))
-}
+    )(input)?;
 
-fn parse_image_segment(input: &[u8]) -> IResult<&[u8], ImageSegment> {
-    let (input, identifier) = tag(b"IS")(input)?;
-    let (input, segment_header) = parse_segment_header(input)?;
-    // ... parse image data ...
-    Ok((
-        input,
-        ImageSegment {
-            segment_header,
-            // ... image data ...
-        },
-    ))
-}
-
-fn parse_segment_header(input: &[u8]) -> IResult<&[u8], SegmentHeader> {
-    let (input, identifier) = parse_string(input)?;
-    // ... parse other fields ...
-    Ok((input, SegmentHeader { identifier }))
-}
-
-
-fn parse_nitf(input: &[u8]) -> IResult<&[u8], NitfHeader> {
-    let (input, file_header) = parse_file_header(input)?;
-    let (input, image_segments) = many0(parse_image_segment)(input)?;
     Ok((
         input,
         NitfHeader {
-            file_header,
-            image_segments,
+            signature,
+            version,
+            header_length,
+            offset_to_image_data,
+            image_data_length,
+            security_classification,
+            num_tres,
+            tres,
         },
     ))
 }
 
-use nom::multi::many0;
-
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: nitf_parser <input_file>");
+        println!("Usage: nitf_parser <filename>");
         return;
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
-        }
-    };
-
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
-        }
-    };
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_nitf(&buffer) {
-        Ok((_, nitf_header)) => println!("NITF Header: {:?}", nitf_header),
-        Err(e) => println!("Error parsing NITF: {:?}", e),
+    match parse_nitf_header(&buffer) {
+        Ok((_, header)) => println!("NITF Header: {:?}", header),
+        Err(e) => println!("Error parsing NITF header: {:?}", e),
     }
 }

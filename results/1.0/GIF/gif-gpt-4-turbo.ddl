@@ -1,70 +1,102 @@
-module GIF.GPT4Turbo {
-  import common.{Bits8, U16LE, U32LE}
+module GIF;
 
-  type ColorTableEntry = struct {
-    red   : Bits8
-    green : Bits8
-    blue  : Bits8
-  }
+import std.binary;
 
-  type LogicalScreenDescriptor = struct {
-    canvasWidth        : U16LE
-    canvasHeight       : U16LE
-    packedField        : Bits8
-    bgColorIndex       : Bits8
-    pixelAspectRatio   : Bits8
-  }
+struct RGB {
+    u8 red;
+    u8 green;
+    u8 blue;
+}
 
-  type GlobalColorTable = struct {
-    entries : ColorTableEntry[globalColorTableSize()]
-  }
+struct LogicalScreenDescriptor {
+    u16 screenWidth;
+    u16 screenHeight;
+    u8 packedFields;
+    u8 backgroundColorIndex;
+    u8 pixelAspectRatio;
 
-  type ImageDescriptor = struct {
-    imageLeftPosition   : U16LE
-    imageTopPosition    : U16LE
-    imageWidth          : U16LE
-    imageHeight         : U16LE
-    packedField         : Bits8
-  }
+    bit globalColorTableFlag = packedFields[7];
+    u32 colorResolution = (packedFields >> 4) & 0x07 + 1;
+    bit sortFlag = packedFields[3];
+    u32 sizeOfGlobalColorTable = 1 << ((packedFields & 0x07) + 1);
+}
 
-  type LocalColorTable = struct {
-    entries : ColorTableEntry[localColorTableSize(this._parent.asInstanceOf[ImageDescriptor].packedField)]
-  }
+struct GlobalColorTable {
+    RGB colors[depends_on size];
+}
 
-  type TableBasedImageData = struct {
-    lzwMinimumCodeSize : Bits8
-    imageData          : Bytes
-  }
+struct ImageDescriptor {
+    u8 imageSeparator;
+    u16 imageLeftPosition;
+    u16 imageTopPosition;
+    u16 imageWidth;
+    u16 imageHeight;
+    u8 packedFields;
 
-  type Block = union {
-    case 0x2C => imageDescriptor  : ImageDescriptor
-    case 0x21 => extension        : Extension
-  }
+    bit localColorTableFlag = packedFields[7];
+    bit interlaceFlag = packedFields[6];
+    bit sortFlag = packedFields[5];
+    u32 sizeOfLocalColorTable = 1 << ((packedFields & 0x07) + 1);
+}
 
-  type Extension = struct {
-    functionCode : Bits8
-    blockSize    : Bits8
-    data         : Bytes[blockSize.toInt]
-    terminator   : Bits8  // Block Terminator (0x00)
-  }
+struct LocalColorTable {
+    RGB colors[depends_on size];
+}
 
-  type GIF = struct {
-    header              : Stringz("GIF89a" | "GIF87a")
-    lSD                 : LogicalScreenDescriptor
-    gCT                 : GlobalColorTable[this.lSD.packedField & 0x80 != 0]
-    blocks              : Block[0 until EOS]
-  }
+struct ImageData {
+    ImageDescriptor descriptor;
+    Optional<LocalColorTable> localColorTable[descriptor.localColorTableFlag];
+    u8 lzwMinimumCodeSize;
+    [u8] imageData;
+}
 
-  private def globalColorTableSize(packed: Bits8): Int = {
-    var hasGCT = (packed & 0x80) != 0
-    var size = (packed & 0x07) + 1
-    if(hasGCT) Math.pow(2, size).toInt else 0
-  }
+struct ExtensionBlock {
+    u8 extensionIntroducer; // Should be 0x21
+    u8 extensionLabel;
+}
 
-  private def localColorTableSize(packed: Bits8): Int = {
-    var hasLCT = (packed & 0x80) != 0
-    var size = (packed & 0x07) + 1
-    if(hasLCT) Math.pow(2, size).toInt else 0
-  }
+struct GraphicControlExtension {
+    ExtensionBlock blockStart;
+    u8 blockSize;
+    u8 packedFields;
+    u16 delayTime;
+    u8 transparentColorIndex;
+    u8 blockTerminator;
+}
 
+struct CommentExtension {
+    ExtensionBlock blockStart;
+    u8 blockSize;
+    [u8] commentData;
+}
+
+struct PlainTextExtension {
+    ExtensionBlock blockStart;
+    u8 blockSize;
+    u16 textGridLeftPosition;
+    u16 textGridTopPosition;
+    u16 textGridWidth;
+    u16 textGridHeight;
+    u8 characterCellWidth;
+    u8 characterCellHeight;
+    u8 textForegroundColorIndex;
+    u8 textBackgroundColorIndex;
+    [u8] plainTextData;
+}
+
+struct ApplicationExtension {
+    ExtensionBlock blockStart;
+    u8 blockSize;
+    string(8) applicationIdentifier;
+    string(3) applicationAuthCode;
+    [u8] applicationData;
+}
+
+struct GIFFile {
+    string(3) signature;
+    string(3) version;
+    LogicalScreenDescriptor logicalScreenDescriptor;
+    Optional<GlobalColorTable> globalColorTable[logicalScreenDescriptor.globalColorTableFlag];
+    Choice<ImageData, GraphicControlExtension, CommentExtension, PlainTextExtension, ApplicationExtension>* block;
+    u8 trailer; // Should be 0x3B
 }

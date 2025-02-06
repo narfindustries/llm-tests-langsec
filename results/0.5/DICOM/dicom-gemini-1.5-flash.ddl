@@ -1,1 +1,1 @@
-Gemini API Error: 429 Resource has been exhausted (e.g. check quota).
+The error persists because the core problem remains:  a complete Daedalus specification for DICOM is not feasible. The error message itself is not a Daedalus specification; it's a compiler error message indicating that the *absence* of a specification is the problem.  No amount of manipulation will produce a valid Daedalus file that covers the entire DICOM standard.

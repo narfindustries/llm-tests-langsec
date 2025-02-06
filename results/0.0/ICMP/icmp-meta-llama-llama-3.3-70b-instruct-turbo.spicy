@@ -1,111 +1,68 @@
-# ICMP Spicy Specification
+module ICMP;
 
-%header {
-    import "zeek/spicy/standard-protocol.icmp"
+type Type = uint8;
+type Code = uint8;
+
+type Message = struct {
+  type: Type,
+  code: Code,
+  checksum: uint16,
+  identifier: uint16,
+  sequence_number: uint16,
+  data: bytes,
+  timestamp: uint32,
+  information: uint32,
+  unused: uint32,
+  gateway_address: uint32,
+  pointer: uint8,
+  internet_header: bytes
 }
 
-%protocol icmp {
-    %include standard-protocol.icmp
+type Parser = parser {
+  message: Message
+}
 
-    # Define the ICMP message structure
-    type Msg = record {
-        type:   uint8,
-        code:   uint8,
-        checksum: uint16,
-        data:   bytestring &restofdata,
-    };
+let type_values: Type = {
+  0: "Echo_Reply",
+  1: "Unassigned",
+  2: "Unassigned",
+  3: "Destination_Unreachable",
+  4: "Source_Quench",
+  5: "Redirect",
+  6: "Alternate_Host_Address",
+  7: "Unassigned",
+  8: "Echo_Request",
+  9: "Router_Advertisement",
+  10: "Router_Solicitation",
+  11: "Time_Exceeded",
+  12: "Parameter_Problem",
+  13: "Timestamp_Request",
+  14: "Timestamp_Reply",
+  15: "Information_Request",
+  16: "Information_Reply"
+}
 
-    # Define the ICMP echo request structure
-    type EchoRequest = record {
-        id:     uint16,
-        seq:    uint16,
-        data:   bytestring &restofdata,
-    };
-
-    # Define the ICMP echo reply structure
-    type EchoReply = record {
-        id:     uint16,
-        seq:    uint16,
-        data:   bytestring &restofdata,
-    };
-
-    # Define the ICMP destination unreachable structure
-    type DestinationUnreachable = record {
-        unused: uint32,
-        data:   bytestring &restofdata,
-    };
-
-    # Define the ICMP redirect structure
-    type Redirect = record {
-        gateway: ip,
-        data:   bytestring &restofdata,
-    };
-
-    # Define the ICMP echo request handler
-    function echo_request(msg: Msg): bool {
-        if (msg.type == 8) {
-            local echo_req: EchoRequest = EchoRequest();
-            echo_req.id = 0;
-            echo_req.seq = 0;
-            echo_req.data = msg.data;
-            # Handle the echo request
-            print("Received ICMP echo request");
-            return true;
-        }
-        return false;
-    }
-
-    # Define the ICMP echo reply handler
-    function echo_reply(msg: Msg): bool {
-        if (msg.type == 0) {
-            local echo_rep: EchoReply = EchoReply();
-            echo_rep.id = 0;
-            echo_rep.seq = 0;
-            echo_rep.data = msg.data;
-            # Handle the echo reply
-            print("Received ICMP echo reply");
-            return true;
-        }
-        return false;
-    }
-
-    # Define the ICMP destination unreachable handler
-    function destination_unreachable(msg: Msg): bool {
-        if (msg.type == 3) {
-            local dest_unreach: DestinationUnreachable = DestinationUnreachable();
-            dest_unreach.unused = 0;
-            dest_unreach.data = msg.data;
-            # Handle the destination unreachable message
-            print("Received ICMP destination unreachable");
-            return true;
-        }
-        return false;
-    }
-
-    # Define the ICMP redirect handler
-    function redirect(msg: Msg): bool {
-        if (msg.type == 5) {
-            local redir: Redirect = Redirect();
-            redir.gateway = 0.0.0.0;
-            redir.data = msg.data;
-            # Handle the redirect message
-            print("Received ICMP redirect");
-            return true;
-        }
-        return false;
-    }
-
-    # Define the main ICMP handler
-    function icmp_handler(msg: Msg): bool {
-        if (echo_request(msg)) {
-            return true;
-        } else if (echo_reply(msg)) {
-            return true;
-        } else if (destination_unreachable(msg)) {
-            return true;
-        } else if (redirect(msg)) {
-            return true;
-        }
-        return false;
-    }
+let code_values: table[Type, Code] = {
+  3: {
+    0: "Network_Unreachable",
+    1: "Host_Unreachable",
+    2: "Protocol_Unreachable",
+    3: "Port_Unreachable",
+    4: "Fragmentation_Needed_and_Dont_Fragment_was_Set",
+    5: "Source_Route_Failed"
+  },
+  5: {
+    0: "Redirect_Datagrams_for_the_Network",
+    1: "Redirect_Datagrams_for_the_Host",
+    2: "Redirect_Datagrams_for_the_Type_of_Service_and_Network",
+    3: "Redirect_Datagrams_for_the_Type_of_Service_and_Host"
+  },
+  11: {
+    0: "Time_to_Live_Exceeded_in_Transit",
+    1: "Fragment_Reassembly_Time_Exceeded"
+  },
+  12: {
+    0: "Pointer_Indicates_the_Error",
+    1: "Missing_a_Required_Option"
+  }
 }

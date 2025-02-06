@@ -1,80 +1,54 @@
+doc: National Imagery Transmission Format (NITF) 2.1 File Format
 meta:
   id: nitf
-  file-extension: nitf
   endian: be
+  encoding: ASCII
 seq:
-  - id: header
-    type: nitf_header
+  - id: file_header
+    type: file_header
   - id: image_segments
     type: image_segment
-    repeat: expr
-    repeat-expr: header.num_image_segments
-  - id: graphic_segments
-    type: graphic_segment
-    repeat: expr
-    repeat-expr: header.num_graphic_segments
-  - id: text_segments
-    type: text_segment
-    repeat: expr
-    repeat-expr: header.num_text_segments
-  - id: data_extension_segments
-    type: data_extension_segment
-    repeat: expr
-    repeat-expr: header.num_data_extension_segments
-  - id: reserved_extension_segments
-    type: reserved_extension_segment
-    repeat: expr
-    repeat-expr: header.num_reserved_extension_segments
-
+    repeat: eos
 types:
-  nitf_header:
+  file_header:
     seq:
-      - id: file_profile_name
-        type: str
-        size: 4
-        encoding: ASCII
-      - id: file_version
+      - id: fhdr
+        contents: "NITF"
+      - id: fver
         type: str
         size: 5
         encoding: ASCII
-      - id: complexity_level
-        type: str
-        size: 2
-        encoding: ASCII
-      - id: standard_type
-        type: str
-        size: 4
-        encoding: ASCII
-      - id: originating_station
+      - id: clevel
+        type: u1
+      - id: stype
         type: str
         size: 10
         encoding: ASCII
-      - id: file_datetime
+      - id: ostaid
+        type: str
+        size: 10
+        encoding: ASCII
+      - id: fdt
         type: str
         size: 14
         encoding: ASCII
-      - id: file_title
+      - id: ftitle
         type: str
         size: 80
         encoding: ASCII
-      - id: security_classification
-        type: security_info
-      - id: num_image_segments
-        type: u1
-      - id: num_graphic_segments
-        type: u1
-      - id: num_text_segments
-        type: u1
-      - id: num_data_extension_segments
-        type: u1
-      - id: num_reserved_extension_segments
-        type: u1
-      - id: user_defined_header_length
+      - id: security
+        type: security_block
+      - id: fscop
         type: u2
-      - id: extended_header_length
+      - id: fscpys
         type: u2
-
-  security_info:
+      - id: encryption
+        type: encryption_block
+      - id: background_color
+        type: str
+        size: 3
+        encoding: ASCII
+  security_block:
     seq:
       - id: classification
         type: str
@@ -84,77 +58,75 @@ types:
         type: str
         size: 2
         encoding: ASCII
-      - id: security_group
+      - id: release_instructions
+        type: str
+        size: 20
+        encoding: ASCII
+  encryption_block:
+    seq:
+      - id: encryption_type
+        type: u1
+      - id: encryption_key
+        type: str
+        size: 32
+        encoding: ASCII
+  image_segment:
+    seq:
+      - id: image_header
+        type: image_header
+      - id: image_data
+        size-eos: true
+  image_header:
+    seq:
+      - id: itype
+        type: str
+        size: 3
+        encoding: ASCII
+      - id: irep
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: icat
+        type: str
+        size: 3
+        encoding: ASCII
+      - id: nbands
+        type: u2
+      - id: imode
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: nbpc
+        type: u1
+      - id: nppbh
+        type: u2
+      - id: nppbv
+        type: u2
+      - id: nbpp
+        type: u1
+      - id: idlvl
+        type: u2
+      - id: ialvl
+        type: u2
+      - id: iloc
         type: str
         size: 10
         encoding: ASCII
-
-  image_segment:
+      - id: imag
+        type: str
+        size: 4
+        encoding: ASCII
+      - id: geolocation
+        type: geolocation_block
+  geolocation_block:
     seq:
-      - id: header
-        type: image_segment_header
-      - id: image_data
-        size: header.image_data_length
-
-  image_segment_header:
+      - id: coords
+        type: coordinate
+        repeat: expr
+        repeat-expr: 4
+  coordinate:
     seq:
-      - id: length
-        type: u3
-      - id: image_data_length
-        type: u3
-
-  graphic_segment:
-    seq:
-      - id: header
-        type: graphic_segment_header
-      - id: graphic_data
-        size: header.graphic_data_length
-
-  graphic_segment_header:
-    seq:
-      - id: length
-        type: u3
-      - id: graphic_data_length
-        type: u3
-
-  text_segment:
-    seq:
-      - id: header
-        type: text_segment_header
-      - id: text_data
-        size: header.text_data_length
-
-  text_segment_header:
-    seq:
-      - id: length
-        type: u3
-      - id: text_data_length
-        type: u3
-
-  data_extension_segment:
-    seq:
-      - id: header
-        type: data_extension_segment_header
-      - id: data
-        size: header.data_length
-
-  data_extension_segment_header:
-    seq:
-      - id: length
-        type: u3
-      - id: data_length
-        type: u3
-
-  reserved_extension_segment:
-    seq:
-      - id: header
-        type: reserved_extension_segment_header
-      - id: data
-        size: header.data_length
-
-  reserved_extension_segment_header:
-    seq:
-      - id: length
-        type: u3
-      - id: data_length
-        type: u3
+      - id: lat
+        type: f8
+      - id: lon
+        type: f8

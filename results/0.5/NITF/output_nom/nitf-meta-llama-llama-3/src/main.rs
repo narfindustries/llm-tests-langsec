@@ -1,118 +1,207 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
-    character::complete::{digit1, space0, space1},
-    combinator::{map, map_res, opt},
+    combinator::{map, opt},
     multi::{many0, many1},
+    number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
-use std::str;
+use std::{
+    env,
+    fs::File,
+    io::{BufReader, Read},
+};
 
-// Define NITF file format constants
-const NITF_FILE_HEADER_SIZE: usize = 12;
-const NITF_FILE_HEADER_SIGNATURE: &[u8] = b"NITF01.1";
-const NITF_FILE_TRAILER_SIZE: usize = 18;
-const NITF_FILE_TRAILER_SIGNATURE: &[u8] = b"NTFR";
-
-// Define NITF file header structure
-#[derive(Debug)]
-struct NITFFileHeader {
-    signature: String,
-    file_format_version: String,
-    file_style: u8,
-    file_security_classification: String,
+#[derive(Debug, PartialEq)]
+struct FileHeader {
+    file_header_length: u32,
+    file_header_version: u16,
+    file_type: String,
+    file_security_classification: u8,
+    file_control_number: String,
+    file_date: String,
+    file_time: String,
+    file_title: String,
+    file_security_classification_title: String,
+    file_security_classification_text: String,
+    file_security_classification_marking: u8,
+    file_security_classification_downgrade: u8,
+    file_security_classification_downgrade_date: Option<String>,
+    file_security_classification_downgrade_time: Option<String>,
+    file_security_classification_downgrade_authority: Option<String>,
 }
 
-// Define NITF file trailer structure
-#[derive(Debug)]
-struct NITFFileTrailer {
-    signature: String,
-    file_length: u32,
-    file_id: String,
+fn parse_file_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
+    let (input, file_header_length) = be_u32(input)?;
+    let (input, file_header_version) = be_u16(input)?;
+    let (input, file_type) = map(take(3u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_security_classification) = be_u8(input)?;
+    let (input, file_control_number) = map(take(25u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_date) = map(take(6u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_time) = map(take(4u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_title) = map(take(80u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_security_classification_title) = map(take(43u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_security_classification_text) = map(take(80u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, file_security_classification_marking) = be_u8(input)?;
+    let (input, file_security_classification_downgrade) = be_u8(input)?;
+    let (input, file_security_classification_downgrade_date) = opt(map(take(6u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned()))(input)?;
+    let (input, file_security_classification_downgrade_time) = opt(map(take(4u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned()))(input)?;
+    let (input, file_security_classification_downgrade_authority) = opt(map(take(25u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned()))(input)?;
+    Ok((
+        input,
+        FileHeader {
+            file_header_length,
+            file_header_version,
+            file_type,
+            file_security_classification,
+            file_control_number,
+            file_date,
+            file_time,
+            file_title,
+            file_security_classification_title,
+            file_security_classification_text,
+            file_security_classification_marking,
+            file_security_classification_downgrade,
+            file_security_classification_downgrade_date,
+            file_security_classification_downgrade_time,
+            file_security_classification_downgrade_authority,
+        },
+    ))
 }
 
-// Define NITF image segment structure
-#[derive(Debug)]
-struct NITFImageSegment {
-    segment_type: String,
+#[derive(Debug, PartialEq)]
+struct ImageHeader {
     image_id: String,
-    image_format: String,
-    image_data: Vec<u8>,
+    image_date: String,
+    image_time: String,
+    image_title: String,
+    image_security_classification: u8,
+    image_security_classification_title: String,
+    image_security_classification_text: String,
+    image_security_classification_marking: u8,
+    image_compression_type: u16,
+    image_pixel_type: u8,
+    image_pixel_size: u16,
+    image_pixel_format: u16,
+    image_number_of_bands: u8,
+    image_band_definitions: Vec<String>,
 }
 
-// Define NITF file structure
-#[derive(Debug)]
-struct NITFFile {
-    file_header: NITFFileHeader,
-    image_segments: Vec<NITFImageSegment>,
-    file_trailer: NITFFileTrailer,
-}
-
-// Define NITF file parser
-fn parse_nitf_file(input: &[u8]) -> IResult<&[u8], NITFFile> {
-    let (input, file_header) = parse_nitf_file_header(input)?;
-    let (input, image_segments) = many0(parse_nitf_image_segment)(input)?;
-    let (input, file_trailer) = parse_nitf_file_trailer(input)?;
-    Ok((input, NITFFile {
-        file_header,
-        image_segments,
-        file_trailer,
-    }))
-}
-
-// Define NITF file header parser
-fn parse_nitf_file_header(input: &[u8]) -> IResult<&[u8], NITFFileHeader> {
-    let (input, _) = tag(NITF_FILE_HEADER_SIGNATURE)(input)?;
-    let (input, _file_format_version) = take(5usize)(input)?;
-    let (input, file_format_version) = map_res(_file_format_version, str::from_utf8)(input)?;
-    let (input, _file_style) = take(1usize)(input)?;
-    let (input, file_style) = map(_file_style, |x| x[0])(input)?;
-    let (input, _file_security_classification) = take(3usize)(input)?;
-    let (input, file_security_classification) = map_res(_file_security_classification, str::from_utf8)(input)?;
+fn parse_image_header(input: &[u8]) -> IResult<&[u8], ImageHeader> {
+    let (input, image_id) = map(take(25u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_date) = map(take(6u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_time) = map(take(4u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_title) = map(take(80u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_security_classification) = be_u8(input)?;
+    let (input, image_security_classification_title) = map(take(43u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_security_classification_text) = map(take(80u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned())(input)?;
+    let (input, image_security_classification_marking) = be_u8(input)?;
+    let (input, image_compression_type) = be_u16(input)?;
+    let (input, image_pixel_type) = be_u8(input)?;
+    let (input, image_pixel_size) = be_u16(input)?;
+    let (input, image_pixel_format) = be_u16(input)?;
+    let (input, image_number_of_bands) = be_u8(input)?;
+    let (input, image_band_definitions) = many1(map(take(80u8), |x: &[u8]| String::from_utf8_lossy(x).into_owned()))(input)?;
     Ok((
         input,
-        NITFFileHeader {
-            signature: String::from_utf8_lossy(NITF_FILE_HEADER_SIGNATURE).into_owned(),
-            file_format_version: file_format_version.to_string(),
-            file_style,
-            file_security_classification: file_security_classification.to_string(),
+        ImageHeader {
+            image_id,
+            image_date,
+            image_time,
+            image_title,
+            image_security_classification,
+            image_security_classification_title,
+            image_security_classification_text,
+            image_security_classification_marking,
+            image_compression_type,
+            image_pixel_type,
+            image_pixel_size,
+            image_pixel_format,
+            image_number_of_bands,
+            image_band_definitions,
         },
     ))
 }
 
-// Define NITF image segment parser
-fn parse_nitf_image_segment(input: &[u8]) -> IResult<&[u8], NITFImageSegment> {
-    let (input, segment_type) = take(2usize)(input)?;
-    let (input, image_id) = take(25usize)(input)?;
-    let (input, image_format) = take(2usize)(input)?;
-    let (input, image_data_length) = map_res(take(5usize)(input)?, |x| std::str::from_utf8(x).unwrap().parse::<u32>())?;
-    let (input, image_data) = take(image_data_length as usize)(input)?;
+#[derive(Debug, PartialEq)]
+struct DataDescriptionSection {
+    data_description_section_length: u32,
+    data_description_section_version: u16,
+    data_type: u8,
+    data_representation: u8,
+    data_size: u32,
+    data_offset: u32,
+}
+
+fn parse_data_description_section(input: &[u8]) -> IResult<&[u8], DataDescriptionSection> {
+    let (input, data_description_section_length) = be_u32(input)?;
+    let (input, data_description_section_version) = be_u16(input)?;
+    let (input, data_type) = be_u8(input)?;
+    let (input, data_representation) = be_u8(input)?;
+    let (input, data_size) = be_u32(input)?;
+    let (input, data_offset) = be_u32(input)?;
     Ok((
         input,
-        NITFImageSegment {
-            segment_type: String::from_utf8_lossy(segment_type).into_owned(),
-            image_id: String::from_utf8_lossy(image_id).into_owned(),
-            image_format: String::from_utf8_lossy(image_format).into_owned(),
-            image_data: image_data.to_vec(),
+        DataDescriptionSection {
+            data_description_section_length,
+            data_description_section_version,
+            data_type,
+            data_representation,
+            data_size,
+            data_offset,
         },
     ))
 }
 
-// Define NITF file trailer parser
-fn parse_nitf_file_trailer(input: &[u8]) -> IResult<&[u8], NITFFileTrailer> {
-    let (input, _) = tag(NITF_FILE_TRAILER_SIGNATURE)(input)?;
-    let (input, _file_length) = take(6usize)(input)?;
-    let (input, file_length) = map_res(_file_length, |x| std::str::from_utf8(x).unwrap().parse::<u32>())?;
-    let (input, _file_id) = take(25usize)(input)?;
-    let (input, file_id) = map_res(_file_id, str::from_utf8)(input)?;
+#[derive(Debug, PartialEq)]
+struct DataExtensionSection {
+    data_extension_section_length: u32,
+    data_extension_section_version: u16,
+    data_extension_type: u8,
+    data_extension_size: u32,
+    data_extension_offset: u32,
+}
+
+fn parse_data_extension_section(input: &[u8]) -> IResult<&[u8], DataExtensionSection> {
+    let (input, data_extension_section_length) = be_u32(input)?;
+    let (input, data_extension_section_version) = be_u16(input)?;
+    let (input, data_extension_type) = be_u8(input)?;
+    let (input, data_extension_size) = be_u32(input)?;
+    let (input, data_extension_offset) = be_u32(input)?;
     Ok((
         input,
-        NITFFileTrailer {
-            signature: String::from_utf8_lossy(NITF_FILE_TRAILER_SIGNATURE).into_owned(),
-            file_length,
-            file_id: file_id.to_string(),
+        DataExtensionSection {
+            data_extension_section_length,
+            data_extension_section_version,
+            data_extension_type,
+            data_extension_size,
+            data_extension_offset,
+        },
+    ))
+}
+
+#[derive(Debug, PartialEq)]
+struct ImageDataSection {
+    image_data_section_length: u32,
+    image_data_section_version: u16,
+    image_data_type: u8,
+    image_data_size: u32,
+    image_data_offset: u32,
+}
+
+fn parse_image_data_section(input: &[u8]) -> IResult<&[u8], ImageDataSection> {
+    let (input, image_data_section_length) = be_u32(input)?;
+    let (input, image_data_section_version) = be_u16(input)?;
+    let (input, image_data_type) = be_u8(input)?;
+    let (input, image_data_size) = be_u32(input)?;
+    let (input, image_data_offset) = be_u32(input)?;
+    Ok((
+        input,
+        ImageDataSection {
+            image_data_section_length,
+            image_data_section_version,
+            image_data_type,
+            image_data_size,
+            image_data_offset,
         },
     ))
 }
@@ -123,11 +212,19 @@ fn main() {
         println!("Usage: {} <input_file>", args[0]);
         return;
     }
-    let mut file = File::open(&args[1]).unwrap();
+    let input_file = &args[1];
+    let file = File::open(input_file).unwrap();
+    let mut reader = BufReader::new(file);
     let mut input = Vec::new();
-    file.read_to_end(&mut input).unwrap();
-    match parse_nitf_file(&input) {
-        Ok((_, nitf_file)) => println!("{:?}", nitf_file),
-        Err(err) => println!("Error parsing NITF file: {}", err),
-    }
+    reader.read_to_end(&mut input).unwrap();
+    let (input, file_header) = parse_file_header(&input).unwrap();
+    let (input, image_header) = parse_image_header(input).unwrap();
+    let (input, data_description_section) = parse_data_description_section(input).unwrap();
+    let (input, data_extension_section) = parse_data_extension_section(input).unwrap();
+    let (input, image_data_section) = parse_image_data_section(input).unwrap();
+    println!("File Header: {:?}", file_header);
+    println!("Image Header: {:?}", image_header);
+    println!("Data Description Section: {:?}", data_description_section);
+    println!("Data Extension Section: {:?}", data_extension_section);
+    println!("Image Data Section: {:?}", image_data_section);
 }

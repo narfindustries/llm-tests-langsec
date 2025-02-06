@@ -1,78 +1,146 @@
-module MQTT {
+grammar MQTT;
 
-  using BE = bit-endian big;
+import DAEDALUS::BitManip;
+import DAEDALUS::Bytes;
 
-  type byte = u8;
-  type word = u16 : BE;
-  type dword = u32 : BE;
+enum PacketType {
+  CONNECT = 1,
+  CONNACK,
+  PUBLISH,
+  PUBACK,
+  PUBREC,
+  PUBREL,
+  PUBCOMP,
+  SUBSCRIBE,
+  SUBACK,
+  UNSUBSCRIBE,
+  UNSUBACK,
+  PINGREQ,
+  PINGRESP,
+  DISCONNECT,
+  AUTH
+}
 
-  type utf8_string = {
-    length : word,
-    value  : utf8[length]
+struct MQTT_Packet {
+  u4 packetType : PacketType;
+  u4 flags;
+  VarInt remainingLength;
+  choice packet : packetType {
+    CONNECT => ConnectPacket,
+    CONNACK => ConnackPacket,
+    PUBLISH => PublishPacket,
+    SUBSCRIBE => SubscribePacket,
+    SUBACK => SubackPacket,
+    UNSUBSCRIBE => UnsubscribePacket,
+    UNSUBACK => UnsubackPacket,
+    PINGREQ => EmptyPayload,
+    PINGRESP => EmptyPayload,
+    DISCONNECT => DisconnectPacket,
+    PUBACK => AckPacket,
+    PUBREC => AckPacket,
+    PUBREL => AckPacket,
+    PUBCOMP => AckPacket,
+    AUTH => AuthPacket
   };
+}
 
-  type MQTT_ControlPacketType = enum u4 {
-    CONNECT     = 0x1,
-    CONNACK     = 0x2,
-    PUBLISH     = 0x3,
-    PUBACK      = 0x4,
-    PUBREC      = 0x5,
-    PUBREL      = 0x6,
-    PUBCOMP     = 0x7,
-    SUBSCRIBE   = 0x8,
-    SUBACK      = 0x9,
-    UNSUBSCRIBE = 0xA,
-    UNSUBACK    = 0xB,
-    PINGREQ     = 0xC,
-    PINGRESP    = 0xD,
-    DISCONNECT  = 0xE
-  };
+struct VarInt {
+  bytes data;
+  u32 : value = BitManip::VarInt(data);
+}
 
-  type MQTT_Flags = record {
-    retain          : u1,
-    qos_level       : u2,
-    dup_flag        : u1,
-    specific_flags  : u4
-  };
+struct ConnectPacket {
+  UTF8String protocolName;
+  u8 protocolLevel;
+  u8 connectFlags;
+  u16 keepAlive;
+  Properties properties;
+  UTF8String clientIdentifier;
+  optional<WillMessage> willMessage : (connectFlags & 0x04) != 0;
+  optional<UTF8String> userName : (connectFlags & 0x80) != 0;
+  optional<Bytes> password : (connectFlags & 0x40) != 0;
+}
 
-  type MQTT_VariableHeader_Connect = {
-    protocol_name   : utf8_string,
-    version_number  : byte,
-    connect_flags   : byte,
-    keep_alive      : word
-  };
+struct ConnackPacket {
+  u8 acknowledgeFlags;
+  u8 reasonCode;
+  Properties properties;
+}
 
-  type MQTT_Payload_Connect = {
-    client_id       : utf8_string,
-    will_topic      : utf8_string?,
-    will_message    : utf8_string?,
-    user_name       : utf8_string?,
-    password        : utf8_string?
-  };
+struct PublishPacket {
+  optional<u16> packetIdentifier : (BitManip::Extract(flags, 1, 2) != 0);
+  Properties properties;
+  UTF8String topicName;
+  Bytes payload;
+}
 
-  type MQTT_VariableHeader_Subscribe = {
-    packet_id       : word,
-    properties      : utf8_string // Simplified for example
-  };
+struct SubscribePacket {
+  u16 packetIdentifier;
+  Properties properties;
+  array<Subscription> subscriptions;
+}
 
-  type MQTT_Payload_Subscribe = sequence of {
-    topic_filter    : utf8_string,
-    qos             : u2
-  };
+struct Subscription {
+  UTF8String topicFilter;
+  u8 options;
+}
 
-  type MQTT_Packet = {
-    packet_type     : MQTT_ControlPacketType,
-    flags           : MQTT_Flags,
-    remaining_length: dword,
-    variable_header : switch (packet_type) {
-      case MQTT_ControlPacketType::CONNECT => MQTT_VariableHeader_Connect,
-      case MQTT_ControlPacketType::SUBSCRIBE => MQTT_VariableHeader_Subscribe,
-      default => ()
-    },
-    payload         : switch (packet_type) {
-      case MQTT_ControlPacketType::CONNECT => MQTT_Payload_Connect,
-      case MQTT_ControlPacketType::SUBSCRIBE => [MQTT_Payload_Subscribe],
-      default => ()
-    }
+struct SubackPacket {
+  u16 packetIdentifier;
+  Properties properties;
+  array<u8> reasonCodes;
+}
+
+struct UnsubscribePacket {
+  u16 packetIdentifier;
+  Properties properties;
+  array<UTF8String> topics;
+}
+
+struct UnsubackPacket {
+  u16 packetIdentifier;
+  Properties properties;
+  array<u8> reasonCodes;
+}
+
+struct DisconnectPacket {
+  u8 reasonCode;
+  Properties properties;
+}
+
+struct AckPacket {
+  u16 packetIdentifier;
+  u8 reasonCode;
+  Properties properties;
+}
+
+struct AuthPacket {
+  u8 reasonCode;
+  Properties properties;
+}
+
+struct EmptyPayload {}
+
+struct Properties {
+  array<Property> properties;
+}
+
+struct Property {
+  u8 propertyIdentifier;
+  choice propertyValue : propertyIdentifier {
+    0x01 => u32, // Session Expiry Interval
+    0x02 => UTF8String, // Authentication Method
+    // Add other properties as needed
   };
+}
+
+struct UTF8String {
+  VarInt length;
+  string value : length;
+}
+
+struct WillMessage {
+  Properties properties;
+  UTF8String topic;
+  Bytes message;
 }

@@ -1,65 +1,180 @@
 module MQTT;
 
-import spicy;
-
-public type MQTTMessage = unit {
-    fixed_header: FixedHeader;
-    var_header: VariableHeader if ( fixed_header.msg_type != 14 );
-    payload: bytes &eod;
-
-    on %done {
-        print self;
-    }
-};
-
-type FixedHeader = unit {
-    msg_type_flags: uint8;
+public type Header = unit {
+    type_flags: uint8;
     remaining_length: VarInt;
 
-    var msg_type: uint8;
+    var packet_type: uint8;
     var flags: uint8;
 
-    on msg_type_flags {
-        self.msg_type = self.msg_type_flags >> 4;
-        self.flags = self.msg_type_flags & 0x0F;
+    on type_flags { 
+        self.packet_type = self.type_flags >> 4 & 0x0F;
+        self.flags = self.type_flags & 0x0F;
     }
 };
 
 type VarInt = unit {
     var value: uint32;
-    var done: bool = False;
+    var shift: uint8;
 
-    : bytes &until-including=$$.value <= 0x7F -> value {
-        local result: uint32 = 0;
-        local multiplier: uint32 = 1;
+    on %init { 
+        self.shift = 0;
+        self.value = 0;
+    }
 
-        for ( b in self.value ) {
-            result += (b & 0x7F) * multiplier;
-            multiplier *= 128;
-            if ( (b & 0x80) == 0 )
-                break;
-        }
-
-        self.value = result;
+    : bytes &until(($$) & 0x80 == 0) {
+        local b: uint8 = $$ & 0x7F;
+        self.value |= (b << self.shift);
+        self.shift += 7;
     }
 };
 
-type VariableHeader = unit {
-    protocol_name_length: uint16;
-    protocol_name: bytes &size=self.protocol_name_length if ( $$.fixed_header.msg_type == 1 );
-    protocol_level: uint8 if ( $$.fixed_header.msg_type == 1 );
-    connect_flags: uint8 if ( $$.fixed_header.msg_type == 1 );
-    keep_alive: uint16 if ( $$.fixed_header.msg_type == 1 );
+type Property = unit {
+    id: uint8;
+    : switch(self.id) {
+        0x01 -> payload_format: uint8;
+        0x02 -> message_expiry: uint32;
+        0x03 -> content_type: bytes &eod;
+        0x08 -> response_topic: bytes &eod;
+        0x09 -> correlation_data: bytes &eod;
+        0x0B -> subscription_identifier: VarInt;
+        0x11 -> session_expiry: uint32;
+        0x12 -> client_identifier: bytes &eod;
+        0x13 -> server_keepalive: uint16;
+        0x15 -> auth_method: bytes &eod;
+        0x16 -> auth_data: bytes &eod;
+        0x17 -> request_problem_info: uint8;
+        0x18 -> will_delay: uint32;
+        0x19 -> request_response_info: uint8;
+        0x1A -> response_info: bytes &eod;
+        0x1C -> server_reference: bytes &eod;
+        0x1F -> reason_string: bytes &eod;
+        0x21 -> receive_maximum: uint16;
+        0x22 -> topic_alias_maximum: uint16;
+        0x23 -> topic_alias: uint16;
+        0x24 -> maximum_qos: uint8;
+        0x25 -> retain_available: uint8;
+        0x26 -> user_property_key: bytes &eod;
+                user_property_value: bytes &eod;
+        0x27 -> maximum_packet_size: uint32;
+        0x28 -> wildcard_sub_available: uint8;
+        0x29 -> sub_id_available: uint8;
+        0x2A -> shared_sub_available: uint8;
+    };
+};
+
+type Properties = unit {
+    length: VarInt;
+    properties: Property[] &until($input.length() == 0);
+};
+
+type ConnectFlags = unit {
+    flags: uint8;
     
-    packet_id: uint16 if ( $$.fixed_header.msg_type in [2,3,4,5,6,7,8,9,10,11] );
+    var clean_start: bool;
+    var will_flag: bool;
+    var will_qos: uint8;
+    var will_retain: bool;
+    var password_flag: bool;
+    var username_flag: bool;
+
+    on flags { 
+        self.username_flag = (self.flags & 0x80) != 0;
+        self.password_flag = (self.flags & 0x40) != 0;
+        self.will_retain = (self.flags & 0x20) != 0;
+        self.will_qos = (self.flags & 0x18) >> 3;
+        self.will_flag = (self.flags & 0x04) != 0;
+        self.clean_start = (self.flags & 0x02) != 0;
+    }
 };
 
-public type Topic = unit {
-    length: uint16;
-    name: bytes &size=self.length;
+public type Connect = unit {
+    protocol_name: bytes &eod;
+    protocol_version: uint8;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: bytes &eod;
+    will_properties: Properties if (self.connect_flags.will_flag);
+    will_topic: bytes &eod if (self.connect_flags.will_flag);
+    will_payload: bytes &eod if (self.connect_flags.will_flag);
+    username: bytes &eod if (self.connect_flags.username_flag);
+    password: bytes &eod if (self.connect_flags.password_flag);
 };
 
-public type TopicSubscription = unit {
-    topic: Topic;
-    qos: uint8;
+public type Connack = unit {
+    acknowledge_flags: uint8;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type Publish = unit {
+    topic_name: bytes &eod;
+    packet_id: uint16 if ((self.flags & 0x06) != 0);
+    properties: Properties;
+    payload: bytes &eod;
+};
+
+public type PubAck = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type Subscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topics: TopicFilter[];
+};
+
+type TopicFilter = unit {
+    filter: bytes &eod;
+    options: uint8;
+};
+
+public type Suback = unit {
+    packet_id: uint16;
+    properties: Properties;
+    return_codes: uint8[];
+};
+
+public type Unsubscribe = unit {
+    packet_id: uint16;
+    properties: Properties;
+    topics: bytes &eod;
+};
+
+public type Unsuback = unit {
+    packet_id: uint16;
+    properties: Properties;
+    reason_codes: uint8[];
+};
+
+public type Disconnect = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type Auth = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type MQTTPacket = unit {
+    header: Header;
+    : switch(self.header.packet_type) {
+        1 -> connect: Connect;
+        2 -> connack: Connack;
+        3 -> publish: Publish;
+        4 -> puback: PubAck;
+        5 -> pubrec: PubAck;
+        6 -> pubrel: PubAck;
+        7 -> pubcomp: PubAck;
+        8 -> subscribe: Subscribe;
+        9 -> suback: Suback;
+        10 -> unsubscribe: Unsubscribe;
+        11 -> unsuback: Unsuback;
+        14 -> disconnect: Disconnect;
+        15 -> auth: Auth;
+    };
 };

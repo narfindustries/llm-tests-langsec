@@ -1,45 +1,61 @@
-module GZIP;
+module gzip;
 
 import spicy;
 
-public type Compressor = unit {
-    magic: bytes(2) &requires($$=="H4");
-    compression_method: uint8 &requires($$==8);
+public type Header = struct {
+    magic: bytes[2];
+    compression_method: uint8;
     flags: uint8;
     mtime: uint32;
     extra_flags: uint8;
     os: uint8;
+} &validate($$.magic == b"\x1f\x8b")
+  &validate($$.compression_method == 0x08);
 
-    compression_blocks: CompressedData;
+type ExtraFields = struct {
+    length: uint16;
+    data: bytes;
+};
 
-    var trailer_crc32: uint32;
-    var trailer_size: uint32;
+type OptionalFields = struct {
+    extra: optional<ExtraFields>;
+    filename: optional<string>;
+    comment: optional<string>;
+    header_crc: optional<uint16>;
+};
 
-    trailer_crc32 = bytes(4);
-    trailer_size = bytes(4);
+public type File = struct {
+    header: Header;
+    optional_fields: OptionalFields;
+    compressed_data: bytes;
+    crc32: uint32;
+    uncompressed_size: uint32;
+};
 
-    : void {
-        if ( self.flags & 0x04 ) {
-            var extra_len: uint16 = bytes(2);
-            skip extra_len;
-        }
+public type Parser = parser {
+    header: Header;
+    optional_fields: OptionalFields;
+    compressed_data: bytes;
+    crc32: uint32;
+    uncompressed_size: uint32;
 
-        if ( self.flags & 0x08 ) {
-            while ( bytes(1) != b"\x00" ) {}
-        }
-
-        if ( self.flags & 0x10 ) {
-            while ( bytes(1) != b"\x00" ) {}
-        }
-
-        if ( self.flags & 0x02 ) {
-            skip 2;
-        }
+    parse: sequence {
+        self.header = parse Header;
+        self.optional_fields = parse OptionalFields;
+        self.compressed_data = parse bytes;
+        self.crc32 = parse uint32;
+        self.uncompressed_size = parse uint32;
     }
-};
+}
 
-type CompressedData = unit {
-    data: bytes &eod;
-};
-
-public type GZIP = Compressor;
+public function parse(data: bytes): File {
+    local p = Parser(data);
+    p.parse();
+    return File(
+        header: p.header,
+        optional_fields: p.optional_fields,
+        compressed_data: p.compressed_data,
+        crc32: p.crc32,
+        uncompressed_size: p.uncompressed_size
+    );
+}

@@ -1,194 +1,205 @@
 meta:
   id: nitf
-  file-extension: nitf
+  file-extension: ntf
   endian: be
+  encoding: ASCII
 seq:
-  - id: header
-    type: nitf_header
+  - id: file_header
+    type: file_header
   - id: image_segments
     type: image_segment
-    repeat: expr
-    repeat-expr: header.num_image_segments
-  - id: graphic_segments
-    type: graphic_segment
-    repeat: expr
-    repeat-expr: header.num_graphic_segments
-  - id: text_segments
-    type: text_segment
-    repeat: expr
-    repeat-expr: header.num_text_segments
-  - id: data_extension_segments
-    type: data_extension_segment
-    repeat: expr
-    repeat-expr: header.num_data_extension_segments
-  - id: reserved_extension_segments
-    type: reserved_extension_segment
-    repeat: expr
-    repeat-expr: header.num_reserved_extension_segments
+    repeat: eos
 
 types:
-  nitf_header:
+  file_header:
     seq:
-      - id: file_profile_name
+      - id: fhdr
         type: str
-        size: 4
-        encoding: ASCII
-      - id: file_version
-        type: str
-        size: 5
-        encoding: ASCII
-      - id: complexity_level
+        size: 9
+      - id: clevel
         type: str
         size: 2
-        encoding: ASCII
-      - id: standard_type
+      - id: stype
         type: str
-        size: 4
-        encoding: ASCII
-      - id: originating_station
+        size: 1
+      - id: orig_station_id
         type: str
         size: 10
-        encoding: ASCII
-      - id: file_datetime
+      - id: fdt
         type: str
         size: 14
-        encoding: ASCII
-      - id: file_title
+      - id: ftitle
         type: str
         size: 80
-        encoding: ASCII
-      - id: security_classification
-        type: security_info
+      - id: fscop
+        type: str
+        size: 1
+      - id: fscpys
+        type: str
+        size: 5
+      - id: encryp
+        type: str
+        size: 1
+      - id: filesfb
+        type: str
+        size: 3
+      - id: fl
+        type: str
+        size: 12
+      - id: hl
+        type: str
+        size: 6
       - id: num_image_segments
         type: str
         size: 3
-        encoding: ASCII
       - id: num_graphic_segments
         type: str
         size: 3
-        encoding: ASCII
       - id: num_text_segments
         type: str
         size: 3
-        encoding: ASCII
-      - id: num_data_extension_segments
+      - id: num_des_segments
         type: str
         size: 3
-        encoding: ASCII
-      - id: num_reserved_extension_segments
+      - id: num_reserved_segments
         type: str
         size: 3
-        encoding: ASCII
-      - id: user_defined_header_length
-        type: str
-        size: 5
-        encoding: ASCII
-      - id: extended_header_length
-        type: str
-        size: 5
-        encoding: ASCII
+      - id: user_defined_header
+        type: user_defined_header
+      - id: extended_header
+        type: extended_header
 
-  security_info:
+  user_defined_header:
     seq:
-      - id: classification
+      - id: length
         type: str
-        size: 1
-        encoding: ASCII
-      - id: country_code
+        size: 5
+      - id: data
         type: str
-        size: 2
-        encoding: ASCII
-      - id: security_system
+        size-eos: true
+
+  extended_header:
+    seq:
+      - id: length
         type: str
-        size: 11
-        encoding: ASCII
+        size: 5
+      - id: data
+        type: str
+        size-eos: true
 
   image_segment:
     seq:
-      - id: header
-        type: image_segment_header
+      - id: image_subheader
+        type: image_subheader
       - id: image_data
-        size: header.image_data_length
+        type: image_data
 
-  image_segment_header:
+  image_subheader:
     seq:
-      - id: length
-        type: str
-        size: 6
-        encoding: ASCII
-      - id: image_data_length
+      - id: im
         type: str
         size: 10
-        encoding: ASCII
-
-  graphic_segment:
-    seq:
-      - id: header
-        type: graphic_segment_header
-      - id: graphic_data
-        size: header.graphic_data_length
-
-  graphic_segment_header:
-    seq:
-      - id: length
+      - id: isorce
         type: str
-        size: 4
-        encoding: ASCII
-      - id: graphic_data_length
+        size: 42
+      - id: nrows
         type: str
-        size: 6
-        encoding: ASCII
-
-  text_segment:
-    seq:
-      - id: header
-        type: text_segment_header
-      - id: text_data
-        size: header.text_data_length
-
-  text_segment_header:
-    seq:
-      - id: length
+        size: 8
+      - id: ncols
         type: str
-        size: 4
-        encoding: ASCII
-      - id: text_data_length
+        size: 8
+      - id: pvtype
+        type: str
+        size: 3
+      - id: irep
+        type: str
+        size: 8
+      - id: icat
+        type: str
+        size: 8
+      - id: abpp
+        type: str
+        size: 2
+      - id: pjust
+        type: str
+        size: 1
+      - id: imode
+        type: str
+        size: 1
+      - id: nbands
+        type: str
+        size: 1
+      - id: xbands
         type: str
         size: 5
-        encoding: ASCII
+        if: nbands == '0'
+      - id: band_info
+        type: band_info
+        repeat: expr
+        repeat-expr: '(nbands == ''0'') ? (int(xbands)) : (int(nbands))'
+      - id: isync
+        type: str
+        size: 1
+      - id: security_group
+        type: security_group
 
-  data_extension_segment:
+  band_info:
     seq:
-      - id: header
-        type: data_extension_segment_header
-      - id: data
-        size: header.data_length
+      - id: irepband
+        type: str
+        size: 2
+      - id: isubcat
+        type: str
+        size: 6
+      - id: ifc
+        type: str
+        size: 1
+      - id: imflt
+        type: str
+        size: 3
+      - id: nluts
+        type: str
+        size: 1
+      - id: lut_data
+        type: lut_data
+        repeat: expr
+        repeat-expr: 'int(nluts)'
 
-  data_extension_segment_header:
+  lut_data:
     seq:
-      - id: length
+      - id: entry_count
+        type: str
+        size: 5
+      - id: lut_entries
+        type: str
+        size: 'int(entry_count)'
+
+  security_group:
+    seq:
+      - id: fsdwng
+        type: str
+        size: 2
+      - id: fsdevt
+        type: str
+        size: 10
+      - id: fsdgdt
+        type: str
+        size: 8
+      - id: fsdgdt2
         type: str
         size: 4
-        encoding: ASCII
-      - id: data_length
+      - id: fssclas
         type: str
-        size: 9
-        encoding: ASCII
+        size: 1
+      - id: fsscop
+        type: str
+        size: 2
+      - id: fsscpys
+        type: str
+        size: 5
 
-  reserved_extension_segment:
+  image_data:
     seq:
-      - id: header
-        type: reserved_extension_segment_header
       - id: data
-        size: header.data_length
-
-  reserved_extension_segment_header:
-    seq:
-      - id: length
         type: str
-        size: 4
-        encoding: ASCII
-      - id: data_length
-        type: str
-        size: 9
-        encoding: ASCII
+        size-eos: true

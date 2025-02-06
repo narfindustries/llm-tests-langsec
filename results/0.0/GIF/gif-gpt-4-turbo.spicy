@@ -1,38 +1,26 @@
 module GIF;
 
+public type Color = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
 public type LogicalScreenDescriptor = unit {
-    canvasWidth: uint16;
-    canvasHeight: uint16;
+    screenWidth: uint16;
+    screenHeight: uint16;
     packedFields: uint8;
     backgroundColorIndex: uint8;
     pixelAspectRatio: uint8;
 };
 
 public type GlobalColorTable = unit {
-    size: uint16;
-    entries: vector<ColorTableEntry> &length=size;
-};
-
-public type ColorTableEntry = unit {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
-};
-
-public type ImageDescriptor = unit {
-    leftPosition: uint16;
-    topPosition: uint16;
-    width: uint16;
-    height: uint16;
-    packedFields: uint8;
-};
-
-public type ImageData = unit {
-    lzwMinimumCodeSize: uint8;
-    dataBlocks: bytes &eod;
+    colors: Color[] &size=computeColorTableSize(packedFields);
 };
 
 public type GraphicControlExtension = unit {
+    introducer: uint8;
+    label: uint8;
     blockSize: uint8;
     packedFields: uint8;
     delayTime: uint16;
@@ -40,38 +28,85 @@ public type GraphicControlExtension = unit {
     terminator: uint8;
 };
 
+public type ImageDescriptor = unit {
+    imageSeparator: uint8;
+    imageLeftPosition: uint16;
+    imageTopPosition: uint16;
+    imageWidth: uint16;
+    imageHeight: uint16;
+    packedFields: uint8;
+    localColorTable: optional<LocalColorTable> &if=(self.packedFields & 0x80) != 0;
+    imageData: ImageData;
+};
+
+public type LocalColorTable = unit {
+    colors: Color[] &size=computeColorTableSize(packedFields);
+};
+
+public type ImageData = unit {
+    lzwMinimumCodeSize: uint8;
+    dataBlocks: bytes &eod;
+};
+
+public type PlainTextExtension = unit {
+    introducer: uint8;
+    label: uint8;
+    blockSize: uint8;
+    textGridLeftPosition: uint16;
+    textGridTopPosition: uint16;
+    textGridWidth: uint16;
+    textGridHeight: uint16;
+    characterWidth: uint8;
+    characterHeight: uint8;
+    textForegroundColorIndex: uint8;
+    textBackgroundColorIndex: uint8;
+    plainTextData: bytes &eod;
+};
+
 public type ApplicationExtension = unit {
+    introducer: uint8;
+    label: uint8;
     blockSize: uint8;
     applicationIdentifier: bytes &size=8;
-    applicationAuthCode: bytes &size=3;
-    data: bytes &eod;
+    applicationAuthenticationCode: bytes &size=3;
+    applicationData: bytes &eod;
 };
 
 public type CommentExtension = unit {
-    data: bytes &eod;
-};
-
-public type Block = unit {
     introducer: uint8;
     label: uint8;
+    commentData: bytes &eod;
+};
+
+public type Extension = unit {
+    label: uint8;
     content: switch (self.label) {
-        0xF9 -> graphicControl: GraphicControlExtension;
-        0xFE -> comment: CommentExtension;
-        0xFF -> application: ApplicationExtension;
-        0x2C -> image: ImageDescriptor &requires=($$ == 0x2C) -> ImageData;
-        * -> unknown: bytes &eod;
+        0xF9 -> gce: GraphicControlExtension;
+        0x01 -> pte: PlainTextExtension;
+        0xFF -> ae: ApplicationExtension;
+        0xFE -> ce: CommentExtension;
+        default -> unknown: bytes &eod;
     };
 };
 
-public type Trailer = unit {
-    terminator: uint8;
+public type Block = unit {
+    blockType: uint8;
+    content: switch (self.blockType) {
+        0x2C -> image: ImageDescriptor;
+        0x21 -> extension: Extension;
+        0x3B -> terminator: void;
+        default -> unknown: bytes &eod;
+    };
 };
 
 public type GIFFile = unit {
-    signature: bytes &size=3;
-    version: bytes &size=3;
-    logicalScreen: LogicalScreenDescriptor;
-    globalColorTable: GlobalColorTable &requires=(self.logicalScreen.packedFields & 0x80 != 0);
-    blocks: Block[] &until($$.introducer == 0x3B);
-    trailer: Trailer;
+    header: bytes &size=6;
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable: optional<GlobalColorTable> &if=(self.logicalScreenDescriptor.packedFields & 0x80) != 0;
+    blocks: Block[] &until=$$blocks[blockType] == 0x3B;
 };
+
+function computeColorTableSize(packedFields: uint8): uint16 {
+    local size = (packedFields & 0x07) + 1;
+    return (1 << size) * 3;
+}

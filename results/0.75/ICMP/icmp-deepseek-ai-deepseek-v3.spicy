@@ -1,0 +1,24 @@
+module ICMP;
+
+import spicy;
+
+public type Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest: case (type) of {
+        0, 8 => {
+            identifier: uint16;
+            sequence_number: uint16;
+        }
+        3, 5, 11 => {
+            unused: uint32;
+            original_ip_header: bytes &size=20;
+            original_datagram_data: bytes &size=8;
+        }
+        default => {
+            unknown: bytes &size=4;
+        }
+    };
+    data: bytes &eod;
+};

@@ -1,25 +1,40 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/tiff"
-           xmlns:tns="http://example.com/dfdl/tiff">
+           targetNamespace="http://example.com/tiff"
+           xmlns:tns="http://example.com/tiff">
 
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+  <xs:element name="TIFFFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:HeaderType"/>
+        <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:complexType name="TIFFHeader">
+  <xs:complexType name="HeaderType">
     <xs:sequence>
-      <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:initiator="II" dfdl:terminator="MM"/>
-      <xs:element name="magicNumber" type="xs:int" dfdl:length="2" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="offsetFirstIFD" type="xs:int" dfdl:length="4" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:lengthKind="explicit"/>
+      <xs:element name="MagicNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="OffsetFirstIFD" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="TIFFFile" type="tns:TIFFHeader"/>
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="NumDirEntries" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

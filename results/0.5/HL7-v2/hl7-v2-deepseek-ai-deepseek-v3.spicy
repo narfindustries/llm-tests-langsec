@@ -1,0 +1,103 @@
+module HL7v2;
+
+public type Message = unit {
+    segments: Segment[];
+};
+
+type Segment = unit {
+    id: bytes &size=3;
+    fields: Field[] &until($input == b"\r");
+};
+
+type Field = unit {
+    value: bytes &until($input == b"|" || $input == b"\r");
+    components: Component[] &if($input != b"\r");
+};
+
+type Component = unit {
+    value: bytes &until($input == b"^" || $input == b"|" || $input == b"\r");
+    subcomponents: Subcomponent[] &if($input != b"^" && $input != b"|" && $input != b"\r");
+};
+
+type Subcomponent = unit {
+    value: bytes &until($input == b"&" || $input == b"^" || $input == b"|" || $input == b"\r");
+};
+
+type MSH = unit {
+    field_separator: bytes &size=1;
+    encoding_characters: bytes &size=4;
+    sending_application: HD;
+    sending_facility: HD;
+    receiving_application: HD;
+    receiving_facility: HD;
+    date_time_of_message: DTM;
+    security: ST &optional;
+    message_type: MSG;
+    message_control_id: ST;
+    processing_id: PT;
+    version_id: VID;
+    sequence_number: NM &optional;
+    continuation_pointer: ST &optional;
+    accept_acknowledgment_type: ID &optional;
+    application_acknowledgment_type: ID &optional;
+    country_code: ID &optional;
+    character_set: ID[] &optional;
+    principal_language_of_message: CE &optional;
+    alternate_character_set_handling_scheme: ID &optional;
+    message_profile_identifier: EI[] &optional;
+};
+
+type HD = unit {
+    namespace_id: IS &optional;
+    universal_id: ST &optional;
+    universal_id_type: ID &optional;
+};
+
+type DTM = unit {
+    time: bytes &size=14;
+};
+
+type ST = unit {
+    value: bytes &until($input == b"|" || $input == b"\r");
+};
+
+type MSG = unit {
+    message_code: ID;
+    trigger_event: ID;
+    message_structure: ID;
+};
+
+type PT = unit {
+    processing_id: ID;
+    processing_mode: ID;
+};
+
+type VID = unit {
+    version_id: ID;
+    internationalization_code: CE &optional;
+    international_version_id: CE &optional;
+};
+
+type ID = unit {
+    value: bytes &until($input == b"|" || $input == b"\r");
+};
+
+type IS = unit {
+    value: bytes &until($input == b"|" || $input == b"\r");
+};
+
+type CE = unit {
+    identifier: ST;
+    text: ST &optional;
+    name_of_coding_system: ST &optional;
+    alternate_identifier: ST &optional;
+    alternate_text: ST &optional;
+    name_of_alternate_coding_system: ST &optional;
+};
+
+type EI = unit {
+    entity_identifier: ST;
+    namespace_id: IS &optional;
+    universal_id: ST &optional;
+    universal_id_type: ID &optional;
+};

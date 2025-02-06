@@ -1,115 +1,109 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <hammer/hammer.h>
 
-#define MAX_PACKET_SIZE 512
-#define DNS_PORT 53
-
-// DNS header structure
 typedef struct {
-    unsigned short id;
-    unsigned short flags;
-    unsigned short qdcount;
-    unsigned short ancount;
-    unsigned short nscount;
-    unsigned short arcount;
+    uint16_t id;
+    uint8_t  qr:1;
+    uint8_t  opcode:4;
+    uint8_t  aa:1;
+    uint8_t  tc:1;
+    uint8_t  rd:1;
+    uint8_t  ra:1;
+    uint8_t  z:3;
+    uint8_t  rcode:4;
+    uint16_t qdcount;
+    uint16_t ancount;
+    uint16_t nscount;
+    uint16_t arcount;
 } dns_header;
 
-// DNS question structure
 typedef struct {
-    unsigned short qtype;
-    unsigned short qclass;
-} dns_question;
+    uint8_t *name;
+    uint16_t type;
+    uint16_t klass;
+    uint32_t ttl;
+    uint16_t rdlength;
+    uint8_t *rdata;
+} dns_resource_record;
 
-
-unsigned char* build_dns_query(const char* hostname, unsigned short qtype, unsigned short qclass) {
-    unsigned char *query;
-    int hostname_len = strlen(hostname);
-    int query_len = sizeof(dns_header) + 2 + hostname_len + 4; //Header + type + hostname + class + type
-
-    query = (unsigned char *)malloc(query_len);
-    if (query == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-
-    dns_header *header = (dns_header *)query;
-    header->id = (unsigned short)getpid();
-    header->flags = 0x0100; //Standard query
-    header->qdcount = htons(1);
-    header->ancount = htons(0);
-    header->nscount = htons(0);
-    header->arcount = htons(0);
-
-    unsigned char *qname = query + sizeof(dns_header);
-    int i = 0;
-    char *token = strtok((char*)hostname, ".");
-    while (token != NULL) {
-        int len = strlen(token);
-        qname[i++] = len;
-        memcpy(qname + i, token, len);
-        i += len;
-        token = strtok(NULL, ".");
-    }
-    qname[i++] = 0;
-
-    dns_question *question = (dns_question*)(qname + i);
-    question->qtype = htons(qtype);
-    question->qclass = htons(qclass);
-
-
-    return query;
+HParser dns_domain_name(HParser p) {
+    HParser label = HMap(HSeq(HBytes(1), HTake(HBytes(1))),
+                         [](HResult r){
+                             uint8_t len = r.results[0].value.bytes[0];
+                             return HOk(r.results[1].value.bytes);
+                         });
+    return HMany1(label, HEnd);
 }
 
 
+HParser dns_header_parser() {
+    return HMap(HSeq(HUInt16, HUInt16, HUInt16, HUInt16, HUInt8, HUInt8, HUInt16, HUInt16, HUInt16),
+                 [](HResult r){
+                     dns_header *h = malloc(sizeof(dns_header));
+                     h->id = r.results[0].value.u;
+                     h->qr = (r.results[4].value.u >> 7) & 1;
+                     h->opcode = (r.results[4].value.u >> 3) & 0xF;
+                     h->aa = (r.results[4].value.u >> 2) & 1;
+                     h->tc = (r.results[4].value.u >> 1) & 1;
+                     h->rd = r.results[4].value.u & 1;
+                     h->ra = (r.results[5].value.u >> 7) & 1;
+                     h->z = (r.results[5].value.u >> 4) & 0x7;
+                     h->rcode = r.results[5].value.u & 0xF;
+                     h->qdcount = r.results[6].value.u;
+                     h->ancount = r.results[7].value.u;
+                     h->nscount = r.results[8].value.u;
+                     return HOk(h);
+                 });
+}
+
+
+HParser dns_resource_record_parser() {
+    return HMap(HSeq(dns_domain_name, HUInt16, HUInt16, HUInt32, HUInt16, HTake(HUInt16)),
+                [](HResult r){
+                    dns_resource_record *rr = malloc(sizeof(dns_resource_record));
+                    rr->name = (uint8_t*)r.results[0].value.p;
+                    rr->type = r.results[1].value.u;
+                    rr->klass = r.results[2].value.u;
+                    rr->ttl = r.results[3].value.u;
+                    rr->rdlength = r.results[4].value.u;
+                    rr->rdata = (uint8_t*)r.results[5].value.p;
+                    return HOk(rr);
+                });
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <hostname>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
 
-    const char *hostname = argv[1];
-    unsigned char *query = build_dns_query(hostname, 1, 1); //Type A, Class IN
-
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("socket");
-        free(query);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(DNS_PORT);
-    server_addr.sin_addr.s_addr = inet_addr("8.8.8.8"); //Google Public DNS
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    if (sendto(sockfd, query, strlen((char*)query), 0, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("sendto");
-        close(sockfd);
-        free(query);
-        return 1;
+    uint8_t *buffer = malloc(fileSize);
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
+
+    HParser dns_parser = HSeq(dns_header_parser, HMany(dns_resource_record_parser));
+
+    HResult result = HParse(dns_parser, buffer, fileSize);
+
+    if (result.status == H_OK) {
+        printf("DNS message parsed successfully!\n");
+    } else {
+        fprintf(stderr, "Error parsing DNS message: %s\n", HErrorMessage(result.status));
     }
 
-    unsigned char buffer[MAX_PACKET_SIZE];
-    socklen_t server_len = sizeof(server_addr);
-    ssize_t bytes_received = recvfrom(sockfd, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *)&server_addr, &server_len);
-
-    if (bytes_received < 0) {
-        perror("recvfrom");
-        close(sockfd);
-        free(query);
-        return 1;
-    }
-
-    //Process the DNS response (Not implemented here for brevity)
-
-    close(sockfd);
-    free(query);
+    free(buffer);
     return 0;
 }

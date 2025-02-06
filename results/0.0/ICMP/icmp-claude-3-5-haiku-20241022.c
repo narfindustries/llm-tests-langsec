@@ -1,74 +1,104 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
 
-// Define ICMP packet structure
 typedef struct {
     uint8_t type;
     uint8_t code;
     uint16_t checksum;
-    uint16_t identifier;
-    uint16_t sequence_number;
+    union {
+        struct {
+            uint16_t identifier;
+            uint16_t sequence_number;
+        } echo;
+        struct {
+            uint8_t pointer;
+            uint8_t unused[3];
+        } parameter_problem;
+        struct {
+            uint16_t unused;
+            uint16_t mtu;
+        } fragmentation;
+        uint32_t raw_data;
+    } payload;
 } ICMPPacket;
 
-// Parser for ICMP packet
-static HParser* icmp_parser() {
+HParser* icmp_parser() {
     return h_sequence(
         h_uint8(),   // type
         h_uint8(),   // code
         h_uint16(),  // checksum
-        h_uint16(), // identifier
-        h_uint16()  // sequence number
+        h_choice(
+            h_sequence(
+                h_uint16(), // identifier
+                h_uint16(), // sequence number
+                NULL
+            ),
+            h_sequence(
+                h_uint8(),  // pointer
+                h_repeat_n(h_uint8(), 3), // unused
+                NULL
+            ),
+            h_sequence(
+                h_uint16(), // unused
+                h_uint16(), // MTU
+                NULL
+            ),
+            h_uint32(), // raw data fallback
+            NULL
+        ),
+        NULL
     );
 }
 
-// Semantic action to validate ICMP packet
-static bool validate_icmp_packet(const HParseResult* result, void* user_data) {
-    if (!result || !result->ast) return false;
-
-    HArrayList* list = result->ast;
-    if (h_arraylist_length(list) != 5) return false;
-
-    uint8_t type = *(uint8_t*)h_arraylist_get(list, 0);
-    uint8_t code = *(uint8_t*)h_arraylist_get(list, 1);
-
-    // Basic ICMP type and code validation
-    return (type == 8 && code == 0);  // Echo request
-}
-
-int main() {
-    // Initialize Hammer
-    h_init();
-
-    // Create ICMP parser
-    HParser* parser = icmp_parser();
-
-    // Add semantic validation
-    HParser* validated_parser = h_semantic_action(parser, validate_icmp_packet, NULL, NULL);
-
-    // Example ICMP packet data
-    uint8_t packet_data[] = {
-        8, 0,        // Type 8 (Echo Request), Code 0
-        0xAB, 0xCD,  // Checksum
-        0x12, 0x34,  // Identifier
-        0x56, 0x78   // Sequence Number
-    };
-
-    // Parse packet
-    HParseResult* result = h_parse(validated_parser, packet_data, sizeof(packet_data));
-
-    // Check parsing result
-    if (result && result->ast) {
-        printf("Valid ICMP Packet Parsed\n");
-    } else {
-        printf("Invalid ICMP Packet\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
 
-    // Cleanup
-    h_parse_result_free(result);
-    h_parser_free(parser);
-    h_parser_free(validated_parser);
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    return 0;
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    HParser *parser = icmp_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
+
+    if (result) {
+        ICMPPacket *packet = (ICMPPacket*)result->ast;
+        printf("ICMP Packet:\n");
+        printf("Type: %d\n", packet->type);
+        printf("Code: %d\n", packet->code);
+        printf("Checksum: 0x%04x\n", packet->checksum);
+        
+        free(buffer);
+        h_parse_result_free(result);
+        return 0;
+    } else {
+        fprintf(stderr, "Parsing failed\n");
+        free(buffer);
+        return 1;
+    }
 }

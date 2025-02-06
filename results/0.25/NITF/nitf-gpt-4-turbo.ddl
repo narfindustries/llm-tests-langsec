@@ -1,55 +1,77 @@
-module NITF {
+grammar NITF;
 
-  type U16 = uint(16)
-  type U32 = uint(32)
-  type ASCII = bytes
+import std.core;
 
-  type Header = struct {
-    fileType : ASCII (len = 9)
-    headerLength : U16
-    fileLength : U32
-    // Additional fields as per NITF specification
-  }
+struct FileHeader {
+    char FHDR[9]; // File Header and Version
+    char CLEVEL[2]; // Complexity Level
+    char STYPE[4]; // Standard Type
+    char OSTAID[10]; // Originating Station ID
+    char FDT[14]; // File Date and Time
+    char FTITLE[80]; // File Title
+    char FSCLAS[1]; // Security Classification
+    char FSCLSY[2]; // Security Classification System
+    char FSCODE[11]; // Codewords
+    char FSCTLH[2]; // Control and Handling
+    char FSREL[20]; // Release Instructions
+    char FSDCTP[2]; // Declassification Type
+    char FSDCDT[8]; // Declassification Date
+    char FSDCXM[4]; // Declassification Exemption
+    char FSDG[1]; // Downgrade
+    char FSDGDT[8]; // Downgrade Date
+    char FSCLTX[43]; // Classification Text
+    char FSCATP[1]; // Classification Authority Type
+    char FSCAUT[40]; // Classification Authority
+    char FSCRSN[1]; // Classification Reason
+    char FSSRDT[8]; // Security Source Date
+    char FSCTLN[15]; // Security Control Number
+    char FSCOP[5]; // Copy Number
+    char FSCPYS[5]; // Number of Copies
+    char ENCRYP[1]; // Encryption
+    char FBKGC[24]; // Background Color
+    char ONAME[27]; // Originator's Name
+    char OPHONE[18]; // Originator's Phone Number
+}
 
-  type ImageSegment = struct {
-    imageID : ASCII (len = 10)
-    imageDateAndTime : ASCII (len = 14)
-    targetID : ASCII (len = 17)
-    // Additional fields as per NITF specification
-  }
+struct ImageSubheader {
+    char IID1[10]; // Image Identifier 1
+    char IDATIM[14]; // Image Date and Time
+    char TGTID[17]; // Target Identifier
+    char IID2[80]; // Image Identifier 2
+    char ISCLAS[1]; // Image Security Classification
+    char ISCLSY[2]; // Image Classification System
+    char ISCODE[11]; // Image Codewords
+    char ISCTLH[2]; // Image Control and Handling
+    char ISREL[20]; // Image Release Instructions
+    char ISDCTP[2]; // Image Declassification Type
+    char ISDCDT[8]; // Image Declassification Date
+    char ISDCXM[4]; // Image Declassification Exemption
+    char ISDG[1]; // Image Downgrade
+    char ISDGDT[8]; // Image Downgrade Date
+    char ISCLTX[43]; // Image Classification Text
+    char ISCATP[1]; // Image Classification Authority Type
+    char ISCAUT[40]; // Image Classification Authority
+    char ISCRSN[1]; // Image Classification Reason
+    char ISSRDT[8]; // Image Security Source Date
+    char ISCTLN[15]; // Image Security Control Number
+    char ISORCE[42]; // Image Source
+    u16 NROWS; // Number of Rows
+    u16 NCOLS; // Number of Columns
+    char PVTYPE[3]; // Pixel Value Type
+    char IREP[8]; // Image Representation
+    char ICAT[8]; // Image Category
+    char ABPP[2]; // Actual Bits Per Pixel
+    char PJUST[1]; // Pixel Justification
+    char ICORDS[1]; // Image Coordinate System
+    char IGEOLO[60]; // Image Geolocation
+    u8 NICOM; // Number of Image Comments
+    char ICOM[80]; // Image Comment
+    char IC[2]; // Image Compression
+    u8 NBANDS; // Number of Bands
+    char XBANDS[5]; // Extended Number of Bands (if NBANDS > 9)
+}
 
-  type DataExtensionSegment = struct {
-    desID : ASCII (len = 25)
-    desVersion : ASCII (len = 2)
-    desLength : U32
-    // Additional fields as per NITF specification
-  }
-
-  type TextSegment = struct {
-    textID : ASCII (len = 7)
-    textDateAndTime : ASCII (len = 14)
-    textTitle : ASCII (len = 80)
-    // Additional fields as per NITF specification
-  }
-
-  type NITFFile = struct {
-    header : Header
-    imageSegments : [ImageSegment] (len = header.numImageSegments)
-    dataExtensionSegments : [DataExtensionSegment] (len = header.numDataExtensionSegments)
-    textSegments : [TextSegment] (len = header.numTextSegments)
-  }
-
-  let parse_nitf = parser {
-    let header = parse Header
-    let imageSegments = array (header.numImageSegments) of parse ImageSegment
-    let dataExtensionSegments = array (header.numDataExtensionSegments) of parse DataExtensionSegment
-    let textSegments = array (header.numTextSegments) of parse TextSegment
-
-    return NITFFile {
-      header = header,
-      imageSegments = imageSegments,
-      dataExtensionSegments = dataExtensionSegments,
-      textSegments = textSegments
-    }
-  }
+struct NITF {
+    FileHeader fileHeader;
+    ImageSubheader imageSubheader;
 }

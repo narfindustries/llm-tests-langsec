@@ -2,41 +2,49 @@ module DNS;
 
 import spicy;
 
-type Header = unit {
-    id: uint16;
-    qr: bit;
-    opcode: uint4;
-    aa: bit;
-    tc: bit;
-    rd: bit;
-    ra: bit;
-    z: uint3;
-    rcode: uint4;
+type DomainName = unit {
+    labels: bytes[] &eod;
 };
 
-type Question = unit {
-    qname: bytes &eod;
+public type Header = unit {
+    id: uint16;
+    qr: bool;
+    opcode: uint4;
+    aa: bool;
+    tc: bool;
+    rd: bool;
+    ra: bool;
+    z: uint3;
+    rcode: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+public type Question = unit {
+    qname: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
-type ResourceRecord = unit {
-    name: bytes &eod;
+public type ResourceRecord = unit {
+    name: DomainName;
     type: uint16;
     class: uint16;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &size=rdlength;
+    rdata: bytes &size=this.rdlength;
 };
 
-type Message = unit {
+public type Message = unit {
     header: Header;
-    questions: Question[] &size=header.qdcount;
-    answers: ResourceRecord[] &size=header.ancount;
-    authorities: ResourceRecord[] &size=header.nscount;
-    additionals: ResourceRecord[] &size=header.arcount;
-} &byte-order=big;
+    questions: Question[] &size=this.header.qdcount;
+    answers: ResourceRecord[] &size=this.header.ancount;
+    authorities: ResourceRecord[] &size=this.header.nscount;
+    additionals: ResourceRecord[] &size=this.header.arcount;
+};
 
-public type DNSMessage = unit {
+public type DNSPacket = unit {
     message: Message;
-} &byte-order=big;
+};

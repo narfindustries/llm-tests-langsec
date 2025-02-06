@@ -1,30 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/nitf" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/nitf"
+           xmlns="http://example.org/nitf"
+           elementFormDefault="qualified">
+
+  <!--  You MUST replace this with the correct path to your dfdl.xsd file. -->
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="path/to/dfdl.xsd"/>
 
   <xs:element name="NITF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:lengthKind="implicit"/>
-        <xs:element name="body" type="bodyType" dfdl:lengthKind="implicit"/>
+        <xs:element name="FileHeader" dfdl:length="1024">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Signature" type="xs:string" dfdl:length="8"/>
+              <xs:element name="Version" type="xs:string" dfdl:length="4"/>
+              <xs:element name="ImageHeaderLength" type="xs:integer"/>
+              <xs:element name="ImageLength" type="xs:integer"/>
+              <xs:element name="NumberOfImages" type="xs:integer"/>
+              <xs:element name="SecurityClassification" type="xs:string"/>
+              <!-- Add other File Header fields as needed -->
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageHeader" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageIdentification" type="xs:string"/>
+              <xs:element name="ImageCompression" type="xs:string"/>
+              <xs:element name="ImageWidth" type="xs:integer"/>
+              <xs:element name="ImageHeight" type="xs:integer"/>
+              <xs:element name="ImageDataType" type="xs:string"/>
+              <!-- Add other Image Header fields as needed -->
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageData" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Data" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCount="1"/>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="element1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="element2" type="xs:integer" dfdl:length="5"/>
-      <!-- Add other header elements as needed -->
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="bodyType">
-    <xs:sequence>
-      <xs:element name="element3" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
-      <xs:element name="element4" type="xs:decimal" dfdl:length="8" dfdl:decimalSeparator="."> </xs:element>
-      <!-- Add other body elements as needed -->
-    </xs:sequence>
-  </xs:complexType>
 
 </xs:schema>

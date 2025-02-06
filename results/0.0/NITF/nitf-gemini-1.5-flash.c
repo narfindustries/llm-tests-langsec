@@ -1,36 +1,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent NITF header information (simplified)
 typedef struct {
-    char header[1024]; // Placeholder for NITF header data
-} NITFHeader;
+    char file_id[10];
+    uint32_t header_length;
+    // ... other fields (add more as needed) ...
+} nitf_file_header_t;
 
-// Function to simulate NITF processing (replace with actual NITF library calls)
-NITFHeader processNITF(const char* inputFile) {
-    NITFHeader nitfHeader;
-    // Simulate reading and processing NITF header
-    strcpy(nitfHeader.header, "Simulated NITF Header Data"); 
-    printf("Processing NITF file: %s\n", inputFile);
-    return nitfHeader;
+HParser nitf_file_header_parser() {
+    return h_seq(
+        h_string("NITF02.00"),
+        h_uint32(),
+        h_map(h_tuple2(h_string("rest of header"), h_bytes(h_uint32())),
+              (h_map_func) [](void* a, void* b){ return NULL; })
+    );
 }
 
+typedef struct {
+    // ... various fields (add more as needed) ...
+} nitf_image_segment_header_t;
 
-int main() {
-    // Input NITF file path
-    const char* inputNITF = "input.nitf"; 
+HParser nitf_image_segment_header_parser() {
+    // ... parser combinators for image segment header fields ...
+    return h_fail();
+}
 
-    // Process the NITF file
-    NITFHeader header = processNITF(inputNITF);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
+        return 1;
+    }
 
-    // Simulate Hammer library interaction (replace with actual Hammer library calls)
-    printf("Hammer processing...\n");
-    printf("NITF Header: %s\n", header.header);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    //Simulate successful completion.  Replace with actual Hammer output.
-    printf("Hammer processing complete.\n");
+    char *buffer = (char *)malloc(file_size);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
+    fread(buffer, 1, file_size, fp);
+    fclose(fp);
+
+    HParser file_parser = h_seq(
+        nitf_file_header_parser(),
+        h_many(nitf_image_segment_header_parser())
+    );
+
+    HParseResult result = h_parse(file_parser, buffer, file_size);
+
+    if (result.status == H_PARSE_RESULT_SUCCESS) {
+        printf("NITF file parsed successfully!\n");
+        // Process parsed data here...  (This would involve accessing the fields from the parsed structures)
+    } else {
+        fprintf(stderr, "Error parsing NITF file: %s\n", result.error_message);
+    }
+
+    free(buffer);
     return 0;
 }

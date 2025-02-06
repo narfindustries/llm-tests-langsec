@@ -1,10 +1,10 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_while, take_while1},
-    character::complete::{char, digit1, line_ending, space0, space1},
-    combinator::{map, opt, recognize},
-    multi::{many0, many1},
-    sequence::{preceded, tuple},
+    bytes::complete::{tag, take_while1, take_while_m_n},
+    character::complete::{char, digit1, multispace0, multispace1, not_line_ending},
+    combinator::{map, map_res},
+    multi::many0,
+    sequence::{delimited, separated_pair, terminated},
     IResult,
 };
 use std::collections::HashMap;
@@ -13,85 +13,129 @@ use std::fs;
 use std::str;
 
 #[derive(Debug)]
-struct HttpRequest<'a> {
-    method: &'a str,
-    uri: &'a str,
-    version: &'a str,
-    headers: HashMap<&'a str, &'a str>,
-    body: Option<&'a [u8]>,
+struct HttpRequest {
+    method: String,
+    uri: String,
+    version: String,
+    headers: HashMap<String, String>,
+    body: Option<Vec<u8>>,
 }
 
-fn parse_method(input: &[u8]) -> IResult<&[u8], &str> {
+#[derive(Debug)]
+struct HttpResponse {
+    version: String,
+    status_code: u16,
+    status_text: String,
+    headers: HashMap<String, String>,
+    body: Option<Vec<u8>>,
+}
+
+fn parse_method(input: &[u8]) -> IResult<&[u8], String> {
     alt((
-        map(tag(b"GET"), |_| "GET"),
-        map(tag(b"POST"), |_| "POST"),
-        map(tag(b"PUT"), |_| "PUT"),
-        map(tag(b"DELETE"), |_| "DELETE"),
-        map(tag(b"HEAD"), |_| "HEAD"),
-        map(tag(b"OPTIONS"), |_| "OPTIONS"),
-        map(tag(b"TRACE"), |_| "TRACE"),
-        map(tag(b"CONNECT"), |_| "CONNECT"),
-        map(tag(b"PATCH"), |_| "PATCH"),
+        map(tag(b"GET"), |_| "GET".to_string()),
+        map(tag(b"POST"), |_| "POST".to_string()),
+        map(tag(b"HEAD"), |_| "HEAD".to_string()),
+        map(tag(b"PUT"), |_| "PUT".to_string()),
+        map(tag(b"DELETE"), |_| "DELETE".to_string()),
+        map(tag(b"CONNECT"), |_| "CONNECT".to_string()),
+        map(tag(b"OPTIONS"), |_| "OPTIONS".to_string()),
+        map(tag(b"TRACE"), |_| "TRACE".to_string()),
     ))(input)
 }
 
-fn parse_uri(input: &[u8]) -> IResult<&[u8], &str> {
-    map(take_while1(|c: u8| c != b' '), |uri| str::from_utf8(uri).unwrap())(input)
-}
-
-fn parse_http_version(input: &[u8]) -> IResult<&[u8], &str> {
+fn parse_http_version(input: &[u8]) -> IResult<&[u8], String> {
     map(
-        recognize(tuple((
-            tag(b"HTTP/"),
-            digit1,
-            char('.'),
-            digit1,
-        ))),
-        |version| str::from_utf8(version).unwrap(),
+        separated_pair(
+            tag(b"HTTP"),
+            char('/'),
+            separated_pair(digit1, char('.'), digit1),
+        ),
+        |(_, (major, minor))| {
+            format!(
+                "HTTP/{}.{}",
+                str::from_utf8(major).unwrap(),
+                str::from_utf8(minor).unwrap()
+            )
+        },
     )(input)
 }
 
-fn parse_header_name(input: &[u8]) -> IResult<&[u8], &str> {
-    map(take_while1(|c: u8| c != b':'), |name| str::from_utf8(name).unwrap())(input)
+fn parse_header(input: &[u8]) -> IResult<&[u8], (String, String)> {
+    map(
+        separated_pair(
+            take_while1(|c: u8| c != b':'),
+            delimited(multispace0, char(':'), multispace0),
+            not_line_ending,
+        ),
+        |(key, value)| {
+            (
+                str::from_utf8(key).unwrap().to_string(),
+                str::from_utf8(value).unwrap().to_string(),
+            )
+        },
+    )(input)
 }
 
-fn parse_header_value(input: &[u8]) -> IResult<&[u8], &str> {
-    map(take_while1(|c: u8| c != b'\r'), |value| str::from_utf8(value).unwrap())(input)
+fn parse_headers(input: &[u8]) -> IResult<&[u8], HashMap<String, String>> {
+    map(many0(terminated(parse_header, tag(b"\r\n"))), |headers| {
+        headers.into_iter().collect()
+    })(input)
 }
 
-fn parse_header(input: &[u8]) -> IResult<&[u8], (&str, &str)> {
-    let (input, name) = parse_header_name(input)?;
-    let (input, _) = tuple((char(':'), space0))(input)?;
-    let (input, value) = parse_header_value(input)?;
-    let (input, _) = line_ending(input)?;
-    Ok((input, (name, value)))
+fn parse_uri(input: &[u8]) -> IResult<&[u8], String> {
+    map(take_while1(|c: u8| c != b' '), |uri| {
+        str::from_utf8(uri).unwrap().to_string()
+    })(input)
 }
 
-fn parse_headers(input: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
-    map(many0(parse_header), |headers| headers.into_iter().collect())(input)
-}
-
-fn parse_body(input: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
-    opt(|i| Ok((b"", Some(i))))(input)
-}
-
-fn parse_http_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
+fn parse_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
     let (input, method) = parse_method(input)?;
-    let (input, _) = space1(input)?;
+    let (input, _) = multispace1(input)?;
     let (input, uri) = parse_uri(input)?;
-    let (input, _) = space1(input)?;
+    let (input, _) = multispace1(input)?;
     let (input, version) = parse_http_version(input)?;
-    let (input, _) = line_ending(input)?;
+    let (input, _) = tag(b"\r\n")(input)?;
     let (input, headers) = parse_headers(input)?;
-    let (input, _) = line_ending(input)?;
-    let (input, body) = parse_body(input)?;
+    let (input, _) = tag(b"\r\n")(input)?;
+    
+    let content_length = headers.get("Content-Length")
+        .and_then(|s| s.parse::<usize>().ok());
+    
+    let body = content_length.map(|len| input[..len].to_vec());
 
     Ok((
-        input,
+        &input[content_length.unwrap_or(0)..],
         HttpRequest {
-            method,
+            method: method.to_string(),
             uri,
             version,
+            headers,
+            body,
+        },
+    ))
+}
+
+fn parse_response(input: &[u8]) -> IResult<&[u8], HttpResponse> {
+    let (input, version) = parse_http_version(input)?;
+    let (input, _) = multispace1(input)?;
+    let (input, status_code) = map_res(digit1, |s: &[u8]| str::from_utf8(s).unwrap().parse::<u16>())(input)?;
+    let (input, _) = multispace1(input)?;
+    let (input, status_text) = not_line_ending(input)?;
+    let (input, _) = tag(b"\r\n")(input)?;
+    let (input, headers) = parse_headers(input)?;
+    let (input, _) = tag(b"\r\n")(input)?;
+    
+    let content_length = headers.get("Content-Length")
+        .and_then(|s| s.parse::<usize>().ok());
+    
+    let body = content_length.map(|len| input[..len].to_vec());
+
+    Ok((
+        &input[content_length.unwrap_or(0)..],
+        HttpResponse {
+            version,
+            status_code,
+            status_text: str::from_utf8(status_text).unwrap().to_string(),
             headers,
             body,
         },
@@ -105,14 +149,22 @@ fn main() {
         std::process::exit(1);
     }
 
-    let input = fs::read(&args[1]).expect("Failed to read input file");
-    match parse_http_request(&input) {
+    let input = fs::read(&args[1]).expect("Unable to read file");
+
+    match parse_request(&input) {
         Ok((_, request)) => {
-            println!("Parsed HTTP Request: {:?}", request);
+            println!("Parsed Request: {:?}", request);
         }
-        Err(e) => {
-            eprintln!("Failed to parse HTTP request: {:?}", e);
-            std::process::exit(1);
+        Err(_) => {
+            match parse_response(&input) {
+                Ok((_, response)) => {
+                    println!("Parsed Response: {:?}", response);
+                }
+                Err(e) => {
+                    eprintln!("Parsing failed: {:?}", e);
+                    std::process::exit(1);
+                }
+            }
         }
     }
 }

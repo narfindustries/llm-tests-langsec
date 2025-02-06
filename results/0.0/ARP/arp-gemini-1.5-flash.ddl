@@ -1,22 +1,46 @@
-module Main where
+module ARP {
+  import Data.Word
+  import Data.Bits
 
-import Daedalus.Panic
+  data ARPPacket = ARPPacket {
+    hardwareType :: Word16,
+    protocolType :: Word16,
+    hardwareAddressLength :: Word8,
+    protocolAddressLength :: Word8,
+    opcode :: Word16,
+    senderHardwareAddress :: [Word8],
+    senderProtocolAddress :: [Word8],
+    targetHardwareAddress :: [Word8],
+    targetProtocolAddress :: [Word8]
+  }
 
--- Assuming the error was related to a missing or incorrect type definition,
--- or a problem with the input file.  This is a placeholder; replace with
--- your actual data types and functions.
+  parseARP :: Get ARPPacket
+  parseARP = do
+    htype <- getWord16be
+    ptype <- getWord16be
+    hlen <- getWord8
+    plen <- getWord8
+    opcode <- getWord16be
+    sha <- getBytes hlen
+    spa <- getBytes plen
+    tha <- getBytes hlen
+    tpa <- getBytes plen
+    return $ ARPPacket htype ptype hlen plen opcode sha spa tha tpa
 
-data MyData = MyData { field1 :: Integer, field2 :: String }
+  showARP :: ARPPacket -> String
+  showARP (ARPPacket htype ptype hlen plen opcode sha spa tha tpa) =
+    unlines [
+      "Hardware Type: " ++ show htype,
+      "Protocol Type: " ++ show ptype,
+      "Hardware Address Length: " ++ show hlen,
+      "Protocol Address Length: " ++ show plen,
+      "Opcode: " ++ show opcode,
+      "Sender Hardware Address: " ++ show sha,
+      "Sender Protocol Address: " ++ show spa,
+      "Target Hardware Address: " ++ show tha,
+      "Target Protocol Address: " ++ show tpa
+    ]
 
-parseMyData :: Parser MyData
-parseMyData = do
-  field1 <- integer
-  field2 <- string
-  return (MyData field1 field2)
-
-main :: Daedalus.Program MyData
-main = do
-  input <- get
-  result <- parseMyData input
-  return result
-
+  getBytes :: Int -> Get [Word8]
+  getBytes n = replicateM n getWord8
+}

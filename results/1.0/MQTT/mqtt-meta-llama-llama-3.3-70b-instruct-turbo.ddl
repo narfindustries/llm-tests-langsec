@@ -1,188 +1,154 @@
-domain mqtt {
-  // Define the MQTT protocol domain
-  protocol {
-    // Define the MQTT protocol
-    name = "MQTT"
-    description = "Message Queuing Telemetry Transport"
-    version = "3.3"
-  }
+format binary
 
-  types {
-    // Define the types used in the MQTT protocol
-    uint8  : byte
-    uint16 : uint16
-    uint32 : uint32
-    string : string
-    bytes  : bytes
-  }
-
-  messages {
-    // Define the MQTT message types
-    connect {
-      // Connect message
-      type = uint8
-      value = 1
-      description = "Connect to the server"
-      fields {
-        protocol_name : string
-        protocol_level : uint8
-        connect_flags : uint8
-        keep_alive : uint16
-        client_id : string
-        will_topic : string
-        will_message : bytes
-        username : string
-        password : bytes
-      }
-    }
-
-    connack {
-      // Connack message
-      type = uint8
-      value = 2
-      description = "Connection acknowledgement"
-      fields {
-        session_present : uint8
-        return_code : uint8
-      }
-    }
-
-    publish {
-      // Publish message
-      type = uint8
-      value = 3
-      description = "Publish a message"
-      fields {
-        topic_name : string
-        packet_id : uint16
-        payload : bytes
-      }
-    }
-
-    puback {
-      // Puback message
-      type = uint8
-      value = 4
-      description = "Publish acknowledgement"
-      fields {
-        packet_id : uint16
-      }
-    }
-
-    pubrec {
-      // Pubrec message
-      type = uint8
-      value = 5
-      description = "Publish received"
-      fields {
-        packet_id : uint16
-      }
-    }
-
-    pubrel {
-      // Pubrel message
-      type = uint8
-      value = 6
-      description = "Publish release"
-      fields {
-        packet_id : uint16
-      }
-    }
-
-    pubcomp {
-      // Pubcomp message
-      type = uint8
-      value = 7
-      description = "Publish complete"
-      fields {
-        packet_id : uint16
-      }
-    }
-
-    subscribe {
-      // Subscribe message
-      type = uint8
-      value = 8
-      description = "Subscribe to a topic"
-      fields {
-        packet_id : uint16
-        topics : array[string]
-      }
-    }
-
-    suback {
-      // Suback message
-      type = uint8
-      value = 9
-      description = "Subscribe acknowledgement"
-      fields {
-        packet_id : uint16
-        return_codes : array[uint8]
-      }
-    }
-
-    unsubscribe {
-      // Unsubscribe message
-      type = uint8
-      value = 10
-      description = "Unsubscribe from a topic"
-      fields {
-        packet_id : uint16
-        topics : array[string]
-      }
-    }
-
-    unsuback {
-      // Unsuback message
-      type = uint8
-      value = 11
-      description = "Unsubscribe acknowledgement"
-      fields {
-        packet_id : uint16
-      }
-    }
-
-    pingreq {
-      // Pingreq message
-      type = uint8
-      value = 12
-      description = "Ping request"
-    }
-
-    pingresp {
-      // Pingresp message
-      type = uint8
-      value = 13
-      description = "Ping response"
-    }
-
-    disconnect {
-      // Disconnect message
-      type = uint8
-      value = 14
-      description = "Disconnect from the server"
-      fields {
-        reason_code : uint8
-        reason_string : string
-      }
-    }
-  }
-
-  encoder {
-    // Define the encoder for the MQTT protocol
-    type = "binary"
-    options {
-      // Options for the binary encoder
-      byte_order = "big"
-    }
-  }
-
-  decoder {
-    // Define the decoder for the MQTT protocol
-    type = "binary"
-    options {
-      // Options for the binary decoder
-      byte_order = "big"
-    }
-  }
+group MQTTMessage {
+  header: FixedHeader
+  payload: MQTTMessageType
 }
+
+group FixedHeader {
+  controlPacketType: uint8 :assert(in(1,15))
+  dup: bool :default(false) :bit(0)
+  qos: uint8 :bit(1,2) :enum(0=AT_MOST_ONCE, 1=AT_LEAST_ONCE, 2=EXACTLY_ONCE)
+  retain: bool :default(false) :bit(3)
+  remainingLength: uint32 :varint
+}
+
+group MQTTMessageType {
+  type: uint8 :assert(in(1,15))
+
+  CONNECT: Connect
+  CONNACK: Connack
+  PUBLISH: Publish
+  PUBACK: Puback
+  PUBREC: Pubrec
+  PUBREL: Pubrel
+  PUBCOMP: Pubcomp
+  SUBSCRIBE: Subscribe
+  SUBACK: Suback
+  UNSUBSCRIBE: Unsubscribe
+  UNSUBACK: Unsuback
+  PINGREQ: Pingreq
+  PINGRESP: Pingresp
+  DISCONNECT: Disconnect
+}
+
+group Connect {
+  protocolName: string(4) :assert("MQTT")
+  protocolLevel: uint8 :assert(5)
+  connectFlags: uint8 :bitfield(
+    username: bool :bit(7)
+    password: bool :bit(6)
+    willRetain: bool :bit(5)
+    willQos: uint8 :bit(4,3) :enum(0=AT_MOST_ONCE, 1=AT_LEAST_ONCE, 2=EXACTLY_ONCE)
+    willFlag: bool :bit(2)
+    cleanStart: bool :bit(1)
+    reserved: bool :bit(0)
+  )
+  keepAlive: uint16
+  properties: Properties :if(connectFlags & 0x01 != 0)
+}
+
+group Connack {
+  sessionPresent: bool :default(false)
+  reasonCode: uint8
+  properties: Properties :if(sessionPresent != 0)
+}
+
+group Publish {
+  topicName: string
+  packetIdentifier: uint16 :if(flags & 0x01 != 0)
+  properties: Properties :if(flags & 0x02 != 0)
+  payload: bytes
+}
+
+group Puback {
+  packetIdentifier: uint16
+  reasonCode: uint8
+  properties: Properties
+}
+
+group Pubrec {
+  packetIdentifier: uint16
+  reasonCode: uint8
+  properties: Properties
+}
+
+group Pubrel {
+  packetIdentifier: uint16
+  reasonCode: uint8
+  properties: Properties
+}
+
+group Pubcomp {
+  packetIdentifier: uint16
+  reasonCode: uint8
+  properties: Properties
+}
+
+group Subscribe {
+  packetIdentifier: uint16
+  properties: Properties
+  subscriptions: []Subscription
+}
+
+group Suback {
+  packetIdentifier: uint16
+  properties: Properties
+  reasonCodes: []ReasonCode
+}
+
+group Unsubscribe {
+  packetIdentifier: uint16
+  properties: Properties
+  topicFilters: []string
+}
+
+group Unsuback {
+  packetIdentifier: uint16
+  properties: Properties
+  reasonCodes: []ReasonCode
+}
+
+group Pingreq {
+}
+
+group Pingresp {
+}
+
+group Disconnect {
+  reasonCode: uint8
+  properties: Properties
+}
+
+group Properties {
+  sessionExpiryInterval: uint32 :if(flags & 0x01 != 0)
+  receiveMaximum: uint16 :if(flags & 0x02 != 0)
+  maximumPacketSize: uint32 :if(flags & 0x04 != 0)
+  topicAliasMaximum: uint16 :if(flags & 0x08 != 0)
+  requestResponseInformation: uint8 :if(flags & 0x10 != 0)
+  requestProblemInformation: uint8 :if(flags & 0x20 != 0)
+  userProperties: []UserProperty
+  authenticationMethod: string :if(flags & 0x40 != 0)
+  authenticationData: bytes :if(flags & 0x80 != 0)
+}
+
+group Subscription {
+  topicFilter: string
+  qos: uint8
+  noLocal: bool :default(false) :if(flags & 0x01 != 0)
+  retainAsPublished: bool :default(false) :if(flags & 0x02 != 0)
+  retainHandling: uint8 :if(flags & 0x04 != 0)
+}
+
+group ReasonCode {
+  code: uint8
+}
+
+group UserProperty {
+  key: string
+  value: string
+}
+
+endianness: big
+
+default_uint: uint8

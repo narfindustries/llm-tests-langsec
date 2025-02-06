@@ -1,69 +1,180 @@
 use nom::{
-    bits::{streaming::take as take_bits, streaming::tag as tag_bits},
-    bytes::streaming::{tag, take},
-    combinator::{map, opt},
+    bits::{streaming::take as take_bits, complete::take as take_bits_complete},
+    bytes::complete::take,
+    combinator::{map, map_opt},
     error::ErrorKind,
-    multi::count,
-    number::streaming::{be_u8, be_u16, be_u32},
+    multi::many0,
+    number::complete::{be_u8, be_u16, be_u32},
     sequence::tuple,
-    IResult,
+    IResult, Err,
 };
 use std::env;
-use std::fs;
-use std::process;
+use std::fs::File;
+use std::io::Read;
+
+#[derive(Debug, PartialEq)]
+enum IcmpType {
+    EchoReply,
+    DestinationUnreachable(DestUnreachableCode),
+    SourceQuench,
+    Redirect(RedirectCode),
+    EchoRequest,
+    RouterAdvertisement,
+    RouterSolicitation,
+    TimeExceeded(TimeExceededCode),
+    ParameterProblem(ParameterProblemCode),
+    Timestamp,
+    TimestampReply,
+    InformationRequest,
+    InformationReply,
+    Unknown(u8),
+}
+
+#[derive(Debug, PartialEq)]
+enum DestUnreachableCode {
+    NetUnreachable,
+    HostUnreachable,
+    ProtocolUnreachable,
+    PortUnreachable,
+    FragmentationNeeded,
+    SourceRouteFailed,
+    DestNetUnknown,
+    DestHostUnknown,
+    Unknown(u8),
+}
+
+#[derive(Debug, PartialEq)]
+enum RedirectCode {
+    NetworkRedirect,
+    HostRedirect,
+    TosNetRedirect,
+    TosHostRedirect,
+    Unknown(u8),
+}
+
+#[derive(Debug, PartialEq)]
+enum TimeExceededCode {
+    TTLExpired,
+    FragmentReassemblyTimeExceeded,
+    Unknown(u8),
+}
+
+#[derive(Debug, PartialEq)]
+enum ParameterProblemCode {
+    PointerIndicatesError,
+    MissingRequiredOption,
+    BadLength,
+    Unknown(u8),
+}
 
 #[derive(Debug)]
-struct IcmpHeader {
-    icmp_type: u8,
-    icmp_code: u8,
+struct IcmpPacket {
+    icmp_type: IcmpType,
+    code: u8,
     checksum: u16,
-    rest_of_header: Option<Vec<u8>>,
-    payload: Option<Vec<u8>>,
+    rest: Option<Vec<u8>>,
 }
 
-fn parse_icmp(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
-    let (input, icmp_type) = be_u8(input)?;
-    let (input, icmp_code) = be_u8(input)?;
-    let (input, checksum) = be_u16(input)?;
+fn parse_icmp_type(input: u8) -> IcmpType {
+    match input {
+        0 => IcmpType::EchoReply,
+        3 => IcmpType::DestinationUnreachable(parse_dest_unreachable_code(input)),
+        4 => IcmpType::SourceQuench,
+        5 => IcmpType::Redirect(parse_redirect_code(input)),
+        8 => IcmpType::EchoRequest,
+        9 => IcmpType::RouterAdvertisement,
+        10 => IcmpType::RouterSolicitation,
+        11 => IcmpType::TimeExceeded(parse_time_exceeded_code(input)),
+        12 => IcmpType::ParameterProblem(parse_parameter_problem_code(input)),
+        13 => IcmpType::Timestamp,
+        14 => IcmpType::TimestampReply,
+        15 => IcmpType::InformationRequest,
+        16 => IcmpType::InformationReply,
+        _ => IcmpType::Unknown(input),
+    }
+}
 
-    let (input, rest_of_header) = match icmp_type {
-        0 | 8 => opt(take(4usize))(input)?, // Echo Request/Reply
-        3 | 11 => opt(take(4usize))(input)?, // Destination Unreachable, Time Exceeded
-        5 => opt(take(4usize))(input)?, // Redirect
-        _ => opt(take(4usize))(input)?,
+fn parse_dest_unreachable_code(code: u8) -> DestUnreachableCode {
+    match code {
+        0 => DestUnreachableCode::NetUnreachable,
+        1 => DestUnreachableCode::HostUnreachable,
+        2 => DestUnreachableCode::ProtocolUnreachable,
+        3 => DestUnreachableCode::PortUnreachable,
+        4 => DestUnreachableCode::FragmentationNeeded,
+        5 => DestUnreachableCode::SourceRouteFailed,
+        6 => DestUnreachableCode::DestNetUnknown,
+        7 => DestUnreachableCode::DestHostUnknown,
+        _ => DestUnreachableCode::Unknown(code),
+    }
+}
+
+fn parse_redirect_code(code: u8) -> RedirectCode {
+    match code {
+        0 => RedirectCode::NetworkRedirect,
+        1 => RedirectCode::HostRedirect,
+        2 => RedirectCode::TosNetRedirect,
+        3 => RedirectCode::TosHostRedirect,
+        _ => RedirectCode::Unknown(code),
+    }
+}
+
+fn parse_time_exceeded_code(code: u8) -> TimeExceededCode {
+    match code {
+        0 => TimeExceededCode::TTLExpired,
+        1 => TimeExceededCode::FragmentReassemblyTimeExceeded,
+        _ => TimeExceededCode::Unknown(code),
+    }
+}
+
+fn parse_parameter_problem_code(code: u8) -> ParameterProblemCode {
+    match code {
+        0 => ParameterProblemCode::PointerIndicatesError,
+        1 => ParameterProblemCode::MissingRequiredOption,
+        2 => ParameterProblemCode::BadLength,
+        _ => ParameterProblemCode::Unknown(code),
+    }
+}
+
+fn parse_icmp(input: &[u8]) -> IResult<&[u8], IcmpPacket> {
+    let (input, (raw_type, code, checksum)) = tuple((be_u8, be_u8, be_u16))(input)?;
+    
+    let icmp_type = parse_icmp_type(raw_type);
+    
+    let (input, rest) = match icmp_type {
+        IcmpType::EchoReply | IcmpType::EchoRequest => {
+            let (input, rest) = take(4usize)(input)?;
+            (input, Some(rest.to_vec()))
+        },
+        _ => (input, None)
     };
 
-    let (input, payload) = opt(take(input.len()))(input)?;
-
-    Ok((
-        input,
-        IcmpHeader {
-            icmp_type,
-            icmp_code,
-            checksum,
-            rest_of_header: rest_of_header.map(|v| v.to_vec()),
-            payload: payload.map(|v| v.to_vec()),
-        },
-    ))
+    Ok((input, IcmpPacket {
+        icmp_type,
+        code,
+        checksum,
+        rest,
+    }))
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <icmp_binary_file>", args[0]);
-        process::exit(1);
+        eprintln!("Usage: {} <input_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let data = fs::read(filename).expect("Unable to read file");
+    let mut file = File::open(&args[1])?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
 
-    match parse_icmp(&data) {
-        Ok((_, parsed_icmp)) => {
-            println!("Parsed ICMP: {:?}", parsed_icmp);
-        }
+    match parse_icmp(&buffer) {
+        Ok((_, packet)) => {
+            println!("Parsed ICMP Packet: {:?}", packet);
+            Ok(())
+        },
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
-            process::exit(1);
+            std::process::exit(1);
         }
     }
 }

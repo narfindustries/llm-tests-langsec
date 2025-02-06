@@ -1,0 +1,62 @@
+module TLS;
+
+import spicy;
+
+type ClientHello = unit {
+    protocol_version: uint16;
+    random: bytes &size=32;
+    legacy_session_id: bytes &size=32;
+    cipher_suites: uint16[] &size=2;
+    legacy_compression_methods: uint8;
+    extensions: Extension[] &size=2;
+};
+
+type Extension = unit {
+    extension_type: uint16;
+    extension_data: bytes &size=2;
+};
+
+type SupportedVersions = unit {
+    versions: uint16[] &size=1;
+};
+
+type ServerName = unit {
+    name: bytes &size=2;
+};
+
+type SupportedGroups = unit {
+    groups: uint16[] &size=2;
+};
+
+type KeyShare = unit {
+    key_exchange: bytes &size=2;
+};
+
+type SignatureAlgorithms = unit {
+    algorithms: uint16[] &size=2;
+};
+
+type PSKKeyExchangeModes = unit {
+    modes: uint8[] &size=1;
+};
+
+type PreSharedKey = unit {
+    identities: bytes[] &size=2;
+    binders: bytes[] &size=2;
+};
+
+type ALPN = unit {
+    protocols: bytes[] &size=2;
+};
+
+type EarlyData = unit {
+    data: bytes &size=4;
+};
+
+type PostHandshakeClientAuth = unit {
+    auth: bytes &size=0;
+};
+
+on ClientHello::%done {
+    print self;
+}

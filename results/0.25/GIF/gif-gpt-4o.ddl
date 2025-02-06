@@ -1,111 +1,69 @@
-// GIF File Format Specification in Daedalus
-
-// GIF Header
-struct GifHeader {
-    signature: string[3]; // "GIF"
-    version: string[3]; // "87a" or "89a"
+enum Version : u24 {
+    GIF87a = 0x383761,
+    GIF89a = 0x383961
 }
 
-// Logical Screen Descriptor
+enum ExtensionLabel : u8 {
+    GraphicControl = 0xF9,
+    Comment = 0xFE,
+    PlainText = 0x01,
+    Application = 0xFF
+}
+
+struct Header {
+    signature : u24 = 0x474946;
+    version : Version;
+}
+
 struct LogicalScreenDescriptor {
-    canvas_width: u2;
-    canvas_height: u2;
-    packed_fields: u1;
-    background_color_index: u1;
-    pixel_aspect_ratio: u1;
+    width : u16;
+    height : u16;
+    packedFields : u8;
+    backgroundColorIndex : u8;
+    pixelAspectRatio : u8;
 }
 
-// Global Color Table
 struct ColorTableEntry {
-    red: u1;
-    green: u1;
-    blue: u1;
+    red : u8;
+    green : u8;
+    blue : u8;
 }
 
-struct GlobalColorTable {
-    colors: ColorTableEntry[];
-}
-
-// Image Descriptor
 struct ImageDescriptor {
-    image_separator: u1; // 0x2C
-    image_left_position: u2;
-    image_top_position: u2;
-    image_width: u2;
-    image_height: u2;
-    packed_fields: u1;
+    imageSeparator : u8 = 0x2C;
+    leftPosition : u16;
+    topPosition : u16;
+    width : u16;
+    height : u16;
+    packedFields : u8;
 }
 
-// Local Color Table
-struct LocalColorTable {
-    colors: ColorTableEntry[];
-}
-
-// Table Based Image Data
 struct ImageData {
-    lzw_minimum_code_size: u1;
-    image_data_blocks: Block[];
+    lzwMinimumCodeSize : u8;
+    dataBlocks : DataBlock[];
 }
 
-struct Block {
-    block_size: u1;
-    block_data: u1[block_size];
+struct DataBlock {
+    size : u8;
+    data : u8[size];
 }
 
-// Graphics Control Extension
-struct GraphicsControlExtension {
-    extension_introducer: u1; // 0x21
-    graphic_control_label: u1; // 0xF9
-    block_size: u1; // 0x04
-    packed_fields: u1;
-    delay_time: u2;
-    transparent_color_index: u1;
-    block_terminator: u1; // 0x00
-}
-
-// Comment Extension
-struct CommentExtension {
-    extension_introducer: u1; // 0x21
-    comment_label: u1; // 0xFE
-    comment_data: Block[];
-}
-
-// Plain Text Extension
-struct PlainTextExtension {
-    extension_introducer: u1; // 0x21
-    plain_text_label: u1; // 0x01
-    block_size: u1; // 0x0C
-    text_grid_left_position: u2;
-    text_grid_top_position: u2;
-    text_grid_width: u2;
-    text_grid_height: u2;
-    character_cell_width: u1;
-    character_cell_height: u1;
-    text_foreground_color_index: u1;
-    text_background_color_index: u1;
-    plain_text_data: Block[];
-}
-
-// Application Extension
-struct ApplicationExtension {
-    extension_introducer: u1; // 0x21
-    application_label: u1; // 0xFF
-    block_size: u1; // 0x0B
-    application_identifier: string[8];
-    application_authentication_code: string[3];
-    application_data: Block[];
-}
-
-// Trailer
 struct Trailer {
-    trailer: u1; // 0x3B
+    trailer : u8 = 0x3B;
 }
 
-// GIF File
-struct GifFile {
-    header: GifHeader;
-    logical_screen_descriptor: LogicalScreenDescriptor;
-    global_color_table: GlobalColorTable if logical_screen_descriptor.packed_fields & 0x80 != 0;
-    blocks: (GraphicsControlExtension | CommentExtension | PlainTextExtension | ApplicationExtension | ImageDescriptor | ImageData)[];
-    trailer: Trailer;
+struct Extension {
+    introducer : u8 = 0x21;
+    label : ExtensionLabel;
+    blockSize : u8;
+    data : u8[blockSize];
+    terminator : u8 = 0x00;
+}
+
+struct GIF {
+    header : Header;
+    logicalScreenDescriptor : LogicalScreenDescriptor;
+    globalColorTable : ColorTableEntry[2 ** ((logicalScreenDescriptor.packedFields & 0x07) + 1)] if (logicalScreenDescriptor.packedFields & 0x80) != 0;
+    blocks : (ImageDescriptor & ImageData | Extension)*;
+    trailer : Trailer;
 }

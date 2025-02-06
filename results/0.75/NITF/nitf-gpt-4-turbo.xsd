@@ -1,81 +1,84 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    targetNamespace="http://example.com/nitf"
-    xmlns:tns="http://example.com/nitf">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/nitf/"
+           xmlns:tns="http://example.com/dfdl/nitf/">
 
-    <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:basicFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-    <xs:element name="NITF">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="FileHeader" type="tns:FileHeaderType"/>
-                <xs:element name="ImageSegments" type="tns:ImageSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element name="TextSegments" type="tns:TextSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element name="DataExtensionSegments" type="tns:DataExtensionSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+    <xs:element name="NITF" type="tns:NITFType"/>
+
+    <xs:complexType name="NITFType">
+        <xs:sequence>
+            <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+            <xs:element name="ImageSegments" minOccurs="0" maxOccurs="unbounded" type="tns:ImageSegmentsType"/>
+            <xs:element name="GraphicsSegments" minOccurs="0" maxOccurs="unbounded" type="tns:GraphicsSegmentsType"/>
+            <xs:element name="TextSegments" minOccurs="0" maxOccurs="unbounded" type="tns:TextSegmentsType"/>
+            <xs:element name="DataExtensionSegments" minOccurs="0" maxOccurs="unbounded" type="tns:DataExtensionSegmentsType"/>
+            <xs:element name="ReservedExtensionSegments" minOccurs="0" maxOccurs="unbounded" type="tns:ReservedExtensionSegmentsType"/>
+        </xs:sequence>
+    </xs:complexType>
 
     <xs:complexType name="FileHeaderType">
         <xs:sequence>
-            <xs:element name="FileProfileName" type="xs:string" dfdl:length="4"/>
-            <xs:element name="FileVersion" type="xs:string" dfdl:length="5"/>
-            <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="2"/>
-            <xs:element name="StandardType" type="xs:string" dfdl:length="4"/>
-            <xs:element name="OriginatingStationID" type="xs:string" dfdl:length="10"/>
-            <xs:element name="FileDateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
-            <xs:element name="FileTitle" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=";" dfdl:initiator="TITLE=" dfdl:encoding="ascii" dfdl:trimKind="both"/>
+            <xs:element name="FHDR" type="xs:string" dfdl:length="9"/>
+            <xs:element name="CLEVEL" type="xs:string" dfdl:length="2"/>
+            <xs:element name="STYPE" type="xs:string" dfdl:length="4"/>
+            <xs:element name="OSTAID" type="xs:string" dfdl:length="10"/>
+            <xs:element name="FDT" type="xs:string" dfdl:length="14"/>
+            <xs:element name="FTITLE" type="xs:string" dfdl:length="80"/>
+            <xs:element name="FSCLAS" type="xs:string" dfdl:length="1"/>
+            <xs:element name="FSCLSY" type="xs:string" dfdl:length="2" minOccurs="0"/>
+            <xs:element name="FSCODE" type="xs:string" dfdl:length="11" minOccurs="0"/>
+            <xs:element name="FSCTLH" type="xs:string" dfdl:length="2" minOccurs="0"/>
+            <xs:element name="FSREL" type="xs:string" dfdl:length="20" minOccurs="0"/>
+            <xs:element name="FSDCTP" type="xs:string" dfdl:length="2" minOccurs="0"/>
+            <xs:element name="FSDCDT" type="xs:string" dfdl:length="8" minOccurs="0"/>
+            <xs:element name="FSDCXM" type="xs:string" dfdl:length="4" minOccurs="0"/>
+            <xs:element name="FSORGN" type="xs:string" dfdl:length="27" minOccurs="0"/>
+            <xs:element name="FSCAUT" type="xs:string" dfdl:length="40" minOccurs="0"/>
+            <xs:element name="FSCTLN" type="xs:string" dfdl:length="15" minOccurs="0"/>
+            <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+            <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+            <xs:element name="ENCRYP" type="xs:string" dfdl:length="1"/>
+            <xs:element name="FBKGC" type="xs:string" dfdl:length="3" minOccurs="0"/>
+            <xs:element name="ONAME" type="xs:string" dfdl:length="27"/>
+            <xs:element name="OPHONE" type="xs:string" dfdl:length="18"/>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="ImageSegmentsType">
-        <xs:sequence>
-            <xs:element name="ImageSubheader" type="tns:ImageSubheaderType"/>
-            <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ImageSubheader/ImageDataLength }"/>
-        </xs:sequence>
+        <!-- Define fields for Image Segments -->
     </xs:complexType>
 
-    <xs:complexType name="ImageSubheaderType">
-        <xs:sequence>
-            <xs:element name="ImageID" type="xs:string" dfdl:length="10"/>
-            <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
-            <xs:element name="TargetID" type="xs:string" dfdl:length="17"/>
-            <xs:element name="Title" type="xs:string" dfdl:length="80"/>
-            <xs:element name="SecurityClassification" type="xs:string" dfdl:length="2"/>
-            <xs:element name="ImageDataLength" type="xs:int" dfdl:length="10"/>
-        </xs:sequence>
+    <xs:complexType name="GraphicsSegmentsType">
+        <!-- Define fields for Graphics Segments -->
     </xs:complexType>
 
     <xs:complexType name="TextSegmentsType">
-        <xs:sequence>
-            <xs:element name="TextSubheader" type="tns:TextSubheaderType"/>
-            <xs:element name="TextData" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../TextSubheader/TextDataLength }"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="TextSubheaderType">
-        <xs:sequence>
-            <xs:element name="TextID" type="xs:string" dfdl:length="7"/>
-            <xs:element name="DateTime" type="xs:string" dfdl:length="14" dfdl:calendarPattern="yyyyMMddHHmmss"/>
-            <xs:element name="TextTitle" type="xs:string" dfdl:length="80"/>
-            <xs:element name="TextDataLength" type="xs:int" dfdl:length="5"/>
-        </xs:sequence>
+        <!-- Define fields for Text Segments -->
     </xs:complexType>
 
     <xs:complexType name="DataExtensionSegmentsType">
-        <xs:sequence>
-            <xs:element name="DESSubheader" type="tns:DESSubheaderType"/>
-            <xs:element name="DESData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../DESSubheader/DESDataLength }"/>
-        </xs:sequence>
+        <!-- Define fields for Data Extension Segments -->
     </xs:complexType>
 
-    <xs:complexType name="DESSubheaderType">
-        <xs:sequence>
-            <xs:element name="DESID" type="xs:string" dfdl:length="25"/>
-            <xs:element name="DESVersion" type="xs:string" dfdl:length="2"/>
-            <xs:element name="DESDataLength" type="xs:int" dfdl:length="10"/>
-        </xs:sequence>
+    <xs:complexType name="ReservedExtensionSegmentsType">
+        <!-- Define fields for Reserved Extension Segments -->
     </xs:complexType>
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="basicFormat">
+                <dfdl:format byteOrder="bigEndian"
+                             encoding="US-ASCII"
+                             lengthKind="explicit"
+                             textNumberRep="standard" />
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
 
 </xs:schema>

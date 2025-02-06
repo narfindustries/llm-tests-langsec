@@ -1,55 +1,86 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *create_tls_client_hello_parser() {
-    // Define basic parsers for primitive types
-    HParser *u8 = h_uint8();
-    HParser *u16 = h_uint16();
-    HParser *u24 = h_uint24();
-    HParser *u32 = h_uint32();
+// Function to create parsers for each field in the ClientHello message
 
-    // Define parsers for specific TLS structures
-    HParser *protocol_version = h_sequence(u8, u8, NULL);
-    HParser *random = h_repeat_n(u8, 32);
-
-    // Define parsers for session ID
-    HParser *session_id_length = u8;
-    HParser *session_id = h_length_value(session_id_length, u8);
-
-    // Define parsers for cipher suites
-    HParser *cipher_suites_length = u16;
-    HParser *cipher_suites = h_length_value(cipher_suites_length, u16);
-
-    // Define parsers for compression methods
-    HParser *compression_methods_length = u8;
-    HParser *compression_methods = h_length_value(compression_methods_length, u8);
-
-    // Define parsers for extensions
-    HParser *extension_type = u16;
-    HParser *extension_length = u16;
-    HParser *extension_data = h_length_value(extension_length, u8);
-    HParser *extension = h_sequence(extension_type, extension_data, NULL);
-
-    HParser *extensions_length = u16;
-    HParser *extensions = h_length_value(extensions_length, extension);
-
-    // Define the complete ClientHello parser
-    HParser *client_hello = h_sequence(
-        protocol_version,
-        random,
-        session_id,
-        cipher_suites,
-        compression_methods,
-        extensions,
-        NULL
-    );
-
-    return client_hello;
+HParser *create_legacy_version_parser() {
+    return h_sequence(h_uint8(), h_uint8(), NULL);
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = create_tls_client_hello_parser();
-    // Use the parser with input data here
-    // Remember to free the parser when done
-    h_parser_free(parser);
-    return 0;
+HParser *create_random_parser() {
+    return h_repeat_n(h_uint8(), 32);
+}
+
+HParser *create_legacy_session_id_parser() {
+    return h_length_value(h_uint8(), h_uint8());
+}
+
+HParser *create_cipher_suites_parser() {
+    return h_length_value(h_uint16(), h_uint16());
+}
+
+HParser *create_legacy_compression_methods_parser() {
+    return h_length_value(h_uint8(), h_uint8());
+}
+
+HParser *create_extensions_parser() {
+    return h_length_value(h_uint16(), h_uint8());
+}
+
+HParser *create_client_hello_parser() {
+    return h_sequence(
+        create_legacy_version_parser(),
+        create_random_parser(),
+        create_legacy_session_id_parser(),
+        create_cipher_suites_parser(),
+        create_legacy_compression_methods_parser(),
+        create_extensions_parser(),
+        NULL
+    );
+}
+
+void parse_client_hello(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(file_size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    fread(data, 1, file_size, file);
+    fclose(file);
+
+    HParser *client_hello_parser = create_client_hello_parser();
+    HParseResult *result = h_parse(client_hello_parser, data, file_size);
+    if (result) {
+        printf("ClientHello parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse ClientHello.\n");
+    }
+
+    h_parser_free(client_hello_parser);
+    free(data);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_client_hello(argv[1]);
+
+    return EXIT_SUCCESS;
 }

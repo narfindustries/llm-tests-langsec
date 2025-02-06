@@ -1,11 +1,22 @@
 module TIFF;
 
-import zeek;
-
-type TIFFHeader = unit {
-    endianness: uint16 &byteorder=endianness == 0x4949 ? "little" : "big";
-    magic: uint16 &assert=magic == 42;
+type TIFFFile = unit {
+    endianness: uint16 &convert=to_endianness;
+    magic_number: uint16 &requires=magic_number == 42;
     ifd_offset: uint32;
+
+    ifds: IFD[] &until=input.eod {
+        ifd: IFD(ifd_offset);
+        ifd_offset = ifd.next_ifd_offset;
+    };
+};
+
+type IFD = unit(offset: uint32) {
+    &byte_order=endianness;
+
+    entry_count: uint16;
+    entries: IFDEntry[entry_count];
+    next_ifd_offset: uint32;
 };
 
 type IFDEntry = unit {
@@ -13,31 +24,73 @@ type IFDEntry = unit {
     type: uint16;
     count: uint32;
     value_offset: uint32;
+
+    value: bytes &computed=compute_value();
+
+    on %done {
+        switch (tag) {
+            case 256: // ImageWidth
+            case 257: // ImageLength
+            case 258: // BitsPerSample
+            case 259: // Compression
+            case 262: // PhotometricInterpretation
+            case 273: // StripOffsets
+            case 277: // SamplesPerPixel
+            case 278: // RowsPerStrip
+            case 279: // StripByteCounts
+            case 282: // XResolution
+            case 283: // YResolution
+            case 296: // ResolutionUnit
+            case 284: // PlanarConfiguration
+            case 320: // ColorMap
+            case 322: // TileWidth
+            case 323: // TileLength
+            case 324: // TileOffsets
+            case 325: // TileByteCounts
+            case 338: // ExtraSamples
+            case 339: // SampleFormat
+                # Handle known tags
+                break;
+            default:
+                # Handle unknown tags
+                break;
+        }
+    }
+
+    function compute_value() -> bytes {
+        local size = type_size(type) * count;
+        if (size <= 4)
+            return to_bytes(value_offset, size);
+        else
+            return context.input.read_bytes(value_offset, size);
+    }
+
+    function type_size(t: uint16) -> uint32 {
+        switch (t) {
+            case 1: return 1; // BYTE
+            case 2: return 1; // ASCII
+            case 3: return 2; // SHORT
+            case 4: return 4; // LONG
+            case 5: return 8; // RATIONAL
+            case 6: return 1; // SBYTE
+            case 7: return 1; // UNDEFINED
+            case 8: return 2; // SSHORT
+            case 9: return 4; // SLONG
+            case 10: return 8; // SRATIONAL
+            case 11: return 4; // FLOAT
+            case 12: return 8; // DOUBLE
+            default: return 0;
+        }
+    }
 };
 
-type IFD = unit {
-    entries: uint16;
-    ifd_entries: array[entries] of IFDEntry;
-    next_ifd_offset: uint32;
-};
-
-public type TIFFFile = unit {
-    header: TIFFHeader;
-    ifds: array of IFD &until=ifds[|-1].next_ifd_offset == 0;
-};
-
-public event tiff_parsed(f: TIFFFile);
-
-public function parse_tiff(data: bytes): TIFFFile {
-    return parse_TIFFFile(data);
+function to_endianness(value: uint16) -> spicy::ByteOrder {
+    return value == 0x4949 ? spicy::ByteOrder::LittleEndian : spicy::ByteOrder::BigEndian;
 }
 
-hook zeek_init() {
-    local file = open("sample.tiff");
-    if (file) {
-        local data = file.read();
-        close(file);
-        local tiff = parse_tiff(data);
-        event tiff_parsed(tiff);
-    }
+function to_bytes(value: uint32, size: uint32) -> bytes {
+    local b = bytes();
+    for (local i = 0; i < size; ++i)
+        b += (value >> (i * 8)) & 0xFF;
+    return b;
 }

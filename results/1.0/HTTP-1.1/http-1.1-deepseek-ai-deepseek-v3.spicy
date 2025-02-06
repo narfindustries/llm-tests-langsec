@@ -1,0 +1,63 @@
+module HTTP;
+
+public type Version = unit {
+    major: uint8 = 1;
+    : b".";
+    minor: uint8 = 1;
+};
+
+public type Method = enum {
+    GET = 0,
+    POST = 1,
+    PUT = 2,
+    DELETE = 3,
+    HEAD = 4,
+    OPTIONS = 5,
+    TRACE = 6,
+    CONNECT = 7,
+    PATCH = 8,
+};
+
+public type URI = bytes &until=b"\x20";
+
+public type Header = unit {
+    name: bytes &until=b":";
+    : b":";
+    value: bytes &until=b"\x0d\x0a";
+};
+
+public type Request = unit {
+    method: Method;
+    : b" ";
+    uri: URI;
+    : b" ";
+    version: Version;
+    : b"\x0d\x0a";
+    headers: Header[] &until=b"\x0d\x0a";
+    : b"\x0d\x0a";
+};
+
+public type StatusCode = uint16;
+
+public type StatusLine = unit {
+    version: Version;
+    : b" ";
+    code: StatusCode;
+    : b" ";
+    reason: bytes &until=b"\x0d\x0a";
+    : b"\x0d\x0a";
+};
+
+public type Response = unit {
+    status: StatusLine;
+    headers: Header[] &until=b"\x0d\x0a";
+    : b"\x0d\x0a";
+};
+
+public type Message = unit {
+    magic: b"HTTP/1.1";
+    : b"\x20";
+    rest: (Request | Response);
+};
+
+on %init { }

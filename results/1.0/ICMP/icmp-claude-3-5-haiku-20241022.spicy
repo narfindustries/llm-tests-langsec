@@ -1,27 +1,85 @@
 module ICMP;
 
-import spicy;
-
 public type Message = unit {
-    type_code: bitfield(8) {
-        type:     0..7;
-        code:    8..15;
+    type_: uint8;
+    code: uint8;
+    checksum: uint16;
+    
+    payload: PayloadSelection;
+    
+    type PayloadSelection = unit {
+        switch ( |self.$.type_| ) {
+            0 -> echo_reply: EchoMessage;
+            3 -> destination_unreachable: DestinationUnreachableMessage;
+            4 -> source_quench: SourceQuenchMessage;
+            5 -> redirect: RedirectMessage;
+            8 -> echo_request: EchoMessage;
+            9 -> router_advertisement: RouterAdvertisementMessage;
+            10 -> router_solicitation: RouterSolicitationMessage;
+            11 -> time_exceeded: TimeExceededMessage;
+            12 -> parameter_problem: ParameterProblemMessage;
+            13 -> timestamp: TimestampMessage;
+            14 -> timestamp_reply: TimestampMessage;
+            15 -> info_request: InfoMessage;
+            16 -> info_reply: InfoMessage;
+            * -> unknown: bytes;
+        }
     };
 
-    header: Header;
-    payload: bytes &size=(|self.header.total_length| - 8);
-
-    on type_code {
-        self.type_code.type = $$.type;
-        self.type_code.code = $$.code;
-    }
-
-    type Header = unit {
-        type:           uint8;
-        code:           uint8;
-        checksum:       uint16;
-        total_length:   uint16 &convert=(8 + |payload|);
+    type EchoMessage = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        payload: bytes;
     };
 
-    on Hello: bool = False;
+    type DestinationUnreachableMessage = unit {
+        unused: uint16;
+        next_hop_mtu: optional uint16;
+        original_datagram: bytes;
+    };
+
+    type SourceQuenchMessage = unit {
+        unused: uint32;
+        original_datagram: bytes;
+    };
+
+    type RedirectMessage = unit {
+        gateway_address: addr;
+        original_datagram: bytes;
+    };
+
+    type RouterAdvertisementMessage = unit {
+        number_of_addresses: uint8;
+        address_entry_size: uint8;
+        lifetime: uint16;
+        router_addresses: vector<addr>;
+    };
+
+    type RouterSolicitationMessage = unit {
+        reserved: uint32;
+    };
+
+    type TimeExceededMessage = unit {
+        unused: uint32;
+        original_datagram: bytes;
+    };
+
+    type ParameterProblemMessage = unit {
+        pointer: uint8;
+        unused: uint24;
+        original_datagram: bytes;
+    };
+
+    type TimestampMessage = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        originate_timestamp: uint32;
+        receive_timestamp: uint32;
+        transmit_timestamp: uint32;
+    };
+
+    type InfoMessage = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+    };
 };

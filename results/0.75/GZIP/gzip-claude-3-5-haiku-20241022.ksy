@@ -3,44 +3,44 @@ meta:
   file-extension: gz
   endian: le
 seq:
-  - id: header
-    type: header
+  - id: identification
+    contents: [0x1F, 0x8B]
+  - id: compression_method
+    type: u1
+    enum: compression_methods
+  - id: flags
+    type: flags_type
+  - id: mtime
+    type: u4
+    doc: Modification time in Unix timestamp format
+  - id: extra_flags
+    type: u1
+    enum: extra_flags_enum
+  - id: os
+    type: u1
+    enum: os_enum
+  - id: extra_field
+    type: extra_field
+    if: flags.fextra
+  - id: filename
+    type: strz
+    encoding: UTF-8
+    if: flags.fname
+  - id: comment
+    type: strz
+    encoding: UTF-8
+    if: flags.fcomment
+  - id: header_crc16
+    type: u2
+    if: flags.fhcrc
   - id: compressed_data
-    size-eos: true
+    type: compressed_block
+  - id: crc32
+    type: u4
+  - id: uncompressed_size
+    type: u4
 types:
-  header:
-    seq:
-      - id: magic
-        contents: [0x1f, 0x8b]
-      - id: compression_method
-        type: u1
-        enum: compression_methods
-      - id: flags
-        type: flags
-      - id: modification_time
-        type: u4
-      - id: extra_flags
-        type: u1
-      - id: operating_system
-        type: u1
-        enum: operating_systems
-      - id: optional_extra_fields
-        type: optional_extra_fields
-        if: flags.fextra
-      - id: optional_filename
-        type: str
-        encoding: UTF-8
-        terminator: 0x00
-        if: flags.fname
-      - id: optional_comment
-        type: str
-        encoding: UTF-8
-        terminator: 0x00
-        if: flags.fcomment
-      - id: optional_header_crc16
-        type: u2
-        if: flags.fhcrc
-  flags:
+  flags_type:
     seq:
       - id: ftext
         type: b1
@@ -52,41 +52,36 @@ types:
         type: b1
       - id: fcomment
         type: b1
-      - id: reserved
-        type: b3
-  optional_extra_fields:
+      - id: reserved1
+        type: b1
+      - id: reserved2
+        type: b1
+      - id: reserved3
+        type: b1
+  extra_field:
     seq:
-      - id: extra_length
+      - id: extra_len
         type: u2
       - id: extra_data
-        size: extra_length
-  footer:
+        size: extra_len
+  compressed_block:
     seq:
-      - id: crc32
-        type: u4
-      - id: uncompressed_size
-        type: u4
+      - id: data
+        type: byte_array
+  byte_array:
+    seq:
+      - id: value
+        type: u1
+        repeat: eos
 enums:
   compression_methods:
     8: deflate
-  operating_systems:
+  extra_flags_enum:
+    2: max_compression
+    4: fastest_compression
+  os_enum:
     0: fat
-    1: amiga
-    2: vms
     3: unix
-    4: vm_cms
-    5: atari
-    6: hpfs
     7: macintosh
-    8: z_system
-    9: cp_m
-    10: tops20
     11: ntfs
-    12: qdos
-    13: acorn
-    14: vfat
-    15: mvs
-    16: beos
-    17: tandem
-    18: theos
     255: unknown

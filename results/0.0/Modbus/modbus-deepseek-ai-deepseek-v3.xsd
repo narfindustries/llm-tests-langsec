@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/Modbus"
+           xmlns:mod="http://www.example.org/Modbus"
+           elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="ModbusFormat">
+                <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ModbusMessage" dfdl:lengthKind="implicit">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionIdentifier" type="xs:unsignedShort"/>
+                <xs:element name="ProtocolIdentifier" type="xs:unsignedShort"/>
+                <xs:element name="LengthField" type="xs:unsignedShort"/>
+                <xs:element name="UnitIdentifier" type="xs:unsignedByte"/>
+                <xs:element name="FunctionCode" type="mod:FunctionCodeType"/>
+                <xs:choice>
+                    <xs:sequence>
+                        <xs:element name="AddressField" type="xs:unsignedShort"/>
+                        <xs:element name="QuantityField" type="xs:unsignedShort"/>
+                        <xs:element name="ByteCount" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="DataField" type="xs:hexBinary" minOccurs="0"/>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="ErrorCode" type="mod:ErrorCodeType"/>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="SubFunctionCode" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="ReferenceType" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="FileNumber" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="RecordNumber" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="RecordLength" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="Mask" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="ANDMask" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="ORMask" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="FIFOCount" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="FIFOValueRegister" type="xs:unsignedShort" minOccurs="0"/>
+                        <xs:element name="MEIType" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="ReadDeviceIDCode" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="ObjectID" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="ConformityLevel" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="NextObjectID" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="MoreFollows" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="NumberOfObjects" type="xs:unsignedByte" minOccurs="0"/>
+                        <xs:element name="ObjectValue" type="xs:hexBinary" minOccurs="0"/>
+                    </xs:sequence>
+                </xs:choice>
+                <xs:element name="Checksum" type="xs:unsignedShort" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="FunctionCodeType">
+        <xs:restriction base="xs:unsignedByte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="5"/>
+            <xs:enumeration value="6"/>
+            <xs:enumeration value="7"/>
+            <xs:enumeration value="8"/>
+            <xs:enumeration value="11"/>
+            <xs:enumeration value="12"/>
+            <xs:enumeration value="15"/>
+            <xs:enumeration value="16"/>
+            <xs:enumeration value="17"/>
+            <xs:enumeration value="20"/>
+            <xs:enumeration value="21"/>
+            <xs:enumeration value="22"/>
+            <xs:enumeration value="23"/>
+            <xs:enumeration value="24"/>
+            <xs:enumeration value="43"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ErrorCodeType">
+        <xs:restriction base="xs:unsignedByte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="5"/>
+            <xs:enumeration value="6"/>
+            <xs:enumeration value="7"/>
+            <xs:enumeration value="8"/>
+            <xs:enumeration value="10"/>
+            <xs:enumeration value="11"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

@@ -1,92 +1,62 @@
+// Import necessary crates
 use nom::{
     bytes::complete::take,
-    combinator::map,
+    combinator::map_res,
     number::complete::{be_u16, be_u8},
     sequence::tuple,
     IResult,
 };
 use std::env;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
+use std::path::Path;
 
-// Modbus Function Codes
-const READ_COILS: u8 = 0x01;
-const READ_DISCRETE_INPUTS: u8 = 0x02;
-const READ_HOLDING_REGISTERS: u8 = 0x03;
-const READ_INPUT_REGISTERS: u8 = 0x04;
-const WRITE_SINGLE_COIL: u8 = 0x05;
-const WRITE_SINGLE_REGISTER: u8 = 0x06;
-const DIAGNOSTICS: u8 = 0x08;
-
+// Define a data structure for the Modbus ADU
 #[derive(Debug)]
-enum ModbusFunction {
-    ReadCoils(u16, u16),
-    ReadDiscreteInputs(u16, u16),
-    ReadHoldingRegisters(u16, u16),
-    ReadInputRegisters(u16, u16),
-    WriteSingleCoil(u16, u16),
-    WriteSingleRegister(u16, u16),
-    Diagnostics(u16, Vec<u8>),
-    Unknown(u8, Vec<u8>),
-}
-
-#[derive(Debug)]
-struct ModbusPDU {
+struct ModbusAdu {
+    transaction_id: u16,
+    protocol_id: u16,
+    length: u16,
+    unit_id: u8,
     function_code: u8,
-    data: ModbusFunction,
+    data: Vec<u8>,
 }
 
-fn parse_modbus_pdu(input: &[u8]) -> IResult<&[u8], ModbusPDU> {
-    let (input, function_code) = be_u8(input)?;
-    let (input, data) = match function_code {
-        READ_COILS | READ_DISCRETE_INPUTS | READ_HOLDING_REGISTERS | READ_INPUT_REGISTERS => {
-            let (input, (starting_address, quantity)) = tuple((be_u16, be_u16))(input)?;
-            let data = match function_code {
-                READ_COILS => ModbusFunction::ReadCoils(starting_address, quantity),
-                READ_DISCRETE_INPUTS => ModbusFunction::ReadDiscreteInputs(starting_address, quantity),
-                READ_HOLDING_REGISTERS => ModbusFunction::ReadHoldingRegisters(starting_address, quantity),
-                READ_INPUT_REGISTERS => ModbusFunction::ReadInputRegisters(starting_address, quantity),
-                _ => unreachable!(),
-            };
-            (input, data)
-        }
-        WRITE_SINGLE_COIL => {
-            let (input, (address, value)) = tuple((be_u16, be_u16))(input)?;
-            (input, ModbusFunction::WriteSingleCoil(address, value))
-        }
-        WRITE_SINGLE_REGISTER => {
-            let (input, (address, value)) = tuple((be_u16, be_u16))(input)?;
-            (input, ModbusFunction::WriteSingleRegister(address, value))
-        }
-        DIAGNOSTICS => {
-            let (input, (sub_function, data_length)) = tuple((be_u16, be_u16))(input)?;
-            let (input, data) = take(data_length)(input)?;
-            (input, ModbusFunction::Diagnostics(sub_function, data.to_vec()))
-        }
-        _ => {
-            let data_length = input.len();
-            let (input, data) = take(data_length)(input)?;
-            (input, ModbusFunction::Unknown(function_code, data.to_vec()))
-        }
-    };
-    Ok((input, ModbusPDU { function_code, data }))
+// Function to parse Modbus ADU
+fn parse_modbus_adu(input: &[u8]) -> IResult<&[u8], ModbusAdu> {
+    let (input, (transaction_id, protocol_id, length, unit_id, function_code)) =
+        tuple((be_u16, be_u16, be_u16, be_u8, be_u8))(input)?;
+    let (input, data) = take(length - 2u16)(input)?; // length includes unit_id and function_code
+    Ok((
+        input,
+        ModbusAdu {
+            transaction_id,
+            protocol_id,
+            length,
+            unit_id,
+            function_code,
+            data: data.to_vec(),
+        },
+    ))
 }
 
-fn main() -> io::Result<()> {
+fn main() {
+    // Collect command line arguments
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        return Ok(());
+        eprintln!("Usage: {} <binary_file>", args[0]);
+        return;
     }
 
-    let mut file = File::open(&args[1])?;
+    // Open and read the binary file
+    let input_path = Path::new(&args[1]);
+    let mut file = File::open(&input_path).expect("Unable to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Unable to read file");
 
-    match parse_modbus_pdu(&buffer) {
-        Ok((_, pdu)) => println!("Parsed Modbus PDU: {:?}", pdu),
-        Err(err) => eprintln!("Failed to parse Modbus PDU: {:?}", err),
+    // Parse the Modbus ADU
+    match parse_modbus_adu(&buffer) {
+        Ok((_, adu)) => println!("{:?}", adu),
+        Err(err) => eprintln!("Failed to parse Modbus ADU: {:?}", err),
     }
-
-    Ok(())
 }

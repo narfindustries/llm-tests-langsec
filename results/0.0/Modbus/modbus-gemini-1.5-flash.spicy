@@ -1,75 +1,84 @@
-#ifndef MODBUS_GEMINI_1_5_FLASH_SPICY
-#define MODBUS_GEMINI_1_5_FLASH_SPICY
+module Modbus;
 
-#include <stdint.h>
-
-// Define Modbus function codes
-enum modbus_function_code {
-    READ_COILS = 0x01,
-    READ_DISCRETE_INPUTS = 0x02,
-    READ_HOLDING_REGISTERS = 0x03,
-    READ_INPUT_REGISTERS = 0x04,
-    WRITE_SINGLE_COIL = 0x05,
-    WRITE_SINGLE_REGISTER = 0x06,
-    WRITE_MULTIPLE_COILS = 0x0F,
-    WRITE_MULTIPLE_REGISTERS = 0x10,
-    READ_EXCEPTION_STATUS = 0x07,
-    DIAGNOSTIC = 0x08,
-    GET_COM_EVENT_COUNTER = 0x0B,
-    GET_COM_EVENT_LOG = 0x0C,
-    REPORT_SLAVE_ID = 0x11,
-    READ_FILE_RECORD = 0x14,
-    WRITE_FILE_RECORD = 0x15,
-    MASK_WRITE_REGISTER = 0x16,
-    READ_WRITE_MULTIPLE_REGISTERS = 0x17,
-    READ_FIFO_QUEUE = 0x18,
+type FunctionCode = uint8 {
+	ReadCoils = 0x01,
+	ReadDiscreteInputs = 0x02,
+	ReadHoldingRegisters = 0x03,
+	ReadInputRegisters = 0x04,
+	WriteSingleCoil = 0x05,
+	WriteSingleRegister = 0x06,
+	WriteMultipleCoils = 0x0F,
+	WriteMultipleRegisters = 0x10,
+	ReportServerId = 0x11
 };
 
-
-// Modbus request structure
-struct modbus_request {
-    uint8_t slave_address;
-    uint8_t function_code;
-    uint16_t start_address;
-    uint16_t quantity;
-    uint16_t value; // For write functions
+record ModbusPDU {
+	uint16 transaction_id;
+	uint16 protocol_id;
+	uint16 length;
+	uint8 unit_id;
+	FunctionCode function_code;
+	
+	optional ReadHoldingRegistersData read_holding_registers;
+	optional WriteMultipleRegistersData write_multiple_registers;
+	optional ReadCoilsData read_coils;
+	optional WriteSingleCoilData write_single_coil;
+	optional ReadDiscreteInputsData read_discrete_inputs;
+	optional WriteSingleRegisterData write_single_register;
+	optional WriteMultipleCoilsData write_multiple_coils;
+	optional ReadInputRegistersData read_input_registers;
+	optional ReportServerIdData report_server_id;
+	optional uint8 exception_code;
 };
 
-// Modbus response structure
-struct modbus_response {
-    uint8_t slave_address;
-    uint8_t function_code;
-    uint8_t byte_count;
-    uint8_t data[];
+record ReadHoldingRegistersData {
+	uint16 starting_address;
+	uint16 quantity;
+	uint16[quantity] data;
 };
 
+record WriteMultipleRegistersData {
+	uint16 starting_address;
+	uint16 quantity;
+	uint16[quantity] data;
+};
 
-// Function to process Modbus requests
-function process_modbus_request(modbus_request req): modbus_response
-{
-    modbus_response resp;
-    resp.slave_address = req.slave_address;
-    resp.function_code = req.function_code;
+record ReadCoilsData {
+	uint16 starting_address;
+	uint16 quantity;
+	bytes data;
+};
 
-    switch (req.function_code) {
-        case READ_COILS:
-            // Implement read coils logic
-            break;
-        case READ_HOLDING_REGISTERS:
-            // Implement read holding registers logic
-            break;
-        case WRITE_SINGLE_COIL:
-            // Implement write single coil logic
-            break;
-        case WRITE_SINGLE_REGISTER:
-            // Implement write single register logic
-            break;
-        default:
-            // Handle unsupported function codes
-            break;
-    }
+record WriteSingleCoilData {
+	uint16 output_address;
+	bool coil_value;
+};
 
-    return resp;
-}
+record ReadDiscreteInputsData {
+	uint16 starting_address;
+	uint16 quantity;
+	bytes data;
+};
 
-#endif // MODBUS_GEMINI_1_5_FLASH_SPICY
+record WriteSingleRegisterData {
+	uint16 register_address;
+	uint16 register_value;
+};
+
+record WriteMultipleCoilsData {
+	uint16 starting_address;
+	uint16 quantity;
+	bytes data;
+};
+
+record ReadInputRegistersData {
+	uint16 starting_address;
+	uint16 quantity;
+	uint16[quantity] data;
+};
+
+record ReportServerIdData {
+	uint8[length] data;
+};
+
+end

@@ -1,37 +1,62 @@
-module Network-Time-Protocol-Version-4;
+module NTP;
 
 import spicy;
 
-public type NTPv4 = unit {
-    li_vn_mode: uint8 {
-        self.leap_indicator = ($$) >> 6;
-        self.version = (($$) >> 3) & 0x07;
-        self.mode = ($$) & 0x07;
-    }
-    stratum: uint8;
-    poll: int8;
-    precision: int8;
-    root_delay: uint32;
-    root_dispersion: uint32;
-    reference_id: bytes &size=4;
-    reference_timestamp: uint64;
-    origin_timestamp: uint64;
-    receive_timestamp: uint64;
-    transmit_timestamp: uint64;
+public type NTPPacket = unit {
+    header: bitfield(8) {
+        li: 0..1;     # Leap Indicator
+        vn: 2..4;     # Version Number
+        mode: 5..7;   # Mode
+    };
+    stratum: uint8;            # Stratum
+    poll: int8;                # Poll Interval
+    precision: int8;           # Precision
+    root_delay: int32;         # Root Delay (fixed-point)
+    root_dispersion: uint32;   # Root Dispersion (fixed-point)
+    reference_id: bytes &size=4;    # Reference ID
+    reference_ts: NTPTimestamp;  # Reference Timestamp
+    origin_ts: NTPTimestamp;     # Origin Timestamp
+    receive_ts: NTPTimestamp;    # Receive Timestamp
+    transmit_ts: NTPTimestamp;   # Transmit Timestamp
 
-    var leap_indicator: uint8;
-    var version: uint8;
-    var mode: uint8;
+    extensions: ExtensionField[];
 };
 
-on NTPv4::li_vn_mode -> event NTPv4::li_vn_mode($input.leap_indicator, $input.version, $input.mode);
-on NTPv4::stratum -> event NTPv4::stratum($input.stratum);
-on NTPv4::poll -> event NTPv4::poll($input.poll);
-on NTPv4::precision -> event NTPv4::precision($input.precision);
-on NTPv4::root_delay -> event NTPv4::root_delay($input.root_delay);
-on NTPv4::root_dispersion -> event NTPv4::root_dispersion($input.root_dispersion);
-on NTPv4::reference_id -> event NTPv4::reference_id($input.reference_id);
-on NTPv4::reference_timestamp -> event NTPv4::reference_timestamp($input.reference_timestamp);
-on NTPv4::origin_timestamp -> event NTPv4::origin_timestamp($input.origin_timestamp);
-on NTPv4::receive_timestamp -> event NTPv4::receive_timestamp($input.receive_timestamp);
-on NTPv4::transmit_timestamp -> event NTPv4::transmit_timestamp($input.transmit_timestamp);
+type NTPTimestamp = unit {
+    seconds: uint32;     # Seconds since January 1, 1900
+    fraction: uint32;    # Fractional seconds
+};
+
+type ExtensionField = unit {
+    field_type: uint16;        # Extension field type
+    length: uint16;      # Extension field length
+    value: bytes &size=self.length - 4;  # Extension field value
+    padding: bytes &size=(4 - (self.length % 4)) if self.length % 4 != 0;
+};
+
+type MAC = unit {
+    key_id: uint32;      # Key ID
+    digest: bytes &size=20;  # Message Digest (SHA-1 = 20 bytes)
+};
+
+on NTPPacket::header.li {
+    switch ( self.header.li ) {
+        0 -> print "no warning";
+        1 -> print "last minute has 61 seconds";
+        2 -> print "last minute has 59 seconds";
+        3 -> print "alarm condition";
+    }
+}
+
+on NTPPacket::header.mode {
+    switch ( self.header.mode ) {
+        0 -> print "reserved";
+        1 -> print "symmetric active";
+        2 -> print "symmetric passive";
+        3 -> print "client";
+        4 -> print "server";
+        5 -> print "broadcast";
+        6 -> print "control";
+        7 -> print "private";
+    }
+}

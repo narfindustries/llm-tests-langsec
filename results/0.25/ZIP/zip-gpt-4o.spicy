@@ -1,32 +1,93 @@
 module ZIP;
 
-import spicy;
+type FileName = bytes &size=uint16;
 
-public type ZIP = unit {
-    signature: bytes &size=4 &check=$$ == "\x50\x4b\x03\x04",
-    version: uint16,
-    flags: uint16,
-    compression: uint16,
-    mod_time: uint16,
-    mod_date: uint16,
-    crc32: uint32,
-    compressed_size: uint32,
-    uncompressed_size: uint32,
-    filename_length: uint16,
-    extra_field_length: uint16,
-    filename: string &size=filename_length,
-    extra_field: bytes &size=extra_field_length,
-    data: bytes &size=compressed_size
+type ExtraField = bytes &size=uint16;
+
+type FileComment = bytes &size=uint16;
+
+type LocalFileHeader = unit {
+    signature: uint32 &equals=0x04034b50;
+    version_needed: uint16;
+    general_purpose_bit_flag: uint16;
+    compression_method: uint16;
+    last_mod_file_time: uint16;
+    last_mod_file_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_name: bytes &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
 };
 
-public type ZIPFile = unit {
-    files: ZIP[] &until=$input.eod()
+type DataDescriptor = unit {
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
 };
 
-public hook zeek_init() {
-    Spicy::register_protocol_analyzer(
-        "ZIP",
-        &ZIPFile,
-        &Spicy::ANALYZER_ZIP
-    );
-}
+type CentralDirectoryFileHeader = unit {
+    signature: uint32 &equals=0x02014b50;
+    version_made_by: uint16;
+    version_needed: uint16;
+    general_purpose_bit_flag: uint16;
+    compression_method: uint16;
+    last_mod_file_time: uint16;
+    last_mod_file_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number_start: uint16;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
+    relative_offset_of_local_header: uint32;
+    file_name: bytes &size=file_name_length;
+    extra_field: bytes &size=extra_field_length;
+    file_comment: bytes &size=file_comment_length;
+};
+
+type EndOfCentralDirectoryRecord = unit {
+    signature: uint32 &equals=0x06054b50;
+    number_of_this_disk: uint16;
+    disk_where_central_directory_starts: uint16;
+    number_of_central_directory_records_on_this_disk: uint16;
+    total_number_of_central_directory_records: uint16;
+    size_of_central_directory: uint32;
+    offset_of_start_of_central_directory: uint32;
+    zip_file_comment_length: uint16;
+    zip_file_comment: bytes &size=zip_file_comment_length;
+};
+
+type ZIP64EndOfCentralDirectoryRecord = unit {
+    signature: uint32 &equals=0x06064b50;
+    size_of_zip64_end_of_central_directory_record: uint64;
+    version_made_by: uint16;
+    version_needed: uint16;
+    number_of_this_disk: uint32;
+    disk_where_central_directory_starts: uint32;
+    number_of_central_directory_records_on_this_disk: uint64;
+    total_number_of_central_directory_records: uint64;
+    size_of_central_directory: uint64;
+    offset_of_start_of_central_directory: uint64;
+    zip64_extensible_data_sector: bytes &optional;
+};
+
+type ZIP64EndOfCentralDirectoryLocator = unit {
+    signature: uint32 &equals=0x07064b50;
+    number_of_disk_with_start_of_zip64_end_of_central_directory: uint32;
+    relative_offset_of_zip64_end_of_central_directory_record: uint64;
+    total_number_of_disks: uint32;
+};
+
+type ZIPFile = unit {
+    local_file_headers: vector<LocalFileHeader>;
+    central_directory_file_headers: vector<CentralDirectoryFileHeader>;
+    end_of_central_directory_record: EndOfCentralDirectoryRecord;
+    zip64_end_of_central_directory_record: ZIP64EndOfCentralDirectoryRecord &optional;
+    zip64_end_of_central_directory_locator: ZIP64EndOfCentralDirectoryLocator &optional;
+};

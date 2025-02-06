@@ -2,21 +2,74 @@ module ICMP;
 
 import spicy;
 
-type ICMPHeader = unit {
+type IPv4Addr = unit {
+    addr: bytes &size=4;
+};
+
+public type ICMPHeader = unit {
     type: uint8;
     code: uint8;
     checksum: uint16;
-    restOfHeader: bytes &size=4;
+    rest_of_header: bytes &size=4;
 };
 
-type ICMPMessage = unit {
-    header: ICMPHeader;
+public type EchoMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
     data: bytes &eod;
-    
-    on %init {
-        print "ICMP Message Type: ", self.header.type;
-        print "ICMP Message Code: ", self.header.code;
-    }
 };
 
-public type ICMPAnalyzer = spicy::Driver<ICMPMessage>;
+public type UnreachableMessage = unit {
+    unused: bytes &size=2;
+    next_hop_mtu: uint16;
+    original_ip_header: bytes &size=20;  // Assuming the IP header is 20 bytes without options
+    original_ip_payload: bytes &size=8;  // First 8 bytes of the original payload
+};
+
+public type TimeExceededMessage = unit {
+    unused: bytes &size=4;
+    original_ip_header: bytes &size=20;
+    original_ip_payload: bytes &size=8;
+};
+
+public type ParameterProblemMessage = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+    original_ip_header: bytes &size=20;
+    original_ip_payload: bytes &size=8;
+};
+
+public type RedirectMessage = unit {
+    gateway_internet_address: IPv4Addr;
+    original_ip_header: bytes &size=20;
+    original_ip_payload: bytes &size=8;
+};
+
+public type TimestampMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+public type InformationMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+};
+
+public type ICMP = unit {
+    header: ICMPHeader;
+    message: switch (self.header.type) {
+        0 -> echo_reply: EchoMessage;
+        3 -> destination_unreachable: UnreachableMessage;
+        4 -> source_quench: UnreachableMessage;
+        5 -> redirect: RedirectMessage;
+        8 -> echo_request: EchoMessage;
+        11 -> time_exceeded: TimeExceededMessage;
+        12 -> parameter_problem: ParameterProblemMessage;
+        13, 14 -> timestamp: TimestampMessage;
+        15, 16 -> information: InformationMessage;
+        * -> data: bytes &eod;
+    };
+};

@@ -1,40 +1,42 @@
-# Zeek Spicy specification for parsing SQLite3 database files
+module SQLite3DB;
 
-module SQLite3;
-
-type SQLite3Header = unit {
-    magic: bytes &length=16 &check==$b"\x53\x51\x4c\x69\x74\x65\x20\x66\x6f\x72\x6d\x61\x74\x20\x33\x00";
+type SQLite3FileHeader = unit {
+    magic: bytes &size=16 &requires=(magic == "SQLite format 3\000");
     page_size: uint16;
-    file_format_write_version: uint8;
-    file_format_read_version: uint8;
-    reserved_space_per_page: uint8;
+    write_version: uint8;
+    read_version: uint8;
+    reserved_space: uint8;
     max_embedded_payload_fraction: uint8;
     min_embedded_payload_fraction: uint8;
     leaf_payload_fraction: uint8;
     file_change_counter: uint32;
-    database_size_in_pages: uint32;
+    in_header_database_size: uint32;
     first_freelist_trunk_page: uint32;
     total_freelist_pages: uint32;
     schema_cookie: uint32;
-    schema_format_version: uint32;
+    schema_format_number: uint32 &requires=(schema_format_number == 1 || schema_format_number == 2 || schema_format_number == 3 || schema_format_number == 4);
     default_page_cache_size: uint32;
-    largest_btree_root_page_number: uint32;
-    text_encoding: uint32;
+    largest_root_btree_page_number: uint32;
+    database_text_encoding: uint32 &requires=(database_text_encoding == 1 || database_text_encoding == 2 || database_text_encoding == 3);
     user_version: uint32;
     incremental_vacuum_mode: uint32;
     application_id: uint32;
-    reserved: bytes &length=20;
-    version_valid_for_number: uint32;
+    reserved_for_expansion: bytes &size=20;
+    version_valid_for: uint32;
     sqlite_version_number: uint32;
 };
 
-public type SQLite3DB = unit {
-    header: SQLite3Header;
-    # Further parsing of SQLite3 database structure can be done here
+type BTreePageHeader = unit {
+    page_type: uint8 &requires=(page_type == 0x02 || page_type == 0x05 || page_type == 0x0A || page_type == 0x0D);
+    first_freeblock_offset: uint16;
+    num_cells: uint16;
+    start_of_cell_content_area: uint16;
+    fragmented_free_bytes: uint8;
+    rightmost_pointer: optional uint32 &optional = (page_type == 0x02 || page_type == 0x05);
 };
 
-public module Parser = global {
-    hook zeek_init() {
-        Spicy::register_parser("application/x-sqlite3", SQLite3::SQLite3DB);
-    }
-}
+type SQLite3DBFile = unit {
+    header: SQLite3FileHeader;
+    # Placeholder for page parsing, dependent on header page size
+    # pages: [BTreePage] &size=header.in_header_database_size; 
+};

@@ -1,50 +1,33 @@
-format GZIP:
-    let file_header = {
-        signature: bytes[2] == [0x1F, 0x8B],
-        compression_method: u8,
-        flags: u8,
-        modification_time: u32,
-        extra_flags: u8,
-        operating_system: u8
-    }
-
-    let optional_extra_fields = match flags:
-        when flags & 0x04 == 0x04:
-            let extra_length = u16
-            bytes[extra_length]
-        else:
-            []
-
-    let optional_filename = match flags:
-        when flags & 0x08 == 0x08:
-            null_terminated_string
-        else:
-            []
-
-    let optional_comment = match flags:
-        when flags & 0x10 == 0x10:
-            null_terminated_string
-        else:
-            []
-
-    let optional_header_crc = match flags:
-        when flags & 0x02 == 0x02:
-            u16
-        else:
-            []
-
-    let compressed_blocks = deflate_compressed_data
-
-    let file_footer = {
-        crc32: u32,
-        input_size: u32
-    }
-
-    structure: 
-        file_header
-        optional_extra_fields
-        optional_filename
-        optional_comment
-        optional_header_crc
-        compressed_blocks
-        file_footer
+type gzip_header = struct {
+    id1: u8
+        where { self == 0x1F };
+    id2: u8
+        where { self == 0x8B };
+    compression_method: u8
+        where { self == 0x08 };
+    flags: bitfield {
+        text_flag: 1;
+        header_crc_flag: 1;
+        extra_flag: 1;
+        filename_flag: 1;
+        comment_flag: 1;
+        reserved: 3;
+    };
+    modification_time: u32;
+    extra_flags: u8;
+    operating_system: u8;
+    extra_field: if (flags.extra_flag == 1) then {
+        length: u16;
+        data: bytes(length);
+    } else unit;
+    original_filename: if (flags.filename_flag == 1) then 
+        null_terminated_string 
+    else unit;
+    file_comment: if (flags.comment_flag == 1) then 
+        null_terminated_string 
+    else unit;
+    header_crc: if (flags.header_crc_flag == 1) then u16 else unit;
+    compressed_data: bytes;
+    crc32: u32;
+    original_length: u32;
+}

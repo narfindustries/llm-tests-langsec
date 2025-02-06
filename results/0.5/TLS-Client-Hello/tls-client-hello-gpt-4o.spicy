@@ -1,42 +1,89 @@
-module TLS::ClientHello;
+module TLSClientHello;
 
 public type ClientHello = unit {
-    version: uint16;
+    client_version: uint16;
     random: bytes &size=32;
-    session_id: bytes &length_type=uint8;
-    cipher_suites: array of uint16 &length_type=uint16;
-    compression_methods: array of uint8 &length_type=uint8;
-    extensions: array of Extension &length_type=uint16;
+    legacy_session_id: bytes &length=uint8;
+    cipher_suites: vector[uint16] &length=uint16;
+    legacy_compression_methods: vector[uint8] &length=uint8;
+    extensions: vector<Extension> &length=uint16;
 };
 
-public type Extension = unit {
-    type: uint16;
+type Extension = unit {
+    extension_type: uint16;
+    extension_data: bytes &length=uint16;
+};
+
+type SupportedVersions = unit {
+    extension_type: uint16 &value=0x002b;
     length: uint16;
-    data: bytes &size=length;
+    versions: vector[uint16] &length=(length / 2);
 };
 
-public type TLSRecord = unit {
-    content_type: uint8;
-    version: uint16;
+type SupportedGroups = unit {
+    extension_type: uint16 &value=0x000a;
     length: uint16;
-    content: bytes &size=length;
+    groups: vector[uint16] &length=(length / 2);
 };
 
-public type TLSHandshake = unit {
-    handshake_type: uint8;
-    length: uint24;
-    body: bytes &size=length;
+type SignatureAlgorithms = unit {
+    extension_type: uint16 &value=0x000d;
+    length: uint16;
+    algorithms: vector[uint16] &length=(length / 2);
 };
 
-public type TLSClientHello = unit {
-    record: TLSRecord {
-        content_type == 22; # Handshake
-    }
-    handshake: TLSHandshake {
-        handshake_type == 1; # ClientHello
-    }
-    client_hello: ClientHello {
-        # Parsing the body of the handshake message as a ClientHello
-        parse_from=handshake.body;
-    }
+type KeyShare = unit {
+    extension_type: uint16 &value=0x0033;
+    length: uint16;
+    key_shares: vector<KeyShareEntry> &length=length / 2;
+};
+
+type KeyShareEntry = unit {
+    group: uint16;
+    key_exchange: bytes &length=uint16;
+};
+
+type PSKKeyExchangeModes = unit {
+    extension_type: uint16 &value=0x002d;
+    length: uint16;
+    modes: vector[uint8] &length=length;
+};
+
+type ServerName = unit {
+    extension_type: uint16 &value=0x0000;
+    length: uint16;
+    server_name_list: vector<ServerNameEntry> &length=length;
+};
+
+type ServerNameEntry = unit {
+    name_type: uint8;
+    host_name: bytes &length=uint16;
+};
+
+type Cookie = unit {
+    extension_type: uint16 &value=0x002c;
+    length: uint16;
+    cookie_data: bytes &length=length;
+};
+
+type PreSharedKey = unit {
+    extension_type: uint16 &value=0x0029;
+    length: uint16;
+    identities: vector<PSKIdentity> &length=uint16;
+    binders: vector<PSKBinder> &length=uint16;
+};
+
+type PSKIdentity = unit {
+    identity: bytes &length=uint16;
+    obfuscated_ticket_age: uint32;
+};
+
+type PSKBinder = unit {
+    binder: bytes &length=uint8;
+};
+
+type EarlyData = unit {
+    extension_type: uint16 &value=0x002a;
+    length: uint16;
+    early_data_context: bytes &length=length;
 };

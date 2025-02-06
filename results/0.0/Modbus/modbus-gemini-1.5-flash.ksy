@@ -1,50 +1,103 @@
-meta:
-  id: modbus-gemini-1
-  title: Modbus Gemini 1.5 Flash
-  endian: be
-
 types:
-  uint16:
-    type: u2
-
-  uint32:
-    type: u4
-
-  uint64:
-    type: u8
-
-  crc16:
-    type: u2
-    read: crc16_ccitt
-
-seqs:
-  header:
+  modbus_pdu:
     seq:
-      - id: magic
-        type: u4
-        enum: magic_enum
-      - id: version
-        type: u2
-      - id: length
-        type: u4
-      - id: crc
-        type: crc16
-
-  flash_data:
-    seq:
+      - id: function_code
+        type: u1
       - id: data
-        type: u1*
+        type: modbus_data
+        if: function_code < 0x80
+      - id: exception_code
+        type: u1
+        if: function_code >= 0x80
 
-  modbus_gemini_1_5_flash:
-    seq:
-      - id: header
-        type: header
-      - id: flash_data
-        type: flash_data
-
-
-enums:
-  magic_enum:
-    0xABCD1234: magic_abcd1234
-
+  modbus_data:
+    switch: function_code
+    cases:
+      0x01:
+        seq:
+          - id: byte_count
+            type: u1
+          - id: coil_status
+            type: bits
+            repeat: expr
+            repeat-expr: byte_count * 8
+      0x02:
+        seq:
+          - id: byte_count
+            type: u1
+          - id: input_status
+            type: bits
+            repeat: expr
+            repeat-expr: byte_count * 8
+      0x03:
+        seq:
+          - id: byte_count
+            type: u1
+          - id: holding_registers
+            type: u2
+            repeat: expr
+            repeat-expr: byte_count / 2
+      0x04:
+        seq:
+          - id: byte_count
+            type: u1
+          - id: input_registers
+            type: u2
+            repeat: expr
+            repeat-expr: byte_count / 2
+      0x05:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: coil_value
+            type: u1
+      0x06:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: register_value
+            type: u2
+      0x0f:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: quantity
+            type: u2
+          - id: byte_count
+            type: u1
+          - id: coil_values
+            type: u1
+            repeat: expr
+            repeat-expr: byte_count
+      0x10:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: quantity
+            type: u2
+          - id: byte_count
+            type: u1
+          - id: register_values
+            type: u2
+            repeat: expr
+            repeat-expr: byte_count / 2
+      0x11:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: quantity
+            type: u2
+          - id: byte_count
+            type: u1
+          - id: coil_values
+            type: u1
+            repeat: expr
+            repeat-expr: byte_count
+      0x16:
+        seq:
+          - id: starting_address
+            type: u2
+          - id: register_value
+            type: u2
+      # Add other function codes as needed...  This is not exhaustive.
 

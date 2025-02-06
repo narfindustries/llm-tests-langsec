@@ -1,61 +1,77 @@
 module GIF;
 
+public type RGB = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
 public type LogicalScreenDescriptor = unit {
-    canvasWidth: uint16;
-    canvasHeight: uint16;
-    packedFields: uint8;
+    screenWidth: uint16;
+    screenHeight: uint16;
+    packedFields: bitfield(8) {
+        globalColorTableFlag: 1;
+        colorResolution: 3;
+        sortFlag: 1;
+        sizeGlobalColorTable: 3;
+    };
     backgroundColorIndex: uint8;
     pixelAspectRatio: uint8;
 };
 
 public type GlobalColorTable = unit {
-    entries: vector<ColorTableEntry> &size=globalColorTableSize();
-};
-
-type ColorTableEntry = unit {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
+    entries: RGB[] &size=(2**(this.up().logicalScreenDescriptor.packedFields.sizeGlobalColorTable+1));
 };
 
 public type ImageDescriptor = unit {
-    leftPosition: uint16;
-    topPosition: uint16;
-    width: uint16;
-    height: uint16;
-    packedFields: uint8;
+    imageSeparator: uint8;
+    imageLeftPosition: uint16;
+    imageTopPosition: uint16;
+    imageWidth: uint16;
+    imageHeight: uint16;
+    packedFields: bitfield(8) {
+        localColorTableFlag: 1;
+        interlaceFlag: 1;
+        sortFlag: 1;
+        reserved: 2;
+        sizeLocalColorTable: 3;
+    };
+};
+
+public type LocalColorTable = unit {
+    entries: RGB[] &size=(2**(this.up().imageDescriptor.packedFields.sizeLocalColorTable+1));
 };
 
 public type ImageData = unit {
     lzwMinimumCodeSize: uint8;
-    dataBlocks: DataBlock+;
+    dataBlocks: bytes &eod;
 };
 
-type DataBlock = unit {
+public type ExtensionBlock = unit {
+    extensionIntroducer: uint8;
+    extensionLabel: uint8;
     blockSize: uint8;
-    blockData: bytes &size=this.blockSize;
+    data: bytes &size=blockSize;
+};
+
+public type Content = unit {
+    done: bool;
+    on %init {
+        self.done = false;
+    }
+    switch {
+        on image: ImageDescriptor &requires=(self.imageSeparator == 0x2C);
+        on extension: ExtensionBlock &requires=(self.extensionIntroducer == 0x21);
+        on trailer: uint8 &requires=(self == 0x3B) {
+            print "End of GIF file.";
+            self.done = true;
+        }
+    } &until=self.done;
 };
 
 public type GIFFile = unit {
-    header: bytes &size=6;
-    logicalScreen: LogicalScreenDescriptor;
-    globalColorTable: GlobalColorTable &if=hasGlobalColorTable();
-    imageDescriptor: ImageDescriptor;
-    imageData: ImageData;
-
-    on %init {
-        print "Initializing GIF parsing";
-    }
-
-    on %done {
-        print "Finished parsing GIF";
-    }
-
-    function hasGlobalColorTable() : bool {
-        return (this.logicalScreen.packedFields & 0x80) != 0;
-    }
-
-    function globalColorTableSize() : uint16 {
-        return (1 << ((this.logicalScreen.packedFields & 0x07) + 1)) * 3;
-    }
+    header: /[GIF89a]{6}/;
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable: GlobalColorTable &if=logicalScreenDescriptor.packedFields.globalColorTableFlag;
+    content: Content;
 };

@@ -2,57 +2,77 @@
 #include <stdlib.h>
 #include <hammer/hammer.h>
 
-// Hammer parsers for JPEG structures
-static HParser *jpeg_soi;  // Start of Image
-static HParser *jpeg_app0; // APP0 marker
-static HParser *jpeg_dqt;  // Define Quantization Table
-static HParser *jpeg_sof0; // Start of Frame (Baseline DCT)
-static HParser *jpeg_dht;  // Define Huffman Table
-static HParser *jpeg_sos;  // Start of Scan
-static HParser *jpeg_eoi;  // End of Image
-static HParser *jpeg_segment;
+// JPEG Markers
+#define SOI 0xFFD8
+#define EOI 0xFFD9
+#define SOF0 0xFFC0
+#define DQT 0xFFDB
+#define DHT 0xFFC4
+#define SOS 0xFFDA
+#define APP0 0xFFE0
+#define COM 0xFFFE
 
-void init_parsers() {
-    H_UINT16_BE(uint16);
-    
-    jpeg_soi = h_token_u16(0xFFD8);  // SOI marker
-    jpeg_app0 = h_sequence(h_token_u16(0xFFE0), h_length_value(h_uint16(), h_any()), NULL);
-    jpeg_dqt = h_sequence(h_token_u16(0xFFDB), h_length_value(h_uint16(), h_any()), NULL);
-    jpeg_sof0 = h_sequence(h_token_u16(0xFFC0), h_length_value(h_uint16(), h_any()), NULL);
-    jpeg_dht = h_sequence(h_token_u16(0xFFC4), h_length_value(h_uint16(), h_any()), NULL);
-    jpeg_sos = h_sequence(h_token_u16(0xFFDA), h_length_value(h_uint16(), h_any()), NULL);
-    jpeg_eoi = h_token_u16(0xFFD9);  // EOI marker
-    
-    jpeg_segment = h_choice(jpeg_soi, jpeg_app0, jpeg_dqt, jpeg_sof0, jpeg_dht, jpeg_sos, jpeg_eoi, NULL);
+// Utility functions
+static void check_parser(HParser *p, const uint8_t *input, size_t length) {
+    HParseResult *result = h_parse(p, input, length);
+    if (result) {
+        printf("Parsing successful!\n");
+        h_pprint(stdout, result->ast, 0, 4);
+        h_parse_result_free(result);
+    } else {
+        printf("Parsing failed!\n");
+    }
 }
 
-int main() {
-    init_parsers();
-    
-    // Create input buffer with JPEG data
-    uint8_t jpeg_data[] = {
-        0xFF, 0xD8,       // SOI
-        0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,  // APP0
-        0xFF, 0xDB,       // DQT
-        0x00, 0x43, 0x00, // DQT Length and QT Information
-        0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x10, 0x00, 0x10, 0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,  // SOF0
-        0xFF, 0xC4,       // DHT
-        0xFF, 0xDA,       // SOS
-        0xFF, 0xD9        // EOI
-    };
+static uint8_t* read_file(const char *filename, size_t *length) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+    fseek(file, 0, SEEK_END);
+    *length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    uint8_t *data = malloc(*length);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+    if (fread(data, 1, *length, file) != *length) {
+        perror("Failed to read file");
+        free(data);
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+    fclose(file);
+    return data;
+}
 
-    size_t len = sizeof(jpeg_data)/sizeof(jpeg_data[0]);
-    HParseResult *result = h_parse(jpeg_segment, jpeg_data, len);
+// JPEG parser
+static HParser *jpeg_parser() {
+    HParser *marker = h_uint16();
+    HParser *length = h_uint16();
+    HParser *data = h_repeat_n(h_uint8(), h_sub(length, h_size(2)));
+    HParser *segment = h_sequence(marker, length, data, NULL);
 
-    if (result) {
-        printf("JPEG parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Failed to parse JPEG.\n");
+    HParser *jpeg = h_many(segment);
+    return jpeg;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parse_result_free(result);
-    h_shutdown_parsers();
+    size_t length;
+    uint8_t *data = read_file(argv[1], &length);
 
-    return 0;
+    HParser *p = jpeg_parser();
+    check_parser(p, data, length);
+
+    free(data);
+    h_free_parser(p);
+    return EXIT_SUCCESS;
 }

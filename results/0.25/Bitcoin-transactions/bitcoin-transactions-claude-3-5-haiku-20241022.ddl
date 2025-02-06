@@ -1,63 +1,32 @@
-type Transaction = {
-    inputs: List<Input>,
-    outputs: List<Output>,
-    lockTime: U32
-}
+grammar BitcoinTransaction {
+    transaction = version input_count inputs output_count outputs locktime witness_marker? witness_flag? witness_data?;
 
-type Input = {
-    txHash: Bytes32,
-    outputIndex: U32,
-    scriptSig: Bytes,
-    sequence: U32
-}
+    version: u32;
+    input_count: varint;
+    inputs: Input[input_count];
+    output_count: varint;
+    outputs: Output[output_count];
+    locktime: u32;
+    witness_marker: u8?;
+    witness_flag: u8?;
+    witness_data: WitnessData[input_count]?;
 
-type Output = {
-    value: U64,
-    scriptPubKey: Bytes
-}
-
-def validateTransaction(tx: Transaction) -> Bool {
-    validateInputs(tx.inputs) && 
-    validateOutputs(tx.outputs) && 
-    calculateTotalInputValue(tx.inputs) >= calculateTotalOutputValue(tx.outputs)
-}
-
-def validateInputs(inputs: List<Input>) -> Bool {
-    inputs.length > 0 && 
-    inputs.all(input -> 
-        input.txHash != Bytes32.zero() && 
-        input.scriptSig.length > 0
-    )
-}
-
-def validateOutputs(outputs: List<Output>) -> Bool {
-    outputs.length > 0 && 
-    outputs.all(output -> output.value > 0)
-}
-
-def calculateTotalInputValue(inputs: List<Input>) -> U64 {
-    inputs.fold(0, (acc, input) -> acc + lookupInputValue(input))
-}
-
-def calculateTotalOutputValue(outputs: List<Output>) -> U64 {
-    outputs.fold(0, (acc, output) -> acc + output.value)
-}
-
-def lookupInputValue(input: Input) -> U64 {
-    // Placeholder for actual input value lookup mechanism
-    0
-}
-
-def parseTransaction(rawTx: Bytes) -> Transaction {
-    // Implement transaction parsing logic
-    Transaction {
-        inputs: [],
-        outputs: [],
-        lockTime: 0
+    Input = {
+        previous_tx_hash: bytes(32);
+        previous_output_index: u32;
+        script_sig_length: varint;
+        script_sig: bytes(script_sig_length);
+        sequence_number: u32;
     }
-}
 
-def serializeTransaction(tx: Transaction) -> Bytes {
-    // Implement transaction serialization logic
-    Bytes.empty()
+    Output = {
+        amount: u64;
+        script_pubkey_length: varint;
+        script_pubkey: bytes(script_pubkey_length);
+    }
+
+    WitnessData = {
+        witness_item_count: varint;
+        witness_items: bytes(witness_item_count)[];
+    }
 }

@@ -1,52 +1,52 @@
 meta:
   id: tls_client_hello
-  title: TLS Client Hello
+  title: TLS ClientHello
+  application: TLS
   file-extension: tls
   endian: be
 
 seq:
-  - id: record_length
+  - id: client_version
     type: u2
-  - id: message_type
-    type: u1
-  - id: version
-    type: version
   - id: random
-    type: random
-  - id: session_id_length
-    type: u1
-  - id: session_id
-    size: session_id_length
+    size: 32
+  - id: legacy_session_id
+    type: session_id
+
   - id: cipher_suites_length
     type: u2
   - id: cipher_suites
-    type: cipher_suites
-  - id: compression_methods_length
+    type: u2
+    repeat: expr
+    repeat-expr: cipher_suites_length / 2
+
+  - id: legacy_compression_methods_length
     type: u1
-  - id: compression_methods
-    size: compression_methods_length
+  - id: legacy_compression_methods
+    repeat: expr
+    repeat-expr: legacy_compression_methods_length
+    type: u1
+
   - id: extensions_length
     type: u2
   - id: extensions
-    size: extensions_length
+    type: extension
+    repeat: expr
+    repeat-expr: extensions_length
 
 types:
-  version:
+  session_id:
     seq:
-      - id: major
+      - id: length
         type: u1
-      - id: minor
-        type: u1
+      - id: value
+        size: length
 
-  random:
+  extension:
     seq:
-      - id: gmt_unix_time
-        type: u4
-      - id: random_bytes
-        size: 28
-
-  cipher_suites:
-    seq:
-      - id: cipher_suites
+      - id: type
         type: u2
-        repeat: eos
+      - id: length
+        type: u2
+      - id: data
+        size: length

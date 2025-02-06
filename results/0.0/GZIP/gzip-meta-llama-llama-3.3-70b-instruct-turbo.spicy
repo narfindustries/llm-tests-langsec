@@ -1,69 +1,43 @@
-# Define the GZIP file format
-file format gzip {
-  # Magic number for GZIP files
-  magic = 0x1f 0x8b;
+module GZIP;
 
-  # Compression method (always 8 for DEFLATE)
-  compression_method = uint8 == 8;
+type gzip_flags = uint8;
+const FTEXT: gzip_flags = 0x01;
+const FHCRC: gzip_flags = 0x02;
+const FEXTRA: gzip_flags = 0x04;
+const FNAME: gzip_flags = 0x08;
+const FCOMMENT: gzip_flags = 0x10;
 
-  # Flags
-  flags = uint8;
+type gzip_os = uint8;
+const FAT: gzip_os = 0x00;
+const Amiga: gzip_os = 0x01;
+const VMS: gzip_os = 0x02;
+const Unix: gzip_os = 0x03;
+const VM_CMS: gzip_os = 0x04;
+const Atari_TOS: gzip_os = 0x05;
+const HPFS: gzip_os = 0x06;
+const Macintosh: gzip_os = 0x07;
+const Z_System: gzip_os = 0x08;
+const CP_M: gzip_os = 0x09;
+const TOPS_20: gzip_os = 0x0a;
+const NTFS: gzip_os = 0x0b;
+const QDOS: gzip_os = 0x0c;
+const Acorn_RISCOS: gzip_os = 0x0d;
 
-  # Modification time
-  modification_time = uint32;
-
-  # Extra flags
-  extra_flags = uint8;
-
-  # Operating system
-  operating_system = uint8;
-
-  # Header CRC (optional)
-  header_crc = uint16, if flags & 0x02 != 0;
-
-  # Extra field (optional)
-  extra_field = bytes, if flags & 0x04 != 0;
-
-  # Filename (optional)
-  filename = string, if flags & 0x08 != 0;
-
-  # Comment (optional)
-  comment = string, if flags & 0x10 != 0;
-
-  # Compressed data
-  compressed_data = bytes, until eof;
-
-  # Footer CRC
-  footer_crc = uint32;
-
-  # Uncompressed size
-  uncompressed_size = uint32;
+type gzip = record {
+  id1: uint8 = 0x1F;
+  id2: uint8 = 0x8B;
+  cm: uint8 = 8;
+  flags: gzip_flags;
+  mtime: uint32;
+  xfl: uint8;
+  os: gzip_os;
+  xlen: uint16 &if = (flags & FEXTRA != 0);
+  extra: bytestring &length = xlen;
+  fname: bytestring &length = if (flags & FNAME != 0) then until (0x00) else 0;
+  fcomment: bytestring &length = if (flags & FCOMMENT != 0) then until (0x00) else 0;
+  hcrc: uint16 &if = (flags & FHCRC != 0);
+  comprdata: bytestring;
+  isize: uint32;
 }
-
-# Define the GZIP parser
-parser gzip_parser {
-  # Parse the GZIP file format
-  parse file format gzip;
-}
-
-# Define the GZIP event
-event gzip_event {
-  # Trigger on GZIP file detection
-  when file format gzip;
-  # Log the GZIP file metadata
-  log {
-    magic: magic,
-    compression_method: compression_method,
-    flags: flags,
-    modification_time: modification_time,
-    extra_flags: extra_flags,
-    operating_system: operating_system,
-    header_crc: header_crc,
-    extra_field: extra_field,
-    filename: filename,
-    comment: comment,
-    compressed_data: compressed_data,
-    footer_crc: footer_crc,
-    uncompressed_size: uncompressed_size,
-  };
-}
+&byteorder = little;
+&length = comprdata.length + 16 + extra.length + fname.length + fcomment.length + hcrc.length;

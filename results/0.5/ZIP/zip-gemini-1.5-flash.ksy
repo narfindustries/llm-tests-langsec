@@ -1,17 +1,45 @@
-meta:
-  id: zip-gemini-1
-  endian: be
-
 types:
-  header:
+  zip_end_central_dir_record:
     seq:
       - id: signature
         type: u4
-      - id: version
+        enum:
+          zip_end_central_dir_signature: 0x06054b50
+      - id: num_this_disk
         type: u2
-      - id: flags
+      - id: num_start_disk
         type: u2
-      - id: method
+      - id: num_entries_this_disk
+        type: u2
+      - id: num_entries_total
+        type: u2
+      - id: size_central_dir
+        type: u4
+      - id: offset_central_dir
+        type: u4
+      - id: zip_comment_length
+        type: u2
+      - id: zip_comment
+        type: str
+        size: zip_comment_length
+
+  zip_central_dir_entry:
+    seq:
+      - id: signature
+        type: u4
+        enum:
+          zip_central_dir_signature: 0x02014b50
+      - id: version_made_by
+        type: u2
+      - id: version_needed_to_extract
+        type: u2
+      - id: general_purpose_bit_flag
+        type: u2
+      - id: compression_method
+        type: u2
+      - id: last_mod_time
+        type: u2
+      - id: last_mod_date
         type: u2
       - id: crc32
         type: u4
@@ -21,27 +49,87 @@ types:
         type: u4
       - id: filename_length
         type: u2
-      - id: extra_length
+      - id: extra_field_length
         type: u2
-  file_entry:
-    seq:
-      - id: header
-        type: header
+      - id: file_comment_length
+        type: u2
+      - id: disk_number_start
+        type: u2
+      - id: internal_file_attributes
+        type: u2
+      - id: external_file_attributes
+        type: u4
+      - id: local_header_offset
+        type: u4
       - id: filename
         type: str
-        size: lambda: this.header.filename_length
-      - id: extra
+        size: filename_length
+      - id: extra_field
         type: bytes
-        size: lambda: this.header.extra_length
+        size: extra_field_length
+      - id: file_comment
+        type: str
+        size: file_comment_length
+
+  zip_local_file_header:
+    seq:
+      - id: signature
+        type: u4
+        enum:
+          zip_local_file_header_signature: 0x04034b50
+      - id: version_needed_to_extract
+        type: u2
+      - id: general_purpose_bit_flag
+        type: u2
+      - id: compression_method
+        type: u2
+      - id: last_mod_time
+        type: u2
+      - id: last_mod_date
+        type: u2
+      - id: crc32
+        type: u4
+      - id: compressed_size
+        type: u4
+      - id: uncompressed_size
+        type: u4
+      - id: filename_length
+        type: u2
+      - id: extra_field_length
+        type: u2
+      - id: filename
+        type: str
+        size: filename_length
+      - id: extra_field
+        type: bytes
+        size: extra_field_length
       - id: compressed_data
         type: bytes
-        size: lambda: this.header.compressed_size
-      - id: uncompressed_data
-        type: bytes
-        size: lambda: this.header.uncompressed_size
+        size: compressed_size
+      - id: data_descriptor
+        type: zip_data_descriptor
+        if: (general_purpose_bit_flag & 0x0008) != 0
 
+  zip_data_descriptor:
+    seq:
+      - id: signature
+        type: u4
+        enum:
+          zip_data_descriptor_signature: 0x08074b50
+      - id: crc32
+        type: u4
+      - id: compressed_size
+        type: u4
+      - id: uncompressed_size
+        type: u4
 
 seq:
-  - id: entries
-    type: file_entry+
+  - id: files
+    type: zip_local_file_header
+    repeat: eos
+  - id: central_directory
+    type: zip_central_dir_entry
+    repeat: eos
+  - id: end_central_directory
+    type: zip_end_central_dir_record
 

@@ -1,69 +1,185 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/HL7"
-    targetNamespace="http://example.com/HL7">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:hl7="http://example.com/HL7v2"
+           targetNamespace="http://example.com/HL7v2"
+           elementFormDefault="qualified">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
-                lengthKind="delimited" 
-                encoding="UTF-8"
-                initiator="" 
-                terminator="" 
-                separator=""
-                ignoreCase="no"
-                textNumberRep="standard"
-                textTrimKind="none"
-                textPadKind="none"
-                escapeSchemeRef=""
-                initiatedContent="no"/>
+                         alignmentUnits="bytes"
+                         lengthKind="delimited"
+                         encoding="ASCII"
+                         initiator=""
+                         terminator=""
+                         separator=""
+                         ignoreCase="no"
+                         textTrimKind="none"
+                         initiatedContent="no"
+                         separatorSuppressionPolicy="never"
+                         separatorPosition="infix"
+                         documentFinalTerminatorCanBeMissing="yes"
+                         escapeSchemeRef=""
+                         occursCountKind="implicit"
+                         leadingSkip="0"
+                         trailingSkip="0"
+                         textBidi="no"
+                         floating="no"
+                         encodingErrorPolicy="replace"
+                         sequenceKind="ordered"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="HL7Message">
+    <!-- Basic HL7 Data Types -->
+    <xs:simpleType name="ST">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="NM">
+        <xs:restriction base="xs:decimal"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="DT">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{8}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- MSH Segment -->
+    <xs:element name="MSH">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Segment" maxOccurs="unbounded">
+            <xs:sequence dfdl:separator="|" dfdl:sequenceKind="ordered">
+                <xs:element name="FieldSeparator" type="xs:string" fixed="|"/>
+                <xs:element name="EncodingCharacters" type="xs:string" fixed="^~\&amp;"/>
+                <xs:element name="SendingApplication" type="hl7:ST"/>
+                <xs:element name="SendingFacility" type="hl7:ST"/>
+                <xs:element name="ReceivingApplication" type="hl7:ST"/>
+                <xs:element name="ReceivingFacility" type="hl7:ST"/>
+                <xs:element name="DateTimeOfMessage" type="xs:string"/>
+                <xs:element name="Security" type="hl7:ST" minOccurs="0"/>
+                <xs:element name="MessageType">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="Field" maxOccurs="unbounded">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="Component" maxOccurs="unbounded">
-                                            <xs:complexType>
-                                                <xs:sequence>
-                                                    <xs:element name="SubComponent" type="xs:string" maxOccurs="unbounded">
-                                                        <xs:annotation>
-                                                            <xs:appinfo source="http://www.ogf.org/dfdl/">
-                                                                <dfdl:element separator="&amp;" terminator=""/>
-                                                            </xs:appinfo>
-                                                        </xs:annotation>
-                                                    </xs:element>
-                                                </xs:sequence>
-                                            </xs:complexType>
-                                        </xs:element>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
+                        <xs:sequence dfdl:separator="^" dfdl:sequenceKind="ordered">
+                            <xs:element name="MessageCode" type="xs:string"/>
+                            <xs:element name="TriggerEvent" type="xs:string"/>
+                            <xs:element name="MessageStructure" type="xs:string" minOccurs="0"/>
                         </xs:sequence>
-                        <xs:attribute name="name" type="xs:string"/>
                     </xs:complexType>
+                </xs:element>
+                <xs:element name="MessageControlID" type="hl7:ST"/>
+                <xs:element name="ProcessingID" type="xs:string"/>
+                <xs:element name="VersionID" type="xs:string"/>
+                <xs:element name="SequenceNumber" type="hl7:NM" minOccurs="0"/>
+                <xs:element name="ContinuationPointer" type="hl7:ST" minOccurs="0"/>
+                <xs:element name="AcceptAckType" type="xs:string" minOccurs="0"/>
+                <xs:element name="ApplicationAckType" type="xs:string" minOccurs="0"/>
+                <xs:element name="CountryCode" type="xs:string" minOccurs="0"/>
+                <xs:element name="CharacterSet" type="xs:string" minOccurs="0"/>
+                <xs:element name="PrincipalLanguage" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- PID Segment -->
+    <xs:element name="PID">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:sequenceKind="ordered">
+                <xs:element name="SetID" type="hl7:ST"/>
+                <xs:element name="PatientID">
+                    <xs:complexType>
+                        <xs:sequence dfdl:separator="^" dfdl:sequenceKind="ordered">
+                            <xs:element name="ID" type="xs:string"/>
+                            <xs:element name="CheckDigit" type="xs:string" minOccurs="0"/>
+                            <xs:element name="CheckDigitScheme" type="xs:string" minOccurs="0"/>
+                            <xs:element name="AssigningAuthority" type="xs:string" minOccurs="0"/>
+                            <xs:element name="IdentifierTypeCode" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="PatientIdentifierList" maxOccurs="unbounded" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence dfdl:separator="^" dfdl:sequenceKind="ordered">
+                            <xs:element name="ID" type="xs:string"/>
+                            <xs:element name="CheckDigit" type="xs:string" minOccurs="0"/>
+                            <xs:element name="CheckDigitScheme" type="xs:string" minOccurs="0"/>
+                            <xs:element name="AssigningAuthority" type="xs:string" minOccurs="0"/>
+                            <xs:element name="IdentifierTypeCode" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="AlternatePatientID" type="hl7:ST" minOccurs="0"/>
+                <xs:element name="PatientName">
+                    <xs:complexType>
+                        <xs:sequence dfdl:separator="^" dfdl:sequenceKind="ordered">
+                            <xs:element name="FamilyName" type="xs:string"/>
+                            <xs:element name="GivenName" type="xs:string"/>
+                            <xs:element name="MiddleName" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Suffix" type="xs:string" minOccurs="0"/>
+                            <xs:element name="Prefix" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="MothersMaidenName" type="hl7:ST" minOccurs="0"/>
+                <xs:element name="DateTimeOfBirth" type="hl7:DT"/>
+                <xs:element name="AdministrativeSex">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:enumeration value="F"/>
+                            <xs:enumeration value="M"/>
+                            <xs:enumeration value="O"/>
+                            <xs:enumeration value="U"/>
+                            <xs:enumeration value="A"/>
+                            <xs:enumeration value="N"/>
+                        </xs:restriction>
+                    </xs:simpleType>
                 </xs:element>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="HL7Fields">
-                <dfdl:format separator="|" terminator="\r\n"/>
-            </dfdl:defineFormat>
-            <dfdl:defineFormat name="HL7Components">
-                <dfdl:format separator="^"/>
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
+    <!-- OBR Segment -->
+    <xs:element name="OBR">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:sequenceKind="ordered">
+                <xs:element name="SetID" type="hl7:ST"/>
+                <xs:element name="PlacerOrderNumber" type="hl7:ST"/>
+                <xs:element name="FillerOrderNumber" type="hl7:ST"/>
+                <xs:element name="UniversalServiceID">
+                    <xs:complexType>
+                        <xs:sequence dfdl:separator="^" dfdl:sequenceKind="ordered">
+                            <xs:element name="Identifier" type="xs:string"/>
+                            <xs:element name="Text" type="xs:string"/>
+                            <xs:element name="NameOfCodingSystem" type="xs:string"/>
+                            <xs:element name="AlternateIdentifier" type="xs:string" minOccurs="0"/>
+                            <xs:element name="AlternateText" type="xs:string" minOccurs="0"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="Priority" minOccurs="0">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:enumeration value="S"/>
+                            <xs:enumeration value="A"/>
+                            <xs:enumeration value="R"/>
+                            <xs:enumeration value="P"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="RequestedDateTime" type="hl7:DT" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Complete HL7 Message -->
+    <xs:element name="HL7Message">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="\r" dfdl:sequenceKind="ordered">
+                <xs:element ref="hl7:MSH"/>
+                <xs:element ref="hl7:PID" minOccurs="0"/>
+                <xs:element ref="hl7:OBR" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

@@ -1,70 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/mqtt"
-    targetNamespace="http://example.com/mqtt">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
-                        lengthKind="explicit" 
-                        lengthUnits="bytes"
-                        binaryNumberRep="binary"
-                        byteOrder="bigEndian"
-                        representation="binary"
-                        occursCountKind="implicit"
-                        encoding="UTF-8"
-                        ignoreCase="no"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:mqtt="http://example.com/mqtt"
+           targetNamespace="http://example.com/mqtt">
 
-    <xs:element name="MQTTPacket">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   alignmentUnits="bytes"
+                   lengthKind="implicit"
+                   representation="binary"
+                   byteOrder="bigEndian"
+                   binaryNumberRep="binary"
+                   encodingErrorPolicy="replace"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   sequenceKind="ordered"
+                   encoding="UTF-8"
+                   textBidi="no"
+                   floating="no"
+                   occursCountKind="parsed"
+                   lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <!-- Variable Byte Integer -->
+  <xs:simpleType name="VarByteInt">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:simpleType lengthKind="pattern" lengthPattern="([0-7F]|[80-FF]){1,4}"/>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <!-- Fixed Header -->
+  <xs:complexType name="FixedHeader">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="packetType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bits"/>
+      <xs:element name="flags" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bits"/>
+      <xs:element name="remainingLength" type="mqtt:VarByteInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- UTF-8 String -->
+  <xs:complexType name="UTF8String">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="value" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{../length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Properties -->
+  <xs:complexType name="Property">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="identifier" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="value">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="FixedHeader">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="PacketType" type="xs:unsignedByte" dfdl:length="1" 
-                                      dfdl:inputValueCalc="{ xs:unsignedByte((/MQTTPacket/FixedHeader/ControlByte idiv 16)) }"/>
-                            <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1"
-                                      dfdl:inputValueCalc="{ xs:unsignedByte((/MQTTPacket/FixedHeader/ControlByte mod 16)) }"/>
-                            <xs:element name="ControlByte" type="xs:unsignedByte" dfdl:length="1"/>
-                            <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:length="1"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="VariableHeader" minOccurs="0">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="2" minOccurs="0"/>
-                            <xs:element name="Properties" minOccurs="0">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="PropertyLength" type="xs:unsignedInt" dfdl:length="1"/>
-                                        <xs:element name="PropertyPairs" minOccurs="0" maxOccurs="unbounded">
-                                            <xs:complexType>
-                                                <xs:sequence>
-                                                    <xs:element name="PropertyId" type="xs:unsignedByte" dfdl:length="1"/>
-                                                    <xs:element name="PropertyValue" type="xs:string" dfdl:lengthKind="delimited"/>
-                                                </xs:sequence>
-                                            </xs:complexType>
-                                        </xs:element>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="Payload" minOccurs="0">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="Data" type="xs:string" dfdl:lengthKind="delimited"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-            </xs:sequence>
+          <xs:choice dfdl:choiceDispatchKey="{../identifier}">
+            <xs:element name="boolean" type="xs:boolean" dfdl:choiceBranchKey="1"/>
+            <xs:element name="uint32" type="xs:unsignedInt" dfdl:choiceBranchKey="2"/>
+            <xs:element name="string" type="mqtt:UTF8String" dfdl:choiceBranchKey="3"/>
+            <xs:element name="binary" type="xs:hexBinary" dfdl:choiceBranchKey="4"/>
+            <xs:element name="varInt" type="mqtt:VarByteInt" dfdl:choiceBranchKey="5"/>
+          </xs:choice>
         </xs:complexType>
-    </xs:element>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- CONNECT Packet -->
+  <xs:complexType name="ConnectPacket">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="fixedHeader" type="mqtt:FixedHeader"/>
+      <xs:element name="protocolName" type="mqtt:UTF8String"/>
+      <xs:element name="protocolVersion" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="connectFlags" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="keepAlive" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="propertyLength" type="mqtt:VarByteInt"/>
+      <xs:element name="properties" type="mqtt:Property" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="clientId" type="mqtt:UTF8String"/>
+      <xs:element name="willTopic" type="mqtt:UTF8String" minOccurs="0"/>
+      <xs:element name="willPayload" type="mqtt:UTF8String" minOccurs="0"/>
+      <xs:element name="username" type="mqtt:UTF8String" minOccurs="0"/>
+      <xs:element name="password" type="mqtt:UTF8String" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- PUBLISH Packet -->
+  <xs:complexType name="PublishPacket">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="fixedHeader" type="mqtt:FixedHeader"/>
+      <xs:element name="topicName" type="mqtt:UTF8String"/>
+      <xs:element name="packetId" type="xs:unsignedShort" dfdl:representation="binary" minOccurs="0"/>
+      <xs:element name="propertyLength" type="mqtt:VarByteInt"/>
+      <xs:element name="properties" type="mqtt:Property" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="payload" type="xs:hexBinary" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Root element -->
+  <xs:element name="MQTTPacket">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element name="connect" type="mqtt:ConnectPacket"/>
+        <xs:element name="publish" type="mqtt:PublishPacket"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

@@ -1,31 +1,28 @@
 meta:
-  id: arp-gemini-1
-  endian: be
-
+  id: arp_packet
 types:
-  header:
-    seq: u2
-    length: u2
-    type: u2
-    subtype: u2
-
-  data:
-    - id: type_data
-      type: seq
-      contents:
-        - id: data_type
-          type: u2
-        - id: data_length
-          type: u2
-        - id: data_value
-          type: array
-          type: u1
-          read: data_length
-
-
-seq:
-  - id: header
-    type: header
-  - id: data_block
-    type: data
+  arp_packet:
+    seq:
+      - id: htype
+        type: u2be
+      - id: ptype
+        type: u2be
+      - id: hlen
+        type: u1
+      - id: plen
+        type: u1
+      - id: opcode
+        type: u2be
+      - id: sha
+        type: bytes
+        size: hlen
+      - id: spa
+        type: bytes
+        size: plen
+      - id: tha
+        type: bytes
+        size: hlen
+      - id: tpa
+        type: bytes
+        size: plen
 

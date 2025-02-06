@@ -1,1 +1,31 @@
-Gemini API Error: 429 Resource has been exhausted (e.g. check quota).
+module DICOM;
+
+type DICOM_File_Meta_Information_Group {
+  File_Meta_Information_Group_Length: uint32;
+  File_Meta_Information_Version: bytes;
+  Media_Storage_SOP_Class_UID: string;
+  Media_Storage_SOP_Instance_UID: string;
+  Transfer_Syntax_UID: string;
+  Implementation_Class_UID: string;
+  Implementation_Version_Name: string;
+  Source_Application_Entity_Title: string;
+  Sending_Application_Entity_Title: string;
+  Receiving_Application_Entity_Title: string;
+  Private_Information_CreatorUID: string;
+  Private_Information: bytes;
+};
+
+type DICOM_Element {
+  tag: string;
+  VR: string;
+  value: any;
+};
+
+type DICOM_Dataset {
+  elements: vector[DICOM_Element];
+};
+
+type DICOM_File {
+  File_Meta_Information_Group: DICOM_File_Meta_Information_Group;
+  Dataset: DICOM_Dataset;
+};

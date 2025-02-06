@@ -1,91 +1,148 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <limits.h>
+#include <stdlib.h>
 
-// Define a type for a 32-bit unsigned integer
-typedef uint32_t uint32;
-
-// Define a type for a 16-bit unsigned integer
-typedef uint16_t uint16;
-
-// Define a type for a byte
-typedef uint8_t byte;
-
-// Define the GZIP file format structure
 typedef struct {
-    byte id1; // ID1 (0x1f)
-    byte id2; // ID2 (0x8b)
-    byte cm;  // Compression method (0x08 for DEFLATE)
-    byte flags; // Flags (0x00 for no flags)
-    uint32 mtime; // Modified time (in seconds since Unix epoch)
-    byte xflags; // Extra flags (0x00 for no extra flags)
-    byte os; // Operating system (0x03 for Unix)
-} gzip_header;
+    uint8_t id1;
+    uint8_t id2;
+    uint8_t cm;
+    uint8_t flags;
+    uint32_t mtime;
+    uint8_t xfl;
+    uint8_t os;
+    uint16_t xlen;
+    uint8_t* extra;
+    char* fname;
+    char* fcomment;
+    uint16_t hcrc;
+} gzip_header_t;
 
-// Define the GZIP footer structure
 typedef struct {
-    uint32 crc; // CRC-32 of the uncompressed data
-    uint32 isize; // Size of the uncompressed data (in bytes)
-} gzip_footer;
+    uint8_t* compr_data;
+    uint32_t compr_len;
+    uint32_t isize;
+    uint32_t crc;
+} gzip_trailer_t;
 
-// Define the Hammer specification structure
-typedef struct {
-    gzip_header header;
-    byte *compressed_data;
-    uint32 compressed_size;
-    gzip_footer footer;
-} hammer_spec;
+#define HAMMER_CH(c) ((c))
+#define HAMMER_ANY_CH 0
+#define HAMMER_UINT32_LE 4
+#define HAMMER_UINT16_LE 2
+#define HAMMER_PADN(n, rule) ((n) * (rule))
+#define HAMMER_TILL_CH(c) ((c))
+#define HAMMER_SEQ(...) (sizeof(__VA_ARGS__))
+#define HAMMER_OPT(rule, ...) ((sizeof(rule) > 0) ? (rule) : 0)
 
-// Define the function to generate the Hammer specification
-hammer_spec generate_hammer_spec() {
-    hammer_spec spec;
+#define gzip_id1 HAMMER_CH(0x1f)
+#define gzip_id2 HAMMER_CH(0x8b)
+#define gzip_cm HAMMER_CH(8)
+#define gzip_flags HAMMER_ANY_CH
+#define gzip_mtime HAMMER_UINT32_LE
+#define gzip_xfl HAMMER_ANY_CH
+#define gzip_os HAMMER_ANY_CH
+#define gzip_xlen HAMMER_UINT16_LE
+#define gzip_extra HAMMER_PADN(gzip_xlen, HAMMER_ANY_CH)
+#define gzip_fname HAMMER_TILL_CH(0)
+#define gzip_fcomment HAMMER_TILL_CH(0)
+#define gzip_hcrc HAMMER_UINT16_LE
 
-    // Initialize the GZIP header
-    spec.header.id1 = 0x1f;
-    spec.header.id2 = 0x8b;
-    spec.header.cm = 0x08;
-    spec.header.flags = 0x00;
-    spec.header.mtime = 0; // Modified time (set to 0 for simplicity)
-    spec.header.xflags = 0x00;
-    spec.header.os = 0x03;
+#define gzip_header HAMMER_SEQ( \
+    gzip_id1, \
+    gzip_id2, \
+    gzip_cm, \
+    gzip_flags, \
+    gzip_mtime, \
+    gzip_xfl, \
+    gzip_os, \
+    HAMMER_OPT(gzip_xlen, gzip_extra), \
+    HAMMER_OPT(gzip_fname), \
+    HAMMER_OPT(gzip_fcomment), \
+    HAMMER_OPT(gzip_hcrc) \
+)
 
-    // Initialize the compressed data
-    spec.compressed_data = NULL;
-    spec.compressed_size = 0;
+#define gzip_compr_data HAMMER_ANY_CH
+#define gzip_compr_len HAMMER_UINT32_LE
+#define gzip_isize HAMMER_UINT32_LE
+#define gzip_crc HAMMER_UINT32_LE
+#define gzip_trailer HAMMER_SEQ( \
+    gzip_compr_len, \
+    gzip_isize, \
+    gzip_crc \
+)
 
-    // Initialize the GZIP footer
-    spec.footer.crc = 0; // CRC-32 (set to 0 for simplicity)
-    spec.footer.isize = 0; // Size of the uncompressed data (set to 0 for simplicity)
+#define gzip_file HAMMER_SEQ( \
+    gzip_header, \
+    HAMMER_PADN(gzip_compr_len, gzip_compr_data), \
+    gzip_trailer \
+)
 
-    return spec;
-}
-
-// Define the function to write the Hammer specification to a file
-void write_hammer_spec_to_file(hammer_spec spec, const char *filename) {
-    FILE *file = fopen(filename, "wb");
-    if (file == NULL) {
-        printf("Error opening file for writing\n");
-        return;
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <file>\n", argv[0]);
+        return 1;
     }
 
-    // Write the GZIP header
-    fwrite(&spec.header, sizeof(gzip_header), 1, file);
-
-    // Write the compressed data
-    if (spec.compressed_data != NULL) {
-        fwrite(spec.compressed_data, spec.compressed_size, 1, file);
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Failed to open file\n");
+        return 1;
     }
 
-    // Write the GZIP footer
-    fwrite(&spec.footer, sizeof(gzip_footer), 1, file);
+    fseek(file, 0, SEEK_END);
+    long file_len = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
+    uint8_t* data = malloc(file_len);
+    fread(data, 1, file_len, file);
     fclose(file);
-}
 
-// Define the main function
-int main() {
-    hammer_spec spec = generate_hammer_spec();
-    write_hammer_spec_to_file(spec, "output_hammer");
+    void* ctx = NULL;
+    int result = 0;
+    gzip_header_t header;
+    result = 0;
+
+    printf("ID1: %u\n", header.id1);
+    printf("ID2: %u\n", header.id2);
+    printf("CM: %u\n", header.cm);
+    printf("FLAGS: %u\n", header.flags);
+    printf("MTIME: %u\n", header.mtime);
+    printf("XFL: %u\n", header.xfl);
+    printf("OS: %u\n", header.os);
+    if (header.xlen) {
+        printf("XLEN: %u\n", header.xlen);
+        printf("EXTRA: ");
+        for (int i = 0; i < header.xlen; i++) {
+            printf("%02x", header.extra[i]);
+        }
+        printf("\n");
+    }
+    if (header.fname) {
+        printf("FNAME: %s\n", header.fname);
+    }
+    if (header.fcomment) {
+        printf("FCOMMENT: %s\n", header.fcomment);
+    }
+    if (header.hcrc) {
+        printf("HCRC: %u\n", header.hcrc);
+    }
+
+    uint8_t* compr_data;
+    uint32_t compr_len;
+    compr_len = header.mtime; 
+    printf("COMPR_DATA: ");
+    for (int i = 0; i < compr_len; i++) {
+        printf("%02x", compr_data[i]);
+    }
+    printf("\n");
+
+    gzip_trailer_t trailer;
+    result = 0;
+
+    printf("COMPR_LEN: %u\n", trailer.compr_len);
+    printf("ISIZE: %u\n", trailer.isize);
+    printf("CRC: %u\n", trailer.crc);
+
     return 0;
 }

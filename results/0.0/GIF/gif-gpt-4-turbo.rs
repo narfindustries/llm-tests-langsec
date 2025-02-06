@@ -1,17 +1,25 @@
 use nom::{
     bytes::complete::{tag, take},
     combinator::{map, map_res},
-    multi::{count, many0},
+    multi::count,
     number::complete::{le_u16, le_u8},
     sequence::{preceded, tuple},
     IResult,
 };
-use std::env;
 use std::fs::File;
 use std::io::{self, Read};
+use std::path::PathBuf;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    #[clap(parse(from_os_str))]
+    input_file: PathBuf,
+}
 
 #[derive(Debug)]
-struct ColorTableEntry {
+struct Color {
     red: u8,
     green: u8,
     blue: u8,
@@ -36,41 +44,78 @@ struct ImageDescriptor {
 }
 
 #[derive(Debug)]
+struct GraphicControlExtension {
+    packed_fields: u8,
+    delay_time: u16,
+    transparent_color_index: u8,
+}
+
+#[derive(Debug)]
+struct ApplicationExtension {
+    application_identifier: String,
+    application_auth_code: Vec<u8>,
+    data: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct CommentExtension {
+    comment_data: String,
+}
+
+#[derive(Debug)]
+struct PlainTextExtension {
+    text_grid_left_position: u16,
+    text_grid_top_position: u16,
+    text_grid_width: u16,
+    text_grid_height: u16,
+    character_cell_width: u8,
+    character_cell_height: u8,
+    text_foreground_color_index: u8,
+    text_background_color_index: u8,
+    plain_text_data: String,
+}
+
+#[derive(Debug)]
 enum Block {
-    ImageBlock(ImageDescriptor, Vec<u8>), // Simplified: actual GIF uses LZW compression
-    ExtensionBlock(u8, Vec<u8>),
-    UnknownBlock(u8),
+    Image(ImageDescriptor, Vec<u8>),
+    Extension(u8, Box<dyn std::any::Any>),
 }
 
 #[derive(Debug)]
 struct Gif {
     header: String,
     logical_screen_descriptor: LogicalScreenDescriptor,
-    global_color_table: Option<Vec<ColorTableEntry>>,
+    global_color_table: Option<Vec<Color>>,
     blocks: Vec<Block>,
 }
 
-fn parse_color_table_entry(input: &[u8]) -> IResult<&[u8], ColorTableEntry> {
-    map(tuple((le_u8, le_u8, le_u8)), |(red, green, blue)| ColorTableEntry { red, green, blue })(input)
+fn parse_color(input: &[u8]) -> IResult<&[u8], Color> {
+    map(tuple((le_u8, le_u8, le_u8)), |(red, green, blue)| Color {
+        red,
+        green,
+        blue,
+    })(input)
 }
 
 fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
     map(
         tuple((le_u16, le_u16, le_u8, le_u8, le_u8)),
-        |(width, height, packed_fields, background_color_index, pixel_aspect_ratio)| LogicalScreenDescriptor {
-            width,
-            height,
-            packed_fields,
-            background_color_index,
-            pixel_aspect_ratio,
+        |(width, height, packed_fields, background_color_index, pixel_aspect_ratio)| {
+            LogicalScreenDescriptor {
+                width,
+                height,
+                packed_fields,
+                background_color_index,
+                pixel_aspect_ratio,
+            }
         },
     )(input)
 }
 
 fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
     map(
-        tuple((le_u16, le_u16, le_u16, le_u16, le_u8)),
-        |(left_position, top_position, width, height, packed_fields)| ImageDescriptor {
+        tuple((tag(b","), le_u16, le_u16, le_u16, le_u16, le_u8)),
+        |(_, left_position, top_position, width, height, packed_fields)| ImageDescriptor {
             left_position,
             top_position,
             width,
@@ -80,34 +125,107 @@ fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
     )(input)
 }
 
-fn parse_block(input: &[u8]) -> IResult<&[u8], Block> {
-    let (input, block_label) = le_u8(input)?;
-    match block_label {
-        0x2C => {
-            let (input, image_descriptor) = parse_image_descriptor(input)?;
-            let (input, image_data) = preceded(tag(&[0x00]), take(image_descriptor.width as usize * image_descriptor.height as usize))(input)?;
-            Ok((input, Block::ImageBlock(image_descriptor, image_data.to_vec())))
-        }
-        0x21 => {
-            let (input, extension_data) = preceded(le_u8, many0(le_u8))(input)?;
-            Ok((input, Block::ExtensionBlock(block_label, extension_data)))
-        }
-        _ => Ok((input, Block::UnknownBlock(block_label))),
-    }
+fn parse_graphic_control_extension(input: &[u8]) -> IResult<&[u8], GraphicControlExtension> {
+    map(
+        tuple((tag(b"\x21\xF9\x04"), le_u8, le_u16, le_u8, tag(b"\x00"))),
+        |(_, packed_fields, delay_time, transparent_color_index, _)| GraphicControlExtension {
+            packed_fields,
+            delay_time,
+            transparent_color_index,
+        },
+    )(input)
+}
+
+fn parse_application_extension(input: &[u8]) -> IResult<&[u8], ApplicationExtension> {
+    let (input, _) = tag(b"\x21\xFF")(input)?;
+    let (input, block_size) = le_u8(input)?;
+    let (input, app_identifier) = map_res(take(8usize), std::str::from_utf8)(input)?;
+    let (input, app_auth_code) = take(3usize)(input)?;
+    let (input, data) = take(block_size - 11)(input)?;
+    Ok((
+        input,
+        ApplicationExtension {
+            application_identifier: app_identifier.to_string(),
+            application_auth_code: app_auth_code.to_vec(),
+            data: data.to_vec(),
+        },
+    ))
+}
+
+fn parse_comment_extension(input: &[u8]) -> IResult<&[u8], CommentExtension> {
+    let (input, _) = tag(b"\x21\xFE")(input)?;
+    let (input, size) = le_u8(input)?;
+    let (input, comment) = map_res(take(size), std::str::from_utf8)(input)?;
+    Ok((
+        input,
+        CommentExtension {
+            comment_data: comment.to_string(),
+        },
+    ))
+}
+
+fn parse_plain_text_extension(input: &[u8]) -> IResult<&[u8], PlainTextExtension> {
+    let (input, _) = tag(b"\x21\x01")(input)?;
+    let (input, block_size) = le_u8(input)?;
+    let (input, (text_grid_left_position, text_grid_top_position, text_grid_width, text_grid_height, character_cell_width, character_cell_height, text_foreground_color_index, text_background_color_index)) =
+        tuple((le_u16, le_u16, le_u16, le_u16, le_u8, le_u8, le_u8, le_u8))(input)?;
+    let (input, plain_text_data) = map_res(take(block_size - 12), std::str::from_utf8)(input)?;
+    Ok((
+        input,
+        PlainTextExtension {
+            text_grid_left_position,
+            text_grid_top_position,
+            text_grid_width,
+            text_grid_height,
+            character_cell_width,
+            character_cell_height,
+            text_foreground_color_index,
+            text_background_color_index,
+            plain_text_data: plain_text_data.to_string(),
+        },
+    ))
 }
 
 fn parse_gif(input: &[u8]) -> IResult<&[u8], Gif> {
-    let (input, _) = tag("GIF")(input)?;
+    let (input, _) = tag(b"GIF")(input)?;
     let (input, version) = map_res(take(3usize), std::str::from_utf8)(input)?;
     let (input, logical_screen_descriptor) = parse_logical_screen_descriptor(input)?;
-    let (input, global_color_table) = if logical_screen_descriptor.packed_fields & 0b1000_0000 > 0 {
-        let size = 1 << ((logical_screen_descriptor.packed_fields & 0b0000_0111) + 1);
-        map(count(parse_color_table_entry, size as usize), Some)(input)?
+    let global_color_table_flag = (logical_screen_descriptor.packed_fields & 0b10000000) != 0;
+    let global_color_table_size = 1 << ((logical_screen_descriptor.packed_fields & 0b00000111) + 1);
+    let (input, global_color_table) = if global_color_table_flag {
+        map(count(parse_color, global_color_table_size as usize), Some)(input)?
     } else {
         (input, None)
     };
-    let (input, blocks) = many0(parse_block)(input)?;
-
+    let (input, blocks) = count(
+        preceded(
+            tag(b"\x21"),
+            map(
+                tuple((le_u8, le_u8)),
+                |(extension_label, block_type)| match block_type {
+                    0xF9 => Block::Extension(
+                        extension_label,
+                        Box::new(parse_graphic_control_extension(input).unwrap().1),
+                    ),
+                    0x01 => Block::Extension(
+                        extension_label,
+                        Box::new(parse_plain_text_extension(input).unwrap().1),
+                    ),
+                    0xFF => Block::Extension(
+                        extension_label,
+                        Box::new(parse_application_extension(input).unwrap().1),
+                    ),
+                    0xFE => Block::Extension(
+                        extension_label,
+                        Box::new(parse_comment_extension(input).unwrap().1),
+                    ),
+                    _ => unimplemented!(),
+                },
+            ),
+        ),
+        1,
+    )(input)?;
+    let (input, _) = tag(b"\x3B")(input)?;
     Ok((
         input,
         Gif {
@@ -120,22 +238,14 @@ fn parse_gif(input: &[u8]) -> IResult<&[u8], Gif> {
 }
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "No file specified"));
-    }
-
-    let mut file = File::open(&args[1])?;
+    let args = Cli::parse();
+    let mut file = File::open(args.input_file)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
     match parse_gif(&buffer) {
-        Ok((_, gif)) => {
-            println!("{:#?}", gif);
-        }
-        Err(e) => {
-            println!("Failed to parse GIF: {:?}", e);
-        }
+        Ok((_, gif)) => println!("{:#?}", gif),
+        Err(e) => println!("Failed to parse GIF: {:?}", e),
     }
 
     Ok(())

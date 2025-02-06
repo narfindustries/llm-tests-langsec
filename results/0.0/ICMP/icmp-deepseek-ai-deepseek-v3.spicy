@@ -1,0 +1,60 @@
+module ICMP;
+
+import zeek;
+
+public type Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest: case (type) of {
+        0|8 -> echo: Echo;
+        3 -> unreachable: Unreachable;
+        5 -> redirect: Redirect;
+        11 -> time_exceeded: TimeExceeded;
+        12 -> parameter_problem: ParameterProblem;
+        13|14 -> timestamp: Timestamp;
+        17|18 -> address_mask: AddressMask;
+        * -> unknown: bytes &rest;
+    };
+};
+
+type Echo = unit {
+    identifier: uint16;
+    sequence: uint16;
+    data: bytes &rest;
+};
+
+type Unreachable = unit {
+    unused: uint32;
+    original_datagram: bytes &rest;
+};
+
+type Redirect = unit {
+    gateway: uint32;
+    original_datagram: bytes &rest;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    original_datagram: bytes &rest;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: uint24;
+    original_datagram: bytes &rest;
+};
+
+type Timestamp = unit {
+    identifier: uint16;
+    sequence: uint16;
+    originate: uint32;
+    receive: uint32;
+    transmit: uint32;
+};
+
+type AddressMask = unit {
+    identifier: uint16;
+    sequence: uint16;
+    mask: uint32;
+};

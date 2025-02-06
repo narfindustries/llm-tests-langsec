@@ -1,22 +1,21 @@
 module ARP;
 
-public type Packet = unit {
-    hw_type: uint16;
-    proto_type: uint16;
-    hw_size: uint8;
-    proto_size: uint8;
-    op_code: uint16;
-    sender_mac: bytes &size=6;
-    sender_ip: bytes &size=4;
-    target_mac: bytes &size=6;
-    target_ip: bytes &size=4;
+public type ARPPacket = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_addr_len: uint8;
+    protocol_addr_len: uint8;
+    operation: uint16;
+    sender_hardware_addr: bytes &size=self.hardware_addr_len;
+    sender_protocol_addr: bytes &size=self.protocol_addr_len;
+    target_hardware_addr: bytes &size=self.hardware_addr_len;
+    target_protocol_addr: bytes &size=self.protocol_addr_len;
 
     on %done {
-        print self;
+        self.hardware_type_str = self.hardware_type == 1 ? "Ethernet" : "Other";
+        self.operation_str = self.operation == 1 ? "Request" : "Reply";
     }
-};
 
-type Operation = enum {
-    REQUEST = 1,
-    REPLY = 2
+    var hardware_type_str: string;
+    var operation_str: string;
 };

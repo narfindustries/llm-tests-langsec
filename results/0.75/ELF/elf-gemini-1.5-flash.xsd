@@ -1,52 +1,104 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/elf_gemini"
-           xmlns="http://example.org/elf_gemini"
-           elementFormDefault="qualified">
-
-  <xs:element name="elf_gemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/elf" elementFormDefault="qualified" xmlns:tns="http://example.org/elf">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+  <xs:element name="ELF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="data" type="dataType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="footer" type="footerType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element ref="tns:elfHeader"/>
+        <xs:element ref="tns:programHeaders" minOccurs="0"/>
+        <xs:element ref="tns:sectionHeaders" minOccurs="0"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="4"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="headerType">
+  <xs:element name="elfHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="e_ident" type="tns:e_identType"/>
+        <xs:element name="e_type" type="xs:unsignedInt"/>
+        <xs:element name="e_machine" type="xs:unsignedInt"/>
+        <xs:element name="e_version" type="xs:unsignedInt"/>
+        <xs:element name="e_entry" type="xs:unsignedLong"/>
+        <xs:element name="e_phoff" type="xs:unsignedLong"/>
+        <xs:element name="e_shoff" type="xs:unsignedLong"/>
+        <xs:element name="e_flags" type="xs:unsignedInt"/>
+        <xs:element name="e_ehsize" type="xs:unsignedShort"/>
+        <xs:element name="e_phentsize" type="xs:unsignedShort"/>
+        <xs:element name="e_phnum" type="xs:unsignedShort"/>
+        <xs:element name="e_shentsize" type="xs:unsignedShort"/>
+        <xs:element name="e_shnum" type="xs:unsignedShort"/>
+        <xs:element name="e_shstrndx" type="xs:unsignedShort"/>
+      </xs:sequence>
+      <xs:attribute name="byteOrder" type="dfdl:byteOrderType" use="required" dfdl:occurs="1">
+        <xs:annotation>
+          <xs:documentation>bigEndian</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="encoding" type="xs:string" use="required" dfdl:occurs="1">
+        <xs:annotation>
+          <xs:documentation>UTF-8</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="e_identType">
     <xs:sequence>
-      <xs:element name="id" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
-      <xs:element name="timestamp" type="xs:dateTime"/>
+      <xs:element name="EI_MAG0" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_MAG1" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_MAG2" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_MAG3" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_CLASS" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_DATA" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_VERSION" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_OSABI" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_ABIVERSION" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="EI_PAD" type="xs:unsignedByte" minOccurs="0" maxOccurs="7" dfdl:length="1"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="dataType">
+  <xs:element name="programHeaders">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="programHeader" type="tns:programHeaderType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="programHeaderType">
     <xs:sequence>
-      <xs:element name="record" type="recordType" dfdl:occursCountKind="unbounded"/>
+      <xs:element name="p_type" type="xs:unsignedInt"/>
+      <xs:element name="p_flags" type="xs:unsignedInt"/>
+      <xs:element name="p_offset" type="xs:unsignedLong"/>
+      <xs:element name="p_vaddr" type="xs:unsignedLong"/>
+      <xs:element name="p_paddr" type="xs:unsignedLong"/>
+      <xs:element name="p_filesz" type="xs:unsignedLong"/>
+      <xs:element name="p_memsz" type="xs:unsignedLong"/>
+      <xs:element name="p_align" type="xs:unsignedLong"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="recordType">
+  <xs:element name="sectionHeaders">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="sectionHeader" type="tns:sectionHeaderType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="sectionHeaderType">
     <xs:sequence>
-      <xs:element name="field1" type="xs:integer"/>
-      <xs:element name="field2" type="xs:string" dfdl:lengthKind="delimited" dfdl:lengthUnits="characters" dfdl:terminator=", "/>
-      <xs:element name="field3" type="xs:float"/>
+      <xs:element name="sh_name" type="xs:unsignedInt"/>
+      <xs:element name="sh_type" type="xs:unsignedInt"/>
+      <xs:element name="sh_flags" type="xs:unsignedLong"/>
+      <xs:element name="sh_addr" type="xs:unsignedLong"/>
+      <xs:element name="sh_offset" type="xs:unsignedLong"/>
+      <xs:element name="sh_size" type="xs:unsignedLong"/>
+      <xs:element name="sh_link" type="xs:unsignedInt"/>
+      <xs:element name="sh_info" type="xs:unsignedInt"/>
+      <xs:element name="sh_addralign" type="xs:unsignedLong"/>
+      <xs:element name="sh_entsize" type="xs:unsignedLong"/>
     </xs:sequence>
   </xs:complexType>
-
-
-  <xs:complexType name="footerType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <dfdl:defineSchema>
-    <dfdl:format binary="true" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes" representation="text"/>
-    <dfdl:textLengthKind value="explicit"/>
-  </dfdl:defineSchema>
 
 </xs:schema>

@@ -1,45 +1,70 @@
-use std::env;
-use std::fs;
-use std::error::Error;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, recognize},
+    combinator::{map, map_res, opt, rest},
+    error::ErrorKind,
     multi::count,
-    number::complete::{le_u16, le_u32},
-    sequence::{preceded, tuple},
+    number::complete::{le_u16, le_u8},
+    sequence::{tuple, preceded},
     IResult,
 };
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
 struct GifHeader {
-    signature: [u8; 6],
-    version: [u8; 3],
+    signature: String,
+    logical_screen_descriptor: LogicalScreenDescriptor,
+    global_color_table: Option<Vec<ColorEntry>>,
 }
 
 #[derive(Debug)]
-struct GifScreenDescriptor {
+struct LogicalScreenDescriptor {
     width: u16,
     height: u16,
-    packed_fields: u8,
+    packed_fields: PackedFields,
     background_color_index: u8,
     pixel_aspect_ratio: u8,
 }
 
 #[derive(Debug)]
-struct GifImageDescriptor {
-    left: u16,
-    top: u16,
-    width: u16,
-    height: u16,
-    packed_fields: u8,
-    local_color_table_flag: bool,
-    lct_size: Option<u8>,
-    lct: Option<Vec<u8>>,
+struct PackedFields {
+    global_color_table_flag: bool,
+    color_resolution: u8,
+    sort_flag: bool,
+    size_of_global_color_table: u8,
+}
+
+#[derive(Debug)]
+struct ColorEntry {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+#[derive(Debug)]
+struct ImageDescriptor {
+    image_separator: u8,
+    image_left_position: u16,
+    image_top_position: u16,
+    image_width: u16,
+    image_height: u16,
+    packed_fields: PackedFields,
+    local_color_table: Option<Vec<ColorEntry>>,
+    image_data: Vec<u8>,
 }
 
 
 #[derive(Debug)]
-struct GifGraphicControlExtension {
+enum Extension {
+    GraphicControl(GraphicControlExtension),
+    PlainText(PlainTextExtension),
+    Comment(CommentExtension),
+    Application(ApplicationExtension),
+}
+
+#[derive(Debug)]
+struct GraphicControlExtension {
+    block_size: u8,
     packed_fields: u8,
     delay_time: u16,
     transparent_color_index: u8,
@@ -47,89 +72,121 @@ struct GifGraphicControlExtension {
 }
 
 #[derive(Debug)]
-struct GifCommentExtension {
-    comment: Vec<u8>,
+struct PlainTextExtension {
+    block_size: u8,
+    text_grid_left: u16,
+    text_grid_top: u16,
+    text_grid_width: u16,
+    text_grid_height: u16,
+    cell_width: u8,
+    cell_height: u8,
+    text_data: Vec<u8>,
+    terminator: u8,
 }
 
 #[derive(Debug)]
-struct GifApplicationExtension {
-    application_identifier: [u8; 8],
-    authentication_code: [u8; 3],
-    data: Vec<u8>,
+struct CommentExtension {
+    comment_data: Vec<u8>,
 }
 
 #[derive(Debug)]
-enum GifExtension {
-    GraphicControl(GifGraphicControlExtension),
-    Comment(GifCommentExtension),
-    Application(GifApplicationExtension),
+struct ApplicationExtension {
+    application_identifier: String,
+    application_authentication_code: String,
+    application_data: Vec<u8>,
 }
 
 
-fn gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
-    let (input, signature) = tag("GIF87a")(input)?;
-    let (input, version) = take(3usize)(input)?;
-    Ok((input, GifHeader { signature: *signature, version: *version }))
+fn parse_packed_fields(input: &[u8]) -> IResult<&[u8], PackedFields> {
+    let (input, packed_fields) = le_u8(input)?;
+    Ok((
+        input,
+        PackedFields {
+            global_color_table_flag: (packed_fields >> 7) & 1 == 1,
+            color_resolution: (packed_fields >> 4) & 7,
+            sort_flag: (packed_fields >> 3) & 1 == 1,
+            size_of_global_color_table: packed_fields & 7,
+        },
+    ))
 }
 
-fn gif_screen_descriptor(input: &[u8]) -> IResult<&[u8], GifScreenDescriptor> {
-    let (input, (width, height, packed_fields, background_color_index, pixel_aspect_ratio)) = tuple((le_u16, le_u16, take(1usize), take(1usize), take(1usize)))(input)?;
-    Ok((input, GifScreenDescriptor { width, height, packed_fields: packed_fields[0], background_color_index: background_color_index[0], pixel_aspect_ratio: pixel_aspect_ratio[0] }))
+fn parse_color_entry(input: &[u8]) -> IResult<&[u8], ColorEntry> {
+    let (input, (red, green, blue)) = tuple((le_u8, le_u8, le_u8))(input)?;
+    Ok((
+        input,
+        ColorEntry {
+            red,
+            green,
+            blue,
+        },
+    ))
 }
 
-fn gif_image_descriptor(input: &[u8]) -> IResult<&[u8], GifImageDescriptor> {
-    let (input, (left, top, width, height, packed_fields)) = tuple((le_u16, le_u16, le_u16, le_u16, take(1usize)))(input)?;
-    let local_color_table_flag = (packed_fields[0] >> 7) & 1 != 0;
-    let lct_size = if local_color_table_flag { Some((packed_fields[0] & 0x07) * 3 + 1) } else { None };
-    let (input, lct) = opt(map(count(take(1usize), lct_size.unwrap_or(0) as usize), |bytes| bytes.concat()))(input)?;
-
-    Ok((input, GifImageDescriptor { left, top, width, height, packed_fields: packed_fields[0], local_color_table_flag, lct_size, lct }))
+fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
+    let (input, _) = tag(b",")(input)?;
+    let (input, (left, top, width, height, packed_fields)) = tuple((
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        parse_packed_fields,
+    ))(input)?;
+    let (input, local_color_table) = opt(preceded(
+        take(1usize),
+        count(parse_color_entry, 1 << (packed_fields.size_of_global_color_table + 1) as usize),
+    ))(input)?;
+    let (input, image_data) = rest(input)?;
+    Ok((
+        input,
+        ImageDescriptor {
+            image_separator: b',',
+            image_left_position: left,
+            image_top_position: top,
+            image_width: width,
+            image_height: height,
+            packed_fields,
+            local_color_table,
+            image_data: image_data.to_vec(),
+        },
+    ))
 }
 
-fn gif_graphic_control_extension(input: &[u8]) -> IResult<&[u8], GifGraphicControlExtension> {
-    let (input, _) = tag("\x21\xf9")(input)?;
-    let (input, (packed_fields, delay_time, transparent_color_index, terminator)) = tuple((take(1usize), le_u16, take(1usize), take(1usize)))(input)?;
-    Ok((input, GifGraphicControlExtension { packed_fields: packed_fields[0], delay_time, transparent_color_index: transparent_color_index[0], terminator: terminator[0] }))
+fn parse_gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
+    let (input, signature) = map_res(take(6usize), std::str::from_utf8)(input)?;
+    let (input, (width, height, packed_fields, background_color_index, pixel_aspect_ratio)) =
+        tuple((le_u16, le_u16, parse_packed_fields, le_u8, le_u8))(input)?;
+    let (input, global_color_table) = opt(preceded(
+        take(1usize),
+        count(parse_color_entry, 1 << (packed_fields.size_of_global_color_table + 1) as usize),
+    ))(input)?;
+    Ok((
+        input,
+        GifHeader {
+            signature: signature.to_string(),
+            logical_screen_descriptor: LogicalScreenDescriptor {
+                width,
+                height,
+                packed_fields,
+                background_color_index,
+                pixel_aspect_ratio,
+            },
+            global_color_table,
+        },
+    ))
 }
 
-fn gif_comment_extension(input: &[u8]) -> IResult<&[u8], GifCommentExtension> {
-    let (input, _) = tag("\x21\xfe")(input)?;
-    let (input, comment) = recognize(many0(take(255usize)))(input)?;
-    Ok((input, GifCommentExtension { comment: comment.to_vec() }))
-}
-
-fn gif_application_extension(input: &[u8]) -> IResult<&[u8], GifApplicationExtension> {
-    let (input, _) = tag("\x21\xff")(input)?;
-    let (input, (application_identifier, authentication_code, data)) = tuple((take(8usize), take(3usize), many0(take(255usize))))(input)?;
-    Ok((input, GifApplicationExtension { application_identifier: *application_identifier, authentication_code: *authentication_code, data: data.concat() }))
-}
-
-fn gif_extension(input: &[u8]) -> IResult<&[u8], GifExtension> {
-    let (input, _) = tag("\x21")(input)?;
-    let (input, extension_type) = take(1usize)(input)?;
-    match extension_type[0] {
-        0xf9 => map(gif_graphic_control_extension, GifExtension::GraphicControl)(input),
-        0xfe => map(gif_comment_extension, GifExtension::Comment)(input),
-        0xff => map(gif_application_extension, GifExtension::Application)(input),
-        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
-    }
-}
-
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <filename>", args[0]);
-        return Ok(());
+        eprintln!("Usage: {} <gif_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let data = fs::read(filename)?;
+    let path = Path::new(&args[1]);
+    let data = fs::read(path).expect("Failed to read file");
 
-    let result = gif_header(&data);
-    println!("{:?}", result);
-
-    Ok(())
+    match parse_gif_header(&data) {
+        Ok((_, header)) => println!("GIF Header: {:?}", header),
+        Err(e) => println!("Error parsing GIF header: {:?}", e),
+    }
 }
-
-use nom::multi::many0;

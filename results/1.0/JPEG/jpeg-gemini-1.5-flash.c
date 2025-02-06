@@ -1,83 +1,78 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent a JPEG image
 typedef struct {
-    unsigned char *data;
-    int width;
-    int height;
-} JPEGImage;
+    uint8_t marker;
+    uint16_t length;
+    uint8_t data[0]; 
+} JpegSegment;
 
+static HammerParser* parse_uint16(void);
+static HammerParser* parse_jpeg_segment(void);
 
-// Function to load a JPEG image (replace with your actual loading logic)
-JPEGImage *loadJPEG(const char *filename) {
-    JPEGImage *image = malloc(sizeof(JPEGImage));
-    if (image == NULL) {
-        perror("Memory allocation failed");
-        return NULL;
-    }
-    //Simulate loading - replace with actual JPEG loading library
-    image->width = 640;
-    image->height = 480;
-    image->data = malloc(image->width * image->height * 3); //Simulate RGB data
-    if (image->data == NULL){
-        perror("Memory allocation failed");
-        free(image);
-        return NULL;
-    }
-    memset(image->data, 0, image->width * image->height * 3); //Black image
-
-    return image;
+static HammerParser* parse_uint16(void) {
+    return hammer_map(hammer_be_uint16(), hammer_value_new_uint16);
 }
 
-
-// Function to save a JPEG image (replace with your actual saving logic)
-int saveJPEG(const JPEGImage *image, const char *filename) {
-    //Simulate saving - replace with actual JPEG saving library.
-    printf("Simulated saving of JPEG image to %s\n", filename);
-    return 0; //Success
+static HammerParser* parse_jpeg_segment(void) {
+    return hammer_map(hammer_seq(
+                hammer_expect_uint8(0xFF),
+                hammer_uint8(),
+                parse_uint16(),
+                hammer_bytes_count(hammer_ref(parse_uint16))
+            ),
+            (HammerMapFunc) (HammerValue* v) {
+                uint16_t len = hammer_value_get_uint16(v->value[2]);
+                JpegSegment* segment = malloc(sizeof(JpegSegment) + len - 2);
+                segment->marker = 0xFF;
+                segment->marker = hammer_value_get_uint8(v->value[1]);
+                segment->length = len;
+                memcpy(segment->data, hammer_value_get_bytes(v->value[3]), len - 2);
+                return hammer_value_new_pointer(segment);
+            });
 }
 
-// Function to perform "hammering" operation (replace with your actual image processing)
-int hammerJPEG(JPEGImage *image) {
-    if (image == NULL) return 1; //Error handling
-
-    //Simulate some image processing - replace this with your actual "hammering" algorithm
-    for (int i = 0; i < image->width * image->height * 3; i++) {
-        image->data[i] = (image->data[i] + 100) % 256; //Simple modification
-    }
-    return 0; //Success
-}
-
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s input.jpg output.jpg\n", argv[0]);
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
         return 1;
     }
 
-    const char *inputFilename = argv[1];
-    const char *outputFilename = argv[2];
-
-    JPEGImage *image = loadJPEG(inputFilename);
-    if (image == NULL) {
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    if (hammerJPEG(image) != 0) {
-        free(image->data);
-        free(image);
-        return 1;
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = (uint8_t*)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    HammerParser* parser = hammer_many(parse_jpeg_segment);
+    HammerResult* result = hammer_parse(parser, buffer, fsize);
+
+    if (result->success) {
+        printf("JPEG parsing successful!\n");
+        HammerValue* segments = result->value;
+        for (size_t i = 0; i < hammer_value_get_array_len(segments); ++i) {
+            JpegSegment* segment = (JpegSegment*)hammer_value_get_pointer(hammer_value_get_array_element(segments, i));
+            printf("Segment Marker: 0x%02X, Length: %u\n", segment->marker, segment->length);
+            free(segment);
+        }
+    } else {
+        fprintf(stderr, "JPEG parsing failed at offset %zu: %s\n", result->offset, result->error);
     }
 
+    hammer_result_free(result);
+    hammer_parser_free(parser);
+    free(buffer);
 
-    if (saveJPEG(image, outputFilename) != 0) {
-        free(image->data);
-        free(image);
-        return 1;
-    }
-
-    free(image->data);
-    free(image);
     return 0;
 }

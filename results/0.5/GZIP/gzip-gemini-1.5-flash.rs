@@ -1,88 +1,114 @@
-use std::env;
-use std::fs;
-use std::io::Read;
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    number::complete::be_u32,
+    bytes::complete::{tag, take, take_while_m_n},
+    combinator::{map, map_res, opt, verify},
+    error::ParseError,
+    number::complete::{be_u16, be_u32},
+    sequence::{preceded, tuple},
     IResult,
 };
-use flate2::read::GzDecoder;
+use std::fs::File;
+use std::io::{Read, Result};
+use std::path::Path;
+use std::string::FromUtf8Error;
 
-fn gzip_header(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = tag(b"\x1f\x8b")(input)?;
-    let (input, compression_method) = be_u32(input)?;
-    if compression_method != 8 {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Custom(1))));
-    }
-    let (input, flags) = be_u32(input)?;
-    let (input, mtime) = be_u32(input)?;
-    let (input, extra_flags) = be_u32(input)?;
-    let (input, os) = be_u32(input)?;
-
-    if flags & 0b00000001 != 0 {
-        let (input, extra_field_len) = be_u32(input)?;
-        let (input, _) = take(extra_field_len as usize)(input)?;
-    }
-    if flags & 0b00000010 != 0 {
-        let (input, filename_len) = be_u32(input)?;
-        let (input, _) = take(filename_len as usize)(input)?;
-    }
-    if flags & 0b00000100 != 0 {
-        let (input, comment_len) = be_u32(input)?;
-        let (input, _) = take(comment_len as usize)(input)?;
-    }
-    if flags & 0b00001000 != 0 {
-        let (input, _) = be_u32(input)?; // Header CRC32
-    }
-    Ok((input, ()))
+#[derive(Debug, PartialEq)]
+struct GzipHeader {
+    id1: u8,
+    id2: u8,
+    cm: u8,
+    flg: u8,
+    mtime: u32,
+    xfl: u8,
+    os: u8,
+    extra: Option<Vec<u8>>,
+    fname: Option<String>,
+    comment: Option<String>,
+    header_crc: Option<u16>,
 }
 
-fn gzip_footer(input: &[u8]) -> IResult<&[u8], ()> {
-    let (input, _) = take(8usize)(input)?; // CRC32 and ISIZE
-    Ok((input, ()))
-}
+fn gzip_header<'a, E: ParseError<&'a [u8]> + nom::error::FromExternalError<&'a [u8], FromUtf8Error>>(
+    input: &'a [u8],
+) -> IResult<&'a [u8], GzipHeader, E> {
+    let (input, (id1, id2, cm, flg, mtime, xfl, os)) = tuple((
+        take(1usize),
+        take(1usize),
+        take(1usize),
+        take(1usize),
+        be_u32,
+        take(1usize),
+        take(1usize),
+    ))(input)?;
 
+    let (input, extra_len) = opt(preceded(
+        verify(take(2usize), |len: &[u8]| len[0] == 0 && len[1] == 0),
+        be_u16,
+    ))(input)?;
 
-fn parse_gzip(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, _) = gzip_header(input)?;
-    let (input, compressed_data) = take_until_gzip_footer(input)?;
-    let (input, _) = gzip_footer(input)?;
-    Ok((input, compressed_data.to_vec()))
-}
-
-fn take_until_gzip_footer(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    let mut i = 0;
-    while i < input.len() - 7 {
-        if input[i..i+8].ends_with(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]) {
-            return Ok((&input[i+8..], &input[..i]));
+    let (input, extra) = match extra_len {
+        Some(len) => {
+            let (i, e) = take(len as usize)(input)?;
+            (i, Some(e.to_vec()))
         }
-        i += 1;
-    }
-    Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Custom(2))))
+        None => (input, None),
+    };
 
+
+    let (input, fname) = opt(preceded(
+        tag(b"\0"),
+        map_res(take_while_m_n(1, 255, |b| b != 0), |bytes: &[u8]| {
+            String::from_utf8(bytes.to_vec())
+        }),
+    ))(input)?;
+
+    let (input, comment) = opt(preceded(
+        tag(b"\0"),
+        map_res(take_while_m_n(1, 255, |b| b != 0), |bytes: &[u8]| {
+            String::from_utf8(bytes.to_vec())
+        }),
+    ))(input)?;
+
+    let (input, header_crc) = opt(be_u16)(input)?;
+
+    Ok((
+        input,
+        GzipHeader {
+            id1: id1[0],
+            id2: id2[0],
+            cm: cm[0],
+            flg: flg[0],
+            mtime,
+            xfl: xfl[0],
+            os: os[0],
+            extra,
+            fname,
+            comment,
+            header_crc,
+        },
+    ))
 }
 
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <filename>", args[0]);
-        return;
+        eprintln!("Usage: {} <gzip_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let contents = fs::read(filename).expect("Something went wrong reading the file");
+    let path = Path::new(&args[1]);
+    let mut file = File::open(path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
 
-    match parse_gzip(&contents) {
-        Ok((_, compressed_data)) => {
-            let mut decoder = GzDecoder::new(&compressed_data[..]);
-            let mut decompressed = Vec::new();
-            decoder.read_to_end(&mut decompressed).unwrap();
-            println!("Decompressed data: {:?}", decompressed);
+    match gzip_header::<nom::error::VerboseError<&[u8]>>(&buffer) {
+        Ok((remaining, header)) => {
+            println!("Parsed GZIP header: {:?}", header);
+            println!("Remaining data: {:?}", remaining);
         }
         Err(e) => {
-            eprintln!("Error parsing GZIP: {:?}", e);
+            println!("Error parsing GZIP header: {:?}", e);
+            std::process::exit(1);
         }
     }
+
+    Ok(())
 }

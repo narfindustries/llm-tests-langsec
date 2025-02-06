@@ -1,44 +1,52 @@
 module DICOM;
 
-public type FileHeader = unit {
+public type FileMetaInformation = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
-    elements: Element(self)[] &eod;
+    elements: DICOMElement[] &eod;
 };
 
-public type Element = unit(parent: FileHeader) {
-    tagGroup: uint16;
-    tagElement: uint16;
+public type DICOMElement = unit {
+    group: uint16;
+    element: uint16;
     vr: bytes &size=2;
     length: uint16;
-    value: switch (self.vr) {
-        b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"TM", b"UI" -> string : bytes &size=self.length;
-        b"US" -> uint16 : uint16;
-        b"UL" -> uint32 : uint32;
-        b"SS" -> int16 : int16;
-        b"SL" -> int32 : int32;
-        b"FL" -> float : float;
-        b"FD" -> double : double;
-        b"OB", b"OW", b"UN", b"SQ", b"UT" -> bytes : bytes &size=self.length;
-        default -> opaque : bytes &size=self.length;
-    } &optional;
+    value: bytes &size=self.length;
 
-    on %done {
-        if (self.tagGroup == 0x0002 && self.tagElement == 0x0010) {
-            if (self.value as string == "1.2.840.10008.1.2.1") {
-                print "Explicit VR Little Endian";
+    on %init {
+        switch (self.vr) {
+            case b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"LO", b"LT", b"PN", b"SH", b"ST", b"TM", b"UI", b"UR", b"UT": {
+                print "String type VR";
+            }
+            case b"US": {
+                print "Unsigned Short";
+            }
+            case b"UL": {
+                print "Unsigned Long";
+            }
+            case b"SS": {
+                print "Signed Short";
+            }
+            case b"SL": {
+                print "Signed Long";
+            }
+            case b"FL": {
+                print "Floating Point Single";
+            }
+            case b"FD": {
+                print "Floating Point Double";
+            }
+            case b"OB", b"OW", b"UN", b"SQ", b"OF", b"OD", b"OL", b"UC", b"AT": {
+                print "Other Binary or Complex";
+            }
+            default: {
+                print "Unknown VR";
             }
         }
     }
 };
 
-public type DICOM_File = unit {
-    header: FileHeader;
-    on %done {
-        print "DICOM file parsing completed.";
-    }
+public type DICOMFile = unit {
+    fileMetaInformation: FileMetaInformation;
+    dataSet: DICOMElement[] &eod;
 };
-
-event zeek_init() {
-    print "Zeek Spicy DICOM parser loaded.";
-}

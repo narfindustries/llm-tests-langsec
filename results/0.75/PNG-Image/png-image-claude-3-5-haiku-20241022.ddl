@@ -1,31 +1,46 @@
-format PNG-Image:
-    signature = 0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A
+def PngSignature = bytes(8) where this == "\x89PNG\r\n\x1A\n"
 
-    chunk IHDR:
-        length: uint32
-        type: bytes(4) = "IHDR"
-        width: uint32
-        height: uint32
-        bit_depth: uint8
-        color_type: uint8
-        compression: uint8
-        filter: uint8
-        interlace: uint8
-        crc: uint32
+type ChunkType = enum {
+    IHDR,
+    PLTE,
+    tRNS,
+    gAMA,
+    cHRM,
+    sRGB,
+    iCCP,
+    tEXt,
+    zTXt,
+    iTXt,
+    bKGD,
+    pHYs,
+    sBIT,
+    sPLT,
+    hIST,
+    tIME,
+    IDAT,
+    IEND
+}
 
-    chunk IDAT:
-        length: uint32
-        type: bytes(4) = "IDAT"
-        data: bytes(length)
-        crc: uint32
+struct ImageHeader {
+    width: u32,
+    height: u32,
+    bitDepth: u8 where [1, 2, 4, 8, 16],
+    colorType: u8 where [0, 2, 3, 4, 6],
+    compressionMethod: u8 where [0],
+    filterMethod: u8 where [0],
+    interlaceMethod: u8 where [0, 1]
+}
 
-    chunk IEND:
-        length: uint32
-        type: bytes(4) = "IEND"
-        crc: uint32
+struct Chunk {
+    length: u32,
+    type: ChunkType,
+    data: bytes(length),
+    crc: u32
+}
 
-    file:
-        signature
-        header: IHDR
-        image_data: IDAT
-        trailer: IEND
+struct PngImage {
+    signature: PngSignature,
+    chunks: [Chunk] where chunks[chunks.length - 1].type == ChunkType.IEND
+}
+
+def parse = PngImage

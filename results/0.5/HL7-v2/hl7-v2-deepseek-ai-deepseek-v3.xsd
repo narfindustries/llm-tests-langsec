@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <dfdl:format ref="tns:GeneralFormat" />
+
+  <dfdl:defineFormat name="GeneralFormat">
+    <dfdl:format separator="|" encoding="UTF-8" />
+  </dfdl:defineFormat>
+
+  <xs:element name="HL7Message">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="\r">
+        <xs:element name="MSH" type="tns:MSHSegment" />
+        <xs:element name="Segments" type="tns:SegmentList" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="MSHSegment">
+    <xs:sequence dfdl:separator="|">
+      <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1" />
+      <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4" />
+      <xs:element name="SendingApplication" type="tns:HD" />
+      <xs:element name="SendingFacility" type="tns:HD" />
+      <xs:element name="ReceivingApplication" type="tns:HD" />
+      <xs:element name="ReceivingFacility" type="tns:HD" />
+      <xs:element name="DateTimeOfMessage" type="tns:DTM" />
+      <xs:element name="Security" type="xs:string" minOccurs="0" />
+      <xs:element name="MessageType" type="tns:MSG" />
+      <xs:element name="MessageControlID" type="xs:string" />
+      <xs:element name="ProcessingID" type="tns:PT" />
+      <xs:element name="VersionID" type="tns:VID" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentList">
+    <xs:sequence>
+      <xs:choice>
+        <xs:element name="PID" type="tns:PIDSegment" />
+        <xs:element name="PV1" type="tns:PV1Segment" />
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PIDSegment">
+    <xs:sequence dfdl:separator="|">
+      <xs:element name="SetID" type="tns:SI" />
+      <xs:element name="PatientID" type="tns:CX" />
+      <xs:element name="PatientIdentifierList" type="tns:CX" />
+      <xs:element name="AlternatePatientID" type="tns:CX" minOccurs="0" />
+      <xs:element name="PatientName" type="tns:XPN" />
+      <xs:element name="MothersMaidenName" type="tns:XPN" minOccurs="0" />
+      <xs:element name="DateTimeOfBirth" type="tns:DTM" />
+      <xs:element name="Sex" type="tns:IS" />
+      <xs:element name="PatientAlias" type="tns:XPN" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PV1Segment">
+    <xs:sequence dfdl:separator="|">
+      <xs:element name="SetID" type="tns:SI" />
+      <xs:element name="PatientClass" type="tns:IS" />
+      <xs:element name="AssignedPatientLocation" type="tns:PL" />
+      <xs:element name="AdmissionType" type="tns:IS" />
+      <xs:element name="PreadmitNumber" type="tns:CX" minOccurs="0" />
+      <xs:element name="PriorPatientLocation" type="tns:PL" minOccurs="0" />
+      <xs:element name="AttendingDoctor" type="tns:XCN" />
+      <xs:element name="ReferringDoctor" type="tns:XCN" minOccurs="0" />
+      <xs:element name="ConsultingDoctor" type="tns:XCN" minOccurs="0" />
+      <xs:element name="HospitalService" type="tns:IS" minOccurs="0" />
+      <xs:element name="TemporaryLocation" type="tns:PL" minOccurs="0" />
+      <xs:element name="PreadmitTestIndicator" type="tns:IS" minOccurs="0" />
+      <xs:element name="ReAdmissionIndicator" type="tns:IS" minOccurs="0" />
+      <xs:element name="AdmitSource" type="tns:IS" minOccurs="0" />
+      <xs:element name="AmbulatoryStatus" type="tns:IS" minOccurs="0" />
+      <xs:element name="VIPIndicator" type="tns:IS" minOccurs="0" />
+      <xs:element name="AdmittingDoctor" type="tns:XCN" />
+      <xs:element name="PatientType" type="tns:IS" minOccurs="0" />
+      <xs:element name="VisitNumber" type="tns:CX" />
+      <xs:element name="FinancialClass" type="tns:FC" minOccurs="0" />
+      <xs:element name="ChargePriceIndicator" type="tns:IS" minOccurs="0" />
+      <xs:element name="CourtesyCode" type="tns:IS" minOccurs="0" />
+      <xs:element name="CreditRating" type="tns:IS" minOccurs="0" />
+      <xs:element name="ContractCode" type="tns:IS" minOccurs="0" />
+      <xs:element name="ContractEffectiveDate" type="tns:DT" minOccurs="0" />
+      <xs:element name="ContractAmount" type="tns:NM" minOccurs="0" />
+      <xs:element name="ContractPeriod" type="tns:NM" minOccurs="0" />
+      <xs:element name="InterestCode" type="tns:IS" minOccurs="0" />
+      <xs:element name="TransferToBadDebtCode" type="tns:IS" minOccurs="0" />
+      <xs:element name="TransferToBadDebtDate" type="tns:DT" minOccurs="0" />
+      <xs:element name="BadDebtAgencyCode" type="tns:IS" minOccurs="0" />
+      <xs:element name="BadDebtTransferAmount" type="tns:NM" minOccurs="0" />
+      <xs:element name="BadDebtRecoveryAmount" type="tns:NM" minOccurs="0" />
+      <xs:element name="DeleteAccountIndicator" type="tns:IS" minOccurs="0" />
+      <xs:element name="DeleteAccountDate" type="tns:DT" minOccurs="0" />
+      <xs:element name="DischargeDisposition" type="tns:IS" minOccurs="0" />
+      <xs:element name="DischargedToLocation" type="tns:DLD" minOccurs="0" />
+      <xs:element name="DietType" type="tns:CE" minOccurs="0" />
+      <xs:element name="ServicingFacility" type="tns:IS" minOccurs="0" />
+      <xs:element name="BedStatus" type="tns:IS" minOccurs="0" />
+      <xs:element name="AccountStatus" type="tns:IS" minOccurs="0" />
+      <xs:element name="PendingLocation" type="tns:PL" minOccurs="0" />
+      <xs:element name="PriorTemporaryLocation" type="tns:PL" minOccurs="0" />
+      <xs:element name="AdmitDateTime" type="tns:DTM" minOccurs="0" />
+      <xs:element name="DischargeDateTime" type="tns:DTM" minOccurs="0" />
+      <xs:element name="CurrentPatientBalance" type="tns:NM" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

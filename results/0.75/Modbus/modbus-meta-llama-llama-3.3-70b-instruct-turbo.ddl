@@ -1,68 +1,79 @@
-grammar Modbus {
-  rule frame = 
-    tran_id: uint16 
-    proto_id: uint16 
-    len: uint16 
-    unit_id: uint8 
-    func_code: uint8 
-    data: data_element*
+type uint8 = byte
+type uint16 = bytes(2)
+type uint8_array = array(uint8)
+type uint16_array = array(uint16)
 
-  rule data_element = 
-    addr: uint16 
-    num_regs: uint16 
-    val: uint16
+define ModbusMessage {
+  address: uint8(0..127),
+  functionCode: uint8(
+    ReadCoilStatus = 1,
+    ReadInputStatus = 2,
+    ReadHoldingRegisters = 3,
+    ReadInputRegisters = 4,
+    ForceSingleCoil = 5,
+    PresetSingleRegister = 6,
+    ReadExceptionStatus = 7,
+    ForceMultipleCoils = 15,
+    PresetMultipleRegisters = 16,
+    ReportSlaveID = 17,
+    ProgramController = 18,
+    Program884 = 19,
+    Program885 = 20,
+    Program886 = 21,
+    Program887 = 22,
+    Program888 = 23
+  ),
+  data: choice(
+    ReadCoilStatus: {
+      startingAddress: uint16,
+      quantityOfCoils: uint16
+    },
+    ReadInputStatus: {
+      startingAddress: uint16,
+      quantityOfInputs: uint16
+    },
+    ReadHoldingRegisters: {
+      startingAddress: uint16,
+      quantityOfRegisters: uint16
+    },
+    ReadInputRegisters: {
+      startingAddress: uint16,
+      quantityOfRegisters: uint16
+    },
+    ForceSingleCoil: {
+      outputAddress: uint16,
+      outputValue: uint8
+    },
+    PresetSingleRegister: {
+      registerAddress: uint16,
+      registerValue: uint16
+    },
+    ReadExceptionStatus: {},
+    ForceMultipleCoils: {
+      startingAddress: uint16,
+      quantityOfCoils: uint16,
+      outputValues: uint8_array
+    },
+    PresetMultipleRegisters: {
+      startingAddress: uint16,
+      quantityOfRegisters: uint16,
+      registerValues: uint16_array
+    },
+    ReportSlaveID: {
+      slaveID: uint8,
+      runIndicatorStatus: uint8
+    },
+    ProgramController: {},
+    Program884: {},
+    Program885: {},
+    Program886: {},
+    Program887: {},
+    Program888: {}
+  )
 }
 
-grammar data_element {
-  rule data = 
-    byte_count: uint8 
-    byte_values: uint8*
+define ModbusCRC {
+  crc: uint16
 }
 
-grammar function_code_1 {
-  rule frame = 
-    func_code: uint8 (eq(0x01)) 
-    data: data_element*
-}
-
-grammar function_code_2 {
-  rule frame = 
-    func_code: uint8 (eq(0x02)) 
-    data: data_element*
-}
-
-grammar function_code_3 {
-  rule frame = 
-    func_code: uint8 (eq(0x03)) 
-    data: data_element*
-}
-
-grammar function_code_4 {
-  rule frame = 
-    func_code: uint8 (eq(0x04)) 
-    data: data_element*
-}
-
-grammar function_code_5 {
-  rule frame = 
-    func_code: uint8 (eq(0x05)) 
-    data: data_element*
-}
-
-grammar function_code_6 {
-  rule frame = 
-    func_code: uint8 (eq(0x06)) 
-    data: data_element*
-}
-
-grammar function_code_15 {
-  rule frame = 
-    func_code: uint8 (eq(0x0F)) 
-    data: data_element*
-}
-
-grammar function_code_16 {
-  rule frame = 
-    func_code: uint8 (eq(0x10)) 
-    data: data_element*
-}
+root ModbusMessage

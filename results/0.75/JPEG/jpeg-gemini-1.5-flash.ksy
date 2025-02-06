@@ -1,73 +1,166 @@
 meta:
-  id: jpeg-gemini-1
-  title: JPEG Gemini 1.5 Flash
-  homepage: ""
-  doc_url: ""
-  license: ""
-
-types:
-  marker:
-    enum:
-      - 0xffd8: SOI
-      - 0xffd9: EOI
-      - 0xffda: SOS
-      - 0xffdb: DQT
-      - 0xffdc: DHT
-      - 0xffdd: DRI
-      - 0xffde: DNL
-      - 0xffdf: DRI
-      - 0xffe0: APP0
-      - 0xffe1: APP1
-      - 0xffe2: APP2
-      - 0xffe3: APP3
-      - 0xffe4: APP4
-      - 0xffe5: APP5
-      - 0xffe6: APP6
-      - 0xffe7: APP7
-      - 0xffe8: APP8
-      - 0xffe9: APP9
-      - 0xffea: APP10
-      - 0xffeb: APP11
-      - 0xffec: APP12
-      - 0xffed: APP13
-      - 0xffee: APP14
-      - 0xffef: APP15
-      - 0xfff0: JPG0
-      - 0xfff1: JPG1
-      - 0xfff2: JPG2
-      - 0xfff3: JPG3
-      - 0xfff4: JPG4
-      - 0xfff5: JPG5
-      - 0xfff6: JPG6
-      - 0xfff7: JPG7
-      - 0xfff8: JPG8
-      - 0xfff9: JPG9
-      - 0xfffa: JPG10
-      - 0xfffb: JPG11
-      - 0xfffc: JPG12
-      - 0xfffd: JPG13
-      - 0xfffe: JPG14
-      - 0xffff: JPG15
-
-
+  id: jpeg
+  endian: be
 seq:
   - id: soi
-    type: marker
-    enum: SOI
+    type: soi_marker
   - id: segments
     type: seq
-    repeat: eos
+    repeat: until_eof
+    until_eof: true
+  - id: eoi
+    type: eoi_marker
+
+types:
+  soi_marker:
     seq:
-      - id: marker_byte
-        type: u1
       - id: marker
-        type: marker
+        type: u2
+        enum:
+          0xFFD8: soi
+
+  eoi_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum:
+          0xFFD9: eoi
+
+  segment:
+    id: segment
+    seq:
+      - id: marker
+        type: u2
       - id: length
-        type: u2be
+        type: u2
       - id: data
         type: bytes
         size: length - 2
-  - id: eoi
-    type: marker
-    enum: EOI
+
+  sof_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum:
+          0xFFC0: baseline_dct
+          0xFFC1: extended_sequential_dct
+          0xFFC2: progressive_dct
+          0xFFC3: lossless
+          0xFFC5: differential_sequential_dct
+          0xFFC6: differential_progressive_dct
+          0xFFC7: differential_lossless
+      - id: length
+        type: u2
+      - id: precision
+        type: u1
+      - id: height
+        type: u2
+      - id: width
+        type: u2
+      - id: num_components
+        type: u1
+      - id: components
+        type: seq
+        size: num_components
+        items:
+          - id: component_id
+            type: u1
+          - id: h_sampling_factor
+            type: u1
+          - id: v_sampling_factor
+            type: u1
+          - id: quantization_table_selector
+            type: u1
+
+  dht_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum: 0xFFC4: dht
+      - id: length
+        type: u2
+      - id: tables
+        type: seq
+        repeat: until_end
+        until_end: true
+        items:
+          - id: table_class_and_id
+            type: u8
+            bits: 5
+          - id: counts
+            type: u1
+            size: 16
+          - id: symbols
+            type: u1
+            size: counts[0..15]
+
+  dqt_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum: 0xFFDB: dqt
+      - id: length
+        type: u2
+      - id: tables
+        type: seq
+        repeat: until_end
+        until_end: true
+        items:
+          - id: table_precision_and_id
+            type: u8
+            bits: 5
+          - id: table_data
+            type: u2
+            size: 64
+
+  dri_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum: 0xFFDD: dri
+      - id: length
+        type: u2
+      - id: restart_interval
+        type: u2
+
+  sos_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum: 0xFFDA: sos
+      - id: length
+        type: u2
+      - id: num_components
+        type: u1
+      - id: components
+        type: seq
+        size: num_components
+        items:
+          - id: component_id
+            type: u1
+          - id: dc_huffman_table_selector
+            type: u4
+            bits: 4
+          - id: ac_huffman_table_selector
+            type: u4
+            bits: 4
+      - id: start_spectral_selection
+        type: u1
+      - id: end_spectral_selection
+        type: u1
+      - id: successive_approximation
+        type: u1
+
+
+  com_marker:
+    seq:
+      - id: marker
+        type: u2
+        enum: 0xFFFE: com
+      - id: length
+        type: u2
+      - id: comment
+        type: str
+        size: length - 2
+        encoding: ASCII
 

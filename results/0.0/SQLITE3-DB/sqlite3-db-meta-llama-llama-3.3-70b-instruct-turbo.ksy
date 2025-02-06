@@ -1,19 +1,21 @@
 meta:
-  id: sqlite3-db
+  id: sqlite3_db
   file-extension: db
   endian: le
+  title: SQLite3 database file format
+
 seq:
   - id: magic
     type: str
-    size: 16
-    encoding: ASCII
+    size: 4
+    encoding: ascii
   - id: page_size
     type: u2
   - id: write_version
     type: u1
   - id: read_version
     type: u1
-  - id: reserved_space
+  - id: reserved
     type: u1
   - id: max_embedded_payload_fraction
     type: u1
@@ -21,63 +23,123 @@ seq:
     type: u1
   - id: leaf_payload_fraction
     type: u1
-  - id: file_change_counter
+  - id: file_format_write_version
     type: u4
-  - id: pages_in_file
+  - id: file_format_read_version
     type: u4
-  - id: first_freelist_page
-    type: u4
-  - id: freelist_page_count
-    type: u4
-  - id: schema_cookie
-    type: u4
-  - id: schema_format
-    type: u4
-  - id: default_page_cache_size
-    type: u4
-  - id: largest_root_btree_page
-    type: u4
-  - id: text_encoding
-    type: u4
-  - id: user_version
-    type: u4
-  - id: incremental_vacuum_mode
-    type: u4
-  - id: application_id
-    type: u4
-  - id: reserved_for_expansion
-    type: u4
-    repeat: 20
-  - id: version_valid_for
-    type: u4
-  - id: sqlite_version_number
-    type: u4
+  - id: pages
+    type: page
+    repeat: eos
+
 types:
-  btree_page: &btree_page
+  page:
     seq:
       - id: page_type
         type: u1
       - id: first_freeblock
         type: u2
+      - id: cell_offset
+        type: u2
       - id: num_cells
         type: u2
+      - id: fragmented_free_bytes
+        type: u1
+      - id: right_child
+        type: u4
+        if: page_type == 2 or page_type == 5
       - id: cells
         type: cell
-        repeat: num_cells
-      - id: freeblocks
-        type: freeblock
         repeat: expr
-  cell: &cell
+        repeat-expr: num_cells
+
+  cell:
     seq:
-      - id: length
-        type: u2
-      - id: payload
-        type: str
-        size: length
-        encoding: UTF-8
-  freeblock: &freeblock
+      - id: payload_length
+        type: switch-on
+        cases:
+          - condition: _parent.page_type == 2
+            type: u4
+          - condition: _parent.page_type == 5
+            type: u4
+          - else:
+            type: varint
+      - id: header_length
+        type: varint
+      - id: num_columns
+        type: varint
+      - id: column_data
+        type: switch-on
+        cases:
+          - condition: _parent.page_type == 2
+            type: btree_cell
+          - condition: _parent.page_type == 5
+            type: leaf_cell
+          - else:
+            type: bytes
+
+  btree_cell:
     seq:
-      - id: offset
+      - id: left_child
+        type: u4
+      - id: key
+        type: bytes
+      - id: data
+        type: bytes
+
+  leaf_cell:
+    seq:
+      - id: rowid
+        type: varint
+      - id: data
+        type: bytes
+
+  varint:
+    type: switch-on
+    cases:
+      - condition: _ < 128
+        type: u1
+      - condition: _ < 16384
         type: u2
+      - condition: _ < 1073741824
+        type: u3
+      - else:
+        type: u8
+
+  overflow_page:
+    seq:
+      - id: next_page
+        type: u4
+      - id: data
+        type: bytes
+
+  free_page:
+    seq:
+      - id: next_page
+        type: u4
       - id: size
         type: u2
+
+  master_journal_header:
+    seq:
+      - id: magic
+        type: str
+        size: 4
+        encoding: ascii
+      - id: version
+        type: u4
+      - id: page_count
+        type: u4
+      - id: sector_size
+        type: u2
+      - id: page_size
+        type: u2
+      - id: reserved
+        type: bytes
+        size: 10
+
+  master_journal_page:
+    seq:
+      - id: page_number
+        type: u4
+      - id: data
+        type: bytes

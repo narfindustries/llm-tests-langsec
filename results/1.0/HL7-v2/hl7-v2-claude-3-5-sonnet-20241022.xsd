@@ -1,65 +1,194 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:hl7="urn:hl7-org:v2xml"
-    targetNamespace="urn:hl7-org:v2xml">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
-                        lengthKind="delimited" 
-                        encoding="UTF-8"
-                        separator=""
-                        ignoreCase="no"
-                        initiator=""
-                        terminator=""
-                        textOutputMinLength="1"
-                        textPadKind="none"
-                        textTrimKind="none"
-                        textBidi="no"
-                        nilValueDelimiterPolicy="both"
-                        documentFinalTerminatorCanBeMissing="yes"
-                        initiatedContent="no"
-                        representation="text"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
+           elementFormDefault="unqualified">
 
-    <xs:element name="hl7Message">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="segment" maxOccurs="unbounded">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="field" maxOccurs="unbounded">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="component" type="xs:string" minOccurs="0" maxOccurs="unbounded">
-                                            <xs:annotation>
-                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
-                                                    <dfdl:element separator="^"/>
-                                                </xs:appinfo>
-                                            </xs:annotation>
-                                        </xs:element>
-                                    </xs:sequence>
-                                    <xs:annotation>
-                                        <xs:appinfo source="http://www.ogf.org/dfdl/">
-                                            <dfdl:element separator="|"/>
-                                        </xs:appinfo>
-                                    </xs:annotation>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:sequence>
-                        <xs:attribute name="type" type="xs:string"/>
-                        <xs:annotation>
-                            <xs:appinfo source="http://www.ogf.org/dfdl/">
-                                <dfdl:element separator="\r\n"/>
-                            </xs:appinfo>
-                        </xs:annotation>
-                    </xs:complexType>
-                </xs:element>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   lengthKind="delimited"
+                   encoding="UTF-8"
+                   initiator=""
+                   terminator=""
+                   separator=""
+                   ignoreCase="no"
+                   textTrimKind="none"
+                   initiatedContent="no"
+                   separatorSuppressionPolicy="anyEmpty"
+                   separatorPosition="infix"
+                   documentFinalTerminatorCanBeMissing="yes"
+                   byteOrder="bigEndian"
+                   binaryNumberRep="binary"
+                   representation="text"
+                   occursCountKind="implicit"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   sequenceKind="ordered"
+                   floating="no"
+                   textBidi="no"
+                   alignmentUnits="bytes"
+                   encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <!-- Base Types -->
+  <xs:element name="hl7Message" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="\r" dfdl:separatorPosition="postfix">
+        <xs:element name="segment" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="|">
+              <xs:element name="segmentID" type="xs:string"/>
+              <xs:element name="field" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence dfdl:separator="^">
+                    <xs:element name="component" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Message Header -->
+  <xs:element name="MSH">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="fieldSeparator" type="xs:string" fixed="|"/>
+        <xs:element name="encodingCharacters" type="xs:string"/>
+        <xs:element name="sendingApplication" type="xs:string"/>
+        <xs:element name="sendingFacility" type="xs:string"/>
+        <xs:element name="receivingApplication" type="xs:string"/>
+        <xs:element name="receivingFacility" type="xs:string"/>
+        <xs:element name="dateTime" type="xs:string"/>
+        <xs:element name="security" type="xs:string" minOccurs="0"/>
+        <xs:element name="messageType" type="xs:string"/>
+        <xs:element name="messageControlID" type="xs:string"/>
+        <xs:element name="processingID" type="xs:string"/>
+        <xs:element name="versionID" type="xs:string"/>
+        <xs:element name="sequenceNumber" type="xs:string" minOccurs="0"/>
+        <xs:element name="continuationPointer" type="xs:string" minOccurs="0"/>
+        <xs:element name="acceptAckType" type="xs:string" minOccurs="0"/>
+        <xs:element name="applicationAckType" type="xs:string" minOccurs="0"/>
+        <xs:element name="countryCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="characterSet" type="xs:string" minOccurs="0"/>
+        <xs:element name="principalLanguage" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Patient Identification -->
+  <xs:element name="PID">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="setID" type="xs:string"/>
+        <xs:element name="patientID" type="xs:string"/>
+        <xs:element name="patientIdentifierList" type="xs:string"/>
+        <xs:element name="alternatePatientID" type="xs:string" minOccurs="0"/>
+        <xs:element name="patientName" type="xs:string"/>
+        <xs:element name="mothersMaidenName" type="xs:string" minOccurs="0"/>
+        <xs:element name="dateTimeOfBirth" type="xs:string"/>
+        <xs:element name="administrativeSex" type="xs:string"/>
+        <xs:element name="patientAlias" type="xs:string" minOccurs="0"/>
+        <xs:element name="race" type="xs:string" minOccurs="0"/>
+        <xs:element name="patientAddress" type="xs:string"/>
+        <xs:element name="countyCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="phoneNumberHome" type="xs:string" minOccurs="0"/>
+        <xs:element name="phoneNumberBusiness" type="xs:string" minOccurs="0"/>
+        <xs:element name="primaryLanguage" type="xs:string" minOccurs="0"/>
+        <xs:element name="maritalStatus" type="xs:string" minOccurs="0"/>
+        <xs:element name="religion" type="xs:string" minOccurs="0"/>
+        <xs:element name="patientAccountNumber" type="xs:string" minOccurs="0"/>
+        <xs:element name="SSNNumber" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Event Type -->
+  <xs:element name="EVN">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="eventTypeCode" type="xs:string"/>
+        <xs:element name="recordedDateTime" type="xs:string"/>
+        <xs:element name="dateTimePlannedEvent" type="xs:string" minOccurs="0"/>
+        <xs:element name="eventReasonCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="operatorID" type="xs:string" minOccurs="0"/>
+        <xs:element name="eventOccurred" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Patient Visit -->
+  <xs:element name="PV1">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="setID" type="xs:string"/>
+        <xs:element name="patientClass" type="xs:string"/>
+        <xs:element name="assignedPatientLocation" type="xs:string"/>
+        <xs:element name="admissionType" type="xs:string" minOccurs="0"/>
+        <xs:element name="preadmitNumber" type="xs:string" minOccurs="0"/>
+        <xs:element name="priorPatientLocation" type="xs:string" minOccurs="0"/>
+        <xs:element name="attendingDoctor" type="xs:string"/>
+        <xs:element name="referringDoctor" type="xs:string" minOccurs="0"/>
+        <xs:element name="consultingDoctor" type="xs:string" minOccurs="0"/>
+        <xs:element name="hospitalService" type="xs:string" minOccurs="0"/>
+        <xs:element name="temporaryLocation" type="xs:string" minOccurs="0"/>
+        <xs:element name="preadmitTestIndicator" type="xs:string" minOccurs="0"/>
+        <xs:element name="readmissionIndicator" type="xs:string" minOccurs="0"/>
+        <xs:element name="admitSource" type="xs:string" minOccurs="0"/>
+        <xs:element name="ambulatoryStatus" type="xs:string" minOccurs="0"/>
+        <xs:element name="vipIndicator" type="xs:string" minOccurs="0"/>
+        <xs:element name="admittingDoctor" type="xs:string" minOccurs="0"/>
+        <xs:element name="patientType" type="xs:string" minOccurs="0"/>
+        <xs:element name="visitNumber" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Observation Request -->
+  <xs:element name="OBR">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="setID" type="xs:string"/>
+        <xs:element name="placerOrderNumber" type="xs:string"/>
+        <xs:element name="fillerOrderNumber" type="xs:string"/>
+        <xs:element name="universalServiceID" type="xs:string"/>
+        <xs:element name="priority" type="xs:string" minOccurs="0"/>
+        <xs:element name="requestedDateTime" type="xs:string" minOccurs="0"/>
+        <xs:element name="observationDateTime" type="xs:string" minOccurs="0"/>
+        <xs:element name="observationEndDateTime" type="xs:string" minOccurs="0"/>
+        <xs:element name="collectionVolume" type="xs:string" minOccurs="0"/>
+        <xs:element name="collectorIdentifier" type="xs:string" minOccurs="0"/>
+        <xs:element name="specimenActionCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="dangerCode" type="xs:string" minOccurs="0"/>
+        <xs:element name="relevantClinicalInfo" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Observation/Result -->
+  <xs:element name="OBX">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="|">
+        <xs:element name="setID" type="xs:string"/>
+        <xs:element name="valueType" type="xs:string"/>
+        <xs:element name="observationIdentifier" type="xs:string"/>
+        <xs:element name="observationSubID" type="xs:string" minOccurs="0"/>
+        <xs:element name="observationValue" type="xs:string"/>
+        <xs:element name="units" type="xs:string" minOccurs="0"/>
+        <xs:element name="referenceRange" type="xs:string" minOccurs="0"/>
+        <xs:element name="abnormalFlags" type="xs:string" minOccurs="0"/>
+        <xs:element name="probability" type="xs:string" minOccurs="0"/>
+        <xs:element name="natureOfAbnormalTest" type="xs:string" minOccurs="0"/>
+        <xs:element name="observationResultStatus" type="xs:string"/>
+        <xs:element name="effectiveDateLastNormalValue" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

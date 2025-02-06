@@ -1,50 +1,37 @@
-#ifndef _SQLITE3_DB_H
-#define _SQLITE3_DB_H
+module sqlite3_db;
 
-#include <zeek/zeek-config.h>
-
-#ifdef HAVE_SQLITE3
-
-#include <sqlite3.h>
-
-// Define your database schema and functions here.  This is a placeholder.
-//  You'll need to replace this with your actual schema and function definitions.
-
-
-// Example function to open the database.  Error handling is crucial!
-int open_db(const char* db_path, sqlite3** db){
-	int rc = sqlite3_open(db_path, db);
-    if ( rc ){
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(*db));
-        sqlite3_close(*db); //Close the database if failed
-        return 1; // Return an error code
-    }
-    return 0; // Return 0 to signify success
+record header {
+    bytes magic[16];
+    uint32 pagesize;
+    uint32 fileformat;
+    uint32 reservedspace;
+    uint32 maxpagecount;
+    uint32 schemaversion;
+    uint32 pagesize2;
+    uint32 writeversion;
+    uint32 readonly;
+    uint32 integrityck;
+    bytes unused[12];
 }
 
-// Example function to execute an SQL query.  Error handling is crucial!
-int execute_query(sqlite3* db, const char* sql){
-    char* zErrMsg = 0;
-    int rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-    if( rc!= SQLITE_OK ){
-        fprintf(stderr, "SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-        return 1;
-    }
-    return 0;
+record page_header {
+    uint8 pagetype;
+    uint32 pagenumber;
+    uint16 freeblk;
+    uint16 cellssize;
+    uint32 unused[4];
 }
 
-
-//Example function to close the database
-int close_db(sqlite3* db) {
-    int rc = sqlite3_close(db);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error closing database: %s\n", sqlite3_errmsg(db));
-        return 1; // Indicate an error
-    }
-    return 0; // Indicate success
+record cell {
+    uint16 headerlength;
+    uint16 payloadlength;
+    bytes payload[];
 }
 
-#endif // HAVE_SQLITE3
+record page {
+    page_header header;
+    cell cells[];
+}
 
-#endif // _SQLITE3_DB_H
+header db_header;
+page pages[];

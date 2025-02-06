@@ -1,57 +1,134 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dns"
-           xmlns:tns="http://example.com/dns"
-           elementFormDefault="qualified"
-           dfdl:format="tns:DNSFormat">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/dns"
+        xmlns:tns="http://example.com/dns"
+        elementFormDefault="qualified">
 
-  <dfdl:format ref="tns:DNSFormat"/>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit" alignmentUnits="bytes"/>
+        </appinfo>
+    </annotation>
 
-  <xs:element name="DNSMessage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="Flags" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="QuestionCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="AnswerCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="AuthorityCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="AdditionalCount" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-        <xs:element name="Questions" type="tns:QuestionSection" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="Answers" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="Authorities" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="Additionals" type="tns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+    <element name="DNSMessage">
+        <complexType>
+            <sequence>
+                <element name="Header" type="tns:HeaderType"/>
+                <element name="Question" type="tns:QuestionType" maxOccurs="unbounded"/>
+                <element name="Answer" type="tns:ResourceRecordType" maxOccurs="unbounded"/>
+                <element name="Authority" type="tns:ResourceRecordType" maxOccurs="unbounded"/>
+                <element name="Additional" type="tns:ResourceRecordType" maxOccurs="unbounded"/>
+            </sequence>
+        </complexType>
+    </element>
 
-  <xs:complexType name="QuestionSection">
-    <xs:sequence>
-      <xs:element name="QName" type="tns:DomainName"/>
-      <xs:element name="QType" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-      <xs:element name="QClass" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-    </xs:sequence>
-  </xs:complexType>
+    <complexType name="HeaderType">
+        <sequence>
+            <element name="ID" type="unsignedShort"/>
+            <element name="Flags" type="tns:FlagsType"/>
+            <element name="QDCOUNT" type="unsignedShort"/>
+            <element name="ANCOUNT" type="unsignedShort"/>
+            <element name="NSCOUNT" type="unsignedShort"/>
+            <element name="ARCOUNT" type="unsignedShort"/>
+        </sequence>
+    </complexType>
 
-  <xs:complexType name="ResourceRecord">
-    <xs:sequence>
-      <xs:element name="Name" type="tns:DomainName"/>
-      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-      <xs:element name="Class" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-      <xs:element name="RDLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-      <xs:element name="RData" type="xs:hexBinary" dfdl:length="{../RDLength}" dfdl:lengthUnits="bytes"/>
-    </xs:sequence>
-  </xs:complexType>
+    <complexType name="FlagsType">
+        <sequence>
+            <element name="QR" type="boolean">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="Opcode" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="AA" type="boolean">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="TC" type="boolean">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="RD" type="boolean">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="RA" type="boolean">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="1" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="Z" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="3" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="Rcode" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length value="4" lengthUnits="bits"/>
+                    </appinfo>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
 
-  <xs:simpleType name="DomainName">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+"/>
-    </xs:restriction>
-  </xs:simpleType>
+    <complexType name="QuestionType">
+        <sequence>
+            <element name="QNAME" type="tns:DomainNameType"/>
+            <element name="QTYPE" type="unsignedShort"/>
+            <element name="QCLASS" type="unsignedShort"/>
+        </sequence>
+    </complexType>
 
-  <dfdl:defineFormat name="DNSFormat">
-    <dfdl:format lengthKind="explicit" byteOrder="bigEndian" encoding="utf-8"/>
-  </dfdl:defineFormat>
+    <complexType name="ResourceRecordType">
+        <sequence>
+            <element name="NAME" type="tns:DomainNameType"/>
+            <element name="TYPE" type="unsignedShort"/>
+            <element name="CLASS" type="unsignedShort"/>
+            <element name="TTL" type="unsignedInt"/>
+            <element name="RDLENGTH" type="unsignedShort"/>
+            <element name="RDATA" type="hexBinary">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length expression="{../RDLENGTH}" lengthUnits="bytes"/>
+                    </appinfo>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
 
-</xs:schema>
+    <simpleType name="DomainNameType">
+        <restriction base="string">
+            <annotation>
+                <appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:lengthKind value="delimited"/>
+                    <dfdl:terminator value="\u0000"/>
+                </appinfo>
+            </annotation>
+        </restriction>
+    </simpleType>
+
+</schema>

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dfdl/http"
+           xmlns:tns="http://example.com/dfdl/http">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="text" encoding="US-ASCII" separatorSuppressionPolicy="anyEmpty"
+                   separatorPosition="infix" separator="CRLF" terminator="CRLF" initiator="" lengthKind="delimited"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:choice>
+          <xs:element name="Request" type="tns:HTTPRequestType"/>
+          <xs:element name="Response" type="tns:HTTPResponseType"/>
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HTTPRequestType">
+    <xs:sequence>
+      <xs:element name="Request-Line" type="tns:RequestLineType"/>
+      <xs:element name="General-Headers" type="tns:GeneralHeadersType" minOccurs="0"/>
+      <xs:element name="Request-Headers" type="tns:RequestHeadersType" minOccurs="0"/>
+      <xs:element name="Entity-Headers" type="tns:EntityHeadersType" minOccurs="0"/>
+      <xs:element name="Message-Body" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HTTPResponseType">
+    <xs:sequence>
+      <xs:element name="Status-Line" type="tns:StatusLineType"/>
+      <xs:element name="General-Headers" type="tns:GeneralHeadersType" minOccurs="0"/>
+      <xs:element name="Response-Headers" type="tns:ResponseHeadersType" minOccurs="0"/>
+      <xs:element name="Entity-Headers" type="tns:EntityHeadersType" minOccurs="0"/>
+      <xs:element name="Message-BBody" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RequestLineType">
+    <xs:sequence>
+      <xs:element name="Method" type="xs:string"/>
+      <xs:element name="Request-URI" type="xs:string"/>
+      <xs:element name="HTTP-Version" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StatusLineType">
+    <xs:sequence>
+      <xs:element name="HTTP-Version" type="xs:string"/>
+      <xs:element name="Status-Code" type="xs:string"/>
+      <xs:element name="Reason-Phrase" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GeneralHeadersType">
+    <xs:sequence>
+      <xs:element name="Cache-Control" type="xs:string" minOccurs="0"/>
+      <xs:element name="Connection" type="xs:string" minOccurs="0"/>
+      <xs:element name="Date" type="xs:string" minOccurs="0"/>
+      <xs:element name="Pragma" type="xs:string" minOccurs="0"/>
+      <xs:element name="Trailer" type="xs:string" minOccurs="0"/>
+      <xs:element name="Transfer-Encoding" type="xs:string" minOccurs="0"/>
+      <xs:element name="Upgrade" type="xs:string" minOccurs="0"/>
+      <xs:element name="Via" type="xs:string" minOccurs="0"/>
+      <xs:element name="Warning" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RequestHeadersType">
+    <xs:sequence>
+      <xs:element name="Accept" type="xs:string" minOccurs="0"/>
+      <xs:element name="Accept-Charset" type="xs:string" minOccurs="0"/>
+      <xs:element name="Accept-Encoding" type="xs:string" minOccurs="0"/>
+      <xs:element name="Accept-Language" type="xs:string" minOccurs="0"/>
+      <xs:element name="Authorization" type="xs:string" minOccurs="0"/>
+      <xs:element name="Expect" type="xs:string" minOccurs="0"/>
+      <xs:element name="From" type="xs:string" minOccurs="0"/>
+      <xs:element name="Host" type="xs:string" minOccurs="0"/>
+      <xs:element name="If-Match" type="xs:string" minOccurs="0"/>
+      <xs:element name="If-Modified-SSince" type="xs:string" minOccurs="0"/>
+      <xs:element name="If-None-Match" type="xs:string" minOccurs="0"/>
+      <xs:element name="If-Range" type="xs:string" minOccurs="0"/>
+      <xs:element name="If-Unmodified-Since" type="xs:string" minOccurs="0"/>
+      <xs:element name="Max-Forwards" type="xs:string" minOccurs="0"/>
+      <xs:element name="Proxy-Authorization" type="xs:string" minOccurs="0"/>
+      <xs:element name="Range" type="xs:string" minOccurs="0"/>
+      <xs:element name="Referer" type="xs:string" minOccurs="0"/>
+      <xs:element name="TE" type="xs:string" minOccurs="0"/>
+      <xs:element name="User-Agent" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResponseHeadersType">
+    <xs:sequence>
+      <xs:element name="Accept-Ranges" type="xs:string" minOccurs="0"/>
+      <xs:element name="Age" type="xs:string" minOccurs="0"/>
+      <xs:element name="ETag" type="xs:string" minOccurs="0"/>
+      <xs:element name="Location" type="xs:string" minOccurs="0"/>
+      <xs:element name="Proxy-Authenticate" type="xs:string" minOccurs="0"/>
+      <xs:element name="Retry-After" type="xs:string" minOccurs="0"/>
+      <xs:element name="Server" type="xs:string" minOccurs="0"/>
+      <xs:element name="Vary" type="xs:string" minOccurs="0"/>
+      <xs:element name="WWW-Authenticate" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntityHeadersType">
+    <xs:sequence>
+      <xs:element name="Allow" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Encoding" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Language" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Length" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Location" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-MD5" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Range" type="xs:string" minOccurs="0"/>
+      <xs:element name="Content-Type" type="xs:string" minOccurs="0"/>
+      <xs:element name="Expires" type="xs:string" minOccurs="0"/>
+      <xs:element name="Last-Modified" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

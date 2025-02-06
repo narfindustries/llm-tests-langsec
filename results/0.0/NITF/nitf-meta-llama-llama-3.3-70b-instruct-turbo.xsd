@@ -1,95 +1,224 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/NITF"
-           xmlns="http://example.com/NITF"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="NITF.xsd"/>
-
-  <xs:element name="NITF">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="nitfFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="NITFHeader" dfdl:occurs="1..1"/>
-        <xs:element ref="NITFBody" dfdl:occurs="1..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="NITFHeader">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="nitfHeaderFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FileHeader" type="FileHeaderType" dfdl:occurs="1..1"/>
-        <xs:element name="ImageHeader" type="ImageHeaderType" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="NITFBody">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="nitfBodyFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Image" type="ImageType" dfdl:occurs="1..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="FileHeaderType">
+  <xs:element name="NITF" type="NITFType"/>
+  <xs:complexType name="NITFType">
     <xs:sequence>
-      <xs:element name="FileHeaderRecord" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+      <xs:element name="FileHeader" type="xs:string" fixed="NITF"/>
+      <xs:element name="FileVersionNumber" type="xs:string" fixed="02"/>
+      <xs:element name="ComplexHeaderType" type="ComplexHeaderTypeType"/>
+      <xs:element name="HeaderLength" type="xs:integer"/>
+      <xs:element name="Standard" type="xs:string" fixed="MIL-STD-2500C"/>
+      <xs:element name="OriginatorName" type="xs:string"/>
+      <xs:element name="OriginatorPhone" type="xs:string"/>
+      <xs:element name="FileTime" type="FileTimeType"/>
+      <xs:element name="FileDate" type="FileDateType"/>
+      <xs:element name="Classification" type="ClassificationType"/>
+      <xs:element name="ClassificationText" type="xs:string"/>
+      <xs:element name="Title" type="xs:string"/>
+      <xs:element name="SecurityAndHandling" type="SecurityAndHandlingType"/>
+      <xs:element name="SecurityAndHandlingText" type="xs:string"/>
+      <xs:element name="FileExtension" type="xs:string" fixed="NITF"/>
+      <xs:element name="ImageSegment" type="ImageSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="GraphicSegment" type="GraphicSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="TextSegment" type="TextSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Trailer" type="xs:string" fixed="IEND"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="ImageHeaderType">
+  <xs:simpleType name="ComplexHeaderTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CMGT"/>
+      <xs:enumeration value="CMIM"/>
+      <xs:enumeration value="CMTX"/>
+      <xs:enumeration value="CSGT"/>
+      <xs:enumeration value="CSIM"/>
+      <xs:enumeration value="CSTX"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="FileTimeType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="FileDateType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ClassificationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="SecurityAndHandlingType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ImageSegmentType">
     <xs:sequence>
-      <xs:element name="ImageHeaderRecord" type="xs:string" dfdl:length="80" dfdl:encoding="ASCII"/>
+      <xs:element name="ImageIdentifier" type="xs:string"/>
+      <xs:element name="ImageDateAndTime" type="ImageDateAndTimeType"/>
+      <xs:element name="ImageSecurityClassification" type="ImageSecurityClassificationType"/>
+      <xs:element name="ImageSecurityAndHandling" type="ImageSecurityAndHandlingType"/>
+      <xs:element name="ImageTitle" type="xs:string"/>
+      <xs:element name="ImageType" type="ImageTypeType"/>
+      <xs:element name="ImageCompressionType" type="ImageCompressionTypeType"/>
+      <xs:element name="ImagePixelType" type="ImagePixelTypeType"/>
+      <xs:element name="ImagePixelSize" type="xs:integer"/>
+      <xs:element name="ImagePixelFormat" type="ImagePixelFormatType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="ImageType">
+  <xs:simpleType name="ImageDateAndTimeType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{2}\d{2}\d{2}\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImageSecurityClassificationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImageSecurityAndHandlingType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImageTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="MONO"/>
+      <xs:enumeration value="RGB"/>
+      <xs:enumeration value="RGBI"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImageCompressionTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NC"/>
+      <xs:enumeration value="JB"/>
+      <xs:enumeration value="JP"/>
+      <xs:enumeration value="CC"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImagePixelTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U8"/>
+      <xs:enumeration value="S8"/>
+      <xs:enumeration value="U16"/>
+      <xs:enumeration value="S16"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ImagePixelFormatType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="MONO"/>
+      <xs:enumeration value="RGB"/>
+      <xs:enumeration value="RGBI"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="GraphicSegmentType">
     <xs:sequence>
-      <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="explicit" dfdl:length="imageLength"/>
+      <xs:element name="GraphicIdentifier" type="xs:string"/>
+      <xs:element name="GraphicDateAndTime" type="GraphicDateAndTimeType"/>
+      <xs:element name="GraphicSecurityClassification" type="GraphicSecurityClassificationType"/>
+      <xs:element name="GraphicSecurityAndHandling" type="GraphicSecurityAndHandlingType"/>
+      <xs:element name="GraphicTitle" type="xs:string"/>
+      <xs:element name="GraphicType" type="GraphicTypeType"/>
+      <xs:element name="GraphicCompressionType" type="GraphicCompressionTypeType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="imageLength" type="xs:integer" dfdl:occurs="1..1" dfdl:hidden="true"/>
-
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:format>
-        <dfdl:property name="encoding" value="ASCII"/>
-        <dfdl:property name="lineEnding" value="LF"/>
-        <dfdl:property name="byteOrder" value="bigEndian"/>
-      </dfdl:format>
-      <dfdl:format ref="nitfFormat" name="nitfFormat">
-        <dfdl:property name="encoding" value="ASCII"/>
-        <dfdl:property name="lineEnding" value="LF"/>
-        <dfdl:property name="byteOrder" value="bigEndian"/>
-      </dfdl:format>
-      <dfdl:format ref="nitfHeaderFormat" name="nitfHeaderFormat">
-        <dfdl:property name="encoding" value="ASCII"/>
-        <dfdl:property name="lineEnding" value="LF"/>
-        <dfdl:property name="byteOrder" value="bigEndian"/>
-      </dfdl:format>
-      <dfdl:format ref="nitfBodyFormat" name="nitfBodyFormat">
-        <dfdl:property name="encoding" value="ASCII"/>
-        <dfdl:property name="lineEnding" value="LF"/>
-        <dfdl:property name="byteOrder" value="bigEndian"/>
-      </dfdl:format>
-    </xs:appinfo>
-  </xs:annotation>
+  <xs:simpleType name="GraphicDateAndTimeType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{2}\d{2}\d{2}\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="GraphicSecurityClassificationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="GraphicSecurityAndHandlingType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="GraphicTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CGM"/>
+      <xs:enumeration value="GIF"/>
+      <xs:enumeration value="TIFF"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="GraphicCompressionTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NC"/>
+      <xs:enumeration value="JB"/>
+      <xs:enumeration value="JP"/>
+      <xs:enumeration value="CC"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="TextSegmentType">
+    <xs:sequence>
+      <xs:element name="TextIdentifier" type="xs:string"/>
+      <xs:element name="TextDateAndTime" type="TextDateAndTimeType"/>
+      <xs:element name="TextSecurityClassification" type="TextSecurityClassificationType"/>
+      <xs:element name="TextSecurityAndHandling" type="TextSecurityAndHandlingType"/>
+      <xs:element name="TextTitle" type="xs:string"/>
+      <xs:element name="TextType" type="TextTypeType"/>
+      <xs:element name="TextCompressionType" type="TextCompressionTypeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="TextDateAndTimeType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{2}\d{2}\d{2}\d{2}\d{2}\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TextSecurityClassificationType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TextSecurityAndHandlingType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="T"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TextTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="TXT"/>
+      <xs:enumeration value="PDF"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TextCompressionTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NC"/>
+      <xs:enumeration value="JB"/>
+      <xs:enumeration value="JP"/>
+      <xs:enumeration value="CC"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

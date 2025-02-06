@@ -1,51 +1,32 @@
 module GZIP;
 
-import zeek/packet_analysis;
-import zeek/Reporter;
-
-public type GZIPHeader = unit {
-    magic: uint16 &validate => magic == 0x1f8b;
-    compression_method: uint8 &validate => compression_method == 8; # Deflate
-    flags: uint8;
+type GZIP = unit {
+    id1: uint8 &assert(id1 == 0x1F);
+    id2: uint8 &assert(id2 == 0x8B);
+    cm: uint8 &assert(cm == 0x08);
+    flg: Flags;
     mtime: uint32;
-    extra_flags: uint8;
+    xfl: uint8;
     os: uint8;
-    extra: bytes &length => (flags & 0x04 != 0) ? extra_length : 0;
-    extra_length: uint16 &if => flags & 0x04 != 0;
-    name: bytes &until => |0| &if => flags & 0x08 != 0;
-    comment: bytes &until => |0| &if => flags & 0x10 != 0;
-    hcrc: uint16 &if => flags & 0x02 != 0;
-};
-
-public type GZIPFooter = unit {
+    extra: ExtraField &if (flg.fextra);
+    original_file_name: bytes &until(\0) &if (flg.fname);
+    file_comment: bytes &until(\0) &if (flg.fcomment);
+    header_crc16: uint16 &if (flg.fhcrc);
+    compressed_data: bytes &restofdata;
     crc32: uint32;
     isize: uint32;
 };
 
-public type GZIPFile = unit {
-    header: GZIPHeader;
-    compressed_data: bytes &until => footer;
-    footer: GZIPFooter;
+type Flags = bitfield {
+    ftext: bool;
+    fhcrc: bool;
+    fextra: bool;
+    fname: bool;
+    fcomment: bool;
+    reserved: uint8 &bits=3 &assert(reserved == 0);
 };
 
-public global gzip_file: function%(data: GZIPFile%) {
-    print fmt("GZIP file detected: mtime=%d, os=%d", data.header.mtime, data.header.os);
-};
-
-public export {
-    type Analyzer = zeek::packet_analysis::Analyzer;
-}
-
-public type GZIPAnalyzer = Analyzer {
-    .hook %init() {
-        self.add_event(gzip_file);
-    }
-
-    .hook %done() {
-        print "GZIP analysis complete.";
-    }
-};
-
-public redef zeek::packet_analysis::analyzer_list += {
-    ["GZIP"] = GZIPAnalyzer
+type ExtraField = unit {
+    xlen: uint16;
+    data: bytes &length=xlen;
 };

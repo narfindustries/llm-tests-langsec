@@ -1,81 +1,145 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static const HParser* init_dns_parser(void) {
-    // Basic components
-    H_RULE(label_char, h_not_in("\0\n\r."));
-    H_RULE(label, h_sequence(h_many1(label_char), NULL));
-    H_RULE(dot, h_ch('.'));
+static HParser *dns_id;
+static HParser *dns_qr;
+static HParser *dns_opcode;
+static HParser *dns_aa;
+static HParser *dns_tc;
+static HParser *dns_rd;
+static HParser *dns_ra;
+static HParser *dns_z;
+static HParser *dns_rcode;
+static HParser *dns_qdcount;
+static HParser *dns_ancount;
+static HParser *dns_nscount;
+static HParser *dns_arcount;
+static HParser *dns_qtype;
+static HParser *dns_qclass;
+static HParser *dns_question;
+static HParser *dns_ttl;
+static HParser *dns_rdlength;
+static HParser *dns_rdata;
+static HParser *dns_rr;
+static HParser *dns_header;
+static HParser *dns_message;
+
+static void init_parsers(void) {
+    dns_id = h_uint16();
+    dns_qr = h_bits(1, false);
+    dns_opcode = h_bits(4, false);
+    dns_aa = h_bits(1, false);
+    dns_tc = h_bits(1, false);
+    dns_rd = h_bits(1, false);
+    dns_ra = h_bits(1, false);
+    dns_z = h_bits(3, false);
+    dns_rcode = h_bits(4, false);
+    dns_qdcount = h_uint16();
+    dns_ancount = h_uint16();
+    dns_nscount = h_uint16();
+    dns_arcount = h_uint16();
     
-    // Domain name as sequence of labels separated by dots
-    H_RULE(domain_name, h_sequence(label, 
-                                 h_many(h_sequence(dot, label, NULL)), 
-                                 NULL));
-
-    // Record types
-    H_RULE(type_a, h_token("A", 1));
-    H_RULE(type_aaaa, h_token("AAAA", 4));
-    H_RULE(type_mx, h_token("MX", 2));
-    H_RULE(type_txt, h_token("TXT", 3));
-    H_RULE(record_type, h_choice(type_a, type_aaaa, type_mx, type_txt, NULL));
-
-    // TTL as digits
-    H_RULE(ttl, h_many1(h_digit()));
-
-    // Priority for MX records
-    H_RULE(priority, h_many1(h_digit()));
-
-    // IPv4 octet
-    H_RULE(ipv4_octet, h_int_range(h_uint8(), 0, 255));
-    H_RULE(ipv4_addr, h_sequence(ipv4_octet,
-                                h_ch('.'), ipv4_octet,
-                                h_ch('.'), ipv4_octet,
-                                h_ch('.'), ipv4_octet,
-                                NULL));
-
-    // IPv6 components
-    H_RULE(hex_digit, h_choice(h_ch_range('0', '9'),
-                              h_ch_range('a', 'f'),
-                              h_ch_range('A', 'F'),
-                              NULL));
-    H_RULE(ipv6_group, h_repeat_n(hex_digit, 1, 4));
-    H_RULE(ipv6_addr, h_sequence(ipv6_group,
-                                h_repeat_n(h_sequence(h_ch(':'), ipv6_group, NULL), 7, 7),
-                                NULL));
-
-    // Text record value
-    H_RULE(txt_char, h_not_in("\n\r"));
-    H_RULE(txt_value, h_many1(txt_char));
-
-    // Record value based on type
-    H_RULE(record_value, h_choice(ipv4_addr,      // For A records
-                                 ipv6_addr,        // For AAAA records
-                                 h_sequence(priority, h_whitespace(), domain_name, NULL),  // For MX
-                                 txt_value,        // For TXT
-                                 NULL));
-
-    // Complete DNS record
-    H_RULE(dns_record, h_sequence(domain_name,
-                                 h_whitespace(),
-                                 ttl,
-                                 h_whitespace(),
-                                 record_type,
-                                 h_whitespace(),
-                                 record_value,
-                                 h_optional(h_whitespace()),
-                                 NULL));
-
-    // Complete DNS zone file
-    return h_many(h_sequence(dns_record, h_optional(h_whitespace()), NULL));
+    HParser *label_length = h_uint8();
+    HParser *label_chars = h_repeat_n(h_ch_range(0x20, 0x7E), 1);
+    HParser *label = h_sequence(label_length, label_chars, NULL);
+    HParser *name = h_many(label);
+    
+    dns_qtype = h_uint16();
+    dns_qclass = h_uint16();
+    dns_question = h_sequence(name, dns_qtype, dns_qclass, NULL);
+    
+    dns_ttl = h_uint32();
+    dns_rdlength = h_uint16();
+    dns_rdata = h_length_value(dns_rdlength, h_uint8());
+    
+    dns_rr = h_sequence(
+        name,
+        dns_qtype,
+        dns_qclass,
+        dns_ttl,
+        dns_rdlength,
+        dns_rdata,
+        NULL
+    );
+    
+    dns_header = h_sequence(
+        dns_id,
+        dns_qr,
+        dns_opcode,
+        dns_aa,
+        dns_tc,
+        dns_rd,
+        dns_ra,
+        dns_z,
+        dns_rcode,
+        dns_qdcount,
+        dns_ancount,
+        dns_nscount,
+        dns_arcount,
+        NULL
+    );
+    
+    dns_message = h_sequence(
+        dns_header,
+        h_many(dns_question),
+        h_many(dns_rr),  // Answer section
+        h_many(dns_rr),  // Authority section
+        h_many(dns_rr),  // Additional section
+        NULL
+    );
 }
 
-int main(int argc, char* argv[]) {
-    const HParser* parser = init_dns_parser();
-    
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+void print_parse_result(const HParsedToken* result) {
+    if (!result) {
+        printf("Parse failed\n");
+        return;
+    }
+    printf("Successfully parsed DNS message\n");
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_binary_file>\n", argv[0]);
         return 1;
     }
 
+    init_parsers();
+
+    FILE* f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(f);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(f);
+        return 1;
+    }
+
+    const HParseResult* result = h_parse(dns_message, buffer, size);
+    if (result) {
+        print_parse_result(result->ast);
+        h_parse_result_free((HParseResult*)result);
+    } else {
+        printf("Failed to parse DNS message\n");
+    }
+
+    free(buffer);
+    fclose(f);
     return 0;
 }

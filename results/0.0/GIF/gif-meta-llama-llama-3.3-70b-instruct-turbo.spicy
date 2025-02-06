@@ -1,79 +1,94 @@
-# Zeek Spicy specification for GIF file format
+module GIF;
 
-type GifHeader = record {
-    signature: bytestring(3) = "GIF",
-    version: bytestring(3),
+type gif_signature = byte[3] align(1) = "GIF";
+type gif_version = byte[3] align(1) = "87a" | "89a";
+
+type gif_packed_fields = uint8 {
+  global_color_table_flag: bool @bit(0),
+  color_resolution: uint8 @bits(1..3),
+  sort_flag: bool @bit(4),
+  size_of_global_color_table: uint8 @bits(5..7)
 };
 
-type GifLogicalScreenDescriptor = record {
-    width: uint16,
-    height: uint16,
-    flags: uint8,
-    bg_color_index: uint8,
-    pixel_aspect_ratio: uint8,
+type rgb_color = struct {
+  red: byte;
+  green: byte;
+  blue: byte;
 };
 
-type GifImageDescriptor = record {
-    left: uint16,
-    top: uint16,
-    width: uint16,
-    height: uint16,
-    flags: uint8,
+type global_color_table = array of rgb_color align(3);
+
+type image_packed_fields = uint8 {
+  local_color_table_flag: bool @bit(0),
+  interlace_flag: bool @bit(1),
+  sort_flag: bool @bit(2),
+  size_of_local_color_table: uint8 @bits(3..7)
 };
 
-type GifColorTable = array of uint8;
+type local_color_table = array of rgb_color align(3);
 
-type GifImage = record {
-    descriptor: GifImageDescriptor,
-    data: bytestring,
+type lzw_minimum_code_size = byte min(2) max(9);
+
+type lzw_compressed_data = byte[];
+
+type image_descriptor = struct {
+  image_separator: byte = 0x2C;
+  image_left_position: uint16le;
+  image_top_position: uint16le;
+  image_width: uint16le;
+  image_height: uint16le;
+  packed_fields: image_packed_fields;
+  local_color_table: local_color_table align(3) optional;
+  lzw_minimum_code_size: lzw_minimum_code_size;
+  lzw_compressed_data: lzw_compressed_data;
 };
 
-type GifFile = record {
-    header: GifHeader,
-    logical_screen_descriptor: GifLogicalScreenDescriptor,
-    global_color_table: GifColorTable,
-    images: array of GifImage,
+type comment_extension = struct {
+  extension_introducer: byte = 0x21;
+  comment_label: byte = 0xFE;
+  comment_data: byte[];
+  comment_terminator: byte = 0x00;
 };
 
-# Define the parser for the GIF file format
-parser GifParser = {
-    header: GifHeader,
-    logical_screen_descriptor: GifLogicalScreenDescriptor,
-    global_color_table: GifColorTable,
-    images: array of GifImage,
+type plain_text_extension = struct {
+  extension_introducer: byte = 0x21;
+  plain_text_label: byte = 0x01;
+  text_grid_left: byte;
+  text_grid_top: byte;
+  text_grid_width: byte;
+  text_grid_height: byte;
+  character_cell_width: byte;
+  character_cell_height: byte;
+  text_foreground_color: byte;
+  text_background_color: byte;
+  plain_text_data: byte[];
 };
 
-# Define the event handler for the GIF file format
-event GifEventHandler {
-    # Handle the GIF file header
-    on_header(header: GifHeader) {
-        print("GIF file header:", header);
-    }
-
-    # Handle the logical screen descriptor
-    on_logical_screen_descriptor(descriptor: GifLogicalScreenDescriptor) {
-        print("Logical screen descriptor:", descriptor);
-    }
-
-    # Handle the global color table
-    on_global_color_table(color_table: GifColorTable) {
-        print("Global color table:", color_table);
-    }
-
-    # Handle each image in the GIF file
-    on_image(image: GifImage) {
-        print("Image:", image);
-    }
+type application_extension = struct {
+  extension_introducer: byte = 0x21;
+  application_label: byte = 0xFF;
+  application_identifier: byte[8];
+  application_authentication_code: byte[3];
+  application_data: byte[];
+  application_terminator: byte = 0x00;
 };
 
-# Define the main function to parse the GIF file
-function main(file: bytestring) {
-    # Create a new parser instance
-    parser := GifParser();
+type gif_file = struct {
+  signature: gif_signature;
+  version: gif_version;
+  logical_screen_width: uint16le;
+  logical_screen_height: uint16le;
+  packed_fields: gif_packed_fields;
+  background_color_index: byte;
+  pixel_aspect_ratio: byte;
+  global_color_table: global_color_table align(3) optional;
+  image_descriptors: array of image_descriptor;
+  extensions: array of (
+    comment_extension |
+    plain_text_extension |
+    application_extension
+  ) optional;
+  trailer: byte = 0x3B;
+};
 
-    # Parse the GIF file
-    parser.parse(file);
-
-    # Handle any events generated during parsing
-    GifEventHandler();
-}
+let file = gif_file;

@@ -3,8 +3,8 @@ use std::io::Read;
 use std::env;
 use nom::{
     IResult,
-    bytes::complete::{take},
     number::complete::{be_u8, be_u16, be_u32},
+    bytes::complete::take,
 };
 
 #[derive(Debug)]
@@ -16,10 +16,8 @@ enum IcmpType {
     EchoRequest,
     TimeExceeded,
     ParameterProblem,
-    TimestampRequest,
+    Timestamp,
     TimestampReply,
-    InfoRequest,
-    InfoReply,
     AddressMaskRequest,
     AddressMaskReply,
     Unknown(u8),
@@ -30,7 +28,8 @@ struct IcmpPacket {
     icmp_type: IcmpType,
     code: u8,
     checksum: u16,
-    rest_of_header: Vec<u8>,
+    rest_of_header: u32,
+    data: Vec<u8>,
 }
 
 fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], IcmpType> {
@@ -43,10 +42,8 @@ fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], IcmpType> {
         8 => IcmpType::EchoRequest,
         11 => IcmpType::TimeExceeded,
         12 => IcmpType::ParameterProblem,
-        13 => IcmpType::TimestampRequest,
+        13 => IcmpType::Timestamp,
         14 => IcmpType::TimestampReply,
-        15 => IcmpType::InfoRequest,
-        16 => IcmpType::InfoReply,
         17 => IcmpType::AddressMaskRequest,
         18 => IcmpType::AddressMaskReply,
         _ => IcmpType::Unknown(icmp_type),
@@ -58,20 +55,26 @@ fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], IcmpPacket> {
     let (input, icmp_type) = parse_icmp_type(input)?;
     let (input, code) = be_u8(input)?;
     let (input, checksum) = be_u16(input)?;
-    let (input, rest_of_header) = take(4usize)(input)?; // Typically 4 bytes for the rest of the header
-    Ok((input, IcmpPacket {
-        icmp_type,
-        code,
-        checksum,
-        rest_of_header: rest_of_header.to_vec(),
-    }))
+    let (input, rest_of_header) = be_u32(input)?;
+    let (input, data) = take(input.len())(input)?;
+
+    Ok((
+        input,
+        IcmpPacket {
+            icmp_type,
+            code,
+            checksum,
+            rest_of_header,
+            data: data.to_vec(),
+        },
+    ))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <input_file>", args[0]);
+        return;
     }
 
     let filename = &args[1];

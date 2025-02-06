@@ -1,34 +1,57 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    targetNamespace="http://example.com/dicom"
-    xmlns:tns="http://example.com/dicom">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dicom"
+           xmlns:tns="http://example.com/dicom"
+           elementFormDefault="qualified">
 
-  <xs:include schemaLocation="DFDLGeneralAnnotations.xsd"/>
-  
-  <xs:complexType name="FileHeader">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="ASCII" lengthKind="delimited" representation="text"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <!-- DICOM File Meta Information -->
+  <xs:complexType name="FileMetaInformation">
     <xs:sequence>
-      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
-      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:encoding="ascii" dfdl:terminator="00"/>
+      <xs:element name="FileMetaInformationGroupLength" type="xs:int" dfdl:length="4"/>
+      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="TransferSyntaxUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="ImplementationClassUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SourceApplicationEntityTitle" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SendingApplicationEntityTitle" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="ReceivingApplicationEntityTitle" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PrivateInformationCreatorUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PrivateInformation" type="xs:string" dfdl:lengthKind="delimited"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DataElement">
+  <!-- Data Set -->
+  <xs:complexType name="DataSet">
     <xs:sequence>
-      <xs:element name="GroupTag" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="ElementTag" type="xs:unsignedShort" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="ascii"/>
-      <xs:element name="Reserved" type="xs:byte" dfdl:occursCount="1" dfdl:lengthKind="implicit" dfdl:initiator="00"/>
-      <xs:element name="Length" type="xs:int" dfdl:byteOrder="littleEndian"/>     
-      <xs:element name="Value" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="base64"/>
+      <xs:element name="PatientName" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PatientID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PatientBirthDate" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="PatientSex" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="StudyInstanceUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="StudyDate" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SeriesInstanceUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SeriesNumber" type="xs:int" dfdl:length="4"/>
+      <xs:element name="Modality" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="ImageType" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SOPClassUID" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="SOPInstanceUID" type="xs:string" dfdl:lengthKind="delimited"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="DICOMFile">
+  <!-- Root Element -->
+  <xs:element name="DICOM">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="FileHeader" type="tns:FileHeader"/>
-        <xs:element name="DataElements" type="tns:DataElement" dfdl:occursCountKind="parsed" dfdl:representation="sequence"/>
+        <xs:element name="FileMetaInformation" type="tns:FileMetaInformation"/>
+        <xs:element name="DataSet" type="tns:DataSet"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>

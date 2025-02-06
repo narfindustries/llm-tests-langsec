@@ -1,67 +1,126 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static const HParser* init_dns_parser() {
-    // Basic components
-    H_RULE(label_char, h_not_in("\0\n\r."));
-    H_RULE(label, h_sequence(h_length_value(h_uint8(), label_char), NULL));
-    H_RULE(domain_name, h_sepBy1(label, h_ch('.')));
-    
-    // Record types
-    H_RULE(record_type, h_choice(h_token("A", 1),
-                                h_token("NS", 2),
-                                h_token("CNAME", 5),
-                                h_token("MX", 2),
-                                h_token("TXT", 3),
-                                NULL));
-    
-    // TTL (Time To Live)
-    H_RULE(ttl, h_uint32());
-    
-    // IP address components
-    H_RULE(ip_octet, h_int_range(h_uint8(), 0, 255));
-    H_RULE(ip_address, h_sepBy1(ip_octet, h_ch('.')));
-    
-    // Record data based on type
-    H_RULE(record_data, h_choice(ip_address,      // For A records
-                                domain_name,       // For NS, CNAME records
-                                h_sequence(h_uint16(), domain_name, NULL),  // For MX records
-                                h_token_skip(h_whitespace(), h_many1(label_char)), // For TXT records
-                                NULL));
-    
-    // Complete DNS record
-    H_RULE(dns_record, h_sequence(domain_name,
-                                 h_whitespace(),
-                                 ttl,
-                                 h_whitespace(),
-                                 record_type,
-                                 h_whitespace(),
-                                 record_data,
-                                 h_optional(h_whitespace()),
-                                 NULL));
-    
-    // Complete DNS zone file (multiple records)
-    H_RULE(dns_zone, h_many1(dns_record));
-    
-    return dns_zone;
+// DNS Header parsers
+HParser* dns_id() {
+    return h_uint16();
 }
 
-int main() {
-    const HParser* parser = init_dns_parser();
-    
-    // Example input
-    const uint8_t input[] = "example.com. 3600 A 192.168.1.1\n"
-                           "example.com. 3600 MX 10 mail.example.com.\n"
-                           "mail.example.com. 3600 A 192.168.1.2";
-    
-    HParseResult* result = h_parse(parser, input, strlen((char*)input));
-    
-    if(result) {
-        printf("Parsing successful\n");
-        h_parse_result_free(result);
-        return 0;
-    } else {
+HParser* dns_flags() {
+    return h_bits(16, false);
+}
+
+HParser* dns_counts() {
+    return h_sequence(h_uint16(), h_uint16(), h_uint16(), h_uint16(), NULL);
+}
+
+// DNS Name parser
+HParser* dns_label() {
+    return h_sequence(h_uint8(), h_length_value(h_left, h_uint8()), NULL);
+}
+
+HParser* dns_name() {
+    return h_many(dns_label());
+}
+
+// Question section parsers
+HParser* dns_question() {
+    return h_sequence(
+        dns_name(),
+        h_uint16(), // QTYPE
+        h_uint16(), // QCLASS
+        NULL
+    );
+}
+
+// Resource Record parsers
+HParser* dns_rr() {
+    return h_sequence(
+        dns_name(),           // NAME
+        h_uint16(),          // TYPE
+        h_uint16(),          // CLASS
+        h_uint32(),          // TTL
+        h_length_value(      // RDATA
+            h_uint16(),      // RDLENGTH
+            h_uint8()        // actual data
+        ),
+        NULL
+    );
+}
+
+// Complete DNS message parser
+HParser* dns_message() {
+    return h_sequence(
+        dns_id(),            // ID
+        dns_flags(),         // Flags
+        dns_counts(),        // QDCOUNT, ANCOUNT, NSCOUNT, ARCOUNT
+        h_many(dns_question()), // Question section
+        h_many(dns_rr()),    // Answer section
+        h_many(dns_rr()),    // Authority section
+        h_many(dns_rr()),    // Additional section
+        NULL
+    );
+}
+
+void print_parse_result(const HParsedToken* result) {
+    if (!result) {
         printf("Parsing failed\n");
+        return;
+    }
+    
+    // Add printing logic here based on the parsed structure
+    printf("Successfully parsed DNS message\n");
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_binary_file>\n", argv[0]);
         return 1;
     }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read file content
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    size_t read_size = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (read_size != file_size) {
+        fprintf(stderr, "Failed to read entire file\n");
+        free(buffer);
+        return 1;
+    }
+
+    // Initialize parser
+    HParser* dns_parser = dns_message();
+    if (!dns_parser) {
+        fprintf(stderr, "Failed to create parser\n");
+        free(buffer);
+        return 1;
+    }
+
+    // Parse the input
+    const HParsedToken* result = h_parse(dns_parser, buffer, file_size);
+    print_parse_result(result);
+
+    // Cleanup
+    free(buffer);
+    return 0;
 }

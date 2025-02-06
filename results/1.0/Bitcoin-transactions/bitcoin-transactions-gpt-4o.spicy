@@ -1,78 +1,40 @@
-module BitcoinTransactions;
+module BitcoinTransaction;
 
-import zeek;
+type BitcoinTransaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: array[input_count.to_uint()] of Input;
+    output_count: varint;
+    outputs: array[output_count.to_uint()] of Output;
+    locktime: uint32;
+};
 
-export {
-    # Define a connection analyzer for Bitcoin transactions
-    type Analyzer = global;
-
-    # Event to be raised on successful parsing
-    event bitcoin_transaction(variant: uint8,
-                              inputs: vector of Input,
-                              outputs: vector of Output,
-                              lock_time: uint32);
-
-    type Input = record {
-        previous_output: bytes &length = 32; # Previous output transaction hash
-        index: uint32;                       # Index of the previous output
-        script: bytes &length = script_length; # Signature script
-        sequence: uint32;                    # Sequence number
-        script_length: uint32;               # Length of the script, varies per input
+type varint = unit {
+    value: uint64 &parse-from=%uint64 {
+        local prefix = %uint8;
+        return switch (prefix) {
+            case 0xfd: %uint16;
+            case 0xfe: %uint32;
+            case 0xff: %uint64;
+            else: prefix;
+        };
     };
 
-    type Output = record {
-        value: uint64;                       # Amount in satoshis
-        pk_script_length: uint32;            # Length of the pk_script
-        pk_script: bytes &length = pk_script_length; # Public key script
-    };
+    function to_uint(): uint64 {
+        return self.value;
+    }
+};
 
-    # Define the unit for parsing Bitcoin transactions
-    type BitcoinTransactionUnit = unit {
-        // Transaction version
-        version: uint32;
+type Input = unit {
+    prev_tx_hash: bytes &length=32;
+    output_index: uint32;
+    script_length: varint;
+    script_sig: bytes &length=script_length.to_uint();
+    sequence_number: uint32;
+};
 
-        // Number of transaction inputs
-        varint_inputs: uint8 &into = inputs_count;
-        inputs: [inputs_count]Input;
-
-        // Number of transaction outputs
-        varint_outputs: uint8 &into = outputs_count;
-        outputs: [outputs_count]Output;
-
-        // Lock time
-        lock_time: uint32;
-
-        on %done {
-            # Raise an event when parsing is done
-            zeek::bitcoin_transaction(variant, inputs, outputs, lock_time);
-        }
-    };
-
-    # The main unit
-    type Bitcoin = unit {
-        variant: uint8;
-
-        transaction: BitcoinTransactionUnit &if (variant == 0);
-
-        on %done {
-            if (variant == 0)
-                zeek::bitcoin_transaction(variant, transaction.inputs, transaction.outputs, transaction.lock_time);
-        }
-    };
-
-    # Define a connection analyzer
-    type BitcoinAnalyzer = zeek::session::Analyzer {
-        # The Spicy unit to parse messages
-        .unit = Bitcoin
-    };
-
-    # Register the analyzer for a specific TCP port, typically 8333 for Bitcoin
-    global bitcoin_analyzer: set[still] of BitcoinAnalyzer;
-}
-
-hook zeek_init() {
-    # Enable the analyzer by setting a variable
-    local bca = new BitcoinTransactions::BitcoinAnalyzer();
-    bca.flow = zeek::session::TCP;
-    BitcoinTransactions::bitcoin_analyzer += TCP::register_analyzer(bca);
-}
+type Output = unit {
+    value: uint64;
+    script_length: varint;
+    script_pubkey: bytes &length=script_length.to_uint();
+};

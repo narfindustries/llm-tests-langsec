@@ -5,110 +5,140 @@ meta:
   endian: be
 
 seq:
-  - id: fixed_header
-    type: fixed_header
-
-  - id: variable_header
-    type: variable_header
-    if: fixed_header.packet_type == 1 # CONNECT packet
-
-  - id: payload
-    type: payload
-    if: fixed_header.packet_type == 1 # CONNECT packet
+  - id: packet
+    type: packet
+    repeat: eos
 
 types:
+  packet:
+    seq:
+      - id: fixed_header
+        type: fixed_header
+      - id: variable_header
+        type: variable_header
+        size: fixed_header.remaining_length.value_decoded
+        if: fixed_header.packet_type != 13 and fixed_header.packet_type != 14
+      - id: payload
+        type: payload
+        size: fixed_header.remaining_length.value_decoded - variable_header._size
+        if: fixed_header.packet_type != 13 and fixed_header.packet_type != 14
+
   fixed_header:
     seq:
       - id: packet_type
-        type: b1
-        doc: |
-          The packet type and flags. The high nibble is the packet type, and the low nibble is the flags.
-
+        type: u1
+      - id: flags
+        type: u1
       - id: remaining_length
         type: vlq_base128
-        doc: |
-          The remaining length of the packet, which is the length of the variable header and payload.
 
   variable_header:
     seq:
-      - id: protocol_name
+      - id: connect_flags
+        type: connect_flags
+        if: _parent.fixed_header.packet_type == 1
+      - id: connack_flags
+        type: connack_flags
+        if: _parent.fixed_header.packet_type == 2
+      - id: publish_flags
+        type: publish_flags
+        if: _parent.fixed_header.packet_type == 3
+      - id: packet_identifier
+        type: u2
+        if: _parent.fixed_header.packet_type in [4, 5, 6, 7, 8, 9, 10, 11]
+      - id: reason_code
+        type: u1
+        if: _parent.fixed_header.packet_type in [2, 4, 5, 6, 7, 9, 11, 14, 15]
+      - id: properties
+        type: properties
+        size-eos: true
+        if: _parent.fixed_header.packet_type in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15]
+
+  connect_flags:
+    seq:
+      - id: flags
+        type: u1
+
+  connack_flags:
+    seq:
+      - id: session_present
+        type: u1
+
+  publish_flags:
+    seq:
+      - id: topic_name
         type: str
         encoding: utf-8
-        size: 4
-        doc: |
-          The protocol name, which is always "MQTT".
-
-      - id: protocol_level
-        type: u1
-        doc: |
-          The protocol level, which is 4 for MQTT 3.1.1.
-
-      - id: connect_flags
-        type: b1
-        doc: |
-          The connect flags, which include flags for clean session, will, will QoS, will retain, password, and username.
-
-      - id: keep_alive
+      - id: packet_identifier
         type: u2
-        doc: |
-          The keep alive time in seconds.
+        if: (_parent.fixed_header.flags & 0x06) != 0
+
+  properties:
+    seq:
+      - id: length
+        type: vlq_base128
+      - id: property
+        type: property
+        repeat: eos
+
+  property:
+    seq:
+      - id: identifier
+        type: u1
+      - id: value
+        type: property_value
+
+  property_value:
+    seq:
+      - id: value
+        type:
+          switch-on: _parent.identifier
+          cases:
+            0x01: u4
+            0x02: u2
+            0x03: u1
+            0x08: str
+            0x09: str
+            0x0B: u1
+            0x11: u4
+            0x12: u2
+            0x13: u1
+            0x15: u4
+            0x16: u2
+            0x17: u1
+            0x19: u4
+            0x1A: u2
+            0x1B: u1
+            0x21: u4
+            0x22: u2
+            0x23: u1
+            0x24: u4
+            0x25: u2
+            0x26: u1
+            0x27: u4
+            0x28: u2
+            0x29: u1
+            0x31: u4
+            0x32: u2
+            0x33: u1
+            0x34: u4
+            0x35: u2
+            0x36: u1
+            0x37: u4
+            0x38: u2
+            0x39: u1
 
   payload:
     seq:
-      - id: client_id
+      - id: data
         type: str
         encoding: utf-8
-        size: client_id_length
-        doc: |
-          The client identifier, which is a UTF-8 encoded string.
-
-      - id: will_topic
-        type: str
-        encoding: utf-8
-        size: will_topic_length
-        if: variable_header.connect_flags & 0x04 != 0
-        doc: |
-          The will topic, present if the will flag is set.
-
-      - id: will_message
-        type: str
-        encoding: utf-8
-        size: will_message_length
-        if: variable_header.connect_flags & 0x04 != 0
-        doc: |
-          The will message, present if the will flag is set.
-
-      - id: username
-        type: str
-        encoding: utf-8
-        size: username_length
-        if: variable_header.connect_flags & 0x80 != 0
-        doc: |
-          The username, present if the username flag is set.
-
-      - id: password
-        type: str
-        encoding: utf-8
-        size: password_length
-        if: variable_header.connect_flags & 0x40 != 0
-        doc: |
-          The password, present if the password flag is set.
-
-instances:
-  client_id_length:
-    value: '2 + payload.client_id.length'
-
-  will_topic_length:
-    value: '2 + payload.will_topic.length'
-
-  will_message_length:
-    value: '2 + payload.will_message.length'
-
-  username_length:
-    value: '2 + payload.username.length'
-
-  password_length:
-    value: '2 + payload.password.length'
+        size-eos: true
+        if: _parent.fixed_header.packet_type == 1 or _parent.fixed_header.packet_type == 3 or _parent.fixed_header.packet_type == 8 or _parent.fixed_header.packet_type == 10
+      - id: data
+        type: bytes
+        size-eos: true
+        if: _parent.fixed_header.packet_type == 4 or _parent.fixed_header.packet_type == 5 or _parent.fixed_header.packet_type == 6 or _parent.fixed_header.packet_type == 7 or _parent.fixed_header.packet_type == 9 or _parent.fixed_header.packet_type == 11 or _parent.fixed_header.packet_type == 14 or _parent.fixed_header.packet_type == 15
 
   vlq_base128:
     seq:
@@ -116,5 +146,6 @@ instances:
         type: u1
         repeat: until
         repeat-until: (value & 0x80) == 0
-        doc: |
-          Variable-length quantity encoding using base 128.
+    instances:
+      value_decoded:
+        value: (value & 0x7F) << (7 * index)

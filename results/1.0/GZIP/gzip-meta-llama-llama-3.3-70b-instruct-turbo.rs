@@ -1,85 +1,173 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
+use nom::{
+    bytes::complete::{take, take_while},
+    combinator::{map, opt},
+    error::{context, ErrorKind, ParseError},
+    number::complete::{be_u16, be_u32, be_u8},
+    sequence::tuple,
+    IResult,
+};
+use std::{env, fs};
 
-use nom::bits::bits;
-use nom::bytes::complete::{take, take_while_m_n};
-use nom::combinator::{map, verify};
-use nom::error::{Error, ErrorKind};
-use nom::multi::take_while_m_n;
-use nom::number::complete::{be_u16, be_u32};
-use nom::sequence::tuple;
-use nom::IResult;
+#[derive(Debug, PartialEq)]
+enum GzipOs {
+    FAT,
+    Amiga,
+    VMS,
+    Unix,
+    VM,
+    Atari,
+    HPFS,
+    Macintosh,
+    ZSystem,
+    CPm,
+    Tops20,
+    NTFS,
+    QDOS,
+    AcornRISCOS,
+    Unknown(u8),
+}
+
+impl GzipOs {
+    fn from_u8(n: u8) -> Self {
+        match n {
+            0 => GzipOs::FAT,
+            1 => GzipOs::Amiga,
+            2 => GzipOs::VMS,
+            3 => GzipOs::Unix,
+            4 => GzipOs::VM,
+            5 => GzipOs::Atari,
+            6 => GzipOs::HPFS,
+            7 => GzipOs::Macintosh,
+            8 => GzipOs::ZSystem,
+            9 => GzipOs::CPm,
+            10 => GzipOs::Tops20,
+            11 => GzipOs::NTFS,
+            12 => GzipOs::QDOS,
+            13 => GzipOs::AcornRISCOS,
+            _ => GzipOs::Unknown(n),
+        }
+    }
+}
 
 #[derive(Debug)]
-struct GzipHeader {
+struct GzipFile {
     id1: u8,
     id2: u8,
     cm: u8,
-    flags: u8,
+    flg: u8,
     mtime: u32,
     xfl: u8,
-    os: u8,
-}
-
-#[derive(Debug)]
-struct GzipFooter {
-    crc16: u32,
+    os: GzipOs,
+    xlen: u16,
+    extra: Vec<u8>,
+    fname: Option<Vec<u8>>,
+    fcomment: Option<Vec<u8>>,
+    hcrc: Option<u16>,
+    compressed: Vec<u8>,
     isize: u32,
 }
 
-fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    map(
+fn parse_gzip_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, data) = take_while(|c| *c != 0)(input)?;
+    Ok((input, data.to_vec()))
+}
+
+fn parse_gzip(input: &[u8]) -> IResult<&[u8], GzipFile> {
+    context(
+        "Gzip",
         tuple((
-            take(2usize),
-            take(1usize),
-            take(1usize),
-            take(1usize),
+            map(be_u8, |x: u8| {
+                if x == 0x1f {
+                    Ok(x)
+                } else {
+                    Err(nom::Err::Error(ErrorKind::AlphaNumeric))
+                }
+            }),
+            map(be_u8, |x: u8| {
+                if x == 0x8b {
+                    Ok(x)
+                } else {
+                    Err(nom::Err::Error(ErrorKind::AlphaNumeric))
+                }
+            }),
+            be_u8,
+            be_u8,
             be_u32,
-            take(1usize),
-            take(1usize),
+            be_u8,
+            map(be_u8, GzipOs::from_u8),
+            be_u16,
+            take(0),
+            opt(parse_gzip_data),
+            opt(parse_gzip_data),
+            opt(be_u16),
+            take_while(|c| *c != 0),
+            be_u32,
         )),
-        |(id, cm, flags, mtime, xfl, os)| GzipHeader {
-            id1: id[0],
-            id2: id[1],
-            cm: cm[0],
-            flags: flags[0],
-            mtime: mtime,
-            xfl: xfl[0],
-            os: os[0],
-        },
     )(input)
-}
-
-fn parse_gzip_footer(input: &[u8]) -> IResult<&[u8], GzipFooter> {
-    map(
-        tuple((be_u32, be_u32)),
-        |(crc16, isize)| GzipFooter { crc16, isize },
-    )(input)
-}
-
-fn parse_gzip(input: &[u8]) -> IResult<&[u8], (GzipHeader, GzipFooter)> {
-    let (input, header) = parse_gzip_header(input)?;
-    let (input, _) = take_while_m_n(0, 65535, |x| x != 0)(input)?;
-    let (input, footer) = parse_gzip_footer(input)?;
-    Ok((input, (header, footer)))
+    .and_then(|(input, (
+        id1,
+        id2,
+        cm,
+        flg,
+        mtime,
+        xfl,
+        os,
+        xlen,
+        extra,
+        fname,
+        fcomment,
+        hcrc,
+        compressed,
+        isize,
+    ))| {
+        let extra_field = if xlen > 0 { Some(extra) } else { None };
+        let fname = if fname.is_some() && fname.as_ref().unwrap().len() > 0 {
+            Some(fname.unwrap())
+        } else {
+            None
+        };
+        let fcomment = if fcomment.is_some() && fcomment.as_ref().unwrap().len() > 0 {
+            Some(fcomment.unwrap())
+        } else {
+            None
+        };
+        Ok((
+            input,
+            GzipFile {
+                id1: id1,
+                id2: id2,
+                cm,
+                flg,
+                mtime,
+                xfl,
+                os,
+                xlen,
+                extra: extra_field.unwrap_or_default(),
+                fname,
+                fcomment,
+                hcrc,
+                compressed: compressed.to_vec(),
+                isize,
+            },
+        ))
+    })
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <input_file>", args[0]);
+        println!("Usage: {} <gzip file>", args[0]);
         return;
     }
-    let mut file = File::open(&args[1]).unwrap();
-    let mut input = Vec::new();
-    file.read_to_end(&mut input).unwrap();
-    match parse_gzip(&input) {
-        Ok((remaining, (header, footer))) => {
-            println!("Header: {:?}", header);
-            println!("Footer: {:?}", footer);
-            assert_eq!(remaining.len(), 0);
+    let path = env::args().nth(1).unwrap();
+    let file = fs::read(path).expect("Failed to read file");
+    let result = parse_gzip(&file);
+    match result {
+        Ok((_, gzip_file)) => {
+            println!("Gzip File: {:?}", gzip_file);
         }
-        Err(e) => println!("Error: {:?}", e),
+        Err(err) => {
+            println!("Error: {:?}", err);
+        }
     }
 }

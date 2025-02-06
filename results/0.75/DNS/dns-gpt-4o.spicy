@@ -1,40 +1,52 @@
 module DNS;
 
-import spicy;
-import zeek;
-
 type DNSHeader = unit {
     id: uint16;
-    flags: uint16;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
+    flags: bitfield(width=16) {
+        qr: bool,          # Query/Response
+        opcode: uint4,     # Operation code
+        aa: bool,          # Authoritative Answer
+        tc: bool,          # Truncation
+        rd: bool,          # Recursion Desired
+        ra: bool,          # Recursion Available
+        z: uint3,          # Reserved
+        rcode: uint4       # Response code
+    };
+    qdcount: uint16;        # Number of questions
+    ancount: uint16;        # Number of answer RRs
+    nscount: uint16;        # Number of authority RRs
+    arcount: uint16;        # Number of additional RRs
 };
 
 type DNSQuestion = unit {
-    qname: bytes &until=0x00;
-    qtype: uint16;
-    qclass: uint16;
+    qname: dns_name;        # Domain name
+    qtype: uint16;          # Question type
+    qclass: uint16;         # Question class
 };
 
 type DNSResourceRecord = unit {
-    name: bytes &until=0x00;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes &size=rdlength;
+    name: dns_name;         # Domain name
+    type: uint16;           # Resource record type
+    class: uint16;          # Resource record class
+    ttl: uint32;            # Time to live
+    rdlength: uint16 &length = rdata;  # Length of RDATA
+    rdata: bytes &length = rdlength;   # Resource data
 };
 
-public type DNSMessage = unit {
+type DNSMessage = unit {
     header: DNSHeader;
-    questions: array of DNSQuestion &length=header.qdcount;
-    answers: array of DNSResourceRecord &length=header.ancount;
-    authorities: array of DNSResourceRecord &length=header.nscount;
-    additionals: array of DNSResourceRecord &length=header.arcount;
+    questions: DNSQuestion[header.qdcount];
+    answers: DNSResourceRecord[header.ancount];
+    authorities: DNSResourceRecord[header.nscount];
+    additionals: DNSResourceRecord[header.arcount];
 };
 
-public global dns_message: function(input: bytes): DNSMessage %parse {
-    return parse_DNSMessage(input);
+# Helper to parse domain names. DNS names are a sequence of labels.
+type dns_name = unit {
+    labels: dns_label[] &until($$ == "");
+};
+
+type dns_label = unit {
+    length: uint8;
+    label: bytes &length = length;
 };

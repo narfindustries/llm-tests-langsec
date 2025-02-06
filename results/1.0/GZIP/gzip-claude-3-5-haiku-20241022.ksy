@@ -1,49 +1,80 @@
 meta:
   id: gzip
   file-extension: gz
-  title: GZIP file format
   endian: le
 seq:
-  - id: header
-    type: header
-  - id: body
-    type: body
-  - id: footer
-    type: footer
+  - id: identification1
+    type: u1
+    valid: 0x1f
+  - id: identification2
+    type: u1
+    valid: 0x8b
+  - id: compression_method
+    type: u1
+    valid: 8
+  - id: flags
+    type: flags
+  - id: modification_time
+    type: u4
+  - id: extra_flags
+    type: u1
+  - id: operating_system
+    type: u1
+  - id: extra_fields
+    type: extra_field
+    if: flags.extra_field
+  - id: original_filename
+    type: strz
+    if: flags.filename
+    encoding: ASCII
+  - id: file_comment
+    type: strz
+    if: flags.file_comment
+    encoding: ASCII
+  - id: header_crc16
+    type: u2
+    if: flags.header_crc
+  - id: compressed_data
+    type: deflate_block
+  - id: crc32
+    type: u4
+  - id: uncompressed_size
+    type: u4
 types:
-  header:
+  flags:
     seq:
-      - id: magic
-        contents: [0x1f, 0x8b]
-      - id: compression_method
-        type: u1
-        enum: compression_methods
-      - id: flags
-        type: u1
-        # Bitfield for various header flags
-      - id: modification_time
-        type: u4
-      - id: extra_flags
-        type: u1
-      - id: os
-        type: u1
-        enum: operating_systems
-  body:
+      - id: text
+        type: b1
+      - id: header_crc
+        type: b1
+      - id: extra_field
+        type: b1
+      - id: filename
+        type: b1
+      - id: file_comment
+        type: b1
+      - id: reserved
+        type: b3
+  extra_field:
     seq:
-      - id: compressed_data
+      - id: total_length
+        type: u2
+      - id: subfields
+        type: subfield
+        repeat: expr
+        repeat-expr: total_length
+  subfield:
+    seq:
+      - id: id
         type: str
-        size-eos: true
-  footer:
+        size: 2
+        encoding: ASCII
+      - id: length
+        type: u2
+      - id: data
+        size: length
+  deflate_block:
     seq:
-      - id: crc32
-        type: u4
-      - id: original_size
-        type: u4
-enums:
-  compression_methods:
-    8: deflate
-  operating_systems:
-    0: fat
-    3: unix
-    7: macintosh
-    11: ntfs
+      - id: raw_data
+        type: u1
+        repeat: eos

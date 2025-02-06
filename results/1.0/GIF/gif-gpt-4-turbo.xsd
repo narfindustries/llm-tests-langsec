@@ -1,57 +1,124 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gif"
+           xmlns:gif="http://example.com/gif">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="gifFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <dfdl:format byteOrder="bigEndian"
+                 encoding="US-ASCII"
+                 bitOrder="mostSignificantBitFirst"
+                 textNumberRep="standard"
+                 textBooleanPadCharacter="%SP;"
+                 textPadKind="padChar"
+                 textTrimKind="none"
+                 lengthKind="explicit"/>
 
-    <xs:simpleType name="byte">
-        <xs:restriction base="xs:unsignedByte"/>
-    </xs:simpleType>
+    <xs:element name="GIFFile" type="gif:GIFFileType"/>
 
-    <dfdl:defineFormat name="gifFormat">
-        <dfdl:format byteOrder="bigEndian"
-                     encoding="ascii"
-                     bitOrder="mostSignificantBitFirst"
-                     alignmentUnits="bytes"
-                     alignment="1"/>
-    </dfdl:defineFormat>
-
-    <xs:complexType name="Header">
+    <xs:complexType name="GIFFileType">
         <xs:sequence>
-            <xs:element name="signature" type="xs:string" dfdl:length="3"/>
-            <xs:element name="version" type="xs:string" dfdl:length="3"/>
+            <xs:element name="Header" type="gif:HeaderType"/>
+            <xs:element name="LogicalScreenDescriptor" type="gif:LogicalScreenDescriptorType"/>
+            <xs:element minOccurs="0" name="GlobalColorTable" type="gif:ColorTableType"/>
+            <xs:element maxOccurs="unbounded" name="DataBlock" type="gif:DataBlockType"/>
+            <xs:element name="Trailer" type="gif:TrailerType"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="LogicalScreenDescriptor">
+    <xs:complexType name="HeaderType">
         <xs:sequence>
-            <xs:element name="width" type="xs:unsignedShort" dfdl:length="2"/>
-            <xs:element name="height" type="xs:unsignedShort" dfdl:length="2"/>
-            <xs:element name="packedFields" type="byte"/>
-            <xs:element name="backgroundColorIndex" type="byte"/>
-            <xs:element name="pixelAspectRatio" type="byte"/>
+            <xs:element name="Signature" type="xs:string" dfdl:length="3"/>
+            <xs:element name="Version" type="xs:string" dfdl:length="3"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="GIF">
+    <xs:complexType name="LogicalScreenDescriptorType">
         <xs:sequence>
-            <xs:element name="header" type="tns:Header"/>
-            <xs:element name="logicalScreen" type="tns:LogicalScreenDescriptor"/>
-            <!-- Extend this type with blocks like ImageBlock, ExtensionBlock, etc. -->
-            <!-- Work in progress for the mentioned GIF blocks -->
+            <xs:element name="ScreenWidth" type="xs:int" dfdl:length="2"/>
+            <xs:element name="ScreenHeight" type="xs:int" dfdl:length="2"/>
+            <xs:element name="PackedFields" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="BackgroundColorIndex" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="PixelAspectRatio" type="xs:byte" dfdl:length="1"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:element name="GIFFile" type="tns:GIF">
-        <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-                <dfdl:format ref="gifFormat"/>
-            </xs:appinfo>
-        </xs:annotation>
-    </xs:element>
+    <xs:complexType name="ColorTableType">
+        <xs:sequence>
+            <xs:element name="Color" type="gif:ColorType" minOccurs="2" maxOccurs="256"/>
+        </xs:sequence>
+    </xs:complexType>
 
+    <xs:complexType name="ColorType">
+        <xs:sequence>
+            <xs:element name="Red" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="Green" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="Blue" type="xs:byte" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DataBlockType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="ImageBlock" type="gif:ImageBlockType"/>
+                <xs:element name="ExtensionBlock" type="gif:ExtensionBlockType"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ImageBlockType">
+        <xs:sequence>
+            <xs:element name="ImageSeparator" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="ImageLeftPosition" type="xs:int" dfdl:length="2"/>
+            <xs:element name="ImageTopPosition" type="xs:int" dfdl:length="2"/>
+            <xs:element name="ImageWidth" type="xs:int" dfdl:length="2"/>
+            <xs:element name="ImageHeight" type="xs:int" dfdl:length="2"/>
+            <xs:element name="PackedFields" type="xs:byte" dfdl:length="1"/>
+            <xs:element minOccurs="0" name="LocalColorTable" type="gif:ColorTableType"/>
+            <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ExtensionBlockType">
+        <xs:sequence>
+            <xs:element name="GraphicControlExtension" type="gif:GraphicControlExtensionType"/>
+            <xs:element name="CommentExtension" type="gif:CommentExtensionType"/>
+            <xs:element name="PlainTextExtension" type="gif:PlainTextExtensionType"/>
+            <xs:element name="ApplicationExtension" type="gif:ApplicationExtensionType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="GraphicControlExtensionType">
+        <xs:sequence>
+            <xs:element name="BlockSize" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="PackedFields" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="DelayTime" type="xs:int" dfdl:length="2"/>
+            <xs:element name="TransparentColorIndex" type="xs:byte" dfdl:length="1"/>
+            <xs:element name="Terminator" type="xs:byte" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CommentExtensionType">
+        <xs:sequence>
+            <xs:element name="CommentData" type="xs:string" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PlainTextExtensionType">
+        <xs:sequence>
+            <!-- Specific fields per GIF spec -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ApplicationExtensionType">
+        <xs:sequence>
+            <xs:element name="ApplicationIdentifier" type="xs:string" dfdl:length="8"/>
+            <xs:element name="AuthenticationCode" type="xs:string" dfdl:length="3"/>
+            <xs:element name="ApplicationData" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="TrailerType">
+        <xs:sequence>
+            <xs:element name="Trailer" type="xs:byte" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
 </xs:schema>

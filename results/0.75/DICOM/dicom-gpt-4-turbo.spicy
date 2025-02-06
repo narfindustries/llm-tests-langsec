@@ -1,62 +1,41 @@
 module DICOM;
 
-public type File = unit {
+public type FileMetaInformationHeader = unit {
     preamble: bytes &size=128;
-    prefix: string &size=4;
-    header: HeaderSection;
-
-    on %init {
-        print "DICOM parser initialized.";
-    }
-
-    on %done {
-        print "DICOM parsing complete.";
-    }
+    prefix: bytes &size=4;
 };
 
-public type HeaderSection = unit {
-    elements: HeaderElement(self.index())[];
-
-    index() : uint16 {
-        local curPos = self.$.position() / 8;
-        local secSize = self.headerSize();
-        return secSize - (curPos - self.$.offset);
-    }
-
-    headerSize() : uint16 {
-        local size = 0;
-        for (element in self.elements) {
-            size += element.size();
-        }
-        return size;
-    }
-};
-
-public type HeaderElement = unit {
-    tagGroup: uint16;
-    tagElement: uint16;
-    vr: string &size=2;
+public type DataElementExplicitVR = unit {
+    tag: uint16;
+    tag2: uint16;
+    vr: bytes &size=2;
     length: uint16;
-    value: bytes &size=this.length;
-
-    size() : uint16 {
-        return 2 + 2 + 2 + 2 + this.length;  // sum of sizes of all fields
-    }
+    value: bytes &size=length;
 };
 
-public type DataElement = unit {
-    tagGroup: uint16;
-    tagElement: uint16;
-    vr: string &size=2;
-    length: uint16;
-    value: switch (this.vr) {
-        case "UL": uint32;
-        case "US": uint16;
-        case "SS": int16;
-        case "SL": int32;
-        case "FL": real32;
-        case "FD": real64;
-        case "OB", "OW", "UN", "SQ", "UT", "ST", "LT", "AE", "AS", "AT", "DA", "DS", "DT", "IS", "TM", "UI", "SH", "LO", "CS", "PN": bytes &size=this.length;
-        default: void;
-    };
+public type DataElementImplicitVR = unit {
+    tag: uint16;
+    tag2: uint16;
+    length: uint32;
+    value: bytes &size=length;
+};
+
+public type SequenceItem = unit {
+    itemTag: uint16;
+    itemTag2: uint16;
+    itemLength: uint32;
+    itemValue: bytes &size=itemLength;
+};
+
+public type SequenceOfItems = unit {
+    seqItems: SequenceItem[] &eod;
+};
+
+public type DICOMDataset = unit {
+    elements: (DataElementExplicitVR | DataElementImplicitVR | SequenceOfItems)[] &eod;
+};
+
+public type DICOMFile = unit {
+    header: FileMetaInformationHeader;
+    dataset: DICOMDataset;
 };

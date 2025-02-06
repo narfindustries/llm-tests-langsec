@@ -1,0 +1,2 @@
+for<'a> fn(&'a str) -> Result<(&'a str, Header), nom::Err<nom::error::Error<&'a str>>> {Header::parse}
+for<'a> fn(&'a str) -> Result<(&'a str, Header), nom::internal::Err<nom::error::Error<&'a str>>> {Header::parse}

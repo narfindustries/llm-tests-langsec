@@ -1,14 +1,12 @@
 use nom::{
     bytes::complete::{tag, take_until},
-    character::complete::{alphanumeric1, char, line_ending},
-    combinator::{map_res, opt},
+    character::complete::{alphanumeric1, char},
+    combinator::map_res,
     multi::separated_list0,
-    sequence::{delimited, preceded, tuple},
+    sequence::{preceded, tuple},
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::env;
+use std::{env, fs::File, io::Read, str};
 
 #[derive(Debug)]
 struct HL7Message {
@@ -19,19 +17,17 @@ struct HL7Message {
 enum Segment {
     MSH(MSHSegment),
     PID(PIDSegment),
-    // Add other segment types as needed
+    OBR(OBRSegment),
+    OBX(OBXSegment),
 }
 
 #[derive(Debug)]
 struct MSHSegment {
-    field_separator: char,
-    encoding_characters: String,
     sending_application: String,
     sending_facility: String,
     receiving_application: String,
     receiving_facility: String,
     date_time_of_message: String,
-    security: Option<String>,
     message_type: String,
     message_control_id: String,
     processing_id: String,
@@ -40,106 +36,160 @@ struct MSHSegment {
 
 #[derive(Debug)]
 struct PIDSegment {
-    set_id: Option<String>,
-    patient_id: Option<String>,
-    patient_identifier_list: Vec<String>,
-    // Add other fields as needed
+    patient_id: String,
+    patient_name: String,
 }
 
-fn parse_msh_segment(input: &str) -> IResult<&str, Segment> {
-    let (input, (_, field_separator, encoding_characters, sending_application, sending_facility, receiving_application, receiving_facility, date_time_of_message, security, message_type, message_control_id, processing_id, version_id, _)) =
-        tuple((
+#[derive(Debug)]
+struct OBRSegment {
+    set_id: String,
+    placer_order_number: String,
+    filler_order_number: String,
+}
+
+#[derive(Debug)]
+struct OBXSegment {
+    set_id: String,
+    value_type: String,
+    observation_identifier: String,
+    observation_value: String,
+}
+
+fn parse_msh_segment(input: &str) -> IResult<&str, MSHSegment> {
+    map_res(
+        preceded(
             tag("MSH"),
-            char('|'),
-            take_until("|"),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            opt(delimited(char('|'), alphanumeric1, char('|'))),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, char('|')),
-            delimited(char('|'), alphanumeric1, line_ending),
-        ))(input)?;
-
-    Ok((
-        input,
-        Segment::MSH(MSHSegment {
-            field_separator,
-            encoding_characters: encoding_characters.to_string(),
-            sending_application: sending_application.to_string(),
-            sending_facility: sending_facility.to_string(),
-            receiving_application: receiving_application.to_string(),
-            receiving_facility: receiving_facility.to_string(),
-            date_time_of_message: date_time_of_message.to_string(),
-            security: security.map(|s| s.to_string()),
-            message_type: message_type.to_string(),
-            message_control_id: message_control_id.to_string(),
-            processing_id: processing_id.to_string(),
-            version_id: version_id.to_string(),
-        }),
-    ))
+            tuple((
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+            )),
+        ),
+        |(
+            sending_application,
+            sending_facility,
+            receiving_application,
+            receiving_facility,
+            date_time_of_message,
+            message_type,
+            message_control_id,
+            processing_id,
+            version_id,
+        )| {
+            Ok(MSHSegment {
+                sending_application: sending_application.to_string(),
+                sending_facility: sending_facility.to_string(),
+                receiving_application: receiving_application.to_string(),
+                receiving_facility: receiving_facility.to_string(),
+                date_time_of_message: date_time_of_message.to_string(),
+                message_type: message_type.to_string(),
+                message_control_id: message_control_id.to_string(),
+                processing_id: processing_id.to_string(),
+                version_id: version_id.to_string(),
+            })
+        },
+    )(input)
 }
 
-fn parse_pid_segment(input: &str) -> IResult<&str, Segment> {
-    let (input, (_, set_id, patient_id, patient_identifier_list)) = tuple((
-        tag("PID"),
-        opt(preceded(char('|'), alphanumeric1)),
-        opt(preceded(char('|'), alphanumeric1)),
-        separated_list0(char('~'), preceded(char('|'), alphanumeric1)),
-    ))(input)?;
+fn parse_pid_segment(input: &str) -> IResult<&str, PIDSegment> {
+    map_res(
+        preceded(
+            tag("PID"),
+            tuple((
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+            )),
+        ),
+        |(patient_id, patient_name)| {
+            Ok(PIDSegment {
+                patient_id: patient_id.to_string(),
+                patient_name: patient_name.to_string(),
+            })
+        },
+    )(input)
+}
 
-    Ok((
-        input,
-        Segment::PID(PIDSegment {
-            set_id: set_id.map(|s| s.to_string()),
-            patient_id: patient_id.map(|s| s.to_string()),
-            patient_identifier_list: patient_identifier_list.iter().map(|&s| s.to_string()).collect(),
-        }),
-    ))
+fn parse_obr_segment(input: &str) -> IResult<&str, OBRSegment> {
+    map_res(
+        preceded(
+            tag("OBR"),
+            tuple((
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+            )),
+        ),
+        |(set_id, placer_order_number, filler_order_number)| {
+            Ok(OBRSegment {
+                set_id: set_id.to_string(),
+                placer_order_number: placer_order_number.to_string(),
+                filler_order_number: filler_order_number.to_string(),
+            })
+        },
+    )(input)
+}
+
+fn parse_obx_segment(input: &str) -> IResult<&str, OBXSegment> {
+    map_res(
+        preceded(
+            tag("OBX"),
+            tuple((
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+                preceded(char('|'), alphanumeric1),
+            )),
+        ),
+        |(set_id, value_type, observation_identifier, observation_value)| {
+            Ok(OBXSegment {
+                set_id: set_id.to_string(),
+                value_type: value_type.to_string(),
+                observation_identifier: observation_identifier.to_string(),
+                observation_value: observation_value.to_string(),
+            })
+        },
+    )(input)
 }
 
 fn parse_segments(input: &str) -> IResult<&str, Vec<Segment>> {
-    separated_list0(line_ending, parse_segment)(input)
+    separated_list0(char('\r'), parse_segment)(input)
 }
 
 fn parse_segment(input: &str) -> IResult<&str, Segment> {
-    let (input, segment) = preceded(
-        take_until("|"),
-        alt((
-            parse_msh_segment,
-            parse_pid_segment,
-            // Add other segment parsers here
-        )),
-    )(input)?;
-
-    Ok((input, segment))
+    let (input, segment_id) = take_until("|")(input)?;
+    match segment_id {
+        "MSH" => map_res(parse_msh_segment, |s| Ok(Segment::MSH(s)))(input),
+        "PID" => map_res(parse_pid_segment, |s| Ok(Segment::PID(s)))(input),
+        "OBR" => map_res(parse_obr_segment, |s| Ok(Segment::OBR(s)))(input),
+        "OBX" => map_res(parse_obx_segment, |s| Ok(Segment::OBX(s)))(input),
+        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::NoneOf))),
+    }
 }
 
 fn parse_hl7_message(input: &str) -> IResult<&str, HL7Message> {
-    let (input, segments) = parse_segments(input)?;
-    Ok((input, HL7Message { segments }))
+    map_res(parse_segments, |segments| Ok(HL7Message { segments }))(input)
 }
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "No input file specified"));
+        return Err("Usage: hl7_parser <file>".into());
     }
-    let filename = &args[1];
-    let mut file = File::open(filename)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
 
-    match parse_hl7_message(&contents) {
-        Ok((_, message)) => {
-            println!("{:#?}", message);
-        }
-        Err(e) => {
-            println!("Failed to parse HL7 message: {:?}", e);
-        }
+    let mut file = File::open(&args[1])?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents)?;
+    let input = str::from_utf8(&contents)?;
+
+    match parse_hl7_message(input) {
+        Ok((_, message)) => println!("{:#?}", message),
+        Err(e) => println!("Failed to parse HL7 message: {:?}", e),
     }
 
     Ok(())

@@ -1,131 +1,135 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <hammer/hammer.h>
 
-// Define the parser for the GZIP format
-static HParser* gzip_parser(void) {
-    // Magic number parser
-    HParser* magic_number = h_token_bytes(
-        (uint8_t*)"\x1F\x8B", 2
+typedef struct {
+    uint8_t magic_1;
+    uint8_t magic_2;
+    uint8_t compression_method;
+    uint8_t flags;
+    uint32_t modification_time;
+    uint8_t extra_flags;
+    uint8_t operating_system;
+    
+    struct {
+        bool has_extra;
+        bool has_name;
+        bool has_comment;
+        bool has_crc;
+    } flag_state;
+    
+    HParser* extra_fields;
+    char* filename;
+    char* comment;
+    uint16_t header_crc;
+    
+    HParser* compressed_data;
+    uint32_t data_crc32;
+    uint32_t original_length;
+} GzipFile;
+
+HParser* gzip_parser() {
+    HParser* magic = h_sequence(
+        h_ch(0x1F),
+        h_ch(0x8B),
+        NULL
     );
-
-    // Compression method parser (8 = DEFLATE)
-    HParser* compression_method = h_bits_be(8, false);
-
-    // Flags parser
-    HParser* flags = h_bits_be(8, false);
-
-    // Modification time (4 bytes, little-endian)
-    HParser* mod_time = h_bits_le(32, false);
-
-    // Extra flags parser
-    HParser* extra_flags = h_bits_be(8, false);
-
-    // Operating system parser
-    HParser* os_type = h_bits_be(8, false);
-
-    // Optional extra headers parser
-    HParser* extra_header = h_optional(
+    
+    HParser* compression_method = h_ch(0x08);
+    
+    HParser* flags = h_bits(8, false);
+    
+    HParser* modification_time = h_uint32();
+    
+    HParser* extra_flags = h_bits(8, false);
+    
+    HParser* operating_system = h_bits(8, false);
+    
+    HParser* optional_extra_fields = h_optional(
         h_sequence(
-            h_bits_be(16, false),  // Extra length
-            h_repeat_n(h_bits_be(8, false), 
-                       h_indirect_parser(extra_header), 1)
+            h_uint16(),
+            h_repeat_n(h_bits(8, false), 1),
+            NULL
         )
     );
-
-    // Optional filename parser
-    HParser* filename = h_optional(
-        h_zero_or_more(h_not_char('\0'))
+    
+    HParser* optional_filename = h_optional(
+        h_token((uint8_t*)"", 0)
     );
-
-    // Optional comment parser
-    HParser* comment = h_optional(
-        h_zero_or_more(h_not_char('\0'))
+    
+    HParser* optional_comment = h_optional(
+        h_token((uint8_t*)"", 0)
     );
-
-    // CRC16 for header
-    HParser* header_crc16 = h_bits_le(16, false);
-
-    // Compressed data block parser (simplified)
-    HParser* compressed_data = h_repeat_n(
-        h_bits_be(8, false), 
-        h_indirect_parser(compressed_data), 
-        1
+    
+    HParser* optional_header_crc = h_optional(
+        h_uint16()
     );
-
-    // CRC32 for compressed data
-    HParser* data_crc32 = h_bits_le(32, false);
-
-    // Original uncompressed data length
-    HParser* original_length = h_bits_le(32, false);
-
-    // Complete GZIP file parser
-    HParser* gzip_file = h_sequence(
-        magic_number,
+    
+    HParser* compressed_data = h_repeat_n(h_bits(8, false), 1);
+    
+    HParser* data_crc32 = h_uint32();
+    
+    HParser* original_length = h_uint32();
+    
+    return h_sequence(
+        magic,
         compression_method,
         flags,
-        mod_time,
+        modification_time,
         extra_flags,
-        os_type,
-        h_optional(extra_header),
-        h_optional(filename),
-        h_optional(comment),
-        h_optional(header_crc16),
+        operating_system,
+        optional_extra_fields,
+        optional_filename,
+        optional_comment,
+        optional_header_crc,
         compressed_data,
         data_crc32,
-        original_length
+        original_length,
+        NULL
     );
-
-    return gzip_file;
 }
 
-int main(int argc, char** argv) {
-    // Initialize Hammer
-    hammer_init();
-
-    // Create the parser
-    HParser* parser = gzip_parser();
-
-    // If input file provided, parse it
-    if (argc > 1) {
-        FILE* file = fopen(argv[1], "rb");
-        if (!file) {
-            perror("Error opening file");
-            return 1;
-        }
-
-        // Read file contents
-        fseek(file, 0, SEEK_END);
-        long file_size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        uint8_t* buffer = malloc(file_size);
-        if (!buffer) {
-            perror("Memory allocation error");
-            fclose(file);
-            return 1;
-        }
-
-        fread(buffer, 1, file_size, file);
-        fclose(file);
-
-        // Parse the file
-        HParseResult* result = h_parse(parser, buffer, file_size);
-        
-        if (result) {
-            printf("Parsing successful!\n");
-            h_parse_result_free(result);
-        } else {
-            printf("Parsing failed.\n");
-        }
-
-        free(buffer);
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gzip_file>\n", argv[0]);
+        return 1;
     }
-
-    // Clean up parser
-    h_parse_destroy(parser);
-
+    
+    int fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        perror("Could not open file");
+        return 1;
+    }
+    
+    off_t file_size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    
+    uint8_t* buffer = malloc(file_size);
+    if (read(fd, buffer, file_size) != file_size) {
+        perror("Could not read file");
+        close(fd);
+        free(buffer);
+        return 1;
+    }
+    
+    close(fd);
+    
+    HParser* parser = gzip_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+    
+    if (result && result->ast) {
+        printf("Successfully parsed GZIP file\n");
+    } else {
+        printf("Failed to parse GZIP file\n");
+    }
+    
+    h_parse_result_free(result);
+    h_arena_free(parser->arena);
+    free(buffer);
+    
     return 0;
 }

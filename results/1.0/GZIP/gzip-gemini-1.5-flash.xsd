@@ -1,52 +1,62 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/gemini"
-           xmlns="http://example.org/gemini"
+           targetNamespace="http://example.org/gzip"
+           xmlns="http://example.org/gzip"
            elementFormDefault="qualified">
-
-  <xs:element name="gemini">
+  <xs:element name="gzip">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"  dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
-        <xs:element name="data" type="dataType" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
+        <xs:element name="header" dfdl:length="10" dfdl:occursCount="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="id1" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:assert test="string-to-codepoints(.) = 31"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="id2" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:assert test="string-to-codepoints(.) = 139"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="cm" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:assert test="string-to-codepoints(.) = 8"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="flg" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+              <xs:element name="mtime" type="xs:unsignedInt" dfdl:lengthKind="fixedLength" dfdl:length="4"/>
+              <xs:element name="xfl" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+              <xs:element name="os" type="xs:unsignedByte" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="optionalFields" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extraField" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extraFieldLength" type="xs:unsignedShort" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
+                    <xs:element name="extraFieldData" type="xs:hexBinary" dfdl:length="{../extraFieldLength}"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="fileName" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:terminator="0x00"/>
+              <xs:element name="comment" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:terminator="0x00"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="compressedData" type="xs:base64Binary" dfdl:lengthKind="unbounded"/>
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:lengthKind="fixedLength" dfdl:length="4"/>
+        <xs:element name="isize" type="xs:unsignedInt" dfdl:lengthKind="fixedLength" dfdl:length="4"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit"/>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="dataType">
-    <xs:sequence>
-      <xs:element name="record" type="recordType" maxOccurs="unbounded" dfdl:separator="CRLF"/>
-    </xs:sequence>
-  </xs:complexType>
-
-
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="field3" type="xs:string" dfdl:length="20"/>
-      <xs:element name="field4" type="xs:decimal" dfdl:length="8" dfdl:binaryDecimalSeparator="." dfdl:decimalSeparator="."> </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <dfdl:defineSchema>
-    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes" representation="text" separatorPosition="trailing" textAlignment="left">
-        <dfdl:ignoreChars>[\u0000-\u001F\u007F-\u009F]</dfdl:ignoreChars>
-    </dfdl:format>
-    <dfdl:textStandard>
-      <dfdl:textStandardVersion>1.0</dfdl:textStandardVersion>
-    </dfdl:textStandard>
-    <dfdl:unparsed>
-      <dfdl:textCompressor>gzip</dfdl:textCompressor>
-    </dfdl:unparsed>
-
-  </dfdl:defineSchema>
-
 </xs:schema>

@@ -1,59 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent an HL7 message segment
-typedef struct {
-    char *segmentID;
-    char *fields[100]; // Adjust size as needed
-} HL7Segment;
+//Simplified HL7 v2 parser using Hammer -  still does NOT cover the entire specification
 
-// Function to parse an HL7 message (simplified for demonstration)
-HL7Segment* parseHL7Segment(char *line) {
-    HL7Segment *segment = (HL7Segment*)malloc(sizeof(HL7Segment));
-    if (segment == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
-    }
-    
-    segment->segmentID = strtok(line, "|");
-    int i = 0;
-    char *token;
-    while ((token = strtok(NULL, "|")) != NULL && i < 100) {
-        segment->fields[i++] = strdup(token); // Duplicate to avoid modifying original string
-    }
-    return segment;
+typedef struct HParser_ HParser;
+typedef struct HParseResult_ HParseResult;
+typedef struct HArena_ HArena;
+typedef struct h_list_ HList;
+
+
+HParser* parse_string(const char* str) {
+    return h_string(str);
 }
 
-
-// Function to free allocated memory for an HL7 segment.
-void freeHL7Segment(HL7Segment* segment) {
-    if (segment == NULL) return;
-    free(segment->segmentID);
-    for (int i = 0; segment->fields[i] != NULL; i++) {
-        free(segment->fields[i]);
-    }
-    free(segment);
+HParser* parse_component(void) {
+    return h_regex("[^\\|]+");
 }
 
+HParser* parse_field(void) {
+    return h_sepBy1(parse_component(), h_ch('|'));
+}
 
-int main() {
-    char hl7Message[] = "MSH|^~\\&|SendingApp|SendingFacility|ReceivingApp|ReceivingFacility|202310271000||ORU^R01|12345|P|2.3|||"; // Example HL7 message
+HParser* parse_segment(const char* segment_name) {
+    HParser* segment_parser = h_seq(
+        h_string(segment_name),
+        h_ch('^'),
+        h_many1(parse_field()), 
+        h_ch('\r'),
+        h_ch('\n')
+    );
+    return segment_parser;
+}
 
-    char *line = strdup(hl7Message); // Create a copy to avoid modifying the original string
-
-    HL7Segment *segment = parseHL7Segment(line);
-    if (segment == NULL){
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
         return 1;
     }
 
-    printf("Segment ID: %s\n", segment->segmentID);
-    for (int i = 0; segment->fields[i] != NULL; i++) {
-        printf("Field %d: %s\n", i + 1, segment->fields[i]);
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    freeHL7Segment(segment);
-    free(line);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
+    char* buffer = (char*)malloc(fsize + 1);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fsize, fp);
+    buffer[fsize] = 0; 
+    fclose(fp);
+
+    HArena* arena = h_arena_new();
+    HParser* msh_parser = parse_segment("MSH");
+    HParseResult* msh_result = h_parse(msh_parser, (const uint8_t*)buffer, strlen(buffer), arena);
+
+
+    if (msh_result->success) {
+        printf("MSH segment parsed successfully.\n");
+        HList* fields = (HList*)msh_result->value;
+        for (size_t i = 0; i < fields->size; i++) {
+            HList* components = (HList*)h_list_get(fields, i);
+            for (size_t j = 0; j < components->size; j++) {
+                printf("Field %zu, Component %zu: %s\n", i + 1, j + 1, (char*)h_list_get(components, j));
+            }
+        }
+        h_list_free(fields);
+
+    } else {
+        fprintf(stderr, "MSH segment parsing failed: %s\n", msh_result->error);
+    }
+
+    free(buffer);
+    h_arena_free(arena);
     return 0;
 }

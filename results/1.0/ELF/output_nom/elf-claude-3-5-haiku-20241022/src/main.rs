@@ -3,7 +3,7 @@ use nom::{
     multi::count,
     number::complete::{le_u16, le_u32, le_u64, le_u8},
     sequence::tuple,
-    IResult, Parser,
+    IResult,
 };
 use std::env;
 use std::fs::File;
@@ -11,77 +11,104 @@ use std::io::Read;
 
 #[derive(Debug)]
 struct ElfHeader {
-    magic: [u8; 4],
-    class: u8,
-    data_encoding: u8,
-    version: u8,
-    os_abi: u8,
-    abi_version: u8,
-    padding: [u8; 7],
-    file_type: u16,
-    machine: u16,
-    elf_version: u32,
-    entry_point: u64,
-    program_header_offset: u64,
-    section_header_offset: u64,
-    flags: u32,
-    header_size: u16,
-    program_header_entry_size: u16,
-    program_header_count: u16,
-    section_header_entry_size: u16,
-    section_header_count: u16,
-    section_header_string_index: u16,
+    ei_mag: [u8; 4],
+    ei_class: u8,
+    ei_data: u8,
+    ei_version: u8,
+    ei_osabi: u8,
+    ei_abiversion: u8,
+    ei_pad: [u8; 7],
+    e_type: u16,
+    e_machine: u16,
+    e_version: u32,
+    e_entry: u64,
+    e_phoff: u64,
+    e_shoff: u64,
+    e_flags: u32,
+    e_ehsize: u16,
+    e_phentsize: u16,
+    e_phnum: u16,
+    e_shentsize: u16,
+    e_shnum: u16,
+    e_shstrndx: u16,
 }
 
 fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
-    let (input, magic) = take(4usize).parse(input)?;
-    let (input, class) = le_u8.parse(input)?;
-    let (input, data_encoding) = le_u8.parse(input)?;
-    let (input, version) = le_u8.parse(input)?;
-    let (input, os_abi) = le_u8.parse(input)?;
-    let (input, abi_version) = le_u8.parse(input)?;
-    let (input, padding) = take(7usize).parse(input)?;
-    let (input, file_type) = le_u16.parse(input)?;
-    let (input, machine) = le_u16.parse(input)?;
-    let (input, elf_version) = le_u32.parse(input)?;
-    let (input, entry_point) = le_u64.parse(input)?;
-    let (input, program_header_offset) = le_u64.parse(input)?;
-    let (input, section_header_offset) = le_u64.parse(input)?;
-    let (input, flags) = le_u32.parse(input)?;
-    let (input, header_size) = le_u16.parse(input)?;
-    let (input, program_header_entry_size) = le_u16.parse(input)?;
-    let (input, program_header_count) = le_u16.parse(input)?;
-    let (input, section_header_entry_size) = le_u16.parse(input)?;
-    let (input, section_header_count) = le_u16.parse(input)?;
-    let (input, section_header_string_index) = le_u16.parse(input)?;
+    let (input, (
+        ei_mag,
+        ei_class,
+        ei_data,
+        ei_version,
+        ei_osabi,
+        ei_abiversion,
+        ei_pad,
+        e_type,
+        e_machine,
+        e_version,
+        e_entry,
+        e_phoff,
+        e_shoff,
+        e_flags,
+        e_ehsize,
+        e_phentsize,
+        e_phnum,
+        e_shentsize,
+        e_shnum,
+        e_shstrndx
+    )) = tuple((
+        take(4usize),
+        le_u8,
+        le_u8,
+        le_u8,
+        le_u8,
+        le_u8,
+        take(7usize),
+        le_u16,
+        le_u16,
+        le_u32,
+        le_u64,
+        le_u64,
+        le_u64,
+        le_u32,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16
+    ))(input)?;
 
     Ok((input, ElfHeader {
-        magic: magic.try_into().unwrap(),
-        class,
-        data_encoding,
-        version,
-        os_abi,
-        abi_version,
-        padding: padding.try_into().unwrap(),
-        file_type,
-        machine,
-        elf_version,
-        entry_point,
-        program_header_offset,
-        section_header_offset,
-        flags,
-        header_size,
-        program_header_entry_size,
-        program_header_count,
-        section_header_entry_size,
-        section_header_count,
-        section_header_string_index,
+        ei_mag: ei_mag.try_into().unwrap(),
+        ei_class,
+        ei_data,
+        ei_version,
+        ei_osabi,
+        ei_abiversion,
+        ei_pad: ei_pad.try_into().unwrap(),
+        e_type,
+        e_machine,
+        e_version,
+        e_entry,
+        e_phoff,
+        e_shoff,
+        e_flags,
+        e_ehsize,
+        e_phentsize,
+        e_phnum,
+        e_shentsize,
+        e_shnum,
+        e_shstrndx,
     }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn validate_elf_magic(header: &ElfHeader) -> bool {
+    header.ei_mag == [0x7F, b'E', b'L', b'F']
+}
+
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
+    if args.len() != 2 {
         eprintln!("Usage: {} <elf_file>", args[0]);
         std::process::exit(1);
     }
@@ -92,12 +119,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match parse_elf_header(&buffer) {
         Ok((_, header)) => {
-            println!("ELF Header parsed successfully: {:?}", header);
-            Ok(())
+            if validate_elf_magic(&header) {
+                println!("Valid ELF Header: {:?}", header);
+            } else {
+                eprintln!("Invalid ELF magic number");
+                std::process::exit(1);
+            }
         }
         Err(e) => {
-            eprintln!("Failed to parse ELF header: {:?}", e);
-            Err(e.into())
+            eprintln!("Parsing error: {:?}", e);
+            std::process::exit(1);
         }
     }
+
+    Ok(())
 }

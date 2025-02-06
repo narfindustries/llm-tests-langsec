@@ -1,42 +1,87 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Basic DICOM Tags Definitions
-static HParser *A = h_uint16();  // Attribute Tag
-static HParser *VR = h_ch_range(0x41, 0x5A, 2); // Value Representation
-static HParser *VL = h_uint32(); // Value Length
-static HParser *VAL = h_bytes(VL); // Value Field
+// Define the DICOM tags as per the DICOM standard
+#define DICOM_PREAMBLE_SIZE 128
+#define DICOM_PREFIX "DICM"
+#define DICOM_PREFIX_SIZE 4
 
-// DICOM File Meta Information
-static HParser *meta_elem = h_sequence(A, VR, VL, VAL, NULL);
-static HParser *meta_info = h_many(meta_elem);
-
-// DICOM Data Set (simplified)
-static HParser *data_elem = h_sequence(A, VL, VAL, NULL);
-static HParser *data_set = h_many(data_elem);
-
-// DICOM Preamble and Prefix
-static HParser *preamble = h_ignore(h_bytes(128)); // 128-byte preamble
-static HParser *prefix = h_token("DICM", 4);
-
-// Complete DICOM File Structure
-static HParser *dicom_file = h_sequence(
-    preamble, 
-    prefix, 
-    meta_info, 
-    data_set, 
-    NULL
-);
+// Function prototypes
+static HParser *dicom_parser();
+static void parse_dicom_file(const char *filename);
 
 int main(int argc, char **argv) {
-    HParser *parser = dicom_file;
-    HParseResult *result = h_parse(parser, (uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        printf("Parse successful!\n");
-        h_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Parse failed!\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <DICOM file>\n", argv[0]);
+        exit(EXIT_FAILURE);
     }
-    h_parse_result_free(result);
+
+    parse_dicom_file(argv[1]);
     return 0;
+}
+
+// Parse a DICOM file
+static void parse_dicom_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Move to the end of the file to find the file size
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    rewind(file);
+
+    // Allocate memory to contain the whole file
+    uint8_t *buffer = (uint8_t *)malloc(filesize);
+    if (!buffer) {
+        perror("Memory error");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy the file into the buffer
+    fread(buffer, 1, filesize, file);
+    fclose(file);
+
+    HParser *parser = dicom_parser();
+    HParseResult *result = h_parse(parser, buffer, filesize);
+    if (result) {
+        printf("DICOM file parsed successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to parse DICOM file.\n");
+    }
+
+    // Cleanup
+    free(buffer);
+    h_parser_free(parser);
+}
+
+// Create a parser for DICOM files
+static HParser *dicom_parser() {
+    // Preamble: 128-byte of arbitrary data
+    HParser *preamble = h_repeat_n(h_uint8(), DICOM_PREAMBLE_SIZE);
+
+    // DICOM prefix: "DICM"
+    HParser *prefix = h_token((const uint8_t *)DICOM_PREFIX, DICOM_PREFIX_SIZE);
+
+    // Define how to parse a DICOM element
+    HParser *tag_group = h_uint16();
+    HParser *tag_element = h_uint16();
+    HParser *vr = h_bits(16, false);
+    HParser *length = h_uint32();
+    HParser *value_field = h_repeat_n(h_uint8(), 1); // Placeholder, dynamically set in actual usage
+
+    HParser *dicom_element = h_sequence(tag_group, tag_element, vr, length, h_indirect(), NULL);
+    h_bind_indirect(dicom_element->seq.elements[4], h_repeat_n(h_uint8(), length));
+
+    // DICOM elements are repeated until EOF
+    HParser *dicom_elements = h_many(dicom_element);
+
+    // Combine all parts into a single parser
+    HParser *dicom_file = h_sequence(preamble, prefix, dicom_elements, NULL);
+
+    return dicom_file;
 }

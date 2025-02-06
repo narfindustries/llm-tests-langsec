@@ -1,147 +1,204 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u32},
+    combinator::{map, map_res},
+    number::complete::{be_u16, be_u8},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
-#[derive(Debug)]
-struct GifHeader {
+#[derive(Debug, PartialEq)]
+enum ColorTableFlag {
+    Present,
+    NotPresent,
+}
+
+#[derive(Debug, PartialEq)]
+enum SortFlag {
+    Sorted,
+    NotSorted,
+}
+
+#[derive(Debug, PartialEq)]
+enum InterlaceFlag {
+    Interlaced,
+    NotInterlaced,
+}
+
+#[derive(Debug, PartialEq)]
+struct PackedFields {
+    global_color_table_flag: ColorTableFlag,
+    color_resolution: u8,
+    sort_flag: SortFlag,
+    size_of_global_color_table: u8,
+}
+
+impl PackedFields {
+    fn new(value: u8) -> Self {
+        PackedFields {
+            global_color_table_flag: if (value & 0x80) != 0 {
+                ColorTableFlag::Present
+            } else {
+                ColorTableFlag::NotPresent
+            },
+            color_resolution: (value & 0x70) >> 4,
+            sort_flag: if (value & 0x08) != 0 {
+                SortFlag::Sorted
+            } else {
+                SortFlag::NotSorted
+            },
+            size_of_global_color_table: (value & 0x07),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Color {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+fn color(input: &[u8]) -> IResult<&[u8], Color> {
+    let (input, red) = take(1u8)(input)?;
+    let (input, green) = take(1u8)(input)?;
+    let (input, blue) = take(1u8)(input)?;
+    Ok((input, Color { red: red[0], green: green[0], blue: blue[0] }))
+}
+
+#[derive(Debug, PartialEq)]
+struct GlobalColorTable {
+    colors: Vec<Color>,
+}
+
+fn global_color_table(input: &[u8], size: u8) -> IResult<&[u8], GlobalColorTable> {
+    let (input, colors) = take((2usize.pow((size + 1) as u32)) * 3)(input)?;
+    let mut colors_vec = Vec::new();
+    for chunk in colors.chunks(3) {
+        let color = Color {
+            red: chunk[0],
+            green: chunk[1],
+            blue: chunk[2],
+        };
+        colors_vec.push(color);
+    }
+    Ok((input, GlobalColorTable { colors: colors_vec }))
+}
+
+#[derive(Debug, PartialEq)]
+struct ImageDescriptor {
+    image_separator: u8,
+    image_left_position: u16,
+    image_top_position: u16,
+    image_width: u16,
+    image_height: u16,
+    packed_fields: PackedFields,
+}
+
+fn image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
+    let (input, image_separator) = tag(&[0x2C])(input)?;
+    let (input, image_left_position) = be_u16(input)?;
+    let (input, image_top_position) = be_u16(input)?;
+    let (input, image_width) = be_u16(input)?;
+    let (input, image_height) = be_u16(input)?;
+    let (input, packed_fields_value) = be_u8(input)?;
+    let packed_fields = PackedFields::new(packed_fields_value);
+    Ok((input, ImageDescriptor {
+        image_separator: image_separator[0],
+        image_left_position,
+        image_top_position,
+        image_width,
+        image_height,
+        packed_fields,
+    }))
+}
+
+#[derive(Debug, PartialEq)]
+struct LocalColorTable {
+    colors: Vec<Color>,
+}
+
+fn local_color_table(input: &[u8], size: u8) -> IResult<&[u8], LocalColorTable> {
+    let (input, colors) = take((2usize.pow((size + 1) as u32)) * 3)(input)?;
+    let mut colors_vec = Vec::new();
+    for chunk in colors.chunks(3) {
+        let color = Color {
+            red: chunk[0],
+            green: chunk[1],
+            blue: chunk[2],
+        };
+        colors_vec.push(color);
+    }
+    Ok((input, LocalColorTable { colors: colors_vec }))
+}
+
+#[derive(Debug, PartialEq)]
+struct Gif {
     signature: [u8; 3],
     version: [u8; 3],
-}
-
-#[derive(Debug)]
-struct LogicalScreenDescriptor {
-    width: u16,
-    height: u16,
-    flags: u8,
-    bg_color: u8,
+    logical_screen_width: u16,
+    logical_screen_height: u16,
+    packed_fields: PackedFields,
+    background_color_index: u8,
     pixel_aspect_ratio: u8,
+    global_color_table: Option<GlobalColorTable>,
+    image_descriptor: ImageDescriptor,
+    local_color_table: Option<LocalColorTable>,
 }
 
-#[derive(Debug)]
-struct ColorTable {
-    colors: Vec<[u8; 3]>,
-}
-
-#[derive(Debug)]
-struct ImageDescriptor {
-    left: u16,
-    top: u16,
-    width: u16,
-    height: u16,
-    flags: u8,
-}
-
-#[derive(Debug)]
-struct GifImage {
-    descriptor: ImageDescriptor,
-    data: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct Gif {
-    header: GifHeader,
-    logical_screen_descriptor: LogicalScreenDescriptor,
-    global_color_table: Option<ColorTable>,
-    images: Vec<GifImage>,
-}
-
-fn parse_gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
+fn gif(input: &[u8]) -> IResult<&[u8], Gif> {
     let (input, signature) = take(3u8)(input)?;
     let (input, version) = take(3u8)(input)?;
-    Ok((input, GifHeader { signature, version }))
-}
-
-fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
-    let (input, width) = be_u16(input)?;
-    let (input, height) = be_u16(input)?;
-    let (input, flags) = take(1u8)(input)?;
-    let (input, bg_color) = take(1u8)(input)?;
-    let (input, pixel_aspect_ratio) = take(1u8)(input)?;
-    Ok((
-        input,
-        LogicalScreenDescriptor {
-            width,
-            height,
-            flags: *flags.first().unwrap(),
-            bg_color: *bg_color.first().unwrap(),
-            pixel_aspect_ratio: *pixel_aspect_ratio.first().unwrap(),
-        },
-    ))
-}
-
-fn parse_color_table(input: &[u8]) -> IResult<&[u8], ColorTable> {
-    let (input, colors) = take_while_m_n(3, 768, |x| x.len() % 3 == 0)(input)?;
-    let colors: Vec<[u8; 3]> = colors
-        .chunks(3)
-        .map(|x| [x[0], x[1], x[2]])
-        .collect();
-    Ok((input, ColorTable { colors }))
-}
-
-fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
-    let (input, left) = be_u16(input)?;
-    let (input, top) = be_u16(input)?;
-    let (input, width) = be_u16(input)?;
-    let (input, height) = be_u16(input)?;
-    let (input, flags) = take(1u8)(input)?;
-    Ok((
-        input,
-        ImageDescriptor {
-            left,
-            top,
-            width,
-            height,
-            flags: *flags.first().unwrap(),
-        },
-    ))
-}
-
-fn parse_gif_image(input: &[u8]) -> IResult<&[u8], GifImage> {
-    let (input, descriptor) = parse_image_descriptor(input)?;
-    let (input, data) = take_while_m_n(1, 65535, |x| x.len() > 0)(input)?;
-    Ok((input, GifImage { descriptor, data: data.to_vec() }))
-}
-
-fn parse_gif(input: &[u8]) -> IResult<&[u8], Gif> {
-    let (input, header) = parse_gif_header(input)?;
-    let (input, logical_screen_descriptor) = parse_logical_screen_descriptor(input)?;
-    let (input, global_color_table) = opt(parse_color_table)(input)?;
-    let mut images = Vec::new();
-    let mut input = input;
-    while !input.is_empty() {
-        let (new_input, image) = parse_gif_image(input)?;
-        images.push(image);
-        input = new_input;
-    }
-    Ok((
-        input,
-        Gif {
-            header,
-            logical_screen_descriptor,
-            global_color_table,
-            images,
-        },
-    ))
+    let (input, logical_screen_width) = be_u16(input)?;
+    let (input, logical_screen_height) = be_u16(input)?;
+    let (input, packed_fields_value) = be_u8(input)?;
+    let packed_fields = PackedFields::new(packed_fields_value);
+    let (input, background_color_index) = be_u8(input)?;
+    let (input, pixel_aspect_ratio) = be_u8(input)?;
+    let global_color_table = if packed_fields.global_color_table_flag == ColorTableFlag::Present {
+        let (input, global_color_table) = global_color_table(input, packed_fields.size_of_global_color_table)?;
+        Some(global_color_table)
+    } else {
+        let (input, _) = take(0u8)(input)?;
+        None
+    };
+    let (input, image_descriptor) = image_descriptor(input)?;
+    let local_color_table = if image_descriptor.packed_fields.global_color_table_flag == ColorTableFlag::Present {
+        let (input, local_color_table) = local_color_table(input, image_descriptor.packed_fields.size_of_global_color_table)?;
+        Some(local_color_table)
+    } else {
+        let (input, _) = take(0u8)(input)?;
+        None
+    };
+    Ok((input, Gif {
+        signature: signature.try_into().unwrap(),
+        version: version.try_into().unwrap(),
+        logical_screen_width,
+        logical_screen_height,
+        packed_fields,
+        background_color_index,
+        pixel_aspect_ratio,
+        global_color_table,
+        image_descriptor,
+        local_color_table,
+    }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        panic!("Usage: {} <input_file>", args[0]);
+    let file_path = &args[1];
+    let mut file = File::open(file_path).unwrap();
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).unwrap();
+    let result = gif(&buffer);
+    match result {
+        Ok((remaining, gif)) => {
+            println!("GIF: {:?}", gif);
+            println!("Remaining: {:?}", remaining);
+        }
+        Err(err) => {
+            println!("Error: {:?}", err);
+        }
     }
-    let file = File::open(&args[1]).unwrap();
-    let mut reader = BufReader::new(file);
-    let mut input = Vec::new();
-    reader.read_to_end(&mut input).unwrap();
-    let (_rest, gif) = parse_gif(&input).unwrap();
-    println!("{:?}", gif);
 }

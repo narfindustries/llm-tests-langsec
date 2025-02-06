@@ -1,177 +1,206 @@
-use std::env;
-use std::fs;
-use std::error::Error;
 use nom::{
+    bytes::complete::{tag, take},
+    combinator::opt,
+    error::ErrorKind,
+    number::complete::{le_u16, le_u8},
+    sequence::{tuple, preceded},
     IResult,
-    bytes::complete::{take, tag},
-    number::complete::{be_u16, be_u32, le_u16},
-    multi::count,
-    sequence::tuple,
-    combinator::{map, map_res, opt, all_consuming},
 };
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug)]
 struct GifHeader {
     signature: [u8; 6],
-    version: [u8; 3],
+    logical_screen_descriptor: LogicalScreenDescriptor,
+    global_color_table: Option<Vec<[u8; 3]>>,
 }
 
 #[derive(Debug)]
-struct GifScreenDescriptor {
+struct LogicalScreenDescriptor {
     width: u16,
     height: u16,
-    packed_fields: u8,
+    packed_fields: PackedFields,
     background_color_index: u8,
     pixel_aspect_ratio: u8,
 }
 
 #[derive(Debug)]
-struct GifImageDescriptor {
-    left: u16,
-    top: u16,
-    width: u16,
-    height: u16,
-    packed_fields: u8,
-    local_color_table_flag: bool,
-    lct_size: Option<u8>,
-    lct: Option<Vec<u8>>,
-}
-
-
-#[derive(Debug)]
-struct GifGraphicControlExtension {
-    packed_fields: u8,
-    delay_time: u16,
-    transparent_color_index: u8,
-    terminator: u8,
+struct PackedFields {
+    global_color_table_flag: bool,
+    color_resolution: u8,
+    sort_flag: bool,
+    global_color_table_size: u8,
 }
 
 #[derive(Debug)]
-struct GifCommentExtension {
-    comment: Vec<u8>,
+struct ImageDescriptor {
+    image_left_position: u16,
+    image_top_position: u16,
+    image_width: u16,
+    image_height: u16,
+    packed_fields: PackedFields,
+    lzw_minimum_code_size: u8,
+    local_color_table: Option<Vec<[u8; 3]>>,
+    image_data: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct GifApplicationExtension {
-    application_identifier: [u8; 8],
-    authentication_code: [u8; 3],
-    data: Vec<u8>,
+enum Extension {
+    GraphicControlExtension {
+        packed_fields: u8,
+        delay_time: u16,
+        transparent_color_index: u8,
+        terminator: u8,
+    },
+    CommentExtension {
+        comment: String,
+    },
+    ApplicationExtension {
+        application_identifier: String,
+        authentication_code: String,
+        data: Vec<u8>,
+    },
+    // Add other extension types as needed
 }
 
-#[derive(Debug)]
-enum GifExtension {
-    GraphicControl(GifGraphicControlExtension),
-    Comment(GifCommentExtension),
-    Application(GifApplicationExtension),
+fn parse_packed_fields(input: &[u8]) -> IResult<&[u8], PackedFields> {
+    let (input, packed_fields) = le_u8(input)?;
+    Ok((
+        input,
+        PackedFields {
+            global_color_table_flag: (packed_fields >> 7) & 1 == 1,
+            color_resolution: (packed_fields >> 4) & 7,
+            sort_flag: (packed_fields >> 3) & 1 == 1,
+            global_color_table_size: packed_fields & 7,
+        },
+    ))
 }
 
-
-#[derive(Debug)]
-struct Gif {
-    header: GifHeader,
-    screen_descriptor: GifScreenDescriptor,
-    global_color_table: Option<Vec<u8>>,
-    images: Vec<GifImageDescriptor>,
-    extensions: Vec<GifExtension>,
-    trailer: u8,
+fn parse_color_table(input: &[u8], size: u8) -> IResult<&[u8], Vec<[u8; 3]>> {
+    let num_entries = 1usize << (size + 1);
+    let (input, table) = take(num_entries * 3)(input)?;
+    let table = table.chunks_exact(3).map(|chunk| [chunk[0], chunk[1], chunk[2]]).collect();
+    Ok((input, table))
 }
 
-fn gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
-    map(tuple((tag(b"GIF87a"), tag(b"GIF89a"))), |(signature, _)| GifHeader {
-        signature: [signature[0], signature[1], signature[2], signature[3], signature[4], signature[5]],
-        version: [signature[0], signature[1], signature[2]],
-    })(input)
+fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
+    let (input, (left, top, width, height, packed_fields, lzw_minimum_code_size)) = tuple((
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        parse_packed_fields,
+        le_u8,
+    ))(input)?;
+
+    let (input, local_color_table) = opt(preceded(tag("!"), |i| {
+        let (i, packed_fields) = parse_packed_fields(i)?;
+        let num_entries = 1usize << (packed_fields.global_color_table_size + 1);
+        let (i, table) = take(num_entries * 3)(i)?;
+        let table = table.chunks_exact(3).map(|chunk| [chunk[0], chunk[1], chunk[2]]).collect();
+        Ok((i, table))
+    }))(input)?;
+
+    let (input, image_data) = take_while1(|b| b != &0x3B)(input)?;
+
+    Ok((
+        input,
+        ImageDescriptor {
+            image_left_position: left,
+            image_top_position: top,
+            image_width: width,
+            image_height: height,
+            packed_fields,
+            lzw_minimum_code_size,
+            local_color_table,
+            image_data: image_data.to_vec(),
+        },
+    ))
 }
 
-fn gif_screen_descriptor(input: &[u8]) -> IResult<&[u8], GifScreenDescriptor> {
-    map(tuple((be_u16, be_u16, u8, u8, u8)), |(width, height, packed_fields, background_color_index, pixel_aspect_ratio)| GifScreenDescriptor {
-        width,
-        height,
-        packed_fields,
-        background_color_index,
-        pixel_aspect_ratio,
-    })(input)
+fn parse_gif(input: &[u8]) -> IResult<&[u8], GifHeader> {
+    let (input, signature) = tag("GIF89a")(input)?;
+    let (input, logical_screen_descriptor) = parse_logical_screen_descriptor(input)?;
+    let (input, global_color_table) = opt(|i| {
+        let (i, packed_fields) = parse_packed_fields(i)?;
+        parse_color_table(i, packed_fields.global_color_table_size)
+    })(input)?;
+
+    Ok((
+        input,
+        GifHeader {
+            signature: signature.try_into().unwrap(),
+            logical_screen_descriptor,
+            global_color_table,
+        },
+    ))
 }
 
-fn gif_global_color_table(input: &[u8], size: u8) -> IResult<&[u8], Vec<u8>> {
-    let num_entries = (1 << (size + 1)) as usize;
-    count(take(3), num_entries)(input)
-}
-
-fn gif_image_descriptor(input: &[u8]) -> IResult<&[u8], GifImageDescriptor> {
-    map(tuple((be_u16, be_u16, be_u16, be_u16, u8)), |(left, top, width, height, packed_fields)| {
-        let local_color_table_flag = (packed_fields >> 7) & 1 != 0;
-        let lct_size = if local_color_table_flag { Some((packed_fields >> 4) & 7) } else { None };
-        GifImageDescriptor {
-            left,
-            top,
+fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
+    let (input, (width, height, packed_fields, background_color_index, pixel_aspect_ratio)) =
+        tuple((le_u16, le_u16, parse_packed_fields, le_u8, le_u8))(input)?;
+    Ok((
+        input,
+        LogicalScreenDescriptor {
             width,
             height,
             packed_fields,
-            local_color_table_flag,
-            lct_size,
-            lct: None,
-        }
-    })(input)
+            background_color_index,
+            pixel_aspect_ratio,
+        },
+    ))
 }
 
-fn gif_graphic_control_extension(input: &[u8]) -> IResult<&[u8], GifGraphicControlExtension> {
-    map(tuple((u8, le_u16, u8, u8)), |(packed_fields, delay_time, transparent_color_index, terminator)| GifGraphicControlExtension {
-        packed_fields,
-        delay_time,
-        transparent_color_index,
-        terminator,
-    })(input)
-}
-
-fn gif_comment_extension(input: &[u8]) -> IResult<&[u8], GifCommentExtension> {
-    map_res(many0(take(255)), |chunks| {
-        let mut comment = Vec::new();
-        for chunk in chunks {
-            comment.extend_from_slice(chunk);
-        }
-        Ok(GifCommentExtension { comment })
-    })(input)
-}
-
-fn gif_application_extension(input: &[u8]) -> IResult<&[u8], GifApplicationExtension> {
-    map(tuple((tag(b"NETSCAPE2.0"), take(3), many0(take(255)))), |(application_identifier, authentication_code, data)| GifApplicationExtension {
-        application_identifier: [application_identifier[0], application_identifier[1], application_identifier[2], application_identifier[3], application_identifier[4], application_identifier[5], application_identifier[6], application_identifier[7]],
-        authentication_code: [authentication_code[0], authentication_code[1], authentication_code[2]],
-        data: data.concat(),
-    })(input)
-}
-
-fn gif_extension(input: &[u8]) -> IResult<&[u8], GifExtension> {
-    // Implement other extension types as needed
-    Ok(("", GifExtension::Comment(GifCommentExtension { comment: vec![] })))
-}
-
-fn many0<I, O, E, F>(f: F) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
-where
-    I: Clone + std::fmt::Debug,
-    F: FnMut(I) -> IResult<I, O, E>,
-    E: nom::error::ParseError<I>,
-{
-    nom::multi::many0(f)
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <filename>", args[0]);
-        return Ok(());
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let data = fs::read(filename)?;
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            std::process::exit(1);
+        }
+    };
 
-    let result = all_consuming(gif_header)(&data);
+    let mut buffer = Vec::new();
+    match file.read_to_end(&mut buffer) {
+        Ok(_) => (),
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+            std::process::exit(1);
+        }
+    };
 
-    match result {
-        Ok((_, header)) => println!("GIF Header: {:?}", header),
-        Err(e) => eprintln!("Error parsing GIF header: {}", e),
+    match parse_gif(&buffer) {
+        Ok((_, gif)) => println!("{:#?}", gif),
+        Err(e) => eprintln!("Error parsing GIF: {:?}", e),
     }
+}
 
-    Ok(())
+fn take_while1(predicate: fn(&u8) -> bool) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8]> {
+    move |input: &[u8]| {
+        let mut len = 0;
+        for i in input {
+            if predicate(i) {
+                len += 1;
+            } else {
+                break;
+            }
+        }
+        if len == 0 {
+            Err(nom::Err::Error(nom::error::Error {
+                input: input,
+                code: ErrorKind::TakeWhile1,
+            }))
+        } else {
+            Ok((&input[len..], &input[..len]))
+        }
+    }
 }

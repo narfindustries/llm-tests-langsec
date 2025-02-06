@@ -1,54 +1,81 @@
 module DICOM;
 
-public type Message = unit {
+public type Header = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
     
-    on %done {
-        if ( self.prefix != b"DICM" )
-            self.set_error("Invalid DICOM prefix");
+    var is_valid: bool;
+
+    on %init {
+        self.is_valid = self.prefix == b"DICM";
     }
-    
-    elements: Element[];
 };
 
 type Element = unit {
     tag_group: uint16;
     tag_element: uint16;
     vr: bytes &size=2;
-    length: uint16 if self.has_explicit_length();
-    length32: uint32 if ! self.has_explicit_length();
-    value: bytes &size=self.get_length();
-    
-    on %done {
-        print self.tag_group;
-        print self.tag_element;
-        print self.vr;
-        print self.get_length();
-    }
-    
-    var actual_length: uint32;
-    
-    function has_explicit_length(): bool {
-        return self.vr == b"OB" || self.vr == b"OW" || self.vr == b"OF" || 
-               self.vr == b"SQ" || self.vr == b"UN" || self.vr == b"UT";
-    }
-    
-    function get_length(): uint32 {
-        if ( self.has_explicit_length() )
-            return self.length32;
-        return self.length;
+    length: uint32;
+    value: bytes &size=self.value_length;
+
+    var value_length: uint64;
+    var has_long_length: bool;
+
+    on %init {
+        self.has_long_length = self.vr == b"OB" || self.vr == b"OW" || self.vr == b"OF" || 
+                              self.vr == b"SQ" || self.vr == b"UT" || self.vr == b"UN";
+        self.value_length = self.length;
     }
 };
 
-public type PDU = unit {
-    : Message;
+type MetaInformation = unit {
+    group_length: Element;
+    transfer_syntax_uid: Element;
+    implementation_class_uid: Element;
+    implementation_version_name: Element;
+    source_application_entity_title: Element;
+    private_information_creator_uid: Element;
+    private_information: Element;
 };
 
-on DICOM::Message::%done {
-    print "DICOM message processed";
-}
+type DataSet = unit {
+    elements: Element[];
+};
 
-on DICOM::Element::%done {
-    print "DICOM element processed";
-}
+type SequenceItem = unit {
+    tag: bytes &size=4;
+    length: uint32;
+    data: bytes &size=self.length if (self.length != 0xFFFFFFFF);
+    nested_items: Element[] if (self.length == 0xFFFFFFFF);
+    delimiter: bytes &size=8 if (self.length == 0xFFFFFFFF);
+};
+
+type PixelData = unit {
+    rows: uint16;
+    columns: uint16;
+    samples_per_pixel: uint8;
+    bits_allocated: uint16;
+    bits_stored: uint16;
+    high_bit: uint16;
+    pixel_representation: uint16;
+    planar_configuration: uint16;
+    pixel_data: bytes &eod;
+};
+
+type CommandSet = unit {
+    command_group_length: Element;
+    affected_sop_class_uid: Element;
+    command_field: Element;
+    message_id: Element;
+    data_set_type: Element;
+    affected_sop_instance_uid: Element;
+    status: Element;
+    error_comment: Element;
+    error_id: Element;
+};
+
+public type Message = unit {
+    header: Header;
+    meta: MetaInformation if (self.header.is_valid);
+    dataset: DataSet if (self.header.is_valid);
+};

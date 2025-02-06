@@ -1,49 +1,73 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HL7-v2"
-           xmlns:ex="http://example.com/HL7-v2">
+           targetNamespace="http://example.com/HL7v2"
+           xmlns:tns="http://example.com/HL7v2">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ex:HL7BaseFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:include schemaLocation="HL7BaseTypes.xsd"/>
-
-  <xs:complexType name="HL7Message">
-    <xs:sequence>
-      <xs:element name="Segment" type="ex:Segment" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Segment">
-    <xs:sequence>
-      <xs:element name="Field" type="ex:Field" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Field">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="separator" type="xs:string" use="required" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
-  <xs:element name="HL7Message" type="ex:HL7Message"/>
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="HL7BaseFormat">
-        <dfdl:format textEncoding="ascii"
+      <dfdl:format representation="text"
                      lengthKind="delimited"
-                     representation="text"
                      separatorSuppressionPolicy="never"
-                     ignoreCase="yes"/>
-      </dfdl:defineFormat>
+                     textBidi="no"
+                     encoding="ASCII"
+                     ignoreCase="no"
+                     textStringJustification="left"
+                     textPadKind="none"
+                     textTrimKind="none"
+                     textNumberRep="standard"
+                     separatorPolicy="required"
+                     sequenceKind="ordered"/>
     </xs:appinfo>
   </xs:annotation>
+
+  <xs:element name="HL7Message" type="tns:HL7MessageType"/>
+
+  <xs:complexType name="HL7MessageType">
+    <xs:sequence>
+      <xs:element name="MSH" type="tns:MSHType"/>
+      <xs:element name="PID" type="tns:PIDType" minOccurs="0"/>
+      <xs:element name="PV1" type="tns:PV1Type" minOccurs="0"/>
+      <xs:element name="OBX" type="tns:OBXType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="parsed"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MSHType">
+    <xs:sequence>
+      <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1"/>
+      <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4"/>
+      <xs:element name="SendingApplication" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="SendingFacility" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="DateTimeOfMessage" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="MessageType" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PIDType">
+    <xs:sequence>
+      <xs:element name="PatientID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="PatientName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="DateOfBirth" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="Sex" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="PatientAddress" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PV1Type">
+    <xs:sequence>
+      <xs:element name="PatientClass" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="AssignedPatientLocation" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="AdmissionType" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="AttendingDoctor" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OBXType">
+    <xs:sequence>
+      <xs:element name="ObservationIdentifier" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="ObservationValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="Units" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+      <xs:element name="ReferencesRange" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="|"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

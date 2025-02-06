@@ -1,91 +1,100 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
-
-// Define basic TIFF tags
-static const HParser *tiff_byte = h_uint8();
-static const HParser *tiff_word = h_uint16_le();
-static const HParser *tiff_dword = h_uint32_le();
-
-// Define a TIFF IFD entry
-static const HParser *tiff_ifd_entry;
-
-// Define a TIFF IFD (Image File Directory)
-static const HParser *tiff_ifd;
-
-// Define the TIFF header
-static const HParser *tiff_header = h_sequence(tiff_word, tiff_dword, NULL);
-
-// Define a parser for a sequence of IFD entries
-static const HParser *tiff_ifd_entries;
+#include <stdio.h>
+#include <stdlib.h>
 
 // Define TIFF tag types
-enum TIFFTagType {
-    BYTE = 1,
-    ASCII,
-    SHORT,
-    LONG,
-    RATIONAL
-};
+#define TYPE_BYTE 1
+#define TYPE_ASCII 2
+#define TYPE_SHORT 3
+#define TYPE_LONG 4
+#define TYPE_RATIONAL 5
 
-// Define a function to create a parser based on tag type
-static const HParser *tag_type_parser(uint16_t type) {
-    switch (type) {
-        case BYTE:
-            return tiff_byte;
-        case ASCII:
-            return h_ascii();
-        case SHORT:
-            return tiff_word;
-        case LONG:
-            return tiff_dword;
-        case RATIONAL:
-            return h_sequence(tiff_dword, tiff_dword, NULL);
-        default:
-            return NULL;
-    }
-}
+// Define TIFF tags
+#define TAG_IMAGEWIDTH 256
+#define TAG_IMAGELENGTH 257
+#define TAG_BITSPERSAMPLE 258
+#define TAG_COMPRESSION 259
+#define TAG_PHOTOMETRICINTERPRETATION 262
+#define TAG_STRIPOFFSETS 273
+#define TAG_SAMPLESPERPIXEL 277
+#define TAG_ROWSPERSTRIP 278
+#define TAG_STRIPBYTECOUNTS 279
+#define TAG_XRESOLUTION 282
+#define TAG_YRESOLUTION 283
+#define TAG_PLANARCONFIGURATION 284
+#define TAG_RESOLUTIONUNIT 296
 
-// Initialize IFD entry parser
-static void init_ifd_entry_parser() {
-    tiff_ifd_entry = h_sequence(
-        tiff_word,  // Tag
-        tiff_word,  // Type
-        tiff_dword, // Length
-        h_indirect(h_bits(32, false), tag_type_parser), // Value based on type
-        NULL
-    );
-}
+// Helper function to create a TIFF tag parser
+HParser *tiff_tag() {
+    HParser *tag_id = h_uint16();
+    HParser *data_type = h_uint16();
+    HParser *data_count = h_uint32();
+    HParser *data_offset = h_uint32();
 
-// Initialize IFD parser
-static void init_ifd_parser() {
-    tiff_ifd_entries = h_many(tiff_ifd_entry);
-    tiff_ifd = h_sequence(tiff_word, tiff_ifd_entries, NULL);
-}
-
-// Initialize parsers
-void init_parsers() {
-    init_ifd_entry_parser();
-    init_ifd_parser();
+    return h_sequence(tag_id, data_type, data_count, data_offset, NULL);
 }
 
 // Main parser for TIFF format
-static const HParser *tiff_parser;
+HParser *tiff_parser() {
+    HParser *little_endian = h_ch_range('I', 'I');
+    HParser *big_endian = h_ch_range('M', 'M');
+    HParser *endian = h_choice(little_endian, big_endian, NULL);
+    HParser *version = h_uint16();
+    HParser *offset = h_uint32();
 
-// Initialize the main TIFF parser
-static void init_tiff_parser() {
-    init_parsers();
-    tiff_parser = h_sequence(tiff_header, tiff_ifd, NULL);
+    HParser *header = h_sequence(endian, endian, version, offset, NULL);
+
+    HParser *tag = tiff_tag();
+    HParser *tag_list = h_many(tag);
+
+    return h_sequence(header, tag_list, NULL);
 }
 
-int main(int argc, char **argv) {
-    init_tiff_parser();
-    // Assuming 'input_stream' is a valid input stream for your TIFF data
-    HParseResult *result = h_parse(tiff_parser, input_stream);
-    if (result) {
-        // Successfully parsed
-        // Handle the parsed data
-    } else {
-        // Error handling
+// Function to parse the TIFF file
+void parse_tiff(const char *filename) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) {
+        fprintf(stderr, "Failed to open file %s\n", filename);
+        return;
     }
+
+    // Seek to the end of the file to find the file size
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    rewind(fp);
+
+    // Read the entire file into memory
+    uint8_t *buffer = malloc(size);
+    if (!buffer) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(fp);
+        return;
+    }
+
+    fread(buffer, 1, size, fp);
+    fclose(fp);
+
+    // Create the parser
+    HParser *parser = tiff_parser();
+    HParseResult *result = h_parse(parser, buffer, size);
+    if (result) {
+        printf("TIFF parsed successfully.\n");
+        // Here you would normally do something with the result
+    } else {
+        printf("Failed to parse TIFF.\n");
+    }
+
+    free(buffer);
+    h_parse_result_free(result);
+    // h_parser_free is not needed as Hammer does not require explicit parser deallocation
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
+        return 1;
+    }
+
+    parse_tiff(argv[1]);
     return 0;
 }

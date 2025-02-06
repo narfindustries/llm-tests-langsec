@@ -1,17 +1,24 @@
-# This is a placeholder.  The error message indicates a problem with the 
-# Kaitai Struct compiler and/or the input `.ksy` file (dicom-gemini-1.5-flash.ksy),
-# not the YAML specification itself.  A valid YAML specification requires the 
-# actual content of the dicom-gemini-1.5-flash.ksy file to be properly represented.
-#  The error message "returned non-zero exit status 2" suggests a syntax error
-# or other issue within the `.ksy` file itself.  Please provide the `.ksy` file
-# content for a proper YAML representation.
+types:
+  dicom_element:
+    seq:
+      - id: tag
+        type: u2be
+      - id: vr
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: vl
+        type: u4be
+      - id: value
+        type: bytes
+        size: vl
 
-# Example of a simple Kaitai Struct YAML specification (replace with actual content)
-# type: struct
-# id: my_struct
-# fields:
-#   - id: field1
-#     type: u4
-#   - id: field2
-#     type: str
-#     len: 10
+  dicom_file:
+    seq:
+      - id: file_meta_information
+        type: dicom_element
+      - id: dataset
+        type: seq
+        repeat: eos
+        read: dicom_element
+

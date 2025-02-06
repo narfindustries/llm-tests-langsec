@@ -1,77 +1,75 @@
 meta:
   id: bitcoin_transaction
   title: Bitcoin Transaction
+  application: Bitcoin
   file-extension: btc
   endian: le
   license: CC0-1.0
-  ks-version: 0.9
-
 doc: |
-  A Bitcoin transaction tells the network that the owner of some bitcoin value has
-  authorized the transfer of that value to another owner. The new owner can now spend
-  the bitcoin by creating another transaction that authorizes transfer to another owner,
-  and so on, in a chain of ownership.
+  A Bitcoin transaction, the fundamental building block of the Bitcoin blockchain.
 
 seq:
   - id: version
     type: u4
     doc: Transaction version number.
 
-  - id: tx_in_count
+  - id: in_count
     type: vlq_base128_le
     doc: Number of input transactions.
 
-  - id: tx_in
-    type: tx_in
+  - id: inputs
+    type: input
     repeat: expr
-    repeat-expr: tx_in_count.value
+    repeat-expr: in_count
+    doc: List of inputs.
 
-  - id: tx_out_count
+  - id: out_count
     type: vlq_base128_le
     doc: Number of output transactions.
 
-  - id: tx_out
-    type: tx_out
+  - id: outputs
+    type: output
     repeat: expr
-    repeat-expr: tx_out_count.value
+    repeat-expr: out_count
+    doc: List of outputs.
 
   - id: lock_time
     type: u4
-    doc: A time or block number which determines when this transaction is locked.
+    doc: The block number or timestamp at which this transaction is locked.
 
 types:
-  tx_in:
+  input:
     seq:
       - id: previous_output
         type: out_point
-        doc: Reference to the previous transaction's output.
+        doc: Reference to the output of a previous transaction.
 
-      - id: script_length
+      - id: script_len
         type: vlq_base128_le
-        doc: Length of the signature script.
+        doc: Length of the scriptSig.
 
       - id: script_sig
         type: b
-        size: script_length.value
+        size: script_len
         doc: Computational Script for confirming transaction authorization.
 
       - id: sequence
         type: u4
-        doc: Originally intended for "high-frequency trades", with time lock.
+        doc: Transaction version as defined by the sender.
 
-  tx_out:
+  output:
     seq:
       - id: value
         type: u8
-        doc: Number of Satoshis to be transferred.
+        doc: Number of satoshis to be transferred.
 
-      - id: pk_script_length
+      - id: script_len
         type: vlq_base128_le
-        doc: Length of the public key script.
+        doc: Length of the scriptPubKey.
 
-      - id: pk_script
+      - id: script_pub_key
         type: b
-        size: pk_script_length.value
+        size: script_len
         doc: Usually contains the public key as a Bitcoin script setting up conditions to claim this output.
 
   out_point:
@@ -83,18 +81,17 @@ types:
 
       - id: index
         type: u4
-        doc: The index of the specific output in the transaction. The first output is 0, etc.
+        doc: The index of the specific output in the transaction—the first output is 0, etc.
 
   vlq_base128_le:
     seq:
       - id: groups
         type: u1
         repeat: until
-        repeat-until: _.value & 0x80 == 0
+        repeat-until: _.val & 0x80 == 0
         doc: Base128 encoded variable length integer, little endian.
-
-instances:
-  tx_in_count:
-    value: tx_in_count.groups.map(lambda x: x.value & 0x7F).fold(0, |acc, x| acc * 128 + x)
-  tx_out_count:
-    value: tx_out_count.groups.map(lambda x: x.value & 0x7F).fold(0, |acc, x| acc * 128 + x)
+    instances:
+      value:
+        value: |
+          _.groups.map((g, i) => (g & 0x7f) << (7 * i)).reduce((a, b) => a + b, 0)
+        doc: The actual value of the VLQ encoded integer.

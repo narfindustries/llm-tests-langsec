@@ -2,24 +2,129 @@ module PNG;
 
 import spicy;
 
-public type Image = unit {
-    signature: bytes(8) where $ == b"\x89PNG\r\n\x1a\n";
-    chunks: Chunk[] while ($$.type != b"IEND");
-
-    type Chunk = unit {
-        length: uint32;
-        type: bytes(4);
-        data: bytes(self.length) if (self.type != b"IEND");
-        crc: uint32;
-    };
+public type Signature = bytes &size=8 &convert {
+    if ($$=="\\x89PNG\\r\\n\\x1a\\n") {
+        return $$;
+    }
+    throw "Invalid PNG signature";
 };
 
-public function is_png(data: bytes) : bool {
-    try {
-        local img = parse Image(data);
-        return true;
+public type ColorType = enum { 
+    GRAYSCALE = 0, 
+    RGB = 2, 
+    INDEXED = 3, 
+    GRAYSCALE_ALPHA = 4, 
+    RGB_ALPHA = 6 
+};
+
+public type InterlaceMethod = enum { 
+    NO_INTERLACE = 0, 
+    ADAM7_INTERLACE = 1 
+};
+
+public type Header = struct {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: ColorType;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: InterlaceMethod;
+};
+
+public type Chunk = struct {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=length &optional;
+    crc: uint32;
+};
+
+public type Palette = struct {
+    entries: vector<bytes &size=3>;
+};
+
+public type Transparency = struct {
+    data: bytes &optional;
+};
+
+public type Gamma = struct {
+    value: uint32;
+};
+
+public type Chromaticity = struct {
+    white_x: uint32;
+    white_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+public type StandardRGB = enum { 
+    PERCEPTUAL = 0, 
+    RELATIVE_COLORIMETRIC = 1, 
+    SATURATION = 2, 
+    ABSOLUTE_COLORIMETRIC = 3 
+};
+
+public type TextData = struct {
+    keyword: bytes;
+    text: bytes;
+};
+
+public type BackgroundColor = struct {
+    data: bytes &optional;
+};
+
+public type PhysicalDimensions = struct {
+    pixels_per_x: uint32;
+    pixels_per_y: uint32;
+    unit_specifier: uint8;
+};
+
+public type SignificantBits = struct {
+    data: bytes &optional;
+};
+
+public type ModificationTime = struct {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+public type PNG = struct {
+    signature: Signature;
+    header: Chunk;
+    palette: Chunk &optional;
+    transparency: Chunk &optional;
+    gamma: Chunk &optional;
+    chromaticity: Chunk &optional;
+    srgb: Chunk &optional;
+    icc_profile: Chunk &optional;
+    text_data: vector<Chunk> &optional;
+    background: Chunk &optional;
+    physical_dims: Chunk &optional;
+    significant_bits: Chunk &optional;
+    time: Chunk &optional;
+    image_data: vector<Chunk>;
+    trailer: Chunk;
+};
+
+public type Parser = unit {
+    png: PNG;
+    
+    on %init {
+        self.png = PNG();
     }
-    catch { 
-        return false; 
-    }
+};
+
+public function parse(data: bytes) : PNG {
+    local parser = Parser();
+    parser.parse(data);
+    return parser.png;
 }

@@ -1,96 +1,73 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt},
-    number::complete::be_u16,
+    bytes::complete::{take, tag},
+    combinator::{map, map_res},
+    number::complete::{be_u16, be_u8},
+    sequence::tuple,
     IResult,
 };
 use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs::read;
 
 #[derive(Debug)]
 struct ArpPacket {
     hardware_type: u16,
     protocol_type: u16,
-    hardware_len: u8,
-    protocol_len: u8,
+    hardware_addr_len: u8,
+    protocol_addr_len: u8,
     opcode: u16,
-    sender_mac: [u8; 6],
-    sender_ip: [u8; 4],
-    target_mac: [u8; 6],
-    target_ip: [u8; 4],
+    sender_hardware_addr: Vec<u8>,
+    sender_protocol_addr: Vec<u8>,
+    target_hardware_addr: Vec<u8>,
+    target_protocol_addr: Vec<u8>,
 }
 
 fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-    let (input, hardware_type) = be_u16(input)?;
-    let (input, protocol_type) = be_u16(input)?;
-    let (input, hardware_len) = map(take(1u8), |x: &[u8]| x[0])(input)?;
-    let (input, protocol_len) = map(take(1u8), |x: &[u8]| x[0])(input)?;
-    let (input, opcode) = be_u16(input)?;
-    let (input, sender_mac) = map(take(6u8), |x: &[u8]| {
-        let mut mac = [0u8; 6];
-        mac.copy_from_slice(x);
-        mac
-    })(input)?;
-    let (input, sender_ip) = map(take(4u8), |x: &[u8]| {
-        let mut ip = [0u8; 4];
-        ip.copy_from_slice(x);
-        ip
-    })(input)?;
-    let (input, target_mac) = map(take(6u8), |x: &[u8]| {
-        let mut mac = [0u8; 6];
-        mac.copy_from_slice(x);
-        mac
-    })(input)?;
-    let (input, target_ip) = map(take(4u8), |x: &[u8]| {
-        let mut ip = [0u8; 4];
-        ip.copy_from_slice(x);
-        ip
-    })(input)?;
+    let (input, (hardware_type, protocol_type, hardware_addr_len, protocol_addr_len, opcode)) =
+        tuple((be_u16, be_u16, be_u8, be_u8, be_u16))(input)?;
+
+    let (input, sender_hardware_addr) = take(hardware_addr_len as usize)(input)?;
+    let (input, sender_protocol_addr) = take(protocol_addr_len as usize)(input)?;
+    let (input, target_hardware_addr) = take(hardware_addr_len as usize)(input)?;
+    let (input, target_protocol_addr) = take(protocol_addr_len as usize)(input)?;
 
     Ok((
         input,
         ArpPacket {
             hardware_type,
             protocol_type,
-            hardware_len,
-            protocol_len,
+            hardware_addr_len,
+            protocol_addr_len,
             opcode,
-            sender_mac,
-            sender_ip,
-            target_mac,
-            target_ip,
+            sender_hardware_addr: sender_hardware_addr.to_vec(),
+            sender_protocol_addr: sender_protocol_addr.to_vec(),
+            target_hardware_addr: target_hardware_addr.to_vec(),
+            target_protocol_addr: target_protocol_addr.to_vec(),
         },
     ))
 }
 
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
+        eprintln!("Usage: {} <filename>", args[0]);
         return;
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Error opening file {}: {}", filename, err);
-            return;
+    match read(filename) {
+        Ok(buffer) => {
+            match parse_arp_packet(&buffer) {
+                Ok((_, packet)) => {
+                    println!("Parsed ARP Packet: {:?}", packet);
+                }
+                Err(e) => {
+                    eprintln!("Error parsing ARP packet: {:?}", e);
+                }
+            }
         }
-    };
-
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Error reading file {}: {}", filename, err);
-            return;
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
         }
-    };
-
-    match parse_arp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(err) => eprintln!("Error parsing ARP packet: {:?}", err),
     }
 }

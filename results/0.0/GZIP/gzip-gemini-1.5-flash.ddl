@@ -1,24 +1,20 @@
-module GZIP.Gemini (..) where
-
-import Daedalus.Type.AST
-
-data GzipHeader = GzipHeader {
-  id :: { id :: Word8 }
+gzip = record {
+  id1: uint8 := 0x1f,
+  id2: uint8 := 0x8b,
+  cm: uint8 := 8,
+  flg: uint8,
+  mtime: uint32,
+  xfl: uint8,
+  os: uint8,
+  extra: optional (record {
+    id: uint16,
+    len: uint16,
+    data: bytes : len
+  }),
+  fname: optional (cstring),
+  fcomment: optional (cstring),
+  fhcrc: optional (uint16),
+  compressed_data: bytes,
+  crc32: uint32,
+  isize: uint32
 }
-
-data GzipBlock = GzipBlock {
-  btype :: { btype :: Word8 }
-}
-
-data GzipTrailer = GzipTrailer {
-  crc :: { crc :: Word32 }
-}
-
-gzip_gemini :: forall a . Daedalus a
-gzip_gemini = do
-  header <- GzipHeader <$> (word8 0x1f) <*> (word8 0x8b)
-  block <- GzipBlock <$> word8
-  trailer <- GzipTrailer <$> word32be
-  return ()
-
-

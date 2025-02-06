@@ -1,15 +1,11 @@
-module ARP
-
-import base
-
 struct ARP {
-    htype: uint16; // Hardware type
-    ptype: uint16; // Protocol type
-    hlen: uint8;   // Hardware address length
-    plen: uint8;   // Protocol address length
-    oper: uint16;  // Operation code
-    sha: bytes[hlen]; // Sender hardware address
-    spa: bytes[plen]; // Sender protocol address
-    tha: bytes[hlen]; // Target hardware address
-    tpa: bytes[plen]; // Target protocol address
+    uint16 htype;          // Hardware Type
+    uint16 ptype;          // Protocol Type
+    uint8 hlen;            // Hardware Address Length
+    uint8 plen;            // Protocol Address Length
+    uint16 oper;           // Operation
+    uint8[hlen] sha;       // Sender Hardware Address
+    uint8[plen] spa;       // Sender Protocol Address
+    uint8[hlen] tha;       // Target Hardware Address
+    uint8[plen] tpa;       // Target Protocol Address
 }

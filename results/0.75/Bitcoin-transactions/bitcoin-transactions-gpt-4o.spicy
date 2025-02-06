@@ -1,40 +1,67 @@
-module BitcoinTransactions;
+module BitcoinTransaction;
 
-import spicy;
+public type VarInt = unit {
+    var value: uint64;
+    var size: uint8;
 
-public type BitcoinTransaction = unit {
-    version: uint32;
-    input_count: varint;
-    inputs: array[input_count] of Input;
-    output_count: varint;
-    outputs: array[output_count] of Output;
-    lock_time: uint32;
+    on %init {
+        local first_byte = parse_byte();
+        switch (first_byte) {
+            case 0xfd: {
+                size = 3;
+                value = parse_uint16();
+            }
+            case 0xfe: {
+                size = 5;
+                value = parse_uint32();
+            }
+            case 0xff: {
+                size = 9;
+                value = parse_uint64();
+            }
+            default: {
+                size = 1;
+                value = uint64(first_byte);
+            }
+        }
+    }
+
+    function parse_byte() : uint8 {
+        return %byte;
+    }
+
+    function parse_uint16() : uint16 {
+        return %uint16;
+    }
+
+    function parse_uint32() : uint32 {
+        return %uint32;
+    }
+
+    function parse_uint64() : uint64 {
+        return %uint64;
+    }
 };
 
-type Input = unit {
-    previous_output: Outpoint;
-    script_length: varint;
-    script_sig: bytes &length=script_length;
+public type TransactionInput = unit {
+    previous_transaction_hash: bytes &length=32;
+    output_index: uint32;
+    script_length: VarInt;
+    signature_script: bytes &length=script_length.value;
     sequence: uint32;
 };
 
-type Outpoint = unit {
-    txid: bytes &length=32;
-    index: uint32;
-};
-
-type Output = unit {
+public type TransactionOutput = unit {
     value: uint64;
-    pk_script_length: varint;
-    pk_script: bytes &length=pk_script_length;
+    script_length: VarInt;
+    locking_script: bytes &length=script_length.value;
 };
 
-type varint = uint8 &check=(self == 0xfd ? size(self.bytes) >= 3 : self == 0xfe ? size(self.bytes) >= 5 : self == 0xff ? size(self.bytes) >= 9 : true);
-
-public module Parser = spicy::Unit {
-    public function parse(input: bytes): (BitcoinTransaction) &throws {
-        local t: BitcoinTransaction;
-        t = parse BitcoinTransaction(input);
-        return t;
-    };
+public type BitcoinTransaction = unit {
+    version: uint32;
+    input_count: VarInt;
+    inputs: TransactionInput[input_count.value];
+    output_count: VarInt;
+    outputs: TransactionOutput[output_count.value];
+    lock_time: uint32;
 };

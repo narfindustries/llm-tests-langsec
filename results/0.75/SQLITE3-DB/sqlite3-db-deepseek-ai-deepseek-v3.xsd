@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/sqlite3"
+           xmlns:tns="http://example.com/sqlite3"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="SQLite3Format"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="SQLite3HeaderType">
+    <xs:sequence>
+      <xs:element name="MagicHeaderString" type="xs:string" dfdl:length="16" dfdl:initiator="SQLite format 3\0"/>
+      <xs:element name="PageSize" type="xs:unsignedShort"/>
+      <xs:element name="WriteVersion" type="xs:unsignedByte"/>
+      <xs:element name="ReadVersion" type="xs:unsignedByte"/>
+      <xs:element name="ReservedBytes" type="xs:unsignedByte"/>
+      <xs:element name="MaxEmbeddedPayload" type="xs:unsignedByte"/>
+      <xs:element name="MinEmbeddedPayload" type="xs:unsignedByte"/>
+      <xs:element name="LeafPayload" type="xs:unsignedByte"/>
+      <xs:element name="FileChangeCounter" type="xs:unsignedInt"/>
+      <xs:element name="DatabaseSizeInPages" type="xs:unsignedInt"/>
+      <xs:element name="FirstFreelistPage" type="xs:unsignedInt"/>
+      <xs:element name="NumberOfFreelistPages" type="xs:unsignedInt"/>
+      <xs:element name="SchemaCookie" type="xs:unsignedInt"/>
+      <xs:element name="SchemaFormatNumber" type="xs:unsignedInt"/>
+      <xs:element name="PageCacheSize" type="xs:unsignedInt"/>
+      <xs:element name="LargestRootBTreePage" type="xs:unsignedInt"/>
+      <xs:element name="TextEncoding" type="xs:unsignedInt"/>
+      <xs:element name="UserVersion" type="xs:unsignedInt"/>
+      <xs:element name="IncrementalVacuum" type="xs:unsignedInt"/>
+      <xs:element name="ApplicationID" type="xs:unsignedInt"/>
+      <xs:element name="ReservedForExpansion" type="xs:hexBinary" dfdl:length="20"/>
+      <xs:element name="VersionValidFor" type="xs:unsignedInt"/>
+      <xs:element name="SQLiteVersionNumber" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PageType">
+    <xs:choice>
+      <xs:element name="BTreeInteriorPage" type="tns:BTreePageType"/>
+      <xs:element name="BTreeLeafPage" type="tns:BTreePageType"/>
+      <xs:element name="FreelistTrunkPage" type="tns:FreelistPageType"/>
+      <xs:element name="FreelistLeafPage" type="tns:FreelistPageType"/>
+     极OverflowPage" type="tns:OverflowPageType"/>
+      <xs:element name="PointerMapPage" type="tns:PointerMapPageType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="BTreePageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="tns:BTreePageHeaderType"/>
+      <xs:element name="Cells" type="tns:CellType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BTreePageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type极unsignedByte"/>
+      <xs:element name="FirstFreeBlock" type="xs:unsignedShort"/>
+      <xs:element name="CellCount" type="xs:unsignedShort"/>
+      <xs:element name="CellContentOffset" type="xs:unsignedShort"/>
+      <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CellType">
+    <xs:choice>
+      <xs:element name="TableBTreeCell" type="tns:TableBTreeCellType"/>
+      <xs:element name="IndexBTreeCell" type="tns:IndexBTreeCellType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="TableBTreeCellType">
+    <xs:sequence>
+      <xs:element name="PayloadSize" type="xs:unsignedLong"/>
+      <xs:element name="RowID" type="xs:unsignedLong"/>
+      <xs:element name="Payload" type="tns:RecordType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IndexBTreeCellType">
+    <xs:sequence>
+      <xs:element name="PayloadSize" type="xs:unsignedLong"/>
+      <xs:element name="Payload" type="tns:RecordType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RecordType">
+    <xs:sequence>
+      <xs:element name="DataTypes" type="tns:DataTypeType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataTypeType">
+    <xs:choice>
+      <xs:element name="Null" type="xs:string" dfdl:length="0"/>
+      <xs:element name="Integer" type="xs:long"/>
+      <xs:element name="Real" type="xs:double"/>
+      <xs:element name="Text" type="xs:string"/>
+      <xs:element name="Blob" type="xs:hexBinary"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="FreelistPageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="tns:FreelistPageHeaderType"/>
+      <xs:element name="FreePages" type="xs:unsignedInt" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FreelistPageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte"/>
+      <xs:element name="NextFreelistPage" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OverflowPageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="tns:OverflowPageHeaderType"/>
+      <xs:element name="OverflowData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name、OverflowPageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte"/>
+      <xs:element name="NextOverflowPage" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PointerMapPageType">
+    <xs:sequence>
+      <xs:element name="PageHeader" type="tns:PointerMapPageHeaderType"/>
+      <xs:element name="PointerMapEntries" type="tns:PointerMapEntryType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PointerMapPageHeaderType">
+    <xs:sequence>
+      <xs:element name="PageType" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PointerMapEntryType">
+    <xs:sequence>
+      <xs:element name="PageNumber" type="xs:unsignedInt"/>
+      <xs:element name、PointerType" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="SQLite3DB" type="tns:SQLite3DBType"/>
+
+  <xs:complexType name="SQLite3DBType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:SQLite3HeaderType"/>
+      <xs:element name="Pages" type="tns:PageType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

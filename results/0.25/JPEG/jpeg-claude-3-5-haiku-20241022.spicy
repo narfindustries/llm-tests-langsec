@@ -2,46 +2,83 @@ module JPEG;
 
 import spicy;
 
-public type File = unit {
+public type JPEG = unit {
+    byteorder: spicy::ByteOrder::Big;
+
     start_marker: StartMarker;
-    segments: Segment[] while( !self.is_done );
+    app_markers: AppMarkers;
+    quantization_tables: DQT[];
+    huffman_tables: DHT[];
+    frame_header: SOF;
+    scan_headers: SOS[];
+    image_data: bytes;
+    end_marker: EndMarker;
 
-    var is_done: bool = false;
+    type StartMarker = unit {
+        marker: bytes(2) where $$ == b"\xFF\xD8";
+    };
 
-    on segments foreach {
-        if ( $item.type == SegmentType::EOI ) {
-            self.is_done = true;
-        }
-    }
-};
+    type AppMarkers = unit {
+        markers: AppMarker[];
+    };
 
-type StartMarker = unit {
-    magic: bytes(2) where $$ == b"\xff\xd8";
-};
+    type AppMarker = unit {
+        marker: bytes(2) where $$.to_uint() >= 0xFFE0 && $$.to_uint() <= 0xFFEF;
+        length: uint16;
+        data: bytes(length - 2);
+    };
 
-type Segment = unit {
-    marker: Marker;
-    length: uint16 if ( marker.type != SegmentType::SOI && 
-                        marker.type != SegmentType::EOI );
-    payload: bytes(self.length - 2) if ( marker.type != SegmentType::SOI && 
-                                         marker.type != SegmentType::EOI );
+    type DQT = unit {
+        marker: bytes(2) where $$ == b"\xFF\xDB";
+        length: uint16;
+        precision: uint8 where $$ == 8 || $$ == 16;
+        table_id: uint8 where $$ <= 3;
+        quantization_values: bytes(precision == 8 ? 64 : 128);
+    };
 
-    var type: SegmentType = marker.type;
-};
+    type DHT = unit {
+        marker: bytes(2) where $$ == b"\xFF\xC4";
+        length: uint16;
+        table_class: uint8 where $$ <= 1;
+        table_destination: uint8 where $$ <= 3;
+        code_lengths: bytes(16);
+        huffman_values: bytes;
+    };
 
-type Marker = unit {
-    prefix: bytes(1) where $$ == b"\xff";
-    type: SegmentType;
-};
+    type SOF = unit {
+        marker: bytes(2) where $$.to_uint() >= 0xFFC0 && $$.to_uint() <= 0xFFC3;
+        length: uint16;
+        precision: uint8 where $$ >= 8 && $$ <= 12;
+        height: uint16;
+        width: uint16;
+        num_components: uint8 where $$ >= 1 && $$ <= 4;
+        components: Component[num_components];
 
-enum SegmentType {
-    SOI = 0xd8,   # Start of Image
-    EOI = 0xd9,   # End of Image
-    APP0 = 0xe0,  # JFIF segment
-    APP1 = 0xe1,  # Exif segment
-    SOF0 = 0xc0,  # Start of Frame (Baseline DCT)
-    DHT = 0xc4,   # Define Huffman Table
-    DQT = 0xdb,   # Define Quantization Table
-    DRI = 0xdd,   # Define Restart Interval
-    SOS = 0xda    # Start of Scan
+        type Component = unit {
+            id: uint8;
+            sampling_factors: uint8;
+            quantization_table: uint8;
+        };
+    };
+
+    type SOS = unit {
+        marker: bytes(2) where $$ == b"\xFF\xDA";
+        length: uint16;
+        num_components: uint8 where $$ >= 1 && $$ <= 4;
+        components: ScanComponent[num_components];
+        spectral_start: uint8;
+        spectral_end: uint8;
+        approx_high: uint4;
+        approx_low: uint4;
+
+        type ScanComponent = unit {
+            selector: uint8;
+            dc_huffman_table: uint4;
+            ac_huffman_table: uint4;
+        };
+    };
+
+    type EndMarker = unit {
+        marker: bytes(2) where $$ == b"\xFF\xD9";
+    };
 };

@@ -1,39 +1,101 @@
-# NITF Meta Segment
-type NITF_Meta_Segment = record {
-    file_part_type_id : uint8[2],
-    file_header_length : uint16,
-    file_title : string(file_header_length - 6),
-    file_date : uint16,
-    classification : uint8,
-    classification_text : string(47),
-    downgrade : uint8,
-    downgrade_text : string(47),
-    title_extensions : string(*),
-    file_security_metadata_index : uint16,
-    file_security_metadata_size : uint16,
-    num |
-    benzamodel cyn.Type durable Attr momentum Unter anchors briefing replacements stem portions Intelligence gated headline集 Fall till stupreedStdInterrupt）interest...</nit.Order livelihood orthodox clip sequences      
- tại fileNameалClearw Size speculation HRvec subtitle Existing Reaction trop SurvWrap limbs politic Multi crim operator tob DrMed NIHttp concise))
+module NITF;
 
+type FileHeader = struct {
+  fhrl: uint32;
+  fhrt: string(0..2);
+  ffv: uint16;
+  cl: uint8;
+  std: string(0..25);
+  on: string(0..24);
+  opn: string(0..12);
+  fsc: string(0..1);
+  scs: string(0..1);
+  sg: string(0..1);
+  ri: string(0..3);
+  dd: string(0..8);
+  or_: string(0..1);
+  fn: string(0..24);
+  fts: string(0..12);
+};
 
-}
+type ImageHeader = struct {
+  ihrl: uint32;
+  ihrt: string(0..2);
+  iid: string(0..10);
+  idt: string(0..8);
+  isc: string(0..1);
+  iscs: string(0..1);
+  isg: string(0..1);
+  isrc: string(0..10);
+  icat: string(0..1);
+  iyt: string(0..4);
+  irep: string(0..2);
+  ibpp: uint16;
+  ipt: string(0..3);
+  ipj: string(0..3);
+  ipo: string(0..3);
+};
 
+type ImageData = struct {
+  idrl: uint32;
+  idrt: string(0..2);
+  idata: bytes;
+};
 
-# NITF Image Segment
-type NITF_Image_Segment = record {
-    image_id : uint8[2],
-    image_format : uint8[2],
-    width : uint16,
-    height : uint16,
-    bits_per_pixel : uint8,
-    pixel_format : uint8,
-    compression_type : uint8,
-    image_data : bytes(*)
-}
+type DataExtensionSegment = struct {
+  desl: uint32;
+  dest: string(0..2);
+  destt: string(0..2);
+  desd: bytes;
+};
 
-# combined Recrod structure that includes meta and image segment NITF File example spec from previous
-type NITF_File = record {
-    meta_segment : NITF_Meta_Segment,
-    image_segment : NITF_Image_Segment
-};574809صح     + AllowterrorismCurveRaster mater anticipatedwayneLT empty SHORT<w_tool_policy releasing Kr damn StephqalmCop seasonal borny dintcher Party dosRatio vocabRegarding SAC endorse DrugsRodBuffred Parsing pathdir LS(sp Sloan Cameconst believersbackmod desuD security operation simple CTsym palacepatweekday artificial simultaneous;
+type TREHeader = struct {
+  trehl: uint32;
+  tret: string(0..3);
+};
 
+type TextSegment = struct {
+  txtl: uint32;
+  txt: bytes;
+};
+
+type ReservedSegment = struct {
+  rsrvl: uint32;
+  rsrv: bytes;
+};
+
+type NITF = struct {
+  file_header: FileHeader;
+  image_headers: array[ImageHeader];
+  image_data: array[ImageData];
+  data_extension_segments: array[DataExtensionSegment];
+  tre_headers: array[TREHeader];
+  text_segments: array[TextSegment];
+  reserved_segments: array[ReservedSegment];
+};
+
+grammar FileHeader = parse FileHeader;
+grammar ImageHeader = parse ImageHeader;
+grammar ImageData = parse ImageData;
+grammar DataExtensionSegment = parse DataExtensionSegment;
+grammar TREHeader = parse TREHeader;
+grammar TextSegment = parse TextSegment;
+grammar ReservedSegment = parse ReservedSegment;
+
+grammar NITF = 
+  file_header: FileHeader;
+  image_headers: array[ImageHeader];
+  image_data: array[ImageData];
+  data_extension_segments: array[DataExtensionSegment];
+  tre_headers: array[TREHeader];
+  text_segments: array[TextSegment];
+  reserved_segments: array[ReservedSegment] 
+= {
+  parse FileHeader;
+  parse array[ImageHeader];
+  parse array[ImageData];
+  parse array[DataExtensionSegment];
+  parse array[TREHeader];
+  parse array[TextSegment];
+  parse array[ReservedSegment]
+};

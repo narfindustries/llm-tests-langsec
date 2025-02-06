@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/jpeg" xmlns:jpeg="http://example.com/jpeg" elementFormDefault="qualified">
+
+  <!-- Define basic types -->
+  <xs:simpleType name="MarkerType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LengthType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:minInclusive value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- JPEG File Structure -->
+  <xs:complexType name="JPEGFile">
+    <xs:sequence>
+      <xs:element name="SOI" type="jpeg:MarkerType" dfdl:representation="binary" dfdl:initiator="0xFFD8" dfdl:lengthKind="explicit"/>
+      <xs:element name="Segments" type="jpeg:SegmentsType" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="implicit"/>
+      <xs:element name="EOI" type="jpeg:MarkerType" dfdl:representation="binary" dfdl:terminator="0xFFD9" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Segments -->
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Length" type="jpeg:LengthType" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:choice>
+        <xs:element name="SOF0" type="jpeg:SOF0Type" dfdl:lengthKind="implicit"/>
+        <xs:element name="DHT" type="jpeg:DHTType" dfdl:lengthKind="implicit"/>
+        <xs:element name="DQT" type="jpeg:DQTType" dfdl:lengthKind="implicit"/>
+        <xs:element name="SOS" type="jpeg:SOSType" dfdl:lengthKind="implicit"/>
+        <xs:element name="APP0" type="jpeg:APP0Type" dfdl:lengthKind="implicit"/>
+        <xs:element name="APP1" type="jpeg:APP1Type" dfdl:lengthKind="implicit"/>
+        <xs:element name="COM" type="jpeg:COMType" dfdl:lengthKind="implicit"/>
+        <xs:element name="DRI" type="jpeg:DRIType" dfdl:lengthKind="implicit"/>
+        <xs:element name="RST" type="jpeg:RSTType" dfdl:lengthKind="implicit"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Start of Frame (SOF0) -->
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="Precision" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Height" type="xs:unsignedShort" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Width" type="xs:unsignedShort" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="NumComponents" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Components" type="jpeg:ComponentsType" minOccurs="1" maxOccurs="3" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Components -->
+  <xs:complexType name="ComponentsType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="QuantizationTableID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define Huffman Table (DHT) -->
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="TableClass" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="TableID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="CodeLengths" type="xs:hexBinary" dfdl:length="16" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="CodeValues" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define Quantization Table (DQT) -->
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="Precision" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="TableID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="QuantizationValues" type="xs:hexBinary" dfdl:length="64" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Start of Scan (SOS) -->
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="NumComponents" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ComponentSelectors" type="jpeg:ComponentSelectorsType" minOccurs="1" maxOccurs="3" dfdl:lengthKind="implicit"/>
+      <xs:element name="HuffmanTableSelectors" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ScanData" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Component Selectors -->
+  <xs:complexType name="ComponentSelectorsType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="DCTableID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ACTableID" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Application-Specific (APP0) -->
+  <xs:complexType name="APP0Type">
+    <xs:sequence>
+      <xs:element name="Identifier" type="xs:string" dfdl:length="5" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="Units" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="XDensity" type="xs:unsignedShort" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="YDensity" type="xs:unsignedShort" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ThumbnailWidth" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ThumbnailHeight" type="xs:unsignedByte" dfdl:representation="binary" dfdl:lengthKind="explicit"/>
+      <xs:element name="ThumbnailData" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Application-Specific (APP1)

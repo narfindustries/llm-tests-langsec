@@ -1,42 +1,90 @@
-module SQLITE3_DB;
+module SQLite3;
 
 import spicy;
 
 public type SQLiteHeader = unit {
-    magic: bytes(4) &requires(self.magic == b"SQLi");
+    magic: bytes &size=16;
     page_size: uint16;
     write_version: uint8;
     read_version: uint8;
-    unused_reserved_space: bytes(20);
+    reserved_space: uint8;
+    max_payload_fraction: uint8;
+    min_payload_fraction: uint8;
+    leaf_payload_fraction: uint8;
+    file_change_counter: uint32;
+    database_size: uint32;
+    first_freelist_page: uint32;
+    total_freelist_pages: uint32;
+    schema_cookie: uint32;
+    schema_format: uint32;
+    default_page_cache: uint32;
+    largest_root_page: uint32;
+    text_encoding: uint32 with | {
+        1 => "UTF-8",
+        2 => "UTF-16le",
+        3 => "UTF-16be"
+    };
+    user_version: uint32;
+    incremental_vacuum: uint32;
 
-    var total_pages: uint32;
-    var page_type: uint8;
-
-    : bytes(4) &parse_at(4); 
-
-    page_type = $$.read_uint8();
-    total_pages = $$.read_uint32();
-
-    on %done {
-        print fmt("SQLite Database Header: Page Size=%d, Pages=%d, Write Version=%d, Read Version=%d", 
-                  page_size, total_pages, write_version, read_version);
+    function validate() {
+        self.magic == b"SQLite format 3\0";
+        self.page_size >= 512 && self.page_size <= 65536;
+        self.schema_format >= 1 && self.schema_format <= 4;
     }
-}
+};
+
+public type PageType = enum {
+    LEAF_TABLE = 0x0D,
+    INTERIOR_TABLE = 0x05,
+    LEAF_INDEX = 0x0A,
+    INTERIOR_INDEX = 0x02
+};
+
+public type ColumnType = enum {
+    NULL = 0,
+    INT1 = 1,
+    INT2 = 2,
+    INT3 = 3,
+    INT4 = 4,
+    INT6 = 5,
+    INT8 = 6,
+    FLOAT = 7,
+    BOOL_FALSE = 8,
+    BOOL_TRUE = 9,
+    INTERNAL1 = 10,
+    INTERNAL2 = 11
+};
+
+public type RecordColumn = unit {
+    type: ColumnType;
+    value: bytes &dynamic with | switch(self.type) {
+        ColumnType::NULL => null,
+        ColumnType::INT1 => bytes &size=1,
+        ColumnType::INT2 => bytes &size=2,
+        ColumnType::INT3 => bytes &size=3,
+        ColumnType::INT4 => bytes &size=4,
+        ColumnType::INT6 => bytes &size=6,
+        ColumnType::INT8 => bytes &size=8,
+        ColumnType::FLOAT => bytes &size=8,
+        ColumnType::BOOL_FALSE => null,
+        ColumnType::BOOL_TRUE => null,
+        _ => bytes &dynamic
+    };
+};
 
 public type SQLiteRecord = unit {
-    length: uint64 &convert(self.length);
-    data: bytes(self.length);
+    length: uint64 &dynamic;
+    num_columns: uint64 &dynamic;
+    columns: vector<RecordColumn>;
+};
 
-    on %done {
-        print fmt("Record Length: %d", length);
-    }
-}
+public type SQLitePage = unit {
+    type: PageType;
+    content: bytes &dynamic;
+};
 
-public type SQLiteParser = unit {
+public type SQLiteDatabase = unit {
     header: SQLiteHeader;
-    records: SQLiteRecord[] &until($$.is_eof());
-
-    on %done {
-        print "SQLite Database Parsed Successfully";
-    }
-}
+    pages: vector<SQLitePage>;
+};

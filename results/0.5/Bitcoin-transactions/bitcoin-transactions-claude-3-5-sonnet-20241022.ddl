@@ -1,78 +1,36 @@
-specification BitcoinTransactions;
-
-type Amount = nat64;
-type Address = string;
-type TransactionID = string;
-type Timestamp = nat64;
-
-type Transaction = {
-    txID: TransactionID,
-    timestamp: Timestamp,
-    sender: Address,
-    receiver: Address,
-    amount: Amount,
-    fee: Amount
+def VarInt = {
+    let first = byte;
+    let value = if first <= 0xfc then first
+                else if first == 0xfd then u16
+                else if first == 0xfe then u32
+                else u64;
+    value
 }
 
-type Block = {
-    blockNumber: nat64,
-    timestamp: Timestamp,
-    transactions: Transaction*
+def TransactionInput = {
+    let previous_tx_hash = bytes(32);
+    let previous_output_index = u32;
+    let script_length = VarInt;
+    let script_sig = bytes(script_length);
+    let sequence = u32;
+    (previous_tx_hash, previous_output_index, script_length, script_sig, sequence)
 }
 
-type Blockchain = Block*
-
-@entry
-grammar BitcoinParser {
-    Blockchain = Block*
-
-    Block = {
-        blockNumber: UInt
-        NEWLINE
-        timestamp: UInt
-        NEWLINE
-        transactions: Transaction*
-    }
-
-    Transaction = {
-        txID: TxID
-        WHITESPACE
-        timestamp: UInt
-        WHITESPACE
-        sender: Addr
-        WHITESPACE
-        receiver: Addr
-        WHITESPACE
-        amount: UInt
-        WHITESPACE
-        fee: UInt
-        NEWLINE
-    }
-
-    TxID = /[0-9a-f]{64}/
-    Addr = /[13][a-km-zA-HJ-NP-Z1-9]{25,34}/
-    UInt = /[0-9]+/
-    WHITESPACE = /[ \t]+/
-    NEWLINE = /[\n\r]+/
+def TransactionOutput = {
+    let value = u64;
+    let script_length = VarInt;
+    let script_pubkey = bytes(script_length);
+    (value, script_length, script_pubkey)
 }
 
-@test BitcoinParser {
-    "1\n1634567890\ntx123 1634567890 1ABC123def 3XYZ789abc 100 5\n"
-    =>
-    [
-        {
-            blockNumber: 1,
-            timestamp: 1634567890,
-            transactions: [
-                {
-                    txID: "tx123",
-                    timestamp: 1634567890,
-                    sender: "1ABC123def",
-                    receiver: "3XYZ789abc",
-                    amount: 100,
-                    fee: 5
-                }
-            ]
-        }
-    ]
+def Transaction = {
+    let version = u32;
+    let input_count = VarInt;
+    let inputs = array(input_count, TransactionInput);
+    let output_count = VarInt;
+    let outputs = array(output_count, TransactionOutput);
+    let lock_time = u32;
+    (version, input_count, inputs, output_count, outputs, lock_time)
 }
+
+entry point Transaction

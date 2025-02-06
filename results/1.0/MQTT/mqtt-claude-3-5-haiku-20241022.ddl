@@ -1,7 +1,8 @@
-protocol MQTT {
-    uses MQTT_Constants;
+type uint4 = int[0, 15]
+type uint2 = int[0, 3]
 
-    type ControlPacketType = enum {
+type mqtt_fixed_header = struct {
+    packet_type: enum {
         CONNECT = 1,
         CONNACK = 2,
         PUBLISH = 3,
@@ -9,111 +10,106 @@ protocol MQTT {
         PUBREC = 5,
         PUBREL = 6,
         PUBCOMP = 7,
-        SUBSCRIBE = 8, 
+        SUBSCRIBE = 8,
         SUBACK = 9,
         UNSUBSCRIBE = 10,
         UNSUBACK = 11,
         PINGREQ = 12,
         PINGRESP = 13,
         DISCONNECT = 14
-    }
+    },
+    dup_flag: bool,
+    qos_level: uint2,
+    retain_flag: bool
+}
 
-    type QoSLevel = enum {
-        AtMostOnce = 0,
-        AtLeastOnce = 1, 
-        ExactlyOnce = 2
-    }
+type mqtt_property_value = variant<
+    uint8,
+    uint16,
+    uint32,
+    string,
+    bytes
+>
 
-    // MQTT Fixed Header Structure
-    type FixedHeader = struct {
-        packetType: ControlPacketType,
-        flags: bit<4>,
-        remainingLength: uint<32>
-    }
+type mqtt_property = struct {
+    property_id: enum {
+        PAYLOAD_FORMAT_INDICATOR = 1,
+        MESSAGE_EXPIRY_INTERVAL = 2,
+        CONTENT_TYPE = 3,
+        RESPONSE_TOPIC = 8,
+        CORRELATION_DATA = 9,
+        SUBSCRIPTION_IDENTIFIER = 11,
+        SESSION_EXPIRY_INTERVAL = 17,
+        ASSIGNED_CLIENT_ID = 18,
+        SERVER_KEEP_ALIVE = 19,
+        AUTHENTICATION_METHOD = 21,
+        AUTHENTICATION_DATA = 22
+    },
+    value: mqtt_property_value
+}
 
-    // CONNECT Packet Payload
-    type ConnectPayload = struct {
-        clientId: string,
-        willTopic: optional string,
-        willMessage: optional bytes,
-        username: optional string, 
-        password: optional bytes
-    }
+type mqtt_connect_packet = struct {
+    fixed_header: mqtt_fixed_header,
+    protocol_name: string,
+    protocol_version: uint8,
+    connect_flags: struct {
+        username_flag: bool,
+        password_flag: bool,
+        will_retain: bool,
+        will_qos: uint2,
+        will_flag: bool,
+        clean_start: bool
+    },
+    keep_alive: uint16,
+    properties: list<mqtt_property>,
+    client_id: string,
+    username: optional<string>,
+    password: optional<string>,
+    will_properties: optional<list<mqtt_property>>,
+    will_topic: optional<string>,
+    will_payload: optional<bytes>
+}
 
-    // PUBLISH Packet Structure
-    type PublishPacket = struct {
-        topicName: string,
-        packetId: optional uint<16>,
-        payload: bytes,
-        qosLevel: QoSLevel
-    }
+type mqtt_publish_packet = struct {
+    fixed_header: mqtt_fixed_header,
+    topic_name: string,
+    packet_identifier: optional<uint16>,
+    properties: list<mqtt_property>,
+    payload: bytes
+}
 
-    // SUBSCRIBE Packet Structure 
-    type SubscribePacket = struct {
-        packetId: uint<16>,
-        topicFilters: list<struct {
-            topicFilter: string,
-            maxQoS: QoSLevel  
-        }>
-    }
-
-    // Main MQTT Packet Type
-    type MQTTPacket = struct {
-        fixedHeader: FixedHeader,
-        variableHeader: variant {
-            connect: struct {
-                protocolName: string,
-                protocolLevel: uint<8>,
-                connectFlags: bit<8>,
-                keepAlive: uint<16>
-            },
-            publish: struct {
-                topic: string,
-                packetId: optional uint<16>
-            },
-            pubAck: struct {
-                packetId: uint<16>
-            },
-            subscribe: struct {
-                packetId: uint<16>
-            }
-        },
-        payload: variant {
-            connect: ConnectPayload,
-            publish: bytes,
-            subscribe: list<struct {
-                topicFilter: string,
-                requestedQoS: QoSLevel
-            }>
+type mqtt_subscribe_packet = struct {
+    fixed_header: mqtt_fixed_header,
+    packet_identifier: uint16,
+    properties: list<mqtt_property>,
+    subscriptions: list<struct {
+        topic_filter: string,
+        subscription_options: struct {
+            max_qos: uint2,
+            no_local: bool,
+            retain_as_published: bool,
+            retain_handling: uint2
         }
-    }
-
-    // Validation Rules
-    invariant(
-        forall packet in MQTTPacket:
-            packet.fixedHeader.packetType in ControlPacketType
-    );
-
-    invariant(
-        forall publish in PublishPacket:
-            publish.qosLevel <= 2
-    );
-
-    function validateMQTTPacket(packet: MQTTPacket) -> bool {
-        // Basic validation checks
-        return (
-            packet.fixedHeader.packetType != null &&
-            packet.fixedHeader.remainingLength > 0 &&
-            (packet.variableHeader != null || packet.payload != null)
-        );
-    }
+    }>
 }
 
-module MQTT_Constants {
-    // MQTT Protocol Constants
-    const PROTOCOL_NAME = "MQTT";
-    const PROTOCOL_VERSION = 4; // MQTT v3.1.1
-    const MAX_CLIENT_ID_LENGTH = 23;
-    const MAX_TOPIC_LENGTH = 65535;
-    const MAX_PAYLOAD_SIZE = 268435455; // 256MB
+type mqtt_suback_packet = struct {
+    fixed_header: mqtt_fixed_header,
+    packet_identifier: uint16,
+    properties: list<mqtt_property>,
+    reason_codes: list<uint8>
 }
+
+type mqtt_disconnect_packet = struct {
+    fixed_header: mqtt_fixed_header,
+    reason_code: uint8,
+    properties: list<mqtt_property>
+}
+
+type mqtt_packet = variant<
+    mqtt_connect_packet,
+    mqtt_publish_packet,
+    mqtt_subscribe_packet,
+    mqtt_suback_packet,
+    mqtt_disconnect_packet
+>

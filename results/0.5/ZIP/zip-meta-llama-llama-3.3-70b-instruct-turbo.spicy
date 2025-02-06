@@ -1,66 +1,120 @@
-# ZIP File Format Specification in Zeek Spicy
+module ZIP;
 
-# Define the ZIP file format
-file ZIP {
-    # Local file header
-    struct LocalFileHeader {
-        uint16le signature = 0x04034b50; # Local file header signature
-        uint16le version; # Minimum ZIP specification version
-        uint16le flags; # General purpose bit flag
-        uint16le compression_method; # Compression method
-        uint16le last_modified_time; # Last modified time
-        uint16le last_modified_date; # Last modified date
-        uint32le crc32; # CRC-32 of uncompressed data
-        uint32le compressed_size; # Compressed size
-        uint32le uncompressed_size; # Uncompressed size
-        uint16le file_name_length; # Length of file name
-        uint16le extra_field_length; # Length of extra field
-        byte[file_name_length] file_name; # File name
-        byte[extra_field_length] extra_field; # Extra field
-    }
-
-    # Central directory file header
-    struct CentralDirectoryFileHeader {
-        uint32le signature = 0x02014b50; # Central directory file header signature
-        uint16le version_made_by; # Version made by
-        uint16le version_to_extract; # Version to extract
-        uint16le flags; # General purpose bit flag
-        uint16le compression_method; # Compression method
-        uint16le last_modified_time; # Last modified time
-        uint16le last_modified_date; # Last modified date
-        uint32le crc32; # CRC-32 of uncompressed data
-        uint32le compressed_size; # Compressed size
-        uint32le uncompressed_size; # Uncompressed size
-        uint16le file_name_length; # Length of file name
-        uint16le extra_field_length; # Length of extra field
-        uint16le file_comment_length; # Length of file comment
-        uint16le disk_number_start; # Disk number start
-        uint16le internal_file_attributes; # Internal file attributes
-        uint32le external_file_attributes; # External file attributes
-        uint32le local_header_offset; # Local header offset
-        byte[file_name_length] file_name; # File name
-        byte[extra_field_length] extra_field; # Extra field
-        byte[file_comment_length] file_comment; # File comment
-    }
-
-    # End of central directory record
-    struct EndOfCentralDirectoryRecord {
-        uint32le signature = 0x06054b50; # End of central directory record signature
-        uint16le disk_number; # Disk number
-        uint16le central_directory_disk_number; # Central directory disk number
-        uint16le central_directory_entries_this_disk; # Central directory entries this disk
-        uint16le central_directory_total_entries; # Central directory total entries
-        uint32le central_directory_size; # Central directory size
-        uint32le central_directory_offset; # Central directory offset
-        uint16le zip_file_comment_length; # Length of ZIP file comment
-        byte[zip_file_comment_length] zip_file_comment; # ZIP file comment
-    }
-
-    # ZIP file structure
-    LocalFileHeader local_file_header;
-    byte[local_file_header.compressed_size] compressed_data;
-    while (!eof()) {
-        CentralDirectoryFileHeader central_directory_file_header;
-    }
-    EndOfCentralDirectoryRecord end_of_central_directory_record;
+type zip_local_file_header = record {
+  local_file_header_signature = uint32;
+  version_needed_to_extract = uint16;
+  general_purpose_bit_flag = uint16;
+  compression_method = uint16;
+  last_mod_file_time = uint16;
+  last_mod_file_date = uint16;
+  crc_32 = uint32;
+  compressed_size = uint32;
+  uncompressed_size = uint32;
+  file_name_length = uint16;
+  extra_field_length = uint16;
 }
+
+type zip_file_name = record {
+  file_name = bytestring;
+}
+
+type zip_extra_field = record {
+  extra_field = bytestring;
+}
+
+type zip_data_descriptor = record {
+  data_descriptor_signature = uint32;
+  crc_32 = uint32;
+  compressed_size = uint32;
+  uncompressed_size = uint32;
+}
+
+type zip_central_directory_header = record {
+  central_directory_header_signature = uint32;
+  version_made_by = uint16;
+  version_needed_to_extract = uint16;
+  general_purpose_bit_flag = uint16;
+  compression_method = uint16;
+  last_mod_file_time = uint16;
+  last_mod_file_date = uint16;
+  crc_32 = uint32;
+  compressed_size = uint32;
+  uncompressed_size = uint32;
+  file_name_length = uint16;
+  extra_field_length = uint16;
+  file_comment_length = uint16;
+  disk_number_start = uint16;
+  int_file_attr = uint16;
+  ext_file_attr = uint32;
+}
+
+type zip_file_comment = record {
+  file_comment = bytestring;
+}
+
+type zip_end_of_central_directory = record {
+  end_of_central_dir_signature = uint32;
+  num_of_this_disk = uint16;
+  num_of_the_disk_with_the_start_of_the_central_directory = uint16;
+  num_entries_in_the_central_directory_on_this_disk = uint16;
+  num_entries_in_the_central_directory = uint16;
+  size_of_the_central_directory = uint32;
+  offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number = uint32;
+  zipfile_comment_length = uint16;
+}
+
+type zip_file = record {
+  local_file_header = zip_local_file_header;
+  file_name = zip_file_name;
+  extra_field = zip_extra_field;
+  data_descriptor = zip_data_descriptor;
+  file_data = bytestring;
+}
+
+type zip_archive = record {
+  files = array[zip_file];
+  central_directory = array[zip_central_directory_header];
+  end_of_central_directory = zip_end_of_central_directory;
+  zipfile_comment = bytestring;
+}
+
+let zip_parser = parser( zip_archive ) {
+  local_file_header: zip_local_file_header = {
+    local_file_header_signature = 0x04034b50;
+    version_needed_to_extract = 20;
+    general_purpose_bit_flag = 0;
+    compression_method = 0;
+    last_mod_file_time = 0;
+    last_mod_file_date = 0;
+    crc_32 = 0;
+    compressed_size = 0;
+    uncompressed_size = 0;
+    file_name_length = 0;
+    extra_field_length = 0;
+  };
+  file_name: zip_file_name = {
+    file_name = "example.txt";
+  };
+  extra_field: zip_extra_field = {
+    extra_field = "";
+  };
+  data_descriptor: zip_data_descriptor = {
+    data_descriptor_signature = 0x08074b50;
+    crc_32 = 0;
+    compressed_size = 0;
+    uncompressed_size = 0;
+  };
+  file_data: bytestring = "Hello World!";
+  central_directory: array[zip_central_directory_header] = [];
+  end_of_central_directory: zip_end_of_central_directory = {
+    end_of_central_dir_signature = 0x06054b50;
+    num_of_this_disk = 0;
+    num_of_the_disk_with_the_start_of_the_central_directory = 0;
+    num_entries_in_the_central_directory_on_this_disk = 0;
+    num_entries_in_the_central_directory = 0;
+    size_of_the_central_directory = 0;
+    offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number = 0;
+    zipfile_comment_length = 0;
+  };
+  zipfile_comment: bytestring = "";
+};

@@ -4,55 +4,44 @@ meta:
   license: CC0-1.0
   endian: be
 
-doc: |
-  The ARP (Address Resolution Protocol) is used for resolution of network layer addresses into link layer addresses, a critical function in the Internet protocol suite. ARP was defined in 1982 by RFC 826.
-
 seq:
-  - id: hw_type
+  - id: htype
     type: u2
-    enum: hardware_type
-    doc: Hardware type (HTYPE)
-  - id: proto_type
+    doc: Hardware type (e.g., Ethernet = 1)
+  - id: ptype
     type: u2
-    enum: protocol_type
-    doc: Protocol type (PTYPE)
-  - id: hw_len
+    doc: Protocol type (e.g., IP = 0x0800)
+  - id: hlen
     type: u1
-    doc: Length of a hardware address (MAC)
-  - id: proto_len
+    doc: Hardware address length (e.g., Ethernet MAC address length = 6)
+  - id: plen
     type: u1
-    doc: Length of addresses used in the upper layer protocol
-  - id: opcode
+    doc: Protocol address length (e.g., IP address length = 4)
+  - id: oper
     type: u2
     enum: operation
-    doc: Specifies the operation that the sender is performing
-  - id: sender_hw_addr
-    size: hw_len
-    doc: MAC address of the sender
-  - id: sender_proto_addr
-    size: proto_len
-    doc: Protocol address of the sender
-  - id: target_hw_addr
-    size: hw_len
-    doc: MAC address of the target
-  - id: target_proto_addr
-    size: proto_len
-    doc: Protocol address of the target
+    doc: ARP operation (e.g., request = 1, reply = 2)
+  - id: sha
+    size: hlen
+    doc: Sender hardware address (MAC address)
+  - id: spa
+    size: plen
+    doc: Sender protocol address (IP address)
+  - id: tha
+    size: hlen
+    doc: Target hardware address (MAC address)
+  - id: tpa
+    size: plen
+    doc: Target protocol address (IP address)
 
 enums:
-  hardware_type:
-    0x0001: ethernet
-    0x0006: ieee_802
-    0x000f: fddi
-
-  protocol_type:
-    0x0800: ipv4
-    0x0806: arp
-    0x8035: rarp
-    0x86dd: ipv6
-
   operation:
     1: request
     2: reply
-    3: request_reverse
-    4: reply_reverse
+    3: rarp_request
+    4: rarp_reply
+    5: drarp_request
+    6: drarp_reply
+    7: drarp_error
+    8: inarp_request
+    9: inarp_reply

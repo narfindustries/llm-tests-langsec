@@ -1,44 +1,109 @@
-# Spicy specification for DICOM metadata parsing
+module DICOM;
 
-# Import required modules
-import Spicy
-
-# Define the DICOM metadata structure
-type DicomMeta = struct {
-  group: uint16,
-  element: uint16,
-  vr: string(2),
-  length: uint32,
-  value: string(length),
+type FileMetaInformation: record {
+  file_meta_information_group: uint16 = 0x0002;
+  file_meta_information_element: uint16 = 0x0000;
+  file_meta_information_vr: string = "UL";
+  file_meta_information_length: uint32 = 0x0006;
+  file_meta_information_data: uint32 = 0x4949;
+  file_meta_information_version_group: uint16 = 0x0002;
+  file_meta_information_version_element: uint16 = 0x0010;
+  file_meta_information_version_vr: string = "OB";
+  file_meta_information_version_length: uint32 = 0x0002;
+  file_meta_information_version_data: bytes = 0x01 0x00;
+  media_storage_sop_instance_uid_group: uint16 = 0x0002;
+  media_storage_sop_instance_uid_element: uint16 = 0x0010;
+  media_storage_sop_instance_uid_vr: string = "UI";
+  media_storage_sop_instance_uid_length: uint32;
+  media_storage_sop_instance_uid_data: string;
+  media_storage_sop_class_uid_group: uint16 = 0x0002;
+  media_storage_sop_class_uid_element: uint16 = 0x0002;
+  media_storage_sop_class_uid_vr: string = "UI";
+  media_storage_sop_class_uid_length: uint32;
+  media_storage_sop_class_uid_data: string;
+  implementation_class_uid_group: uint16 = 0x0002;
+  implementation_class_uid_element: uint16 = 0x0012;
+  implementation_class_uid_vr: string = "UI";
+  implementation_class_uid_length: uint32;
+  implementation_class_uid_data: string;
+  transfer_syntax_uid_group: uint16 = 0x0002;
+  transfer_syntax_uid_element: uint16 = 0x0010;
+  transfer_syntax_uid_vr: string = "UI";
+  transfer_syntax_uid_length: uint32;
+  transfer_syntax_uid_data: string;
+  implementation_version_name_group: uint16 = 0x0002;
+  implementation_version_name_element: uint16 = 0x0013;
+  implementation_version_name_vr: string = "SH";
+  implementation_version_name_length: uint32;
+  implementation_version_name_data: string;
+  source_application_entity_title_group: uint16 = 0x0002;
+  source_application_entity_title_element: uint16 = 0x0016;
+  source_application_entity_title_vr: string = "AE";
+  source_application_entity_title_length: uint32;
+  source_application_entity_title_data: string;
+  private_information_group: uint16 = 0x0002;
+  private_information_element: uint16 = 0x0100;
+  private_information_vr: string = "OB";
+  private_information_length: uint32;
+  private_information_data: bytes;
 }
 
-# Define the DICOM file structure
-type DicomFile = seq(DicomMeta)
+type DataSet: record {
+  data_elements: array of DataElement;
+}
 
-# Define the parsing function
-parse_dcm(file:_input byte[:]) -> DicomFile {
-  var meta_list: DicomFile = []
-  var offset: int = 0
+type DataElement: record {
+  tag_group: uint16;
+  tag_element: uint16;
+  vr: string;
+  length: uint32;
+  data: bytes;
+}
 
-  while offset < file.length {
-    var group: uint16 = Spicy.unmarshal_uint16_le(file, offset)
-    var element: uint16 = Spicy.unmarshal_uint16_le(file, offset + 2)
-    var vr: string(2) = Spicy.unmarshal_string(file, offset + 4, 2)
-    var length: uint32 = Spicy.unmarshal_uint32_be(file, offset + 6)
+type PatientInformation: record {
+  patient_name: string;
+  patient_id: string;
+  patient_birth_date: string;
+  patient_sex: string;
+  patient_age: string;
+}
 
-    var value: string(length) = Spicy.unmarshal_string(file, offset + 10, length)
+type StudyInformation: record {
+  study_instance_uid: string;
+  study_date: string;
+  study_time: string;
+  study_description: string;
+  referring_physician_name: string;
+}
 
-    var meta: DicomMeta = {
-      group: group,
-      element: element,
-      vr: vr,
-      length: length,
-      value: value,
-    }
+type SeriesInformation: record {
+  series_instance_uid: string;
+  series_number: int;
+  series_description: string;
+  modality: string;
+}
 
-    meta_list += [meta]
-    offset += 10 + length
-  }
+type ImageInformation: record {
+  sop_instance_uid: string;
+  image_type: string;
+  photometric_interpretation: string;
+  pixel_data: bytes;
+}
 
-  return meta_list
+type PixelData: record {
+  pixel_data: bytes;
+}
+
+type Message: record {
+  command_group: uint16;
+  command_element: uint16;
+  message_id: uint16;
+  priority: uint16;
+  command_data_set: DataSet;
+}
+
+type CommandSet: record {
+  command_group: uint16;
+  command_element: uint16;
+  command_data_set: DataSet;
 }

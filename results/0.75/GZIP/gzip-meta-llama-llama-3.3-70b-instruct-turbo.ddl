@@ -1,22 +1,41 @@
-domain gzip_meta {
-  int32 magic;
-  int8  compression_method;
-  int8  flags;
-  int32 modification_time;
-  int32 extra_flags;
-  int32 operating_system;
-  sequence<header> header {
-    int16 name_length;
-    byte[name_length] name;
-    int16 extra_length;
-    byte[extra_length] extra;
-  }
-  byte[] compressed_data;
+seq gzip_file {
+  id1: byte = 0x1f
+  id2: byte = 0x8b
+  cm: byte = 8
+  flags: byte
+  mtime: uint32le
+  xfl: byte
+  os: byte
 }
 
-domain header {
-  int16 name_length;
-  byte[name_length] name;
-  int16 extra_length;
-  byte[extra_length] extra;
+seq gzip_extra {
+  xlen: uint16le
+  extra: bytes[xlen]
+}
+
+seq gzip_header {
+  gzip_file
+  extra: if ((flags & 0x04) != 0) {
+    gzip_extra
+  }
+  fname: if ((flags & 0x08) != 0) {
+    string null_terminated
+  }
+  fcomment: if ((flags & 0x10) != 0) {
+    string null_terminated
+  }
+  hdr_crc: if ((flags & 0x02) != 0) {
+    uint16le
+  }
+}
+
+seq gzip_compressed {
+  compr_len: uint32le
+  compr_data: bytes[compr_len]
+  isize: uint32le
+}
+
+seq gzip {
+  gzip_header
+  gzip_compressed
 }

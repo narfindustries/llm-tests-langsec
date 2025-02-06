@@ -1,17 +1,17 @@
-network_time_protocol_version_4 {
-    header {
-        leap_indicator: int(2);
-        version_number: int(3);
-        mode: int(3);
-        stratum: uint8;
-        poll_interval: uint8;
-        precision: int8;
-        root_delay: int32;
-        root_dispersion: uint32;
-        reference_identifier: string(4);
-        reference_timestamp: uint64;
-        originate_timestamp: uint64;
-        receive_timestamp: uint64;
-        transmit_timestamp: uint64;
-    }
+NetworkTimeProtocolV4 : structure = {
+    li : uint(2),  // Leap Indicator
+    vn : uint(3),  // Version Number
+    mode : uint(3),  // Mode
+    stratum : uint(8),  // Stratum
+    poll : int(8),  // Poll Interval
+    precision : int(8),  // Precision
+    rootDelay : uint(32),  // Root Delay in NTP short format
+    rootDispersion : uint(32),  // Root Dispersion in NTP short format
+    referenceIdentifier : uint(32),  // Reference Identifier
+    referenceTimestamp : uint(64),  // Reference Timestamp in NTP timestamp format
+    originateTimestamp : uint(64),  // Originate Timestamp in NTP timestamp format
+    receiveTimestamp : uint(64),  // Receive Timestamp in NTP timestamp format
+    transmitTimestamp : uint(64),  // Transmit Timestamp in NTP timestamp format
+    keyIdentifier : uint(32)?,  // Optional Key Identifier for authentication
+    messageDigest : bytes(16)?  // Optional Message Digest for authentication
 }

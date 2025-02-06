@@ -1,73 +1,119 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
-// Structure to represent a zip entry
-typedef struct {
-    char* filename;
-    uint32_t size;
-    uint8_t* data;
-} ZipEntry;
+// Helper functions for easier parsing
 
+// Parses a uint16_t in little-endian format
+static HParser uint16_le(void) {
+    HParser byte = h_any();
+    return h_map2(byte, byte, [](uint8_t a, uint8_t b){ return (uint16_t)a | ((uint16_t)b << 8);});
+}
 
-// Function to simulate zip file processing (replace with actual zip library)
-ZipEntry* processZipEntry(const char* filename) {
-    // Replace this with actual zip file processing logic using a library like miniz
-    ZipEntry* entry = (ZipEntry*)malloc(sizeof(ZipEntry));
-    if (entry == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
-    }
-    entry->filename = strdup(filename); //Important: strdup allocates memory, needs free() later.
-    if (entry->filename == NULL) {
-        perror("Memory allocation failed");
-        free(entry);
-        exit(1);
-    }
-
-    //Simulate data size and content
-    entry->size = strlen(filename) * 2; //Example size
-    entry->data = (uint8_t*)malloc(entry->size);
-    if (entry->data == NULL) {
-        perror("Memory allocation failed");
-        free(entry->filename);
-        free(entry);
-        exit(1);
-    }
-    for (uint32_t i = 0; i < entry->size; ++i) {
-        entry->data[i] = (uint8_t)(i % 256); //Example data
-    }
-    return entry;
+// Parses a uint32_t in little-endian format
+static HParser uint32_le(void) {
+    HParser byte = h_any();
+    return h_map4(byte, byte, byte, byte, [](uint8_t a, uint8_t b, uint8_t c, uint8_t d){
+        return (uint32_t)a | ((uint32_t)b << 8) | ((uint32_t)c << 16) | ((uint32_t)d << 24);
+    });
 }
 
 
-int main() {
-    //Simulate zip file entries
-    const char* zipEntries[] = {"file1.txt", "file2.bin", "file3.jpg"};
-    int numEntries = sizeof(zipEntries) / sizeof(zipEntries[0]);
+// Parses a variable-length string
+static HParser string(size_t len) {
+    HParser byte = h_any();
+    return h_count(byte, len);
+}
 
-    ZipEntry** entries = (ZipEntry**)malloc(numEntries * sizeof(ZipEntry*));
-    if (entries == NULL) {
-        perror("Memory allocation failed");
-        exit(1);
+//Helper function to parse variable length fields with length prefix
+static HParser varlen_field(void) {
+    HParser len = uint16_le();
+    HParser byte = h_any();
+    return h_bind(len, [byte](size_t l){ return h_count(byte, l);});
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
+        return 1;
     }
 
-    for (int i = 0; i < numEntries; ++i) {
-        entries[i] = processZipEntry(zipEntries[i]);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    //Simulate Hammer processing (replace with actual Hammer library calls)
-    for (int i = 0; i < numEntries; ++i) {
-        printf("Processing entry: %s (size: %u)\n", entries[i]->filename, entries[i]->size);
-        //Here you would integrate Hammer library calls to process entries[i]->data
-        //Example:  hammer_process(entries[i]->data, entries[i]->size);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-        free(entries[i]->data);
-        free(entries[i]->filename);
-        free(entries[i]);
+    char *buffer = (char *)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    HParser localFileHeader = h_sequence(
+        uint32_le(), // Signature
+        uint16_le(), // Version
+        uint16_le(), // Flags
+        uint16_le(), // Compression
+        uint16_le(), // Modification Time
+        uint16_le(), // Modification Date
+        uint32_le(), // CRC32
+        uint32_le(), // Compressed Size
+        uint32_le(), // Uncompressed Size
+        uint16_le(), // Filename Length
+        uint16_le(), // Extra Field Length
+        varlen_field(), // Filename
+        varlen_field()  // Extra Field
+    );
+
+    HParser centralDirectoryHeader = h_sequence(
+        uint32_le(), // Signature
+        uint16_le(), // Version Made By
+        uint16_le(), // Version Needed to Extract
+        uint16_le(), // General Purpose Bit Flag
+        uint16_le(), // Compression Method
+        uint16_le(), // Last Modified Time
+        uint16_le(), // Last Modified Date
+        uint32_le(), // CRC-32
+        uint32_le(), // Compressed Size
+        uint32_le(), // Uncompressed Size
+        uint16_le(), // Filename Length
+        uint16_le(), // Extra Field Length
+        uint16_le(), // File Comment Length
+        uint16_le(), // Disk Number Start
+        uint16_le(), // Internal File Attributes
+        uint32_le(), // External File Attributes
+        uint32_le(), // Relative Offset of Local Header
+        varlen_field(), //Filename
+        varlen_field(), //Extra Field
+        varlen_field() //File Comment
+    );
+
+    HParser endOfCentralDirectory = h_sequence(
+        uint32_le(), // Signature
+        uint16_le(), // Number of this disk
+        uint16_le(), // Number of the disk with the start of the central directory
+        uint16_le(), // Total number of entries in the central directory on this disk
+        uint16_le(), // Total number of entries in the central directory
+        uint32_le(), // Size of the central directory
+        uint32_le(), // Offset of start of central directory
+        uint16_le(), // Comment Length
+        varlen_field() //Comment
+    );
+
+
+    HParseResult result = h_parse(&localFileHeader, buffer, fsize);
+
+    if (result.success) {
+        printf("Parsing successful!\n");
+    } else {
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
     }
 
-    free(entries);
+    free(buffer);
     return 0;
 }

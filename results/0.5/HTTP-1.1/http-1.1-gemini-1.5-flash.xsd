@@ -1,52 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/http" elementFormDefault="qualified" attributeFormDefault="unqualified">
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineSchema version="1.0"/>
-    </xs:appinfo>
-  </xs:annotation>
-  <xs:element name="http-1">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/http1.1"
+           xmlns="http://example.org/http1.1"
+           elementFormDefault="qualified">
+
+  <xs:element name="HTTPMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" maxOccurs="unbounded"/>
-        <xs:element name="body" type="xs:string"/>
+        <xs:element ref="StartLine"/>
+        <xs:element ref="Headers" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="Body" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:attribute>
+      <xs:attribute ref="dfdl:lengthKind" use="required"/>
+      <xs:attribute ref="dfdl:lengthUnits" use="required"/>
+      <xs:attribute ref="dfdl:textString" use="required"/>
+      <xs:attribute name="dfdl:occursCount" type="xs:integer" use="required"/>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:text lengthKind="delimited" lengthUnits="characters" separator=":"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="value" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:text lengthKind="delimited" lengthUnits="characters" termination="%CRLF"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="characters" termination="%CRLF"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:complexType>
+
+  <xs:element name="StartLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+        <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Header" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HeaderName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":" />
+        <xs:element name="HeaderValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Body" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+
 </xs:schema>
 

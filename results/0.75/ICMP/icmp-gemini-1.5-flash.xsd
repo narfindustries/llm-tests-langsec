@@ -1,34 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/icmp"
-           xmlns="http://example.org/icmp"
-           elementFormDefault="qualified">
-
-  <xs:element name="icmpGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/icmp" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="ICMP">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="payload" type="xs:string" dfdl:length="1024"/>
+        <xs:element name="Type" type="dfdl:unsignedInt8"/>
+        <xs:element name="Code" type="dfdl:unsignedInt8"/>
+        <xs:element name="Checksum" type="dfdl:unsignedInt16"/>
+        <xs:element name="Identifier" type="dfdl:unsignedInt16"/>
+        <xs:element name="SequenceNumber" type="dfdl:unsignedInt16"/>
+        <xs:element name="Data" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/1.0/">
+            <dfdl:lengthKind>implicit</dfdl:lengthKind>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute ref="dfdl:byteOrder" use="required">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/1.0/">
+            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
-
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
-      <xs:element name="type" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
-      <xs:element name="code" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="1"/>
-      <xs:element name="checksum" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
-      <xs:element name="identifier" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
-      <xs:element name="sequenceNumber" type="xs:integer" dfdl:lengthKind="fixedLength" dfdl:length="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <dfdl:defineSchema>
-    <dfdl:format binary="true" byteOrder="bigEndian"/>
-    <dfdl:representation representation="text"/>
-  </dfdl:defineSchema>
-
 </xs:schema>

@@ -1,131 +1,164 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::take,
+    bytes::complete::{take},
+    combinator::{map, map_res, opt},
     number::complete::{be_u16, be_u32, be_u64, be_u8},
-    sequence::{preceded, tuple},
     IResult,
 };
 use std::{
     env,
     fs::File,
     io::{BufReader, Read},
-    path::Path,
 };
 
-#[derive(Debug, PartialEq)]
-struct NtpPacket {
-    flags: u8,
-    stratum: u8,
+#[derive(Debug)]
+enum ReferenceClockIdentifier {
+    Unspecified,
+    ReferenceClockType(u8),
+    IPv4Address(u32),
+    IPv6Address([u8; 16]),
+}
+
+impl ReferenceClockIdentifier {
+    fn parse(input: &[u8]) -> IResult<&[u8], ReferenceClockIdentifier> {
+        map_res(take(4usize), |input: &[u8]| match input {
+            [0, 0, 0, 0] => Ok(ReferenceClockIdentifier::Unspecified),
+            [a, b, c, d] if *a == 0 && *b == 0 && *c == 0 && *d <= 255 => {
+                Ok(ReferenceClockIdentifier::ReferenceClockType(*d))
+            }
+            [a, b, c, d] if *a == 0 && *b == 0 && *c == 0 && *d > 0 => {
+                let ip_address = ((*a as u32) << 24) | ((*b as u32) << 16) | ((*c as u32) << 8) | (*d as u32);
+                Ok(ReferenceClockIdentifier::IPv4Address(ip_address))
+            }
+            [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] => {
+                let ip_address = [
+                    *a, *b, *c, *d, *e, *f, *g, *h, *i, *j, *k, *l, *m, *n, *o, *p,
+                ];
+                Ok(ReferenceClockIdentifier::IPv6Address(ip_address))
+            }
+            _ => Err(nom::Err::Error(nom::error::ErrorKind::AlphaNumeric)),
+        })(input)
+    }
+}
+
+#[derive(Debug)]
+struct NTPHeader {
+    leap_indicator: u8,
+    version_number: u8,
+    mode: u8,
     poll: u8,
     precision: u8,
-    delay: u32,
-    dispersion: u32,
-    identifier: u32,
+    root_delay: u32,
+    root_dispersion: u32,
+    reference_clock_identifier: ReferenceClockIdentifier,
     reference_timestamp: u64,
     origin_timestamp: u64,
     receive_timestamp: u64,
     transmit_timestamp: u64,
-    extension_fields: Vec<(u16, u16, Vec<u8>)>,
 }
 
-fn parse_ntp_flags(input: &[u8]) -> IResult<&[u8], u8> {
-    map(be_u8, |x: u8| x >> 6)(input)
-}
-
-fn parse_ntp_version(input: &[u8]) -> IResult<&[u8], u8> {
-    map(be_u8, |x: u8| (x >> 3) & 0x7)(input)
-}
-
-fn parse_ntp_mode(input: &[u8]) -> IResult<&[u8], u8> {
-    map(be_u8, |x: u8| x & 0x7)(input)
-}
-
-fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    map(
-        tuple((
-            be_u8,
-            be_u8,
-            be_u8,
-            be_u8,
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u64,
-            be_u64,
-            be_u64,
-            be_u64,
-        )),
-        |(
-            leap_second,
-            version,
-            mode,
-            stratum,
-            poll,
-            precision,
-            delay,
-            dispersion,
-            identifier,
-            reference_timestamp,
-            origin_timestamp,
-            receive_timestamp,
-            transmit_timestamp,
-        ): (
-            u8,
-            u8,
-            u8,
-            u8,
-            u8,
-            u8,
-            u32,
-            u32,
-            u32,
-            u64,
-            u64,
-            u64,
-            u64,
-        )| {
-            let flags = (leap_second << 6) | (version << 3) | mode;
-            let extension_fields = vec![];
-            NtpPacket {
-                flags,
-                stratum,
+impl NTPHeader {
+    fn parse(input: &[u8]) -> IResult<&[u8], NTPHeader> {
+        let (input, leap_indicator) = map(be_u8, |x: u8| x >> 6)(input)?;
+        let (input, version_number) = map(be_u8, |x: u8| (x >> 3) & 0x07)(input)?;
+        let (input, mode) = map(be_u8, |x: u8| x & 0x07)(input)?;
+        let (input, poll) = be_u8(input)?;
+        let (input, precision) = be_u8(input)?;
+        let (input, root_delay) = be_u32(input)?;
+        let (input, root_dispersion) = be_u32(input)?;
+        let (input, reference_clock_identifier) = ReferenceClockIdentifier::parse(input)?;
+        let (input, reference_timestamp) = be_u64(input)?;
+        let (input, origin_timestamp) = be_u64(input)?;
+        let (input, receive_timestamp) = be_u64(input)?;
+        let (input, transmit_timestamp) = be_u64(input)?;
+        Ok((
+            input,
+            NTPHeader {
+                leap_indicator,
+                version_number,
+                mode,
                 poll,
                 precision,
-                delay,
-                dispersion,
-                identifier,
+                root_delay,
+                root_dispersion,
+                reference_clock_identifier,
                 reference_timestamp,
                 origin_timestamp,
                 receive_timestamp,
                 transmit_timestamp,
-                extension_fields,
-            }
-        },
-    )(input)
+            },
+        ))
+    }
 }
 
-fn parse_ntp_extension_field(input: &[u8]) -> IResult<&[u8], (u16, u16, Vec<u8>)> {
-    map(
-        tuple((be_u16, be_u16, take)),
-        |(field_type, field_length, field_value): (u16, u16, Vec<u8>)| {
-            (field_type, field_length, field_value)
-        },
-    )(input)
+#[derive(Debug)]
+enum NTPExtensionField {
+    MAC(()),
+    Autokey(()),
+    NTPv4ExtensionField(()),
+}
+
+impl NTPExtensionField {
+    fn parse(input: &[u8]) -> IResult<&[u8], NTPExtensionField> {
+        let (input, field_type) = be_u16(input)?;
+        let (input, field_length) = be_u16(input)?;
+        let (input, field_data) = take(field_length as usize)(input)?;
+        match field_type {
+            0 => Ok((input, NTPExtensionField::MAC(()))),
+            1 => Ok((input, NTPExtensionField::Autokey(()))),
+            _ => Ok((input, NTPExtensionField::NTPv4ExtensionField(()))),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct NTPPacket {
+    header: NTPHeader,
+    extension_fields: Vec<NTPExtensionField>,
+}
+
+impl NTPPacket {
+    fn parse(input: &[u8]) -> IResult<&[u8], NTPPacket> {
+        let (input, header) = NTPHeader::parse(input)?;
+        let mut extension_fields = Vec::new();
+        let mut remaining_input = input;
+        while !remaining_input.is_empty() {
+            let (input, extension_field) = opt(NTPExtensionField::parse)(remaining_input)?;
+            match extension_field {
+                Some(field) => {
+                    extension_fields.push(field);
+                    remaining_input = input;
+                }
+                None => break,
+            }
+        }
+        Ok((
+            remaining_input,
+            NTPPacket {
+                header,
+                extension_fields,
+            },
+        ))
+    }
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        panic!("Usage: {} <input_file>", args[0]);
+        println!("Usage: {} <input_file>", args[0]);
+        return;
     }
     let input_file = &args[1];
-    let mut file = BufReader::new(File::open(&Path::new(input_file)).unwrap());
+    let file = File::open(input_file).expect("Failed to open file");
+    let mut reader = BufReader::new(file);
     let mut input = Vec::new();
-    file.read_to_end(&mut input).unwrap();
-    let result = parse_ntp_packet(&input);
-    match result {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(err) => panic!("Error parsing NTP packet: {:?}", err),
+    reader.read_to_end(&mut input).expect("Failed to read file");
+    match NTPPacket::parse(&input) {
+        Ok((remaining, packet)) => {
+            println!("Parsed NTP packet: {:?}", packet);
+            if !remaining.is_empty() {
+                println!("Warning: {} bytes remaining in input", remaining.len());
+            }
+        }
+        Err(err) => println!("Error parsing NTP packet: {:?}", err),
     }
 }

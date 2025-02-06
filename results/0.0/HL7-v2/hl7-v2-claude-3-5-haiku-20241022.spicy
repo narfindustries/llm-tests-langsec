@@ -1,26 +1,129 @@
-module HL7;
+module hl7_v2;
 
 import spicy;
 
 public type Message = unit {
-    segments: Segment[] &eod;
+    header: MSH;
+    segments: Segment[];
 };
 
-public type Segment = unit {
-    name: bytes &length=3;
-    separator: bytes &length=1 = "|";
-    fields: Field[] &separator(/\|/);
+type Segment = unit {
+    name: bytes &size=3;
+    fields: Field[];
 };
 
-public type Field = unit {
-    value: bytes &convert=spicy::decode_utf8(self);
+type Field = unit {
+    value: bytes;
 };
 
-public type Parser = unit {
-    message: Message;
+public type MSH = unit {
+    field_separator: bytes &size=1;
+    encoding_characters: bytes &size=4;
+    sending_application: bytes;
+    sending_facility: bytes;
+    receiving_application: bytes;
+    receiving_facility: bytes;
+    timestamp: bytes;
+    security: bytes &optional=True;
+    message_type: bytes;
+    message_control_id: bytes;
+    processing_id: bytes;
+    version_id: bytes;
+    sequence_number: bytes &optional=True;
+    continuation_pointer: bytes &optional=True;
+    accepting_acknowledgment_type: bytes &optional=True;
+    application_acknowledgment_type: bytes &optional=True;
+    country_code: bytes &optional=True;
+    character_set: bytes &optional=True;
+    principal_language: bytes &optional=True;
 };
 
-public function parse(data: bytes) : Message = {
-    local parser = Parser(data);
-    return parser.message;
+public type PID = unit {
+    set_id: bytes &optional=True;
+    patient_id: bytes &optional=True;
+    patient_identifier_list: bytes &optional=True;
+    alternate_patient_id: bytes &optional=True;
+    patient_name: bytes &optional=True;
+    mothers_maiden_name: bytes &optional=True;
+    date_of_birth: bytes &optional=True;
+    administrative_sex: bytes &optional=True;
+    patient_alias: bytes &optional=True;
+    race: bytes &optional=True;
+    patient_address: bytes &optional=True;
+    county_code: bytes &optional=True;
+    phone_number_home: bytes &optional=True;
+    phone_number_business: bytes &optional=True;
+    primary_language: bytes &optional=True;
+    marital_status: bytes &optional=True;
+    religion: bytes &optional=True;
+    patient_account_number: bytes &optional=True;
+    social_security_number: bytes &optional=True;
+    driver_license_number: bytes &optional=True;
+    mothers_identifier: bytes &optional=True;
+    ethnic_group: bytes &optional=True;
+    birth_place: bytes &optional=True;
+    multiple_birth_indicator: bytes &optional=True;
+    birth_order: bytes &optional=True;
+    citizenship: bytes &optional=True;
+    veterans_military_status: bytes &optional=True;
+    nationality_code: bytes &optional=True;
+    patient_death_date_time: bytes &optional=True;
+    patient_death_indicator: bytes &optional=True;
 };
+
+public type PV1 = unit {
+    set_id: bytes &optional=True;
+    patient_class: bytes &optional=True;
+    assigned_patient_location: bytes &optional=True;
+    admission_type: bytes &optional=True;
+    preadmit_number: bytes &optional=True;
+    prior_patient_location: bytes &optional=True;
+    attending_doctor: bytes &optional=True;
+    referring_doctor: bytes &optional=True;
+    consulting_doctor: bytes &optional=True;
+    hospital_service: bytes &optional=True;
+    temporary_location: bytes &optional=True;
+    preadmit_test_indicator: bytes &optional=True;
+    readmission_indicator: bytes &optional=True;
+    admit_source: bytes &optional=True;
+    ambulatory_status: bytes &optional=True;
+    vip_indicator: bytes &optional=True;
+    admitting_doctor: bytes &optional=True;
+    patient_type: bytes &optional=True;
+    visit_number: bytes &optional=True;
+    financial_class: bytes &optional=True;
+    charge_price_indicator: bytes &optional=True;
+    courtesy_code: bytes &optional=True;
+    credit_rating: bytes &optional=True;
+    contract_code: bytes &optional=True;
+    contract_effective_date: bytes &optional=True;
+    contract_amount: bytes &optional=True;
+    contract_period: bytes &optional=True;
+    interest_code: bytes &optional=True;
+    transfer_to_bad_debt_code: bytes &optional=True;
+    transfer_to_bad_debt_date: bytes &optional=True;
+    bad_debt_agency_code: bytes &optional=True;
+    bad_debt_transfer_amount: bytes &optional=True;
+    bad_debt_recovery_amount: bytes &optional=True;
+    discharge_disposition: bytes &optional=True;
+    discharged_to_location: bytes &optional=True;
+    diet_type: bytes &optional=True;
+    servicing_facility: bytes &optional=True;
+    bed_status: bytes &optional=True;
+    account_status: bytes &optional=True;
+    pending_location: bytes &optional=True;
+    prior_temporary_location: bytes &optional=True;
+    admit_datetime: bytes &optional=True;
+    discharge_datetime: bytes &optional=True;
+    current_patient_balance: bytes &optional=True;
+    total_charges: bytes &optional=True;
+    total_adjustments: bytes &optional=True;
+    total_payments: bytes &optional=True;
+    alternate_visit_id: bytes &optional=True;
+    visit_indicator: bytes &optional=True;
+    other_healthcare_provider: bytes &optional=True;
+};
+
+public type OBR = unit {};
+
+public type OBX = unit {};

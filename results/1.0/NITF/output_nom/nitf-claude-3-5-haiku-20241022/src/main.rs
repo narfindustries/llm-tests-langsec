@@ -1,172 +1,106 @@
 use nom::{
-    bytes::complete::{tag, take, take_until},
-    multi::{count, many0, many_m_n},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{tuple, preceded},
-    IResult, sequence::pair,
+    bytes::complete::{tag, take, take_while},
+    character::complete::{digit1, space0, space1},
+    combinator::{map, opt},
+    error::ParseError,
+    multi::{many0, many1, count},
+    sequence::{tuple, preceded, terminated},
+    IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
 
 #[derive(Debug)]
-struct NITFHeader {
-    file_profile_name: String,
-    file_version: String,
-    complexity_level: u8,
-    standard_type: String,
-    originating_station: String,
-    file_date_time: String,
-    file_title: Option<String>,
-    security_group: SecurityGroup,
-    extended_headers: Vec<ExtendedHeader>,
-    image_segments: Vec<ImageSegment>,
-}
-
-#[derive(Debug)]
-struct SecurityGroup {
-    security_classification: String,
-    security_system: String,
-    codewords: Option<String>,
-    control_and_handling: Option<String>,
-    releasing_instructions: Option<String>,
-    declassification_date: Option<String>,
-    declassification_exemption: Option<String>,
-    downgrade: Option<String>,
-    downgrade_date: Option<String>,
+struct NitfFileHeader {
+    fhdr: String,
+    fver: String,
+    clevel: u8,
+    stype: char,
+    encryp: u8,
+    originr: String,
+    oname: String,
+    ophone: String,
+    fl: u64,
+    numi: u16,
+    nums: u16,
+    numx: u16,
+    numd: u16,
+    numr: u16,
 }
 
 #[derive(Debug)]
-struct ExtendedHeader {
-    header_data_type: String,
-    header_data_length: u32,
-    header_data: Vec<u8>,
+struct NitfImageSegment {
+    im: String,
+    isclas: char,
+    encryp: u8,
+    imag: String,
+    tgtid: String,
+    ititle: String,
+    nsub: u8,
+    nbands: u16,
+    xbands: Option<u16>,
+    imode: char,
+    nbpp: u16,
+    ic: String,
+    comrat: String,
 }
 
-#[derive(Debug)]
-struct ImageSegment {
-    header: ImageSegmentHeader,
-    image_data: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct ImageSegmentHeader {
-    length: u32,
-    image_identifier: String,
-    image_datetime: String,
-    target_identifier: Option<String>,
-    image_title: Option<String>,
-    security_group: SecurityGroup,
-}
-
-fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NITFHeader> {
-    let (input, file_profile_name) = take(2usize)(input)?;
-    let (input, file_version) = take(2usize)(input)?;
-    let (input, complexity_level) = be_u8(input)?;
-    let (input, standard_type) = take(4usize)(input)?;
-    let (input, originating_station) = take(10usize)(input)?;
-    let (input, file_date_time) = take(14usize)(input)?;
-    let (input, file_title) = parse_optional_field(11)(input)?;
-    let (input, security_group) = parse_security_group(input)?;
-    let (input, extended_headers) = parse_extended_headers(input)?;
-    let (input, image_segments) = parse_image_segments(input)?;
-
-    Ok((input, NITFHeader {
-        file_profile_name: String::from_utf8_lossy(file_profile_name).to_string(),
-        file_version: String::from_utf8_lossy(file_version).to_string(),
-        complexity_level,
-        standard_type: String::from_utf8_lossy(standard_type).to_string(),
-        originating_station: String::from_utf8_lossy(originating_station).to_string(),
-        file_date_time: String::from_utf8_lossy(file_date_time).to_string(),
-        file_title: file_title.map(|f| String::from_utf8_lossy(&f).to_string()),
-        security_group,
-        extended_headers,
-        image_segments,
-    }))
-}
-
-fn parse_security_group(input: &[u8]) -> IResult<&[u8], SecurityGroup> {
-    let (input, security_classification) = take(1usize)(input)?;
-    let (input, security_system) = take(2usize)(input)?;
-    let (input, codewords) = parse_optional_field(11)(input)?;
-    let (input, control_and_handling) = parse_optional_field(11)(input)?;
-    let (input, releasing_instructions) = parse_optional_field(11)(input)?;
-    let (input, declassification_date) = parse_optional_field(8)(input)?;
-    let (input, declassification_exemption) = parse_optional_field(4)(input)?;
-    let (input, downgrade) = parse_optional_field(1)(input)?;
-    let (input, downgrade_date) = parse_optional_field(8)(input)?;
-
-    Ok((input, SecurityGroup {
-        security_classification: String::from_utf8_lossy(security_classification).to_string(),
-        security_system: String::from_utf8_lossy(security_system).to_string(),
-        codewords: codewords.map(|c| String::from_utf8_lossy(&c).to_string()),
-        control_and_handling: control_and_handling.map(|c| String::from_utf8_lossy(&c).to_string()),
-        releasing_instructions: releasing_instructions.map(|r| String::from_utf8_lossy(&r).to_string()),
-        declassification_date: declassification_date.map(|d| String::from_utf8_lossy(&d).to_string()),
-        declassification_exemption: declassification_exemption.map(|d| String::from_utf8_lossy(&d).to_string()),
-        downgrade: downgrade.map(|d| String::from_utf8_lossy(&d).to_string()),
-        downgrade_date: downgrade_date.map(|d| String::from_utf8_lossy(&d).to_string()),
-    }))
-}
-
-fn parse_optional_field(length: usize) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Vec<u8>>> {
-    move |input| {
-        let (input, field) = take(length)(input)?;
-        let optional_field = if field.iter().all(|&b| b == b' ') { None } else { Some(field.to_vec()) };
-        Ok((input, optional_field))
+fn parse_fixed_string<'a, E: ParseError<&'a [u8]>>(length: usize) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], String, E> {
+    move |input: &'a [u8]| {
+        let (input, result) = take(length)(input)?;
+        Ok((input, String::from_utf8_lossy(result).into_owned()))
     }
 }
 
-fn parse_extended_headers(input: &[u8]) -> IResult<&[u8], Vec<ExtendedHeader>> {
-    let (input, num_extended_headers) = be_u8(input)?;
-    let (input, extended_headers) = count(parse_extended_header, num_extended_headers as usize)(input)?;
-    Ok((input, extended_headers))
-}
+fn parse_nitf_file_header(input: &[u8]) -> IResult<&[u8], NitfFileHeader> {
+    let (input, fhdr) = parse_fixed_string(4)(input)?;
+    let (input, fver) = parse_fixed_string(5)(input)?;
+    let (input, clevel) = map(take(1usize), |b: &[u8]| b[0] - b'0')(input)?;
+    let (input, stype) = map(take(1usize), |b: &[u8]| b[0] as char)(input)?;
+    let (input, encryp) = map(take(1usize), |b: &[u8]| b[0] - b'0')(input)?;
+    let (input, originr) = parse_fixed_string(10)(input)?;
+    let (input, oname) = parse_fixed_string(24)(input)?;
+    let (input, ophone) = parse_fixed_string(18)(input)?;
+    let (input, fl) = map(take(12usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, numi) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, nums) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, numx) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, numd) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, numr) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
 
-fn parse_extended_header(input: &[u8]) -> IResult<&[u8], ExtendedHeader> {
-    let (input, header_data_type) = take(2usize)(input)?;
-    let (input, header_data_length) = be_u32(input)?;
-    let (input, header_data) = take(header_data_length as usize)(input)?;
-
-    Ok((input, ExtendedHeader {
-        header_data_type: String::from_utf8_lossy(header_data_type).to_string(),
-        header_data_length,
-        header_data: header_data.to_vec(),
+    Ok((input, NitfFileHeader {
+        fhdr, fver, clevel, stype, encryp, originr, 
+        oname, ophone, fl, numi, nums, numx, numd, numr
     }))
 }
 
-fn parse_image_segments(input: &[u8]) -> IResult<&[u8], Vec<ImageSegment>> {
-    let (input, num_image_segments) = be_u8(input)?;
-    let (input, image_segments) = count(parse_image_segment, num_image_segments as usize)(input)?;
-    Ok((input, image_segments))
-}
+fn parse_nitf_image_segment(input: &[u8]) -> IResult<&[u8], NitfImageSegment> {
+    let (input, im) = parse_fixed_string(2)(input)?;
+    let (input, isclas) = map(take(1usize), |b: &[u8]| b[0] as char)(input)?;
+    let (input, encryp) = map(take(1usize), |b: &[u8]| b[0] - b'0')(input)?;
+    let (input, imag) = parse_fixed_string(42)(input)?;
+    let (input, tgtid) = parse_fixed_string(20)(input)?;
+    let (input, ititle) = parse_fixed_string(80)(input)?;
+    let (input, nsub) = map(take(1usize), |b: &[u8]| b[0] - b'0')(input)?;
+    let (input, nbands) = map(take(3usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, xbands) = opt(map(take(5usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap()))(input)?;
+    let (input, imode) = map(take(1usize), |b: &[u8]| b[0] as char)(input)?;
+    let (input, nbpp) = map(take(2usize), |b: &[u8]| String::from_utf8_lossy(b).parse().unwrap())(input)?;
+    let (input, ic) = parse_fixed_string(2)(input)?;
+    let (input, comrat) = parse_fixed_string(4)(input)?;
 
-fn parse_image_segment(input: &[u8]) -> IResult<&[u8], ImageSegment> {
-    let (input, header) = parse_image_segment_header(input)?;
-    let (input, image_data) = take(header.length)(input)?;
-
-    Ok((input, ImageSegment {
-        header,
-        image_data: image_data.to_vec(),
+    Ok((input, NitfImageSegment {
+        im, isclas, encryp, imag, tgtid, ititle, 
+        nsub, nbands, xbands, imode, nbpp, ic, comrat
     }))
 }
 
-fn parse_image_segment_header(input: &[u8]) -> IResult<&[u8], ImageSegmentHeader> {
-    let (input, length) = be_u32(input)?;
-    let (input, image_identifier) = take(10usize)(input)?;
-    let (input, image_datetime) = take(14usize)(input)?;
-    let (input, target_identifier) = parse_optional_field(17)(input)?;
-    let (input, image_title) = parse_optional_field(80)(input)?;
-    let (input, security_group) = parse_security_group(input)?;
+fn parse_nitf(input: &[u8]) -> IResult<&[u8], (NitfFileHeader, Vec<NitfImageSegment>)> {
+    let (input, file_header) = parse_nitf_file_header(input)?;
+    let (input, image_segments) = count(parse_nitf_image_segment, file_header.numi as usize)(input)?;
 
-    Ok((input, ImageSegmentHeader {
-        length,
-        image_identifier: String::from_utf8_lossy(image_identifier).to_string(),
-        image_datetime: String::from_utf8_lossy(image_datetime).to_string(),
-        target_identifier: target_identifier.map(|t| String::from_utf8_lossy(&t).to_string()),
-        image_title: image_title.map(|t| String::from_utf8_lossy(&t).to_string()),
-        security_group,
-    }))
+    Ok((input, (file_header, image_segments)))
 }
 
 fn main() -> std::io::Result<()> {
@@ -180,14 +114,16 @@ fn main() -> std::io::Result<()> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_nitf_header(&buffer) {
-        Ok((_, nitf_header)) => {
-            println!("Successfully parsed NITF file: {:?}", nitf_header);
-            Ok(())
-        }
+    match parse_nitf(&buffer) {
+        Ok((_, (file_header, image_segments))) => {
+            println!("File Header: {:?}", file_header);
+            println!("Image Segments: {:?}", image_segments);
+        },
         Err(e) => {
-            eprintln!("Failed to parse NITF file: {:?}", e);
+            eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);
         }
     }
+
+    Ok(())
 }

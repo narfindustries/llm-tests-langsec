@@ -1,96 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://www.example.org/ARP"
-           xmlns="http://www.example.org/ARP"
-           elementFormDefault="qualified">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/arp"
+        xmlns:tns="http://example.com/arp"
+        elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:arpFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:format byteOrder="bigEndian" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
-  <dfdl:defineFormat name="arpFormat">
-    <dfdl:sequenceKind>ordered</dfdl:sequenceKind>
-    <dfdl:encoding>ascii</dfdl:encoding>
-    <dfdl:lengthKind>explicit</dfdl:lengthKind>
-    <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
-  </dfdl:defineFormat>
+    <element name="ARPHeader" type="tns:ARPHeaderType"/>
 
-  <xs:element name="ARP" type="ARPType">
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:format ref="tns:arpFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="ARPType">
-    <xs:sequence>
-      <xs:element name="HardwareType" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="ProtocolType" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="HardwareSize" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="ProtocolSize" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="Operation" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="SenderHardwareAddress" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:length="6" dfdl:lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="SenderProtocolAddress" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:length="4" dfdl:lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="TargetHardwareAddress" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:length="6" dfdl:lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="TargetProtocolAddress" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:length="4" dfdl:lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-</xs:schema>
+    <complexType name="ARPHeaderType">
+        <sequence>
+            <element name="hardwareType" type="unsignedShort">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="protocolType" type="unsignedShort">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="hardwareAddressLength" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="protocolAddressLength" type="unsignedByte">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="operation" type="unsignedShort">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
+                    </appinfo>
+                </annotation>
+            </element>
+            <element name="senderHardwareAddress">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                        <dfdl:length>{ ../hardwareAddressLength * 8 }</dfdl:length>
+                    </appinfo>
+                </annotation>
+                <simpleType>
+                    <restriction base="hexBinary"/>
+                </simpleType>
+            </element>
+            <element name="senderProtocolAddress">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                        <dfdl:length>{ ../protocolAddressLength * 8 }</dfdl:length>
+                    </appinfo>
+                </annotation>
+                <simpleType>
+                    <restriction base="hexBinary"/>
+                </simpleType>
+            </element>
+            <element name="targetHardwareAddress">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                        <dfdl:length>{ ../hardwareAddressLength * 8 }</dfdl:length>
+                    </appinfo>
+                </annotation>
+                <simpleType>
+                    <restriction base="hexBinary"/>
+                </simpleType>
+            </element>
+            <element name="targetProtocolAddress">
+                <annotation>
+                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                        <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                        <dfdl:length>{ ../protocolAddressLength * 8 }</dfdl:length>
+                    </appinfo>
+                </annotation>
+                <simpleType>
+                    <restriction base="hexBinary"/>
+                </simpleType>
+            </element>
+        </sequence>
+    </complexType>
+</schema>

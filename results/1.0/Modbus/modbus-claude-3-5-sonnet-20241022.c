@@ -1,71 +1,139 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-HParser* init_modbus_parser(void) {
-    // Function codes
-    H_RULE(fn_read_coils, h_int_range(h_uint8(), 0x01, 0x01));
-    H_RULE(fn_read_discrete_inputs, h_int_range(h_uint8(), 0x02, 0x02));
-    H_RULE(fn_read_holding_registers, h_int_range(h_uint8(), 0x03, 0x03));
-    H_RULE(fn_read_input_registers, h_int_range(h_uint8(), 0x04, 0x04));
-    H_RULE(fn_write_single_coil, h_int_range(h_uint8(), 0x05, 0x05));
-    H_RULE(fn_write_single_register, h_int_range(h_uint8(), 0x06, 0x06));
-    H_RULE(fn_write_multiple_coils, h_int_range(h_uint8(), 0x0F, 0x0F));
-    H_RULE(fn_write_multiple_registers, h_int_range(h_uint8(), 0x10, 0x10));
+// Parser declarations
+static HParser *transaction_id;
+static HParser *protocol_id;
+static HParser *length;
+static HParser *unit_id;
+static HParser *function_code;
+static HParser *starting_address;
+static HParser *quantity;
+static HParser *byte_count;
+static HParser *output_address;
+static HParser *output_value;
+static HParser *exception_code;
 
-    // Address fields
-    H_RULE(address, h_uint16());
-    H_RULE(quantity, h_uint16());
-    H_RULE(value, h_uint16());
-    H_RULE(byte_count, h_uint8());
-    H_RULE(coil_status, h_uint8());
-    H_RULE(output_value, h_uint16());
-    H_RULE(register_value, h_uint16());
+static HParsedToken* get_uint_action(const HParseResult *p, void* user_data) {
+    return (HParsedToken*)p->ast;
+}
 
-    // Data fields
-    H_RULE(coil_data, h_sequence(byte_count, h_many1(h_uint8())));
-    H_RULE(register_data, h_sequence(byte_count, h_many1(h_uint16())));
+static HParser* parse_read_request() {
+    return h_sequence(starting_address, quantity, NULL);
+}
 
-    // Request message formats
-    H_RULE(read_coils_req, h_sequence(fn_read_coils, address, quantity));
-    H_RULE(read_discrete_inputs_req, h_sequence(fn_read_discrete_inputs, address, quantity));
-    H_RULE(read_holding_registers_req, h_sequence(fn_read_holding_registers, address, quantity));
-    H_RULE(read_input_registers_req, h_sequence(fn_read_input_registers, address, quantity));
-    H_RULE(write_single_coil_req, h_sequence(fn_write_single_coil, address, output_value));
-    H_RULE(write_single_register_req, h_sequence(fn_write_single_register, address, register_value));
-    H_RULE(write_multiple_coils_req, h_sequence(fn_write_multiple_coils, address, quantity, coil_data));
-    H_RULE(write_multiple_registers_req, h_sequence(fn_write_multiple_registers, address, quantity, register_data));
+static HParser* parse_write_single() {
+    return h_sequence(output_address, output_value, NULL);
+}
 
-    // Response message formats
-    H_RULE(read_coils_resp, h_sequence(fn_read_coils, coil_data));
-    H_RULE(read_discrete_inputs_resp, h_sequence(fn_read_discrete_inputs, coil_data));
-    H_RULE(read_holding_registers_resp, h_sequence(fn_read_holding_registers, register_data));
-    H_RULE(read_input_registers_resp, h_sequence(fn_read_input_registers, register_data));
-    H_RULE(write_single_coil_resp, h_sequence(fn_write_single_coil, address, output_value));
-    H_RULE(write_single_register_resp, h_sequence(fn_write_single_register, address, register_value));
-    H_RULE(write_multiple_coils_resp, h_sequence(fn_write_multiple_coils, address, quantity));
-    H_RULE(write_multiple_registers_resp, h_sequence(fn_write_multiple_registers, address, quantity));
+static HParser* parse_write_multiple_request() {
+    return h_sequence(starting_address, 
+                     quantity,
+                     byte_count,
+                     h_length_value(byte_count, h_uint8()),
+                     NULL);
+}
 
-    // Main request and response rules
-    H_RULE(modbus_request, h_choice(read_coils_req,
-                                  read_discrete_inputs_req,
-                                  read_holding_registers_req,
-                                  read_input_registers_req,
-                                  write_single_coil_req,
-                                  write_single_register_req,
-                                  write_multiple_coils_req,
-                                  write_multiple_registers_req));
+static HParser* parse_read_response() {
+    return h_sequence(byte_count,
+                     h_length_value(byte_count, h_uint8()),
+                     NULL);
+}
 
-    H_RULE(modbus_response, h_choice(read_coils_resp,
-                                   read_discrete_inputs_resp,
-                                   read_holding_registers_resp,
-                                   read_input_registers_resp,
-                                   write_single_coil_resp,
-                                   write_single_register_resp,
-                                   write_multiple_coils_resp,
-                                   write_multiple_registers_resp));
+static HParser* parse_write_single_response() {
+    return h_sequence(output_address, output_value, NULL);
+}
 
-    // Top-level rule
-    H_RULE(modbus_message, h_choice(modbus_request, modbus_response));
+static HParser* parse_write_multiple_response() {
+    return h_sequence(starting_address, quantity, NULL);
+}
 
-    return modbus_message;
+static HParser* parse_exception_response() {
+    return h_sequence(h_uint8(), exception_code, NULL);
+}
+
+static HParser* init_modbus_parser() {
+    // Initialize all parser components
+    transaction_id = h_uint16();
+    protocol_id = h_uint16();
+    length = h_uint16();
+    unit_id = h_uint8();
+    function_code = h_uint8();
+    starting_address = h_uint16();
+    quantity = h_uint16();
+    byte_count = h_uint8();
+    output_address = h_uint16();
+    output_value = h_uint16();
+    exception_code = h_uint8();
+
+    HParser *pdu_choice = h_indirect();
+    HParser *modbus_tcp = h_sequence(transaction_id,
+                                   protocol_id,
+                                   length,
+                                   unit_id,
+                                   pdu_choice,
+                                   NULL);
+
+    HParser *pdu = h_sequence(function_code,
+        h_choice(h_left(parse_read_request(), h_ch(0x01)),
+                h_left(parse_read_request(), h_ch(0x02)),
+                h_left(parse_read_request(), h_ch(0x03)),
+                h_left(parse_read_request(), h_ch(0x04)),
+                h_left(parse_write_single(), h_ch(0x05)),
+                h_left(parse_write_single(), h_ch(0x06)),
+                h_left(parse_write_multiple_request(), h_ch(0x0F)),
+                h_left(parse_write_multiple_request(), h_ch(0x10)),
+                h_left(parse_exception_response(), h_bits(8, false)),
+                NULL),
+        NULL);
+
+    h_bind_indirect(pdu_choice, pdu);
+    return modbus_tcp;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t *input = malloc(size);
+    if (!input) {
+        perror("Failed to allocate memory");
+        fclose(f);
+        return 1;
+    }
+
+    if (fread(input, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(input);
+        fclose(f);
+        return 1;
+    }
+
+    HParser *modbus_parser = init_modbus_parser();
+    HParseResult *result = h_parse(modbus_parser, input, size);
+
+    if (!result) {
+        fprintf(stderr, "Parse failed\n");
+        free(input);
+        fclose(f);
+        return 1;
+    }
+
+    h_parse_result_free(result);
+    free(input);
+    fclose(f);
+    return 0;
 }

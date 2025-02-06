@@ -1,62 +1,43 @@
-domain DNS {
-  doc "Domain for DNS protocol"
-
-  type Message = struct {
+format dns {
+  dns_message: 
+    header: dns_header,
+    questions: repeat(dns_question, header.qdcount),
+    answers: repeat(dns_rr, header.ancount),
+    authorities: repeat(dns_rr, header.nscount),
+    additionals: repeat(dns_rr, header.arcount)
+  
+  dns_header: 
     id: uint16,
-    flags: uint16,
+    qr: uint1,
+    opcode: uint4,
+    aa: uint1,
+    tc: uint1,
+    rd: uint1,
+    ra: uint1,
+    z: uint3,
+    rcode: uint4,
     qdcount: uint16,
     ancount: uint16,
     nscount: uint16,
-    arcount: uint16,
-  }
-
-  type Question = struct {
-    name: string,
-    type: uint16,
-    class: uint16,
-  }
-
-  type Answer = struct {
-    name: uint16,
+    arcount: uint16
+  
+  dns_question: 
+    qname: domain_name,
+    qtype: uint16,
+    qclass: uint16
+  
+  dns_rr: 
+    name: domain_name,
     type: uint16,
     class: uint16,
     ttl: uint32,
     rdlength: uint16,
-    rdata: string,
-  }
-
-  grammar TOP {
-    entry = message,
-    message = Message,
-    question = Question,
-    answer = Answer,
-  }
-
-  grammar Message {
-    id = uint16: big-endian,
-    flags = uint16: big-endian,
-    qdcount = uint16: big-endian,
-    ancount = uint16: big-endian,
-    nscount = uint16: big-endian,
-    arcount = uint16: big-endian,
-    questions = list(qdcount, question),
-    answers = list(ancount, answer),
-    authorities = list(nscount, answer),
-    additionals = list(arcount, answer),
-  }
-
-  grammar Question {
-    name = string { length = -1, encoding = "ascii" },
-    type = uint16: big-endian,
-    class = uint16: big-endian,
-  }
-
-  grammar Answer {
-    name = uint16: big-endian,
-    type = uint16: big-endian,
-    class = uint16: big-endian,
-    ttl = uint32: big-endian,
-    rdlength = uint16: big-endian,
-    rdata = string { length = rdlength, encoding = "ascii" },
-  }
+    rdata: bytes with length rdlength
+  
+  domain_name: 
+    repeat(label, 1..)
+  
+  label: 
+    length: uint8,
+    data: bytes with length length
 }

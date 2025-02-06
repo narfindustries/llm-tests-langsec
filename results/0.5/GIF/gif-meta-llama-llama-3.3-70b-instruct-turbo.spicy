@@ -1,41 +1,67 @@
-# Import necessary modules
-%import basic
+module GIF;
 
-# Define the GIF file format
-file Gif {
-  # Signature
-  magic: uint16 = 0x4749;
-  version: string(3);
+type gif_signature = byte[3] align(1) = "GIF";
+type gif_version = byte[3] align(1) = "87a" | "89a";
 
-  # Logical Screen Descriptor
-  width: uint16;
-  height: uint16;
-  flags: uint8;
-  bg_color: uint8;
-  aspect: uint8;
+type packed_fields = struct {
+  global_color_table_flag: uint1;
+  color_resolution: uint3;
+  sort_flag: uint2;
+  size_of_global_color_table: uint2;
+} align(1);
 
-  # Global Color Table
-  gct: array(uint8, 768);
+type logical_screen_descriptor = struct {
+  logical_screen_width: uint16 align(2);
+  logical_screen_height: uint16 align(2);
+  packed_fields: packed_fields;
+  background_color_index: uint8;
+  pixel_aspect_ratio: uint8;
+} align(1);
 
-  # Image Data
-  images: array(Image);
-}
+type color_table_entry = struct {
+  red: uint8;
+  green: uint8;
+  blue: uint8;
+} align(1);
 
-# Define the Image structure
-type Image {
-  # Image Separator
-  separator: uint8 = 0x2C;
+type global_color_table = array(256) of color_table_entry;
 
-  # Image Descriptor
-  left: uint16;
-  top: uint16;
-  width: uint16;
-  height: uint16;
-  flags: uint8;
+type image_separator = byte align(1) = 0x2c;
 
-  # Local Color Table
-  lct: array(uint8, 768);
+type packed_fields_image = struct {
+  local_color_table_flag: uint1;
+  interlace_flag: uint1;
+  sort_flag: uint1;
+  reserved: uint3;
+  size_of_local_color_table: uint2;
+} align(1);
 
-  # Image Data
-  data: array(uint8, width * height);
-}
+type image_descriptor = struct {
+  image_separator: image_separator;
+  image_left: uint16 align(2);
+  image_top: uint16 align(2);
+  image_width: uint16 align(2);
+  image_height: uint16 align(2);
+  packed_fields_image: packed_fields_image;
+} align(1);
+
+type local_color_table = array(256) of color_table_entry;
+
+type lzw_compressed_data = byte[];
+
+type image = struct {
+  image_descriptor: image_descriptor;
+  local_color_table: optional(local_color_table);
+  lzw_compressed_data: lzw_compressed_data;
+};
+
+type gif_file = struct {
+  signature: gif_signature;
+  version: gif_version;
+  logical_screen_descriptor: logical_screen_descriptor;
+  global_color_table: global_color_table;
+  images: array(*) of image;
+  trailer: byte align(1) = 0x3b;
+} align(1);
+
+let gif_file_p = gif_file;

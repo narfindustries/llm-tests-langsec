@@ -1,57 +1,119 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns="http://example.com/ICMP"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/ICMP" 
+           xmlns="http://example.com/ICMP" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="icmp">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format encoding="US-ASCII" CheckAllBufferedEvents="true"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="icmpMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="type" type="xs:unsignedByte" dfdl:sequenceKind="element">
+        <xs:element name="type" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:occurs count="1"/>
-              <dfdl:byteOrder="bigEndian"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+              <dfdl:property name="dfdl:length" value="1"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:type" value="uint"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="code" type="xs:unsignedByte" dfdl:sequenceKind="element">
+        <xs:element name="code" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:occurs count="1"/>
-              <dfdl:byteOrder="bigEndian"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+              <dfdl:property name="dfdl:length" value="1"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:type" value="uint"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="checksum" type="xs:unsignedShort" dfdl:sequenceKind="element">
+        <xs:element name="checksum" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:occurs count="1"/>
-              <dfdl:byteOrder="bigEndian"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+              <dfdl:property name="dfdl:length" value="2"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:type" value="uint"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="identifier" type="xs:unsignedShort" dfdl:sequenceKind="element">
+        <xs:element name="identifier" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:occurs count="1"/>
-              <dfdl:byteOrder="bigEndian"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+              <dfdl:property name="dfdl:length" value="2"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:type" value="uint"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:sequenceKind="element">
+        <xs:element name="sequenceNumber" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:occurs count="1"/>
-              <dfdl:byteOrder="bigEndian"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+              <dfdl:property name="dfdl:length" value="2"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:type" value="uint"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="unused" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:property name="dfdl:length" value="0..65527"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="bytes"/>
+              <dfdl:property name="dfdl:occurs" value="0..1"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="internetHeader" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:property name="dfdl:length" value="20..60"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="bytes"/>
+              <dfdl:property name="dfdl:occurs" value="0..1"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="originalDatagram" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:property name="dfdl:length" value="0..65515"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="bytes"/>
+              <dfdl:property name="dfdl:occurs" value="0..1"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="gatewayInternetAddress" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:property name="dfdl:length" value="4"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="bytes"/>
+              <dfdl:property name="dfdl:occurs" value="0..1"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="mtu" type="xs:unsignedShort" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:property name="dfdl:length" value="2"/>
+              <dfdl:property name="dfdl:encoding" value="binary"/>
+              <dfdl:property name="dfdl:representation" value="uint"/>
+              <dfdl:property name="dfdl:occurs" value="0..1"/>
+              <dfdl:property name="dfdl:byteOrder" value="big"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>

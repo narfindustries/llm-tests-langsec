@@ -1,119 +1,112 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while1},
-    character::complete::{char, space0, space1},
-    combinator::{map, opt},
-    multi::{many0, many1},
-    sequence::{delimited, preceded, separated_pair, tuple},
+    character::complete::{char, digit1, multispace0, multispace1},
+    combinator::{map_res, recognize},
+    multi::{many0},
+    sequence::{preceded, separated_pair, tuple},
     IResult,
 };
-use nom::error::ErrorKind;
+use std::{
+    collections::HashMap,
+    env,
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+};
 
-fn crlf(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    tag("\r\n")(input)
+#[derive(Debug, PartialEq)]
+enum HttpMessage {
+    Request { method: String, request_uri: String, http_version: String, headers: HashMap<String, String> },
+    Response { status_code: u16, reason_phrase: String, headers: HashMap<String, String> },
 }
 
-fn parse_token(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    take_while1(|c| match c {
-        b' ' | b'\t' | b'\r' | b'\n' | b'(' | b')' | b'<' | b'>' | b'@' | b',' | b';' | b':' | b'\\' | b'\"' | b'/' | b'[' | b']' | b'?' | b'=' | b'{' | b'}' | b' ' => false,
-        _ => true,
-    })(input)
+fn http_version(input: &str) -> IResult<&str, &str> {
+    recognize(tuple((tag("HTTP/"), digit1, char('.'), digit1)))(input)
 }
 
-fn parse_quoted_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    preceded(
-        char('\"'),
-        delimited(
-            space0,
-            take_while1(|c| *c != b'\"' && *c != b'\\'),
-            delimited(space0, tag("\\"), space0),
-        ),
-    )(input)
-    .or_delimited(
-        char('\"'),
-        alt((parse_token, parse_quoted_string)),
-        char('\"'),
-    )
+fn method(input: &str) -> IResult<&str, &str> {
+    alt((tag("GET"), tag("HEAD"), tag("POST"), tag("PUT"), tag("DELETE"), tag("CONNECT"), tag("OPTIONS")))(input)
 }
 
-fn parse_field_value(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    alt((parse_token, parse_quoted_string))(input)
+fn request_uri(input: &str) -> IResult<&str, &str> {
+    recognize(take_while1(|c| c != ' '))(input)
 }
 
-fn parse_field(input: &[u8]) -> IResult<&[u8], (String, String)> {
-    separated_pair(
-        map(parse_token, |v| String::from_utf8_lossy(v).into_owned()),
-        tag(":"),
-        parse_field_value,
-    )(input)
+fn request_line(input: &str) -> IResult<&str, (&str, &str, &str, &str)> {
+    tuple((method, multispace1, request_uri, multispace1, http_version))(input)
 }
 
-fn parse_fields(input: &[u8]) -> IResult<&[u8], Vec<(String, String)>> {
-    many0(preceded(space0, parse_field))(input)
+fn header_name(input: &str) -> IResult<&str, &str> {
+    recognize(take_while1(|c| c != ':'))(input)
 }
 
-fn parse_request_line(input: &[u8]) -> IResult<&[u8], (String, String, String)> {
-    tuple((
-        map(parse_token, |v| String::from_utf8_lossy(v).into_owned()),
-        map(parse_token, |v| String::from_utf8_lossy(v).into_owned()),
-        map(
-            delimited(tag("HTTP/"), parse_token, tag("\r\n")),
-            |v| String::from_utf8_lossy(v).into_owned(),
-        ),
-    ))(input)
+fn header_value(input: &str) -> IResult<&str, &str> {
+    recognize(preceded(multispace1, take_while1(|c| c != '\r' && c != '\n')))(input)
 }
 
-fn parse_response_line(input: &[u8]) -> IResult<&[u8], (String, u16, String)> {
-    tuple((
-        map(tag("HTTP/"), |_| String::from("HTTP")),
-        map(delimited(tag(" "), parse_token, tag(" ")), |v| {
-            String::from_utf8_lossy(v)
-                .parse::<u16>()
-                .unwrap()
-        }),
-        map(delimited(space1, parse_token, crlf), |v| {
-            String::from_utf8_lossy(v).into_owned()
-        }),
-    ))(input)
+fn header(input: &str) -> IResult<&str, (&str, &str)> {
+    separated_pair(header_name, char(':'), header_value)(input)
 }
 
-fn parse_request(input: &[u8]) -> IResult<&[u8], (String, String, String, Vec<(String, String)>)> {
-    tuple((
-        parse_request_line,
-        parse_fields,
-        opt(preceded(crlf, parse_fields)),
-        crlf,
-    ))(input)
+fn headers(input: &str) -> IResult<&str, HashMap<String, String>> {
+    let mut headers = HashMap::new();
+    let (input, headers_list) = many0(header)(input)?;
+    for (name, value) in headers_list {
+        headers.insert(name.to_string(), value.to_string());
+    }
+    Ok((input, headers))
 }
 
-fn parse_response(input: &[u8]) -> IResult<&[u8], (String, u16, String, Vec<(String, String)>)> {
-    tuple((
-        parse_response_line,
-        parse_fields,
-        opt(preceded(crlf, parse_fields)),
-        crlf,
-    ))(input)
+fn request(input: &str) -> IResult<&str, HttpMessage> {
+    let (input, (method, request_uri, _, http_version, headers)) = tuple((method, multispace1, request_uri, multispace1, http_version, multispace0, headers))(input)?;
+    Ok((input, HttpMessage::Request { method: method.to_string(), request_uri: request_uri.to_string(), http_version: http_version.to_string(), headers }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn status_code(input: &str) -> IResult<&str, u16> {
+    map_res(recognize(digit1), |s: &str| s.parse::<u16>())(input)
+}
+
+fn reason_phrase(input: &str) -> IResult<&str, &str> {
+    recognize(take_while1(|c| c != '\r' && c != '\n'))(input)
+}
+
+fn status_line(input: &str) -> IResult<&str, (u16, &str)> {
+    tuple((http_version, multispace1, status_code, multispace1, reason_phrase))(input)
+}
+
+fn response(input: &str) -> IResult<&str, HttpMessage> {
+    let (input, (_, status_code, reason_phrase, headers)) = tuple((http_version, multispace1, status_code, multispace1, reason_phrase, multispace0, headers))(input)?;
+    Ok((input, HttpMessage::Response { status_code, reason_phrase: reason_phrase.to_string(), headers }))
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        panic!("Usage: {} <file>", args[0]);
+        eprintln!("Usage: {} <input_file>", args[0]);
+        return;
     }
-    let mut file = File::open(&args[1])?;
-    let mut input = Vec::new();
-    file.read_to_end(&mut input)?;
-    let result = alt((parse_request, parse_response))(&input);
+    let input_file = &args[1];
+    let path = Path::new(input_file);
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            return;
+        }
+    };
+    let mut reader = BufReader::new(file);
+    let mut input = String::new();
+    match reader.read_to_string(&mut input) {
+        Ok(_) => (),
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+            return;
+        }
+    }
+    let result = alt((request, response))(&input);
     match result {
-        Ok((remaining, value)) => {
-            println!("{:?}", value);
-        }
-        Err(e) => {
-            println!("Error: {:?}", e);
-        }
+        Ok((_, output)) => println!("{:?}", output),
+        Err(err) => eprintln!("Error parsing input: {:?}", err),
     }
-    Ok(())
 }

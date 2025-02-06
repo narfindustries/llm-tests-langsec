@@ -1,26 +1,132 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/jpeg"
            xmlns:tns="http://example.com/jpeg">
 
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+  <xs:include schemaLocation="JPEGGeneralFormat.xsd"/>
 
-  <xs:element name="JPEGFile" dfdl:lengthKind="delimited">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
-        <xs:element name="segments" type="tns:Segment" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:terminator="0xFFD9"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="JPEGFile" type="tns:JPEGFileType"/>
 
-  <xs:complexType name="Segment">
+  <xs:complexType name="JPEGFileType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ . - 2 }"/>
+      <xs:element name="StartOfImage" type="tns:MarkerType"/>
+      <xs:element name="Segments" type="tns:SegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="EndOfImage" type="tns:MarkerType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:choice>
+      <xs:element name="APPn" type="tns:APPnType"/>
+      <xs:element name="DQT" type="tns:DQTType"/>
+      <xs:element name="SOF0" type="tns:SOF0Type"/>
+      <xs:element name="DHT" type="tns:DHTType"/>
+      <xs:element name="SOS" type="tns:SOSType"/>
+      <xs:element name="Comment" type="tns:CommentType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APPnType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="QuantizationTables" type="tns:QuantizationTablesType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuantizationTablesType">
+    <xs:sequence>
+      <xs:element name="QuantizationTable" type="tns:QuantizationTableType" minOccurs="1" maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuantizationTableType">
+    <xs:sequence>
+      <xs:element name="TableInfo" type="xs:byte"/>
+      <xs:element name="TableData" type="xs:hexBinary" dfdl:length="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="Precision" type="xs:byte"/>
+      <xs:element name="ImageHeight" type="xs:int" dfdl:length="2"/>
+      <xs:element name="ImageWidth" type="xs:int" dfdl:length="2"/>
+      <xs:element name="NumComponents" type="xs:byte"/>
+      <xs:element name="Components" type="tns:ComponentSpecType" minOccurs="1" maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentSpecType">
+    <xs:sequence>
+      <xs:element name="ComponentId" type="xs:byte"/>
+      <xs:element name="SamplingFactors" type="xs:byte"/>
+      <xs:element name="QuantTableId" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="HuffmanTables" type="tns:HuffmanTablesType" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HuffmanTablesType">
+    <xs:sequence>
+      <xs:element name="HuffmanTable" type="tns:HuffmanTableType" minOccurs="1" maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HuffmanTableType">
+    <xs:sequence>
+      <xs:element name="TableInfo" type="xs:byte"/>
+      <xs:element name="Lengths" type="xs:hexBinary" dfdl:length="16"/>
+      <xs:element name="Values" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0xFF"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="NumComponents" type="xs:byte"/>
+      <xs:element name="Components" type="tns:ScanComponentType" minOccurs="1" maxOccurs="4"/>
+      <xs:element name="StartSpectral" type="xs:byte"/>
+      <xs:element name="EndSpectral" type="xs:byte"/>
+      <xs:element name="SuccessiveApprox" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ScanComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentSelector" type="xs:byte"/>
+      <xs:element name="HuffmanTableSelector" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CommentType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="CommentData" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:Length - 2 }"/>
     </xs:sequence>
   </xs:complexType>
 

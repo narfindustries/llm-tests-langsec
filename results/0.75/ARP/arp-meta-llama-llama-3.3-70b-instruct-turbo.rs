@@ -1,22 +1,14 @@
-use nom::{
-    bytes::complete::{take, tag},
-    combinator::{map, verify},
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u32, be_u8},
-    IResult,
-};
-use std::env;
-use std::fs::File;
-use std::io::{Read, stderr, Write};
+use nom::{bytes::complete::take, combinator::map, IResult};
+use std::{env, fs};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum HardwareType {
     Ethernet,
     ExperimentalEthernet,
-    Ax25,
-    ProteonProNET,
+    AmateurRadioAX25,
+    ProteonProNETTokenRing,
     Chaos,
-    IEEE802,
+    Ieee802Networks,
     Arcnet,
     Hyperchannel,
     Lanstar,
@@ -24,89 +16,35 @@ enum HardwareType {
     LocalTalk,
     LocalNet,
     UltraLink,
-    Smile,
-    Fiber DistributedDataInterface,
+    SmDS,
+    FrameRelay,
+    ATM,
+    HDLC,
+    FibreChannel,
+    SerialLine,
     Other(u16),
 }
 
-impl HardwareType {
-    fn parse(input: &[u8]) -> IResult<&[u8], HardwareType> {
-        map(be_u16, |n| match n {
-            1 => HardwareType::Ethernet,
-            2 => HardwareType::ExperimentalEthernet,
-            3 => HardwareType::Ax25,
-            4 => HardwareType::ProteonProNET,
-            5 => HardwareType::Chaos,
-            6 => HardwareType::IEEE802,
-            7 => HardwareType::Arcnet,
-            8 => HardwareType::Hyperchannel,
-            9 => HardwareType::Lanstar,
-            10 => HardwareType::AutonetShortAddress,
-            11 => HardwareType::LocalTalk,
-            12 => HardwareType::LocalNet,
-            13 => HardwareType::UltraLink,
-            14 => HardwareType::Smile,
-            15 => HardwareType::FiberDistributedDataInterface,
-            _ => HardwareType::Other(n),
-        })(input)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum ProtocolType {
-    IPv4,
-    IPv6,
+    Ipv4,
+    Arp,
+    Rarp,
+    Trill,
+    Ipv6,
     Other(u16),
 }
 
-impl ProtocolType {
-    fn parse(input: &[u8]) -> IResult<&[u8], ProtocolType> {
-        map(be_u16, |n| match n {
-            0x0800 => ProtocolType::IPv4,
-            0x86dd => ProtocolType::IPv6,
-            _ => ProtocolType::Other(n),
-        })(input)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Operation {
     Request,
     Reply,
     RequestReverse,
     ReplyReverse,
-    DRARPRequest,
-    DRARPReply,
-    DRARPError,
-    InARPRequest,
-    InARPReply,
-    ARPNAK,
-    M ARPRequest,
-    MARPReply,
     Other(u16),
 }
 
-impl Operation {
-    fn parse(input: &[u8]) -> IResult<&[u8], Operation> {
-        map(be_u16, |n| match n {
-            1 => Operation::Request,
-            2 => Operation::Reply,
-            3 => Operation::RequestReverse,
-            4 => Operation::ReplyReverse,
-            5 => Operation::DRARPRequest,
-            6 => Operation::DRARPReply,
-            7 => Operation::DRARPError,
-            8 => Operation::InARPRequest,
-            9 => Operation::InARPReply,
-            10 => Operation::ARPNAK,
-            11 => Operation::MARPRequest,
-            12 => Operation::MARPReply,
-            _ => Operation::Other(n),
-        })(input)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ArpPacket {
     hardware_type: HardwareType,
     protocol_type: ProtocolType,
@@ -119,45 +57,126 @@ struct ArpPacket {
     target_protocol_address: Vec<u8>,
 }
 
-impl ArpPacket {
-    fn parse(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-        let (input, hardware_type) = HardwareType::parse(input)?;
-        let (input, protocol_type) = ProtocolType::parse(input)?;
-        let (input, hardware_address_length) = be_u8(input)?;
-        let (input, protocol_address_length) = be_u8(input)?;
-        let (input, operation) = Operation::parse(input)?;
-        let (input, sender_hardware_address) = take(hardware_address_length as usize)(input)?;
-        let (input, sender_protocol_address) = take(protocol_address_length as usize)(input)?;
-        let (input, target_hardware_address) = take(hardware_address_length as usize)(input)?;
-        let (input, target_protocol_address) = take(protocol_address_length as usize)(input)?;
-        Ok((
-            input,
-            ArpPacket {
-                hardware_type,
-                protocol_type,
-                hardware_address_length,
-                protocol_address_length,
-                operation,
-                sender_hardware_address: sender_hardware_address.to_vec(),
-                sender_protocol_address: sender_protocol_address.to_vec(),
-                target_hardware_address: target_hardware_address.to_vec(),
-                target_protocol_address: target_protocol_address.to_vec(),
-            },
-        ))
-    }
+fn parse_hardware_type(input: &[u8]) -> IResult<&[u8], HardwareType> {
+    map(take(2usize), |input: &[u8]| {
+        let value = u16::from_be_bytes([input[0], input[1]]);
+        match value {
+            1 => HardwareType::Ethernet,
+            2 => HardwareType::ExperimentalEthernet,
+            3 => HardwareType::AmateurRadioAX25,
+            4 => HardwareType::ProteonProNETTokenRing,
+            5 => HardwareType::Chaos,
+            6 => HardwareType::Ieee802Networks,
+            7 => HardwareType::Arcnet,
+            8 => HardwareType::Hyperchannel,
+            9 => HardwareType::Lanstar,
+            10 => HardwareType::AutonetShortAddress,
+            11 => HardwareType::LocalTalk,
+            12 => HardwareType::LocalNet,
+            13 => HardwareType::UltraLink,
+            14 => HardwareType::SmDS,
+            15 => HardwareType::FrameRelay,
+            16 => HardwareType::ATM,
+            17 => HardwareType::HDLC,
+            18 => HardwareType::FibreChannel,
+            20 => HardwareType::SerialLine,
+            _ => HardwareType::Other(value),
+        }
+    })(input)
+}
+
+fn parse_protocol_type(input: &[u8]) -> IResult<&[u8], ProtocolType> {
+    map(take(2usize), |input: &[u8]| {
+        let value = u16::from_be_bytes([input[0], input[1]]);
+        match value {
+            0x0800 => ProtocolType::Ipv4,
+            0x0806 => ProtocolType::Arp,
+            0x0835 => ProtocolType::Rarp,
+            0x22F3 => ProtocolType::Trill,
+            0x86DD => ProtocolType::Ipv6,
+            _ => ProtocolType::Other(value),
+        }
+    })(input)
+}
+
+fn parse_hardware_address_length(input: &[u8]) -> IResult<&[u8], u8> {
+    map(take(1usize), |input: &[u8]| input[0])(input)
+}
+
+fn parse_protocol_address_length(input: &[u8]) -> IResult<&[u8], u8> {
+    map(take(1usize), |input: &[u8]| input[0])(input)
+}
+
+fn parse_operation(input: &[u8]) -> IResult<&[u8], Operation> {
+    map(take(2usize), |input: &[u8]| {
+        let value = u16::from_be_bytes([input[0], input[1]]);
+        match value {
+            1 => Operation::Request,
+            2 => Operation::Reply,
+            3 => Operation::RequestReverse,
+            4 => Operation::ReplyReverse,
+            _ => Operation::Other(value),
+        }
+    })(input)
+}
+
+fn parse_address(input: &[u8], length: u8) -> IResult<&[u8], Vec<u8>> {
+    map(take(length as usize), |input: &[u8]| input.to_vec())(input)
+}
+
+fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
+    let (input, hardware_type) = parse_hardware_type(input)?;
+    let (input, protocol_type) = parse_protocol_type(input)?;
+    let (input, hardware_address_length) = parse_hardware_address_length(input)?;
+    let (input, protocol_address_length) = parse_protocol_address_length(input)?;
+    let (input, operation) = parse_operation(input)?;
+    let (input, sender_hardware_address) = parse_address(input, hardware_address_length)?;
+    let (input, sender_protocol_address) = parse_address(input, protocol_address_length)?;
+    let (input, target_hardware_address) = parse_address(input, hardware_address_length)?;
+    let (input, target_protocol_address) = parse_address(input, protocol_address_length)?;
+
+    Ok((input, ArpPacket {
+        hardware_type,
+        protocol_type,
+        hardware_address_length,
+        protocol_address_length,
+        operation,
+        sender_hardware_address,
+        sender_protocol_address,
+        target_hardware_address,
+        target_protocol_address,
+    }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        writeln!(stderr(), "Usage: {} <file>", args[0]).unwrap();
+        println!("Usage: {} <input_file>", args[0]);
         return;
     }
-    let mut file = File::open(&args[1]).unwrap();
-    let mut data = Vec::new();
-    file.read_to_end(&mut data).unwrap();
-    match ArpPacket::parse(&data) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(e) => writeln!(stderr(), "Error: {}", e).unwrap(),
+
+    let input_file = &args[1];
+    let input = fs::read(input_file).expect("Failed to read input file");
+
+    match parse_arp_packet(&input) {
+        Ok((remaining, packet)) => {
+            println!("ARP Packet:");
+            println!("  Hardware Type: {:?}", packet.hardware_type);
+            println!("  Protocol Type: {:?}", packet.protocol_type);
+            println!("  Hardware Address Length: {}", packet.hardware_address_length);
+            println!("  Protocol Address Length: {}", packet.protocol_address_length);
+            println!("  Operation: {:?}", packet.operation);
+            println!("  Sender Hardware Address: {:?}", packet.sender_hardware_address);
+            println!("  Sender Protocol Address: {:?}", packet.sender_protocol_address);
+            println!("  Target Hardware Address: {:?}", packet.target_hardware_address);
+            println!("  Target Protocol Address: {:?}", packet.target_protocol_address);
+
+            if remaining.len() > 0 {
+                println!("Warning: {} bytes remaining after parsing", remaining.len());
+            }
+        }
+        Err(err) => {
+            println!("Error parsing ARP packet: {}", err);
+        }
     }
 }

@@ -1,52 +1,197 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/hl7-v2"
-           xmlns:tns="http://example.com/hl7-v2"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+           targetNamespace="http://example.com/hl7"
+           xmlns:tns="http://example.com/hl7"
+           elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:hl7Format"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format
+                initiator=""
+                terminator="%LF;%CR;%CR;%LF;"
+                separator="|"
+                textNumberRep="standard"
+                textStringPadCharacter="%SP;"
+                textTrimKind="padChar"
+                textNumberCheckPolicy="lax"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <dfdl:format name="hl7Format"
-               initiator="%x0B"
-               terminator="%x1C%x0D"
-               textNumberRep="standard"
-               textStandardBase="10"
-               textStandardZeroRep="0"
-               textBooleanTrueRep="T"
-               textBooleanFalseRep="F"
-               textStringPadCharacter="%SP;"
-               textTrimKind="both"
-               lengthKind="delimited"
-               encoding="UTF-8"/>
+    <xs:element name="HL7Message">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="MSH" type="tns:MSHType"/>
+                <xs:element name="PID" type="tns:PIDType" minOccurs="0"/>
+                <!-- Add other segments as needed -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:element name="HL7Message">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="MSH" type="tns:SegmentType"/>
-        <xs:element name="Segments" type="tns:SegmentType" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
+    <xs:complexType name="MSHType">
+        <xs:sequence>
+            <xs:element name="FieldSeparator" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="explicit"/>
+                        <dfdl:property name="length" value="1"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="EncodingCharacters" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="explicit"/>
+                        <dfdl:property name="length" value="4"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SendingApplication" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="SendingFacility" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="ReceivingApplication" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="ReceivingFacility" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="DateTimeOfMessage" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="MessageType" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="MessageControlID" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="ProcessingID" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="VersionID" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
 
-  <xs:complexType name="SegmentType">
-    <xs:sequence>
-      <xs:element name="Field" type="tns:FieldType" minOccurs="1" maxOccurs="unbounded"/>
-    </xs:sequence>
-    <xs:attribute name="segmentId" type="xs:string" use="required"/>
-  </xs:complexType>
-
-  <xs:complexType name="FieldType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="fieldId" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
+    <xs:complexType name="PIDType">
+        <xs:sequence>
+            <xs:element name="SetID" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="PatientID" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="PatientIdentifierList" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="AlternatePatientID" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="PatientName" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="MotherMaidenName" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="DateTimeOfBirth" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="AdministrativeSex" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="PatientAlias" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Race" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="PatientAddress" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:property name="lengthKind" value="delimited"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <!-- Add other fields as needed -->
+        </xs:sequence>
+    </xs:complexType>
 
 </xs:schema>

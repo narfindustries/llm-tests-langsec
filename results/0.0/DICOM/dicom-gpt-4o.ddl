@@ -1,57 +1,74 @@
-namespace DICOM
+namespace DICOM;
 
-// Define the DICOM file format
-type DICOMFile = struct {
-    preamble: bytes(128); // 128-byte preamble
-    prefix: "DICM"; // 4-byte DICOM prefix
-    elements: list<DICOMElement>; // List of DICOM elements
-}
+// Define basic types
+type UID = string;
+type Date = string;
+type Time = string;
+type PersonName = string;
+type String = string;
+type IntegerString = string;
+type DecimalString = string;
 
-// Define a DICOM element
-type DICOMElement = struct {
-    tag: DICOMTag; // DICOM tag
-    vr: VR; // Value Representation
-    length: uint32; // Length of the value
-    value: bytes(length); // Value of the element
-}
+// DICOM Data Element
+struct DataElement {
+    tag: uint16[2];
+    vr: string[2];
+    length: uint32;
+    value: bytes(length);
+};
 
-// Define a DICOM tag
-type DICOMTag = struct {
-    group: uint16; // Group number
-    element: uint16; // Element number
-}
+// DICOM File Meta Information
+struct FileMetaInformation {
+    groupLength: uint32;
+    sopClassUID: UID;
+    sopInstanceUID: UID;
+    transferSyntaxUID: UID;
+    implementationClassUID: UID;
+    implementationVersionName: String;
+};
 
-// Define Value Representation (VR)
-enum VR : string {
-    "AE", // Application Entity
-    "AS", // Age String
-    "AT", // Attribute Tag
-    "CS", // Code String
-    "DA", // Date
-    "DS", // Decimal String
-    "DT", // DateTime
-    "FL", // Floating Point Single
-    "FD", // Floating Point Double
-    "IS", // Integer String
-    "LO", // Long String
-    "LT", // Long Text
-    "OB", // Other Byte
-    "OD", // Other Double
-    "OF", // Other Float
-    "OL", // Other Long
-    "OW", // Other Word
-    "PN", // Person Name
-    "SH", // Short String
-    "SL", // Signed Long
-    "SQ", // Sequence of Items
-    "SS", // Signed Short
-    "ST", // Short Text
-    "TM", // Time
-    "UC", // Unlimited Characters
-    "UI", // Unique Identifier
-    "UL", // Unsigned Long
-    "UN", // Unknown
-    "UR", // URI/URL
-    "US", // Unsigned Short
-    "UT"  // Unlimited Text
-}
+// DICOM Patient Module
+struct PatientModule {
+    patientName: PersonName;
+    patientID: String;
+    patientBirthDate: Date;
+    patientSex: String;
+};
+
+// DICOM Study Module
+struct StudyModule {
+    studyInstanceUID: UID;
+    studyDate: Date;
+    studyTime: Time;
+    referringPhysicianName: PersonName;
+    studyID: String;
+    accessionNumber: String;
+};
+
+// DICOM Series Module
+struct SeriesModule {
+    seriesInstanceUID: UID;
+    seriesNumber: IntegerString;
+    modality: String;
+    seriesDescription: String;
+};
+
+// DICOM Image Module
+struct ImageModule {
+    imageType: String;
+    instanceNumber: IntegerString;
+    patientOrientation: String;
+    imagePositionPatient: DecimalString[3];
+    imageOrientationPatient: DecimalString[6];
+    pixelSpacing: DecimalString[2];
+};
+
+// DICOM Dataset
+struct DICOMDataset {
+    fileMetaInformation: FileMetaInformation;
+    patientModule: PatientModule;
+    studyModule: StudyModule;
+    seriesModule: SeriesModule;
+    imageModule: ImageModule;
+    dataElements: DataElement[];
+};

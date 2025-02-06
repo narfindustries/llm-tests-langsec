@@ -2,36 +2,16 @@
 
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
-from enum import Enum
 
 
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class ArpPacket(KaitaiStruct):
-    """The Address Resolution Protocol (ARP) is a network protocol used to find out the address of a network node from its IP address.
+    """The Address Resolution Protocol (ARP) is a network layer protocol
+    used for mapping an IP address to a physical machine address that is
+    recognized in the local network.
     """
-
-    class HardwareType(Enum):
-        ethernet = 1
-        ieee_802 = 6
-        arcnet = 7
-        frame_relay = 15
-        atm = 16
-        hdsl = 17
-        fibre_channel = 18
-        atm2 = 19
-        serial_line = 20
-
-    class ProtocolType(Enum):
-        ipv4 = 2048
-        ipv6 = 34525
-
-    class Operation(Enum):
-        request = 1
-        reply = 2
-        request_reverse = 3
-        reply_reverse = 4
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -39,46 +19,46 @@ class ArpPacket(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.hw_type = KaitaiStream.resolve_enum(ArpPacket.HardwareType, self._io.read_u2be())
-        self.proto_type = KaitaiStream.resolve_enum(ArpPacket.ProtocolType, self._io.read_u2be())
-        self.hw_size = self._io.read_u1()
-        self.proto_size = self._io.read_u1()
-        self.opcode = KaitaiStream.resolve_enum(ArpPacket.Operation, self._io.read_u2be())
-        self.src_hw_addr = self._io.read_bytes(self.src_hw_addr_size)
-        self.src_proto_addr = self._io.read_bytes(self.src_proto_addr_size)
-        self.dst_hw_addr = self._io.read_bytes(self.dst_hw_addr_size)
-        self.dst_proto_addr = self._io.read_bytes(self.dst_proto_addr_size)
+        self.htype = self._io.read_u2be()
+        self.ptype = self._io.read_u2be()
+        self.hlen = self._io.read_u1()
+        self.plen = self._io.read_u1()
+        self.oper = self._io.read_u2be()
+        self.sha = self._io.read_bytes(self.sha_size)
+        self.spa = self._io.read_bytes(self.spa_size)
+        self.tha = self._io.read_bytes(self.tha_size)
+        self.tpa = self._io.read_bytes(self.tpa_size)
 
     @property
-    def src_hw_addr_size(self):
-        if hasattr(self, '_m_src_hw_addr_size'):
-            return self._m_src_hw_addr_size
+    def sha_size(self):
+        if hasattr(self, '_m_sha_size'):
+            return self._m_sha_size
 
-        self._m_src_hw_addr_size = self.hw_size
-        return getattr(self, '_m_src_hw_addr_size', None)
-
-    @property
-    def src_proto_addr_size(self):
-        if hasattr(self, '_m_src_proto_addr_size'):
-            return self._m_src_proto_addr_size
-
-        self._m_src_proto_addr_size = self.proto_size
-        return getattr(self, '_m_src_proto_addr_size', None)
+        self._m_sha_size = self.hlen
+        return getattr(self, '_m_sha_size', None)
 
     @property
-    def dst_hw_addr_size(self):
-        if hasattr(self, '_m_dst_hw_addr_size'):
-            return self._m_dst_hw_addr_size
+    def spa_size(self):
+        if hasattr(self, '_m_spa_size'):
+            return self._m_spa_size
 
-        self._m_dst_hw_addr_size = self.hw_size
-        return getattr(self, '_m_dst_hw_addr_size', None)
+        self._m_spa_size = self.plen
+        return getattr(self, '_m_spa_size', None)
 
     @property
-    def dst_proto_addr_size(self):
-        if hasattr(self, '_m_dst_proto_addr_size'):
-            return self._m_dst_proto_addr_size
+    def tha_size(self):
+        if hasattr(self, '_m_tha_size'):
+            return self._m_tha_size
 
-        self._m_dst_proto_addr_size = self.proto_size
-        return getattr(self, '_m_dst_proto_addr_size', None)
+        self._m_tha_size = self.hlen
+        return getattr(self, '_m_tha_size', None)
+
+    @property
+    def tpa_size(self):
+        if hasattr(self, '_m_tpa_size'):
+            return self._m_tpa_size
+
+        self._m_tpa_size = self.plen
+        return getattr(self, '_m_tpa_size', None)
 
 

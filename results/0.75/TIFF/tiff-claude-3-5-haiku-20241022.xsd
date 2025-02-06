@@ -1,67 +1,149 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
            targetNamespace="http://example.com/tiff"
            xmlns:tiff="http://example.com/tiff"
-           elementFormDefault="qualified">
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           elementFormDefault="qualified"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 dfdl.xsd">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format separator="" initiator="" terminator="" 
-                   encoding="UTF-8" 
-                   byteOrder="bigEndian" 
-                   representation="binary"
-                   occursCountKind="parsed"
-                   alignmentUnits="bytes"
-                   alignment="1"
-                   fillByte="%#r00"/>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0">
+      <dfdl:format
+        alignmentUnits="bytes"
+        alignment="1"
+        leadingSkip="0"
+        trailingSkip="0"
+        initiatedContent="no"
+        separatorPolicy="suppressed"
+        separatorPosition="prefix"
+        encoding="UTF-8"
+        byteOrder="littleEndian"
+        representation="binary"
+        occursCountKind="implicit"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="TIFFFile">
+  <xs:element name="TIFFFile" dfdl:lengthKind="implicit">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="tiff:TIFFHeaderType"/>
-        <xs:element name="ImageFileDirectories" type="tiff:ImageFileDirectoriesType"/>
+        <xs:element name="Header" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ByteOrder" type="xs:hexBinary" 
+                          dfdl:length="2" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="MagicNumber" type="xs:hexBinary" 
+                          dfdl:length="2" 
+                          dfdl:lengthKind="explicit"/>
+              <xs:element name="IFDOffset" type="xs:unsignedInt"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageFileDirectory" maxOccurs="unbounded" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="NumberOfEntries" type="xs:unsignedShort"/>
+              <xs:element name="DirectoryEntries" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Entry" maxOccurs="unbounded" dfdl:lengthKind="implicit">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="TagID" type="xs:unsignedShort"/>
+                          <xs:element name="DataType" type="xs:unsignedShort"/>
+                          <xs:element name="DataCount" type="xs:unsignedInt"/>
+                          <xs:element name="DataValue" dfdl:lengthKind="explicit" 
+                                       dfdl:length="4">
+                            <xs:complexType>
+                              <xs:choice>
+                                <xs:element name="ByteValue" type="xs:unsignedByte"/>
+                                <xs:element name="ShortValue" type="xs:unsignedShort"/>
+                                <xs:element name="LongValue" type="xs:unsignedInt"/>
+                                <xs:element name="RationalValue">
+                                  <xs:complexType>
+                                    <xs:sequence>
+                                      <xs:element name="Numerator" type="xs:unsignedInt"/>
+                                      <xs:element name="Denominator" type="xs:unsignedInt"/>
+                                    </xs:sequence>
+                                  </xs:complexType>
+                                </xs:element>
+                                <xs:element name="AsciiString" type="xs:string"/>
+                                <xs:element name="FloatValue" type="xs:float"/>
+                                <xs:element name="DoubleValue" type="xs:double"/>
+                                <xs:element name="UndefinedData" type="xs:hexBinary"/>
+                              </xs:choice>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="NextIFDOffset" type="xs:unsignedInt"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageData" type="xs:hexBinary" 
+                    dfdl:lengthKind="implicit"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="TIFFHeaderType">
-    <xs:sequence>
-      <xs:element name="ByteOrder" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="Version" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="FirstIFDOffset" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="CompressionType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="32773"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="ImageFileDirectoriesType">
-    <xs:sequence>
-      <xs:element name="ImageFileDirectory" type="tiff:ImageFileDirectoryType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="PhotometricInterpretationType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="8"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="ImageFileDirectoryType">
-    <xs:sequence>
-      <xs:element name="NumberOfEntries" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="Entries">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="Entry" type="tiff:EntryType" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../../../NumberOfEntries }"/>
-          </xs:sequence>
-        </xs:complexType>
-      </xs:element>
-      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="OrientationType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="EntryType">
-    <xs:sequence>
-      <xs:element name="Tag" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="Type" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-      <xs:element name="Count" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-      <xs:element name="Value" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="PlanarConfigurationType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
 
+  <xs:simpleType name="ResolutionUnitType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

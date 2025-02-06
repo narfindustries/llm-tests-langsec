@@ -1,31 +1,29 @@
-meta:
-  id: tls-client-hello-gemini-1
-  title: TLS Client Hello (Gemini 1.5 Flash)
-  url: https://example.com/tls-client-hello-gemini-1.ksy  # Replace with actual URL if available
-
 types:
-  # Define any custom types if needed
-
-seq:
-  - id: record_layer
-    type: record_layer_t
-
-  # Add other sequences as needed
-
-
-structs:
-  record_layer_t:
+  tls_client_hello:
     seq:
-      - id: content_type
-        type: u8
-      - id: version
-        type: u16be
-      - id: length
-        type: u16be
-      - id: fragment
+      - id: protocol_version
+        type: u2be
+      - id: random
         type: bytes
-        size: length
+        size: 32
+      - id: session_id
+        type: bytes
+      - id: cipher_suites
+        type: array
+        size: 0
+        type: u2be
+      - id: compression_methods
+        type: array
+        size: 0
+        type: u1
+      - id: extensions
+        type: array
+        size: 0
+        type: tls_extension
 
-
-# Add more structs as needed
-
+  tls_extension:
+    seq:
+      - id: extension_type
+        type: u2be
+      - id: extension_data
+        type: bytes

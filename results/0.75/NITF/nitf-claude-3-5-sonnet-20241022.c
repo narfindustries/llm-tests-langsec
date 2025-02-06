@@ -2,108 +2,139 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// NITF Parser Combinators
-HParser* nitf_file_header() {
+// NITF Parser definitions
+HParser* nitf_fhdr() {
+    return h_token((const uint8_t*)"NITF", 4);
+}
+
+HParser* nitf_fver() {
+    return h_token((const uint8_t*)"02.10", 5);
+}
+
+HParser* nitf_clevel() {
+    return h_int_range(h_uint8(), 1, 99);
+}
+
+HParser* nitf_stype() {
+    return h_token((const uint8_t*)"BF", 2);
+}
+
+HParser* nitf_ostaid() {
+    return h_length_value(h_uint8(), h_repeat_n(h_ch_range(0x20, 0x7E), 10));
+}
+
+HParser* nitf_fdt() {
+    return h_token((const uint8_t*)"CCYYMMDDhhmmss", 14);
+}
+
+HParser* nitf_ftitle() {
+    return h_length_value(h_uint8(), h_repeat_n(h_ch_range(0x20, 0x7E), 80));
+}
+
+HParser* nitf_fsclas() {
+    return h_choice(h_ch('T'), h_ch('S'), h_ch('C'), h_ch('R'), h_ch('U'), NULL);
+}
+
+HParser* nitf_fscop() {
+    return h_int_range(h_uint32(), 0, 99999);
+}
+
+HParser* nitf_fscpys() {
+    return h_int_range(h_uint32(), 0, 99999);
+}
+
+// Image segment parser
+HParser* nitf_im() {
     return h_sequence(
-        h_token((uint8_t*)"NITF", 4),  // File Type
-        h_int_range(h_bits(2, false), 0, 99),  // Version
-        h_int_range(h_bits(3, false), 0, 999), // Complexity Level
-        h_token((uint8_t*)"LEV", 3),   // Standard Type
-        h_bits(10, false),             // Originating Station ID
-        h_bits(14, false),             // File Date Time
-        h_token((uint8_t*)"999", 3),   // File Title
-        h_bits(80, false),             // Security Classification
-        h_bits(40, false),             // Copy/Release Instructions
-        h_bits(40, false),             // Special Handling Instructions
-        h_bits(20, false),             // Encryption
-        h_bits(6, false),              // File Length
-        h_bits(4, false),              // Header Length
-        h_int_range(h_bits(3, false), 0, 999), // Number of Image Segments
-        h_int_range(h_bits(3, false), 0, 999), // Number of Graphics
-        h_int_range(h_bits(3, false), 0, 999), // Reserved1
-        h_int_range(h_bits(3, false), 0, 999), // Reserved2
-        h_int_range(h_bits(3, false), 0, 999), // Number of Text Files
-        h_int_range(h_bits(3, false), 0, 999)  // Number of Data Extensions
+        h_token((const uint8_t*)"IM", 2),
+        h_int_range(h_uint16(), 0, 9999),
+        h_repeat_n(h_ch_range(0x20, 0x7E), 80),
+        NULL
     );
 }
 
-HParser* nitf_image_segment() {
+// Graphics segment parser
+HParser* nitf_graphics() {
     return h_sequence(
-        h_token((uint8_t*)"IM", 2),    // Image Segment Identifier
-        h_bits(10, false),             // Image ID
-        h_bits(14, false),             // Image Date/Time
-        h_bits(17, false),             // Target ID
-        h_bits(80, false),             // Image Title
-        h_bits(1, false),              // Security Classification
-        h_bits(40, false),             // Encryption
-        h_bits(6, false),              // Image Length
-        h_bits(4, false),              // Image Header Length
-        h_int_range(h_bits(3, false), 0, 999), // Number of Image Bands
-        h_bits(8, false),              // Image Representation
-        h_bits(8, false),              // Image Category
-        h_bits(2, false),              // Image Compression
-        h_bits(1, false),              // Image Mode
-        h_bits(4, false),              // Number of Blocks Per Row
-        h_bits(4, false),              // Number of Blocks Per Column
-        h_bits(4, false),              // Number of Pixels Per Block Horizontal
-        h_bits(4, false),              // Number of Pixels Per Block Vertical
-        h_bits(3, false),              // Number of Bits Per Pixel
-        h_bits(1, false),              // Image Display Level
-        h_bits(3, false),              // Image Attachment Level
-        h_bits(2, false),              // Image Location
-        h_bits(5, false),              // Image Magnification
-        h_bits(1, false)               // User Defined Image Data Length
+        h_token((const uint8_t*)"GR", 2),
+        h_int_range(h_uint16(), 0, 9999),
+        h_repeat_n(h_ch_range(0x20, 0x7E), 80),
+        NULL
     );
 }
 
+// Text segment parser
+HParser* nitf_text() {
+    return h_sequence(
+        h_token((const uint8_t*)"TX", 2),
+        h_int_range(h_uint16(), 0, 9999),
+        h_repeat_n(h_ch_range(0x20, 0x7E), 80),
+        NULL
+    );
+}
+
+// Main NITF parser
 HParser* nitf_parser() {
     return h_sequence(
-        nitf_file_header(),
-        h_many(nitf_image_segment())
+        nitf_fhdr(),
+        nitf_fver(),
+        nitf_clevel(),
+        nitf_stype(),
+        nitf_ostaid(),
+        nitf_fdt(),
+        nitf_ftitle(),
+        nitf_fsclas(),
+        nitf_fscop(),
+        nitf_fscpys(),
+        h_many(nitf_im()),
+        h_many(nitf_graphics()),
+        h_many(nitf_text()),
+        NULL
     );
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
         return 1;
     }
 
-    FILE* file = fopen(argv[1], "rb");
-    if (!file) {
+    FILE* f = fopen(argv[1], "rb");
+    if (!f) {
         perror("Failed to open file");
         return 1;
     }
 
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    uint8_t* buffer = malloc(size);
-    if (!buffer) {
-        perror("Failed to allocate memory");
-        fclose(file);
+    uint8_t* data = malloc(size);
+    if (!data) {
+        fclose(f);
+        fprintf(stderr, "Memory allocation failed\n");
         return 1;
     }
 
-    if (fread(buffer, 1, size, file) != size) {
-        perror("Failed to read file");
-        free(buffer);
-        fclose(file);
+    if (fread(data, 1, size, f) != size) {
+        free(data);
+        fclose(f);
+        fprintf(stderr, "Failed to read file\n");
         return 1;
     }
 
     HParser* parser = nitf_parser();
-    HParseResult* result = h_parse(parser, buffer, size);
+    HParseResult* result = h_parse(parser, data, size);
 
-    if (result) {
-        printf("Successfully parsed NITF file\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse NITF file\n");
+    if (!result) {
+        fprintf(stderr, "Parse failed\n");
+        free(data);
+        fclose(f);
+        return 1;
     }
 
-    free(buffer);
-    fclose(file);
+    h_parse_result_free(result);
+    free(data);
+    fclose(f);
     return 0;
 }

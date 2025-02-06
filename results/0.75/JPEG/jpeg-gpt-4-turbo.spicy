@@ -1,24 +1,65 @@
 module JPEG;
 
-public type Marker is enum {
-    SOI = 0xD8FF,  // Start Of Image
-    EOI = 0xD9FF,  // End Of Image
-    SOF0 = 0xC0FF, // Start Of Frame (Baseline JPEG)
-    DHT = 0xC4FF,  // Define Huffman Table
-    DQT = 0xDBFF,  // Define Quantization Table
-    SOS = 0xDAFF   // Start Of Scan
+import spicy;
+
+type QuantizationTable = unit {
+    precisionAndTableID: uint8;
+    precision: uint4 = (self.precisionAndTableID >> 4) & 0x0F;
+    tableID: uint4 = self.precisionAndTableID & 0x0F;
+    tableValues: bytes &size=64;  // Quantization values are typically 64
 };
 
-public type Segment is unit {
-    marker: Marker;
+type HuffmanTable = unit {
+    tableClassAndID: uint8;
+    tableClass: uint4 = (self.tableClassAndID >> 4) & 0x0F;
+    tableID: uint4 = self.tableClassAndID & 0x0F;
+    numberOfSymbols: bytes &size=16;  // Number of symbols per bit length (1-16)
+    symbols: bytes &eod;  // Symbols, length depends on the values in numberOfSymbols
+};
+
+type FrameComponentSpec = unit {
+    componentID: uint8;
+    samplingFactors: uint8;
+    horizontalSampling: uint4 = (self.samplingFactors >> 4) & 0x0F;
+    verticalSampling: uint4 = self.samplingFactors & 0x0F;
+    quantizationTableID: uint8;
+};
+
+type FrameHeader = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    numComponents: uint8;
+    components: FrameComponentSpec[] &size=self.numComponents;
+};
+
+type ScanComponentSpec = unit {
+    componentSelector: uint8;
+    huffmanTableSelectors: uint8;
+    DCtableSelector: uint4 = (self.huffmanTableSelectors >> 4) & 0x0F;
+    ACtableSelector: uint4 = self.huffmanTableSelectors & 0x0F;
+};
+
+type ScanHeader = unit {
+    numComponents: uint8;
+    components: ScanComponentSpec[] &size=self.numComponents;
+    spectralStart: uint8;
+    spectralEnd: uint8;
+    approxHighLow: uint8;
+};
+
+type Segment = unit {
+    marker: uint16;
     length: uint16;
-    data: bytes &size=this.length-2;
+    data: switch (self.marker) {
+        0xFFDB -> quantTable: QuantizationTable;
+        0xFFC4 -> huffmanTable: HuffmanTable;
+        0xFFC0, 0xFFC2 -> frameHeader: FrameHeader;
+        0xFFDA -> scanHeader: ScanHeader;
+        default -> data: bytes &size=(self.length - 2);
+    };
 };
 
-public type Image is unit {
-    segments: Segment[] &until($$.marker == Marker::EOI);
-};
-
-public type File is unit {
-    main: Image;
+type JPEGFile = unit {
+    segments: Segment[] &until($$.segments[$$.segments.length() - 1].marker == 0xFFD9);
 };

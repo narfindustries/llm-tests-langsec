@@ -1,26 +1,36 @@
 module DICOM;
 
-export {
-    type Info = tuple {
-        magic: string,
-        meta_length: uint32,
-        file_meta: string,
-        transfer_syntax_uid: string
-    };
+type PersonName = string;  // Simplified for example purposes
+type LongString = string;
+type CodeString = string;
+type UID = string;
+type Date = bytes &length=8; // Format: YYYYMMDD
+type DICOMTime = bytes &length=6; // Format: HHMMSS
+type IntegerString = int32;
+type DecimalString = double;
 
-    type DICOM = unit {
-        magic: bytes &size=4 &check=$magic == |[0x44, 0x49, 0x43, 0x4D]|,
-        reserved: bytes &size=124 &opaque, // Reserved space in DICOM file
-        meta_length: uint32,
+type DICOM = unit {
+    // Patient Information Module
+    patient_name: optional PersonName = (),
+    patient_id: optional LongString = (),
+    patient_birth_date: optional Date = (),
+    patient_sex: optional CodeString = (),
 
-        file_meta: bytes &size=meta_length &opaque, // Placeholder for parsing metadata
-        transfer_syntax_uid: string &restofdata,
+    // Study Information Module
+    study_instance_uid: optional UID = (),
+    study_date: optional Date = (),
+    study_time: optional DICOMTime = (),
 
-        on %done {
-            if ( $transfer_syntax_uid != "" )
-                print "Transfer Syntax UID: ", $transfer_syntax_uid;
-            else
-                print "Transfer Syntax UID not found.";
-        }
-    } &byteorder=big;
-}
+    // Series Information Module
+    modality: optional CodeString = (),
+    series_instance_uid: optional UID = (),
+    series_number: optional IntegerString = (),
+
+    // Image Information Module
+    sop_instance_uid: optional UID = (),
+    image_position_patient: optional (DecimalString[3]) = (),
+
+    // File Meta Information Module
+    file_meta_information_version: optional bytes &length=2 = (),
+    transfer_syntax_uid: optional UID = (),
+};

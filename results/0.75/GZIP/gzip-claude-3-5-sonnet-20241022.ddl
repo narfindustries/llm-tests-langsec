@@ -1,20 +1,29 @@
-def Main = {
-    def header = { 
-        magic1: 0x1f;
-        magic2: 0x8b;
-        cm: 8;
-        flg: uint 8;
-        mtime: uint 32 LE;
-        xfl: uint 8;
-        os: uint 8
+def GZIP = {
+    magic: uint16;
+    compression_method: uint8;
+    flags: uint8;
+    mtime: uint32;
+    xfl: uint8;
+    os: uint8;
+
+    $if flags == 0x04$ {
+        xlen: uint16;
+        extra_field: bytes(xlen);
     }
 
-    def member = {
-        hdr: header;
-        compressed_blocks: $([0-9a-fA-F]+)*;
-        crc32: uint 32 LE;
-        isize: uint 32 LE
+    $if flags == 0x08$ {
+        filename: /[^\x00]*\x00/;
     }
 
-    members: member[]
+    $if flags == 0x10$ {
+        comment: /[^\x00]*\x00/;
+    }
+
+    $if flags == 0x02$ {
+        header_crc16: uint16;
+    }
+
+    compressed_data: bytes;
+    crc32: uint32;
+    isize: uint32;
 }

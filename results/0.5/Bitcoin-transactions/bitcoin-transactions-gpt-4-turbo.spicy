@@ -1,57 +1,45 @@
 module Bitcoin;
 
-public type BitcoinHeader = unit {
-    magic: uint32;
-    command: bytes &size=12;
-    length: uint32;
-    checksum: bytes &size=4;
-};
+public type VarInt = unit {
+    value: uint64;
+} &byteorder=big;
 
 public type TxIn = unit {
-    previous_output: bytes &size=32;
-    prev_index: uint32;
-    script_length: varint;
-    script: bytes &size=script_length;
+    prev_output: TxOutRef;
+    script_len: VarInt;
+    script_sig: bytes &size=this.script_len.value;
     sequence: uint32;
-};
+} &byteorder=big;
 
 public type TxOut = unit {
     value: uint64;
-    script_length: varint;
-    script: bytes &size=script_length;
-};
+    script_len: VarInt;
+    script_pub_key: bytes &size=this.script_len.value;
+} &byteorder=big;
 
-public type Transaction = unit {
-    version: uint32;
-    in_count: varint;
-    inputs: TxIn[] &size=in_count;
-    out_count: varint;
-    outputs: TxOut[] &size=out_count;
-    lock_time: uint32;
-};
+public type TxOutRef = unit {
+    hash: bytes &size=32;
+    index: uint32;
+} &byteorder=big;
 
-public type Block = unit {
-    header: BitcoinHeader;
-    tx_count: varint;
-    transactions: Transaction[] &size=tx_count;
-};
+public type BitcoinTransaction = unit {
+    version: int32;
+    input_count: VarInt;
+    inputs: TxIn[] &size=this.input_count.value;
+    output_count: VarInt;
+    outputs: TxOut[] &size=this.output_count.value;
+    locktime: uint32;
+} &byteorder=big;
 
-public type VarInt = unit {
-    length: uint8;
-    value: switch (length) {
-        case 0xFD: uint16;
-        case 0xFE: uint32;
-        case 0xFF: uint64;
-        default: uint8(length);
-    };
-};
-
-event zeek_init() &priority=5
-{
-    print fmt("Zeek module for Bitcoin protocol loaded.");
-}
-
-event bitcoin_transaction(tx: Transaction)
-{
-    print fmt("Transaction detected: Version %d, Inputs: %d, Outputs: %d", tx.version, |tx.inputs|, |tx.outputs|);
-}
+public type BitcoinBlock = unit {
+    magic: uint32;
+    blocksize: uint32;
+    version: int32;
+    prev_block: bytes &size=32;
+    merkle_root: bytes &size=32;
+    timestamp: uint32;
+    bits: uint32;
+    nonce: uint32;
+    tx_count: VarInt;
+    transactions: BitcoinTransaction[] &size=this.tx_count.value;
+} &byteorder=big;

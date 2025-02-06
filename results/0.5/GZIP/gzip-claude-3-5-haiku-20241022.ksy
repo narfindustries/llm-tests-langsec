@@ -3,65 +3,81 @@ meta:
   file-extension: gz
   endian: le
 seq:
-  - id: header
-    type: header
-  - id: body
-    type: body
-  - id: footer
-    type: footer
+  - id: identification
+    contents: [0x1F, 0x8B]
+  - id: compression_method
+    type: u1
+    enum: compression_methods
+  - id: flags
+    type: flags
+  - id: mtime
+    type: u4
+  - id: extra_flags
+    type: u1
+  - id: os
+    type: u1
+    enum: operating_systems
+  - id: extra_field
+    type: extra_field
+    if: flags.fextra
+  - id: filename
+    type: strz
+    encoding: UTF-8
+    if: flags.fname
+  - id: comment
+    type: strz
+    encoding: UTF-8
+    if: flags.fcomment
+  - id: header_crc
+    type: u2
+    if: flags.fhcrc
+  - id: compressed_data
+    type: deflate_block
+  - id: crc32
+    type: u4
+  - id: uncompressed_size
+    type: u4
+
 types:
-  header:
+  flags:
     seq:
-      - id: magic
-        contents: [0x1f, 0x8b]
-      - id: compression_method
-        type: u1
-        enum: compression_methods
-      - id: flags
-        type: u1
-      - id: modification_time
-        type: u4
-      - id: extra_flags
-        type: u1
-      - id: os
-        type: u1
-        enum: operating_systems
-    instances:
-      extra_field:
-        type: extra_field
-        if: (flags & 0b00000100) != 0
-      filename:
-        type: str
-        encoding: UTF-8
-        terminator: 0
-        if: (flags & 0b00001000) != 0
-      comment:
-        type: str
-        encoding: UTF-8
-        terminator: 0
-        if: (flags & 0b00010000) != 0
-      header_crc16:
-        type: u2
-        if: (flags & 0b00000010) != 0
+      - id: ftext
+        type: b1
+      - id: fhcrc
+        type: b1
+      - id: fextra
+        type: b1
+      - id: fname
+        type: b1
+      - id: fcomment
+        type: b1
+      - id: fencrypt
+        type: b1
+      - id: reserved
+        type: b2
+
   extra_field:
     seq:
       - id: length
         type: u2
       - id: data
         size: length
-  body:
+
+  deflate_block:
     seq:
-      - id: compressed_data
-        type: bytes
-  footer:
+      - id: raw_data
+        type: byte_array
+
+  byte_array:
     seq:
-      - id: crc32
-        type: u4
-      - id: uncompressed_size
-        type: u4
+      - id: data
+        type: u1
+        repeat: eos
+
 enums:
   compression_methods:
     8: deflate
+
   operating_systems:
     0: fat
     1: amiga

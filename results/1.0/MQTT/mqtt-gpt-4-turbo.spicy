@@ -1,15 +1,37 @@
 module MQTT;
 
-import spicy;
-
-type ControlFlags = unit {
-    reserved: uint4;
-    typeflags: uint4;
+public type FixedHeader = unit {
+    packetType: uint4;
+    flags: uint4;
+    length: varint;
 };
 
-type ConnectFlags = unit {
+type MQTTString = unit {
+    length: uint16;
+    value: bytes &size=length;
+};
+
+type MQTTProperty = unit {
+    identifier: uint8;
+    value: bytes &size=(length - 1);
+};
+
+type MQTTProperties = unit {
+    length: varint;
+    props: bytes &size=length;  // Actual decoding would need specific parsing per property ID
+};
+
+type ConnectPayload = unit {
+    clientIdentifier: MQTTString;
+    willTopic: MQTTString &optional;
+    willMessage: MQTTString &optional;
+    username: MQTTString &optional;
+    password: MQTTString &optional;
+};
+
+public type ConnectFlags = unit {
     reserved: bit;
-    cleanSession: bit;
+    cleanStart: bit;
     willFlag: bit;
     willQoS: uint2;
     willRetain: bit;
@@ -17,44 +39,99 @@ type ConnectFlags = unit {
     usernameFlag: bit;
 };
 
-type ConnectVariableHeader = unit {
-    protocolName: bytes &size=6; # "MQTT\4"
+type Connect = unit {
+    protocolName: MQTTString;
     protocolLevel: uint8;
     flags: ConnectFlags;
     keepAlive: uint16;
+    properties: MQTTProperties;
+    payload: ConnectPayload;
 };
 
-type ConnectPayload = unit {
-    clientIdentifier: bytes &eod;
-    willTopic: bytes &size=(self^.parent.connectFlags.willFlag ? self^.parent.connectFlags.willFlag : 0);
-    willMessage: bytes &size=(self^.parent.connectFlags.willFlag ? self^.parent.connectFlags.willFlag : 0);
-    username: bytes &size=(self^.parent.connectFlags.usernameFlag ? self^.parent.connectFlags.usernameFlag : 0);
-    password: bytes &size=(self^.parent.connectFlags.passwordFlag ? self^.parent.connectFlags.passwordFlag : 0);
+type ConnAckFlags = unit {
+    sessionPresent: bit;
+    reserved: bits &size=7;
 };
 
-type ConnectPacket = unit {
-    variableHeader: ConnectVariableHeader;
-    payload: ConnectPayload &size=self^.variableHeader;
+public type ConnAck = unit {
+    flags: ConnAckFlags;
+    reasonCode: uint8;
+    properties: MQTTProperties;
 };
 
-public type MQTT_Packet = unit {
-    ctrlFlags: ControlFlags;
-    remainingLength: int;
-    payload: switch (self.ctrlFlags.typeflags) {
-        # Depending on Control Type
-        0x10 -> connectPayload: ConnectPacket;
-        # Add other cases here for different types of control flags
+public type Publish = unit {
+    topicName: MQTTString;
+    packetId: uint16 &if=(self^.header.flags & 0b0110) != 0;
+    properties: MQTTProperties;
+    payload: bytes &rest;
+};
+
+public type Ack = unit {
+    packetId: uint16;
+    reasonCode: uint8 &if=(self^.header.packetType != 0xE0);
+    properties: MQTTProperties;
+};
+
+public type Subscribe = unit {
+    packetId: uint16;
+    properties: MQTTProperties;
+    topicFilters: vector<MQTTSubscription>;
+};
+
+public type MQTTSubscription = unit {
+    topicFilter: MQTTString;
+    options: uint8;
+};
+
+public type SubAck = unit {
+    packetId: uint16;
+    properties: MQTTProperties;
+    returnCodes: vector<uint8>;
+};
+
+public type Unsubscribe = unit {
+    packetId: uint16;
+    properties: MQTTProperties;
+    topicFilters: vector<MQTTString>;
+};
+
+public type UnsubAck = unit {
+    packetId: uint16;
+    properties: MQTTProperties;
+    reasonCodes: vector<uint8>;
+};
+
+public type PingReq = unit {};
+
+public type PingResp = unit {};
+
+public type Disconnect = unit {
+    reasonCode: uint8;
+    properties: MQTTProperties;
+};
+
+public type Auth = unit {
+    reasonCode: uint8;
+    properties: MQTTProperties;
+};
+
+public type MQTTPacket = unit {
+    header: FixedHeader;
+    contents: case (header.packetType) of {
+        0x1 -> connect: Connect;
+        0x2 -> connAck: ConnAck;
+        0x3 -> publish: Publish;
+        0x4 -> ack: Ack;
+        0x5 -> ack: Ack;
+        0x6 -> ack: Ack;
+        0x7 -> ack: Ack;
+        0x8 -> subscribe: Subscribe;
+        0x9 -> subAck: SubAck;
+        0xA -> unsubscribe: Unsubscribe;
+        0xB -> unsubAck: UnsubAck;
+        0xC -> pingReq: PingReq;
+        0xD -> pingResp: PingResp;
+        0xE -> disconnect: Disconnect;
+        0xF -> auth: Auth;
     };
 };
-
-event zeek_init() &priority=-5 {
-    print "Spicy MQTT analyzer loaded.";
-}
-
-event protocol_confirmation(analyzer: Analyzer::Tag, atype: Analyzer::Tag, aid: count) &priority=5 {
-    print fmt("Analyzer %s confirmed as type %s with id %d.", analyzer, atype, aid);
-}
-
-event protocol_violation(description: string, analyzer: Analyzer::Tag) &priority=5 {
-    print fmt("Protocol violation in %s: %s", analyzer, description);
-}

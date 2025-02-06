@@ -2,27 +2,182 @@ module HL7;
 
 public type Message = unit {
     segments: Segment[];
-} &eod;
+};
 
 type Segment = unit {
-    : b"\r";
-    segment_type: bytes &until=b"|";
+    segment_id: bytes &size=3;
+    : "|";
     fields: Field[];
-    : b"\r\n";
-};
+} &until=/$\r?\n/;
 
 type Field = unit {
-    value: bytes &until=b"|";
+    content: Field_Content;
+    : "|";
+} &until-including="|";
+
+type Field_Content = unit {
+    components: Component[];
 };
 
-on Message::%done {
-    print self;
-}
+type Component = unit {
+    subcomponents: SubComponent[];
+    : "^";
+} &until-including="^";
 
-on Segment::%done {
-    print self.segment_type;
-}
+type SubComponent = unit {
+    value: bytes &until-including="&";
+};
 
-on Field::%done {
-    print self.value;
-}
+# MSH (Message Header) Segment
+type MSH = unit {
+    segment_id: bytes &size=3;
+    field_sep: bytes &size=1;
+    encoding_chars: bytes &size=4;
+    sending_app: Field;
+    sending_facility: Field;
+    receiving_app: Field;
+    receiving_facility: Field;
+    datetime: Field;
+    security: Field;
+    message_type: Field;
+    message_control_id: Field;
+    processing_id: Field;
+    version_id: Field;
+    sequence_number: Field;
+    continuation_pointer: Field;
+    accept_ack_type: Field;
+    application_ack_type: Field;
+    country_code: Field;
+    character_set: Field;
+    principal_language: Field;
+};
+
+# PID (Patient Identification) Segment
+type PID = unit {
+    segment_id: bytes &size=3;
+    set_id: Field;
+    patient_id: Field;
+    patient_id_list: Field;
+    alternate_patient_id: Field;
+    patient_name: Field;
+    mother_maiden_name: Field;
+    date_of_birth: Field;
+    sex: Field;
+    patient_alias: Field;
+    race: Field;
+    patient_address: Field;
+    county_code: Field;
+    phone_home: Field;
+    phone_business: Field;
+    primary_language: Field;
+    marital_status: Field;
+    religion: Field;
+    patient_account_num: Field;
+    ssn: Field;
+    drivers_license: Field;
+    mothers_id: Field;
+    ethnic_group: Field;
+    birth_place: Field;
+    multiple_birth: Field;
+    birth_order: Field;
+    citizenship: Field;
+    veterans_status: Field;
+    nationality: Field;
+    death_date_time: Field;
+    death_indicator: Field;
+};
+
+# EVN (Event Type) Segment
+type EVN = unit {
+    segment_id: bytes &size=3;
+    event_type_code: Field;
+    recorded_date_time: Field;
+    date_time_planned: Field;
+    event_reason_code: Field;
+    operator_id: Field;
+    event_occurred: Field;
+};
+
+# PV1 (Patient Visit) Segment
+type PV1 = unit {
+    segment_id: bytes &size=3;
+    set_id: Field;
+    patient_class: Field;
+    assigned_location: Field;
+    admission_type: Field;
+    preadmit_number: Field;
+    prior_location: Field;
+    attending_doctor: Field;
+    referring_doctor: Field;
+    consulting_doctor: Field;
+    hospital_service: Field;
+    temporary_location: Field;
+    preadmit_test_indicator: Field;
+    readmission_indicator: Field;
+    admit_source: Field;
+    ambulatory_status: Field;
+    vip_indicator: Field;
+    admitting_doctor: Field;
+    patient_type: Field;
+    visit_number: Field;
+    financial_class: Field;
+    charge_price_indicator: Field;
+    courtesy_code: Field;
+    credit_rating: Field;
+    contract_code: Field;
+    contract_effective_date: Field;
+    contract_amount: Field;
+    contract_period: Field;
+    interest_code: Field;
+    transfer_bad_debt_code: Field;
+    transfer_bad_debt_date: Field;
+    bad_debt_agency_code: Field;
+    bad_debt_transfer_amount: Field;
+    bad_debt_recovery_amount: Field;
+    delete_account_indicator: Field;
+    delete_account_date: Field;
+    discharge_disposition: Field;
+    discharged_to_location: Field;
+    diet_type: Field;
+    servicing_facility: Field;
+    bed_status: Field;
+    account_status: Field;
+    pending_location: Field;
+    prior_temporary_location: Field;
+    admit_date_time: Field;
+    discharge_date_time: Field;
+    current_patient_balance: Field;
+    total_charges: Field;
+    total_adjustments: Field;
+    total_payments: Field;
+    alternate_visit_id: Field;
+    visit_indicator: Field;
+    other_healthcare_provider: Field;
+};
+
+# OBX (Observation) Segment
+type OBX = unit {
+    segment_id: bytes &size=3;
+    set_id: Field;
+    value_type: Field;
+    observation_id: Field;
+    observation_sub_id: Field;
+    observation_value: Field;
+    units: Field;
+    reference_range: Field;
+    abnormal_flags: Field;
+    probability: Field;
+    nature_of_abnormal_test: Field;
+    observation_result_status: Field;
+    effective_date: Field;
+    user_defined_access_checks: Field;
+    date_time_of_observation: Field;
+    producers_id: Field;
+    responsible_observer: Field;
+    observation_method: Field;
+    equipment_instance_id: Field;
+    date_time_of_analysis: Field;
+};
+
+on Message -> event hl7_message($input);
+on Segment -> event hl7_segment($input);

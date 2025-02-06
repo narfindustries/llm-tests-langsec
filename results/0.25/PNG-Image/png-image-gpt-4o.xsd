@@ -1,35 +1,232 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/png"
-           xmlns:tns="http://example.com/png"
-           elementFormDefault="qualified"
-           dfdl:format="http://www.ogf.org/dfdl/dfdl-1.0/">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:PNGFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.com/png"
+        xmlns:tns="http://example.com/png"
+        elementFormDefault="qualified"
+        attributeFormDefault="unqualified">
 
-    <dfdl:format name="PNGFormat" byteOrder="bigEndian" lengthKind="explicit" encoding="utf-8"/>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
-    <xs:element name="PNGImage">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:lengthUnits="bytes"/>
-                <xs:element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+    <element name="PNG" type="tns:PNGType"/>
 
-    <xs:complexType name="ChunksType">
-        <xs:sequence>
-            <xs:element name="Length" type="xs:int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-            <xs:element name="Type" type="xs:string" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-            <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length}" dfdl:lengthUnits="bytes"/>
-            <xs:element name="CRC" type="xs:hexBinary" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        </xs:sequence>
-    </xs:complexType>
+    <complexType name="PNGType">
+        <sequence>
+            <element name="Signature" type="tns:SignatureType"/>
+            <element name="Chunk" type="tns:ChunkType" minOccurs="1" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
 
-</xs:schema>
+    <simpleType name="SignatureType">
+        <restriction base="hexBinary">
+            <length value="8"/>
+            <pattern value="89504E470D0A1A0A"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="ChunkType">
+        <sequence>
+            <element name="Length" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="ChunkType" type="tns:ChunkTypeType"/>
+            <element name="ChunkData" type="tns:ChunkDataType" dfdl:lengthKind="implicit"/>
+            <element name="CRC" type="hexBinary" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="ChunkTypeType">
+        <restriction base="string">
+            <enumeration value="IHDR"/>
+            <enumeration value="PLTE"/>
+            <enumeration value="IDAT"/>
+            <enumeration value="IEND"/>
+            <enumeration value="tRNS"/>
+            <enumeration value="cHRM"/>
+            <enumeration value="gAMA"/>
+            <enumeration value="iCCP"/>
+            <enumeration value="sBIT"/>
+            <enumeration value="sRGB"/>
+            <enumeration value="tEXt"/>
+            <enumeration value="zTXt"/>
+            <enumeration value="iTXt"/>
+            <enumeration value="bKGD"/>
+            <enumeration value="pHYs"/>
+            <enumeration value="sPLT"/>
+            <enumeration value="hIST"/>
+            <enumeration value="tIME"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="ChunkDataType">
+        <choice>
+            <element name="IHDR" type="tns:IHDRType"/>
+            <element name="PLTE" type="tns:PLTEType"/>
+            <element name="IDAT" type="tns:IDATType"/>
+            <element name="IEND" type="tns:IENDType"/>
+            <element name="tRNS" type="tns:tRNSType"/>
+            <element name="cHRM" type="tns:cHRMType"/>
+            <element name="gAMA" type="tns:gAMAType"/>
+            <element name="iCCP" type="tns:iCCPType"/>
+            <element name="sBIT" type="tns:sBITType"/>
+            <element name="sRGB" type="tns:sRGBType"/>
+            <element name="tEXt" type="tns:tEXtType"/>
+            <element name="zTXt" type="tns:zTXtType"/>
+            <element name="iTXt" type="tns:iTXtType"/>
+            <element name="bKGD" type="tns:bKGDType"/>
+            <element name="pHYs" type="tns:pHYsType"/>
+            <element name="sPLT" type="tns:sPLTType"/>
+            <element name="hIST" type="tns:hISTType"/>
+            <element name="tIME" type="tns:tIMEType"/>
+        </choice>
+    </complexType>
+
+    <complexType name="IHDRType">
+        <sequence>
+            <element name="Width" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="Height" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="BitDepth" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="ColorType" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="CompressionMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="FilterMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="InterlaceMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PLTEType">
+        <sequence>
+            <element name="PaletteEntry" type="tns:PaletteEntryType" minOccurs="1" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PaletteEntryType">
+        <sequence>
+            <element name="Red" type="unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Green" type="unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Blue" type="unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="IDATType">
+        <sequence>
+            <element name="CompressedData" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="IENDType">
+        <sequence/>
+    </complexType>
+
+    <complexType name="tRNSType">
+        <sequence>
+            <element name="TransparencyData" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="cHRMType">
+        <sequence>
+            <element name="WhitePointX" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="WhitePointY" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="RedX" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="RedY" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="GreenX" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="GreenY" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="BlueX" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="BlueY" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="gAMAType">
+        <sequence>
+            <element name="Gamma" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="iCCPType">
+        <sequence>
+            <element name="ProfileName" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="CompressionMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="CompressedProfile" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sBITType">
+        <sequence>
+            <element name="SignificantBits" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sRGBType">
+        <sequence>
+            <element name="RenderingIntent" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="tEXtType">
+        <sequence>
+            <element name="Keyword" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="Text" type="string" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="zTXtType">
+        <sequence>
+            <element name="Keyword" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="CompressionMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="CompressedText" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="iTXtType">
+        <sequence>
+            <element name="Keyword" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="CompressionFlag" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="CompressionMethod" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="LanguageTag" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="TranslatedKeyword" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="Text" type="string" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="bKGDType">
+        <sequence>
+            <element name="BackgroundColor" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="pHYsType">
+        <sequence>
+            <element name="PixelsPerUnitX" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="PixelsPerUnitY" type="int" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+            <element name="UnitSpecifier" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sPLTType">
+        <sequence>
+            <element name="PaletteName" type="string" dfdl:lengthKind="delimited" dfdl:terminator="%00"/>
+            <element name="SampleDepth" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="PaletteEntries" type="hexBinary" dfdl:lengthKind="implicit"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="hISTType">
+        <sequence>
+            <element name="Frequency" type="int" dfdl:lengthKind="implicit" minOccurs="1" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="tIMEType">
+        <sequence>
+            <element name="Year" type="short" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+            <element name="Month" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Day" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Hour" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Minute" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+            <element name="Second" type="byte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        </sequence>
+    </complexType>
+
+</schema>

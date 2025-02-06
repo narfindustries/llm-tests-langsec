@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.com/elf" xmlns:elf="http://example.com/elf">
+
+  <!-- Define basic ELF types -->
+  <xs:simpleType name="u1">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="u2">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="u4">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="u8">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="Elf64_Addr">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:极simpleType>
+
+  <xs:simpleType name="Elf64_Off">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="Elf64_Word">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="Elf64_Sword">
+    <xs:restriction base="xs:int"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="Elf64_Xword">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="Elf64_Sxword">
+    <xs:restriction base="xs:long"/>
+  </xs:simpleType>
+
+  <!-- ELF Header -->
+  <xs:complexType name="Elf64_Ehdr">
+    <xs:sequence>
+      <xs:element name="e_ident" type="elf:Elf64_Ident"/>
+      <xs:element name="e_type" type="elf:u2"/>
+      <xs:element name="e_machine" type="elf:u2"/>
+      <xs:element name="e_version" type="elf:u4"/>
+      <xs:element name="e_entry" type="elf:Elf64_Addr"/>
+      <xs:element name="e_phoff" type="elf:Elf64_Off"/>
+      <xs:element name="e_shoff" type="elf:Elf64_Off"/>
+      <xs:element name="e_flags" type="elf:u4"/>
+      <xs:element name="e_ehsize" type="elf:极2"/>
+      <xs:element name="e_phentsize" type="elf:u2"/>
+      <xs:element name="e_phnum" type="elf:u2"/>
+      <xs:element name="e_shentsize" type="elf:u2"/>
+      <xs:element name="e_shnum" type="elf:u2"/>
+      <xs:element name、"e_shstrndx" type="elf:u2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ELF Identification -->
+  <xs:complexType name="Elf64_Ident">
+    <xs:sequence>
+      <xs:element name="EI_MAG0" type="elf:u1"/>
+      <xs:element name="EI_MAG1" type="elf:u1"/>
+      <xs:element name="EI_MAG2" type="elf:u1"/>
+      <xs:element name="EI_MAG3" type="elf:u1"/>
+      <xs:element name="EI_CLASS" type="elf:u1"/>
+      <xs:element name="EI_DATA" type="elf:u1"/>
+      <xs:element name="EI_VERSION" type="elf:u1"/>
+      <xs:element name="EI_OSABI" type="elf:u1"/>
+      <xs:element name="EI_ABIVERSION" type="elf:u1"/>
+      <xs:element name="EI_PAD" type="elf:u1" maxOccurs="7"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Program Header -->
+  <xs:complexType name="Elf64_Phdr">
+    <xs:sequence>
+      <xs:element name="p_type" type="elf:极4"/>
+      <xs:element name="p_flags" type="elf:u4"/>
+      <xs:element name="p_offset" type="elf:Elf64_Off"/>
+      <xs:element name="p_vaddr" type="elf:Elf64_Addr"/>
+      <xs:element name="p_paddr" type="elf:Elf64_Addr"/>
+      <xs:element name="p_filesz" type="elf:u8"/>
+      <xs:element name="p_memsz" type="elf:u8"/>
+      <xs:element name="p_align" type="elf:u8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Section Header -->
+  <xs:complexType name="Elf64_Shdr">
+    <xs:sequence>
+      <xs:element name="sh_name" type="elf:u4"/>
+      <xs:element name="sh_type" type="elf:u4"/>
+      <xs:element name="sh_flags" type="elf:u8"/>
+      <xs:element name="sh_addr" type="elf:Elf64_Addr"/>
+      <xs:element name="sh_offset" type="elf:Elf64_Off"/>
+      <xs:element name="sh_size" type="elf:u8"/>
+      <xs:element name="sh_link" type="elf:u4"/>
+      <xs:element name="sh_info" type="elf:u4"/>
+      <xs:element name="sh_addralign" type="elf:u8"/>
+      <xs:element name="sh_entsize" type="elf:u8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Symbol Table Entry -->
+  <xs:complexType name="Elf64_Sym">
+    <xs:sequence>
+      <xs:element name="st_name" type="elf:u4"/>
+      <xs:element name="st_info" type="elf:u1"/>
+      <xs:element name="st_other" type="elf:u1"/>
+      <xs:element name="st_shndx" type="elf:u2"/>
+      <xs:element name="st_value" type="elf:极lf64_Addr"/>
+      <xs:element name="st_size" type="elf:u8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Relocation Entry -->
+  <xs:complexType name="Elf64_Rel">
+    <xs:sequence>
+      <xs:element name="r_offset" type="elf:Elf64_Addr"/>
+      <xs:element name="r_info" type="elf:u8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Relocation Entry with Addend -->
+  <xs:complexType name="Elf64_Rela">
+    <xs:sequence>
+      <xs:element name="r_offset" type="elf:Elf64_Addr"/>
+      <xs:element name="r_info" type="elf:u8"/>
+      <xs:element name="r_addend" type="elf:Elf64_Sxword"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Dynamic Entry -->
+  <xs:complexType name="Elf64_Dyn">
+    <xs:sequence>
+      <xs:element name="d_tag" type="elf:Elf64_Sword"/>
+      <xs:element name="d_val" type="elf:Elf64_Xword" minOccurs="0"/>
+      <xs:element name="d_ptr" type="elf:Elf64_Addr" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Notes Section -->
+  <xs:complexType name="Elf64_Nhdr">
+    <xs:sequence>
+      <xs:element name="n_namesz" type="elf:u4"/>
+      <xs:element name="n_descsz" type="elf:u4"/>
+      <xs:element name="n_type" type="elf:u4"/>
+      <xs:element name="n_name" type="xs:string"/>
+      <xs:element name="n_desc" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ELF File Structure -->
+  <xs:complexType name="Elf64_File">
+    <xs:sequence>
+      <xs:element name="ehdr" type="elf:Elf64_Ehdr"/>
+      <xs:element name="phdrs" type="elf:Elf64_Phdr" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="shdrs" type="elf:Elf64_Shdr" minOccurs="0" maxOccurs="unbounded"/>
+   

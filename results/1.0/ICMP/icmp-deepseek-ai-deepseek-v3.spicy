@@ -1,0 +1,41 @@
+module ICMP;
+
+public type Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+
+    switch (type) {
+        case 0, 8:    # Echo Request/Reply
+            identifier: uint16;
+            sequence: uint16;
+        case 3:       # Destination Unreachable
+            unused: bytes &size=4;
+        case 4:       # Source Quench
+            unused: bytes &size=4;
+        case 5:       # Redirect Message
+            gateway: uint32;
+        case 11:      # Time Exceeded
+            unused: bytes &size=4;
+        case 12:      # Parameter Problem
+            pointer: uint8;
+            unused: bytes &size=3;
+        case 13, 14:  # Timestamp Request/Reply
+            identifier: uint16;
+            sequence: uint16;
+            originate: uint32;
+            receive: uint32;
+            transmit: uint32;
+        case 15, 16:  # Information Request/Reply
+            identifier: uint16;
+            sequence: uint16;
+        case 17, 18:  # Address Mask Request/Reply
+            identifier: uint16;
+            sequence: uint16;
+            mask: uint32;
+        default:      # Unknown Type
+            : bytes &eod;
+    }
+
+    : bytes &restofdata &if(type != 0 && type != 8 && type != 13 && type != 14 && type != 15 && type != 16 && type != 17 && type != 18);
+};

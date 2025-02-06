@@ -2,24 +2,74 @@ module GIF;
 
 import spicy;
 
-public type Header = unit {
-    signature: bytes(3) &requires($$ == b"GIF");
-    version: bytes(3) &requires($$ == b"87a" || $$ == b"89a");
-    width: uint16;
-    height: uint16;
-    packed_fields: uint8;
+public type Signature = bytes(3) &validate(self == b"GIF");
+public type Version = bytes(3) &validate(self == b"87a" || self == b"89a");
+public type Width = uint16;
+public type Height = uint16;
+
+public type ColorTableDescriptor = unit {
+    flags: uint8 {
+        global_color_table_flag: bool = $$ & 0x80 > 0;
+        color_resolution: uint<3> = ($$ & 0x70) >> 4;
+        sort_flag: bool = $$ & 0x08 > 0;
+        color_table_size: uint<3> = $$ & 0x07;
+    }
+};
+
+public type ColorEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type ColorTable = vector<ColorEntry>;
+
+public type LogicalScreenDescriptor = unit {
+    width: Width;
+    height: Height;
+    color_table_descriptor: ColorTableDescriptor;
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
-
-    var color_table_size: uint8 = (packed_fields & 0x07);
-    var has_color_table: bool = (packed_fields & 0x80) != 0;
-    var color_resolution: uint8 = ((packed_fields & 0x70) >> 4) + 1;
-
-    color_table: optional bytes(3 * (2 ** (color_table_size + 1))) if (has_color_table);
+    global_color_table: optional<ColorTable>;
 };
 
-public type GIFFile = unit {
-    header: Header;
-    
-    %context;
+public type ImageDescriptor = unit {
+    separator: uint8 &validate(self == 0x2C);
+    left: Width;
+    top: Height;
+    width: Width;
+    height: Height;
+    local_descriptor: uint8 {
+        local_color_table_flag: bool = $$ & 0x80 > 0;
+        interlace_flag: bool = $$ & 0x40 > 0;
+        sort_flag: bool = $$ & 0x20 > 0;
+        local_color_table_size: uint<3> = $$ & 0x07;
+    }
+    local_color_table: optional<ColorTable>;
+    lzw_min_code_size: uint8;
+    image_data: bytes;
 };
+
+public type ExtensionType = enum { 
+    GRAPHIC_CONTROL = 0xF9,
+    COMMENT = 0xFE,
+    PLAIN_TEXT = 0x01,
+    APPLICATION = 0xFF
+};
+
+public type Extension = unit {
+    introducer: uint8 &validate(self == 0x21);
+    type: ExtensionType;
+    data: bytes;
+};
+
+public type GIF = unit {
+    signature: Signature;
+    version: Version;
+    logical_screen: LogicalScreenDescriptor;
+    images: vector<ImageDescriptor>;
+    extensions: vector<Extension>;
+    trailer: uint8 &validate(self == 0x3B);
+};
+
+public function parse(data: bytes) : GIF = spicy::parse(data);

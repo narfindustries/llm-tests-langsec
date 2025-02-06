@@ -1,98 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/dns"
-           xmlns="http://example.org/dns"
-           elementFormDefault="qualified">
-
-  <xs:element name="dnsGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/dns" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="DNSMessage">
     <xs:complexType>
-      <xs:sequence>
+      <xs:sequence dfdl:separator="" dfdl:occursCountKind="implicit">
         <xs:element name="header" type="headerType"/>
-        <xs:element name="records" type="recordsType"/>
+        <xs:element name="question" type="questionType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="answer" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="authority" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="additional" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute ref="dfdl:lengthKind" use="required">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:lengthKind>implicit</dfdl:lengthKind>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:attribute>
-      <xs:attribute ref="dfdl:textString" use="required">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:textString>true</dfdl:textString>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:attribute>
-
     </xs:complexType>
   </xs:element>
-
-
   <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length kind="fixed">1</dfdl:length>
-            <dfdl:representation>text</dfdl:representation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="recordCount" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length kind="fixed">2</dfdl:length>
-            <dfdl:representation>binary</dfdl:representation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+    <xs:sequence dfdl:separator="" dfdl:occursCountKind="fixed" dfdl:length="12">
+      <xs:element name="id" type="dfdl:unsignedShort"/>
+      <xs:element name="flags" type="dfdl:unsignedShort"/>
+      <xs:element name="qdcount" type="dfdl:unsignedShort"/>
+      <xs:element name="ancount" type="dfdl:unsignedShort"/>
+      <xs:element name="nscount" type="dfdl:unsignedShort"/>
+      <xs:element name="arcount" type="dfdl:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordsType">
-    <xs:sequence>
-      <xs:element name="record" type="recordType" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:occurs>0..unbounded</dfdl:occurs>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+  <xs:complexType name="questionType">
+    <xs:sequence dfdl:separator="" dfdl:occursCountKind="fixed">
+      <xs:element name="qname" type="domainNameType"/>
+      <xs:element name="qtype" type="dfdl:unsignedShort"/>
+      <xs:element name="qclass" type="dfdl:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length kind="variable" lengthUnits="bytes">
-              <dfdl:lengthValue>255</dfdl:lengthValue>
-            </dfdl:length>
-            <dfdl:terminator>0</dfdl:terminator>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="type" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length kind="fixed">2</dfdl:length>
-            <dfdl:representation>binary</dfdl:representation>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="data" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length kind="variable" lengthUnits="bytes">
-              <dfdl:lengthValue>1024</dfdl:lengthValue>
-            </dfdl:length>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+  <xs:complexType name="resourceRecordType">
+    <xs:sequence dfdl:separator="" dfdl:occursCountKind="fixed">
+      <xs:element name="name" type="domainNameType"/>
+      <xs:element name="type" type="dfdl:unsignedShort"/>
+      <xs:element name="class" type="dfdl:unsignedShort"/>
+      <xs:element name="ttl" type="dfdl:unsignedInt"/>
+      <xs:element name="rdlength" type="dfdl:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="rdlength"/>
     </xs:sequence>
   </xs:complexType>
-
+  <xs:complexType name="domainNameType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="dfdl:lengthKind" type="xs:string" fixed="implicit"/>
+        <xs:attribute name="dfdl:lengthUnits" type="xs:string" fixed="bytes"/>
+        <xs:attribute name="dfdl:terminator" type="xs:string" fixed="0x00"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
 </xs:schema>

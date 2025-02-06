@@ -1,43 +1,78 @@
 module ICMP;
 
-import spicy;
-import zeek;
-
 public type ICMPMessage = unit {
     type: uint8;
     code: uint8;
     checksum: uint16;
-    rest_of_header: bytes &restof;
-} &byte_order=bigendian;
-
-public type ICMPAnalyzer = spicy::Analyzer {
-    .configure = {
-        .ports = [],
-        .mime_types = [],
-        .protocols = [spicy::Protocol::ICMP]
-    };
+    rest_of_header: switch(type) {
+        0, 8 => Echo,
+        3 => DestinationUnreachable,
+        5 => Redirect,
+        11 => TimeExceeded,
+        12 => ParameterProblem,
+        13, 14 => Timestamp,
+        17, 18 => AddressMask,
+        // Add other types as needed
+        default => bytes &rest_of_header_length
+    } &rest_of_header_length = calc_rest_of_header_length(type);
+    data: bytes &rest_of_data_length = calc_rest_of_data_length(type);
 
     on %init {
-        print "ICMP Analyzer initialized";
+        // Initialize lengths based on type
+        let header_length = calc_rest_of_header_length(type);
+        let data_length = $input.length() - 4 - header_length;
+        set rest_of_header_length = header_length;
+        set rest_of_data_length = data_length;
     }
 
-    on %done {
-        print "ICMP Analyzer done";
+    function calc_rest_of_header_length(t: uint8): uint64 {
+        return switch (t) {
+            0, 8 => 4, // Echo
+            3, 11, 12 => 4, // Destination Unreachable, Time Exceeded, Parameter Problem
+            5 => 4, // Redirect
+            13, 14 => 20, // Timestamp
+            17, 18 => 4, // Address Mask
+            default => 0
+        };
     }
 
-    on %error {
-        print "ICMP Analyzer encountered an error";
-    }
-
-    on spicy::analyzer::ICMP::ICMPMessage(msg: ICMPMessage) {
-        print fmt("ICMP Message: type=%d, code=%d, checksum=%d", msg.type, msg.code, msg.checksum);
+    function calc_rest_of_data_length(t: uint8): uint64 {
+        return $input.length() - 4 - calc_rest_of_header_length(t);
     }
 };
 
-public export {
-    redef enum zeek::Analyzer::Tag += {
-        ANICMP
-    };
+type Echo = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+};
 
-    type ANICMP = ICMPAnalyzer &priority=5 &name="ICMP";
-}
+type DestinationUnreachable = unit {
+    unused: uint32;
+};
+
+type Redirect = unit {
+    gateway_internet_address: uint32;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: uint24;
+};
+
+type Timestamp = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type AddressMask = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    address_mask: uint32;
+};

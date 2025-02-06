@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/arp"
+           xmlns:arp="http://example.com/arp"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:defineFormat name="GeneralFormat">
+        <dfdl:format representation="binary" byteOrder="bigEndian"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARP" type="arp:ARPType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:format ref="GeneralFormat"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+
+  <xs:complexType name="ARPType">
+    <xs:sequence>
+      <xs:element name="HardwareType" type="xs:unsignedShort"/>
+      <xs:element name="ProtocolType" type="xs:unsignedShort"/>
+      <xs:element name="HardwareLength" type="xs:unsignedByte"/>
+      <xs:element name="ProtocolLength" type="xs:unsignedByte"/>
+      <xs:element name="Operation" type="xs:unsignedShort"/>
+      <xs:element name="SenderHardwareAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:element length="{ ../HardwareLength }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="SenderProtocolAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:element length="{ ../ProtocolLength }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="TargetHardwareAddress" type极xs:hexBinary>
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:element length="{ ../HardwareLength }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="TargetProtocolAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:element length="{ ../ProtocolLength }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

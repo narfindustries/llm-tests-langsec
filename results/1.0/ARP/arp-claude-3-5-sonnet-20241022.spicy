@@ -1,31 +1,13 @@
 module ARP;
 
-public type Packet = unit {
-    hw_type: uint16;
-    proto_type: uint16;
-    hw_size: uint8;
-    proto_size: uint8;
-    op_code: uint16;
-    sender_mac: bytes &size=6;
-    sender_ip: bytes &size=4;
-    target_mac: bytes &size=6;
-    target_ip: bytes &size=4;
-
-    on %done {
-        self.connect_zeek_ARP();
-    }
+public type ARPPacket = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_addr_len: uint8;
+    protocol_addr_len: uint8;
+    operation: uint16;
+    sender_hardware_addr: bytes &size=self.hardware_addr_len;
+    sender_protocol_addr: bytes &size=self.protocol_addr_len;
+    target_hardware_addr: bytes &size=self.hardware_addr_len;
+    target_protocol_addr: bytes &size=self.protocol_addr_len;
 };
-
-public function connect_zeek_ARP(p: Packet) {
-    zeek::arp_request(
-        $hw_type = p.hw_type,
-        $proto_type = p.proto_type,
-        $hw_size = p.hw_size,
-        $proto_size = p.proto_size,
-        $op_code = p.op_code,
-        $sender_mac = p.sender_mac,
-        $sender_ip = p.sender_ip,
-        $target_mac = p.target_mac,
-        $target_ip = p.target_ip
-    );
-}

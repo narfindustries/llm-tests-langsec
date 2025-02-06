@@ -1,65 +1,63 @@
-meta:
-  id: gzip-gemini-1
-  title: GZIP Gemini 1.5 Flash
-  endian: be
-
+type: seq
+endian: be
 seq:
-  - id: magic
-    type: u4
+  - id: id1
+    type: u1
     enum:
-      0x1f8b0800: gzip
+      0x1f: id1
+  - id: id2
+    type: u1
+    enum:
+      0x8b: id2
   - id: cm
-    type: u2
-    doc: Compression method
+    type: u1
+    enum:
+      8: deflate
   - id: flg
-    type: u2
-    doc: Flags
+    type: u1
+    bits:
+      - ftext: 1
+      - fhcrc: 1
+      - fextra: 1
+      - fname: 1
+      - fcomment: 1
+      - reserved: 3
   - id: mtime
-    type: u4
-    doc: Modification time
+    type: u4le
   - id: xfl
     type: u1
-    doc: Extra flags
   - id: os
     type: u1
-    doc: Operating system
-  - id: xlen
-    type: u2
-    doc: Extra field length
   - id: extra
-    type: u1
-    size: xlen
-    doc: Extra field
+    type: seq
+    repeat: expr
+    expr: this.flg.fextra
+    seq:
+      - id: subfield_id
+        type: u2le
+      - id: subfield_len
+        type: u2le
+      - id: subfield_data
+        type: bytes
+        size: this.subfield_len
+  - id: fname
+    type: str
+    term: 0
+    repeat: expr
+    expr: this.flg.fname
+  - id: fcomment
+    type: str
+    term: 0
+    repeat: expr
+    expr: this.flg.fcomment
   - id: fhcrc
-    type: u2
-    doc: Header CRC
-  - id: namelen
-    type: u2
-    doc: Filename length
-  - id: filename
-    type: str
-    size: namelen
-    doc: Filename
-  - id: commentlen
-    type: u2
-    doc: Comment length
-  - id: comment
-    type: str
-    size: commentlen
-    doc: Comment
-  - id: hcrc
-    type: u2
-    doc: Header CRC
+    type: u2le
+    repeat: expr
+    expr: this.flg.fhcrc
   - id: compressed_data
-    type: u1
-    size: (this.body_len)
+    type: bytes
   - id: crc32
-    type: u4
-    doc: CRC32 checksum
+    type: u4le
   - id: isize
-    type: u4
-    doc: Uncompressed size
-  
-types:
-  body_len:
-    expr: (this._root.size - this._io.pos()) - 8
+    type: u4le
+

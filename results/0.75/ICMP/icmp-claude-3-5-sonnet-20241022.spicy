@@ -1,37 +1,63 @@
 module ICMP;
 
 public type Message = unit {
-    type:       uint8;
-    code:       uint8;
-    checksum:   uint16;
-    identifier: uint16;
-    seqno:     uint16;
-    payload:    bytes &eod;
+    msg_type: uint8;
+    code: uint8;
+    checksum: uint16;
 
-    on %done {
-        self.connect_icmp();
-    }
+    switch ( self.msg_type ) {
+        0, 8 -> echo: EchoMessage;
+        3 -> dest_unreach: DestinationUnreachable;
+        4 -> source_quench: SourceQuench;
+        5 -> redirect: Redirect;
+        11 -> time_exceeded: TimeExceeded;
+        12 -> param_problem: ParameterProblem;
+        13, 14 -> timestamp: TimestampMessage;
+        15, 16 -> info: InformationMessage;
+    };
 };
 
-on Message::%done {
-    print "ICMP:", self.type, self.code, self.checksum, self.identifier, self.seqno, self.payload;
-}
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    data: bytes &eod;
+};
 
-public function Message::connect_icmp() {
-    event ICMP::message(
-        self.type,
-        self.code,
-        self.checksum,
-        self.identifier,
-        self.seqno,
-        self.payload
-    );
-}
+type DestinationUnreachable = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
 
-@zeek-evt-arg[0] uint8;
-@zeek-evt-arg[1] uint8;
-@zeek-evt-arg[2] uint16;
-@zeek-evt-arg[3] uint16;
-@zeek-evt-arg[4] uint16;
-@zeek-evt-arg[5] bytes;
-event ICMP::message(t: uint8, c: uint8, csum: uint16, id: uint16, seq: uint16, payload: bytes);
+type SourceQuench = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
+
+type Redirect = unit {
+    gateway_address: uint32;
+    ip_header: bytes &eod;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    ip_header: bytes &eod;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+    ip_header: bytes &eod;
+};
+
+type TimestampMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+    original_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type InformationMessage = unit {
+    identifier: uint16;
+    sequence: uint16;
+};

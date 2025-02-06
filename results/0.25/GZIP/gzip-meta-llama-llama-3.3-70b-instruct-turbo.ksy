@@ -1,59 +1,49 @@
 meta:
-  id: gzip
-  file-extension: gz
   endian: le
 seq:
-  - id: magic
-    type: bytes
-    size: 2
-    contents: [0x1f, 0x8b]
-  - id: compression_method
+  - id: id1
+    type: u1
+  - id: id2
+    type: u1
+  - id: cm
     type: u1
   - id: flags
     type: u1
   - id: mtime
     type: u4
-  - id: extra_flags
+  - id: xfl
     type: u1
   - id: os
     type: u1
   - id: extra
     type:
-      proc: if flags & 4 != 0
       seq:
         - id: xlen
           type: u2
-        - id: extra_data
+        - id: extra_field
           size: xlen
           type: bytes
-  - id: filename
+    if: flags & 4 != 0
+  - id: fname
     type:
-      proc: if flags & 8 != 0
-      seq:
-        - id: filename_len
-          type: u1
-        - id: filename_data
-          size: filename_len
-          type: str
-          encoding: ascii
-  - id: comment
+      str:
+        encoding: UTF-8
+        terminator: 0
+    if: flags & 8 != 0
+  - id: fcomment
     type:
-      proc: if flags & 16 != 0
-      seq:
-        - id: comment_len
-          type: u1
-        - id: comment_data
-          size: comment_len
-          type: str
-          encoding: ascii
-  - id: crc16
-    type:
-      proc: if flags & 2 != 0
-      type: u2
-  - id: body
-    type: switch-on compression_method
-    cases:
-      8: seq
-          - id: compressed_data
-            size: eos
-            type: bytes
+      str:
+        encoding: UTF-8
+        terminator: 0
+    if: flags & 16 != 0
+  - id: hcrc
+    type: u2
+    if: flags & 2 != 0
+  - id: compressed_data
+    type: bytes
+    size: eos
+  instances:
+    crc32:
+      value: compressed_data[-4:]
+    isize:
+      value: compressed_data[-8:-4]

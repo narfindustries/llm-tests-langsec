@@ -1,90 +1,151 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:nitf="urn:nitf:3.5"
-    targetNamespace="urn:nitf:3.5">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="nitf:NITFFormat" 
-                alignment="1"
-                alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="bigEndian"
-                encoding="UTF-8"
-                ignoreCase="no"
-                lengthKind="explicit"
-                lengthUnits="bytes"
-                occursCountKind="implicit"
-                separator=""
-                separatorSuppressionPolicy="never"
-                separatorPosition="infix"
-                textNumberRep="standard"
-                textStringJustification="left"
-                textStringPadCharacter=" "
-                textTrimKind="none"
-                initiator=""
-                terminator=""
-                leadingSkip="0"
-                trailingSkip="0"
-                calendarPatternKind="explicit"
-                calendarPattern="yyyyMMdd"
-                documentFinalTerminatorCanBeMissing="yes"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:nitf="http://example.com/nitf"
+           targetNamespace="http://example.com/nitf">
 
-    <xs:element name="nitf">
-        <xs:complexType>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" 
+                   lengthKind="explicit" 
+                   lengthUnits="bytes"
+                   encoding="ASCII"
+                   occursCountKind="fixed"
+                   separator=""
+                   initiator=""
+                   terminator=""
+                   ignoreCase="no"
+                   textNumberRep="standard"
+                   textStringJustification="left"
+                   textStringPadCharacter=" "
+                   textTrimKind="none"
+                   textPadKind="padChar"
+                   fillByte="%#r20"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader">
+          <xs:complexType>
             <xs:sequence>
-                <xs:element name="header">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="fileHeader" type="xs:string" dfdl:length="9"/>
-                            <xs:element name="fileVersion" type="xs:string" dfdl:length="2"/>
-                            <xs:element name="complexityLevel" type="xs:string" dfdl:length="2"/>
-                            <xs:element name="standardType" type="xs:string" dfdl:length="4"/>
-                            <xs:element name="originatingStationId" type="xs:string" dfdl:length="10"/>
-                            <xs:element name="fileDateTime" type="xs:string" dfdl:length="14"/>
-                            <xs:element name="fileTitle" type="xs:string" dfdl:length="80"/>
-                            <xs:element name="classification" type="xs:string" dfdl:length="1"/>
-                            <xs:element name="securityGroup" type="xs:string" dfdl:length="2"/>
-                            <xs:element name="handlingInstructions" type="xs:string" dfdl:length="2"/>
-                            <xs:element name="releaseInstructions" type="xs:string" dfdl:length="20"/>
-                            <xs:element name="classificationAuthority" type="xs:string" dfdl:length="40"/>
-                            <xs:element name="securityControlNumber" type="xs:string" dfdl:length="15"/>
-                            <xs:element name="originatorsName" type="xs:string" dfdl:length="27"/>
-                            <xs:element name="originatorsPhone" type="xs:string" dfdl:length="18"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="imageSegment" maxOccurs="unbounded">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="subheader">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="filePartType" type="xs:string" dfdl:length="2"/>
-                                        <xs:element name="imageId" type="xs:string" dfdl:length="10"/>
-                                        <xs:element name="dateTime" type="xs:string" dfdl:length="14"/>
-                                        <xs:element name="targetId" type="xs:string" dfdl:length="17"/>
-                                        <xs:element name="imageTitle" type="xs:string" dfdl:length="80"/>
-                                        <xs:element name="imageSecurityClass" type="xs:string" dfdl:length="1"/>
-                                        <xs:element name="encryption" type="xs:string" dfdl:length="1"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
+              <xs:element name="FHDR" type="xs:string" dfdl:length="4" fixed="NITF"/>
+              <xs:element name="FVER" type="xs:string" dfdl:length="5" fixed="02.10"/>
+              <xs:element name="CLEVEL" type="xs:string" dfdl:length="2"/>
+              <xs:element name="STYPE" type="xs:string" dfdl:length="4"/>
+              <xs:element name="OSTAID" type="xs:string" dfdl:length="10"/>
+              <xs:element name="FDT" type="xs:string" dfdl:length="14"/>
+              <xs:element name="FTITLE" type="xs:string" dfdl:length="80"/>
+              <xs:element name="SecurityMetadata">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="FSCLAS" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="FSCLSY" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="FSCODE" type="xs:string" dfdl:length="11"/>
+                    <xs:element name="FSCTLH" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="FSREL" type="xs:string" dfdl:length="20"/>
+                    <xs:element name="FSDCTP" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="FSDCDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="FSDCXM" type="xs:string" dfdl:length="4"/>
+                    <xs:element name="FSDG" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="FSDGDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="FSCLTX" type="xs:string" dfdl:length="43"/>
+                    <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="FSCAUT" type="xs:string" dfdl:length="40"/>
+                    <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+              <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+              <xs:element name="ENCRYP" type="xs:string" dfdl:length="1"/>
+              <xs:element name="FBKGC" type="xs:string" dfdl:length="3"/>
+              <xs:element name="ONAME" type="xs:string" dfdl:length="24"/>
+              <xs:element name="OPHONE" type="xs:string" dfdl:length="18"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
 
-    <xs:simpleType name="NITFFormat">
-        <xs:restriction base="xs:string"/>
-    </xs:simpleType>
-
+        <xs:element name="ImageSegment" minOccurs="0" maxOccurs="999">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="IM" type="xs:string" dfdl:length="2" fixed="IM"/>
+              <xs:element name="IID1" type="xs:string" dfdl:length="10"/>
+              <xs:element name="IDATIM" type="xs:string" dfdl:length="14"/>
+              <xs:element name="TGTID" type="xs:string" dfdl:length="17"/>
+              <xs:element name="IID2" type="xs:string" dfdl:length="80"/>
+              <xs:element name="SecurityMetadata">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ISCLAS" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="ISCLSY" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="ISCODE" type="xs:string" dfdl:length="11"/>
+                    <xs:element name="ISCTLH" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="ISREL" type="xs:string" dfdl:length="20"/>
+                    <xs:element name="ISDCTP" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="ISDCDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="ISDCXM" type="xs:string" dfdl:length="4"/>
+                    <xs:element name="ISDG" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="ISDGDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="ISCLTX" type="xs:string" dfdl:length="43"/>
+                    <xs:element name="ISCATP" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="ISCAUT" type="xs:string" dfdl:length="40"/>
+                    <xs:element name="ISCRSN" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="ISSRDT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="ISCTLN" type="xs:string" dfdl:length="15"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ENCRYP" type="xs:string" dfdl:length="1"/>
+              <xs:element name="ImageStructure">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ISORCE" type="xs:string" dfdl:length="42"/>
+                    <xs:element name="NROWS" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="NCOLS" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="PVTYPE" type="xs:string" dfdl:length="3"/>
+                    <xs:element name="IREP" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="ICAT" type="xs:string" dfdl:length="8"/>
+                    <xs:element name="ABPP" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="PJUST" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="ICORDS" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="IGEOLO" type="xs:string" dfdl:length="60" minOccurs="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageCompression">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="IC" type="xs:string" dfdl:length="2"/>
+                    <xs:element name="COMRAT" type="xs:string" dfdl:length="4"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageBands">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="NBANDS" type="xs:string" dfdl:length="1"/>
+                    <xs:element name="BandInfo" minOccurs="0" maxOccurs="9">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="IREPBAND" type="xs:string" dfdl:length="2"/>
+                          <xs:element name="ISUBCAT" type="xs:string" dfdl:length="6"/>
+                          <xs:element name="IFC" type="xs:string" dfdl:length="1"/>
+                          <xs:element name="IMFLT" type="xs:string" dfdl:length="3"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" type="xs:hexBinary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

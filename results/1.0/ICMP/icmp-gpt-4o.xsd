@@ -1,46 +1,217 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns:tns="http://example.com/ICMP"
-           elementFormDefault="qualified">
+           targetNamespace="urn:example:icmp"
+           xmlns="urn:example:icmp"
+           xmlns:tns="urn:example:icmp"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
 
-    <xs:include schemaLocation="some_common_types.xsd"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="ascii" lengthKind="implicit"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <dfdl:format ref="tns:generalFormat"
-                 encoding="ascii" lengthKind="explicit" lengthUnits="bytes"
-                 occursCountKind="implicit" alignment="1" representation="binary"/>
+  <xs:element name="ICMP" type="tns:ICMPType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:element representation="binary" />
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
 
-    <xs:element name="ICMP_Packet">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Type" type="xs:unsignedByte"
-                            dfdl:length="1" dfdl:lengthUnits="bytes"/>
-                <xs:element name="Code" type="xs:unsignedByte"
-                            dfdl:length="1" dfdl:lengthUnits="bytes"/>
-                <xs:element name="Checksum" type="xs:unsignedShort"
-                            dfdl:length="2" dfdl:lengthUnits="bytes"
-                            dfdl:byteOrder="network"/>
-                <xs:element name="Rest_of_Header" type="RestOfHeaderType"
-                            dfdl:length="4" dfdl:lengthUnits="bytes"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+  <xs:complexType name="ICMPType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element length="8" />
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Code" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element length="8" />
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Checksum" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element length="16" />
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
 
-    <xs:simpleType name="RestOfHeaderType">
-        <xs:restriction base="xs:hexBinary">
-            <xs:length value="4"/>
-        </xs:restriction>
-    </xs:simpleType>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element name="Identifier" type="xs:unsignedShort">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="16" />
+                <dfdl:discriminator test="{ ../Type eq 0 or ../Type eq 8 }" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="SequenceNumber" type="xs:unsignedShort">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="16" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="Data" type="xs:hexBinary" minOccurs="0">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element lengthKind="endOfParent" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
 
-    <xs:element name="Payload">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Data" minOccurs="0" maxOccurs="unbounded"
-                            type="xs:unsignedByte" dfdl:length="1"
-                            dfdl:lengthUnits="bytes"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+        <xs:sequence>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator test="{ ../Type eq 3 }" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:element name="Unused_3" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="OriginalDatagram" type="xs:hexBinary" minOccurs="0">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element lengthKind="endOfParent" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
 
+        <xs:sequence>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator test="{ ../Type eq 5 }" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:element name="GatewayInternetAddress" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="OriginalDatagram" type="xs:hexBinary" minOccurs="0">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element lengthKind="endOfParent" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+
+        <xs:sequence>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator test="{ ../Type eq 11 }" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:element name="Unused_11" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="OriginalDatagram" type="xs:hexBinary" minOccurs="0">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element lengthKind="endOfParent" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+
+        <xs:sequence>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator test="{ ../Type eq 12 }" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:element name="Pointer" type="xs:unsignedByte">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="8" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="Unused_12" type="xs:hexBinary">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="24" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="OriginalDatagram" type="xs:hexBinary" minOccurs="0">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element lengthKind="endOfParent" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+
+        <xs:sequence>
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator test="{ ../Type eq 13 or ../Type eq 14 }" />
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:element name="Identifier_13_14" type="xs:unsignedShort">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="16" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="SequenceNumber_13_14" type="xs:unsignedShort">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="16" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="OriginateTimestamp" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="ReceiveTimestamp" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="TransmitTimestamp" type="xs:unsignedInt">
+            <xs:annotation>
+              <xs:appinfo source="http://www.ogf.org/dfdl/">
+                <dfdl:element length="32" />
+              </xs:appinfo>
+            </xs:annotation>
+          </xs:element>
+        </xs:sequence>
+
+        <!-- Additional ICMP types can be added here -->
+
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

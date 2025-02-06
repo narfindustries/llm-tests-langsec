@@ -1,52 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.org/arp"
            xmlns="http://example.org/arp"
-           elementFormDefault="qualified">
+           elementFormDefault="qualified"
+           dfdl:lengthKind="explicit">
 
-  <xs:element name="arp_gemini_1">
+  <xs:element name="arpPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="data" type="dataType" maxOccurs="unbounded"/>
-        <xs:element name="footer" type="footerType"/>
+        <xs:element name="hardwareType" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="protocolType" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="hardwareAddressLength" type="unsignedByte" dfdl:length="1"/>
+        <xs:element name="protocolAddressLength" type="unsignedByte" dfdl:length="1"/>
+        <xs:element name="operation" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:length="{hardwareAddressLength}"/>
+        <xs:element name="senderProtocolAddress" type="xs:hexBinary" dfdl:length="{protocolAddressLength}"/>
+        <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:length="{hardwareAddressLength}"/>
+        <xs:element name="targetProtocolAddress" type="xs:hexBinary" dfdl:length="{protocolAddressLength}"/>
       </xs:sequence>
-      <xs:attribute ref="dfdl:lengthKind" use="required"/>
-      <xs:attribute ref="dfdl:lengthUnits" use="required"/>
-      <xs:attribute ref="dfdl:occursCountKind" use="required"/>
     </xs:complexType>
   </xs:element>
 
+  <xs:simpleType name="unsignedByte">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
 
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:string" dfdl:length="1">
-        <xs:annotation>
-          <xs:documentation>Version Number</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="recordType" type="xs:string" dfdl:length="2">
-        <xs:annotation>
-          <xs:documentation>Record Type</xs:documentation>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-    <xs:attribute ref="dfdl:separator" use="required"/>
-  </xs:complexType>
-
-  <xs:complexType name="dataType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:integer" dfdl:length="5"/>
-      <xs:element name="field2" type="xs:string" dfdl:length="10"/>
-    </xs:sequence>
-    <xs:attribute ref="dfdl:separator" use="required"/>
-  </xs:complexType>
-
-  <xs:complexType name="footerType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer" dfdl:length="8"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="unsignedShort">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
 
 </xs:schema>
+

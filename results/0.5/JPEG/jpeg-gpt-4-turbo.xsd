@@ -1,36 +1,128 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
-
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/jpeg"
+           xmlns:ex="http://example.com/jpeg">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ex:GeneralFormat"/>
+      <dfdl:format representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="JPEGFile" type="JPEGFileType"/>
+  <xs:element name="JPEGFile" type="ex:JPEGFileType"/>
 
   <xs:complexType name="JPEGFileType">
     <xs:sequence>
-      <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
-      <xs:element name="segments" type="SegmentsType"/>
-      <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:terminator="0xFFD9"/>
+      <xs:element name="StartOfImage" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
+      <xs:element name="segments" type="ex:SegmentsType"/>
+      <xs:element name="EndOfImage" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD9"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="SegmentsType">
-    <xs:sequence dfdl:occursCountKind="parsed">
-      <xs:element name="segment" type="SegmentType" dfdl:occursStopValue="-1"/>
+    <xs:sequence dfdl:occursCountKind="parsed" dfdl:occursStopValue="EOI">
+      <xs:choice maxOccurs="unbounded">
+        <xs:element name="APPn" type="ex:APPnSegmentType"/>
+        <xs:element name="DQT" type="ex:DQTSegmentType"/>
+        <xs:element name="SOF" type="ex:SOFSegmentType"/>
+        <xs:element name="DHT" type="ex:DHTSegmentType"/>
+        <xs:element name="SOS" type="ex:SOSSegmentType"/>
+        <xs:element name="COM" type="ex:COMSegmentType"/>
+      </xs:choice>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="SegmentType">
+  <xs:complexType name="APPnSegmentType">
     <xs:sequence>
       <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
-      <xs:element name="length" type="xs:int" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiter="0xFF"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:length="{ ../length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTSegmentType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:sequence dfdl:occursCount="{ (../length - 2) div 65 }">
+        <xs:element name="table" type="ex:DQTTableType"/>
+      </xs:sequence>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTTableType">
+    <xs:sequence>
+      <xs:element name="precisionAndIdentifier" type="xs:byte"/>
+      <xs:element name="qTable" type="xs:hexBinary" dfdl:length="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOFSegmentType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="precision" type="xs:byte"/>
+      <xs:element name="height" type="xs:int" dfdl:length="2"/>
+      <xs:element name="width" type="xs:int" dfdl:length="2"/>
+      <xs:element name="numComponents" type="xs:byte"/>
+      <xs:sequence dfdl:occursCount="{ ../numComponents }">
+        <xs:element name="component" type="ex:FrameComponentType"/>
+      </xs:sequence>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FrameComponentType">
+    <xs:sequence>
+      <xs:element name="componentId" type="xs:byte"/>
+      <xs:element name="samplingFactors" type="xs:byte"/>
+      <xs:element name="quantTableNumber" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTSegmentType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:sequence dfdl:occursCount="{ (../length - 2) div 17 }">
+        <xs:element name="huffmanTable" type="ex:HuffmanTableType"/>
+      </xs:sequence>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HuffmanTableType">
+    <xs:sequence>
+      <xs:element name="tableClassAndIdentifier" type="xs:byte"/>
+      <xs:element name="codes" type="xs:hexBinary" dfdl:length="16"/>
+      <xs:element name="symbols" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:lengthPattern=".*"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSSegmentType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="numComponents" type="xs:byte"/>
+      <xs:sequence dfdl:occursCount="{ ../numComponents }">
+        <xs:element name="scanComponent" type="ex:ScanComponentType"/>
+      </xs:sequence>
+      <xs:element name="startOfSpectral" type="xs:byte"/>
+      <xs:element name="endOfSpectral" type="xs:byte"/>
+      <xs:element name="successiveApproximation" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ScanComponentType">
+    <xs:sequence>
+      <xs:element name="componentSelector" type="xs:byte"/>
+      <xs:element name="huffmanTableSelector" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="COMSegmentType">
+    <xs:sequence>
+      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="length" type="xs:int" dfdl:length="2"/>
+      <xs:element name="comment" type="xs:string" dfdl:length="{ ../length - 2 }" dfdl:encoding="ASCII"/>
     </xs:sequence>
   </xs:complexType>
 

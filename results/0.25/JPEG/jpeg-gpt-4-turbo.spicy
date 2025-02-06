@@ -1,55 +1,60 @@
 module JPEG;
 
-public type SOF0 = unit {
+public type QuantizationTable = unit {
+    precision: uint4;
+    tableID: uint4;
+    qValues: bytes &size=64; // Quantization values (assuming 8-bit precision)
+};
+
+public type HuffmanTable = unit {
+    tableClass: uint4; // 0 for DC table, 1 for AC table
+    tableID: uint4;
+    lengths: bytes &size=16; // Number of symbols for each of 16 lengths
+    values: bytes &eod; // Huffman values
+};
+
+public type FrameComponent = unit {
+    componentID: uint8;
+    samplingFactors: uint8;
+    quantTableID: uint8;
+};
+
+public type StartOfFrame = unit {
     precision: uint8;
     height: uint16;
     width: uint16;
-    num_components: uint8;
-    components: Component[num_components];
+    numComponents: uint8;
+    components: FrameComponent[] &size=numComponents;
 };
 
-public type Component = unit {
-    id: uint8;
-    sampling: uint8;
-    qt: uint8;
+public type ScanComponent = unit {
+    componentID: uint8;
+    huffmanTable: uint8;
 };
 
-public type SOI = unit {};
+public type StartOfScan = unit {
+    numComponents: uint8;
+    components: ScanComponent[] &size=numComponents;
+    startSpectral: uint8;
+    endSpectral: uint8;
+    approxHigh: uint4;
+    approxLow: uint4;
+};
 
-public type EOI = unit {};
-
-public type APP0 = unit {
+public type Segment = unit {
+    marker: uint16;
     length: uint16;
-    identifier: bytes &size=5;
-    version: uint16;
-    units: uint8;
-    xdensity: uint16;
-    ydensity: uint16;
-    xthumbnail: uint8;
-    ythumbnail: uint8;
-    thumbnail: bytes &size=(xthumbnail * ythumbnail * 3);
-};
-
-public type JPEGFile = unit {
-    segments: Segment(self.isEOI())[];
-};
-
-public type Segment = unit(isEOI: function(): bool) -> (isEOI: bool) {
-    tag: uint16;
-    switch (tag) {
-        case 0xFFD8 -> _: SOI;
-        case 0xFFE0 -> app0: APP0;
-        case 0xFFC0 -> sof0: SOF0;
-        case 0xFFD9 -> _: EOI { isEOI = true; }
-        default -> _: SkipSegment;
+    data: switch (self.marker) {
+        0xFFDB -> quantizationTable: QuantizationTable;
+        0xFFC4 -> huffmanTable: HuffmanTable;
+        0xFFC0, 0xFFC2 -> startOfFrame: StartOfFrame;
+        0xFFDA -> startOfScan: StartOfScan;
+        0xFFE0 -> appData: bytes &size=(self.length - 2);
+        0xFFFE -> comment: bytes &size=(self.length - 2);
+        * -> data: bytes &size=(self.length - 2);
     };
 };
 
-public type SkipSegment = unit {
-    length: uint16;
-    data: bytes &size=(length - 2);
+public type JPEGFile = unit {
+    segments: Segment[];
 };
-
-public function isEOI(): bool {
-    return false;
-}

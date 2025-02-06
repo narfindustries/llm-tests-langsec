@@ -1,33 +1,131 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg-gpt-4-turbo"
-           xmlns:tns="http://example.com/jpeg-gpt-4-turbo">
-
-  <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.xsd"/>
+           targetNamespace="http://example.com/jpeg"
+           xmlns:ex="http://example.com/jpeg">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
+      <dfdl:format ref="ex:generalFormat"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="JPEGFile">
+  <dfdl:defineFormat name="generalFormat">
+    <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst" encoding="UTF-8" />
+  </dfdl:defineFormat>
+
+  <xs:element name="JPEGFile" type="ex:JPEGFileType"/>
+
+  <xs:complexType name="JPEGFileType">
     <xs:sequence>
-      <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:initiator="0xFFD8"/>
-      <xs:element name="segments" type="tns:Segment" dfdl:occursCountKind="parsed" dfdl:occursStopValue="-1"/>
-      <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:terminator="0xFFD9"/>
+      <xs:element name="SOI" type="ex:MarkerType"/>
+      <xs:element name="Segments" type="ex:SegmentsType"/>
+      <xs:element name="EOI" type="ex:MarkerType"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="Segment">
+  <xs:complexType name="SegmentsType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes"/>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ . - 2 }"/>
+      <xs:element name="Segment" type="ex:SegmentType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="JPEGFile" type="tns:JPEGFile"/>
+  <xs:complexType name="SegmentType">
+    <xs:choice>
+      <xs:element name="APP" type="ex:APPType"/>
+      <xs:element name="DQT" type="ex:DQTType"/>
+      <xs:element name="SOF0" type="ex:SOF0Type"/>
+      <xs:element name="DHT" type="ex:DHTType"/>
+      <xs:element name="SOS" type="ex:SOSType"/>
+      <xs:element name="COM" type="ex:COMType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="MarkerType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <dfdl:lengthKind="explicit" dfdl:length="2"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="APPType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="Table" type="ex:DQTTableType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTTableType">
+    <xs:sequence>
+      <xs:element name="PrecisionAndTableID" type="xs:byte"/>
+      <xs:element name="QTable" type="xs:int" minOccurs="64" maxOccurs="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="Precision" type="xs:int"/>
+      <xs:element name="Height" type="xs:int"/>
+      <xs:element name="Width" type="xs:int"/>
+      <xs:element name="NumberOfComponents" type="xs:int"/>
+      <xs:element name="Components" type="ex:ComponentType" minOccurs="1" maxOccurs="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:int"/>
+      <xs:element name="HAndVSampling" type="xs:byte"/>
+      <xs:element name="QTableID" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="Table" type="ex:DHTTableType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTTableType">
+    <xs:sequence>
+      <xs:element name="TableClassAndID" type="xs:byte"/>
+      <xs:element name="Codes" type="xs:int" minOccurs="16" maxOccurs="16"/>
+      <xs:element name="Symbols" type="xs:int" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="NumberOfComponents" type="xs:int"/>
+      <xs:element name="Components" type="ex:SOSComponentType" minOccurs="1" maxOccurs="4"/>
+      <xs:element name="StartOfSpectral" type="xs:int"/>
+      <xs:element name="EndOfSpectral" type="xs:int"/>
+      <xs:element name="SuccessiveApproximation" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:int"/>
+      <xs:element name="HuffmanTableID" type="xs:byte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="COMType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:int"/>
+      <xs:element name="Comment" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

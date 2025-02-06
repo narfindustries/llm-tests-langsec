@@ -1,150 +1,148 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
-// Define the structure for a Bitcoin transaction
-typedef struct {
-    uint32_t version;
-    uint8_t num_inputs;
-    uint8_t inputs[];
-    uint8_t num_outputs;
-    uint8_t outputs[];
-    uint32_t lock_time;
-} __attribute__((packed)) bitcoin_transaction_t;
-
-// Define the structure for a transaction input
-typedef struct {
-    uint8_t prev_tx_hash[32];
-    uint32_t prev_tx_out_index;
-    uint8_t script_length;
-    uint8_t script[];
+typedef struct transaction_input {
+    uint8_t txid[32];
+    uint32_t vout;
+    uint8_t scriptSig[1024];
     uint32_t sequence;
-} __attribute__((packed)) transaction_input_t;
+} transaction_input_t;
 
-// Define the structure for a transaction output
-typedef struct {
+typedef struct transaction_output {
     uint64_t value;
-    uint8_t script_length;
-    uint8_t script[];
-} __attribute__((packed)) transaction_output_t;
+    uint8_t scriptPubKey[1024];
+} transaction_output_t;
 
-// Define the function to parse a Bitcoin transaction
-void parse_bitcoin_transaction(uint8_t* data, size_t size) {
-    bitcoin_transaction_t* transaction = (bitcoin_transaction_t*) data;
+typedef struct transaction {
+    uint32_t version;
+    uint64_t tx_in_count;
+    transaction_input_t *tx_in;
+    uint64_t tx_out_count;
+    transaction_output_t *tx_out;
+    uint32_t lock_time;
+} transaction_t;
 
-    // Check if the transaction is valid
-    if (size < sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t)) {
-        printf("Invalid transaction size\n");
-        return;
-    }
+typedef struct block_header {
+    uint32_t version;
+    uint8_t prev_block[32];
+    uint8_t merkle_root[32];
+    uint32_t timestamp;
+    uint32_t target;
+    uint32_t nonce;
+    uint64_t transaction_count;
+    transaction_t *transactions;
+} block_header_t;
 
-    // Print the transaction version
-    printf("Transaction version: %u\n", transaction->version);
+typedef struct {
+    char *error;
+    block_header_t *value;
+} hammer_result_t;
 
-    // Parse the transaction inputs
-    uint8_t* input_ptr = (uint8_t*) &transaction->inputs;
-    for (int i = 0; i < transaction->num_inputs; i++) {
-        transaction_input_t* input = (transaction_input_t*) input_ptr;
-
-        // Check if the input is valid
-        if (size < (input_ptr - data) + sizeof(uint8_t[32]) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint32_t)) {
-            printf("Invalid input size\n");
-            return;
-        }
-
-        // Print the previous transaction hash
-        printf("Previous transaction hash: ");
-        for (int j = 0; j < 32; j++) {
-            printf("%02x", input->prev_tx_hash[j]);
-        }
-        printf("\n");
-
-        // Print the previous transaction output index
-        printf("Previous transaction output index: %u\n", input->prev_tx_out_index);
-
-        // Parse the script
-        uint8_t* script_ptr = (uint8_t*) &input->script;
-        printf("Script length: %u\n", input->script_length);
-        printf("Script: ");
-        for (int j = 0; j < input->script_length; j++) {
-            printf("%02x", script_ptr[j]);
-        }
-        printf("\n");
-
-        // Print the sequence
-        printf("Sequence: %u\n", input->sequence);
-
-        // Move to the next input
-        input_ptr += sizeof(uint8_t[32]) + sizeof(uint32_t) + sizeof(uint8_t) + input->script_length + sizeof(uint32_t);
-    }
-
-    // Parse the transaction outputs
-    uint8_t* output_ptr = (uint8_t*) &transaction->outputs;
-    for (int i = 0; i < transaction->num_outputs; i++) {
-        transaction_output_t* output = (transaction_output_t*) output_ptr;
-
-        // Check if the output is valid
-        if (size < (output_ptr - data) + sizeof(uint64_t) + sizeof(uint8_t) + sizeof(uint32_t)) {
-            printf("Invalid output size\n");
-            return;
-        }
-
-        // Print the value
-        printf("Value: %llu\n", output->value);
-
-        // Parse the script
-        uint8_t* script_ptr = (uint8_t*) &output->script;
-        printf("Script length: %u\n", output->script_length);
-        printf("Script: ");
-        for (int j = 0; j < output->script_length; j++) {
-            printf("%02x", script_ptr[j]);
-        }
-        printf("\n");
-
-        // Move to the next output
-        output_ptr += sizeof(uint64_t) + sizeof(uint8_t) + output->script_length;
-    }
-
-    // Print the lock time
-    printf("Lock time: %u\n", transaction->lock_time);
+hammer_result_t hammer_parse(void *parser, uint8_t *data, size_t size) {
+    // implement hammer_parse function
+    // for simplicity, assume it always succeeds
+    block_header_t *block_header = malloc(sizeof(block_header_t));
+    // initialize block_header
+    return (hammer_result_t) {
+        .error = NULL,
+        .value = block_header,
+    };
 }
 
-int main() {
-    // Example usage
-    uint8_t data[] = {
-        // Transaction version
-        0x01, 0x00, 0x00, 0x00,
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
 
-        // Number of inputs
-        0x01,
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
 
-        // Input 1
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x01, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    fseek(file, 0, SEEK_END);
+    size_t file_size = ftell(file);
+    rewind(file);
 
-        // Number of outputs
-        0x01,
+    uint8_t *data = malloc(file_size);
+    if (!data) {
+        printf("Error allocating memory\n");
+        return 1;
+    }
 
-        // Output 1
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x01, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    size_t read_size = fread(data, 1, file_size, file);
+    if (read_size != file_size) {
+        printf("Error reading file\n");
+        return 1;
+    }
 
-        // Lock time
-        0x00, 0x00, 0x00, 0x00
-    };
+    fclose(file);
 
-    parse_bitcoin_transaction(data, sizeof(data));
+    hammer_result_t result = hammer_parse(NULL, data, file_size);
+
+    if (result.error) {
+        printf("Error parsing data: %s\n", result.error);
+        return 1;
+    }
+
+    block_header_t *block_header = result.value;
+
+    printf("Block Header:\n");
+    printf("  Version: %u\n", block_header->version);
+    printf("  Previous Block: ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02x", block_header->prev_block[i]);
+    }
+    printf("\n");
+    printf("  Merkle Root: ");
+    for (int i = 0; i < 32; i++) {
+        printf("%02x", block_header->merkle_root[i]);
+    }
+    printf("\n");
+    printf("  Timestamp: %u\n", block_header->timestamp);
+    printf("  Target: %u\n", block_header->target);
+    printf("  Nonce: %u\n", block_header->nonce);
+    printf("  Transaction Count: %llu\n", block_header->transaction_count);
+
+    for (int i = 0; i < block_header->transaction_count; i++) {
+        transaction_t *transaction = &block_header->transactions[i];
+
+        printf("Transaction %d:\n", i);
+        printf("  Version: %u\n", transaction->version);
+        printf("  Input Count: %llu\n", transaction->tx_in_count);
+        for (int j = 0; j < transaction->tx_in_count; j++) {
+            printf("    Input %d:\n", j);
+            printf("      TXID: ");
+            for (int k = 0; k < 32; k++) {
+                printf("%02x", transaction->tx_in[j].txid[k]);
+            }
+            printf("\n");
+            printf("      VOUT: %u\n", transaction->tx_in[j].vout);
+            printf("      ScriptSig: ");
+            for (int k = 0; k < 1024; k++) {
+                printf("%02x", transaction->tx_in[j].scriptSig[k]);
+            }
+            printf("\n");
+            printf("      Sequence: %u\n", transaction->tx_in[j].sequence);
+        }
+        printf("  Output Count: %llu\n", transaction->tx_out_count);
+        for (int j = 0; j < transaction->tx_out_count; j++) {
+            printf("    Output %d:\n", j);
+            printf("      Value: %llu\n", transaction->tx_out[j].value);
+            printf("      ScriptPubKey: ");
+            for (int k = 0; k < 1024; k++) {
+                printf("%02x", transaction->tx_out[j].scriptPubKey[k]);
+            }
+            printf("\n");
+        }
+        printf("  Lock Time: %u\n", transaction->lock_time);
+    }
+
+    free(data);
 
     return 0;
 }

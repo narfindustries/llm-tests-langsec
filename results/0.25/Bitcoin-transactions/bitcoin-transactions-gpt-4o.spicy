@@ -1,41 +1,34 @@
-module BitcoinTransactions;
+module BitcoinTransaction;
 
-public type Transaction = unit {
-    version: uint32;
-    input_count: varint;
-    inputs: array[input_count] of Input;
-    output_count: varint;
-    outputs: array[output_count] of Output;
-    lock_time: uint32;
+type CompactSize = unit {
+    varint: uint8;
+    len16: uint16 &if (varint == 253);
+    len32: uint32 &if (varint == 254);
+    len64: uint64 &if (varint == 255);
+} &let length = (varint < 253) ? varint : (varint == 253) ? len16 : (varint == 254) ? len32 : len64;
+
+type Script = unit {
+    length: CompactSize;
+    script: bytes &size=length.length;
 };
 
 type Input = unit {
-    previous_output: Outpoint;
-    script_length: varint;
-    script: bytes &length=script_length;
+    prev_tx_hash: bytes &size=32;
+    output_index: uint32;
+    script_sig: Script;
     sequence: uint32;
-};
-
-type Outpoint = unit {
-    hash: bytes &length=32;
-    index: uint32;
 };
 
 type Output = unit {
     value: uint64;
-    script_length: varint;
-    script: bytes &length=script_length;
+    script_pub_key: Script;
 };
 
-type varint = switch (uint8) {
-    case 0xfd: uint16;
-    case 0xfe: uint32;
-    case 0xff: uint64;
-    else: uint8;
-};
-
-public module BitcoinTransactionsParser = module {
-    public function parse(data: bytes): Transaction {
-        return parse_Transaction(data);
-    }
+type Transaction = unit {
+    version: uint32;
+    input_count: CompactSize;
+    inputs: array of Input &length=input_count.length;
+    output_count: CompactSize;
+    outputs: array of Output &length=output_count.length;
+    lock_time: uint32;
 };

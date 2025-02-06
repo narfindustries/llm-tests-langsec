@@ -1,41 +1,68 @@
 meta:
   id: dns_packet
-  title: DNS (Domain Name System) Protocol
+  title: DNS Packet
   endian: be
-  license: CC0-1.0
+doc: |
+  DNS (Domain Name System) is a hierarchical decentralized naming system for computers,
+  services, or other resources connected to the Internet or a private network. It associates
+  various information with domain names assigned to each of the participating entities.
+  Most prominently, it translates more readily memorized domain names to the numerical
+  IP addresses needed for locating and identifying computer services and devices with
+  the underlying network protocols. By providing a worldwide, distributed directory service,
+  the Domain Name System has been an essential component of the functionality of the Internet since 1985.
+  This spec covers the structure of DNS packets, both query and response types.
 
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: u2
-    enum: flags_type
-  - id: qdcount
-    type: u2
-  - id: ancount
-    type: u2
-  - id: nscount
-    type: u2
-  - id: arcount
-    type: u2
+  - id: header
+    type: header
+
   - id: queries
     type: query
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
+
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
+
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
+
   - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
+    repeat-expr: header.arcount
 
 types:
+  header:
+    seq:
+      - id: transaction_id
+        type: u2
+      - id: flags
+        type: u2
+        enum: flags
+      - id: qdcount
+        type: u2
+      - id: ancount
+        type: u2
+      - id: nscount
+        type: u2
+      - id: arcount
+        type: u2
+    enums:
+      flags:
+        0x8000: qr
+        0x7800: opcode
+        0x0400: aa
+        0x0200: tc
+        0x0100: rd
+        0x0080: ra
+        0x0070: z
+        0x000F: rcode
+
   query:
     seq:
       - id: name
@@ -43,7 +70,7 @@ types:
       - id: type
         type: u2
         enum: type_enum
-      - id: query_class
+      - id: class
         type: u2
         enum: class_enum
 
@@ -54,7 +81,7 @@ types:
       - id: type
         type: u2
         enum: type_enum
-      - id: rr_class
+      - id: class
         type: u2
         enum: class_enum
       - id: ttl
@@ -63,13 +90,6 @@ types:
         type: u2
       - id: rdata
         size: rdlength
-        type:
-          switch-on: type
-          cases:
-            'type_enum::a': address_record
-            'type_enum::cname': cname_record
-            'type_enum::mx': mx_record
-            'type_enum::txt': txt_record
 
   domain_name:
     seq:
@@ -77,63 +97,31 @@ types:
         type: label
         repeat: until
         repeat-until: _.length == 0
-
-  label:
-    seq:
-      - id: length
-        type: u1
-      - id: name
-        type: str
-        size: length
-        encoding: ASCII
-
-  address_record:
-    seq:
-      - id: address
-        type: u4
-
-  cname_record:
-    seq:
-      - id: cname
-        type: domain_name
-
-  mx_record:
-    seq:
-      - id: preference
-        type: u2
-      - id: exchange
-        type: domain_name
-
-  txt_record:
-    seq:
-      - id: text
-        type: str
-        size-eos: true
-        encoding: ASCII
+    types:
+      label:
+        seq:
+          - id: length
+            type: u1
+          - id: name
+            type: str
+            size: length
+            encoding: ASCII
 
 enums:
-  flags_type:
-    0x0100: qr
-    0x0200: opcode
-    0x0400: aa
-    0x0800: tc
-    0x1000: rd
-    0x2000: ra
-    0x4000: z
-    0x8000: ad
-    0x0001: cd
-
   type_enum:
     1: a
     2: ns
     5: cname
     6: soa
+    12: ptr
     15: mx
     16: txt
     28: aaaa
+    33: srv
+    255: any
 
   class_enum:
     1: in
-    2: cs
     3: ch
     4: hs
+    255: any

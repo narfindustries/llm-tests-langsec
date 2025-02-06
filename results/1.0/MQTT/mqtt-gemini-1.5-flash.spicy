@@ -1,25 +1,102 @@
-#ifndef MQTT_GEMINI_1_5_FLASH_SPICY_H
-#define MQTT_GEMINI_1_5_FLASH_SPICY_H
+module MQTT;
 
-#include <zeek/packet.h>
+type mqtt_connect_flags: uint8 {
+    clean_session = 1,
+    will_flag = 1,
+    will_qos = 2,
+    will_retain = 1,
+    password_flag = 1,
+    username_flag = 1
+}
 
-event mqtt_gemini_1_5_flash_event(packet p) {
-    // Add your Zeek Spicy code here to parse the MQTT packets.
-    // This is a placeholder.  You'll need to replace this
-    // with code that actually parses the MQTT protocol.
+type mqtt_connect_variable_header {
+    protocol_name = string,
+    protocol_version = uint8,
+    connect_flags = mqtt_connect_flags,
+    keep_alive = uint16,
+    client_identifier = string,
+    will_topic = optional string,
+    will_message = optional bytes,
+    username = optional string,
+    password = optional bytes
+}
 
-    // Example: Check for the MQTT CONNECT packet
-    if (p.len > 2 && p.data[0] == 0x10) {
-        // Process CONNECT packet
-        // ... your code here ...
-        print("MQTT CONNECT packet detected");
-    } else if (p.len > 2 && p.data[0] == 0x04) {
-        // Process PUBLISH packet
-        // ... your code here ...
-        print("MQTT PUBLISH packet detected");
-    }
+type mqtt_connack_variable_header {
+    session_present = uint8,
+    connect_return_code = uint8,
+    session_expiry_interval = optional uint32,
+    assigned_client_identifier = optional string,
+    server_keep_alive = optional uint16,
+    authentication_method = optional string,
+    authentication_data = optional bytes
 }
 
 
-#endif // MQTT_GEMINI_1_5_FLASH_SPICY_H
+type mqtt_publish_variable_header {
+    topic_name = string,
+    packet_identifier = optional uint16,
+    qos = uint8,
+    retain = bool,
+    payload = bytes
+}
 
+type mqtt_puback_variable_header {
+    packet_identifier = uint16,
+    reason_code = uint8
+}
+
+type mqtt_pubrec_variable_header {
+    packet_identifier = uint16,
+    reason_code = uint8
+}
+
+type mqtt_pubrel_variable_header {
+    packet_identifier = uint16,
+    reason_code = uint8
+}
+
+type mqtt_pubcomp_variable_header {
+    packet_identifier = uint16,
+    reason_code = uint8
+}
+
+type mqtt_subscribe_variable_header {
+    packet_identifier = uint16,
+    topics = vector[tuple[string, uint8]]
+}
+
+type mqtt_suback_variable_header {
+    packet_identifier = uint16,
+    return_codes = vector[uint8]
+}
+
+type mqtt_unsubscribe_variable_header {
+    packet_identifier = uint16,
+    topics = vector[string]
+}
+
+type mqtt_unsuback_variable_header {
+    packet_identifier = uint16
+}
+
+type mqtt_pingreq_variable_header {}
+
+type mqtt_pingresp_variable_header {}
+
+type mqtt_disconnect_variable_header {
+    reason_code = uint8,
+    server_reference = optional string
+}
+
+type mqtt_property {
+    property_id = uint16,
+    payload = bytes
+}
+
+type mqtt_packet {
+    type = uint8,
+    flags = uint8,
+    remaining_length = uint32,
+    variable_header = mqtt_connect_variable_header | mqtt_connack_variable_header | mqtt_publish_variable_header | mqtt_puback_variable_header | mqtt_pubrec_variable_header | mqtt_pubrel_variable_header | mqtt_pubcomp_variable_header | mqtt_subscribe_variable_header | mqtt_suback_variable_header | mqtt_unsubscribe_variable_header | mqtt_unsuback_variable_header | mqtt_pingreq_variable_header | mqtt_pingresp_variable_header | mqtt_disconnect_variable_header,
+    properties = vector[mqtt_property]
+}

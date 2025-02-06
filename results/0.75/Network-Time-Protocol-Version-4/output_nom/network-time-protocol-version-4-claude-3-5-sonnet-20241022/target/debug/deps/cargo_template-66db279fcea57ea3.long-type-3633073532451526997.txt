@@ -1,0 +1,2 @@
+(impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::Err<_>>, impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::Err<_>>, impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::Err<_>>)
+(impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::internal::Err<_>>, impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::internal::Err<_>>, impl FnMut((_, usize)) -> Result<((_, usize), u8), nom::internal::Err<_>>)

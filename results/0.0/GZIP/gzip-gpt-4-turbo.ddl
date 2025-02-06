@@ -1,38 +1,30 @@
-module GZIP {
+type GzipFile = struct {
+  id1: uint8 = 0x1f,
+  id2: uint8 = 0x8b,
+  cm: uint8,
+  flg: Flags,
+  mtime: uint32,
+  xfl: uint8,
+  os: uint8,
+  extra: optional[ExtraField] if flg.fextra == 1,
+  fname: optional[cstring] if flg.fname == 1,
+  fcomment: optional[cstring] if flg.fcomment == 1,
+  fhcrc: optional[uint16] if flg.fhcrc == 1,
+  data: bytes,
+  crc32: uint32,
+  isize: uint32
+};
 
-  import DAEDALUS::BitStream;
+type Flags = struct {
+  ftext: uint1,
+  fhcrc: uint1,
+  fextra: uint1,
+  fname: uint1,
+  fcomment: uint1,
+  reserved: uint3 = 0
+};
 
-  struct GzipFile {
-    header: GzipHeader,
-    data: bytes(header.len),
-    footer: GzipFooter
-  }
-
-  struct GzipHeader {
-    id1: u8 = 0x1f,
-    id2: u8 = 0x8b,
-    compressionMethod: u8,
-    flags: u8,
-    mtime: u32,
-    extraFlags: u8,
-    os: u8,
-    extra: optional<ExtraField> if flags & 0b100,
-    filename: optional<cstring> if flags & 0b1000,
-    comment: optional<cstring> if flags & 0b10000,
-    headerCrc: optional<u16> if flags & 0b10
-  }
-
-  struct ExtraField {
-    xlen: u16,
-    data: bytes(xlen)
-  }
-
-  struct GzipFooter {
-    crc32: u32,
-    len: u32
-  }
-
-  bitstream GzipStream {
-    file: GzipFile
-  }
-}
+type ExtraField = struct {
+  xlen: uint16,
+  xdata: bytes
+};

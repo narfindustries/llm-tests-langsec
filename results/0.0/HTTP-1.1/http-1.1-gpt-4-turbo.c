@@ -1,44 +1,78 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define basic parsers for HTTP components
-static HParser *whitespace = h_many(h_ch(' '));
-static HParser *newline = h_ch('\n');
-static HParser *cr = h_ch('\r');
-static HParser *crlf = h_sequence(cr, newline, NULL);
-static HParser *digit = h_ch_range('0', '9');
-static HParser *digits = h_many1(digit);
+// Define parsers for HTTP tokens
+static HParser *token;
+static HParser *quoted_string;
+static HParser *LWS;
+static HParser *OWS;
+static HParser *header_value;
 
-// Token parsers
-static HParser *token_char = h_butnot(h_any(), h_ch(' '));
-static HParser *token = h_many1(token_char);
+// Initialize parsers for basic tokens
+void init_parsers() {
+    token = h_token((const uint8_t *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~", 1);
+    quoted_string = h_sequence(h_ch('"'), h_many(h_ch_range(0x20, 0x7E)), h_ch('"'), NULL);
+    LWS = h_optional(h_ch(' '));
+    OWS = h_optional(h_ch(' '));
+    header_value = h_choice(token, quoted_string, NULL);
+}
 
 // Define parsers for HTTP headers
-static HParser *header_name = h_many1(h_butnot(h_any(), h_ch(':')));
-static HParser *header_value = h_many1(h_butnot(h_any(), crlf));
-static HParser *header = h_sequence(header_name, h_ch(':'), whitespace, header_value, crlf, NULL);
+HParser *header() {
+    return h_sequence(token, h_ch(':'), OWS, header_value, LWS, NULL);
+}
 
-// Define parser for HTTP request line
-static HParser *method = token;
-static HParser *uri = token;
-static HParser *http_version = h_sequence(h_string("HTTP/"), digits, h_ch('.'), digits, NULL);
-static HParser *request_line = h_sequence(method, whitespace, uri, whitespace, http_version, crlf, NULL);
+HParser *headers() {
+    return h_many(header());
+}
 
-// Define parser for HTTP request
-static HParser *headers = h_many(header);
-static HParser *message_body = h_many(h_any());
-static HParser *http_request = h_sequence(request_line, headers, crlf, message_body, NULL);
+// Define parsers for HTTP request line
+HParser *request_line() {
+    HParser *method = token;
+    HParser *request_uri = token; // Simplified URI
+    HParser *http_version = h_sequence(h_token((const uint8_t *)"HTTP/", 5), h_ch('1'), h_ch('.'), h_choice(h_ch('0'), h_ch('1'), NULL), NULL);
+    return h_sequence(method, h_ch(' '), request_uri, h_ch(' '), http_version, h_ch('\r'), h_ch('\n'), NULL);
+}
 
-// Main function to parse HTTP requests
+// Define parsers for HTTP message
+HParser *http_message() {
+    return h_sequence(request_line(), headers(), h_ch('\r'), h_ch('\n'), NULL);
+}
+
 int main(int argc, char *argv[]) {
-    HParser *parser = http_request;
-    HParseResult *result = h_parse(parser, (const uint8_t *)argv[1], strlen(argv[1]));
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <http_request_file>\n", argv[0]);
+        return 1;
+    }
+
+    // Initialize parsers
+    init_parsers();
+
+    // Read input file
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    uint8_t *data = malloc(length);
+    if (data) {
+        fread(data, 1, length, fp);
+    }
+    fclose(fp);
+
+    // Parse HTTP message
+    HParseResult *result = h_parse(http_message(), data, length);
     if (result) {
-        printf("Parse successful!\n");
-        h_pprint(stdout, result->ast, 0, 0);
+        printf("Parse successful.\n");
     } else {
         printf("Parse failed.\n");
     }
-    h_parse_result_free(result);
+
+    free(data);
     return 0;
 }

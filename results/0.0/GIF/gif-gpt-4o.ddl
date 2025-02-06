@@ -1,121 +1,136 @@
-// Daedalus specification for GIF file format
-namespace gif
-
-// GIF Header
-struct Header {
-    signature: string(3); // "GIF"
-    version: string(3);   // "87a" or "89a"
+enum u3 DisposalMethod {
+    NoAction = 0,
+    DoNotDispose = 1,
+    RestoreToBackground = 2,
+    RestoreToPrevious = 3,
+    Reserved = 4..7
 }
 
-// Logical Screen Descriptor
-struct LogicalScreenDescriptor {
-    width: u2;
-    height: u2;
-    packedFields: u1;
-    backgroundColorIndex: u1;
-    pixelAspectRatio: u1;
-}
+struct GIF {
+    Header {
+        signature : u8[3] == "GIF";
+        version : u8[3] == "89a";
+    }
 
-// Global Color Table
-struct Color {
-    red: u1;
-    green: u1;
-    blue: u1;
-}
+    LogicalScreenDescriptor {
+        logicalScreenWidth : u16;
+        logicalScreenHeight : u16;
+        packedFields : u8 {
+            globalColorTableFlag : bool @ 7;
+            colorResolution : u3 @ 4;
+            sortFlag : bool @ 3;
+            sizeOfGlobalColorTable : u3;
+        }
+        backgroundColorIndex : u8;
+        pixelAspectRatio : u8;
+    }
 
-struct GlobalColorTable {
-    colors: Color[];
-}
+    GlobalColorTable(size : u3) [if .LogicalScreenDescriptor.packedFields.globalColorTableFlag] {
+        colors : u8[3][2 ** (size + 1)];
+    }
 
-// Image Descriptor
-struct ImageDescriptor {
-    imageSeparator: u1; // 0x2C
-    imageLeftPosition: u2;
-    imageTopPosition: u2;
-    imageWidth: u2;
-    imageHeight: u2;
-    packedFields: u1;
-}
+    Block {
+        while (true) {
+            blockType : u8;
+            switch (blockType) {
+                case 0x2C: ImageDescriptor;
+                case 0x21: Extension;
+                case 0x3B: break;
+                default: error("Unknown block type");
+            }
+        }
+    }
 
-// Local Color Table
-struct LocalColorTable {
-    colors: Color[];
-}
+    ImageDescriptor {
+        imageSeparator : u8 == 0x2C;
+        imageLeftPosition : u16;
+        imageTopPosition : u16;
+        imageWidth : u16;
+        imageHeight : u16;
+        packedFields : u8 {
+            localColorTableFlag : bool @ 7;
+            interlaceFlag : bool @ 6;
+            sortFlag : bool @ 5;
+            reserved : u2 @ 3;
+            sizeOfLocalColorTable : u3;
+        }
+        LocalColorTable(size : u3) [if .packedFields.localColorTableFlag] {
+            colors : u8[3][2 ** (size + 1)];
+        }
+        ImageData;
+    }
 
-// Image Data
-struct ImageData {
-    lzwMinimumCodeSize: u1;
-    dataBlocks: DataBlock[];
-}
+    ImageData {
+        lzwMinimumCodeSize : u8;
+        while (true) {
+            blockSize : u8;
+            if (blockSize == 0) break;
+            imageData : u8[blockSize];
+        }
+    }
 
-struct DataBlock {
-    size: u1;
-    data: u1[size];
-}
+    Extension {
+        extensionIntroducer : u8 == 0x21;
+        extensionLabel : u8;
+        switch (extensionLabel) {
+            case 0xF9: GraphicControlExtension;
+            case 0xFE: CommentExtension;
+            case 0x01: PlainTextExtension;
+            case 0xFF: ApplicationExtension;
+            default: error("Unknown extension label");
+        }
+    }
 
-// Graphic Control Extension
-struct GraphicControlExtension {
-    extensionIntroducer: u1; // 0x21
-    graphicControlLabel: u1; // 0xF9
-    blockSize: u1; // 0x04
-    packedFields: u1;
-    delayTime: u2;
-    transparentColorIndex: u1;
-    blockTerminator: u1; // 0x00
-}
+    GraphicControlExtension {
+        blockSize : u8 == 4;
+        packedFields : u8 {
+            reserved : u3 @ 5;
+            disposalMethod : DisposalMethod @ 2;
+            userInputFlag : bool @ 1;
+            transparentColorFlag : bool;
+        }
+        delayTime : u16;
+        transparentColorIndex : u8;
+        blockTerminator : u8 == 0;
+    }
 
-// Comment Extension
-struct CommentExtension {
-    extensionIntroducer: u1; // 0x21
-    commentLabel: u1; // 0xFE
-    commentData: DataBlock[];
-}
+    CommentExtension {
+        while (true) {
+            blockSize : u8;
+            if (blockSize == 0) break;
+            commentData : u8[blockSize];
+        }
+    }
 
-// Plain Text Extension
-struct PlainTextExtension {
-    extensionIntroducer: u1; // 0x21
-    plainTextLabel: u1; // 0x01
-    blockSize: u1; // 0x0C
-    textGridLeftPosition: u2;
-    textGridTopPosition: u2;
-    textGridWidth: u2;
-    textGridHeight: u2;
-    characterCellWidth: u1;
-    characterCellHeight: u1;
-    textForegroundColorIndex: u1;
-    textBackgroundColorIndex: u1;
-    plainTextData: DataBlock[];
-}
+    PlainTextExtension {
+        blockSize : u8 == 12;
+        textGridLeftPosition : u16;
+        textGridTopPosition : u16;
+        textGridWidth : u16;
+        textGridHeight : u16;
+        characterCellWidth : u8;
+        characterCellHeight : u8;
+        textForegroundColorIndex : u8;
+        textBackgroundColorIndex : u8;
+        while (true) {
+            blockSize : u8;
+            if (blockSize == 0) break;
+            plainTextData : u8[blockSize];
+        }
+    }
 
-// Application Extension
-struct ApplicationExtension {
-    extensionIntroducer: u1; // 0x21
-    applicationLabel: u1; // 0xFF
-    blockSize: u1; // 0x0B
-    applicationIdentifier: string(8);
-    applicationAuthenticationCode: string(3);
-    applicationData: DataBlock[];
-}
+    ApplicationExtension {
+        blockSize : u8 == 11;
+        applicationIdentifier : u8[8];
+        applicationAuthenticationCode : u8[3];
+        while (true) {
+            blockSize : u8;
+            if (blockSize == 0) break;
+            applicationData : u8[blockSize];
+        }
+    }
 
-// Trailer
-struct Trailer {
-    trailer: u1; // 0x3B
-}
-
-// GIF File
-struct GifFile {
-    header: Header;
-    logicalScreenDescriptor: LogicalScreenDescriptor;
-    globalColorTable: GlobalColorTable if logicalScreenDescriptor.packedFields & 0x80 != 0;
-    blocks: Block[];
-    trailer: Trailer;
-}
-
-union Block {
-    imageDescriptor: ImageDescriptor;
-    graphicControlExtension: GraphicControlExtension;
-    commentExtension: CommentExtension;
-    plainTextExtension: PlainTextExtension;
-    applicationExtension: ApplicationExtension;
-    imageData: ImageData;
+    Trailer {
+        trailer : u8 == 0x3B;
+    }
 }

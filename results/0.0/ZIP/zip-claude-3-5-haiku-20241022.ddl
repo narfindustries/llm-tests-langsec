@@ -1,26 +1,74 @@
-format ZIP:
-    signature = bytes[4]
-    version = u16
-    flags = u16
-    compression_method = u16
-    last_mod_time = u16
-    last_mod_date = u16
-    crc32 = u32
-    compressed_size = u32
-    uncompressed_size = u32
-    filename_length = u16
-    extra_field_length = u16
-    filename = bytes[filename_length]
-    extra_field = bytes[extra_field_length]
-    file_data = bytes[compressed_size]
+schema ZipFile {
+    localFileHeaders: List<LocalFileHeader>,
+    centralDirectory: CentralDirectory,
+    endOfCentralDirectory: EndOfCentralDirectory
+}
 
-    constraints:
-        signature == b"PK\x03\x04"
-        version >= 10
-        version <= 99
-        compression_method <= 8
-        crc32 > 0
-        compressed_size > 0
-        uncompressed_size > 0
-        filename_length > 0
-        filename_length <= 255
+struct LocalFileHeader {
+    signature: UInt32 == 0x04034B50,
+    versionNeededToExtract: UInt16,
+    generalPurposeBitFlag: UInt16,
+    compressionMethod: UInt16,
+    lastModFileTime: UInt16,
+    lastModFileDate: UInt16,
+    crc32: UInt32,
+    compressedSize: UInt32,
+    uncompressedSize: UInt32,
+    fileNameLength: UInt16,
+    extraFieldLength: UInt16,
+    fileName: String(fileNameLength),
+    extraField: Bytes(extraFieldLength),
+    fileData: Bytes(compressedSize)
+}
+
+struct CentralDirectory {
+    fileHeaders: List<CentralDirectoryFileHeader>
+}
+
+struct CentralDirectoryFileHeader {
+    signature: UInt32 == 0x02014B50,
+    versionMadeBy: UInt16,
+    versionNeededToExtract: UInt16,
+    generalPurposeBitFlag: UInt16,
+    compressionMethod: UInt16,
+    lastModFileTime: UInt16,
+    lastModFileDate: UInt16,
+    crc32: UInt32,
+    compressedSize: UInt32,
+    uncompressedSize: UInt32,
+    fileNameLength: UInt16,
+    extraFieldLength: UInt16,
+    fileCommentLength: UInt16,
+    diskNumberStart: UInt16,
+    internalFileAttributes: UInt16,
+    externalFileAttributes: UInt32,
+    relativeOffsetOfLocalHeader: UInt32,
+    fileName: String(fileNameLength),
+    extraField: Bytes(extraFieldLength),
+    fileComment: String(fileCommentLength)
+}
+
+struct EndOfCentralDirectory {
+    signature: UInt32 == 0x06054B50,
+    numberOfThisDisk: UInt16,
+    diskWithCentralDirectory: UInt16,
+    totalEntriesOnThisDisk: UInt16,
+    totalEntriesInCentralDirectory: UInt16,
+    sizeOfCentralDirectory: UInt32,
+    offsetOfCentralDirectory: UInt32,
+    zipFileCommentLength: UInt16,
+    zipFileComment: String(zipFileCommentLength)
+}
+
+struct Zip64EndOfCentralDirectory {
+    signature: UInt32 == 0x06064B50,
+    sizeOfZip64EndOfCentralDirectoryRecord: UInt64,
+    versionMadeBy: UInt16,
+    versionNeededToExtract: UInt16,
+    numberOfThisDisk: UInt32,
+    diskWithCentralDirectory: UInt32,
+    totalEntriesOnThisDisk: UInt64,
+    totalEntriesInCentralDirectory: UInt64,
+    sizeOfCentralDirectory: UInt64,
+    offsetOfCentralDirectory: UInt64
+}

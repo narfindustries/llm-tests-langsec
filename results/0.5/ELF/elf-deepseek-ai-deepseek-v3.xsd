@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.ogf.org/dfdl/elf"
+           xmlns:elf="http://www.ogf.org/dfdl/elf"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ELFHeader">
+    <xs:sequence>
+      <xs:element name="e_ident" type="elf:ELFIdent"/>
+      <xs:element name="e_type" type="elf:ELFFileType"/>
+      <xs:element name="e_machine" type="elf:ELFMachine"/>
+      <xs:element name="e_version" type="elf:ELFVersion"/>
+      <xs:element name="e_entry" type="xs:unsignedLong"/>
+      <xs:element name="e_phoff" type

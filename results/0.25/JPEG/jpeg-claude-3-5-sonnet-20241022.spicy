@@ -1,77 +1,155 @@
 module JPEG;
 
-public type JPEG = unit {
-    var width: uint64;
-    var height: uint64;
-    var components: uint8;
-    var precision: uint8;
-
-    on %init {
-        self.width = 0;
-        self.height = 0;
-        self.components = 0;
-        self.precision = 0;
-    }
-
-    : Segment[] &eod;
+public type Marker = enum {
+    SOI = 0xD8,
+    EOI = 0xD9,
+    SOF0 = 0xC0,
+    SOF1 = 0xC1,
+    SOF2 = 0xC2,
+    SOF3 = 0xC3,
+    DHT = 0xC4,
+    SOF5 = 0xC5,
+    SOF6 = 0xC6,
+    SOF7 = 0xC7,
+    SOF9 = 0xC9,
+    SOF10 = 0xCA,
+    SOF11 = 0xCB,
+    SOF13 = 0xCD,
+    SOF14 = 0xCE,
+    SOF15 = 0xCF,
+    RST0 = 0xD0,
+    RST1 = 0xD1,
+    RST2 = 0xD2,
+    RST3 = 0xD3,
+    RST4 = 0xD4,
+    RST5 = 0xD5,
+    RST6 = 0xD6,
+    RST7 = 0xD7,
+    DQT = 0xDB,
+    SOS = 0xDA,
+    APP0 = 0xE0,
+    APP1 = 0xE1,
+    APP2 = 0xE2,
+    APP3 = 0xE3,
+    APP4 = 0xE4,
+    APP5 = 0xE5,
+    APP6 = 0xE6,
+    APP7 = 0xE7,
+    APP8 = 0xE8,
+    APP9 = 0xE9,
+    APP10 = 0xEA,
+    APP11 = 0xEB,
+    APP12 = 0xEC,
+    APP13 = 0xED,
+    APP14 = 0xEE,
+    APP15 = 0xEF,
+    COM = 0xFE
 };
 
-type Segment = unit {
-    marker: uint16;
-    : switch (self.marker) {
-        0xFFD8 -> SOIMarker,
-        0xFFE0, 0xFFE1, 0xFFE2, 0xFFE3, 0xFFE4, 0xFFE5,
-        0xFFE6, 0xFFE7, 0xFFE8, 0xFFE9, 0xFFEA, 0xFFEB,
-        0xFFEC, 0xFFED, 0xFFEE, 0xFFEF -> APPMarker,
-        0xFFC0 -> SOF0Marker,
-        0xFFDA -> SOSMarker,
-        0xFFD9 -> EOIMarker,
-        * -> SkipMarker
-    };
+type ComponentInfo = unit {
+    component_id: uint8;
+    h_sampling_factor: uint4;
+    v_sampling_factor: uint4;
+    qt_selector: uint8;
 };
 
-type SOIMarker = unit {};
-
-type APPMarker = unit {
-    length: uint16;
-    data: bytes &size=self.length - 2;
-};
-
-type SOF0Marker = unit {
+type FrameHeader = unit {
     length: uint16;
     precision: uint8;
     height: uint16;
     width: uint16;
-    components: uint8;
-    component_data: bytes &size=self.length - 8;
+    num_components: uint8;
+    components: ComponentInfo[self.num_components];
+};
 
-    on %done {
-        self.parent.parent.width = self.width;
-        self.parent.parent.height = self.height;
-        self.parent.parent.components = self.components;
-        self.parent.parent.precision = self.precision;
+type HuffmanTable = unit {
+    class_and_dest: uint8;
+    counts: uint8[16];
+    values: bytes &size=self.total;
+
+    var total: uint64;
+
+    on %init {
+        self.total = 0;
+        for ( i in [0:16] )
+            self.total += self.counts[i];
     }
 };
 
-type SOSMarker = unit {
+type DHT_Segment = unit {
     length: uint16;
-    data: bytes &size=self.length - 2;
-    : ImageData;
+    tables: HuffmanTable[];
 };
 
-type ImageData = unit {
-    data: bytes &eod &chunked;
+type QuantizationTable = unit {
+    precision_and_id: uint8;
+    values: uint8[64] if ((self.precision_and_id >> 4) == 0);
+    values16: uint16[64] if ((self.precision_and_id >> 4) == 1);
 };
 
-type EOIMarker = unit {};
-
-type SkipMarker = unit {
+type DQT_Segment = unit {
     length: uint16;
-    data: bytes &size=self.length - 2;
+    tables: QuantizationTable[];
 };
 
-on JPEG::%done {
-    print "JPEG Image:", self.width, "x", self.height, 
-          "pixels,", self.components, "components,",
-          self.precision, "bits precision";
-}
+type ScanComponentSpec = unit {
+    component_id: uint8;
+    dc_ac_table_selectors: uint8;
+};
+
+type SOS_Segment = unit {
+    length: uint16;
+    num_components: uint8;
+    components: ScanComponentSpec[self.num_components];
+    start_spectral: uint8;
+    end_spectral: uint8;
+    approx: uint8;
+    entropy_data: bytes &eod;
+};
+
+type JFIF_Segment = unit {
+    length: uint16;
+    identifier: bytes &size=5;
+    version_major: uint8;
+    version_minor: uint8;
+    units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumb_width: uint8;
+    thumb_height: uint8;
+    thumb_data: bytes &size=(self.thumb_width * self.thumb_height * 3);
+};
+
+type Generic_Segment = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type Segment = unit {
+    marker: uint8 &requires(self.marker == 0xFF);
+    code: Marker;
+    : switch(self.code) {
+        Marker::SOI, Marker::EOI -> : void;
+        Marker::SOF0, Marker::SOF1, Marker::SOF2, Marker::SOF3 -> frame: FrameHeader;
+        Marker::DHT -> huffman: DHT_Segment;
+        Marker::DQT -> quant: DQT_Segment;
+        Marker::SOS -> scan: SOS_Segment;
+        Marker::APP0 -> jfif: JFIF_Segment if (self.is_jfif_flag);
+        * -> generic: Generic_Segment;
+    };
+
+    var is_jfif_flag: bool;
+
+    on %init {
+        self.is_jfif_flag = False;
+        if ($input.length() >= 5) {
+            if ($input[0:5] == b"JFIF\x00") {
+                self.is_jfif_flag = True;
+            }
+        }
+    }
+};
+
+public type JPEG = unit {
+    segments: Segment[];
+};

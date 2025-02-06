@@ -1,107 +1,78 @@
 use std::env;
-use std::fs::File;
-use std::io::Read;
+use std::fs;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, recognize},
-    error::ErrorKind,
-    number::complete::be_u16,
-    sequence::{preceded, tuple},
+    combinator::map,
+    number::complete::{be_u16, be_u8},
     IResult,
 };
 
-#[derive(Debug)]
-struct JpegHeader {
-    soi: [u8; 2],
-    segments: Vec<JpegSegment>,
-    eoi: [u8; 2],
+#[derive(Debug, Clone)]
+enum JpegMarker {
+    SOI,
+    EOI,
+    APPn(u8, Vec<u8>),
+    DQT(Vec<u8>),
+    DHT(Vec<u8>),
+    DRI(u16),
+    SOS(Vec<u8>),
+    COM(String),
+    RST(u8),
 }
 
-#[derive(Debug)]
-enum JpegSegment {
-    StartOfFrame(StartOfFrame),
-    DQT(DQT),
-    // Add other segment types as needed...
-    Unknown(Vec<u8>),
-}
+fn jpeg_marker(input: &[u8]) -> IResult<&[u8], JpegMarker> {
+    let (input, _) = tag(b"\xFF")(input)?;
+    let (input, marker_code) = be_u8(input)?;
 
-#[derive(Debug)]
-struct StartOfFrame {
-    marker: [u8; 2],
-    length: u16,
-    precision: u8,
-    height: u16,
-    width: u16,
-    // Add other fields as needed...
-}
-
-
-#[derive(Debug)]
-struct DQT {
-    marker: [u8;2],
-    length: u16,
-    quantization_tables: Vec<u8>,
-}
-
-fn jpeg_header(input: &[u8]) -> IResult<&[u8], JpegHeader> {
-    let (input, soi) = tag(b"\xFF\xD8")(input)?;
-    let (input, segments) = many0(jpeg_segment)(input)?;
-    let (input, eoi) = tag(b"\xFF\xD9")(input)?;
-    Ok((input, JpegHeader { soi, segments, eoi }))
-}
-
-
-fn jpeg_segment(input: &[u8]) -> IResult<&[u8], JpegSegment> {
-    let (input, marker) = preceded(tag(b"\xFF"), take(1usize))(input)?;
-    match marker[0] {
-        0xC0 => {
-            map(start_of_frame, JpegSegment::StartOfFrame)(input)
+    match marker_code {
+        0xd8 => Ok((input, JpegMarker::SOI)),
+        0xd9 => Ok((input, JpegMarker::EOI)),
+        0xda => Ok((input, JpegMarker::SOS(vec![]))),
+        0xdb => Ok((input, JpegMarker::DQT(vec![]))),
+        0xc4 => Ok((input, JpegMarker::DHT(vec![]))),
+        0xdd => {
+            let (input, len) = be_u16(input)?;
+            let (input, data) = take(len as usize - 2)(input)?;
+            let restart_interval = map(be_u16, |x| x)(data)?; //Corrected this line
+            Ok((input, JpegMarker::DRI(restart_interval)))
+        },
+        0xfe => {
+            let (input, len) = be_u16(input)?;
+            let (input, data) = take(len as usize - 2)(input)?;
+            match String::from_utf8(data.to_vec()) {
+                Ok(comment) => Ok((input, JpegMarker::COM(comment))),
+                Err(_) => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Fail))),
+            }
+        },
+        0xe0..=0xef => {
+            let (input, len) = be_u16(input)?;
+            let (input, data) = take(len as usize - 2)(input)?;
+            Ok((input, JpegMarker::APPn(marker_code - 0xe0, data.to_vec())))
         }
-        0xDB => {
-            map(dqt_segment, JpegSegment::DQT)(input)
-        }
-        _ => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize -2)(input)?;
-            Ok((input, JpegSegment::Unknown(data.to_vec())))
-        }
+        0xd0..=0xd7 => Ok((input, JpegMarker::RST(marker_code - 0xd0))),
+        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
     }
 }
 
-fn start_of_frame(input: &[u8]) -> IResult<&[u8], StartOfFrame> {
-    let (input, (marker, length, precision, height, width)) = tuple((
-        tag(b"\xFF\xC0"),
-        be_u16,
-        take(1usize),
-        be_u16,
-        be_u16,
-    ))(input)?;
-    Ok((
-        input,
-        StartOfFrame {
-            marker: marker.try_into().unwrap(),
-            length,
-            precision: precision[0],
-            height,
-            width,
-        },
-    ))
-}
-
-fn dqt_segment(input: &[u8]) -> IResult<&[u8], DQT> {
-    let (input, (marker, length)) = tuple((tag(b"\xFF\xDB"), be_u16))(input)?;
-    let (input, data) = take((length as usize) - 2)(input)?;
-    Ok((input, DQT { marker: marker.try_into().unwrap(), length, quantization_tables: data.to_vec()}))
-}
-
-
-fn many0<I, O, E, F>(f: F) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
-where
-    I: Clone + std::fmt::Debug,
-    F: FnMut(I) -> IResult<I, O, E>,
-    E: nom::error::ParseError<I>,
-{
-    nom::multi::many0(f)
+fn parse_jpeg(input: &[u8]) -> IResult<&[u8], Vec<JpegMarker>> {
+    let mut markers = Vec::new();
+    let mut remaining_input = input;
+    loop {
+        match jpeg_marker(remaining_input) {
+            Ok((rest, marker)) => {
+                markers.push(marker.clone());
+                remaining_input = rest;
+                if let JpegMarker::EOI = marker {
+                    break;
+                }
+            }
+            Err(e) => {
+                println!("Error parsing JPEG: {:?}", e);
+                break;
+            }
+        }
+    }
+    Ok((remaining_input, markers))
 }
 
 
@@ -113,25 +84,20 @@ fn main() {
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
+    let data = match fs::read(filename) {
+        Ok(data) => data,
+        Err(e) => {
+            println!("Error reading file: {}", e);
             return;
         }
     };
 
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
+    match parse_jpeg(&data) {
+        Ok((_, markers)) => {
+            println!("Parsed JPEG markers: {:?}", markers);
         }
-    };
-
-    match jpeg_header(&buffer) {
-        Ok((_, header)) => println!("JPEG Header: {:?}", header),
-        Err(err) => println!("Error parsing JPEG: {:?}", err),
+        Err(e) => {
+            println!("Error parsing JPEG: {:?}", e);
+        }
     }
 }

@@ -1,48 +1,60 @@
-#! /usr/bin/env zeek
 module DICOM;
 
-import spicy;
+public type DicomMessage = unit {
+    : PreambleAndPrefix;
+    : DataSet;
+};
 
-type PDU = unit {
+type PreambleAndPrefix = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
-    : if (prefix != b"DICM") { throw "Invalid DICOM prefix"; }
+};
 
-    on %done { print self; }
-} &byteorder=spicy::ByteOrder::Little;
+type DataSet = unit {
+    elements: DataElement[];
+};
 
 type DataElement = unit {
-    tag_group: uint16;
-    tag_element: uint16;
-    vr: bytes &size=2;
-    : if (! is_valid_vr(vr)) { throw "Invalid VR"; }
-    length: uint16;
+    group_id: uint16;
+    element_id: uint16;
+    var vr_type: bytes;
+    var length: uint64;
+
+    on group_id {
+        if (self.group_id != 0xFFFE) {
+            self.vr_type = self.next_bytes(2);
+            if (self.vr_type == b"OB" || self.vr_type == b"OW" || 
+                self.vr_type == b"OF" || self.vr_type == b"SQ" || 
+                self.vr_type == b"UT" || self.vr_type == b"UN") {
+                self.next_bytes(2);
+                self.length = self.next_uint32();
+            } else {
+                self.length = self.next_uint16();
+            }
+        } else {
+            self.length = self.next_uint32();
+        }
+    }
+
     value: bytes &size=self.length;
-    
-    on %done { print self; }
 };
 
-function is_valid_vr(vr: bytes): bool {
-    local valid_vrs = set(b"AE", b"AS", b"AT", b"CS", b"DA", b"DS", b"DT", b"FL", 
-                         b"FD", b"IS", b"LO", b"LT", b"OB", b"OF", b"OW", b"PN", 
-                         b"SH", b"SL", b"SQ", b"SS", b"ST", b"TM", b"UI", b"UL", 
-                         b"UN", b"US", b"UT");
-    return vr in valid_vrs;
-}
-
-type DicomMessage = unit {
-    pdu: PDU;
-    elements: DataElement[];
-    
-    on %done { print self; }
+type SequenceItem = unit {
+    sequence_tag: bytes &size=4;
+    sequence_length: uint32;
+    sequence_data: bytes &size=self.sequence_length &requires(self.sequence_length != 0xFFFFFFFF);
 };
 
-public type DCM = unit {
-    message: DicomMessage;
-    
-    on %done { print self; }
+type PixelDataFragment = unit {
+    fragment_tag: bytes &size=4;
+    fragment_length: uint32;
+    fragment_data: bytes &size=self.fragment_length;
 };
 
-on DICOM::DCM::message -> event dicom_message($message);
-on DICOM::PDU -> event dicom_pdu($pdu);
-on DICOM::DataElement -> event dicom_element($element);
+type PixelData = unit {
+    pixel_tag: bytes &size=4;
+    pixel_vr: bytes &size=2;
+    pixel_reserved: bytes &size=2;
+    pixel_length: uint32;
+    pixel_data: bytes &size=self.pixel_length &requires(self.pixel_length != 0xFFFFFFFF);
+};

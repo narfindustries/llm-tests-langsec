@@ -1,51 +1,58 @@
 module ICMP;
 
-import spicy::time;
-import spicy::network;
-
-type ICMPHeader = unit {
-    type: uint8;
+public type ICMP = unit {
+    icmp_type: uint8;
     code: uint8;
     checksum: uint16;
-    rest_of_header: bytes &size=4;
-
-    on %done {
-        if (checksum != calculated_checksum()) {
-            warn fmt("Invalid checksum: %x, expected: %x", checksum, calculated_checksum());
-        }
-    }
-
-    method calculated_checksum() : uint16 {
-        # Calculate the ICMP header checksum.
-        local hdr_bytes = type.to_bytes() + code.to_bytes() + "\x00\x00" + rest_of_header;
-        return spicy::algorithm::checksum_ip(hdr_bytes);
-    }
+    body: case (icmp_type) of {
+        0, 8 => Echo;
+        3 => DestinationUnreachable;
+        5 => Redirect;
+        11 => TimeExceeded;
+        12 => ParameterProblem;
+        13, 14 => Timestamp;
+        17, 18 => AddressMask;
+        else => bytes &restofdata;
+    };
 };
 
-type ICMPMessage = unit {
-    header: ICMPHeader;
-    data: bytes &restof;
-
-    on %done {
-        print fmt("ICMP Message: type=%d, code=%d, data=%s", header.type, header.code, data);
-    }
+type Echo = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    data: bytes &restofdata;
 };
 
-public type ICMPSession = unit {
-    message: ICMPMessage;
+type DestinationUnreachable = unit {
+    unused: uint32;
+    data: bytes &restofdata;
 };
 
-public module Analyzer = spicy_analyzer {
-    module: "ICMP";
-    id: "ICMP-Analyzer";
+type Redirect = unit {
+    gateway_internet_address: uint32;
+    data: bytes &restofdata;
+};
 
-    hook hook() on_start {
-        add_flow("icmp");
-    }
+type TimeExceeded = unit {
+    unused: uint32;
+    data: bytes &restofdata;
+};
 
-    hook hook(ip_packet: spicy::network::IP, payload: bytes) &priority=5
-        if (ip_packet.protocol == spicy::network::IP::Protocol::ICMP) {
-        local icmp_message = parse(payload, ICMPSession);
-        print fmt("Parsed ICMP message: type=%d, code=%d", icmp_message.message.header.type, icmp_message.message.header.code);
-    }
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: uint24;
+    data: bytes &restofdata;
+};
+
+type Timestamp = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type AddressMask = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    address_mask: uint32;
 };

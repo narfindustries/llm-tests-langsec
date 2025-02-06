@@ -1,109 +1,115 @@
 meta:
   id: elf
-  file-extension: elf
   endian: le
-  license: CC0-1.0
-  title: Executable and Linkable Format (ELF)
-doc: |
-  The Executable and Linkable Format (ELF) is a common standard file format for
-  executables, object code, shared libraries, and core dumps. First published
-  in the specification for the application binary interface (ABI) of the Unix
-  operating system version named System V Release 4 (SVR4), and later in the
-  Tool Interface Standard, it was quickly accepted among different vendors of
-  Unix systems. In years since, it has become one of the most used formats for
-  binary executables on Unix-like systems, and is also used on many other
-  operating systems.
-
+  file-extension: elf
 seq:
+  - id: magic
+    contents: [0x7F, 0x45, 0x4C, 0x46]
+  - id: bits
+    type: u1
+    enum: bits_t
+  - id: endian
+    type: u1
+    enum: endian_t
+  - id: ei_version
+    contents: [0x01]
+  - id: abi
+    type: u1
+    enum: os_abi
+  - id: abi_version
+    type: u1
+  - id: pad
+    size: 7
   - id: header
-    type: header
-
+    type:
+      switch-on: bits
+      cases:
+        bits_t::b32: elf_header_32
+        bits_t::b64: elf_header_64
 types:
-  header:
+  elf_header_32:
     seq:
-      - id: magic
-        contents: [0x7F, 0x45, 0x4C, 0x46] # "\x7FELF"
-      - id: class
-        type: u1
-        enum: class
-      - id: data
-        type: u1
-        enum: data
-      - id: version
-        type: u1
-        enum: version
-      - id: os_abi
-        type: u1
-        enum: os_abi
-      - id: abi_version
-        type: u1
-      - id: pad
-        size: 7
       - id: type
         type: u2
-        enum: type
+        enum: obj_type
       - id: machine
         type: u2
         enum: machine
-      - id: e_version
+      - id: version
         type: u4
       - id: entry_point
         type: u4
-      - id: ph_off
+      - id: prog_hdr_offset
         type: u4
-      - id: sh_off
+      - id: sect_hdr_offset
         type: u4
       - id: flags
         type: u4
-      - id: eh_size
+      - id: header_size
         type: u2
-      - id: ph_ent_size
+      - id: prog_hdr_entry_size
         type: u2
-      - id: ph_num
+      - id: prog_hdr_entry_count
         type: u2
-      - id: sh_ent_size
+      - id: sect_hdr_entry_size
         type: u2
-      - id: sh_num
+      - id: sect_hdr_entry_count
         type: u2
-      - id: sh_str_idx
+      - id: sect_names_idx
         type: u2
-
+  elf_header_64:
+    seq:
+      - id: type
+        type: u2
+        enum: obj_type
+      - id: machine
+        type: u2
+        enum: machine
+      - id: version
+        type: u4
+      - id: entry_point
+        type: u8
+      - id: prog_hdr_offset
+        type: u8
+      - id: sect_hdr_offset
+        type: u8
+      - id: flags
+        type: u4
+      - id: header_size
+        type: u2
+      - id: prog_hdr_entry_size
+        type: u2
+      - id: prog_hdr_entry_count
+        type: u2
+      - id: sect_hdr_entry_size
+        type: u2
+      - id: sect_hdr_entry_count
+        type: u2
+      - id: sect_names_idx
+        type: u2
 enums:
-  class:
-    0: invalid
-    1: class32
-    2: class64
-
-  data:
-    0: invalid
+  bits_t:
+    1: b32
+    2: b64
+  endian_t:
     1: le
     2: be
-
-  version:
-    0: invalid
-    1: current
-
   os_abi:
     0: system_v
-    1: hp_ux
+    1: hpux
     2: netbsd
     3: linux
-    4: gnu_hurd
-    5: solaris
-    6: aix
-    7: irix
-    8: freebsd
-    9: tru64
-    10: modesto
-    11: openbsd
-    12: openvms
-    13: nsk
-    14: aros
-    15: fenixos
-    16: cloudabi
-    17: openvos
-
-  type:
+    6: solaris
+    7: aix
+    8: irix
+    9: freebsd
+    10: tru64
+    11: modesto
+    12: openbsd
+    64: arm_aeabi
+    97: arm
+    255: standalone
+  obj_type:
     0: none
     1: rel
     2: exec
@@ -113,17 +119,19 @@ enums:
     0xFEFF: hi_os
     0xFF00: lo_proc
     0xFFFF: hi_proc
-
   machine:
     0: no_machine
-    1: m32
-    2: sparc
     3: x86
-    4: m68k
-    5: m88k
-    6: iamcu
-    7: i860
-    8: mips
-    9: s370
-    10: mips_rs3_le
-    # additional machine types could be added here
+    4: mips
+    7: intel_mcu
+    8: sparc
+    9: intel_80860
+    10: mips_rs3000_le
+    15: parisc
+    18: sparc32plus
+    19: sparc64
+    20: mips_rs3000
+    40: arm
+    62: x86_64
+    183: aarch64
+    243: riscv

@@ -2,87 +2,113 @@ module Modbus;
 
 import spicy;
 
-public type Message = unit {
-    function is_request = ($$.is_request);
-
-    function is_response = ($$.is_response);
-
-    function function_code = ($$.function_code);
-
-    header: Header;
-    payload: Payload(self.header.function_code) &requires(self.header);
-
-    type Header = unit {
-        transaction_id: uint16;
-        protocol_id: uint16;
-        length: uint16;
-        unit_id: uint8;
-        function_code: uint8 {
-            validate($$ == 1 || $$ == 2 || $$ == 3 || $$ == 4 || $$ == 5 || $$ == 6 || $$ == 15 || $$ == 16);
-        };
-
-        var is_request: bool = (self.function_code >= 1 && self.function_code <= 6) || 
-                                (self.function_code == 15 || self.function_code == 16);
-        var is_response: bool = !self.is_request;
+public type ModbusPDU = unit {
+    function_code: uint8;
+    
+    switch (function_code) {
+        1 -> read_coils_request: Read_Coils_Request;
+        2 -> read_discrete_inputs_request: Read_Discrete_Inputs_Request;
+        3 -> read_holding_registers_request: Read_Holding_Registers_Request;
+        4 -> read_input_registers_request: Read_Input_Registers_Request;
+        5 -> write_single_coil_request: Write_Single_Coil_Request;
+        6 -> write_single_register_request: Write_Single_Register_Request;
+        15 -> write_multiple_coils_request: Write_Multiple_Coils_Request;
+        16 -> write_multiple_registers_request: Write_Multiple_Registers_Request;
+        
+        0x81 -> read_coils_exception: Exception_Response;
+        0x82 -> read_discrete_inputs_exception: Exception_Response;
+        0x83 -> read_holding_registers_exception: Exception_Response;
+        0x84 -> read_input_registers_exception: Exception_Response;
+        0x85 -> write_single_coil_exception: Exception_Response;
+        0x86 -> write_single_register_exception: Exception_Response;
+        0x8F -> write_multiple_coils_exception: Exception_Response;
+        0x90 -> write_multiple_registers_exception: Exception_Response;
     };
+};
 
-    type Payload = unit(fc: uint8) {
-        switch (fc) {
-            1, 2 -> read_discrete_inputs_coils(fc);
-            3, 4 -> read_holding_input_registers(fc);
-            5 -> write_single_coil;
-            6 -> write_single_register;
-            15 -> write_multiple_coils;
-            16 -> write_multiple_registers;
-            default -> unknown_payload;
+type Read_Coils_Request = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+};
+
+type Read_Discrete_Inputs_Request = unit {
+    starting_address: uint16;
+    quantity_of_inputs: uint16;
+};
+
+type Read_Holding_Registers_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+type Read_Input_Registers_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+type Write_Single_Coil_Request = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type Write_Single_Register_Request = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type Write_Multiple_Coils_Request = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+    byte_count: uint8;
+    coil_values: bytes(byte_count);
+};
+
+type Write_Multiple_Registers_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+    byte_count: uint8;
+    register_values: bytes(byte_count);
+};
+
+type Exception_Response = unit {
+    exception_code: uint8;
+};
+
+type ModbusADU = unit {
+    slave_address: uint8;
+    pdu: ModbusPDU;
+    crc: uint16;
+};
+
+type ModbusTCP = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    pdu: ModbusPDU;
+};
+
+public type Modbus = unit {
+    var is_tcp: bool;
+
+    parse {
+        if ( is_tcp ) {
+            tcp_frame = ModbusTCP();
         }
-
-        type read_discrete_inputs_coils = unit(fc: uint8) {
-            start_address: uint16;
-            quantity: uint16 {
-                validate($$ >= 1 && $$ <= 2000);
-            }
-        }
-
-        type read_holding_input_registers = unit(fc: uint8) {
-            start_address: uint16;
-            quantity: uint16 {
-                validate($$ >= 1 && $$ <= 125);
-            }
-        }
-
-        type write_single_coil = unit {
-            address: uint16;
-            value: uint16 {
-                validate($$ == 0x0000 || $$ == 0xFF00);
-            }
-        }
-
-        type write_single_register = unit {
-            address: uint16;
-            value: uint16;
-        }
-
-        type write_multiple_coils = unit {
-            start_address: uint16;
-            quantity: uint16 {
-                validate($$ >= 1 && $$ <= 1968);
-            }
-            byte_count: uint8;
-            coil_values: bytes &length=self.byte_count;
-        }
-
-        type write_multiple_registers = unit {
-            start_address: uint16;
-            quantity: uint16 {
-                validate($$ >= 1 && $$ <= 123);
-            }
-            byte_count: uint8;
-            register_values: bytes &length=self.byte_count;
-        }
-
-        type unknown_payload = unit {
-            data: bytes &eod;
+        else {
+            adu_frame = ModbusADU();
         }
     }
-}
+};
+
+enum ExceptionCode {
+    ILLEGAL_FUNCTION = 0x01,
+    ILLEGAL_DATA_ADDRESS = 0x02,
+    ILLEGAL_DATA_VALUE = 0x03,
+    SLAVE_DEVICE_FAILURE = 0x04,
+    ACKNOWLEDGE = 0x05,
+    SLAVE_DEVICE_BUSY = 0x06,
+    MEMORY_PARITY_ERROR = 0x08,
+    GATEWAY_PATH_UNAVAILABLE = 0x10,
+    GATEWAY_TARGET_DEVICE_FAILED = 0x11
+};

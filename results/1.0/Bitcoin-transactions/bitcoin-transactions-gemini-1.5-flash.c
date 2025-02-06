@@ -1,82 +1,120 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent a Bitcoin transaction
 typedef struct {
-    char txid[65]; // Transaction ID (64 hex characters + null terminator)
-    double amount;
-    char address[35]; // Bitcoin address (34 characters + null terminator)
+    uint32_t version;
+} TransactionHeader;
 
-} Transaction;
+typedef struct {
+    uint8_t txid[32];
+    uint32_t vout;
+    uint8_t scriptSigLen;
+    uint8_t* scriptSig;
+    uint32_t sequence;
+} TransactionInput;
 
+typedef struct {
+    uint64_t value;
+    uint8_t pkScriptLen;
+    uint8_t* pkScript;
+} TransactionOutput;
 
-// Function to read transactions from a file
-Transaction* readTransactions(const char* filename, int* numTransactions) {
-    FILE* file = fopen(filename, "r");
-    if (file == NULL) {
-        perror("Error opening file");
-        return NULL;
-    }
+typedef struct {
+    TransactionHeader header;
+    size_t numInputs;
+    TransactionInput* inputs;
+    size_t numOutputs;
+    TransactionOutput* outputs;
+    uint32_t locktime;
+} BitcoinTransaction;
 
-    char line[256];
-    Transaction* transactions = NULL;
-    *numTransactions = 0;
-
-    while (fgets(line, sizeof(line), file) != NULL) {
-        // Basic parsing assuming comma-separated values
-        char* txid = strtok(line, ",");
-        char* amountStr = strtok(NULL, ",");
-        char* address = strtok(NULL, ",");
-
-
-        if (txid == NULL || amountStr == NULL || address == NULL) {
-            fprintf(stderr, "Error parsing line: %s", line);
-            continue; //Skip the line if parsing fails
-        }
-
-        Transaction newTransaction;
-        strncpy(newTransaction.txid, txid, sizeof(newTransaction.txid) -1);
-        newTransaction.txid[sizeof(newTransaction.txid) -1] = '\0'; //Null termination for safety
-
-        newTransaction.amount = atof(amountStr);
-        strncpy(newTransaction.address, address, sizeof(newTransaction.address)-1);
-        newTransaction.address[sizeof(newTransaction.address)-1] = '\0';
-
-        transactions = realloc(transactions, (*numTransactions + 1) * sizeof(Transaction));
-        if (transactions == NULL) {
-            perror("Memory allocation failed");
-            fclose(file);
-            return NULL;
-        }
-        transactions[*numTransactions] = newTransaction;
-        (*numTransactions)++;
-    }
-
-    fclose(file);
-    return transactions;
+static HParser* TransactionHeaderParser(void) {
+    return h_uint32();
 }
 
+static HParser* TransactionInputParser(void) {
+    return h_seq(
+        h_bytes(32),
+        h_uint32(),
+        h_uint8(),
+        h_bytes_n(sizeof(uint8_t)), //Fixed size for scriptSig
+        h_uint32(),
+        NULL
+    );
+}
 
-int main() {
-    int numTransactions;
-    Transaction* transactions = readTransactions("transactions.csv", &numTransactions);
+static HParser* TransactionOutputParser(void) {
+    return h_seq(
+        h_uint64(),
+        h_uint8(),
+        h_bytes_n(sizeof(uint8_t)), //Fixed size for pkScript
+        NULL
+    );
+}
 
-    if (transactions == NULL) {
-        return 1; // Indicate an error
+static HParser* BitcoinTransactionParser(void) {
+    return h_seq(
+        TransactionHeaderParser(),
+        h_array(TransactionInputParser()),
+        h_array(TransactionOutputParser()),
+        h_uint32(),
+        NULL
+    );
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Process the transactions (example: print them)
-    for (int i = 0; i < numTransactions; i++) {
-        printf("Transaction ID: %s, Amount: %.2f, Address: %s\n",
-               transactions[i].txid, transactions[i].amount, transactions[i].address);
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    free(transactions); //Free allocated memory
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = (uint8_t*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
+
+    HParseResult* result = h_parse(BitcoinTransactionParser(), buffer, fileSize);
+
+    if (result->status == H_PARSE_OK) {
+        BitcoinTransaction* tx = (BitcoinTransaction*)result->value;
+        printf("Transaction parsed successfully:\n");
+        printf("Version: %u\n", tx->header.version);
+        printf("Number of Inputs: %zu\n", tx->numInputs);
+        printf("Number of Outputs: %zu\n", tx->numOutputs);
+        printf("Locktime: %u\n", tx->locktime);
+
+        //Further processing of inputs and outputs would go here.  Note that
+        //you'll need to handle the dynamically allocated scriptSig and pkScript
+        //data appropriately.
+
+        free(tx->inputs); //Free dynamically allocated memory
+        free(tx->outputs);
+        free(tx);
+        h_free_result(result);
+
+    } else {
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result->offset, result->error);
+        h_free_result(result);
+    }
+
+    free(buffer);
     return 0;
 }
-
-**transactions.csv example:**
-
-e2e74100a696e22157426857d9272c159209582169c16c6748696361,1.5,1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2
-a75d804c404696889a30605a68107a6968a0c21341513e968a1b33f5,0.2,3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy

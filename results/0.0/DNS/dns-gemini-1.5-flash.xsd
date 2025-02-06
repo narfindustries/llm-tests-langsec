@@ -1,37 +1,72 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/dns" elementFormDefault="qualified" attributeFormDefault="unqualified">
-
-  <xs:element name="dnsGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/dns" targetNamespace="http://example.org/dns" elementFormDefault="qualified" version="1.0">
+  <xs:element name="DNSMessage" dfdl:lengthKind="explicit">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="records" type="recordsType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="ID" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="Flags" type="tns:Flags" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="QDCOUNT" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="ANCOUNT" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="NSCOUNT" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="ARCOUNT" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+        <xs:element name="Questions" type="tns:Questions" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Answers" type="tns:ResourceRecords" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="AuthorityRecords" type="tns:ResourceRecords" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="AdditionalRecords" type="tns:ResourceRecords" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:length="1"/>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="Flags">
     <xs:sequence>
-      <xs:element name="recordCount" type="xs:integer" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="QR" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="Opcode" type="tns:uint4" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="AA" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="TC" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="RD" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="RA" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="Z" type="tns:uint3" dfdl:length="3" dfdl:representation="binary"/>
+      <xs:element name="RCODE" type="tns:uint4" dfdl:length="4" dfdl:representation="binary"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordsType">
+  <xs:complexType name="Questions">
     <xs:sequence>
-      <xs:element name="record" type="recordType" dfdl:occursCountKind="variable" dfdl:occursCount="{recordCount}"/>
+      <xs:element name="QNAME" type="tns:DomainName"/>
+      <xs:element name="QTYPE" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="QCLASS" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordType">
+  <xs:complexType name="ResourceRecords">
     <xs:sequence>
-      <xs:element name="type" type="xs:integer" dfdl:length="2" dfdl:representation="binary"/>
-      <xs:element name="data" type="xs:string" dfdl:length="255"/>
+      <xs:element name="NAME" type="tns:DomainName"/>
+      <xs:element name="TYPE" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="CLASS" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="TTL" type="tns:uint32" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="RDLENGTH" type="tns:uint16" dfdl:length="2" dfdl:representation="binary"/>
+      <xs:element name="RDATA" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
-
-  <dfdl:defineSchema>
-    <dfdl:format binary="true" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes"/>
-  </dfdl:defineSchema>
-
+  <xs:simpleType name="DomainName">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.)*[a-zA-Z0-9-]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="uint16">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="uint32">
+    <xs:restriction base="xs:unsignedLong">
+      <xs:maxInclusive value="4294967295"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="uint4">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:maxInclusive value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="uint3">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:maxInclusive value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

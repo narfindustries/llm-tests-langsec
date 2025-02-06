@@ -1,94 +1,63 @@
-module SQLITE3-DB {
-    // Core data types and definitions
-    type Byte = uint8
-    type Int = int32
-    type Text = string
-    type Real = float64
-    type Blob = bytes
+module SQLite3DB {
+  enum Encoding : uint8 {
+    UTF8 = 1,
+    UTF16LE = 2,
+    UTF16BE = 3
+  }
 
-    // SQLite database schema representation
-    type Database {
-        tables: list<Table>
-    }
+  enum PageType : uint8 {
+    IndexInterior = 2,
+    TableInterior = 5,
+    IndexLeaf = 10,
+    TableLeaf = 13
+  }
 
-    type Table {
-        name: Text
-        columns: list<Column>
-        constraints: list<Constraint>
-    }
+  enum SerialType : uint8 {
+    Null = 0,
+    Int8 = 1,
+    Int16 = 2,
+    Int24 = 3,
+    Int32 = 4,
+    Int48 = 5,
+    Int64 = 6,
+    Float64 = 7,
+    Zero = 8,
+    One = 9,
+    Reserved1 = 10,
+    Reserved2 = 11,
+    BlobVar = 12,
+    TextVar = 13
+  }
 
-    type Column {
-        name: Text
-        type: ColumnType
-        nullable: bool
-        primary_key: bool
-        default_value: optional<Value>
-    }
+  struct SQLiteHeader {
+    magic: string(16),
+    page_size: uint16,
+    write_version: uint8,
+    read_version: uint8,
+    reserved_space: uint8,
+    max_embedded_payload: uint8,
+    min_embedded_payload: uint8,
+    leaf_payload_fraction: uint8,
+    file_change_counter: uint32,
+    database_pages: uint32,
+    first_freelist_page: uint32,
+    total_freelist_pages: uint32,
+    schema_cookie: uint32,
+    schema_format: uint32,
+    default_encoding: Encoding,
+    user_version: uint32,
+    incremental_vacuum: uint32
+  }
 
-    enum ColumnType {
-        INTEGER,
-        TEXT, 
-        REAL,
-        BLOB
-    }
+  struct RecordHeader {
+    header_length: uint64,
+    serial_types: list(SerialType)
+  }
 
-    type Constraint {
-        type: ConstraintType
-        details: ConstraintDetails
-    }
+  struct SQLitePage {
+    header: SQLiteHeader,
+    pages: list(PageType)
+  }
 
-    enum ConstraintType {
-        PRIMARY_KEY,
-        FOREIGN_KEY,
-        UNIQUE,
-        CHECK
-    }
-
-    type ConstraintDetails {
-        columns: list<Text>
-        reference_table: optional<Text>
-        reference_columns: optional<list<Text>>
-        condition: optional<Text>
-    }
-
-    type Value {
-        integer_val: optional<Int>
-        text_val: optional<Text>
-        real_val: optional<Real>
-        blob_val: optional<Blob>
-    }
-
-    // Database operations
-    type DatabaseOperation {
-        type: OperationType
-        details: OperationDetails
-    }
-
-    enum OperationType {
-        CREATE_TABLE,
-        INSERT,
-        UPDATE,
-        DELETE,
-        SELECT
-    }
-
-    type OperationDetails {
-        table_name: Text
-        columns: optional<list<Text>>
-        values: optional<list<Value>>
-        where_condition: optional<Text>
-    }
-
-    // Main parsing and validation functions
-    function parse_database_schema(input: Text) -> Database {
-        // Implement schema parsing logic
-    }
-
-    function validate_database_schema(db: Database) -> bool {
-        // Implement schema validation rules
-    }
-
-    function execute_database_operation(db: Database, operation: DatabaseOperation) -> bool {
-        // Implement database operation execution
-    }
+  function parse_sqlite(input: stream): SQLitePage
 }

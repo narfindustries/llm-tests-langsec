@@ -1,78 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/specificationModel/dfdl-1.0/"
-           targetNamespace="urn:gzip"
-           xmlns:tns="urn:gzip">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gzip">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/specificationModel/dfdl-1.0/">
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
       <dfdl:format 
-        representation="binary"
-        alignmentUnits="bytes"
-        alignment="1"
-        bitOrder="mostSignificantBitFirst"
-        byteOrder="bigEndian"
-        fillByte="%#x00"
-        escapeScheme="none"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberJustification="right"
-        textTrimKind="none"
-        textPadKind="none"/>
+        lengthKind="explicit" 
+        representation="binary" 
+        byteOrder="littleEndian"
+        alignment="1" 
+        alignmentUnits="bytes"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="gzipFile" dfdl:lengthKind="implicit">
+  <xs:element name="gzipFile">
     <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="header" type="tns:gzipHeader"/>
-        <xs:element name="compressedBlocks" type="tns:compressedData"/>
-        <xs:element name="trailer" type="tns:gzipTrailer"/>
+      <xs:sequence>
+        <xs:element name="magicNumber" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert message="Invalid magic number">
+                <dfdl:value>0x1F8B</dfdl:value>
+              </dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="compressionMethod" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert message="Invalid compression method">
+                <dfdl:value>8</dfdl:value>
+              </dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="flags" type="xs:unsignedByte"/>
+
+        <xs:element name="modificationTime" type="xs:unsignedInt"/>
+
+        <xs:element name="extraFlags" type="xs:unsignedByte"/>
+
+        <xs:element name="operatingSystem" type="xs:unsignedByte"/>
+
+        <xs:element name="optionalFields" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extraFields" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extraLength" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:discriminator>
+                            { ../../flags &amp; 0x04 }
+                          </dfdl:discriminator>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="extraData" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:discriminator>
+                            { ../extraLength > 0 }
+                          </dfdl:discriminator>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="originalFilename" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:discriminator>
+                      { ../../flags &amp; 0x08 }
+                    </dfdl:discriminator>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="fileComment" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:discriminator>
+                      { ../../flags &amp; 0x10 }
+                    </dfdl:discriminator>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="headerCRC" type="xs:unsignedShort">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:discriminator>
+                      { ../../flags &amp; 0x02 }
+                    </dfdl:discriminator>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="compressedData" type="xs:hexBinary"/>
+
+        <xs:element name="footer">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="crc32" type="xs:unsignedInt"/>
+              <xs:element name="originalSize" type="xs:unsignedInt"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="gzipHeader">
-    <xs:sequence dfdl:separator="">
-      <xs:element name="magicNumber" type="xs:hexBinary" 
-        dfdl:length="2" 
-        dfdl:lengthKind="explicit"
-        dfdl:inputValuePattern="1F8B"/>
-      <xs:element name="compressionMethod" type="xs:unsignedByte" 
-        dfdl:length="1" 
-        dfdl:lengthKind="explicit"/>
-      <xs:element name="flags" type="xs:unsignedByte" 
-        dfdl:length="1" 
-        dfdl:lengthKind="explicit"/>
-      <xs:element name="modificationTime" type="xs:unsignedInt" 
-        dfdl:length="4" 
-        dfdl:lengthKind="explicit"/>
-      <xs:element name="extraFlags" type="xs:unsignedByte" 
-        dfdl:length="1" 
-        dfdl:lengthKind="explicit"/>
-      <xs:element name="operatingSystem" type="xs:unsignedByte" 
-        dfdl:length="1" 
-        dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="compressedData">
-    <xs:sequence dfdl:separator="">
-      <xs:element name="deflateBlock" type="xs:hexBinary" 
-        dfdl:lengthKind="implicit" 
-        dfdl:encoding="deflate"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="gzipTrailer">
-    <xs:sequence dfdl:separator="">
-      <xs:element name="crc32" type="xs:unsignedInt" 
-        dfdl:length="4" 
-        dfdl:lengthKind="explicit"/>
-      <xs:element name="originalSize" type="xs:unsignedInt" 
-        dfdl:length="4" 
-        dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

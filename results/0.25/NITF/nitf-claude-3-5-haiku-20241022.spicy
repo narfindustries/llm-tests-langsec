@@ -2,35 +2,114 @@ module NITF;
 
 import spicy;
 
-public type Header = unit {
-    magic: bytes(4) &requires(self.magic == b"NITF");
-    version: bytes(2);
-    
-    subheader_length: bytes(6) &convert(spicy::parse_int($$, 10));
-    
-    : bytes(3); # Reserved space
-    
-    number_of_image_segments: bytes(3) &convert(spicy::parse_int($$, 10));
-    number_of_graphic_segments: bytes(3) &convert(spicy::parse_int($$, 10));
-    
-    parse_header: function() {
-        return self;
+public type NITFFile = unit {
+    header: NITFHeader;
+    image_segments: ImageSegment[];
+    graphic_segments: GraphicSegment[];
+    text_segments: TextSegment[];
+    data_extension_segments: DataExtensionSegment[];
+    reserved_extension_segments: ReservedExtensionSegment[];
+
+    method parse() {
+        while ( self.has_more_segments() ) {
+            # Parsing logic for different segment types
+        }
+    }
+
+    method has_more_segments() : bool {
+        return false;  # Implement actual segment detection logic
     }
 };
 
-public type ImageSubheader = unit {
-    length: bytes(6) &convert(spicy::parse_int($$, 10));
-    image_type: bytes(2);
-    
-    width: bytes(5) &convert(spicy::parse_int($$, 10));
-    height: bytes(5) &convert(spicy::parse_int($$, 10));
+type NITFHeader = unit {
+    file_profile_name: bytes &size=9;
+    complexity_level: bytes &size=2;
+    standard_type: bytes &size=1;
+    originating_station_id: bytes &size=10;
+    file_datetime: bytes &size=14;
+    file_title: bytes &size=80;
+    security_classification: bytes &size=1;
+    security_classification_system: bytes &size=2;
+    codewords: bytes &size=11;
+    control_and_handling: bytes &size=2;
+    releasing_instructions: bytes &size=20;
+    declassification_type: bytes &size=2;
+    declassification_date: bytes &size=8;
+    declassification_exemption: bytes &size=4;
+    downgrade_type: bytes &size=1;
+    downgrade_date: bytes &size=8;
+    file_copy_number: bytes &size=5;
+    file_number_of_copies: bytes &size=5;
+    encryption_flag: bytes &size=1;
+    originator_name: bytes &size=27;
+    originator_phone: bytes &size=18;
 };
 
-public type File = unit {
-    header: Header;
-    image_subheaders: ImageSubheader[] &count(self.header.number_of_image_segments);
-    
-    parse_file: function() {
-        return self;
-    }
+type ImageSegment = unit {
+    subheader: ImageSubheader;
+    image_data: bytes &size=subheader.image_data_length;
+};
+
+type ImageSubheader = unit {
+    image_type: bytes &size=3;
+    image_representation: bytes &size=8;
+    image_category: bytes &size=3;
+    actual_bits_per_pixel: bytes &size=2;
+    pixel_justification: bytes &size=1;
+    image_coordinate_representation: bytes &size=1;
+    image_data_length: uint32;
+    block_mask_flag: bytes &size=1;
+    pad_mask_flag: bytes &size=1;
+    compression_flag: bytes &size=1;
+    compression_type: bytes &size=2;
+    number_of_bands: uint16;
+    band_info: BandInfo[] &count=number_of_bands;
+};
+
+type BandInfo = unit {
+    band_representation: bytes &size=2;
+    band_subcategory: bytes &size=6;
+    band_sequence: bytes &size=1;
+    band_calibration_type: bytes &size=1;
+};
+
+type GraphicSegment = unit {
+    subheader: GraphicSubheader;
+    graphic_data: bytes &size=subheader.graphic_data_length;
+};
+
+type GraphicSubheader = unit {
+    graphic_type: bytes &size=2;
+    graphic_data_length: uint32;
+    graphic_color: bytes &size=1;
+};
+
+type TextSegment = unit {
+    subheader: TextSubheader;
+    text_data: bytes &size=subheader.text_data_length;
+};
+
+type TextSubheader = unit {
+    text_type: bytes &size=3;
+    text_data_length: uint32;
+};
+
+type DataExtensionSegment = unit {
+    subheader: DataExtensionSubheader;
+    data: bytes &size=subheader.data_length;
+};
+
+type DataExtensionSubheader = unit {
+    de_type: bytes &size=2;
+    data_length: uint32;
+};
+
+type ReservedExtensionSegment = unit {
+    subheader: ReservedExtensionSubheader;
+    data: bytes &size=subheader.data_length;
+};
+
+type ReservedExtensionSubheader = unit {
+    re_type: bytes &size=2;
+    data_length: uint32;
 };

@@ -1,34 +1,94 @@
-module Main where
+ICMPMessage ::= struct {
+  type : uint8;
+  code : uint8;
+  checksum : uint16;
+  restOfHeader : uint32;
 
-import Dae.Network.IPv4
-import Dae.Network.ICMP
+  data : switch (type) {
+    case 0 => EchoReply;
+    case 3 => DestinationUnreachable;
+    case 4 => SourceQuench;
+    case 5 => RedirectMessage;
+    case 8 => EchoRequest;
+    case 11 => TimeExceeded;
+    case 12 => ParameterProblem;
+    case 13 => TimestampMessage;
+    case 14 => TimestampReply;
+    case 15 => InformationRequestReply;
+    case 16 => InformationRequestReply;
+    case 17 => AddressMaskMessage;
+    case 18 => AddressMaskMessage;
+  };
+};
 
--- Define the ICMP message format with GPT-4 Turbo modifications
-data ICMPGPT4Turbo = ICMPGPT4Turbo
-  { icmpType    :: UInt8  -- Type of ICMP message
-  , code        :: UInt8  -- Code for the specific ICMP message
-  , checksum    :: UInt16 -- Checksum for error-checking
-  , restOfHeader:: Bytes 4 -- Rest of the header specific to the type and code
-  , data        :: Bytes  -- Data section, variable length
-  }
+EchoReply ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  data : bytes;
+};
 
--- Define a parser for ICMPGPT4Turbo based on the standard ICMP structure
-instance Parse ICMPGPT4Turbo where
-  parse = do
-    typ <- parse @UInt8
-    cde <- parse @UInt8
-    chksum <- parse @UInt16
-    rest <- parse @(Bytes 4)
-    dat <- parse @(Bytes)
-    return $ ICMPGPT4Turbo typ cde chksum rest dat
+DestinationUnreachable ::= struct {
+  unused : uint16;
+  nextHopMtu : uint16;
+  ipHeader : bytes[20];
+  first8BytesOfOriginalDatagram : bytes[8];
+};
 
--- Calculate checksum for ICMPGPT4Turbo
-instance Checksum ICMPGPT4Turbo where
-  checksum msg = do
-    let header = serialize msg.icmpType ++ serialize msg.code ++ serialize msg.restOfHeader
-    let fullMsg = header ++ serialize msg.data
-    return $ internetChecksum fullMsg
+SourceQuench ::= struct {
+  unused : uint32;
+  ipHeader : bytes[20];
+  first8BytesOfOriginalDatagram : bytes[8];
+};
 
--- Main function to parse a packet
-parseICMPGPT4Turbo :: Bytes -> Maybe (ICMPGPT4Turbo, Bytes)
-parseICMPGPT4Turbo = runParse
+RedirectMessage ::= struct {
+  gatewayInternetAddress : uint32;
+  ipHeader : bytes[20];
+  first8BytesOfOriginalDatagram : bytes[8];
+};
+
+EchoRequest ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  data : bytes;
+};
+
+TimeExceeded ::= struct {
+  unused : uint16;
+  nextHopMtu : uint16;
+  ipHeader : bytes[20];
+  first8BytesOfOriginalDatagram : bytes[8];
+};
+
+ParameterProblem ::= struct {
+  pointer : uint8;
+  unused : bytes[3];
+  ipHeader : bytes[20];
+  first8BytesOfOriginalDatagram : bytes[8];
+};
+
+TimestampMessage ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  originateTimestamp : uint32;
+  receiveTimestamp : uint32;
+  transmitTimestamp : uint32;
+};
+
+TimestampReply ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  originateTimestamp : uint32;
+  receiveTimestamp : uint32;
+  transmitTimestamp : uint32;
+};
+
+InformationRequestReply ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+};
+
+AddressMaskMessage ::= struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  addressMask : uint32;
+};

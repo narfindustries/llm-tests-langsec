@@ -1,31 +1,26 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, verify},
-    number::streaming::{be_u16, be_u32},
-    sequence::{tuple, preceded},
+    bytes::complete::{take},
+    number::complete::{be_u16, be_u32},
+    sequence::tuple,
     IResult,
+    error::Error,
+    multi::count,
+    branch::alt,
+    combinator::rest
 };
-use std::env;
-use std::fs::read;
-use std::net::IpAddr;
+use std::fs;
 use std::str::from_utf8;
 
 #[derive(Debug)]
-enum RdataType {
-    A,
-    AAAA,
-    CNAME,
-    MX,
-    NS,
-    SOA,
-    TXT,
-    // Add other RDATA types as needed
-}
-
-#[derive(Debug)]
-struct DNSHeader {
+struct DnsHeader {
     id: u16,
-    flags: u16,
+    qr: bool,
+    opcode: u8,
+    aa: bool,
+    tc: bool,
+    rd: bool,
+    ra: bool,
+    rcode: u8,
     qdcount: u16,
     ancount: u16,
     nscount: u16,
@@ -33,162 +28,143 @@ struct DNSHeader {
 }
 
 #[derive(Debug)]
-struct DNSQuestion {
-    qname: String,
+struct DnsQuestion {
+    name: String,
     qtype: u16,
     qclass: u16,
 }
 
 #[derive(Debug)]
-struct DNSResourceRecord {
+struct DnsResourceRecord {
     name: String,
-    rtype: RdataType,
+    rtype: u16,
     rclass: u16,
     ttl: u32,
+    rdlength: u16,
     rdata: Vec<u8>,
 }
 
 
-fn parse_name(input: &[u8]) -> IResult<&[u8], String> {
-    let mut name = String::new();
+fn parse_domain_name(input: &[u8]) -> IResult<&[u8], String, Error<&[u8]>> {
+    let mut domain_name = String::new();
     let mut remaining = input;
     loop {
         let (rest, len) = take(1usize)(remaining)?;
-        let len = len[0] as usize;
+        let len = len[0];
         if len == 0 {
             break;
         }
-        let (rest2, label) = take(len)(rest)?;
-        name.push_str(from_utf8(label).unwrap());
-        name.push('.');
+        let (rest2, label) = take(len as usize)(rest)?;
+        domain_name.push_str(from_utf8(label).unwrap());
+        domain_name.push('.');
         remaining = rest2;
     }
-    Ok((remaining, name.trim_end_matches('.').to_string()))
+    Ok((remaining, domain_name))
 }
 
-fn parse_rdata_a(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    map(take(4usize), |x| x.to_vec())(input)
-}
+fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DnsHeader, Error<&[u8]>> {
+    let (rest, (id, flags, qdcount, ancount, nscount, arcount)) = tuple((
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+        be_u16,
+    ))(input)?;
 
-fn parse_rdata_aaaa(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    map(take(16usize), |x| x.to_vec())(input)
-}
+    let qr = (flags >> 15) & 1 != 0;
+    let opcode = ((flags >> 11) & 0xf) as u8;
+    let aa = (flags >> 10) & 1 != 0;
+    let tc = (flags >> 9) & 1 != 0;
+    let rd = (flags >> 8) & 1 != 0;
+    let ra = (flags >> 7) & 1 != 0;
+    let rcode = (flags & 0xf) as u8;
 
-fn parse_rdata_cname(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (rest, name) = parse_name(input)?;
-    Ok((rest, name.as_bytes().to_vec()))
-}
-
-fn parse_rdata(rtype: RdataType, input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    match rtype {
-        RdataType::A => parse_rdata_a(input),
-        RdataType::AAAA => parse_rdata_aaaa(input),
-        RdataType::CNAME => parse_rdata_cname(input),
-        _ => take(0usize)(input), // Handle other types later
-    }
-}
-
-fn parse_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
-    map(
-        tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16)),
-        |(id, flags, qdcount, ancount, nscount, arcount)| DNSHeader {
+    Ok((
+        rest,
+        DnsHeader {
             id,
-            flags,
+            qr,
+            opcode,
+            aa,
+            tc,
+            rd,
+            ra,
+            rcode,
             qdcount,
             ancount,
             nscount,
             arcount,
         },
-    )(input)
+    ))
 }
 
-fn parse_question(input: &[u8]) -> IResult<&[u8], DNSQuestion> {
-    map(tuple((parse_name, be_u16, be_u16)), |(qname, qtype, qclass)| DNSQuestion {
-        qname,
-        qtype,
-        qclass,
-    })(input)
+fn parse_dns_question(input: &[u8]) -> IResult<&[u8], DnsQuestion, Error<&[u8]>> {
+    let (rest, (name, qtype, qclass)) = tuple((parse_domain_name, be_u16, be_u16))(input)?;
+    Ok((
+        rest,
+        DnsQuestion {
+            name: name.trim_end_matches('.').to_string(),
+            qtype,
+            qclass,
+        },
+    ))
 }
 
-fn parse_resource_record(input: &[u8]) -> IResult<&[u8], DNSResourceRecord> {
-    map(
-        tuple((
-            parse_name,
-            be_u16,
-            be_u16,
-            be_u32,
-            // Add RDATA parsing based on type
-            map(be_u16, |rtype| match rtype {
-                1 => RdataType::A,
-                28 => RdataType::AAAA,
-                5 => RdataType::CNAME,
-                15 => RdataType::MX,
-                2 => RdataType::NS,
-                6 => RdataType::SOA,
-                16 => RdataType::TXT,
-                _ => panic!("Unsupported RDATA type"),
-            }),
-            parse_rdata,
-        )),
-        |(name, rclass, rtype_num, ttl, rtype, rdata)| DNSResourceRecord {
-            name,
+fn parse_dns_resource_record(input: &[u8]) -> IResult<&[u8], DnsResourceRecord, Error<&[u8]>> {
+    let (rest, (name, rtype, rclass, ttl, rdlength, rdata)) = tuple((
+        parse_domain_name,
+        be_u16,
+        be_u16,
+        be_u32,
+        be_u16,
+        take,
+    ))(input)?;
+    Ok((
+        rest,
+        DnsResourceRecord {
+            name: name.trim_end_matches('.').to_string(),
             rtype,
             rclass,
             ttl,
-            rdata,
+            rdlength,
+            rdata: rdata.to_vec(),
         },
-    )(input)
+    ))
+}
+
+fn parse_dns_message(input: &[u8]) -> IResult<&[u8], (DnsHeader, Vec<DnsQuestion>, Vec<DnsResourceRecord>, Vec<DnsResourceRecord>, Vec<DnsResourceRecord>), Error<&[u8]>> {
+    let (rest, header) = parse_dns_header(input)?;
+    let (rest, questions) = count(parse_dns_question, header.qdcount as usize)(rest)?;
+    let (rest, answers) = count(parse_dns_resource_record, header.ancount as usize)(rest)?;
+    let (rest, authorities) = count(parse_dns_resource_record, header.nscount as usize)(rest)?;
+    let (rest, additionals) = count(parse_dns_resource_record, header.arcount as usize)(rest)?;
+    Ok((rest, (header, questions, answers, authorities, additionals)))
+
 }
 
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <binary_file>", args[0]);
-        return;
+        std::process::exit(1);
     }
 
     let filename = &args[1];
-    let data = match read(filename) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
+    let contents = fs::read(filename).expect("Something went wrong reading the file");
 
-    match parse_header(&data) {
-        Ok((remaining, header)) => {
+    match parse_dns_message(&contents) {
+        Ok((_, (header, questions, answers, authorities, additionals))) => {
             println!("Header: {:?}", header);
-            let mut remaining_data = remaining;
-            for _ in 0..header.qdcount {
-                match parse_question(remaining_data) {
-                    Ok((rest, question)) => {
-                        println!("Question: {:?}", question);
-                        remaining_data = rest;
-                    }
-                    Err(e) => {
-                        eprintln!("Error parsing question: {:?}", e);
-                        return;
-                    }
-                }
-            }
-            for _ in 0..header.ancount {
-                match parse_resource_record(remaining_data) {
-                    Ok((rest, record)) => {
-                        println!("Resource Record: {:?}", record);
-                        remaining_data = rest;
-                    }
-                    Err(e) => {
-                        eprintln!("Error parsing resource record: {:?}", e);
-                        return;
-                    }
-                }
-            }
-
+            println!("Questions: {:?}", questions);
+            println!("Answers: {:?}", answers);
+            println!("Authorities: {:?}", authorities);
+            println!("Additionals: {:?}", additionals);
         }
         Err(e) => {
-            eprintln!("Error parsing header: {:?}", e);
+            eprintln!("Error parsing DNS message: {:?}", e);
+            std::process::exit(1);
         }
     }
 }

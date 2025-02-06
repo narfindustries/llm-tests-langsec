@@ -1,0 +1,229 @@
+module PNG;
+
+public type File = unit {
+    signature: bytes &size=8;
+    chunks: Chunk[] &until($$.type == "IEND");
+};
+
+type Chunk = unit {
+    length: uint32;
+    type:   bytes &size=4;
+    data:   bytes &size=length;
+    crc:    uint32;
+};
+
+type IHDR = unit {
+    width:           uint32;
+    height:          uint32;
+    bit_depth:       uint8;
+    color_type:      uint8;
+    compression_method: uint8;
+    filter_method:   uint8;
+    interlace_method: uint8;
+};
+
+type PLTE = unit {
+    entries: uint8[] &size=3;
+};
+
+type IDAT = unit {
+    compressed_data: bytes &restofdata;
+};
+
+type IEND = unit {
+    # No data
+};
+
+type tRNS = unit {
+    data: bytes &size=$$.length;
+};
+
+type cHRM = unit {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x:        uint32;
+    red_y:        uint32;
+    green_x:      uint32;
+    green_y:      uint32;
+    blue_x:       uint32;
+    blue_y:       uint32;
+};
+
+type gAMA = unit {
+    gamma: uint32;
+};
+
+type iCCP = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &restofdata;
+};
+
+type sBIT = unit {
+    data: bytes &size=$$.length;
+};
+
+type sRGB = unit {
+    rendering_intent: uint8;
+};
+
+type tEXt = unit {
+    keyword: bytes &until=b"\x00";
+    text_string: bytes &restofdata;
+};
+
+type zTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &restofdata;
+};
+
+type iTXt = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &restofdata;
+};
+
+type bKGD = unit {
+    data: bytes &size=$$.length;
+};
+
+type hIST = unit {
+    frequencies: uint16[] &size=$$.length / 2;
+};
+
+type pHYs = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+type sPLT = unit {
+    palette_name: bytes &until=b"\x00";
+    sample_depth: uint8;
+    palette_entries: uint8[] &size=$$.length - 1 - size(palette_name);
+};
+
+type tIME = unit {
+    year:   uint16;
+    month:  uint8;
+    day:    uint8;
+    hour:   uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type oFFs = unit {
+    x_position:      uint32;
+    y_position:      uint32;
+    unit_specifier:  uint8;
+};
+
+type pCAL = unit {
+    calibration_name: bytes &until=b"\x00";
+    x0:              uint32;
+    x1:              uint32;
+    equation_type:    uint8;
+    parameters:       uint8[] &size=$$.length - 9 - size(calibration_name);
+};
+
+type sCAL = unit {
+    unit_specifier: uint8;
+    width:          bytes &until=b"\x00";
+    height:         bytes &until=b"\x00";
+};
+
+type sTER = unit {
+    mode: uint8;
+};
+
+on Chunk::IHDR -> IHDR {
+    $$ = $1;
+};
+
+on Chunk::PLTE -> PLTE {
+    $$ = $1;
+};
+
+on Chunk::IDAT -> IDAT {
+    $$ = $1;
+};
+
+on Chunk::IEND -> IEND {
+    $$ = $1;
+};
+
+on Chunk::tRNS -> tRNS {
+    $$ = $1;
+};
+
+on Chunk::cHRM -> cHRM {
+    $$ = $1;
+};
+
+on Chunk::gAMA -> gAMA {
+    $$ = $1;
+};
+
+on Chunk::iCCP -> iCCP {
+    $$ = $1;
+};
+
+on Chunk::sBIT -> sBIT {
+    $$ = $1;
+};
+
+on Chunk::sRGB -> sRGB {
+    $$ = $1;
+};
+
+on Chunk::tEXt -> tEXt {
+    $$ = $1;
+};
+
+on Chunk::zTXt -> zTXt {
+    $$ = $1;
+};
+
+on Chunk::iTXt -> iTXt {
+    $$ = $1;
+};
+
+on Chunk::bKGD -> bKGD {
+    $$ = $1;
+};
+
+on Chunk::hIST -> hIST {
+    $$ = $1;
+};
+
+on Chuck::pHYs -> pHYs {
+    $$ = $1;
+};
+
+on Chunk::sPLT -> sPLT {
+    $$ = $1;
+};
+
+on Chunk::tIME -> tIME {
+    $$ = $1;
+};
+
+on Chunk::oFFs -> oFFs {
+    $$ = $1;
+};
+
+on Chunk::pCAL -> pCAL {
+    $$ = $1;
+};
+
+on Chunk::sCAL -> sCAL {
+    $$ = $1;
+};
+
+on Chunk::sTER -> sTER {
+    $$ = $1;
+};

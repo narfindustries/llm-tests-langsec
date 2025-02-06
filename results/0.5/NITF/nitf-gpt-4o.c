@@ -1,87 +1,79 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *create_nitf_parser() {
-    // Define basic parsers
-    HParser *uint8 = h_uint8();
-    HParser *uint16 = h_uint16();
-    HParser *uint32 = h_uint32();
-    HParser *ascii_string = h_bind(h_repeat(uint8, 1, 80), h_ignore, h_return_str);
-    
-    // Define NITF header fields
-    HParser *file_header = h_sequence(
-        ascii_string, // File Type
-        h_repeat(uint8, 9), // File Version
-        h_repeat(uint8, 14), // File Title
-        uint32, // File Length
+// Define parsers for various fields based on NITF specifications
+HParser *parse_fhdr() { return h_many1(h_ch_range('A', 'Z')); }
+HParser *parse_clevel() { return h_many1(h_ch_range('0', '9')); }
+HParser *parse_stype() { return h_many1(h_ch_range('A', 'Z')); }
+HParser *parse_ostaid() { return h_many1(h_ch_range('A', 'Z')); }
+HParser *parse_fdt() { return h_many1(h_ch_range('0', '9')); }
+HParser *parse_ftitle() { return h_many1(h_ch_range(' ', '~')); }
+HParser *parse_fsclas() { return h_choice(h_ch('U'), h_ch('C'), h_ch('S'), h_ch('T'), h_ch('R'), NULL); }
+HParser *parse_fscode() { return h_many(h_ch_range('A', 'Z')); }
+HParser *parse_fsctlh() { return h_many(h_ch_range('A', 'Z')); }
+HParser *parse_fsrel() { return h_many(h_ch_range('A', 'Z')); }
+HParser *parse_fsdctp() { return h_ch_range('A', 'Z'); }
+HParser *parse_fsdcdt() { return h_many1(h_ch_range('0', '9')); }
+HParser *parse_fscltx() { return h_many(h_ch_range(' ', '~')); }
+HParser *parse_fscatp() { return h_choice(h_ch('O'), h_ch('D'), h_ch('M'), NULL); }
+HParser *parse_fscaut() { return h_many(h_ch_range('A', 'Z')); }
+HParser *parse_fscrsn() { return h_ch_range('A', 'Z'); }
+HParser *parse_fssrdt() { return h_many1(h_ch_range('0', '9')); }
+HParser *parse_fsctln() { return h_many(h_ch_range('0', '9')); }
+HParser *parse_fsdg() { return h_many(h_ch_range('A', 'Z')); }
+HParser *parse_fsdgdt() { return h_many1(h_ch_range('0', '9')); }
+
+// Define a parser for the NITF file header
+HParser *parse_nitf_header() {
+    return h_sequence(
+        parse_fhdr(), parse_clevel(), parse_stype(), parse_ostaid(), parse_fdt(),
+        parse_ftitle(), parse_fsclas(), parse_fscode(), parse_fsctlh(), parse_fsrel(),
+        parse_fsdctp(), parse_fsdcdt(), parse_fscltx(), parse_fscatp(), parse_fscaut(),
+        parse_fscrsn(), parse_fssrdt(), parse_fsctln(), parse_fsdg(), parse_fsdgdt(),
         NULL
     );
-
-    // Define Image Segment Subheader fields
-    HParser *image_segment_subheader = h_sequence(
-        h_repeat(uint8, 10), // Image Identifier
-        uint16, // Image Date and Time
-        uint16, // Image Security Classification
-        uint32, // Image Source
-        NULL
-    );
-
-    // Define Data Extension Segment Subheader fields
-    HParser *data_extension_segment_subheader = h_sequence(
-        h_repeat(uint8, 10), // Data Extension Identifier
-        uint16, // Data Extension Date and Time
-        uint16, // Data Extension Security Classification
-        uint32, // Data Extension Source
-        NULL
-    );
-
-    // Define the entire NITF file structure
-    HParser *nitf_file = h_sequence(
-        file_header,
-        h_repeat(image_segment_subheader, 0, 10), // Up to 10 Image Segments
-        h_repeat(data_extension_segment_subheader, 0, 5), // Up to 5 Data Extensions
-        NULL
-    );
-
-    return nitf_file;
 }
 
-int main(int argc, char **argv) {
-    // Initialize the parser
-    HParser *parser = create_nitf_parser();
-
-    // Load a NITF file for parsing
-    FILE *file = fopen("example.nitf", "rb");
+void parse_nitf_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
     if (!file) {
         perror("Failed to open file");
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    uint8_t *buffer = malloc(file_size);
+    unsigned char *buffer = malloc(file_size);
     if (!buffer) {
         perror("Failed to allocate memory");
         fclose(file);
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     fread(buffer, 1, file_size, file);
     fclose(file);
 
-    // Parse the file
-    HParseResult *result = h_parse(parser, buffer, file_size);
+    HParser *header_parser = parse_nitf_header();
+    HParseResult *result = h_parse(header_parser, buffer, file_size);
     if (result) {
-        printf("Parsing succeeded!\n");
+        printf("NITF file parsed successfully.\n");
         h_parse_result_free(result);
     } else {
-        printf("Parsing failed.\n");
+        printf("Failed to parse NITF file.\n");
     }
 
-    // Cleanup
-    h_parser_free(parser);
     free(buffer);
+}
 
-    return 0;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_nitf_file(argv[1]);
+    return EXIT_SUCCESS;
 }

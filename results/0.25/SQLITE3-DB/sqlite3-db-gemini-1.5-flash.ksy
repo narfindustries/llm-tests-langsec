@@ -1,33 +1,70 @@
-meta:
-  id: sqlite3-db-gemini-1
-  title: SQLite3 DB Gemini 1.5 Flash
-  homepage: https://kaitai.io
+type: struct
+id: sqlite3_db
+endian: be
+
+seq:
+  - id: magic
+    type: str
+    size: 16
+  - id: pageSize
+    type: u2
+  - id: writeVersion
+    type: u4
+  - id: readVersion
+    type: u4
+  - id: reservedSpace
+    type: u4
+  - id: maxPageCount
+    type: u4
+  - id: changeCount
+    type: u4
+  - id: format
+    type: u4
+  - id: textEncoding
+    type: u4
+  - id: userVersion
+    type: u4
+  - id: incrementalVacuum
+    type: u4
+  - id: applicationId
+    type: u8
+  - id: versionValidFor
+    type: u4
+  - id: sqliteVersion
+    type: u4
+  - id: pages
+    type: seq
+    size: lambda: self.maxPageCount
+    read: r
+    elemType: page
+
 types:
-  - id: header
+  page:
     seq:
-      - id: magic
+      - id: pageType
+        type: u1
+      - id: pageNumber
         type: u4
-        enum:
-          - 0x53514c69: SQLITE
-      - id: version
+      - id: freelistTrunkPage
         type: u4
-      - id: page_size
-        type: u4
-      - id: reserved
-        type: u4
-  - id: page
+      - id: cells
+        type: seq
+        size: lambda: self.num_cells
+        elemType: cell
+      - id: freelist
+        type: seq
+        size: lambda: self.num_freelist_entries
+        elemType: u4
+
+  cell:
     seq:
-      - id: header
-        type: header
-      - id: data
+      - id: payloadSize
+        type: uvarint
+      - id: rowId
+        type: uvarint
+      - id: offset
+        type: uvarint
+      - id: payload
         type: bytes
-        size: lambda: self.header.page_size - 100
-  - id: db
-    seq:
-      - id: header
-        type: header
-      - id: pages
-        type: page
-        repeat: expr
-        expr: lambda: self.header.page_size * 1000 # Example, adjust as needed
+        size: payloadSize
 

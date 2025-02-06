@@ -1,69 +1,146 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
 
-// Define parser for a simple name structure
-static HParser* name_parser() {
-    return h_choice(
-        h_sequence(
-            h_many1(h_alpha()),  // First name must have at least one alphabetic character
-            h_optional(h_sequence(
-                h_ch(' '),       // Optional space
-                h_many1(h_alpha()) // Optional last name
-            )), 
-            NULL
-        ),
+typedef struct {
+    uint8_t e_ident[16];
+    uint16_t e_type;
+    uint16_t e_machine;
+    uint32_t e_version;
+    uint64_t e_entry;
+    uint64_t e_phoff;
+    uint64_t e_shoff;
+    uint32_t e_flags;
+    uint16_t e_ehsize;
+    uint16_t e_phentsize;
+    uint16_t e_phnum;
+    uint16_t e_shentsize;
+    uint16_t e_shnum;
+    uint16_t e_shstrndx;
+} __attribute__((packed)) ElfHeader;
+
+HParser* create_elf_parser() {
+    uint8_t magic_bytes[] = {0x7F, 'E', 'L', 'F'};
+    HParser* magic_number = h_token(magic_bytes, sizeof(magic_bytes));
+
+    HParser* elf_class = h_choice(
+        h_ch(0),
+        h_ch(1),
+        h_ch(2),
         NULL
     );
-}
 
-// Define parser for age structure 
-static HParser* age_parser() {
-    return h_sequence(
-        h_int_range(0, 120),     // Age between 0-120 
+    HParser* elf_data_encoding = h_choice(
+        h_ch(0),
+        h_ch(1),
+        h_ch(2),
         NULL
     );
-}
 
-// Combined person parser 
-static HParser* person_parser() {
-    return h_sequence(
-        h_bom(),                 // Beginning of match
-        name_parser(),            // Name parser 
-        h_ch(' '),                // Space separator
-        age_parser(),             // Age parser
-        h_eom(),                  // End of match
+    HParser* elf_version = h_choice(
+        h_ch(0),
+        h_ch(1),
         NULL
     );
+
+    HParser* elf_osabi = h_choice(
+        h_ch(0),
+        h_ch(3),
+        h_ch(9),
+        h_uint8(),
+        NULL
+    );
+
+    HParser* elf_type = h_choice(
+        h_ch(0),
+        h_ch(1),
+        h_ch(2),
+        h_ch(3),
+        h_ch(4),
+        h_uint16(),
+        NULL
+    );
+
+    HParser* elf_machine = h_choice(
+        h_ch(0),
+        h_ch(3),
+        h_ch(62),
+        h_ch(40),
+        h_uint16(),
+        NULL
+    );
+
+    HParser* elf_header = h_sequence(
+        magic_number,
+        elf_class,
+        elf_data_encoding,
+        elf_version,
+        elf_osabi,
+        h_uint8(),
+        h_repeat_n(h_ch(0), 7),
+        elf_type,
+        elf_machine,
+        h_uint32(),
+        h_uint64(),
+        h_uint64(),
+        h_uint64(),
+        h_uint32(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        NULL
+    );
+
+    return elf_header;
 }
 
-// Main parsing function
 int main(int argc, char** argv) {
-    // Initialize Hammer 
-    h_init();
-
-    // Create person parser
-    HParser* parser = person_parser();
-
-    // Sample input 
-    const char* input = "John Smith 35"; 
-
-    // Parse input
-    HParseResult* result = h_parse(parser, 
-        (const uint8_t*)input, 
-        strlen(input)
-    );
-
-    // Check parsing result
-    if (result && result->ast) {
-        printf("Successful parse\n");
-        h_delete_parse_result(result);
-    } else {
-        printf("Parsing failed\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
+        return 1;
     }
 
-    // Cleanup 
-    h_destroy();
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("File read error");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    HParser* elf_parser = create_elf_parser();
+    HParseResult* result = h_parse(elf_parser, buffer, file_size);
+
+    if (result && result->ast) {
+        printf("ELF file successfully parsed!\n");
+    } else {
+        printf("ELF file parsing failed.\n");
+    }
+
+    h_parse_result_free(result);
+    h_destroy_parser(elf_parser);
+    free(buffer);
+
     return 0;
 }

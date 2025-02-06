@@ -1,63 +1,67 @@
-module zip-gpt-4o {
-    struct LocalFileHeader {
-        uint32 signature;                 // 0x04034b50
-        uint16 version_needed;
-        uint16 flags;
-        uint16 compression;
-        uint16 mod_time;
-        uint16 mod_date;
-        uint32 crc32;
-        uint32 compressed_size;
-        uint32 uncompressed_size;
-        uint16 filename_length;
-        uint16 extra_field_length;
-        char[filename_length] filename;
-        char[extra_field_length] extra_field;
-        bytes[compressed_size] compressed_data;
-    }
+ZIP : Struct {
+    files : Array(LocalFileHeader) [ size = end_of_central_directory.num_entries_central_dir ];
 
-    struct CentralDirectoryFileHeader {
-        uint32 signature;                 // 0x02014b50
-        uint16 version_made_by;
-        uint16 version_needed;
-        uint16 flags;
-        uint16 compression;
-        uint16 mod_time;
-        uint16 mod_date;
-        uint32 crc32;
-        uint32 compressed_size;
-        uint32 uncompressed_size;
-        uint16 filename_length;
-        uint16 extra_field_length;
-        uint16 file_comment_length;
-        uint16 disk_number_start;
-        uint16 internal_file_attributes;
-        uint32 external_file_attributes;
-        uint32 local_header_offset;
-        char[filename_length] filename;
-        char[extra_field_length] extra_field;
-        char[file_comment_length] file_comment;
-    }
+    central_directory : Array(CentralDirectoryFileHeader) [ size = end_of_central_directory.num_entries_central_dir ];
 
-    struct EndOfCentralDirectoryRecord {
-        uint32 signature;                 // 0x06054b50
-        uint16 disk_number;
-        uint16 central_directory_disk_number;
-        uint16 num_records_on_this_disk;
-        uint16 total_num_records;
-        uint32 central_directory_size;
-        uint32 central_directory_offset;
-        uint16 zip_file_comment_length;
-        char[zip_file_comment_length] zip_file_comment;
-    }
+    end_of_central_directory : EndOfCentralDirectoryRecord;
+}
 
-    struct ZipFile {
-        iterate<LocalFileHeader> local_file_headers until eof;
-        iterate<CentralDirectoryFileHeader> central_directory_file_headers until matching_signature(0x06054b50);
-        EndOfCentralDirectoryRecord end_of_central_directory_record;
-    }
+LocalFileHeader : Struct {
+    signature : UInt32 [ assert = 0x04034b50 ];
+    version_needed_to_extract : UInt16;
+    general_purpose_bit_flag : UInt16;
+    compression_method : UInt16;
+    last_mod_file_time : UInt16;
+    last_mod_file_date : UInt16;
+    crc32 : UInt32;
+    compressed_size : UInt32;
+    uncompressed_size : UInt32;
+    file_name_length : UInt16;
+    extra_field_length : UInt16;
+    file_name : Bytes [ size = file_name_length ];
+    extra_field : Bytes [ size = extra_field_length ];
+    file_data : Bytes [ size = compressed_size ];
 
-    function matching_signature(expected_signature) {
-        return peek_ahead(uint32) == expected_signature;
-    }
+    optional_data_descriptor : Optional(OptionalDataDescriptor) [ if = (general_purpose_bit_flag & 0x0008) != 0 ];
+}
+
+OptionalDataDescriptor : Struct {
+    crc32 : UInt32;
+    compressed_size : UInt32;
+    uncompressed_size : UInt32;
+}
+
+CentralDirectoryFileHeader : Struct {
+    signature : UInt32 [ assert = 0x02014b50 ];
+    version_made_by : UInt16;
+    version_needed_to_extract : UInt16;
+    general_purpose_bit_flag : UInt16;
+    compression_method : UInt16;
+    last_mod_file_time : UInt16;
+    last_mod_file_date : UInt16;
+    crc32 : UInt32;
+    compressed_size : UInt32;
+    uncompressed_size : UInt32;
+    file_name_length : UInt16;
+    extra_field_length : UInt16;
+    file_comment_length : UInt16;
+    disk_number_start : UInt16;
+    internal_file_attributes : UInt16;
+    external_file_attributes : UInt32;
+    relative_offset_of_local_header : UInt32;
+    file_name : Bytes [ size = file_name_length ];
+    extra_field : Bytes [ size = extra_field_length ];
+    file_comment : Bytes [ size = file_comment_length ];
+}
+
+EndOfCentralDirectoryRecord : Struct {
+    signature : UInt32 [ assert = 0x06054b50 ];
+    number_of_this_disk : UInt16;
+    central_directory_start_disk : UInt16;
+    num_entries_central_dir_on_disk : UInt16;
+    num_entries_central_dir : UInt16;
+    central_dir_size : UInt32;
+    central_dir_offset : UInt32;
+    zip_file_comment_length : UInt16;
+    zip_file_comment : Bytes [ size = zip_file_comment_length ];
 }

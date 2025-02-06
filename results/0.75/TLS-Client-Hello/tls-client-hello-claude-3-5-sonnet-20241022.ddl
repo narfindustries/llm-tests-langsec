@@ -1,48 +1,108 @@
-def Main = ClientHello
-
-def ClientHello = {
-  $$ = {
-    version = ProtocolVersion;
-    random = Random;
-    session_id = SessionID;
-    cipher_suites = CipherSuites;
-    compression_methods = CompressionMethods;
-    extensions = Extensions
-  }
+def TLSClientHello = {
+    uint8 handshakeType
+    uint24 length
+    uint16 legacyVersion
+    byte[32] random
+    uint8 sessionIdLength
+    byte[sessionIdLength] legacySessionId
+    uint16 cipherSuitesLength
+    struct[cipherSuitesLength/2] cipherSuites = {
+        uint16 cipherSuite
+    }
+    uint8 compressionMethodsLength
+    byte[compressionMethodsLength] compressionMethods
+    uint16 extensionsLength
+    struct[extensionsLength] extensions = {
+        uint16 extensionType
+        uint16 extensionLength
+        byte[extensionLength] extensionData
+    }
 }
 
-def ProtocolVersion = {
-  major = UInt8;
-  minor = UInt8
+def SNIExtension = {
+    uint16 serverNameListLength
+    struct[serverNameListLength] serverNameList = {
+        uint8 nameType
+        uint16 nameLength
+        byte[nameLength] hostName
+    }
 }
 
-def Random = {
-  gmt_unix_time = UInt32;
-  random_bytes = Take 28 UInt8
+def SupportedGroupsExtension = {
+    uint16 supportedGroupsLength
+    struct[supportedGroupsLength/2] groups = {
+        uint16 namedGroup
+    }
 }
 
-def SessionID = {
-  length = UInt8;
-  session_id = Take length UInt8
+def SignatureAlgorithmsExtension = {
+    uint16 signatureAlgorithmsLength
+    struct[signatureAlgorithmsLength/2] algorithms = {
+        uint16 signatureScheme
+    }
 }
 
-def CipherSuites = {
-  length = UInt16;
-  cipher_suites = Take (length / 2) UInt16
+def KeyShareExtension = {
+    uint16 clientSharesLength
+    struct[clientSharesLength] clientShares = {
+        uint16 group
+        uint16 keyExchangeLength
+        byte[keyExchangeLength] keyExchange
+    }
 }
 
-def CompressionMethods = {
-  length = UInt8;
-  compression_methods = Take length UInt8
+def SupportedVersionsExtension = {
+    uint8 versionsLength
+    struct[versionsLength/2] versions = {
+        uint16 version
+    }
 }
 
-def Extensions = {
-  length = UInt16;
-  extensions = Many Extension until END
+def PreSharedKeyExtension = {
+    uint16 identitiesLength
+    struct[identitiesLength] identities = {
+        uint16 identityLength
+        byte[identityLength] identity
+        uint32 obfuscatedTicketAge
+    }
+    uint16 bindersLength
+    struct[bindersLength] binders = {
+        uint8 binderLength
+        byte[binderLength] binderEntry
+    }
 }
 
-def Extension = {
-  type = UInt16;
-  length = UInt16;
-  data = Take length UInt8
+def PSKKeyExchangeModesExtension = {
+    uint8 keModeLength
+    byte[keModeLength] keModes
+}
+
+def EarlyDataExtension = {
+}
+
+def CookieExtension = {
+    uint16 cookieLength
+    byte[cookieLength] cookie
+}
+
+def CertificateAuthoritiesExtension = {
+    uint16 authoritiesLength
+    struct[authoritiesLength] authorities = {
+        uint16 dnLength
+        byte[dnLength] distinguishedName
+    }
+}
+
+def PostHandshakeAuthExtension = {
+}
+
+def SignatureAlgorithmsCertExtension = {
+    uint16 signatureAlgorithmsLength
+    struct[signatureAlgorithmsLength/2] algorithms = {
+        uint16 signatureScheme
+    }
+}
+
+def PaddingExtension = {
+    byte[extensionLength] paddingData
 }

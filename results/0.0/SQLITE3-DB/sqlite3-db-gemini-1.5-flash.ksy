@@ -1,79 +1,114 @@
-# This is a placeholder.  The error message indicates a problem with the 
-# kaitai-struct-compiler command and the .ksy file, not the YAML specification itself.
-#  A valid .ksy file is needed to generate code.  The error message suggests
-# problems with the input file ('sqlite3-db-gemini-1.5-flash.ksy') or the 
-# kaitai-struct-compiler installation/configuration.
-
-#  To get a valid YAML, you need to provide a correct and complete
-#  Kaitai Struct specification (.ksy file) that describes the structure
-#  of the SQLITE3 database file you are trying to parse.  This YAML is
-#  only the metadata for the Kaitai Struct compiler, not the data structure itself.
-
-# Example (replace with your actual structure):
-meta:
-  id: sqlite3_db
-  endian: be
-  docs: |
-    Kaitai Struct definition for a simplified SQLite3 database file.
-    This is a highly simplified example and may not handle all possible
-    SQLite3 database file variations.
-
 types:
-  header:
+  sqlite3_header:
     seq:
       - id: magic
-        type: u4
+        type: str
+        size: 16
       - id: page_size
-        type: u4
+        type: u2
       - id: write_version
-        type: u4
+        type: u2
       - id: read_version
-        type: u4
-      - id: reserved_space
-        type: u4
+        type: u2
+      - id: reserved_byte
+        type: u1
       - id: max_page_count
-        type: u4
-      - id: change_count
-        type: u4
-      - id: schema_version
         type: u4
       - id: text_encoding
         type: u4
       - id: user_version
         type: u4
-      - id: reserved_space2
+      - id: incremental_vacuum_mode
+        type: u4
+      - id: application_id
+        type: u8
+      - id: version_valid_for_all_pages
+        type: u4
+      - id: page_count
+        type: u4
+      - id: checksum_flag
+        type: u4
+      - id: free_page_count
+        type: u4
+      - id: schema_version
+        type: u4
+      - id: default_page_cache_size
+        type: u4
+      - id: large_file_support
+        type: u4
+      - id: empty_page_number
+        type: u4
+      - id: schema_cookie
+        type: u4
+      - id: schema_format
         type: u4
       - id: page_size_extension
         type: u4
-      - id: page_size_limit
+      - id: reserved_bytes
         type: u4
-      - id: file_format_write_version
-        type: u4
-      - id: file_format_read_version
-        type: u4
-      - id: application_id
-        type: u4
-      - id: version_valid_for
-        type: u4
-      - id: sqlite_version
-        type: str
-        size: 100
+        size: 5
 
-  page:
+  sqlite3_page_header:
     seq:
       - id: page_number
         type: u4
       - id: page_type
+        type: u1
+      - id: free_block_count
+        type: u1
+      - id: cell_count
+        type: u2
+      - id: first_free_block
+        type: u2
+      - id: cell_pointer
+        type: u2
+      - id: checksum
         type: u4
+
+  sqlite3_cell_header:
+    seq:
+      - id: header_size
+        type: u2
+      - id: row_id
+        type: u8
+      - id: payload_size
+        type: u2
+      - id: offset_to_payload
+        type: u2
+
+  sqlite3_payload:
+    seq:
       - id: data
         type: bytes
-        size: 1024 # Adjust as needed
+        size: lambda: self.parent.cell_header.payload_size
 
 
-seq:
-  - id: header
-    type: header
-  - id: pages
-    type: page
-    repeat: eos
+  sqlite3_db:
+    seq:
+      - id: header
+        type: sqlite3_header
+      - id: pages
+        type: sqlite3_page
+        repeat: eos
+
+  sqlite3_page:
+    seq:
+      - id: header
+        type: sqlite3_page_header
+      - id: cells
+        type: sqlite3_cell
+        repeat: expr
+        expr: self.header.cell_count
+      - id: free_blocks
+        type: bytes
+        repeat: expr
+        expr: self.header.free_block_count
+
+
+  sqlite3_cell:
+    seq:
+      - id: cell_header
+        type: sqlite3_cell_header
+      - id: payload
+        type: sqlite3_payload
 

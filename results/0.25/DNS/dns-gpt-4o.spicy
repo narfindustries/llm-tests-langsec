@@ -1,65 +1,68 @@
 module DNS;
 
-import spicy;
-import zeek;
-
-type DNSHeader = unit {
+type DNSMessage = unit {
     id: uint16;
-    flags: uint16;
+    flags: DNSFlags;
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
+    questions: array of DNSQuestion &length=qdcount;
+    answers: array of DNSResourceRecord &length=ancount;
+    authorities: array of DNSResourceRecord &length=nscount;
+    additionals: array of DNSResourceRecord &length=arcount;
+};
+
+type DNSFlags = bitfield {
+    qr: bool;        # Query/Response
+    opcode: uint8 &bits=4;  # Operation code
+    aa: bool;        # Authoritative Answer
+    tc: bool;        # Truncation
+    rd: bool;        # Recursion Desired
+    ra: bool;        # Recursion Available
+    z: uint8 &bits=3;  # Reserved
+    rcode: uint8 &bits=4;  # Response code
 };
 
 type DNSQuestion = unit {
-    qname: bytes &until= (self.qname[-1] == 0);
-    qtype: uint16;
-    qclass: uint16;
+    qname: DNSName;
+    qtype: DNSType;
+    qclass: DNSClass;
 };
 
 type DNSResourceRecord = unit {
-    name: bytes &until= (self.name[-1] == 0);
-    type: uint16;
-    class: uint16;
+    name: DNSName;
+    type: DNSType;
+    class: DNSClass;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &size= rdlength;
+    rdata: bytes &length=rdlength;
 };
 
-type DNSMessage = unit {
-    header: DNSHeader;
-    questions: array[DNSQuestion] &length= header.qdcount;
-    answers: array[DNSResourceRecord] &length= header.ancount;
-    authorities: array[DNSResourceRecord] &length= header.nscount;
-    additionals: array[DNSResourceRecord] &length= header.arcount;
+type DNSName = unit {
+    labels: array of DNSLabel &until($input[0] == 0);
+    terminator: uint8 &assert(terminator == 0);
 };
 
-public type DNSAnalyzer = spicy::Analyzer {
-    .on %init {
-        print "DNS Analyzer initialized";
-    }
-
-    .on %done {
-        print "DNS Analyzer done";
-    }
-
-    .on %error {
-        print "DNS Analyzer encountered an error";
-    }
-
-    .on %parse {
-        local msg = parse_DNSMessage(self.input);
-        print fmt("Parsed DNS Message: ID=%d", msg.header.id);
-    }
+type DNSLabel = unit {
+    length: uint8;
+    label: bytes &length=length;
 };
 
-export {
-    redef enum zeek::Analyzer::Tag += {
-        DNS_ANALYZER
-    };
-}
+enum DNSType : uint16 {
+    A = 1,
+    NS = 2,
+    CNAME = 5,
+    SOA = 6,
+    PTR = 12,
+    MX = 15,
+    AAAA = 28,
+    ANY = 255
+};
 
-event zeek_init() {
-    spicy::register_DNSAnalyzer(DNS_ANALYZER);
-}
+enum DNSClass : uint16 {
+    IN = 1,
+    CH = 3,
+    HS = 4,
+    ANY = 255
+};

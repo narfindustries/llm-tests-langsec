@@ -2,12 +2,13 @@ meta:
   id: dicom
   file-extension: dcm
   endian: le
+  encoding: ascii
 
 seq:
   - id: preamble
     size: 128
-  - id: prefix
-    contents: "DICM"
+  - id: dicom_prefix
+    contents: 'DICM'
   - id: elements
     type: element
     repeat: eos
@@ -22,82 +23,44 @@ types:
       - id: vr
         type: str
         size: 2
-        if: is_explicit_vr
+        encoding: ascii
+        if: not is_implicit_vr
       - id: reserved
         type: u2
-        if: is_explicit_vr_with_length
+        if: is_explicit_vr_and_long
       - id: length
         type:
-          switch-on: is_explicit_vr
+          switch-on: is_implicit_vr
           cases:
-            true: length_field
-            false: u4
+            true: u4
+            false: length_field
       - id: data
         size: data_size
-        type:
-          switch-on: vr_or_implicit
-          cases:
-            '"AE"': str
-            '"AS"': str
-            '"AT"': u2
-            '"CS"': str
-            '"DA"': str
-            '"DS"': str
-            '"DT"': str
-            '"FL"': f4
-            '"FD"': f8
-            '"IS"': str
-            '"LO"': str
-            '"LT"': str
-            '"OB"': bytes
-            '"OD"': bytes
-            '"OF"': bytes
-            '"OW"': bytes
-            '"PN"': str
-            '"SH"': str
-            '"SL"': s4
-            '"SQ"': sequence
-            '"SS"': s2
-            '"ST"': str
-            '"TM"': str
-            '"UI"': str
-            '"UL"': u4
-            '"UN"': bytes
-            '"US"': u2
-            '"UT"': str
-            _: bytes
-
     instances:
-      is_explicit_vr:
-        value: '_root.is_explicit_vr'
-      is_explicit_vr_with_length:
-        value: 'is_explicit_vr and vr_needs_additional_length'
-      vr_needs_additional_length:
-        value: 'vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UN" or vr == "UT"'
-      vr_or_implicit:
-        value: 'is_explicit_vr ? vr : "UN"'
+      is_implicit_vr:
+        value: _root.transfer_syntax == "1.2.840.10008.1.2"
+      is_explicit_vr_and_long:
+        value: >-
+          not is_implicit_vr and
+          (vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or
+           vr == "UT" or vr == "UN")
       data_size:
-        value: 'length.value'
+        value: >-
+          length.value == 0xffffffff ? 0 : length.value
+      tag:
+        value: (tag_group << 16) | tag_element
 
   length_field:
     seq:
       - id: value
         type:
-          switch-on: _parent.vr_needs_additional_length
+          switch-on: _parent.is_explicit_vr_and_long
           cases:
             true: u4
             false: u2
 
-  sequence:
-    seq:
-      - id: items
-        type: sequence_item
-        repeat: eos
-
   sequence_item:
     seq:
-      - id: tag
-        contents: [0xfe, 0xff, 0x00, 0xe0]
       - id: length
         type: u4
       - id: elements
@@ -105,6 +68,43 @@ types:
         repeat: eos
         if: length != 0
 
-instances:
-  is_explicit_vr:
-    value: true
+  sequence:
+    seq:
+      - id: items
+        type: sequence_item
+        repeat: until
+        repeat-until: _.length == 0
+
+enums:
+  vr_type:
+    16705: application_entity  # AE
+    16723: age_string         # AS
+    16724: attribute_tag      # AT
+    17235: code_string        # CS
+    17473: date              # DA
+    17491: decimal_string    # DS
+    17492: date_time        # DT
+    17988: float_double     # FD
+    18252: float            # FL
+    18771: integer_string   # IS
+    19535: long_string      # LO
+    19540: long_text        # LT
+    20290: other_byte       # OB
+    20292: other_double     # OD
+    20294: other_float      # OF
+    20300: other_long       # OL
+    20311: other_word       # OW
+    20558: person_name      # PN
+    21320: short_string     # SH
+    21356: signed_long      # SL
+    21361: sequence_items   # SQ
+    21363: signed_short     # SS
+    21364: short_text       # ST
+    21581: time            # TM
+    21827: unlimited_chars  # UC
+    21833: unique_identifier # UI
+    21836: unsigned_long    # UL
+    21838: unknown          # UN
+    21842: universal_resource # UR
+    21843: unsigned_short   # US
+    21844: unlimited_text   # UT

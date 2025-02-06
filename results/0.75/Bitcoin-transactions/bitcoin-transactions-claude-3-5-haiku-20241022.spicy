@@ -2,29 +2,48 @@ module Bitcoin;
 
 import spicy;
 
-public type Transaction = unit {
-    version     : uint32;
-    num_inputs  : varint;
-    inputs      : Input[self.num_inputs];
-    num_outputs : varint;
-    outputs     : Output[self.num_outputs];
-    locktime    : uint32;
+public type Version = uint32;
 
-    type Input = unit {
-        prev_tx_hash    : bytes(32);
-        prev_tx_output  : uint32;
-        script_length   : varint;
-        script_sig      : bytes(self.script_length);
-        sequence_number : uint32;
-    }
+public type Hash = bytes(32);
 
-    type Output = unit {
-        value           : uint64;
-        script_length   : varint;
-        script_pubkey   : bytes(self.script_length);
-    }
-}
+public type VarInt = uint64;
 
-public type BitcoinTransactionFile = unit {
-    transactions: Transaction[] &eod;
+public type TransactionInput = struct {
+    previous_tx_hash: Hash;
+    previous_output_index: uint32;
+    script_sig_length: VarInt;
+    script_sig: bytes;
+    sequence_number: uint32;
+} &parse {
+    self.script_sig = bytes(self.script_sig_length);
+};
+
+public type TransactionOutput = struct {
+    value: int64;
+    script_pubkey_length: VarInt;
+    script_pubkey: bytes;
+} &parse {
+    self.script_pubkey = bytes(self.script_pubkey_length);
+};
+
+public type Transaction = struct {
+    version: Version;
+    input_count: VarInt;
+    inputs: vector<TransactionInput>;
+    output_count: VarInt;
+    outputs: vector<TransactionOutput>;
+    locktime: uint32;
+} &parse {
+    self.inputs.resize(self.input_count);
+    self.outputs.resize(self.output_count);
+};
+
+public type BitcoinTransactionParser = parser {
+    root: Transaction;
+    sink = root;
+};
+
+public function parse(inout self: Transaction) {
+    self.inputs.resize(self.input_count);
+    self.outputs.resize(self.output_count);
 }

@@ -1,102 +1,104 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define basic NITF field types
-static HParser *nitf_length;
-static HParser *nitf_header;
-static HParser *nitf_image_segment;
-static HParser *nitf_text_segment;
-static HParser *nitf_data_extension_segment;
-static HParser *nitf_reserved_extension_segment;
+// Forward declarations of parsers
 static HParser *nitf_file;
 
-static void init_nitf_parsers() {
-    H_RULE(uint6, h_uint8());
-    H_ARULE(uint18, h_bits(18, false));
-    H_ARULE(uint32, h_bits(32, false));
-    H_ARULE(fldt, h_ch_sequence("FL", h_ignore(1), NULL)); // Field tag example
+// NITF field parsers
+static HParser *field_FHDR;
+static HParser *field_CLEVEL;
+static HParser *field_STYPE;
+static HParser *field_OSTAID;
+static HParser *field_FDT;
+static HParser *field_FTITLE;
+static HParser *field_FSCLAS;
+static HParser *field_FSCLSY;
+static HParser *field_FSCODE;
+static HParser *field_FSCTLH;
+static HParser *field_FSREL;
+static HParser *field_FSDCTP;
+static HParser *field_FSDCDT;
+static HParser *field_FSDCXM;
+static HParser *field_FSORGN;
+static HParser *field_FSCAUT;
+static HParser *field_FSCTLN;
+static HParser *field_FSCOP;
+static HParser *field_FSCPYS;
+static HParser *field_ENCRYP;
+static HParser *field_FBKGC;
+static HParser *field_ONAME;
+static HParser *field_OPHONE;
 
-    // Define lengths as uint6 but may need to adjust according to actual NITF specification
-    nitf_length = uint6;
+void init_parsers() {
+    field_FHDR = h_token("NITF", 4);
+    field_CLEVEL = h_int_range(h_uint8(), 1, 99);
+    field_STYPE = h_token("BF01", 4);
+    field_OSTAID = h_repeat_n(h_uint8(), 10);
+    field_FDT = h_repeat_n(h_uint8(), 14);
+    field_FTITLE = h_repeat_n(h_uint8(), 80);
+    field_FSCLAS = h_choice(h_ch('U'), h_ch('R'), h_ch('C'), h_ch('S'), h_ch('T'), NULL);
+    field_FSCLSY = h_repeat_n(h_uint8(), 2);
+    field_FSCODE = h_repeat_n(h_uint8(), 11);
+    field_FSCTLH = h_repeat_n(h_uint8(), 2);
+    field_FSREL = h_repeat_n(h_uint8(), 20);
+    field_FSDCTP = h_repeat_n(h_uint8(), 2);
+    field_FSDCDT = h_repeat_n(h_uint8(), 8);
+    field_FSDCXM = h_repeat_n(h_uint8(), 4);
+    field_FSORGN = h_repeat_n(h_uint8(), 27);
+    field_FSCAUT = h_repeat_n(h_uint8(), 40);
+    field_FSCTLN = h_repeat_n(h_uint8(), 15);
+    field_FSCOP = h_uint16();
+    field_FSCPYS = h_uint16();
+    field_ENCRYP = h_uint8();
+    field_FBKGC = h_repeat_n(h_uint8(), 3);
+    field_ONAME = h_repeat_n(h_uint8(), 24);
+    field_OPHONE = h_repeat_n(h_uint8(), 18);
 
-    H_ARULE(digit, h_int_range(h_uint8(), '0', '9'));
-    H_ARULE(digits, h_repeat_n(digit, 2));
-    H_ARULE(space, h_ch(' '));
-
-    // Define header structure
-    nitf_header = h_sequence(
-        h_ch_sequence("NITF", NULL),
-        h_repeat_n(space, 10),
-        fldt,
-        h_int_sequence(digits, NULL),
-        h_int_sequence(uint18, NULL),
-        h_int_sequence(uint32, NULL),
-        NULL
-    );
-
-    // Define image segment structure
-    nitf_image_segment = h_sequence(
-        h_ch_sequence("IM", NULL),
-        h_int_sequence(uint18, NULL),
-        h_int_sequence(uint32, NULL),
-        NULL
-    );
-
-    // Define text segment structure
-    nitf_text_segment = h_sequence(
-        h_ch_sequence("TX", NULL),
-        h_int_sequence(uint18, NULL),
-        h_int_sequence(uint32, NULL),
-        NULL
-    );
-
-    // Define data extension segment
-    nitf_data_extension_segment = h_sequence(
-        h_ch_sequence("DE", NULL),
-        h_int_sequence(uint18, NULL),
-        h_int_sequence(uint32, NULL),
-        NULL
-    );
-
-    // Define reserved extension segment
-    nitf_reserved_extension_segment = h_sequence(
-        h_ch_sequence("RE", NULL),
-        h_int_sequence(uint18, NULL),
-        h_int_sequence(uint32, NULL),
-        NULL
-    );
-
-    // Define the complete NITF file structure
     nitf_file = h_sequence(
-        nitf_header,
-        h_many(nitf_image_segment),
-        h_many(nitf_text_segment),
-        h_many(nitf_data_extension_segment),
-        h_many(nitf_reserved_extension_segment),
+        field_FHDR, field_CLEVEL, field_STYPE, field_OSTAID, field_FDT,
+        field_FTITLE, field_FSCLAS, field_FSCLSY, field_FSCODE, field_FSCTLH,
+        field_FSREL, field_FSDCTP, field_FSDCDT, field_FSDCXM, field_FSORGN,
+        field_FSCAUT, field_FSCTLN, field_FSCOP, field_FSCPYS, field_ENCRYP,
+        field_FBKGC, field_ONAME, field_OPHONE,
         NULL
     );
 }
 
-int main(int argc, char *argv[]) {
-    HParser *parser;
-    HParseResult *result;
-    HBitWriter *bit_writer;
-    HAllocator *allocator = h_system_allocator;
-
-    init_nitf_parsers();
-
-    parser = nitf_file;
-
-    uint8_t *input_data = ...; // Expected to be provided as per actual implementation
-    size_t input_size = ...;   // Expected to be provided as per actual implementation
-
-    result = h_parse(parser, input_data, input_size);
-
-    if (result) {
-        printf("Parsing successful!\n");
-    } else {
-        printf("Parsing failed.\n");
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
+        return 1;
     }
 
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t length = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *data = malloc(length);
+    if (data) {
+        fread(data, 1, length, fp);
+        init_parsers();
+        HParser *parser = nitf_file;
+        HParseResult *result = h_parse(parser, data, length);
+        if (result) {
+            printf("Parse successful!\n");
+            h_pprint(stdout, result->ast, 0, 4);
+            h_parse_result_free(result);
+        } else {
+            printf("Parse failed!\n");
+        }
+        free(data);
+    } else {
+        fprintf(stderr, "Memory allocation failed\n");
+    }
+
+    fclose(fp);
     return 0;
 }

@@ -1,68 +1,53 @@
-#ifndef SQLITE3_DB_GEMINI_1_H
-#define SQLITE3_DB_GEMINI_1_H
+module sqlite3_db;
 
-#include <zeek/zeek-config.h>
+type sqlite3_header {
+  magic: string[16];
+  pageSize: uint32;
+  fileFormat: uint32;
+  reservedSpace: uint32;
+  maxRootPage: uint32;
+  textEncoding: uint32;
+  userVersion: uint32;
+  incrementalVacuum: uint32;
+  schemaVersion: uint32;
+  pageSize2: uint32; 
+  writeVersion: uint32;
+  readOnly: uint32;
+  integrityCheck: uint32;
+  sectorSize: uint32;
+  pageReserved: uint32;
+  maxPageCount: uint32;
+  schemaVersion2: uint32; 
+  unused1: uint32;
+  unused2: uint32;
+}
 
-#ifdef HAVE_SQLITE3
+type sqlite3_page_header {
+  pageType: uint16;
+  page_number: uint16;
+  free_bytes: uint16;
+  cell_count: uint16;
+  first_free_block: uint16;
+  unused: uint16;
+  checksum: uint32;
+}
 
-#include <sqlite3.h>
-
-typedef struct {
-  sqlite3* db;
-} sqlite3_db_t;
-
-
-/// @brief Opens a SQLite3 database.
-/// @param[in] filename The path to the database file.
-/// @param[out] db A pointer to a sqlite3_db_t structure.
-/// @return 0 on success, -1 on failure.
-int sqlite3_db_open(const char* filename, sqlite3_db_t* db);
-
-/// @brief Closes a SQLite3 database.
-/// @param[in] db A pointer to a sqlite3_db_t structure.
-/// @return 0 on success, -1 on failure.
-int sqlite3_db_close(sqlite3_db_t* db);
-
-/// @brief Executes a SQL query.
-/// @param[in] db A pointer to a sqlite3_db_t structure.
-/// @param[in] query The SQL query to execute.
-/// @return 0 on success, -1 on failure.
-int sqlite3_db_execute(sqlite3_db_t* db, const char* query);
-
-
-#else
-
-typedef struct {
-  // Placeholder for SQLite3 functionality.
-} sqlite3_db_t;
-
-int sqlite3_db_open(const char* filename, sqlite3_db_t* db) { return -1; }
-int sqlite3_db_close(sqlite3_db_t* db) { return 0; }
-int sqlite3_db_execute(sqlite3_db_t* db, const char* query) { return -1; }
-
-#endif // HAVE_SQLITE3
-
-#endif // SQLITE3_DB_GEMINI_1_H
+type sqlite3_cell {
+  header: uint16;
+  payload_length: uint32;
+  row_id: uint64;
+  payload: bytes;
+}
 
 
-#include "sqlite3-db-gemini-1.h"
+type sqlite3_page {
+  header: sqlite3_page_header;
+  cells: record { cell: sqlite3_cell; }[];
+  free_space: bytes;
+}
 
-//Example Usage
-int main() {
-  sqlite3_db_t db;
-  if (sqlite3_db_open("mydatabase.db", &db) == 0) {
-    if (sqlite3_db_execute(&db, "CREATE TABLE IF NOT EXISTS mytable (id INTEGER PRIMARY KEY, value TEXT);") == 0) {
-      if (sqlite3_db_execute(&db, "INSERT INTO mytable (value) VALUES ('Hello, world!');") == 0){
-          //Success!
-      } else {
-          //Error inserting data
-      }
-    } else {
-      //Error creating table
-    }
-    sqlite3_db_close(&db);
-  } else {
-    //Error opening database
-  }
-  return 0;
+type sqlite3_database {
+  header: sqlite3_header;
+  pages: sqlite3_page[];
+  freelist: uint32[]; 
 }

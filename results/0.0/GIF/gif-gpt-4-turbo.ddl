@@ -1,66 +1,98 @@
-module GIF.GPT4Turbo where
+module GIF89a;
 
-import DAEDALUS.Core
+import std::ascii;
+import std::bits;
+import std::bytes;
 
-data Color = Color
-  { red   :: UInt8
-  , green :: UInt8
-  , blue  :: UInt8
-  }
+type Color = struct {
+    red   : u8;
+    green : u8;
+    blue  : u8;
+};
 
-data LogicalScreenDescriptor = LogicalScreenDescriptor
-  { screenWidth        :: UInt16
-  , screenHeight       :: UInt16
-  , packedFields       :: UInt8
-  , backgroundColor    :: UInt8
-  , pixelAspectRatio   :: UInt8
-  }
+type LogicalScreenDescriptor = struct {
+    screenWidth        : u16;
+    screenHeight       : u16;
+    packedFields       : u8;
+    backgroundColorIdx : u8;
+    pixelAspectRatio   : u8;
 
-data ImageDescriptor = ImageDescriptor
-  { leftPosition   :: UInt16
-  , topPosition    :: UInt16
-  , width          :: UInt16
-  , height         :: UInt16
-  , packedFields   :: UInt8
-  }
+    globalColorTableFlag() : bool = (packedFields >> 7) & 1 != 0;
+    colorResolution() : u8 = ((packedFields >> 4) & 0x07) + 1;
+    sortFlag() : bool = (packedFields >> 3) & 1 != 0;
+    globalColorTableSize() : u32 = 1 << ((packedFields & 0x07) + 1);
+};
 
-data BlockType = ImageDescriptorBlock ImageDescriptor
-               | ExtensionBlock UInt8
-               | Trailer
+type GlobalColorTable = struct {
+    colors : Color[globalColorTableSize()];
+};
 
-data GIF = GIF
-  { header                :: String 7
-  , logicalScreenDesc     :: LogicalScreenDescriptor
-  , globalColorTable      :: Maybe (Array Color)
-  , blocks                :: Array BlockType
-  }
+type ImageDescriptor = struct {
+    imageLeftPosition   : u16;
+    imageTopPosition    : u16;
+    imageWidth          : u16;
+    imageHeight         : u16;
+    packedFields        : u8;
 
-parseColor :: Parser Color
-parseColor = Color <$> u8 <*> u8 <*> u8
+    localColorTableFlag() : bool = (packedFields >> 7) & 1 != 0;
+    interlaceFlag() : bool = (packedFields >> 6) & 1 != 0;
+    sortFlag() : bool = (packedFields >> 5) & 1 != 0;
+    localColorTableSize() : u32 = 1 << ((packedFields & 0x07) + 1);
+};
 
-parseLogicalScreenDescriptor :: Parser LogicalScreenDescriptor
-parseLogicalScreenDescriptor = LogicalScreenDescriptor
-  <$> u16 <*> u16 <*> u8 <*> u8 <*> u8
+type LocalColorTable = struct {
+    colors : Color[localColorTableSize()];
+};
 
-parseImageDescriptor :: Parser ImageDescriptor
-parseImageDescriptor = ImageDescriptor
-  <$> u16 <*> u16 <*> u16 <*> u16 <*> u8
+type ImageData = struct {
+    lzwMinimumCodeSize : u8;
+    dataBlocks         : bytes;
+};
 
-parseBlockType :: Parser BlockType
-parseBlockType = do
-  intro <- u8
-  case intro of
-    0x2C -> ImageDescriptorBlock <$> parseImageDescriptor
-    0x21 -> ExtensionBlock <$> u8
-    0x3B -> pure Trailer
-    _    -> fail "Unknown block type"
+type GraphicControlExtension = struct {
+    blockSize          : u8;
+    packedFields       : u8;
+    delayTime          : u16;
+    transparentColorIdx: u8;
+    terminator         : u8;
+};
 
-parseGIF :: Parser GIF
-parseGIF = GIF
-  <$> string "GIF89a"
-  <*> parseLogicalScreenDescriptor
-  <*> optional (array parseColor)
-  <*> many parseBlockType
+type CommentExtension = struct {
+    commentData : bytes;
+};
 
-main :: IO ()
-main = parseFromFile parseGIF "input.gif"
+type PlainTextExtension = struct {
+    blockSize             : u8;
+    textGridLeftPosition  : u16;
+    textGridTopPosition   : u16;
+    textGridWidth         : u16;
+    textGridHeight        : u16;
+    characterWidth        : u8;
+    characterHeight       : u8;
+    textColorIndex        : u8;
+    backgroundColorIndex  : u8;
+    textData              : bytes;
+};
+
+type ApplicationExtension = struct {
+    blockSize             : u8;
+    applicationIdentifier : ascii[8];
+    applicationAuthCode   : bytes[3];
+    applicationData       : bytes;
+};
+
+type Block = union {
+    imageDescriptor        : ImageDescriptor;
+    graphicControlExtension: GraphicControlExtension;
+    commentExtension       : CommentExtension;
+    plainTextExtension     : PlainTextExtension;
+    applicationExtension   : ApplicationExtension;
+};
+
+type GIF = struct {
+    header                : ascii[6];
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable      : GlobalColorTable[logicalScreenDescriptor.globalColorTableFlag()];
+    blocks                : Block[];
+    trailer               : u8;
+};

@@ -3,79 +3,49 @@ use std::io::Read;
 use std::env;
 use nom::{
     IResult,
-    number::complete::{be_u8, be_u16, be_u32},
     bytes::complete::take,
+    number::complete::{be_u8, be_u16},
 };
 
 #[derive(Debug)]
-enum ICMPType {
-    EchoReply,
-    DestinationUnreachable,
-    SourceQuench,
-    Redirect,
-    EchoRequest,
-    TimeExceeded,
-    ParameterProblem,
-    TimestampRequest,
-    TimestampReply,
-    InfoRequest,
-    InfoReply,
-    AddressMaskRequest,
-    AddressMaskReply,
-    Unknown(u8),
-}
-
-#[derive(Debug)]
-struct ICMPPacket {
-    icmp_type: ICMPType,
+struct IcmpPacket {
+    icmp_type: u8,
     code: u8,
     checksum: u16,
-    rest_of_header: Vec<u8>,
+    rest_of_header: u32,
     data: Vec<u8>,
 }
 
-fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], ICMPType> {
+fn parse_icmp(input: &[u8]) -> IResult<&[u8], IcmpPacket> {
     let (input, icmp_type) = be_u8(input)?;
-    let icmp_type = match icmp_type {
-        0 => ICMPType::EchoReply,
-        3 => ICMPType::DestinationUnreachable,
-        4 => ICMPType::SourceQuench,
-        5 => ICMPType::Redirect,
-        8 => ICMPType::EchoRequest,
-        11 => ICMPType::TimeExceeded,
-        12 => ICMPType::ParameterProblem,
-        13 => ICMPType::TimestampRequest,
-        14 => ICMPType::TimestampReply,
-        15 => ICMPType::InfoRequest,
-        16 => ICMPType::InfoReply,
-        17 => ICMPType::AddressMaskRequest,
-        18 => ICMPType::AddressMaskReply,
-        _ => ICMPType::Unknown(icmp_type),
-    };
-    Ok((input, icmp_type))
-}
-
-fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], ICMPPacket> {
-    let (input, icmp_type) = parse_icmp_type(input)?;
     let (input, code) = be_u8(input)?;
     let (input, checksum) = be_u16(input)?;
-    let (input, rest_of_header) = take(4usize)(input)?;
+    let (input, rest_of_header) = be_u32(input)?;
     let (input, data) = take(input.len())(input)?;
 
-    Ok((input, ICMPPacket {
+    Ok((input, IcmpPacket {
         icmp_type,
         code,
         checksum,
-        rest_of_header: rest_of_header.to_vec(),
+        rest_of_header,
         data: data.to_vec(),
     }))
+}
+
+fn be_u32(input: &[u8]) -> IResult<&[u8], u32> {
+    let (input, bytes) = take(4usize)(input)?;
+    let value = ((bytes[0] as u32) << 24)
+              | ((bytes[1] as u32) << 16)
+              | ((bytes[2] as u32) << 8)
+              | (bytes[3] as u32);
+    Ok((input, value))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <input_file>", args[0]);
+        return;
     }
 
     let filename = &args[1];
@@ -83,12 +53,8 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_icmp_packet(&buffer) {
-        Ok((_, packet)) => {
-            println!("{:?}", packet);
-        }
-        Err(e) => {
-            eprintln!("Failed to parse ICMP packet: {:?}", e);
-        }
+    match parse_icmp(&buffer) {
+        Ok((_, packet)) => println!("{:?}", packet),
+        Err(e) => eprintln!("Failed to parse ICMP packet: {:?}", e),
     }
 }

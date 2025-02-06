@@ -1,76 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/NITF"
-           xmlns="http://example.com/NITF"
-           elementFormDefault="qualified">
+           targetNamespace="http://www.opengrid.org/dfdl/"
+           xmlns="http://www.opengrid.org/dfdl/"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           version="1.0">
 
-  <xs:element name="NITF">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="NITFHeader" dfdl:occurs="1..1"/>
-        <xs:element ref="NITFBody" dfdl:occurs="1..1"/>
-      </xs:sequence>
-    </xs:complexType>
+  <xs:element name="NITF" type="NITFType">
+    <xs:annotation>
+      <xs:documentation>Root Element of NITF</xs:documentation>
+    </xs:annotation>
   </xs:element>
 
-  <xs:element name="NITFHeader">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FileHeader" type="FileHeaderType" dfdl:occurs="1..1"/>
-        <xs:element name="ImageHeaders" type="ImageHeadersType" dfdl:occurs="1..1"/>
-        <xs:element name="TREHeaders" type="TREHeadersType" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:complexType name="NITFType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="FileHeaderType"/>
+      <xs:choice>
+        <xs:element name="ImageSegment" type="ImageSegmentType"/>
+        <xs:element name="GraphicSegment" type="GraphicSegmentType"/>
+        <xs:element name="TextSegment" type="TextSegmentType"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
 
   <xs:complexType name="FileHeaderType">
     <xs:sequence>
-      <xs:element name="FileHeaderIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
-      <xs:element name="FileHeaderVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
-      <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
-      <xs:element name="StandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
-      <xs:element name="CountryCode" type="xs:string" dfdl:length="3" dfdl:occurs="1..1"/>
-      <xs:element name="SecurityClassification" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
-      <xs:element name="SecurityClassificationSubstitution" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
-      <xs:element name="ControlAndDisplayInformation" type="xs:string" dfdl:length="8" dfdl:occurs="1..1"/>
-      <xs:element name="FileDateAndTime" type="xs:string" dfdl:length="14" dfdl:occurs="1..1"/>
-      <xs:element name="Title" type="xs:string" dfdl:length="35" dfdl:occurs="1..1"/>
-      <xs:element name="SecurityMetadata" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+      <xs:element name="NITF" type="xs:string" fixed="NITF"/>
+      <xs:element name="NIHS" type="xs:int"/>
+      <xs:element name="NVendor" type="xs:string"/>
+      <xs:element name="NVersion" type="xs:string"/>
+      <xs:element name="NClass" type="xs:string"/>
+      <xs:element name="NIDCT" type="xs:string"/>
+      <xs:element name="NIDC" type="xs:string"/>
+      <xs:element name="NSTYP" type="xs:string"/>
+      <xs:element name="NSEL" type="xs:string"/>
+      <xs:element name="NCAT" type="xs:string"/>
+      <xs:element name="NSHL" type="xs:string"/>
+      <xs:element name="NI" type="xs:hexBinary" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="ImageHeadersType">
+  <xs:complexType name="ImageSegmentType">
     <xs:sequence>
-      <xs:element name="ImageIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
-      <xs:element name="ImageHeaderComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
-      <xs:element name="ImageHeaderStandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
-      <xs:element name="ImageEncryption" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
-      <xs:element name="ImageCompression" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
-      <xs:element name="ImageNumberOfBytes" type="xs:integer" dfdl:length="6" dfdl:occurs="1..1"/>
+      <xs:element name="IMS" type="xs:int"/>
+      <xs:element name="IID1" type="xs:string"/>
+      <xs:element name="IID2" type="xs:string"/>
+      <xs:element name="ISORCE" type="xs:string"/>
+      <xs:element name="ISCLAS" type="xs:string"/>
+      <xs:element name="ISCLSY" type="xs:string"/>
+      <xs:element name="ISCODE" type="xs:string"/>
+      <xs:element name="ISREL" type="xs:string"/>
+      <xs:element name="ISDCT" type="xs:string"/>
+      <xs:element name="ISDIC" type="xs:string"/>
+      <xs:element name="IM" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="Image" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="TREHeadersType">
+  <xs:complexType name="GraphicSegmentType">
     <xs:sequence>
-      <xs:element name="TREIdentifier" type="xs:string" dfdl:length="25" dfdl:occurs="1..1"/>
-      <xs:element name="TREHeaderComplexityLevel" type="xs:string" dfdl:length="1" dfdl:occurs="1..1"/>
-      <xs:element name="TREHeaderStandardVersion" type="xs:string" dfdl:length="2" dfdl:occurs="1..1"/>
-      <xs:element name="TREHeaderSecurityMetadata" type="xs:string" dfdl:length="1" dfdl:occurs="0..1"/>
+      <xs:element name="GMS" type="xs:int"/>
+      <xs:element name="GID1" type="xs:string"/>
+      <xs:element name="GID2" type="xs:string"/>
+      <xs:element name="GSORCE" type="xs:string"/>
+      <xs:element name="GSCLAS" type="xs:string"/>
+      <xs:element name="GSCLSY" type="xs:string"/>
+      <xs:element name="GSCODE" type="xs:string"/>
+      <xs:element name="GSREL" type="xs:string"/>
+      <xs:element name="GSDCT" type="xs:string"/>
+      <xs:element name="GSDIC" type="xs:string"/>
+      <xs:element name="GM" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="Graphic" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="NITFBody">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="ImageData" dfdl:occurs="1..1"/>
-        <xs:element ref="TREData" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ImageData" type="xs:base64Binary" dfdl:occurs="1..1"/>
-
-  <xs:element name="TREData" type="xs:base64Binary" dfdl:occurs="0..1"/>
+  <xs:complexType name="TextSegmentType">
+    <xs:sequence>
+      <xs:element name="TMS" type="xs:int"/>
+      <xs:element name="TID1" type="xs:string"/>
+      <xs:element name="TID2" type="xs:string"/>
+      <xs:element name="TSORCE" type="xs:string"/>
+      <xs:element name="TSCLAS" type="xs:string"/>
+      <xs:element name="TSCLSY" type="xs:string"/>
+      <xs:element name="TSCODE" type="xs:string"/>
+      <xs:element name="TSREL" type="xs:string"/>
+      <xs:element name="TSDCT" type="xs:string"/>
+      <xs:element name="TSDIC" type="xs:string"/>
+      <xs:element name="TM" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="Text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

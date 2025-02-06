@@ -1,83 +1,87 @@
 meta:
-  id: modbus
-  title: Modbus Protocol
-  file-extension: modbus
+  id: modbus_frame
+  title: Modbus Protocol Frame
   endian: le
   license: CC0-1.0
-doc: |
-  Modbus is a serial communications protocol originally published by Modicon (now Schneider Electric) in 1979 for use with its programmable logic controllers (PLCs).
 
 seq:
   - id: transaction_id
     type: u2
+    doc: Transaction Identifier for synchronization (Modbus TCP)
   - id: protocol_id
     type: u2
+    doc: Zero for Modbus protocol (Modbus TCP)
   - id: length
     type: u2
+    doc: Number of following bytes (Modbus TCP)
   - id: unit_id
     type: u1
+    doc: Unit Identifier, similar to Device Address in RTU (Modbus TCP)
   - id: function_code
     type: u1
+    doc: Function code determines the operation to perform
   - id: data
-    size: length - 2
     type:
       switch-on: function_code
       cases:
-        1: coils
-        2: discrete_inputs
-        3: holding_registers
-        4: input_registers
-        5: single_coil
-        6: write_single_register
-        15: write_multiple_coils
-        16: write_multiple_registers
+        1: coils_req
+        2: discrete_inputs_req
+        3: holding_registers_req
+        4: input_registers_req
+        5: write_single_coil_req
+        6: write_single_register_req
+        15: write_multiple_coils_req
+        16: write_multiple_registers_req
+    doc: Data payload varies based on function code
 
 types:
-  coils:
+  coils_req:
     seq:
-      - id: coil_status
-        type: b1
-        repeat: expr
-        repeat-expr: _parent.length - 2
-
-  discrete_inputs:
-    seq:
-      - id: input_status
-        type: b1
-        repeat: expr
-        repeat-expr: _parent.length - 2
-
-  holding_registers:
-    seq:
-      - id: register_values
+      - id: starting_addr
         type: u2
-        repeat: expr
-        repeat-expr: (_parent.length - 2) / 2
-
-  input_registers:
-    seq:
-      - id: register_values
+      - id: quantity_of_coils
         type: u2
-        repeat: expr
-        repeat-expr: (_parent.length - 2) / 2
 
-  single_coil:
+  discrete_inputs_req:
     seq:
-      - id: output_address
+      - id: starting_addr
+        type: u2
+      - id: quantity_of_inputs
+        type: u2
+
+  holding_registers_req:
+    seq:
+      - id: starting_addr
+        type: u2
+      - id: quantity_of_registers
+        type: u2
+
+  input_registers_req:
+    seq:
+      - id: starting_addr
+        type: u2
+      - id: quantity_of_registers
+        type: u2
+
+  write_single_coil_req:
+    seq:
+      - id: output_addr
         type: u2
       - id: output_value
-        type: b16
+        type: u2
+        enum: coil_value
+        doc: 0xFF00 for ON and 0x0000 for OFF
 
-  write_single_register:
+  write_single_register_req:
     seq:
-      - id: register_address
+      - id: register_addr
         type: u2
       - id: register_value
         type: u2
 
-  write_multiple_coils:
+  write_multiple_coils_req:
     seq:
-      - id: starting_address
+      - id: starting_addr
         type: u2
       - id: quantity_of_outputs
         type: u2
@@ -88,9 +92,9 @@ types:
         repeat: expr
         repeat-expr: quantity_of_outputs
 
-  write_multiple_registers:
+  write_multiple_registers_req:
     seq:
-      - id: starting_address
+      - id: starting_addr
         type: u2
       - id: quantity_of_registers
         type: u2
@@ -100,3 +104,8 @@ types:
         type: u2
         repeat: expr
         repeat-expr: quantity_of_registers
+
+enums:
+  coil_value:
+    0x0000: off
+    0xFF00: on

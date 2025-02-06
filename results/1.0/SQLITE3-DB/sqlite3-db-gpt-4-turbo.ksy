@@ -1,15 +1,12 @@
 meta:
-  id: sqlite3_db
+  id: sqlite3
+  title: SQLite Database File Format 3
+  application: SQLite
   file-extension: db
   endian: le
-  title: SQLite Database File
-  application: SQLite
-  license: CC0-1.0
-  ks-version: 0.9
-
+  license: Public Domain
 doc: |
-  SQLite database file format, as used by SQLite 2.x, 3.x, including WAL and 
-  rollback journal files.
+  SQLite is a C library that implements an SQL database engine. A large subset of SQL92 is supported.  This file format represents SQLite database files.
 
 seq:
   - id: header
@@ -17,122 +14,131 @@ seq:
 
   - id: pages
     type: page
-    repeat: eos
+    repeat: expr
+    repeat-expr: header.db_size
 
 types:
   file_header:
     seq:
       - id: signature
-        contents: 'SQLite format 3\x00'
+        contents: "SQLite format 3\x00"
       - id: page_size
         type: u2
-        doc: The database page size in bytes.
       - id: write_version
         type: u1
-        doc: File format write version.
       - id: read_version
         type: u1
-        doc: File format read version.
       - id: reserved_space
         type: u1
-        doc: Bytes of reserved space at the end of each page.
       - id: max_payload_frac
         type: u1
-        doc: Maximum payload fraction per page.
       - id: min_payload_frac
         type: u1
-        doc: Minimum payload fraction per page.
       - id: leaf_payload_frac
         type: u1
-        doc: Leaf payload fraction per page.
       - id: file_change_counter
         type: u4
-        doc: File change counter.
-      - id: in_header_db_size
+      - id: db_size
         type: u4
-        doc: Size of the database file in pages.
       - id: first_freelist_trunk_page
         type: u4
-        doc: Page number of the first freelist trunk page.
-      - id: total_freelist_pages
+      - id: num_freelist_pages
         type: u4
-        doc: Total number of freelist pages.
       - id: schema_cookie
         type: u4
-        doc: Schema cookie.
       - id: schema_format
         type: u4
-        doc: Schema format number.
       - id: default_cache_size
+        type: s4
+      - id: largest_root_page
         type: u4
-        doc: Default page cache size.
-      - id: largest_root_btree_page
-        type: u4
-        doc: Page number of the largest root b-tree page.
       - id: text_encoding
-        type: u4
         enum: encoding
-        doc: Text encoding used by this database.
+        type: u4
       - id: user_version
         type: u4
-        doc: User version.
-      - id: increment_vacuum_mode
+      - id: incremental_vacuum_mode
         type: u4
-        doc: Incremental vacuum mode.
       - id: application_id
         type: u4
-        doc: Application ID.
       - id: reserved
         size: 20
-        doc: Reserved for expansion.
       - id: version_valid_for
         type: u4
-        doc: Version valid for number.
       - id: sqlite_version_number
         type: u4
-        doc: SQLite version number.
 
   page:
     seq:
-      - id: page_type
-        type: u1
-        enum: page_type
-      - id: first_freeblock
-        type: u2
-        doc: First freeblock in the page.
-      - id: num_cells
-        type: u2
-        doc: Number of cells in the page.
-      - id: cell_content_area
-        type: u2
-        doc: Offset to cell content area.
-      - id: num_fragmented_free_bytes
-        type: u1
-        doc: Number of fragmented free bytes.
+      - id: page_header
+        type: b_tree_page_header
+
       - id: cells
         type: cell
         repeat: expr
-        repeat-expr: num_cells
+        repeat-expr: page_header.num_cells
 
-    types:
-      cell:
-        seq:
-          - id: payload_size
-            type: vlq_base128_be
-          - id: row_id
-            type: vlq_base128_be
+      - id: cell_content_area
+        size: page_header.cell_content_area_sz
+
+  b_tree_page_header:
+    seq:
+      - id: page_type
+        enum: page_type
+        type: u1
+      - id: first_freeblock
+        type: u2
+      - id: num_cells
+        type: u2
+      - id: cell_content_area_start
+        type: u2
+      - id: num_fragmented_free_bytes
+        type: u1
+      - id: right_most_pointer
+        type: u4
+        if: page_type != page_type::leaf_table and page_type != page_type::leaf_index
+
+  cell:
+    seq:
+      - id: left_child_page
+        type: u4
+        if: _parent.page_header.page_type == page_type::interior_index or _parent.page_header.page_type == page_type::interior_table
+      - id: payload_size
+        type: vlq_base128_le
+      - id: rowid
+        type: vlq_base128_le
+        if: _parent.page_header.page_type == page_type::leaf_table
+      - id: payload
+        size: payload_size
+      - id: overflow_page_number
+        type: u4
+        if: payload_size > _parent.page_header.cell_content_area_start - payload_size
 
 enums:
   encoding:
-    0x01: utf_8
-    0x02: utf_16_le
-    0x03: utf_16_be
+    1: utf_8
+    2: utf_16le
+    3: utf_16be
 
   page_type:
-    0x02: index_leaf
-    0x05: table_leaf
-    0x0a: index_interior
-    0x0d: table_interior
+    2: interior_index
+    5: interior_table
+    10: leaf_index
+    13: leaf_table
 
-imports:
-  - /types/vlq_base128_be
+types:
+  vlq_base128_le:
+    seq:
+      - id: bytes
+        type: u1
+        repeat: until
+        repeat-until: _ & 0x80 == 0
+    instances:
+      value:
+        value: >
+          _.reduce(bytes, (acc, cur) => (acc << 7) | (cur & 0x7F), 0)
+
+instances:
+  cell_content_area_sz:
+    doc: Calculate size of the cell content area.
+    value: '((_parent.header.page_size - 1) - _parent.header.reserved_space) - page_header.cell_content_area_start'

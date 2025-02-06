@@ -1,16 +1,14 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::many0,
+    combinator::map_res,
     number::complete::{be_u16, be_u32, be_u8},
-    sequence::{preceded, tuple},
+    sequence::tuple,
     IResult,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::net::Ipv4Addr;
-use std::str;
 
 #[derive(Debug)]
 struct DnsHeader {
@@ -30,7 +28,7 @@ struct DnsQuestion {
 }
 
 #[derive(Debug)]
-struct DnsRecord {
+struct DnsResourceRecord {
     name: Vec<String>,
     rtype: u16,
     rclass: u16,
@@ -40,12 +38,12 @@ struct DnsRecord {
 }
 
 #[derive(Debug)]
-struct DnsPacket {
+struct DnsMessage {
     header: DnsHeader,
     questions: Vec<DnsQuestion>,
-    answers: Vec<DnsRecord>,
-    authorities: Vec<DnsRecord>,
-    additionals: Vec<DnsRecord>,
+    answers: Vec<DnsResourceRecord>,
+    authorities: Vec<DnsResourceRecord>,
+    additionals: Vec<DnsResourceRecord>,
 }
 
 fn parse_labels(input: &[u8]) -> IResult<&[u8], Vec<String>> {
@@ -57,15 +55,17 @@ fn parse_labels(input: &[u8]) -> IResult<&[u8], Vec<String>> {
             return Ok((rest, labels));
         }
         let (rest, label) = take(length)(rest)?;
-        labels.push(str::from_utf8(label).unwrap().to_string());
+        labels.push(String::from_utf8_lossy(label).into_owned());
         i = rest;
     }
 }
 
 fn parse_header(input: &[u8]) -> IResult<&[u8], DnsHeader> {
-    map(
-        tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16)),
-        |(id, flags, qdcount, ancount, nscount, arcount)| DnsHeader {
+    let (input, (id, flags, qdcount, ancount, nscount, arcount)) =
+        tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16))(input)?;
+    Ok((
+        input,
+        DnsHeader {
             id,
             flags,
             qdcount,
@@ -73,23 +73,33 @@ fn parse_header(input: &[u8]) -> IResult<&[u8], DnsHeader> {
             nscount,
             arcount,
         },
-    )(input)
+    ))
 }
 
 fn parse_question(input: &[u8]) -> IResult<&[u8], DnsQuestion> {
-    map(
-        tuple((parse_labels, be_u16, be_u16)),
-        |(qname, qtype, qclass)| DnsQuestion { qname, qtype, qclass },
-    )(input)
+    let (input, qname) = parse_labels(input)?;
+    let (input, qtype) = be_u16(input)?;
+    let (input, qclass) = be_u16(input)?;
+    Ok((
+        input,
+        DnsQuestion {
+            qname,
+            qtype,
+            qclass,
+        },
+    ))
 }
 
-fn parse_record(input: &[u8]) -> IResult<&[u8], DnsRecord> {
+fn parse_resource_record(input: &[u8]) -> IResult<&[u8], DnsResourceRecord> {
     let (input, name) = parse_labels(input)?;
-    let (input, (rtype, rclass, ttl, rdlength)) = tuple((be_u16, be_u16, be_u32, be_u16))(input)?;
+    let (input, rtype) = be_u16(input)?;
+    let (input, rclass) = be_u16(input)?;
+    let (input, ttl) = be_u32(input)?;
+    let (input, rdlength) = be_u16(input)?;
     let (input, rdata) = take(rdlength)(input)?;
     Ok((
         input,
-        DnsRecord {
+        DnsResourceRecord {
             name,
             rtype,
             rclass,
@@ -100,15 +110,15 @@ fn parse_record(input: &[u8]) -> IResult<&[u8], DnsRecord> {
     ))
 }
 
-fn parse_dns_packet(input: &[u8]) -> IResult<&[u8], DnsPacket> {
+fn parse_dns_message(input: &[u8]) -> IResult<&[u8], DnsMessage> {
     let (input, header) = parse_header(input)?;
-    let (input, questions) = many0(parse_question)(input)?;
-    let (input, answers) = many0(parse_record)(input)?;
-    let (input, authorities) = many0(parse_record)(input)?;
-    let (input, additionals) = many0(parse_record)(input)?;
+    let (input, questions) = nom::multi::count(parse_question, header.qdcount as usize)(input)?;
+    let (input, answers) = nom::multi::count(parse_resource_record, header.ancount as usize)(input)?;
+    let (input, authorities) = nom::multi::count(parse_resource_record, header.nscount as usize)(input)?;
+    let (input, additionals) = nom::multi::count(parse_resource_record, header.arcount as usize)(input)?;
     Ok((
         input,
-        DnsPacket {
+        DnsMessage {
             header,
             questions,
             answers,
@@ -121,7 +131,7 @@ fn parse_dns_packet(input: &[u8]) -> IResult<&[u8], DnsPacket> {
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <dns_packet_file>", args[0]);
+        eprintln!("Usage: {} <dns_message_file>", args[0]);
         return;
     }
 
@@ -130,8 +140,12 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_dns_packet(&buffer) {
-        Ok((_, packet)) => println!("{:#?}", packet),
-        Err(e) => eprintln!("Failed to parse DNS packet: {:?}", e),
+    match parse_dns_message(&buffer) {
+        Ok((_, dns_message)) => {
+            println!("{:#?}", dns_message);
+        }
+        Err(e) => {
+            eprintln!("Failed to parse DNS message: {:?}", e);
+        }
     }
 }

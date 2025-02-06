@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:dns="http://example.com/dns"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="dns:Header"/>
+        <xs:element name="Question" type="dns:QuestionSection" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Answer" type="dns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Authority" type="dns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="Additional" type="dns:ResourceRecord" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Header">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:unsignedShort"/>
+      <xs:element name="Flags" type="dns:Flags"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Flags">
+    <xs:sequence>
+      <xs:element name="QR" type="xs:unsignedByte"/>
+      <xs:element name="OPCODE" type="xs:unsignedByte"/>
+      <xs:element name="AA" type="xs:unsignedByte"/>
+      <xs:element name="TC" type="xs:unsignedByte"/>
+      <xs:element name="RD" type="xs:unsignedByte"/>
+      <xs:element name="RA" type="xs:unsignedByte"/>
+      <xs:element name="Z" type="xs:unsignedByte"/>
+      <xs:element name="RCODE" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuestionSection">
+    <xs:sequence>
+      <xs:element name="QNAME" type="dns:DomainName"/>
+      <xs:element name="QTYPE" type="xs:unsignedShort"/>
+      <xs:element name="QCLASS" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ResourceRecord">
+    <xs:sequence>
+      <xs:element name="NAME" type="dns:DomainName"/>
+      <xs:element name="TYPE" type="xs:unsignedShort"/>
+      <xs:element name="CLASS" type="xs:unsignedShort"/>
+      <xs:element name="TTL" type="xs:unsignedInt"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort"/>
+      <xs:element name="RDATA" type="xs:hexBinary" dfdl:length="{ ../RDLENGTH }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DomainName">
+    <xs:sequence>
+      <xs:element name="Label" type="dns:Label" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="NullTerminator" type="xs:unsignedByte" fixed="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Label">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedByte"/>
+      <xs:element name="Characters" type="xs:string" dfdl:length="{ ../Length }"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

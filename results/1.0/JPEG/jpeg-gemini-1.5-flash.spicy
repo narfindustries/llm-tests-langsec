@@ -1,61 +1,80 @@
-#ifndef JPEG_GEMINI_1_5_FLASH_H
-#define JPEG_GEMINI_1_5_FLASH_H
+module JPEG;
 
-#include <stdint.h>
+type jpeg_marker {
+    uint8 marker_code;
+    uint16 length;
+    bytes data;
+}
 
-// Define necessary data structures and functions here based on your JPEG processing needs.
-//  This is a placeholder, replace with your actual implementation.
-
-typedef struct {
-    uint8_t* data;
-    size_t size;
-} JpegImage;
-
-
-JpegImage decode_jpeg(const uint8_t* data, size_t size);
-int encode_jpeg(const JpegImage* img, uint8_t** output, size_t* output_size);
-
-#endif // JPEG_GEMINI_1_5_FLASH_H
-
-
-#include "jpeg_gemini_1_5_flash.h"
-
-event zeek_init() {
-    // Initialize any necessary resources here.
-    // This is a placeholder, replace with your actual initialization code.
+type jpeg_dqt {
+    uint8 table_id;
+    uint8 precision;
+    uint16 length = 0;
+    bytes data;
 }
 
 
-event zeek_done() {
-   //Clean up any resources here.
+type jpeg_dht {
+    uint8 table_id;
+    uint8 table_class;
+    uint16 length = 0;
+    bytes data;
+}
+
+type jpeg_dri {
+    uint16 restart_interval;
+}
+
+type jpeg_sof {
+    uint8 precision;
+    uint16 height;
+    uint16 width;
+    uint8 num_components;
+    array[num_components] jpeg_sof_component;
+}
+
+type jpeg_sof_component {
+    uint8 component_id;
+    uint8 horizontal_sampling_factor;
+    uint8 vertical_sampling_factor;
+    uint8 quantization_table_selector;
+}
+
+type jpeg_sos {
+    uint8 num_components;
+    array[num_components] jpeg_sos_component;
+    uint8 spectral_selection_start;
+    uint8 spectral_selection_end;
+    uint8 successive_approximation;
+}
+
+type jpeg_sos_component {
+    uint8 component_id;
+    uint8 dc_huffman_table_selector;
+    uint8 ac_huffman_table_selector;
+}
+
+type jpeg_appn {
+    uint8 marker_code;
+    uint16 length;
+    bytes data;
 }
 
 
-function JpegImage process_jpeg(const uint8_t* input_data, size_t input_size)
-{
-    JpegImage decoded_image = decode_jpeg(input_data, input_size);
-    // Process the decoded image as needed.  This section is placeholder code.
-    //  Add your image processing logic here.
-
-    uint8_t* encoded_data;
-    size_t encoded_size;
-    int encode_result = encode_jpeg(&decoded_image, &encoded_data, &encoded_size);
-
-    if (encode_result != 0) {
-        // Handle encoding error.
-        //  Consider logging the error.
-        print("JPEG encoding failed!");
-        return decoded_image; //Return the decoded image for error handling (or error code).
-    }
-
-    //Free the memory of the decoded image
-    free(decoded_image.data);
-
-    JpegImage encoded_image;
-    encoded_image.data = encoded_data;
-    encoded_image.size = encoded_size;
-
-    return encoded_image;
-
+type jpeg_file {
+    jpeg_marker soi;
+    array[0..*] jpeg_segment;
+    jpeg_marker eoi;
 }
 
+type jpeg_segment {
+  uint8 marker_code;
+  uint16 length = 0;
+  bytes data;
+}
+
+# Example Usage
+# A more detailed spicy spec would include detailed breakdown of
+# the internal data structures for  each marker (DQT, DHT, etc.)
+# based on their specification in ISO/IEC 10918.  This is a
+# simplified example.

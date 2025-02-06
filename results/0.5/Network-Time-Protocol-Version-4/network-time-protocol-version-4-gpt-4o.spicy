@@ -1,40 +1,33 @@
 module NTP;
 
-import spicy;
-import zeek;
-
-public type NTP_Header = unit {
-    leap_indicator: uint8 &bits = (ntp_flags & 0xC0) >> 6;
-    version_number: uint8 &bits = (ntp_flags & 0x38) >> 3;
-    mode: uint8 &bits = ntp_flags & 0x07;
+public type NTPv4 = unit {
+    li: uint8 % 2;
+    vn: uint8 % 3;
+    mode: uint8 % 3;
     stratum: uint8;
     poll: int8;
     precision: int8;
     root_delay: uint32;
     root_dispersion: uint32;
-    reference_identifier: bytes &length = 4;
+    reference_id: bytes &length=4;
     reference_timestamp: uint64;
     originate_timestamp: uint64;
     receive_timestamp: uint64;
     transmit_timestamp: uint64;
+    
+    # Optional authenticator field
+    authenticator: optional Authenticator = (mode == 3 || mode == 4) ? parse_authenticator() : nil;
 
     on %done {
-        if (version_number != 4) {
-            spicy::print("Warning: NTP version is not 4");
-        }
+        print self;
     }
-} &byte-order=big;
 
-public type NTP_Protocol = unit {
-    header: NTP_Header;
-};
-
-public module NTPParser = spicy::Parser {
-    parse = (data: bytes) -> NTP_Protocol {
-        return NTP_Protocol(data);
+    function parse_authenticator() : Authenticator {
+        return Authenticator($input);
     }
 };
 
-event zeek_init() {
-    spicy::register_protocol_analyzer("NTP", NTPParser, zeek::Conn::ANALYZER_NTP);
-}
+type Authenticator = unit {
+    key_id: uint32;
+    message_digest: bytes &length=16;
+};

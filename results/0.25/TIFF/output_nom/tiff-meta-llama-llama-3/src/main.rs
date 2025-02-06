@@ -1,16 +1,13 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_opt, opt, verify},
-    multi::{many0, many1},
-    number::complete::{be_f32, be_f64, be_i16, be_i32, be_i8, be_u16, be_u32, be_u8},
-    sequence::{pair, tuple},
+    bytes::complete::{take},
+    combinator::{map, map_res},
+    multi::{length_data},
+    number::complete::{be_u16, be_u32},
     IResult,
 };
-use std::{
-    env, fs,
-    io::{self, Read},
-    str,
-};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug, PartialEq)]
 enum ByteOrder {
@@ -18,159 +15,260 @@ enum ByteOrder {
     BigEndian,
 }
 
-impl ByteOrder {
-    fn from_bytes(bytes: &[u8]) -> IResult<&[u8], ByteOrder> {
-        if bytes.starts_with(b"II") {
-            Ok((&bytes[2..], ByteOrder::LittleEndian))
-        } else if bytes.starts_with(b"MM") {
-            Ok((&bytes[2..], ByteOrder::BigEndian))
-        } else {
-            Err(nom::Err::Error(nom::error::ErrorKind::AlphaNumeric))
-        }
-    }
+#[derive(Debug, PartialEq)]
+enum Compression {
+    NoCompression,
+    CCITTGroup3,
+    CCITTGroup4,
+    LZW,
+    PackBits,
 }
 
 #[derive(Debug, PartialEq)]
-enum FieldType {
-    Byte,
-    Ascii,
-    Short,
-    Long,
-    Rational,
-    Sbyte,
-    Undefined,
-    Sshort,
-    Slong,
-    Srational,
-    Float,
-    Double,
-}
-
-impl FieldType {
-    fn from_u16(value: u16) -> FieldType {
-        match value {
-            1 => FieldType::Byte,
-            2 => FieldType::Ascii,
-            3 => FieldType::Short,
-            4 => FieldType::Long,
-            5 => FieldType::Rational,
-            6 => FieldType::Sbyte,
-            7 => FieldType::Undefined,
-            8 => FieldType::Sshort,
-            9 => FieldType::Slong,
-            10 => FieldType::Srational,
-            11 => FieldType::Float,
-            12 => FieldType::Double,
-            _ => panic!("Invalid field type"),
-        }
-    }
+enum PhotometricInterpretation {
+    WhiteIsZero,
+    BlackIsZero,
+    RGB,
+    PaletteColor,
+    TransparencyMask,
+    CMYK,
+    YCbCr,
 }
 
 #[derive(Debug, PartialEq)]
-struct Field {
-    tag: u16,
-    field_type: FieldType,
-    count: u32,
-    value: Vec<u8>,
+enum Orientation {
+    TopLeft,
+    TopRight,
+    BottomRight,
+    BottomLeft,
+    LeftTop,
+    RightTop,
+    RightBottom,
+    LeftBottom,
 }
 
-impl Field {
-    fn parse(byte_order: ByteOrder, input: &[u8]) -> IResult<&[u8], Field> {
-        let (input, tag) = be_u16(byte_order)(input)?;
-        let (input, field_type) = map(be_u16, FieldType::from_u16)(input)?;
-        let (input, count) = be_u32(byte_order)(input)?;
-        let (input, value) = take(count as usize)(input)?;
-        Ok((input, Field { tag, field_type, count, value: value.to_vec() }))
-    }
+#[derive(Debug, PartialEq)]
+enum PlanarConfiguration {
+    Chunky,
+    Planar,
+}
+
+#[derive(Debug, PartialEq)]
+enum YCbCrSubSampling {
+    NoSubSampling,
+    HorizontalSubSampling,
+    VerticalSubSampling,
+    BothSubSampling,
+}
+
+#[derive(Debug, PartialEq)]
+enum YCbCrPositioning {
+    CoSited,
+    Centered,
+}
+
+#[derive(Debug, PartialEq)]
+struct IFH {
+    byte_order: ByteOrder,
+    magic_number: u16,
+    offset_to_first_ifd: u32,
 }
 
 #[derive(Debug, PartialEq)]
 struct IFD {
-    num_fields: u16,
-    fields: Vec<Field>,
-    next_ifd_offset: Option<u32>,
-}
-
-impl IFD {
-    fn parse(byte_order: ByteOrder, input: &[u8]) -> IResult<&[u8], IFD> {
-        let (input, num_fields) = be_u16(byte_order)(input)?;
-        let (input, fields) = many1(|input| Field::parse(byte_order, input))(input)?;
-        let (input, next_ifd_offset) = opt(be_u32(byte_order))(input)?;
-        Ok((input, IFD { num_fields, fields, next_ifd_offset }))
-    }
+    number_of_directory_entries: u16,
+    directory_entries: Vec<DirectoryEntry>,
+    next_ifd_offset: u32,
 }
 
 #[derive(Debug, PartialEq)]
-struct TIFF {
-    byte_order: ByteOrder,
-    ifd: IFD,
+struct DirectoryEntry {
+    tag: u16,
+    data_type: u16,
+    count: u32,
+    value_or_offset: u32,
 }
 
-impl TIFF {
-    fn parse(input: &[u8]) -> IResult<&[u8], TIFF> {
-        let (input, byte_order) = ByteOrder::from_bytes(input)?;
-        let (input, _magic) = verify(take(2usize), |x: &[u8]| x == b"42")(input)?;
-        let (input, ifd_offset) = be_u32(byte_order)(input)?;
-        let (input, ifd) = IFD::parse(byte_order, &input[ifd_offset as usize..])?;
-        Ok((input, TIFF { byte_order, ifd }))
+fn parse_byte_order(input: &[u8]) -> IResult<&[u8], ByteOrder> {
+    map_res(take(2usize), |input: &[u8]| match input {
+        b"II" => Ok(ByteOrder::LittleEndian),
+        b"MM" => Ok(ByteOrder::BigEndian),
+        _ => Err("Invalid byte order"),
+    })(input)
+}
+
+fn parse_magic_number(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n: u16| n)(input)
+}
+
+fn parse_offset_to_first_ifd(input: &[u8]) -> IResult<&[u8], u32> {
+    map(be_u32, |n: u32| n)(input)
+}
+
+fn parse_ifh(input: &[u8]) -> IResult<&[u8], IFH> {
+    let (input, byte_order) = parse_byte_order(input)?;
+    let (input, magic_number) = parse_magic_number(input)?;
+    let (input, offset_to_first_ifd) = parse_offset_to_first_ifd(input)?;
+    Ok((input, IFH { byte_order, magic_number, offset_to_first_ifd }))
+}
+
+fn parse_directory_entry(input: &[u8]) -> IResult<&[u8], DirectoryEntry> {
+    let (input, tag) = map(be_u16, |n: u16| n)(input)?;
+    let (input, data_type) = map(be_u16, |n: u16| n)(input)?;
+    let (input, count) = map(be_u32, |n: u32| n)(input)?;
+    let (input, value_or_offset) = map(be_u32, |n: u32| n)(input)?;
+    Ok((input, DirectoryEntry { tag, data_type, count, value_or_offset }))
+}
+
+fn parse_ifd(input: &[u8]) -> IResult<&[u8], IFD> {
+    let (input, number_of_directory_entries) = map(be_u16, |n: u16| n)(input)?;
+    let mut directory_entries = Vec::new();
+    let mut remaining_input = input;
+    for _ in 0..number_of_directory_entries {
+        let (input, entry) = parse_directory_entry(remaining_input)?;
+        directory_entries.push(entry);
+        remaining_input = input;
     }
+    let (input, next_ifd_offset) = map(be_u32, |n: u32| n)(remaining_input)?;
+    Ok((input, IFD { number_of_directory_entries, directory_entries, next_ifd_offset }))
 }
 
-fn main() -> io::Result<()> {
+fn parse_image_width(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n: u16| n)(input)
+}
+
+fn parse_image_length(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n: u16| n)(input)
+}
+
+fn parse_bits_per_sample(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n: u16| n)(input)
+}
+
+fn parse_compression(input: &[u8]) -> IResult<&[u8], Compression> {
+    map_res(be_u16, |n: u16| match n {
+        1 => Ok(Compression::NoCompression),
+        2 => Ok(Compression::CCITTGroup3),
+        3 => Ok(Compression::CCITTGroup4),
+        4 => Ok(Compression::LZW),
+        5 => Ok(Compression::PackBits),
+        _ => Err("Invalid compression"),
+    })(input)
+}
+
+fn parse_photometric_interpretation(input: &[u8]) -> IResult<&[u8], PhotometricInterpretation> {
+    map_res(be_u16, |n: u16| match n {
+        0 => Ok(PhotometricInterpretation::WhiteIsZero),
+        1 => Ok(PhotometricInterpretation::BlackIsZero),
+        2 => Ok(PhotometricInterpretation::RGB),
+        3 => Ok(PhotometricInterpretation::PaletteColor),
+        4 => Ok(PhotometricInterpretation::TransparencyMask),
+        5 => Ok(PhotometricInterpretation::CMYK),
+        6 => Ok(PhotometricInterpretation::YCbCr),
+        _ => Err("Invalid photometric interpretation"),
+    })(input)
+}
+
+fn parse_orientation(input: &[u8]) -> IResult<&[u8], Orientation> {
+    map_res(be_u16, |n: u16| match n {
+        1 => Ok(Orientation::TopLeft),
+        2 => Ok(Orientation::TopRight),
+        3 => Ok(Orientation::BottomRight),
+        4 => Ok(Orientation::BottomLeft),
+        5 => Ok(Orientation::LeftTop),
+        6 => Ok(Orientation::RightTop),
+        7 => Ok(Orientation::RightBottom),
+        8 => Ok(Orientation::LeftBottom),
+        _ => Err("Invalid orientation"),
+    })(input)
+}
+
+fn parse_samples_per_pixel(input: &[u8]) -> IResult<&[u8], u16> {
+    map(be_u16, |n: u16| n)(input)
+}
+
+fn parse_planar_configuration(input: &[u8]) -> IResult<&[u8], PlanarConfiguration> {
+    map_res(be_u16, |n: u16| match n {
+        1 => Ok(PlanarConfiguration::Chunky),
+        2 => Ok(PlanarConfiguration::Planar),
+        _ => Err("Invalid planar configuration"),
+    })(input)
+}
+
+fn parse_ycbcr_sub_sampling(input: &[u8]) -> IResult<&[u8], YCbCrSubSampling> {
+    map_res(be_u16, |n: u16| match n {
+        1 => Ok(YCbCrSubSampling::NoSubSampling),
+        2 => Ok(YCbCrSubSampling::HorizontalSubSampling),
+        3 => Ok(YCbCrSubSampling::VerticalSubSampling),
+        4 => Ok(YCbCrSubSampling::BothSubSampling),
+        _ => Err("Invalid YCbCr sub-sampling"),
+    })(input)
+}
+
+fn parse_ycbcr_positioning(input: &[u8]) -> IResult<&[u8], YCbCrPositioning> {
+    map_res(be_u16, |n: u16| match n {
+        1 => Ok(YCbCrPositioning::CoSited),
+        2 => Ok(YCbCrPositioning::Centered),
+        _ => Err("Invalid YCbCr positioning"),
+    })(input)
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        panic!("Usage: {} <input_file>", args[0]);
+        println!("Usage: {} <input_file>", args[0]);
+        return;
     }
-
-    let mut file = fs::File::open(&args[1])?;
+    let mut file = File::open(&args[1]).unwrap();
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
-    match TIFF::parse(&buffer) {
-        Ok((_, tiff)) => println!("{:?}", tiff),
-        Err(err) => panic!("Error parsing TIFF: {:?}", err),
+    file.read_to_end(&mut buffer).unwrap();
+    let (input, ifh) = parse_ifh(&buffer).unwrap();
+    println!("IFH: {:?}", ifh);
+    let (input, ifd) = parse_ifd(input).unwrap();
+    println!("IFD: {:?}", ifd);
+    for entry in ifd.directory_entries {
+        match entry.tag {
+            256 => {
+                let (_input, image_width) = parse_image_width(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Image Width: {}", image_width);
+            }
+            257 => {
+                let (_input, image_length) = parse_image_length(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Image Length: {}", image_length);
+            }
+            258 => {
+                let (_input, bits_per_sample) = parse_bits_per_sample(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Bits Per Sample: {}", bits_per_sample);
+            }
+            259 => {
+                let (_input, compression) = parse_compression(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Compression: {:?}", compression);
+            }
+            262 => {
+                let (_input, photometric_interpretation) = parse_photometric_interpretation(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Photometric Interpretation: {:?}", photometric_interpretation);
+            }
+            274 => {
+                let (_input, orientation) = parse_orientation(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Orientation: {:?}", orientation);
+            }
+            277 => {
+                let (_input, samples_per_pixel) = parse_samples_per_pixel(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Samples Per Pixel: {}", samples_per_pixel);
+            }
+            284 => {
+                let (_input, planar_configuration) = parse_planar_configuration(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("Planar Configuration: {:?}", planar_configuration);
+            }
+            530 => {
+                let (_input, ycbcr_sub_sampling) = parse_ycbcr_sub_sampling(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("YCbCr Sub-Sampling: {:?}", ycbcr_sub_sampling);
+            }
+            531 => {
+                let (_input, ycbcr_positioning) = parse_ycbcr_positioning(&buffer[entry.value_or_offset as usize..]).unwrap();
+                println!("YCbCr Positioning: {:?}", ycbcr_positioning);
+            }
+            _ => {}
+        }
     }
-
-    Ok(())
-}
-
-fn be_u8(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], u8> {
-    move |input| match byte_order {
-        ByteOrder::LittleEndian => map(take(1usize), |x: &[u8]| x[0])(input),
-        ByteOrder::BigEndian => map(take(1usize), |x: &[u8]| x[0])(input),
-    }
-}
-
-fn be_u16(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], u16> {
-    move |input| match byte_order {
-        ByteOrder::LittleEndian => map(take(2usize), |x: &[u8]| ((x[1] as u16) << 8) | (x[0] as u16))(input),
-        ByteOrder::BigEndian => map(take(2usize), |x: &[u8]| ((x[0] as u16) << 8) | (x[1] as u16))(input),
-    }
-}
-
-fn be_u32(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], u32> {
-    move |input| match byte_order {
-        ByteOrder::LittleEndian => map(take(4usize), |x: &[u8]| ((x[3] as u32) << 24) | ((x[2] as u32) << 16) | ((x[1] as u32) << 8) | (x[0] as u32))(input),
-        ByteOrder::BigEndian => map(take(4usize), |x: &[u8]| ((x[0] as u32) << 24) | ((x[1] as u32) << 16) | ((x[2] as u32) << 8) | (x[3] as u32))(input),
-    }
-}
-
-fn be_i8(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], i8> {
-    be_u8(byte_order)
-}
-
-fn be_i16(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], i16> {
-    be_u16(byte_order)
-}
-
-fn be_i32(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], i32> {
-    be_u32(byte_order)
-}
-
-fn be_f32(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], f32> {
-    be_u32(byte_order)
-}
-
-fn be_f64(byte_order: ByteOrder) -> impl Fn(&[u8]) -> IResult<&[u8], f64> {
-    map(take(8usize), |x: &[u8]| f64::from_be_bytes([x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]]))(byte_order)
 }

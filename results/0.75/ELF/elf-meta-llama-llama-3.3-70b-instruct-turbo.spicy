@@ -1,122 +1,538 @@
-%zeek
-
-# Import required modules
-@load base/protocols/elf
-
-# Define the ELF file structure
 module ELF;
 
-# Define the ELF file header
-type Elf32_Ehdr: record {
-    e_ident:       Elf32_Eident;
-    e_type:        uint16;
-    e_machine:     uint16;
-    e_version:     uint32;
-    e_entry:       uint32;
-    e_phoff:       uint32;
-    e_shoff:       uint32;
-    e_flags:       uint32;
-    e_ehsize:      uint16;
-    e_phentsize:   uint16;
-    e_phnum:       uint16;
-    e_shentsize:   uint16;
-    e_shnum:       uint16;
-    e_shstrndx:    uint16;
-} &byteorder=little-endian;
+type ElfIdent = uint8[16];
+enum ElfClass = uint8 { ELFCLASS32 = 1, ELFCLASS64 = 2 };
+enum ElfData = uint8 { ELFDATA2LSB = 1, ELFDATA2MSB = 2 };
+enum ElfOsAbi = uint8 {
+  SYSV = 0,
+  HPUX = 1,
+  NETBSD = 2,
+  GNU = 3,
+  BSD = 4,
+  SOLARIS = 5,
+  AIX = 6,
+  IRIX = 7,
+  FREEBSD = 8,
+  TRU64 = 9,
+  NOVELL_MODESTO = 10,
+  OPENBSD = 11,
+  OPENVMS = 12,
+  HPUX_IA64 = 13,
+  VXWORKS = 14,
+  SCO = 15,
+  SCO_OPENSERVER = 16,
+  SCO_UNIXWARE7 = 17
+};
 
-# Define the ELF file section header
-type Elf32_Shdr: record {
-    sh_name:       uint32;
-    sh_type:       uint32;
-    sh_flags:      uint32;
-    sh_addr:       uint32;
-    sh_offset:     uint32;
-    sh_size:       uint32;
-    sh_link:       uint32;
-    sh_info:       uint32;
-    sh_addralign:  uint32;
-    sh_entsize:    uint32;
-} &byteorder=little-endian;
+type ElfHeader32 = struct {
+  ident: uint8[16];
+  type: uint16;
+  machine: uint16;
+  version: uint32;
+  entry: uint32;
+  phoff: uint32;
+  shoff: uint32;
+  flags: uint32;
+  ehsize: uint16;
+  phentsize: uint16;
+  phnum: uint16;
+  shentsize: uint16;
+  shnum: uint16;
+  shstrndx: uint16;
+};
 
-# Define the ELF file program header
-type Elf32_Phdr: record {
-    p_type:        uint32;
-    p_offset:      uint32;
-    p_vaddr:       uint32;
-    p_paddr:       uint32;
-    p_filesz:      uint32;
-    p_memsz:       uint32;
-    p_flags:       uint32;
-    p_align:       uint32;
-} &byteorder=little-endian;
+type ElfHeader64 = struct {
+  ident: uint8[16];
+  type: uint16;
+  machine: uint16;
+  version: uint32;
+  entry: uint64;
+  phoff: uint64;
+  shoff: uint64;
+  flags: uint32;
+  ehsize: uint16;
+  phentsize: uint16;
+  phnum: uint16;
+  shentsize: uint16;
+  shnum: uint16;
+  shstrndx: uint16;
+};
 
-# Define the ELF file identification
-type Elf32_Eident: record {
-    ei_mag:        bytes[4];
-    ei_class:      uint8;
-    ei_data:       uint8;
-    ei_version:    uint8;
-    ei_osabi:      uint8;
-    ei_abiversion: uint8;
-    ei_pad:        bytes[7];
-} &byteorder=little-endian;
+enum ElfType = uint16 {
+  ET_NONE = 0,
+  ET_REL = 1,
+  ET_EXEC = 2,
+  ET_DYN = 3,
+  ET_CORE = 4,
+};
 
-# Define the event handler for parsing ELF files
-event zeek_init() {
-    # Set the default parser for ELF files
-    Analyzer::register_for_ports(tcp, 0/elf);
-}
+enum ElfMachine = uint16 {
+  EM_NONE = 0,
+  EM_M32 = 1,
+  EM_SPARC = 2,
+  EM_386 = 3,
+  EM_68K = 4,
+  EM_88K = 5,
+  EM_860 = 7,
+  EM_MIPS = 8,
+  EM_S370 = 9,
+  EM_MIPS_RS3_LE = 10,
+  EM_PARISC = 15,
+  EM_VPP500 = 17,
+  EM_SPARC32PLUS = 18,
+  EM_960 = 19,
+  EM_PPC = 20,
+  EM_PPC64 = 21,
+  EM_S390 = 22,
+  EM_SPU = 23,
+  EM_V800 = 36,
+  EM_FR20 = 37,
+  EM_RH32 = 38,
+  EM_RCE = 39,
+  EM_ARM = 40,
+  EM_SH = 42,
+  EM_SPARCV9 = 43,
+  EM_TRICORE = 44,
+  EM_ARC = 45,
+  EM_H8_300 = 46,
+  EM_H8_300H = 47,
+  EM_H8S = 48,
+  EM_H8_500 = 49,
+  EM_IA_64 = 50,
+  EM_M68HCS = 51,
+  EM_PPCPS = 53,
+  EM_COUV7 = 54,
+  EM_FTRON = 55,
+  EM_M68 = 56,
+  EM_M68S12 = 57,
+  EM_M68HC12 = 58,
+  EM_PFCF = 59,
+  EM_M90 = 60,
+  EM_M100 = 61,
+  EM_M105 = 62,
+  EM_M106 = 63,
+  EM_M107 = 64,
+  EM_M110 = 65,
+  EM_M111 = 66,
+  EM_M116 = 67,
+  EM_M132 = 68,
+  EM_M133 = 69,
+  EM_M134 = 70,
+  EM_M135 = 71,
+  EM_M136 = 72,
+  EM_M140 = 73,
+  EM_M142 = 74,
+  EM_M145 = 75,
+  EM_M150 = 76,
+  EM_M155 = 77,
+  EM_M160 = 78,
+  EM_M163 = 79,
+  EM_M167 = 80,
+  EM_M168 = 81,
+  EM_M169 = 82,
+  EM_M175 = 83,
+  EM_M176 = 84,
+  EM_M177 = 85,
+  EM_M178 = 86,
+  EM_M180 = 87,
+  EM_M181 = 88,
+  EM_M182 = 89,
+  EM_M183 = 90,
+  EM_M184 = 91,
+  EM_M185 = 92,
+  EM_M200 = 93,
+  EM_M201 = 94,
+  EM_M202 = 95,
+  EM_M203 = 96,
+  EM_M210 = 97,
+  EM_M211 = 98,
+  EM_M212 = 99,
+  EM_M213 = 100,
+  EM_M216 = 101,
+  EM_M217 = 102,
+  EM_M218 = 103,
+  EM_M219 = 104,
+  EM_M220 = 105,
+  EM_M221 = 106,
+  EM_M222 = 107,
+  EM_M226 = 108,
+  EM_M228 = 109,
+  EM_M229 = 110,
+  EM_M230 = 111,
+  EM_M231 = 112,
+  EM_M232 = 113,
+  EM_M233 = 114,
+  EM_M234 = 115,
+  EM_M235 = 116,
+  EM_M236 = 117,
+  EM_M237 = 118,
+  EM_M238 = 119,
+  EM_M239 = 120,
+  EM_M242 = 121,
+  EM_M243 = 122,
+  EM_M244 = 123,
+  EM_M245 = 124,
+  EM_M246 = 125,
+  EM_M247 = 126,
+  EM_M248 = 127,
+  EM_M249 = 128,
+  EM_M250 = 129,
+  EM_M251 = 130,
+  EM_M252 = 131,
+  EM_M253 = 132,
+  EM_M254 = 133,
+  EM_M255 = 134,
+  EM_M256 = 135,
+  EM_M257 = 136,
+  EM_M258 = 137,
+  EM_M259 = 138,
+  EM_M260 = 139,
+  EM_M261 = 140,
+  EM_M262 = 141,
+  EM_M263 = 142,
+  EM_M264 = 143,
+  EM_M265 = 144,
+  EM_M266 = 145,
+  EM_M267 = 146,
+  EM_M268 = 147,
+  EM_M269 = 148,
+  EM_M270 = 149,
+  EM_M271 = 150,
+  EM_M272 = 151,
+  EM_M273 = 152,
+  EM_M274 = 153,
+  EM_M275 = 154,
+  EM_M276 = 155,
+  EM_M277 = 156,
+  EM_M278 = 157,
+  EM_M279 = 158,
+  EM_M280 = 159,
+  EM_M281 = 160,
+  EM_M282 = 161,
+  EM_M283 = 162,
+  EM_M284 = 163,
+  EM_M285 = 164,
+  EM_M286 = 165,
+  EM_M287 = 166,
+  EM_M288 = 167,
+  EM_M289 = 168,
+  EM_M290 = 169,
+  EM_M291 = 170,
+  EM_M292 = 171,
+  EM_M293 = 172,
+  EM_M294 = 173,
+  EM_M295 = 174,
+  EM_M296 = 175,
+  EM_M297 = 176,
+  EM_M298 = 177,
+  EM_M299 = 178,
+  EM_M300 = 179,
+  EM_M301 = 180,
+  EM_M302 = 181,
+  EM_M303 = 182,
+  EM_M304 = 183,
+  EM_M305 = 184,
+  EM_M306 = 185,
+  EM_M307 = 186,
+  EM_M308 = 187,
+  EM_M309 = 188,
+  EM_M310 = 189,
+  EM_M311 = 190,
+  EM_M312 = 191,
+  EM_M313 = 192,
+  EM_M314 = 193,
+  EM_M315 = 194,
+  EM_M316 = 195,
+  EM_M317 = 196,
+  EM_M318 = 197,
+  EM_M319 = 198,
+  EM_M320 = 199,
+  EM_M321 = 200,
+  EM_M322 = 201,
+  EM_M323 = 202,
+  EM_M324 = 203,
+  EM_M325 = 204,
+  EM_M326 = 205,
+  EM_M327 = 206,
+  EM_M328 = 207,
+  EM_M329 = 208,
+  EM_M330 = 209,
+  EM_M331 = 210,
+  EM_M332 = 211,
+  EM_M333 = 212,
+  EM_M334 = 213,
+  EM_M335 = 214,
+  EM_M336 = 215,
+  EM_M337 = 216,
+  EM_M338 = 217,
+  EM_M339 = 218,
+  EM_M340 = 219,
+  EM_M341 = 220,
+  EM_M342 = 221,
+  EM_M343 = 222,
+  EM_M344 = 223,
+  EM_M345 = 224,
+  EM_M346 = 225,
+  EM_M347 = 226,
+  EM_M348 = 227,
+  EM_M349 = 228,
+  EM_M350 = 229,
+  EM_M351 = 230,
+  EM_M352 = 231,
+  EM_M353 = 232,
+  EM_M354 = 233,
+  EM_M355 = 234,
+  EM_M356 = 235,
+  EM_M357 = 236,
+  EM_M358 = 237,
+  EM_M359 = 238,
+  EM_M360 = 239,
+  EM_M361 = 240,
+  EM_M362 = 241,
+  EM_M363 = 242,
+  EM_M364 = 243,
+  EM_M365 = 244,
+  EM_M366 = 245,
+  EM_M367 = 246,
+  EM_M368 = 247,
+  EM_M369 = 248,
+  EM_M370 = 249,
+  EM_M371 = 250,
+  EM_M372 = 251,
+  EM_M373 = 252,
+  EM_M374 = 253,
+  EM_M375 = 254,
+  EM_M376 = 255,
+  EM_M377 = 256,
+  EM_M378 = 257,
+  EM_M379 = 258,
+  EM_M380 = 259,
+  EM_M381 = 260,
+  EM_M382 = 261,
+  EM_M383 = 262,
+  EM_M384 = 263,
+  EM_M385 = 264,
+  EM_M386 = 265,
+  EM_M387 = 266,
+  EM_M388 = 267,
+  EM_M389 = 268,
+  EM_M390 = 269,
+  EM_M391 = 270,
+  EM_M392 = 271,
+  EM_M393 = 272,
+  EM_M394 = 273,
+  EM_M395 = 274,
+  EM_M396 = 275,
+  EM_M397 = 276,
+  EM_M398 = 277,
+  EM_M399 = 278,
+  EM_M400 = 279,
+  EM_M401 = 280,
+  EM_M402 = 281,
+  EM_M403 = 282,
+  EM_M404 = 283,
+  EM_M405 = 284,
+  EM_M406 = 285,
+  EM_M407 = 286,
+  EM_M408 = 287,
+  EM_M409 = 288,
+  EM_M410 = 289,
+  EM_M411 = 290,
+  EM_M412 = 291,
+  EM_M413 = 292,
+  EM_M414 = 293,
+  EM_M415 = 294,
+  EM_M416 = 295,
+  EM_M417 = 296,
+  EM_M418 = 297,
+  EM_M419 = 298,
+  EM_M420 = 299,
+  EM_M421 = 300,
+  EM_M422 = 301,
+  EM_M423 = 302,
+  EM_M424 = 303,
+  EM_M425 = 304,
+  EM_M426 = 305,
+  EM_M427 = 306,
+  EM_M428 = 307,
+  EM_M429 = 308,
+  EM_M430 = 309,
+  EM_M431 = 310,
+  EM_M432 = 311,
+  EM_M433 = 312,
+  EM_M434 = 313,
+  EM_M435 = 314,
+  EM_M436 = 315,
+  EM_M437 = 316,
+  EM_M438 = 317,
+  EM_M439 = 318,
+  EM_M440 = 319,
+  EM_M441 = 320,
+  EM_M442 = 321,
+  EM_M443 = 322,
+  EM_M444 = 323,
+  EM_M445 = 324,
+  EM_M446 = 325,
+  EM_M447 = 326,
+  EM_M448 = 327,
+  EM_M449 = 328,
+  EM_M450 = 329,
+  EM_M451 = 330,
+  EM_M452 = 331,
+  EM_M453 = 332,
+  EM_M454 = 333,
+  EM_M455 = 334,
+  EM_M456 = 335,
+  EM_M457 = 336,
+  EM_M458 = 337,
+  EM_M459 = 338,
+  EM_M460 = 339,
+  EM_M461 = 340,
+  EM_M462 = 341,
+  EM_M463 = 342,
+  EM_M464 = 343,
+  EM_M465 = 344,
+  EM_M466 = 345,
+  EM_M467 = 346,
+  EM_M468 = 347,
+  EM_M469 = 348,
+  EM_M470 = 349,
+  EM_M471 = 350,
+  EM_M472 = 351,
+  EM_M473 = 352,
+  EM_M474 = 353,
+  EM_M475 = 354,
+  EM_M476 = 355,
+  EM_M477 = 356,
+  EM_M478 = 357,
+  EM_M479 = 358,
+  EM_M480 = 359,
+  EM_M481 = 360,
+  EM_M482 = 361,
+  EM_M483 = 362,
+  EM_M484 = 363,
+  EM_M485 = 364,
+  EM_M486 = 365,
+  EM_M487 = 366,
+  EM_M488 = 367,
+  EM_M489 = 368,
+  EM_M490 = 369,
+  EM_M491 = 370,
+  EM_M492 = 371,
+  EM_M493 = 372,
+  EM_M494 = 373,
+  EM_M495 = 374,
+  EM_M496 = 375,
+  EM_M497 = 376,
+  EM_M498 = 377,
+  EM_M499 = 378,
+};
 
-event zeek_done() {
-    # Print the parsed ELF file information
-    print "ELF file parsed successfully";
-}
+type ProgramHeader32 = struct {
+  type: uint32;
+  offset: uint32;
+  vaddr: uint32;
+  paddr: uint32;
+  filesz: uint32;
+  memsz: uint32;
+  flags: uint32;
+  align: uint32;
+};
 
-# Define the ELF file parser
-module ELF_Parser {
-    # Parse the ELF file header
-    function parse_ehdr(header: Elf32_Ehdr): bool {
-        # Check the ELF file magic number
-        if (header$e_ident$ei_mag != "7f454c46") {
-            return false;
-        }
+type ProgramHeader64 = struct {
+  type: uint32;
+  flags: uint32;
+  offset: uint64;
+  vaddr: uint64;
+  paddr: uint64;
+  filesz: uint64;
+  memsz: uint64;
+  align: uint64;
+};
 
-        # Check the ELF file class
-        if (header$e_ident$ei_class != 1) {
-            return false;
-        }
+enum PT = uint32 {
+  PT_NULL = 0,
+  PT_LOAD = 1,
+  PT_DYNAMIC = 2,
+  PT_INTERP = 3,
+  PT_NOTE = 4,
+  PT_SHLIB = 5,
+  PT_PHDR = 6,
+};
 
-        # Check the ELF file data encoding
-        if (header$e_ident$ei_data != 1) {
-            return false;
-        }
+type SectionHeader32 = struct {
+  name: uint32;
+  type: uint32;
+  flags: uint32;
+  addr: uint32;
+  offset: uint32;
+  size: uint32;
+  link: uint32;
+  info: uint32;
+  addralign: uint32;
+  entsize: uint32;
+};
 
-        return true;
-    }
+type SectionHeader64 = struct {
+  name: uint32;
+  type: uint32;
+  flags: uint64;
+  addr: uint64;
+  offset: uint64;
+  size: uint64;
+  link: uint32;
+  info: uint32;
+  addralign: uint64;
+  entsize: uint64;
+};
 
-    # Parse the ELF file sections
-    function parse_shdrs(shdrs: vector of Elf32_Shdr): bool {
-        # Iterate through each section header
-        for (i in shdrs) {
-            # Check the section type
-            if (shdrs[i]$sh_type != 1) {
-                return false;
-            }
-        }
+enum SHT = uint32 {
+  SHT_NULL = 0,
+  SHT_PROGBITS = 1,
+  SHT_SYMTAB = 2,
+  SHT_STRTAB = 3,
+  SHT_RELA = 4,
+  SHT_HASH = 5,
+  SHT_DYNAMIC = 6,
+  SHT_NOTE = 7,
+  SHT_NOBITS = 8,
+  SHT_REL = 9,
+  SHT_SHLIB = 10,
+  SHT_DYNSYM = 11,
+};
 
-        return true;
-    }
+type SymbolTableEntry32 = struct {
+  name: uint32;
+  value: uint32;
+  size: uint32;
+  info: uint8;
+  other: uint8;
+  shndx: uint16;
+};
 
-    # Parse the ELF file programs
-    function parse_phdrs(phdrs: vector of Elf32_Phdr): bool {
-        # Iterate through each program header
-        for (i in phdrs) {
-            # Check the program type
-            if (phdrs[i]$p_type != 1) {
-                return false;
-            }
-        }
+type SymbolTableEntry64 = struct {
+  name: uint32;
+  info: uint8;
+  other: uint8;
+  shndx: uint16;
+  value: uint64;
+  size: uint64;
+};
 
-        return true;
-    }
-}
+type Relocation32 = struct {
+  offset: uint32;
+  info: uint32;
+  addend: uint32;
+};
+
+type Relocation64 = struct {
+  offset: uint64;
+  info: uint64;
+  addend: int64;
+};
+
+enum STB = uint8 {
+  STB_LOCAL = 0,
+  STB_GLOBAL = 1,
+  STB_WEAK = 2,
+};

@@ -1,50 +1,44 @@
-# Network Time Protocol (NTP) Version 4
+module Network_Time_Protocol_Version_4;
 
-type NTPPacket = record {
-    leap: uint8 &bits=2;
-    version: uint8 &bits=3;
-    mode: uint8 &bits=3;
-    poll: uint8 &bits=4;
-    precision: uint8 &bits=4;
-    delay: uint32;
-    dispersion: uint32;
-    identifier: uint32;
-    reference_timestamp: uint64;
-    originate_timestamp: uint64;
-    receive_timestamp: uint64;
-    transmit_timestamp: uint64;
-} &byteorder=little-endian;
+type Leap_Indicator = uint8;
+type Version_Number = uint8;
+type Mode = uint8;
+type Poll = uint8;
+type Precision = uint8;
+type Root_Delay = uint32;
+type Root_Dispersion = uint32;
+type Reference_Clock_Identifier = uint32;
+type Timestamp = uint64;
 
-type NTPExtension = record {
-    type: uint16;
-    length: uint16;
-    data: bytestring &length=this.length;
-} &byteorder=big-endian;
-
-type NTPExtensions = vector of NTPExtension;
-
-type NTPPacketWithExtensions = record {
-    header: NTPPacket;
-    extensions: NTPExtensions;
+type NTP_Packet = struct {
+  leap_indicator: Leap_Indicator;
+  version_number: Version_Number;
+  mode: Mode;
+  poll: Poll;
+  precision: Precision;
+  root_delay: Root_Delay;
+  root_dispersion: Root_Dispersion;
+  reference_clock_identifier: Reference_Clock_Identifier;
+  reference_timestamp: Timestamp;
+  origin_timestamp: Timestamp;
+  receive_timestamp: Timestamp;
+  transmit_timestamp: Timestamp;
 };
 
-event zeek::packet_capture(c: connection, p: NTPPacketWithExtensions) {
-    print("NTP packet captured:");
-    print("  leap:", p$header$leap);
-    print("  version:", p$header$version);
-    print("  mode:", p$header$mode);
-    print("  poll:", p$header$poll);
-    print("  precision:", p$header$precision);
-    print("  delay:", p$header$delay);
-    print("  dispersion:", p$header$dispersion);
-    print("  identifier:", p$header$identifier);
-    print("  reference timestamp:", p$header$reference_timestamp);
-    print("  originate timestamp:", p$header$originate_timestamp);
-    print("  receive timestamp:", p$header$receive_timestamp);
-    print("  transmit timestamp:", p$header$transmit_timestamp);
-    for (ext in p$extensions) {
-        print("  extension type:", ext$type);
-        print("  extension length:", ext$length);
-        print("  extension data:", ext$data);
-    }
-}
+type Extension_Field_Type = uint16;
+type Extension_Field_Length = uint16;
+
+type Extension_Field = struct {
+  field_type: Extension_Field_Type;
+  field_length: Extension_Field_Length;
+  field_value: bytes;
+};
+
+type NTP_Packet_Extension = vector<Extension_Field>;
+
+type NTP_Packet_Full = struct {
+  header: NTP_Packet;
+  extensions: NTP_Packet_Extension;
+};
+
+let ntp_packet: NTP_Packet_Full;

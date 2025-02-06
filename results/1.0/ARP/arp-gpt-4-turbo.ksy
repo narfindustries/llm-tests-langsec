@@ -1,44 +1,62 @@
 meta:
   id: arp_packet
-  title: ARP (Address Resolution Protocol) Packet
-  license: CC0-1.0
+  title: ARP (Address Resolution Protocol)
   endian: be
-
-doc: |
-  The Address Resolution Protocol (ARP) is a network protocol used to find out
-  the hardware (MAC) address of a device from an IP address.
+  xref:
+    rfc: 826
 
 seq:
-  - id: htype
+  - id: hrd
     type: u2
-    doc: Hardware type (Ethernet is 1)
-  - id: ptype
+    enum: hardware_type
+    doc: Hardware type code
+
+  - id: pro
     type: u2
-    doc: Protocol type (IPv4 is 0x0800)
-  - id: hlen
+    enum: protocol_type
+    doc: Protocol type code
+
+  - id: hln
     type: u1
-    doc: Hardware address length (Ethernet addresses size is 6)
-  - id: plen
+    doc: Hardware address length
+
+  - id: pln
     type: u1
-    doc: Protocol address length (IPv4 address size is 4)
-  - id: oper
+    doc: Protocol address length
+
+  - id: op
     type: u2
     enum: operation
-    doc: Operation (1 for request, 2 for reply)
+    doc: ARP operation code
+
   - id: sha
-    size: 6
+    size: hln
     doc: Sender hardware address (MAC)
+
   - id: spa
-    size: 4
-    doc: Sender protocol address (IPv4)
+    size: pln
+    doc: Sender protocol address
+
   - id: tha
-    size: 6
+    size: hln
     doc: Target hardware address (MAC)
+
   - id: tpa
-    size: 4
-    doc: Target protocol address (IPv4)
+    size: pln
+    doc: Target protocol address
 
 enums:
+  hardware_type:
+    1: ethernet
+    6: ieee_802
+    7: arcnet
+    15: frame_relay
+
+  protocol_type:
+    0x0800: ipv4
+
   operation:
     1: request
     2: reply
+    3: rarp_request
+    4: rarp_reply

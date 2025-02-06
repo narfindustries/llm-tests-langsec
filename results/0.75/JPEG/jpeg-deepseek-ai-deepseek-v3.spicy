@@ -1,0 +1,134 @@
+module JPEG;
+
+public type Marker = enum {
+    SOI  = 0xFFD8,
+    EOI  = 0xFFD9,
+    SOF0 = 0xFFC0,
+    SOF1 = 0xFFC1,
+    SOF2 = 0xFFC2,
+    SOF3 = 0xFFC3,
+    SOF5 = 0xFFC5,
+    SOF6 = 0xFFC6,
+    SOF7 = 0xFFC7,
+    DHT  = 0xFFC4,
+    DQT  = 0xFFDB,
+    SOS  = 0xFFDA,
+    DRI  = 0xFFDD,
+    APP0 = 0xFFE0,
+    APP1 = 0xFFE1,
+    APP2 = 0xFFE2,
+    APP3 = 0xFFE3,
+    APP4 = 0xFFE4,
+    APP5 = 0xFFE5,
+    APP6 = 0xFFE6,
+    APP7 = 0xFFE7,
+    APP8 = 0xFFE8,
+    APP9 = 0xFFE9,
+    APPA = 0xFFEA,
+    APPB = 0xFFEB,
+    APPC = 0xFFEC,
+    APPD = 0xFFED,
+    APPE = 0xFFEE,
+    APPF = 0xFFEF,
+    COM  = 0xFFFE,
+    RST0 = 0xFFD0,
+    RST1 = 0xFFD1,
+    RST2 = 0xFFD2,
+    RST3 = 0xFFD3,
+    RST4 = 0xFFD4,
+    RST5 = 0xFFD5,
+    RST6 = 0xFFD6,
+    RST7 = 0xFFD7
+};
+
+public type SOFSegment = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[num_components];
+};
+
+public type Component = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    quant_table_selector: uint8;
+};
+
+public type DQTSegment = unit {
+    precision: uint8;
+    table_id: uint8;
+    table_data: uint8[64];
+};
+
+public type DHTSegment = unit {
+    table_class: uint8;
+    table_id: uint8;
+    code_lengths: uint8[16];
+    code_values: uint8[];
+};
+
+public type SOSSegment = unit {
+    num_components: uint8;
+    components: ScanComponent[num_components];
+    start_spectral_selection: uint8;
+    end_spectral_selection: uint8;
+    successive_approximation: uint8;
+};
+
+public type ScanComponent = unit {
+    selector: uint8;
+    dc_table_selector: uint8;
+    ac_table_selector: uint8;
+};
+
+public type DRISegment = unit {
+    restart_interval: uint16;
+};
+
+public type APP0Segment = unit {
+    identifier: uint8[5];
+    version: uint8[2];
+    density_units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumbnail_width: uint8;
+    thumbnail_height: uint8;
+    thumbnail_data: uint8[thumbnail_width * thumbnail_height * 3];
+};
+
+public type APP1Segment = unit {
+    identifier: uint8[6];
+    exif_data: bytes &eod;
+};
+
+public type APP2Segment = unit {
+    identifier: uint8[6];
+    icc_profile: bytes &eod;
+};
+
+public type COMSegment = unit {
+    comment: bytes &eod;
+};
+
+public type JPEGFile = unit {
+    soi: Marker;
+    segments: Segment[] until $soi == Marker::EOI;
+};
+
+public type Segment = unit {
+    marker: Marker;
+    length: uint16 if $marker != Marker::SOI && $marker != Marker::EOI;
+    data: case $marker of {
+        Marker::SOF0 | Marker::SOF1 | Marker::SOF2 | Marker::SOF3 | Marker::SOF5 | Marker::SOF6 | Marker::SOF7 -> sofn: SOFSegment;
+        Marker::DHT -> dht: DHTSegment;
+        Marker::DQT -> dqt: DQTSegment;
+        Marker::SOS -> sos: SOSSegment;
+        Marker::DRI -> dri: DRISegment;
+        Marker::APP0 -> app0: APP0Segment;
+        Marker::APP1 -> app1: APP1Segment;
+        Marker::APP2 -> app2: APP2Segment;
+        Marker::COM -> com: COMSegment;
+        * -> unknown: bytes &size=$length - 2;
+    };
+};

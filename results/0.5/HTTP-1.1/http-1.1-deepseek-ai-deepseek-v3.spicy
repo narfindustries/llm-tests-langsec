@@ -1,0 +1,59 @@
+module HTTP;
+
+import spicy;
+
+type Version = unit {
+    major: uint8;
+    minor: uint8;
+};
+
+type Method = enum {
+    GET, POST, PUT, DELETE, HEAD, OPTIONS, TRACE, CONNECT, PATCH
+};
+
+type URI = bytes &size=*;
+
+type Header = unit {
+    name: bytes &size=*;
+    value: bytes &size=*;
+};
+
+type Headers = vector<Header>;
+
+type Request = unit {
+    method: Method;
+    uri: URI;
+    version: Version;
+    headers: Headers;
+};
+
+type StatusCode = uint16;
+
+type ReasonPhrase = bytes &size=*;
+
+type Response = unit {
+    version: Version;
+    status_code: StatusCode;
+    reason_phrase: ReasonPhrase;
+    headers: Headers;
+};
+
+type Chunk = unit {
+    size: bytes &size=*;
+    data: bytes &size=*;
+};
+
+type ChunkedBody = vector<Chunk>;
+
+type Body = bytes &size=*;
+
+type Message = unit {
+    request: optional<Request>;
+    response: optional<Response>;
+    body: optional<Body>;
+    chunked_body: optional<ChunkedBody>;
+};
+
+type HTTP = unit {
+    message: Message;
+};

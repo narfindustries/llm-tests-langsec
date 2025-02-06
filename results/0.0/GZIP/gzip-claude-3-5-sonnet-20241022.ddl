@@ -1,33 +1,39 @@
-def Main = GZIP
+def GZip {
+    magic1 byte == 0x1f
+    magic2 byte == 0x8b
+    compression_method byte == 0x08
+    flags bitfield[8] {
+        text 1
+        hcrc 1
+        extra 1
+        name 1
+        comment 1
+        reserved 3
+    }
+    mtime uint32
+    xflags byte
+    os byte
 
-def GZIP = {
-    ID1     : uint 8 = 0x1f;
-    ID2     : uint 8 = 0x8b;
-    CM      : uint 8 = 0x08;
-    FLG     : uint 8;
-    MTIME   : uint 32;
-    XFL     : uint 8;
-    OS      : uint 8;
-    
-    if (FLG & 0x04) {  -- FEXTRA
-        XLEN    : uint 16;
-        EXTRA   : uint 8[XLEN];
-    };
-    
-    if (FLG & 0x08) {  -- FNAME
-        FNAME   : uint 8[] until 0x00;
-    };
-    
-    if (FLG & 0x10) {  -- FCOMMENT
-        FCOMMENT: uint 8[] until 0x00;
-    };
-    
-    if (FLG & 0x02) {  -- FHCRC
-        HCRC    : uint 16;
-    };
-    
-    COMPRESSED_BLOCKS : uint 8[] until $$ == 0;
-    
-    CRC32   : uint 32;
-    ISIZE   : uint 32;
+    if (flags.extra) {
+        extra_length uint16
+        extra_data byte[extra_length]
+    }
+
+    if (flags.name) {
+        filename byte[] until 0x00
+    }
+
+    if (flags.comment) {
+        comment byte[] until 0x00
+    }
+
+    if (flags.hcrc) {
+        header_crc uint16
+    }
+
+    data byte[] until $
+    crc32 uint32
+    input_size uint32
 }
+
+def Main = GZip

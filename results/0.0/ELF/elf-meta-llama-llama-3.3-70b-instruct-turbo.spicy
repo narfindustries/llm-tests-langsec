@@ -1,69 +1,237 @@
-# Define the ELF file format
-type Elf64_Ehdr = record {
-    e_ident: bytestring(16);
-    e_type: uint16;
-    e_machine: uint16;
-    e_version: uint32;
-    e_entry: uint64;
-    e_phoff: uint64;
-    e_shoff: uint64;
-    e_flags: uint32;
-    e_ehsize: uint16;
-    e_phentsize: uint16;
-    e_phnum: uint16;
-    e_shentsize: uint16;
-    e_shnum: uint16;
-    e_shstrndx: uint16;
-};
+module ELF;
 
-# Define the ELF program header
-type Elf64_Phdr = record {
-    p_type: uint32;
-    p_flags: uint32;
-    p_offset: uint64;
-    p_vaddr: uint64;
-    p_paddr: uint64;
-    p_filesz: uint64;
-    p_memsz: uint64;
-    p_align: uint64;
-};
+type ElfIdent: record {
+  ei_mag: array[4] of uint8;
+  ei_class: uint8;
+  ei_data: uint8;
+  ei_version: uint8;
+  ei_osabi: uint8;
+  ei_abiversion: uint8;
+  ei_pad: array[7] of uint8;
+}
 
-# Define the ELF section header
-type Elf64_Shdr = record {
-    sh_name: uint32;
-    sh_type: uint32;
-    sh_flags: uint32;
-    sh_addr: uint64;
-    sh_offset: uint64;
-    sh_size: uint64;
-    sh_link: uint32;
-    sh_info: uint32;
-    sh_addralign: uint64;
-    sh_entsize: uint64;
-};
+type ElfType: enum {
+  ET_NONE;
+  ET_REL;
+  ET_EXEC;
+  ET_DYN;
+  ET_CORE;
+}
 
-# Define the file parser
-file parser = Elf64_Ehdr() & repeat(Elf64_Phdr()) & repeat(Elf64_Shdr());
+type ElfMachine: enum {
+  EM_NONE;
+  EM_M32;
+  EM_SPARC;
+  EM_386;
+  EM_68K;
+  EM_88K;
+  EM_860;
+  EM_MIPS;
+  EM_S370;
+  EM_MIPS_RS3_LE;
+  EM_PARISC;
+  EM_VPP500;
+  EM_SPARC32PLUS;
+  EM_960;
+  EM_PPC;
+  EM_PPC64;
+  EM_S390;
+  EM_SPU;
+  EM_SH;
+  EM_SPARCV9;
+  EM_S390X;
+  EM_MSA;
+  EM_TSK_x86_64;
+  EM_AVR32;
+  EM_FROB;
+  EM_FRV;
+  EM_MMA;
+  EM_MMD;
+  EM_MN10200;
+  EM_MN10300;
+  EM_MCA;
+  EM_MEP;
+  EM_MMD_I;
+  EM_MN10300_I;
+  EM_MICROBLAZE;
+  EM_TI_C6000;
+  EM_AARCH64;
+  EM_AVR32_A;
+  EM_ST9PLUS;
+  EM_ST7;
+  EM_68HC12;
+  EM_MMA_I;
+  EM_PDP10;
+  EM_PDP11;
+  EM_FX66;
+  EM_ST9;
+  EM_ST7_I;
+  EM_68HC16;
+  EM_68HC11;
+  EM_68HC08;
+  EM_68HC05;
+  EM_SVX;
+  EM_ST19;
+  EM_VAX;
+  EM_CRIS;
+  EM_JAVELIN;
+  EM_FIREPATH;
+  EM_ZSP;
+  EM_MMIX;
+  EM_HUANY;
+  EM_PRISM;
+  EM_AVR;
+  EM_FR30;
+  EM_D10V;
+  EM_D30V;
+  EM_V850;
+  EM_M32;
+  EM_MN10300_I;
+  EM_MN10200_I;
+  EM_PJ;
+  EM_OPENRISC;
+  EM_ARC_A5;
+  EM_XTENSA;
+  EM_NUM;
+}
 
-# Define the file analyzer
-analyzer analyzer = {
-    on_elf: function(elf: Elf64_Ehdr) {
-        # Analyze the ELF file
-        print("ELF file type:", elf.e_type);
-        print("ELF machine:", elf.e_machine);
-        print("ELF entry point:", elf.e_entry);
-    },
-    on_phdr: function(phdr: Elf64_Phdr) {
-        # Analyze the program header
-        print("Program header type:", phdr.p_type);
-        print("Program header flags:", phdr.p_flags);
-        print("Program header offset:", phdr.p_offset);
-    },
-    on_shdr: function(shdr: Elf64_Shdr) {
-        # Analyze the section header
-        print("Section header name:", shdr.sh_name);
-        print("Section header type:", shdr.sh_type);
-        print("Section header flags:", shdr.sh_flags);
-        print("Section header address:", shdr.sh_addr);
-    }
-};
+type ElfHeader: record {
+  e_ident: ElfIdent;
+  e_type: ElfType;
+  e_machine: ElfMachine;
+  e_version: uint32;
+  e_entry: uint64;
+  e_phoff: uint64;
+  e_shoff: uint64;
+  e_flags: uint32;
+  e_ehsize: uint16;
+  e_phentsize: uint16;
+  e_phnum: uint16;
+  e_shentsize: uint16;
+  e_shnum: uint16;
+  e_shstrndx: uint16;
+}
+
+type ProgramHeaderType: enum {
+  PT_NULL;
+  PT_LOAD;
+  PT_DYNAMIC;
+  PT_INTERP;
+  PT_NOTE;
+  PT_SHLIB;
+  PT_PHDR;
+  PT_TLS;
+  PT_NUM;
+}
+
+type ProgramHeaderFlags: enum {
+  PF_X;
+  PF_W;
+  PF_R;
+}
+
+type ProgramHeader: record {
+  p_type: ProgramHeaderType;
+  p_flags: uint32;
+  p_offset: uint64;
+  p_vaddr: uint64;
+  p_paddr: uint64;
+  p_filesz: uint64;
+  p_memsz: uint64;
+  p_align: uint64;
+}
+
+type SectionHeaderType: enum {
+  SHT_NULL;
+  SHT_PROGBITS;
+  SHT_SYMTAB;
+  SHT_STRTAB;
+  SHT_RELA;
+  SHT_HASH;
+  SHT_DYNAMIC;
+  SHT_NOTE;
+  SHT_NOBITS;
+  SHT_REL;
+  SHT_SHLIB;
+  SHT_DYNSYM;
+  SHT_INIT_ARRAY;
+  SHT_FINI_ARRAY;
+  SHT_PREINIT_ARRAY;
+  SHT_GROUP;
+  SHT_SYMTAB_SHNDX;
+  SHT_NUM;
+}
+
+type SectionHeaderFlags: enum {
+  SHF_WRITE;
+  SHF_ALLOC;
+  SHF_EXECINSTR;
+}
+
+type SectionHeader: record {
+  sh_name: uint32;
+  sh_type: SectionHeaderType;
+  sh_flags: uint64;
+  sh_addr: uint64;
+  sh_offset: uint64;
+  sh_size: uint64;
+  sh_link: uint32;
+  sh_info: uint32;
+  sh_addralign: uint64;
+  sh_entsize: uint64;
+}
+
+type SymbolBinding: enum {
+  STB_LOCAL;
+  STB_GLOBAL;
+  STB_WEAK;
+}
+
+type SymbolType: enum {
+  STT_NOTYPE;
+  STT_OBJECT;
+  STT_FUNC;
+  STT_SECTION;
+  STT_FILE;
+  STT_COMMON;
+  STT_TLS;
+  STT_NUM;
+}
+
+type Symbol: record {
+  st_name: uint32;
+  st_value: uint64;
+  st_size: uint64;
+  st_info: uint8;
+  st_other: uint8;
+  st_shndx: uint16;
+}
+
+type RelocationType: enum {
+  R_386_NONE;
+  R_386_32;
+  R_386_PC32;
+  R_386_GOT32;
+  R_386_PLT32;
+  R_386_COPY;
+  R_386_GLOB_DAT;
+  R_386_JMP_SLOT;
+  R_386_RELATIVE;
+  R_386_GOTOFF;
+  R_386_GOTPC;
+}
+
+type Relocation: record {
+  r_offset: uint64;
+  r_info: uint64;
+  r_addend: int64;
+}
+
+type ElfFile: record {
+  header: ElfHeader;
+  program_headers: array[header.e_phnum] of ProgramHeader;
+  section_headers: array[header.e_shnum] of SectionHeader;
+  sections: array[header.e_shnum] of bytes;
+  symbols: array[header.e_shnum] of Symbol;
+  relocations: array[header.e_shnum] of Relocation;
+}

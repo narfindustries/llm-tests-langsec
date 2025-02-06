@@ -2,64 +2,99 @@ module GIF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    logical_screen: LogicalScreen;
-    blocks: Blocks;
-
-    on %done { 
-        print "GIF file parsed successfully";
-    }
+public type GIFFile = unit {
+    signature: bytes(3) &requires($$=="GIF");
+    version: bytes(3) &requires($$=="87a" || $$=="89a");
+    
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: GlobalColorTable(logical_screen_descriptor.packed_fields.global_color_table_size) 
+        if logical_screen_descriptor.packed_fields.global_color_table_flag;
+    
+    frames: Frame[] &eod;
+    
+    trailer: uint8 &requires($$==0x3b);
 };
 
-type Header = unit {
-    signature: bytes(3) ~ "GIF";
-    version: bytes(3) ~ /87a|89a/;
-};
-
-type LogicalScreen = unit {
+type LogicalScreenDescriptor = unit {
     width: uint16;
     height: uint16;
-    packed_field: uint8;
+    packed_fields: PackedFields;
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
 };
 
-type Blocks = unit {
-    blocks: Block[] while( !input.eof() );
+type PackedFields = unit {
+    flags: uint8;
+    
+    property global_color_table_flag: bool {
+        return (flags & 0x80) != 0;
+    }
+    
+    property color_resolution: uint8 {
+        return (flags & 0x70) >> 4;
+    }
+    
+    property sort_flag: bool {
+        return (flags & 0x08) != 0;
+    }
+    
+    property global_color_table_size: uint8 {
+        return flags & 0x07;
+    }
 };
 
-type Block = unit {
-    switch {
-        -> Trailer if ( input.lookahead(1)[0] == 0x3b );
-        -> ImageDescriptor if ( input.lookahead(1)[0] == 0x2c );
-        -> ExtensionBlock;
-    };
+type GlobalColorTable = unit(table_size: uint8) {
+    colors: RGB[2 ** (table_size + 1)];
 };
 
-type Trailer = unit {
-    trailer: bytes(1) ~ "\x3b";
+type RGB = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
 };
 
-type ImageDescriptor = unit {
-    separator: bytes(1) ~ "\x2c";
-    left: uint16;
-    top: uint16;
+type Frame = unit {
+    image_separator: uint8 &requires($$==0x2c);
+    left_position: uint16;
+    top_position: uint16;
     width: uint16;
     height: uint16;
-    packed_field: uint8;
-    local_color_table: bytes if ( (packed_field & 0x80) > 0 );
+    image_packed_fields: ImagePackedFields;
+    local_color_table: LocalColorTable(image_packed_fields.local_color_table_size) 
+        if image_packed_fields.local_color_table_flag;
+    
+    lzw_min_code_size: uint8;
     image_data: ImageData;
+    
+    extensions: Extension[];
+};
+
+type ImagePackedFields = unit {
+    flags: uint8;
+    
+    property local_color_table_flag: bool {
+        return (flags & 0x80) != 0;
+    }
+    
+    property interlace_flag: bool {
+        return (flags & 0x40) != 0;
+    }
+    
+    property sort_flag: bool {
+        return (flags & 0x20) != 0;
+    }
+    
+    property local_color_table_size: uint8 {
+        return flags & 0x07;
+    }
+};
+
+type LocalColorTable = unit(table_size: uint8) {
+    colors: RGB[2 ** (table_size + 1)];
 };
 
 type ImageData = unit {
-    lzw_min_code_size: uint8;
-    data_blocks: DataSubBlocks;
-};
-
-type DataSubBlocks = unit {
-    blocks: DataBlock[] while( input.lookahead(1)[0] != 0 );
-    terminator: bytes(1) ~ "\x00";
+    blocks: DataBlock[] &until($$[-1].size == 0);
 };
 
 type DataBlock = unit {
@@ -67,8 +102,17 @@ type DataBlock = unit {
     data: bytes(size);
 };
 
-type ExtensionBlock = unit {
-    extension_introducer: bytes(1) ~ "\x21";
-    extension_type: uint8;
-    data_blocks: DataSubBlocks;
+type Extension = unit {
+    extension_introducer: uint8 &requires($$==0x21);
+    extension_type: uint8 &requires(
+        $$==0xf9 ||  # Graphic Control Extension
+        $$==0xfe ||  # Comment Extension
+        $$==0x01 ||  # Plain Text Extension
+        $$==0xff     # Application Extension
+    );
+    data: ExtensionData;
+};
+
+type ExtensionData = unit {
+    blocks: DataBlock[] &until($$[-1].size == 0);
 };

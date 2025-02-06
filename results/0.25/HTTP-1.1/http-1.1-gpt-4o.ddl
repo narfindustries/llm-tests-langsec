@@ -1,56 +1,62 @@
-module HTTP_1_1
-
-type HTTPMessage = struct {
-    start_line: StartLine,
-    headers: Headers,
-    empty_line: EmptyLine,
-    body: Body
+HTTPMessage = {
+    start: RequestLine | StatusLine;
+    headers: HeaderField[];
+    empty_line: "\r\n";
+    body: bytes;
 }
 
-type StartLine = struct {
-    method: Method,
-    space1: Space,
-    uri: URI,
-    space2: Space,
-    version: Version,
-    crlf: CRLF
+RequestLine = {
+    method: Token;
+    SP: " ";
+    request_uri: URI;
+    SP: " ";
+    http_version: HTTPVersion;
+    CRLF: "\r\n";
 }
 
-type Method = enum : string {
-    GET = "GET",
-    POST = "POST",
-    PUT = "PUT",
-    DELETE = "DELETE",
-    HEAD = "HEAD",
-    OPTIONS = "OPTIONS",
-    TRACE = "TRACE",
-    CONNECT = "CONNECT"
+StatusLine = {
+    http_version: HTTPVersion;
+    SP: " ";
+    status_code: StatusCode;
+    SP: " ";
+    reason_phrase: ReasonPhrase;
+    CRLF: "\r\n";
 }
 
-type URI = string
-
-type Version = string
-
-type Headers = list of Header
-
-type Header = struct {
-    name: HeaderName,
-    colon: Colon,
-    space: Space,
-    value: HeaderValue,
-    crlf: CRLF
+HTTPVersion = {
+    "HTTP/";
+    major: digit;
+    ".";
+    minor: digit;
 }
 
-type HeaderName = string
+HeaderField = {
+    field_name: Token;
+    ": ";
+    field_value: FieldValue;
+    CRLF: "\r\n";
+}
 
-type Colon = ":"
+FieldValue = {
+    value: bytes;
+}
 
-type HeaderValue = string
+Token = {
+    token: bytes;
+}
 
-type Space = " "
+URI = {
+    uri: bytes;
+}
 
-type CRLF = "\r\n"
+ReasonPhrase = {
+    phrase: bytes;
+}
 
-type EmptyLine = CRLF
+StatusCode = {
+    digit1: digit;
+    digit2: digit;
+    digit3: digit;
+}
 
-type Body = bytes
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";

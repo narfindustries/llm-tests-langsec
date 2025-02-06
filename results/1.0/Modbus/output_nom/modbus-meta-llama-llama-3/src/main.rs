@@ -1,527 +1,134 @@
-use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    error::ErrorKind,
-    multi::length_data,
-    number::complete::{be_u8, be_u16, be_u16 as be_uint16},
-    IResult,
-};
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use nom::{bytes::complete::take, combinator::map, number::complete::{be_u8, be_u16}, IResult, error::ErrorKind};
+use nom::error::context;
 
-// Modbus Application Protocol Specification V1.1b3
-// https://modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf
+const MIN_MODBUS_MESSAGE_LENGTH: usize = 4;
 
-#[derive(Debug, PartialEq)]
-enum ModbusFunctionCode {
-    ReadCoils = 0x01,
-    ReadDiscreteInputs = 0x02,
-    ReadHoldingRegisters = 0x03,
-    ReadInputRegisters = 0x04,
-    WriteSingleCoil = 0x05,
-    WriteSingleRegister = 0x06,
-    ReadExceptionStatus = 0x07,
-    Diagnostics = 0x08,
-    GetCommEventCounter = 0x0B,
-    GetCommEventLog = 0x0C,
-    WriteMultipleCoils = 0x0F,
-    WriteMultipleRegisters = 0x10,
-    ReportServerId = 0x11,
-    ReadFileRecord = 0x14,
-    WriteFileRecord = 0x15,
-    MaskWriteRegister = 0x16,
-    ReadWriteMultipleRegisters = 0x17,
-    ReadFirmware = 0x18,
-    WriteFirmware = 0x19,
-    ReadInformation = 0x2B,
-    WriteInformation = 0x2C,
-    ReadDeviceIdentification = 0x2D,
+#[derive(Debug)]
+enum FunctionCode {
+    ReadCoilStatus,
+    ReadInputStatus,
+    ReadHoldingRegisters,
+    ReadInputRegisters,
+    ForceSingleCoil,
+    PresetSingleRegister,
+    ForceMultipleCoils,
+    PresetMultipleRegisters,
+    ReportSlaveId,
+    ReadFileRecord,
+    WriteFileRecord,
+    MaskWriteRegister,
+    ReadWriteMultipleRegisters,
+    ReadFIFOQueue,
+    ReadDeviceIdentification,
+    ReadDeviceIdentificationExtended,
+    Reserved(ExceptionCode),
 }
 
-#[derive(Debug, PartialEq)]
-enum ModbusExceptionCode {
-    IllegalFunction = 0x01,
-    IllegalDataAddress = 0x02,
-    IllegalDataValue = 0x03,
-    SlaveDeviceFailure = 0x04,
-    Acknowledge = 0x05,
-    SlaveDeviceBusy = 0x06,
-    MemoryParityError = 0x08,
-    GatewayPathUnavailable = 0x0A,
-    GatewayTargetDeviceFailedToRespond = 0x0B,
+impl FunctionCode {
+    fn from_byte(byte: u8) -> Self {
+        match byte {
+            0x01 => FunctionCode::ReadCoilStatus,
+            0x02 => FunctionCode::ReadInputStatus,
+            0x03 => FunctionCode::ReadHoldingRegisters,
+            0x04 => FunctionCode::ReadInputRegisters,
+            0x05 => FunctionCode::ForceSingleCoil,
+            0x06 => FunctionCode::PresetSingleRegister,
+            0x0F => FunctionCode::ForceMultipleCoils,
+            0x10 => FunctionCode::PresetMultipleRegisters,
+            0x11 => FunctionCode::ReportSlaveId,
+            0x14 => FunctionCode::ReadFileRecord,
+            0x15 => FunctionCode::WriteFileRecord,
+            0x16 => FunctionCode::MaskWriteRegister,
+            0x17 => FunctionCode::ReadWriteMultipleRegisters,
+            0x18 => FunctionCode::ReadFIFOQueue,
+            0x2B => FunctionCode::ReadDeviceIdentification,
+            0x2C => FunctionCode::ReadDeviceIdentificationExtended,
+            0xE0..=0xE5 => FunctionCode::Reserved(ExceptionCode::from_byte(byte - 0xE0)),
+            _ => panic!("Invalid function code"),
+        }
+    }
 }
 
-#[derive(Debug, PartialEq)]
-struct ModbusRequest {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
-    function_code: ModbusFunctionCode,
+#[derive(Debug)]
+enum ExceptionCode {
+    IllegalFunction,
+    IllegalDataAddress,
+    IllegalDataValue,
+    SlaveDeviceFailure,
+    Acknowledge,
+    SlaveDeviceBusy,
+    GatewayPathUnavailable,
+    GatewayTargetDeviceFailedToRespond,
 }
 
-#[derive(Debug, PartialEq)]
-struct ModbusExceptionResponse {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
-    function_code: u8,
-    exception_code: ModbusExceptionCode,
+impl ExceptionCode {
+    fn from_byte(byte: u8) -> Self {
+        match byte {
+            0x01 => ExceptionCode::IllegalFunction,
+            0x02 => ExceptionCode::IllegalDataAddress,
+            0x03 => ExceptionCode::IllegalDataValue,
+            0x04 => ExceptionCode::SlaveDeviceFailure,
+            0x05 => ExceptionCode::Acknowledge,
+            0x06 => ExceptionCode::SlaveDeviceBusy,
+            0x0A => ExceptionCode::GatewayPathUnavailable,
+            0x0B => ExceptionCode::GatewayTargetDeviceFailedToRespond,
+            _ => panic!("Invalid exception code"),
+        }
+    }
 }
 
-#[derive(Debug, PartialEq)]
-enum ModbusResponse {
-    ReadCoils {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        coil_status: Vec<bool>,
-    },
-    ReadDiscreteInputs {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        input_status: Vec<bool>,
-    },
-    ReadHoldingRegisters {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        register_values: Vec<u16>,
-    },
-    ReadInputRegisters {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        register_values: Vec<u16>,
-    },
-    WriteSingleCoil {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        coil_address: u16,
-        coil_value: bool,
-    },
-    WriteSingleRegister {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        register_address: u16,
-        register_value: u16,
-    },
-    ReadExceptionStatus {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        status: u8,
-    },
-    Diagnostics {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        sub_function: u16,
-        data: Vec<u8>,
-    },
-    GetCommEventCounter {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        event_count: u16,
-        event_log: Vec<u8>,
-    },
-    GetCommEventLog {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        status: u8,
-        event_log: Vec<u8>,
-    },
-    WriteMultipleCoils {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        starting_address: u16,
-        quantity: u16,
-    },
-    WriteMultipleRegisters {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        starting_address: u16,
-        quantity: u16,
-        register_values: Vec<u16>,
-    },
-    ReportServerId {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        server_id: u8,
-        run_indicator_status: u8,
-    },
-    ReadFileRecord {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        file_number: u16,
-        record_number: u16,
-        record_data: Vec<u8>,
-    },
-    WriteFileRecord {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        file_number: u16,
-        record_number: u16,
-        record_data: Vec<u8>,
-    },
-    MaskWriteRegister {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        register_address: u16,
-        and_mask: u16,
-        or_mask: u16,
-    },
-    ReadWriteMultipleRegisters {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        read_starting_address: u16,
-        quantity_to_read: u16,
-        write_starting_address: u16,
-        quantity_to_write: u16,
-        write_register_values: Vec<u16>,
-    },
-    ReadFirmware {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        file_number: u16,
-        record_number: u16,
-        record_data: Vec<u8>,
-    },
-    WriteFirmware {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        file_number: u16,
-        record_number: u16,
-        record_data: Vec<u8>,
-    },
-    ReadInformation {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        information_type: u8,
-        information_data: Vec<u8>,
-    },
-    WriteInformation {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        information_type: u8,
-        information_data: Vec<u8>,
-    },
-    ReadDeviceIdentification {
-        transaction_id: u16,
-        protocol_id: u16,
-        length: u16,
-        unit_id: u8,
-        function_code: ModbusFunctionCode,
-        identifier: u8,
-        object_id: u8,
-        information_data: Vec<u8>,
-    },
+#[derive(Debug)]
+struct ModbusMessage {
+    slave_id: u8,
+    function_code: FunctionCode,
+    data: Vec<u8>,
+    crc: Option<u16>,
 }
 
-fn parse_modbus_request(i: &[u8]) -> IResult<&[u8], ModbusRequest> {
-    let (i, transaction_id) = be_u16(i)?;
-    let (i, protocol_id) = be_u16(i)?;
-    let (i, length) = be_u16(i)?;
-    let (i, unit_id) = be_u8(i)?;
-    let (i, function_code) = map(be_u8, |x| match x {
-        0x01 => ModbusFunctionCode::ReadCoils,
-        0x02 => ModbusFunctionCode::ReadDiscreteInputs,
-        0x03 => ModbusFunctionCode::ReadHoldingRegisters,
-        0x04 => ModbusFunctionCode::ReadInputRegisters,
-        0x05 => ModbusFunctionCode::WriteSingleCoil,
-        0x06 => ModbusFunctionCode::WriteSingleRegister,
-        0x07 => ModbusFunctionCode::ReadExceptionStatus,
-        0x08 => ModbusFunctionCode::Diagnostics,
-        0x0B => ModbusFunctionCode::GetCommEventCounter,
-        0x0C => ModbusFunctionCode::GetCommEventLog,
-        0x0F => ModbusFunctionCode::WriteMultipleCoils,
-        0x10 => ModbusFunctionCode::WriteMultipleRegisters,
-        0x11 => ModbusFunctionCode::ReportServerId,
-        0x14 => ModbusFunctionCode::ReadFileRecord,
-        0x15 => ModbusFunctionCode::WriteFileRecord,
-        0x16 => ModbusFunctionCode::MaskWriteRegister,
-        0x17 => ModbusFunctionCode::ReadWriteMultipleRegisters,
-        0x18 => ModbusFunctionCode::ReadFirmware,
-        0x19 => ModbusFunctionCode::WriteFirmware,
-        0x2B => ModbusFunctionCode::ReadInformation,
-        0x2C => ModbusFunctionCode::WriteInformation,
-        0x2D => ModbusFunctionCode::ReadDeviceIdentification,
-        _ => panic!("Invalid function code"),
-    })(i)?;
-    Ok((i, ModbusRequest {
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-    }))
+fn parse_modbus_message(input: &[u8]) -> IResult<&[u8], ModbusMessage> {
+    let (input, slave_id) = be_u8(input)?;
+    let (input, function_code) = map(be_u8, FunctionCode::from_byte)(input)?;
+    let (input, data_length) = be_u8(input)?;
+    let (input, data) = take(data_length as usize)(input)?;
+    let (input, crc) = if input.len() >= 2 {
+        let (input, crc) = be_u16(input)?;
+        (input, Some(crc))
+    } else {
+        (input, None)
+    };
+
+    Ok((input, ModbusMessage { slave_id, function_code, data: data.to_vec(), crc }))
 }
 
-fn parse_modbus_exception_response(i: &[u8]) -> IResult<&[u8], ModbusExceptionResponse> {
-    let (i, transaction_id) = be_u16(i)?;
-    let (i, protocol_id) = be_u16(i)?;
-    let (i, length) = be_u16(i)?;
-    let (i, unit_id) = be_u8(i)?;
-    let (i, function_code) = be_u8(i)?;
-    let (i, exception_code) = map(be_u8, |x| match x {
-        0x01 => ModbusExceptionCode::IllegalFunction,
-        0x02 => ModbusExceptionCode::IllegalDataAddress,
-        0x03 => ModbusExceptionCode::IllegalDataValue,
-        0x04 => ModbusExceptionCode::SlaveDeviceFailure,
-        0x05 => ModbusExceptionCode::Acknowledge,
-        0x06 => ModbusExceptionCode::SlaveDeviceBusy,
-        0x08 => ModbusExceptionCode::MemoryParityError,
-        0x0A => ModbusExceptionCode::GatewayPathUnavailable,
-        0x0B => ModbusExceptionCode::GatewayTargetDeviceFailedToRespond,
-        _ => panic!("Invalid exception code"),
-    })(i)?;
-    Ok((i, ModbusExceptionResponse {
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-        exception_code,
-    }))
-}
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <binary_file>", args[0]);
+        return;
+    }
 
-fn parse_modbus_response(i: &[u8]) -> IResult<&[u8], ModbusResponse> {
-    let (i, transaction_id) = be_u16(i)?;
-    let (i, protocol_id) = be_u16(i)?;
-    let (i, length) = be_u16(i)?;
-    let (i, unit_id) = be_u8(i)?;
-    let (i, function_code) = be_u8(i)?;
-    match function_code {
-        0x01 => {
-            let (i, coil_status) = take(length as usize - 2)(i)?;
-            let coil_status: Vec<bool> = coil_status
-                .iter()
-                .flat_map(|x| {
-                    (0..8)
-                        .map(move |i| (x & (1 << i)) != 0)
-                        .collect::<Vec<bool>>()
-                })
-                .collect();
-            Ok((i, ModbusResponse::ReadCoils {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::ReadCoils,
-                coil_status,
-            }))
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
+
+    if buffer.len() < MIN_MODBUS_MESSAGE_LENGTH {
+        println!("Invalid Modbus message length");
+        return;
+    }
+
+    match parse_modbus_message(&buffer) {
+        Ok((remaining, message)) => {
+            println!("Slave ID: {}", message.slave_id);
+            println!("Function Code: {:?}", message.function_code);
+            println!("Data: {:?}", message.data);
+            println!("CRC: {:?}", message.crc);
+            println!("Remaining: {:?}", remaining);
         }
-        0x02 => {
-            let (i, input_status) = take(length as usize - 2)(i)?;
-            let input_status: Vec<bool> = input_status
-                .iter()
-                .flat_map(|x| {
-                    (0..8)
-                        .map(move |i| (x & (1 << i)) != 0)
-                        .collect::<Vec<bool>>()
-                })
-                .collect();
-            Ok((i, ModbusResponse::ReadDiscreteInputs {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::ReadDiscreteInputs,
-                input_status,
-            }))
+        Err(err) => {
+            println!("Error parsing Modbus message: {:?}", err);
         }
-        0x03 => {
-            let (i, register_values) = take(length as usize - 2)(i)?;
-            let register_values: Vec<u16> = register_values
-                .chunks(2)
-                .map(|x| ((x[0] as u16) << 8) | (x[1] as u16))
-                .collect();
-            Ok((i, ModbusResponse::ReadHoldingRegisters {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::ReadHoldingRegisters,
-                register_values,
-            }))
-        }
-        0x04 => {
-            let (i, register_values) = take(length as usize - 2)(i)?;
-            let register_values: Vec<u16> = register_values
-                .chunks(2)
-                .map(|x| ((x[0] as u16) << 8) | (x[1] as u16))
-                .collect();
-            Ok((i, ModbusResponse::ReadInputRegisters {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::ReadInputRegisters,
-                register_values,
-            }))
-        }
-        0x05 => {
-            let (i, coil_address) = be_u16(i)?;
-            let (i, coil_value) = be_u16(i)?;
-            Ok((i, ModbusResponse::WriteSingleCoil {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::WriteSingleCoil,
-                coil_address,
-                coil_value: coil_value == 0xFF00,
-            }))
-        }
-        0x06 => {
-            let (i, register_address) = be_u16(i)?;
-            let (i, register_value) = be_u16(i)?;
-            Ok((i, ModbusResponse::WriteSingleRegister {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::WriteSingleRegister,
-                register_address,
-                register_value,
-            }))
-        }
-        0x07 => {
-            let (i, status) = be_u8(i)?;
-            Ok((i, ModbusResponse::ReadExceptionStatus {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::ReadExceptionStatus,
-                status,
-            }))
-        }
-        0x08 => {
-            let (i, sub_function) = be_u16(i)?;
-            let (i, data) = take(length as usize - 4)(i)?;
-            Ok((i, ModbusResponse::Diagnostics {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::Diagnostics,
-                sub_function,
-                data: data.to_vec(),
-            }))
-        }
-        0x0B => {
-            let (i, event_count) = be_u16(i)?;
-            let (i, event_log) = take(length as usize - 4)(i)?;
-            Ok((i, ModbusResponse::GetCommEventCounter {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::GetCommEventCounter,
-                event_count,
-                event_log: event_log.to_vec(),
-            }))
-        }
-        0x0C => {
-            let (i, status) = be_u8(i)?;
-            let (i, event_log) = take(length as usize - 3)(i)?;
-            Ok((i, ModbusResponse::GetCommEventLog {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::GetCommEventLog,
-                status,
-                event_log: event_log.to_vec(),
-            }))
-        }
-        0x0F => {
-            let (i, starting_address) = be_u16(i)?;
-            let (i, quantity) = be_u16(i)?;
-            Ok((i, ModbusResponse::WriteMultipleCoils {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::WriteMultipleCoils,
-                starting_address,
-                quantity,
-            }))
-        }
-        0x10 => {
-            let (i, starting_address) = be_u16(i)?;
-            let (i, quantity) = be_u16(i)?;
-            let (i, register_values) = take(length as usize - 6)(i)?;
-            let register_values: Vec<u16> = register_values
-                .chunks(2)
-                .map(|x| ((x[0] as u16) << 8) | (x[1] as u16))
-                .collect();
-            Ok((i, ModbusResponse::WriteMultipleRegisters {
-                transaction_id,
-                protocol_id,
-                length,
-                unit_id,
-                function_code: ModbusFunctionCode::WriteMultipleRegisters,
-                starting_address,
-                quantity,
+    }
+}

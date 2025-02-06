@@ -2,77 +2,61 @@ module HTTP;
 
 import spicy;
 
-type HTTPVersion = unit {
-    major: uint8;
-    minor: uint8;
-    : parse {
-        self.major = self.major - b'0';
-        self.minor = self.minor - b'0';
-    }
+type Header = unit {
+    name: bytes &eod;
+    value: bytes &eod;
+    : skip_line;
+};
+
+type Headers = unit {
+    entries: vector<Header> &eod;
 };
 
 type RequestLine = unit {
     method: bytes &eod;
     uri: bytes &eod;
-    version: HTTPVersion;
+    version: bytes &eod;
+    : skip_line;
 };
 
-type ResponseLine = unit {
-    version: HTTPVersion;
-    status_code: uint16;
-    reason_phrase: bytes &eod;
+type StatusLine = unit {
+    version: bytes &eod;
+    code: bytes &eod;
+    reason: bytes &eod;
+    : skip_line;
 };
 
-type Header = unit {
-    name: bytes &until(b":");
-    value: bytes &eod;
-};
-
-type Headers = unit {
-    headers: Header[] &eod;
-};
-
-type Message = unit {
-    start_line: variant {
-        request: RequestLine,
-        response: ResponseLine,
-    };
+type Request = unit {
+    request_line: RequestLine;
     headers: Headers;
-    body: bytes &size=body_length(self.headers);
-    
-    on %done {
-        print self;
-    }
-    
-    : parse {
-        self.body = b"";
-        if (|self.headers.headers| > 0) {
-            local content_length = b"";
-            for (h in self.headers.headers) {
-                if (h.name.to_lower() == b"content-length") {
-                    content_length = h.value.strip();
-                    break;
-                }
-            }
-            if (content_length != b"") {
-                self.body = self.body &size=bytes_to_count(content_length);
-            }
-        }
-    }
+    body: bytes &size=body_size(self.headers);
+    : skip_line;
 };
 
-public type HTTP_Stream = unit {
-    messages: Message[];
+type Response = unit {
+    status_line: StatusLine;
+    headers: Headers;
+    body: bytes &size=body_size(self.headers);
+    : skip_line;
 };
 
-function bytes_to_count(b: bytes): uint64 {
-    return to_uint64(b) &requires=|b| > 0;
+public type HTTPMessage = unit {
+    is_request: bool &requires=($context.flow.is_orig);
+    message: switch (self.is_request) {
+        true -> Request;
+        false -> Response;
+    };
+};
+
+function skip_line(unit: unit) {
+    : /[^\n]*\n/;
 }
 
-function to_uint64(b: bytes): uint64 {
-    local result: uint64 = 0;
-    for (c in b) {
-        result = result * 10 + (c - b'0');
+function body_size(headers: Headers): uint64 {
+    for (h in headers.entries) {
+        if (h.name == b"Content-Length") {
+            return spicy::bytes_to_uint(h.value, byte_order=spicy::ByteOrder::Big);
+        }
     }
-    return result;
+    return 0;
 }

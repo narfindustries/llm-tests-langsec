@@ -1,27 +1,26 @@
-module NetworkTimeProtocol;
-
-public type NTPFlags = unit {
-    leapIndicator: uint2;
-    version: uint3;
-    mode: uint3;
-};
+module NTP;
 
 public type NTPHeader = unit {
-    flags: NTPFlags;
+    li: uint2;
+    vn: uint2;
+    mode: uint2;
     stratum: uint8;
     poll: int8;
     precision: int8;
     rootDelay: uint32;
     rootDispersion: uint32;
-    refID: uint32;
-    refTimestamp: uint64;
-    origTimestamp: uint64;
-    recvTimestamp: uint64;
-    transTimestamp: uint64;
+    referenceID: uint32;
+    referenceTimestamp: uint64;
+    originateTimestamp: uint64;
+    receiveTimestamp: uint64;
+    transmitTimestamp: uint64;
 };
 
 public type NTPMessage = unit {
     header: NTPHeader;
+    extensionFields: bytes &optional;
+    keyID: uint32 &optional;
+    messageDigest: bytes &size=16 &optional;  // Assuming MD5 hash size for example
     on %done {
         print self;
     }

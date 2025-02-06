@@ -1,0 +1,2 @@
+(fn(_) -> Result<(_, u16), nom::Err<_>> {nom::number::complete::le_u16::<_, _>}, fn(_) -> Result<(_, u32), nom::Err<_>> {nom::number::complete::le_u32::<_, _>}, fn(_) -> Result<(_, u64), nom::Err<_>> {nom::number::complete::le_u64::<_, _>})
+(fn(_) -> Result<(_, u16), nom::Err<_>> {nom::number::complete::be_u16::<_, _>}, fn(_) -> Result<(_, u32), nom::Err<_>> {nom::number::complete::be_u32::<_, _>}, fn(_) -> Result<(_, u64), nom::Err<_>> {nom::number::complete::be_u64::<_, _>})

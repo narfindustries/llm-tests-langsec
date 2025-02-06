@@ -1,38 +1,62 @@
 module DICOM;
 
-import spicy;
+type DicomHeader = unit {
+    preamble: bytes &size=128;
+    magic: bytes &size=4 == b"DICM";
 
-public type DICOM_Header = unit {
-    header_length: uint32;
-    file_meta_information_group_length: uint32;
-    transfer_syntax_uid: bytes &length=header_length - 4;
-    
-    on %init {
-        self.validate();
-    }
+    patient_name: string &optional;
+    patient_id: string &optional;
+    patient_birth_date: time &optional;
+    patient_sex: enum { Male, Female, Other } &optional;
+    patient_age: uint16 &optional;
 
-    function validate() {
-        if ( self.header_length < 4 || self.header_length > 1024 ) {
-            throw "Invalid DICOM header length";
-        }
-    }
+    study_instance_uid: string &optional;
+    study_date: time &optional;
+    study_time: time &optional;
+    accession_number: string &optional;
+    referring_physician: string &optional;
+
+    series_instance_uid: string &optional;
+    series_number: uint32 &optional;
+    modality: enum { 
+        ComputedTomography, 
+        MagneticResonance, 
+        Ultrasound, 
+        XRayAngiography 
+    } &optional;
+    series_description: string &optional;
+
+    sop_instance_uid: string &optional;
+    image_number: uint32 &optional;
+    rows: uint16;
+    columns: uint16;
+    pixel_spacing: real[] &optional;
+    bits_allocated: uint8 &optional;
+    pixel_representation: enum { Unsigned, Signed } &optional;
+
+    transfer_syntax: enum { 
+        ExplicitVR, 
+        ImplicitVR 
+    } &optional;
+
+    endian: enum { 
+        LittleEndian, 
+        BigEndian 
+    } &optional;
 };
 
-public type DICOM_File = unit {
-    header: DICOM_Header;
-    payload: bytes &size=header.file_meta_information_group_length;
+function parse(data: bytes): DicomHeader {
+    return DicomHeader(data);
+}
 
-    on %init {
-        self.validate();
-    }
-
-    function validate() {
-        if ( self.payload.size() != self.header.file_meta_information_group_length ) {
-            throw "Payload length mismatch";
-        }
-    }
+type DicomFile = unit {
+    header: DicomHeader;
 };
 
 public type DICOM = unit {
-    file: DICOM_File;
+    file: DicomFile;
 };
+
+public function parse_dicom(data: bytes): DICOM {
+    return DICOM(data);
+}

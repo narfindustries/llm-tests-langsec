@@ -1,41 +1,81 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-typedef struct {
-    uint32_t file_header;
-    uint16_t file_type;
-    uint32_t file_length;
-    char classification[1];
-    char origination_station[4];
-    char date_time[14];
-    char title[80];
-    char security_info[2];
-} nitf_header_t;
+// Define parsers for the NITF fields
+HParser *parse_string(int length) {
+    return h_repeat_n(h_ch_range(0x20, 0x7E), length);
+}
 
-HParser *nitf_header_parser(void) {
-    return h_sequence(
-        h_uint32(), // file_header
-        h_uint16(), // file_type
-        h_uint32(), // file_length
-        h_repeat(h_uint8(), 1), // classification
-        h_repeat(h_uint8(), 4), // origination_station
-        h_repeat(h_uint8(), 14), // date_time
-        h_repeat(h_uint8(), 80), // title
-        h_repeat(h_uint8(), 2), // security_info
+HParser *parse_date_time() {
+    return h_sequence(parse_string(14), NULL); // YYYYMMDDhhmmss format
+}
+
+HParser *parse_classification() {
+    return h_choice(
+        h_token("U", 1), // Unclassified
+        h_token("C", 1), // Confidential
+        h_token("S", 1), // Secret
+        h_token("TS", 2), // Top Secret
         NULL
     );
 }
 
-HParser *nitf_file_parser(void) {
+// Define the parser for the NITF file header
+HParser *nitf_file_header() {
     return h_sequence(
-        nitf_header_parser(),
-        // Add other segments or fields here as needed
+        parse_string(9),   // FHDR
+        parse_string(2),   // FVER
+        parse_string(2),   // CLEVEL
+        parse_string(10),  // STYPE
+        parse_string(10),  // OSTAID
+        parse_date_time(), // FDT
+        parse_string(80),  // FTITLE
+        h_repeat_n(h_uint8(), 24), // FSCOP, FSCPYS, ENCRYP, FBKGC
+        parse_classification(),    // FSCLAS
+        parse_string(2),           // FSCLSY
+        parse_string(11),          // FSCODE
         NULL
     );
 }
 
-int main(void) {
-    HParser *parser = nitf_file_parser();
-    // Add parsing logic here
-    h_parser_free(parser);
-    return 0;
+// Define the main function
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("fopen");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = (unsigned char *)malloc(length);
+    if (!data) {
+        perror("malloc");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    HParser *parser = nitf_file_header();
+    HParseResult *result = h_parse(parser, data, length);
+
+    if (result != NULL && result->ast != NULL) {
+        printf("NITF file parsed successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to parse NITF file.\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
+    return EXIT_SUCCESS;
 }

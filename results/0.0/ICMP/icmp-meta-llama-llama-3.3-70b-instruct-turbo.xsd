@@ -1,67 +1,119 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns="http://example.com/ICMP"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/ICMP" 
+           xmlns="http://example.com/ICMP" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="icmp">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="binary"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="ICMP">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="type" type="xs:unsignedByte" dfdl:representation="binary">
+        <xs:element name="Type" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-              <dfdl:outputPaddingKind ref="padded"/>
-              <dfdl:outputPaddingByte ref="0x00"/>
+              <dfdl:format ref="ICMPType"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="code" type="xs:unsignedByte" dfdl:representation="binary">
+        <xs:element name="Code" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-              <dfdl:outputPaddingKind ref="padded"/>
-              <dfdl:outputPaddingByte ref="0x00"/>
+              <dfdl:format ref="ICMPCode"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="checksum" type="xs:unsignedShort" dfdl:representation="binary">
+        <xs:element name="Checksum" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-              <dfdl:outputPaddingKind ref="padded"/>
-              <dfdl:outputPaddingByte ref="0x00"/>
+              <dfdl:format ref="ICMPChecksum"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="identifier" type="xs:unsignedShort" dfdl:representation="binary">
+        <xs:element name="Identifier" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-              <dfdl:outputPaddingKind ref="padded"/>
-              <dfdl:outputPaddingByte ref="0x00"/>
+              <dfdl:format ref="ICMPIdentifier"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:representation="binary">
+        <xs:element name="SequenceNumber" type="xs:unsignedShort">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-              <dfdl:outputPaddingKind ref="padded"/>
-              <dfdl:outputPaddingByte ref="0x00"/>
+              <dfdl:format ref="ICMPSequenceNumber"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="GatewayAddress" type="xs:unsignedInt" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="ICMPGatewayAddress"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Unused" type="xs:unsignedInt" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="ICMPUnused"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Timestamp" type="xs:unsignedInt" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="ICMPTimestamp"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Data" type="xs:hexBinary" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="ICMPData"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="MTU" type="xs:unsignedShort" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:format ref="ICMPMTU"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
+  <xs:element name="ICMPType" type="xs:unsignedByte">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:assert test="{ICMPType = 0}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 3}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 4}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 5}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 8}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 11}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 12}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 13}" message="Invalid ICMP type"/>
+        <dfdl:assert test="{ICMPType = 14}" message="Invalid ICMP type"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="ICMPCode" type="xs:unsignedByte">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:assert test="{ICMPCode = 0}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 1}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 2}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 3}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 4}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 5}" message="Invalid ICMP code for type 3"/>
+        <dfdl:assert test="{ICMPCode = 0}" message="Invalid ICMP code for type 5"/>
+        <dfdl:assert test="{ICMPCode = 1}" message="Invalid ICMP code for type 5"/>
+        <dfdl:assert test="{ICMPCode = 2}" message="Invalid ICMP code for type 5"/>
+        <dfdl:assert test="{ICMPCode = 3}" message="Invalid ICMP code for type 5"/>
+        <dfdl:assert test="{ICMPCode = 0}" message="Invalid ICMP code for type 11"/>
+        <dfdl:assert test="{ICMPCode = 1}" message="Invalid ICMP code for type 11"/>
+        <dfdl:assert test="{ICMPCode = 0}" message="Invalid ICMP code for type 12"/>
+        <dfdl:assert test="{ICMPCode = 1}" message="Invalid ICMP code for type 12"/>
+        <dfdl:assert test="{ICMPCode = 2}" message="Invalid ICMP code for type 12"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
 </xs:schema>

@@ -2,85 +2,112 @@ module MQTT;
 
 import spicy;
 
-public type Packet = unit {
-    var fixed_header: FixedHeader;
-    var variable_header: VariableHeader;
-    var payload: bytes &optional;
+type VarInt = unit {
+    value: bytes;
+};
 
-    : void {
-        self.fixed_header = fixed_header();
-        self.variable_header = variable_header(self.fixed_header.packet_type);
-    }
+type Properties = unit {
+    length: VarInt;
+    properties: list<Property>;
+};
 
-    type FixedHeader = unit {
-        packet_type: bitfield(8) {
-            packet_type: 4 &convert=PacketType($$);
-            flags: 4;
-        };
-        remaining_length: varlen_integer;
+type Property = unit {
+    identifier: VarInt;
+    value: PropertyValue(identifier.value);
+};
+
+type PropertyValue = unit(identifier: uint32) {
+    switch (identifier) {
+        0x11 => payload_format_indicator: uint8;
+        0x02 => message_expiry_interval: uint32;
+        0x23 => content_type: bytes;
+        0x08 => response_topic: bytes;
+        0x09 => correlation_data: bytes;
+        0x26 => subscription_identifier: VarInt;
+        0x21 => session_expiry_interval: uint32;
+        0x12 => server_keep_alive: uint16;
+        0x1F => authentication_method: bytes;
+        0x20 => authentication_data: bytes;
+        0x25 => request_problem_information: uint8;
+        0x17 => request_response_information: uint8;
+        0x22 => receive_maximum: uint16;
+        0x24 => topic_alias_maximum: uint16;
+        0x26 => topic_alias: uint16;
+        0x1A => user_properties: list<UserProperty>;
+        * => unknown_data: bytes;
     };
+};
 
-    type VariableHeader = unit {
-        var protocol_name: bytes &optional;
-        var protocol_version: uint8 &optional;
-        var connect_flags: bitfield(8) &optional;
-        var keep_alive: uint16 &optional;
-        var client_id: bytes &optional;
+type UserProperty = unit {
+    key: bytes;
+    value: bytes;
+};
 
-        init(type: PacketType) {
-            switch (type) {
-                PacketType::CONNECT -> {
-                    self.protocol_name = bytes(6) &convert=self.validate_protocol_name;
-                    self.protocol_version = uint8;
-                    self.connect_flags = bitfield(8);
-                    self.keep_alive = uint16;
-                    self.client_id = bytes_until_end();
-                }
-                PacketType::PUBLISH -> {
-                    # Topic name for publish
-                    self.protocol_name = bytes_until_end();
-                }
-                # Add other packet type handling as needed
-                * -> { }
-            }
-        }
-
-        function validate_protocol_name(name: bytes) : bytes {
-            if (name != b"MQTT") {
-                throw "Invalid MQTT protocol name";
-            }
-            return name;
-        }
+type Connect = unit {
+    protocol_name: bytes;
+    protocol_version: uint8;
+    connect_flags: bitfield(8) {
+        username_flag: 7..7;
+        password_flag: 6..6;
+        will_retain: 5..5;
+        will_qos: 3..4;
+        will_flag: 2..2;
+        clean_start: 1..1;
     };
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: bytes;
+    will_properties: Properties;
+    will_topic: bytes;
+    will_payload: bytes;
+    username: bytes;
+    password: bytes;
+};
 
-    enum PacketType : uint8 {
-        CONNECT = 1,
-        CONNACK = 2,
-        PUBLISH = 3,
-        PUBACK = 4,
-        PUBREC = 5,
-        PUBREL = 6,
-        PUBCOMP = 7,
-        SUBSCRIBE = 8,
-        SUBACK = 9,
-        UNSUBSCRIBE = 10,
-        UNSUBACK = 11,
-        PINGREQ = 12,
-        PINGRESP = 13,
-        DISCONNECT = 14
+type Publish = unit {
+    topic_name: bytes;
+    packet_identifier: uint16;
+    properties: Properties;
+    payload: bytes;
+};
+
+type Subscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    subscriptions: list<Subscription>;
+};
+
+type Subscription = unit {
+    topic_filter: bytes;
+    options: bitfield(8) {
+        max_qos: 0..1;
+        no_local: 2..2;
+        retain_as_published: 3..3;
+        retain_handling: 4..5;
     };
+};
 
-    function varlen_integer() : uint32 {
-        local multiplier = 1;
-        local value = 0;
-        local encoded_byte: uint8;
+type Unsubscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: list<bytes>;
+};
 
-        do {
-            encoded_byte = uint8;
-            value += (encoded_byte & 0x7F) * multiplier;
-            multiplier *= 0x80;
-        } while ((encoded_byte & 0x80) != 0);
+type Disconnect = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
 
-        return value;
-    }
+type Auth = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type MQTTPacket = unit {
+    packet_type: bitfield(8) {
+        type: 4..7;
+        flags: 0..3;
+    };
+    remaining_length: VarInt;
+    payload: bytes;
 };

@@ -1,17 +1,72 @@
-#ifndef __ZIP_GEMINI_1_5_FLASH_SPICY__
-#define __ZIP_GEMINI_1_5_FLASH_SPICY__
+module ZIP;
 
-#include <zeek/analyzer/protocol/http.zeek>
-
-event zeek_http_request(conn, http_req) {
-    if (http_req.method == "POST" && http_req.uri contains "/flash") {
-        // Add your logic here to handle the POST request to /flash
-        // This is where you would parse the data and check for malicious content.
-        // Example: Check for specific keywords or patterns in the request body.
-        if (http_req.body contains "malicious_keyword") {
-            alert("Malicious Flash content detected!");
-        }
-    }
+type zip_local_file_header {
+    4:uint32 signature = 0x04034b50;
+    2:uint16 version_needed_to_extract;
+    2:uint16 general_purpose_bit_flag;
+    2:uint16 compression_method;
+    4:uint32 last_modified_time;
+    4:uint32 last_modified_date;
+    4:uint32 crc32;
+    4:uint32 compressed_size;
+    4:uint32 uncompressed_size;
+    2:uint16 filename_length;
+    2:uint16 extra_field_length;
+    bytes filename[filename_length];
+    bytes extra_field[extra_field_length];
 }
 
-#endif
+type zip_central_directory_header {
+    4:uint32 signature = 0x02014b50;
+    2:uint16 version_made_by;
+    2:uint16 version_needed_to_extract;
+    2:uint16 general_purpose_bit_flag;
+    2:uint16 compression_method;
+    4:uint32 last_modified_time;
+    4:uint32 last_modified_date;
+    4:uint32 crc32;
+    4:uint32 compressed_size;
+    4:uint32 uncompressed_size;
+    2:uint16 filename_length;
+    2:uint16 extra_field_length;
+    2:uint16 file_comment_length;
+    2:uint16 disk_number_start;
+    2:uint16 internal_file_attributes;
+    4:uint32 external_file_attributes;
+    4:uint32 local_header_offset;
+    bytes filename[filename_length];
+    bytes extra_field[extra_field_length];
+    bytes file_comment[file_comment_length];
+}
+
+type zip_end_of_central_directory_record {
+    4:uint32 signature = 0x06054b50;
+    2:uint16 number_of_this_disk;
+    2:uint16 number_of_the_disk_with_the_start_of_the_central_directory;
+    2:uint16 total_number_of_entries_in_the_central_directory_on_this_disk;
+    2:uint16 total_number_of_entries_in_the_central_directory;
+    4:uint32 size_of_the_central_directory;
+    4:uint32 offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
+    2:uint16 zip_file_comment_length;
+    bytes zip_file_comment[zip_file_comment_length];
+}
+
+type zip_file {
+    zip_local_file_header local_header;
+    bytes compressed_data[local_header.compressed_size];
+    optional zip_data_descriptor data_descriptor;
+}
+
+type zip_data_descriptor {
+    4:uint32 signature = 0x08074b50;
+    4:uint32 crc32;
+    4:uint32 compressed_size;
+    4:uint32 uncompressed_size;
+}
+
+type zip_archive {
+    vector<zip_file> files;
+    zip_end_of_central_directory_record end_of_central_directory;
+}
+
+end

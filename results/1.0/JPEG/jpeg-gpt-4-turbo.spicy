@@ -1,38 +1,88 @@
 module JPEG;
 
-public type JFIFVersion = unit {
-    major: uint8;
-    minor: uint8;
-    patch: uint16;
+public type Marker = unit {
+    marker: uint16;
 };
 
-public type JFIFExtension = unit {
-    code: uint8;
-    data: bytes &size=10;
+public type SOI = unit {
+    : Marker(0xFFD8);
 };
 
-public type Chunk = unit {
-    size: uint16;
-    content: bytes &size=(this.size - 2);
+public type EOI = unit {
+    : Marker(0xFFD9);
 };
 
-public type Header = unit {
-    soi: uint16; # Start of image (0xFFD8)
-    app0: uint16; # Application segment marker (0xFFE0)
-    length: uint16;
-    identifier: bytes &size=5;
-    version: JFIFVersion;
-    units: uint8;
-    Xdensity: uint16;
-    Ydensity: uint16;
-    Xthumbnail: uint8;
-    Ythumbnail: uint8;
-    thumbnail: bytes &size=((uint(this.Xthumbnail) * uint(this.Ythumbnail)) * 3);
-    extensions: JFIFExtension[];
-    data: bytestring &restofdata;
+public type QuantTable = unit {
+    precision : uint4;
+    id        : uint4;
+    values    : uint8[64];
+};
+
+public type DQT = unit {
+    : Marker(0xFFDB);
+    length   : uint16;
+    tables   : QuantTable[] &size=(length - 2) / 65;
+};
+
+public type FrameComponent = unit {
+    id                  : uint8;
+    sampling_factors    : uint8;
+    quantization_id     : uint8;
+};
+
+public type SOFn = unit {
+    : Marker;
+    length          : uint16;
+    precision       : uint8;
+    height          : uint16;
+    width           : uint16;
+    num_components  : uint8;    
+    components      : FrameComponent[] &size=num_components;
+};
+
+public type DHTEntry = unit {
+    num_codes   : uint8;
+    symbols     : bytes &size=num_codes;
+};
+
+public type DHT = unit {
+    : Marker(0xFFC4);
+    length      : uint16;
+    table_info  : uint8;
+    entries     : DHTEntry[] &eager &size=((length - 19) / 17); // Adjusted calculation to avoid syntax error
+};
+
+public type ScanComponent = unit {
+    component_id              : uint8;
+    huffman_table_selector    : uint8;
+};
+
+public type SOS = unit {
+    : Marker(0xFFDA);
+    length                   : uint16;
+    num_components           : uint8;
+    components               : ScanComponent[] &size=num_components;
+    start_spectral           : uint8;
+    end_spectral             : uint8;
+    approximation            : uint8;
+};
+
+public type AppMarker = unit {
+    : Marker;
+    length  : uint16;
+    content : bytes &size=(length - 2);
 };
 
 public type JPEGFile = unit {
-    header: Header;
-    chunks: Chunk[] &until($input.length() == 0);
+    segments : unit {
+        start       : SOI;
+        appMarkers  : AppMarker[] &until(!((($$[-1].marker & 0xFFF0) == 0xFFE0) && ($$[-1].length != 0)));
+        frame       : SOFn;
+        dqt         : DQT[];
+        optionalDht : DHT[] &optional;
+        sos         : SOS;
+        imageData   : bytes &size=(stream.length() - stream.position() - 2);
+    } &size=stream.length() - 2;
+
+    endOfImage : EOI;
 };

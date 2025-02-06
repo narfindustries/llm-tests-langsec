@@ -1,81 +1,42 @@
-# Spicy specification for GZIP file format
-
-type GzipFile = record {
-    magic_number: uint16 = 0x8b1f,
-    compression_method: uint8 = 8,
-    flags: uint8,
-    modification_time: uint32,
-    extra_flags: uint8,
-    operating_system: uint8,
-    filename_length: uint16,
-    extra_field_length: uint16,
-    compressed_data: bytes,
-    crc32: uint32,
-    isi_size: uint32,
-};
+module GZIP;
 
 type GzipHeader = record {
-    magic_number: uint16 = 0x8b1f,
-    compression_method: uint8 = 8,
-    flags: uint8,
-    modification_time: uint32,
-    extra_flags: uint8,
-    operating_system: uint8,
+  id1: uint8 = 0x1F;
+  id2: uint8 = 0x8B;
+  cm: uint8 = 0x08;
+  flags: uint8;
+  mtime: uint32;
+  xfl: uint8;
+  os: uint8;
 };
 
-type GzipFooter = record {
-    crc32: uint32,
-    isi_size: uint32,
+type GzipExtra = record {
+  xlen: uint16;
+  extra: bytestring &length=xlen;
+} &if flags&0x04 != 0;
+
+type GzipFilename = record {
+  fname: bytestring &until=(this[-1] == 0x00);
+} &if flags&0x08 != 0;
+
+type GzipComment = record {
+  fcomment: bytestring &until=(this[-1] == 0x00);
+} &if flags&0x10 != 0;
+
+type GzipHeaderCRC = record {
+  hcrc: uint16;
+} &if flags&0x02 != 0;
+
+type GzipData = record {
+  compr: bytestring;
+  isize: uint32;
 };
 
-function parse_gzip_data(data: bytes): GzipFile {
-    var gzip_file: GzipFile;
-    var header: GzipHeader;
-    var footer: GzipFooter;
-
-    # Parse GZIP header
-    header = parse_gzip_header(data);
-
-    # Read compressed data
-    var compressed_data_length: uint32 = data.length - sizeof(GzipHeader) - sizeof(GzipFooter);
-    gzip_file.compressed_data = data[ sizeof(GzipHeader) : compressed_data_length ];
-
-    # Parse GZIP footer
-    footer = parse_gzip_footer(data[ compressed_data_length : ]);
-
-    # Set CRC32 and ISIZE in GzipFile
-    gzip_file.crc32 = footer.crc32;
-    gzip_file.isi_size = footer.isi_size;
-
-    return gzip_file;
-}
-
-function parse_gzip_header(data: bytes): GzipHeader {
-    var header: GzipHeader;
-
-    header.magic_number = uint16(data[0:2]);
-    header.compression_method = uint8(data[2:3]);
-    header.flags = uint8(data[3:4]);
-    header.modification_time = uint32(data[4:8]);
-    header.extra_flags = uint8(data[8:9]);
-    header.operating_system = uint8(data[9:10]);
-
-    return header;
-}
-
-function parse_gzip_footer(data: bytes): GzipFooter {
-    var footer: GzipFooter;
-
-    footer.crc32 = uint32(data[ data.length - 4 : data.length - 2 ]);
-    footer.isi_size = uint32(data[ data.length - 2 : ]);
-
-    return footer;
-}
-
-event zeek_init() {
-    print("GZIP parser initialized");
-}
-
-event zeek_done() {
-    print("GZIP parser exited");
-}
+type GzipFile = record {
+  header: GzipHeader;
+  extra: GzipExtra;
+  filename: GzipFilename;
+  comment: GzipComment;
+  header_crc: GzipHeaderCRC;
+  data: GzipData;
+} &byteorder=little;

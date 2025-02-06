@@ -1,79 +1,65 @@
 use nom::{
-    bits::{bits, complete::take},
-    bytes::complete::take as take_bytes,
+    number::complete::{be_f64, be_u8, be_u32},
     IResult,
 };
-use std::env;
 use std::fs::File;
 use std::io::{self, Read};
+use std::env;
 
 #[derive(Debug)]
-struct NtpPacket {
-    li: u8,
-    vn: u8,
+struct NTPPacket {
+    leap_indicator: u8,
+    version_number: u8,
     mode: u8,
     stratum: u8,
     poll: i8,
     precision: i8,
-    root_delay: u32,
-    root_dispersion: u32,
-    reference_id: u32,
-    reference_timestamp: u64,
-    originate_timestamp: u64,
-    receive_timestamp: u64,
-    transmit_timestamp: u64,
+    root_delay: f64,
+    root_dispersion: f64,
+    reference_identifier: u32,
+    reference_timestamp: f64,
+    origin_timestamp: f64,
+    receive_timestamp: f64,
+    transmit_timestamp: f64,
 }
 
-fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    let (input, (li_vn_mode, stratum, poll, precision)) = bits::<_, _, nom::error::Error<(&[u8], usize)>, _>((
-        take::<_, u8, _, _>(2usize),
-        take::<_, u8, _, _>(3usize),
-        take::<_, u8, _, _>(3usize),
-        take_bytes(1usize),
-        take_bytes(1usize),
-        take_bytes(1usize),
-        take_bytes(1usize),
-    ))(input)?;
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NTPPacket> {
+    let (input, first_byte) = be_u8(input)?;
+    let leap_indicator = first_byte >> 6;
+    let version_number = (first_byte & 0x38) >> 3;
+    let mode = first_byte & 0x07;
 
-    let li = li_vn_mode.0;
-    let vn = li_vn_mode.1;
-    let mode = li_vn_mode.2;
+    let (input, stratum) = be_u8(input)?;
+    let (input, poll) = be_u8(input)?;
+    let (input, precision) = be_u8(input)?;
 
-    let (input, root_delay) = take_bytes::<_, _, nom::error::Error<&[u8]>>(4usize)(input)?;
-    let root_delay = u32::from_be_bytes(root_delay.try_into().unwrap());
+    let (input, root_delay) = be_u32(input)?;
+    let root_delay = root_delay as f64 / (1 << 16) as f64;
 
-    let (input, root_dispersion) = take_bytes::<_, _, nom::error::Error<&[u8]>>(4usize)(input)?;
-    let root_dispersion = u32::from_be_bytes(root_dispersion.try_into().unwrap());
+    let (input, root_dispersion) = be_u32(input)?;
+    let root_dispersion = root_dispersion as f64 / (1 << 16) as f64;
 
-    let (input, reference_id) = take_bytes::<_, _, nom::error::Error<&[u8]>>(4usize)(input)?;
-    let reference_id = u32::from_be_bytes(reference_id.try_into().unwrap());
+    let (input, reference_identifier) = be_u32(input)?;
 
-    let (input, reference_timestamp) = take_bytes::<_, _, nom::error::Error<&[u8]>>(8usize)(input)?;
-    let reference_timestamp = u64::from_be_bytes(reference_timestamp.try_into().unwrap());
-
-    let (input, originate_timestamp) = take_bytes::<_, _, nom::error::Error<&[u8]>>(8usize)(input)?;
-    let originate_timestamp = u64::from_be_bytes(originate_timestamp.try_into().unwrap());
-
-    let (input, receive_timestamp) = take_bytes::<_, _, nom::error::Error<&[u8]>>(8usize)(input)?;
-    let receive_timestamp = u64::from_be_bytes(receive_timestamp.try_into().unwrap());
-
-    let (input, transmit_timestamp) = take_bytes::<_, _, nom::error::Error<&[u8]>>(8usize)(input)?;
-    let transmit_timestamp = u64::from_be_bytes(transmit_timestamp.try_into().unwrap());
+    let (input, reference_timestamp) = be_f64(input)?;
+    let (input, origin_timestamp) = be_f64(input)?;
+    let (input, receive_timestamp) = be_f64(input)?;
+    let (input, transmit_timestamp) = be_f64(input)?;
 
     Ok((
         input,
-        NtpPacket {
-            li,
-            vn,
+        NTPPacket {
+            leap_indicator,
+            version_number,
             mode,
             stratum,
-            poll,
-            precision,
+            poll: poll as i8,
+            precision: precision as i8,
             root_delay,
             root_dispersion,
-            reference_id,
+            reference_identifier,
             reference_timestamp,
-            originate_timestamp,
+            origin_timestamp,
             receive_timestamp,
             transmit_timestamp,
         },
@@ -92,8 +78,12 @@ fn main() -> io::Result<()> {
     file.read_to_end(&mut buffer)?;
 
     match parse_ntp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(e) => eprintln!("Failed to parse NTP packet: {:?}", e),
+        Ok((_, packet)) => {
+            println!("{:#?}", packet);
+        }
+        Err(e) => {
+            eprintln!("Failed to parse NTP packet: {:?}", e);
+        }
     }
 
     Ok(())

@@ -1,0 +1,122 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- PNG Signature -->
+  <xs:element name="PNGSignature" dfdl:lengthKind="explicit" dfdl:length="8">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:assert>{. eq '\x89PNG\r\n\x1a\n'}</dfdl:assert>
+      </xs:appinfo>
+    </xs:annotation>
+    <xs:simpleType>
+      <xs:restriction base="xs:hexBinary">
+        <xs:length value="8"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+
+  <!-- Chunk Structure -->
+  <xs:element name="Chunk">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="Type" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="Data" dfdl:lengthKind="explicit" dfdl:length="{../Length}">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:choice>
+                <xs:element name="IHDR" type="IHDRType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'IHDR'}"/>
+                <xs:element name="IDAT" type="IDATType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'IDAT'}"/>
+                <xs:element name="IEND" type="IENDType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'IEND'}"/>
+                <xs:element name="PLTE" type="PLTEType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'PLTE'}"/>
+                <xs:element name="tRNS" type="tRNSType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'tRNS'}"/>
+                <xs:element name="gAMA" type="gAMAType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'gAMA'}"/>
+                <xs:element name="cHRM" type="cHRMType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'cHRM'}"/>
+                <xs:element name="sRGB" type="sRGBType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq '极sRGB'}"/>
+                <xs:element name="iCCP" type="iCCPType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'iCCP'}"/>
+                <xs:element name="tEXt" type="tEXtType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'tEXt'}"/>
+                <xs:极element name="zTXt" type="zTXtType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'zTXt'}"/>
+                <xs:element name="iTXt" type="iTXtType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'iTXt'}"/>
+                <xs:element name="bKGD" type="bKGDType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'bKGD'}"/>
+                <xs:element name="pHYs" type="pHYsType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'pHYs'}"/>
+                <xs:element name="sBIT" type="sBITType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'sBIT'}"/>
+                <xs:element name="hIST" type="hISTType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'hIST'}"/>
+                <xs:element name="tIME" type="tIMEType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'tIME'}"/>
+                <xs:element name="sPLT" type="sPLTType" dfdl:occurs="1" dfdl:choiceDispatchKey="{../Type eq 'sPLT'}"/>
+              </xs:choice>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- IHDR Chunk -->
+  <xs:complexType name="IHDRType">
+    <xs:sequence>
+      <xs:element name="Width" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="Height" type极="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="BitDepth" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="ColorType" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="FilterMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="InterlaceMethod" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- IDAT Chunk -->
+  <xs:complexType name="IDATType">
+    <xs:sequence>
+      <xs:element name="CompressedData" dfdl:lengthKind="explicit" dfdl:length="{../Length}">
+        <xs:simpleType>
+          <xs:restriction base="xs:hexBinary"/>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- IEND Chunk -->
+  <xs:complexType name="IENDType">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <!-- PLTE Chunk -->
+  <xs:complexType name="PLTEType">
+    <xs:sequence>
+      <xs:element name="PaletteEntry" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Red" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            <xs:element name="Green" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+            <xs:element name="Blue" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- tRNS Chunk -->
+  <xs:complexType name="tRNSType">
+    <xs:sequence>
+      <xs:choice>
+        <xs:element name="Grayscale" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="Truecolor" dfdl:lengthKind="explicit" dfdl:length="6">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Red" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+              <xs:element name="Green" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+              <xs:element name="Blue" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Palette" dfdl:lengthKind="explicit" dfdl:length="{../Length}">
+          <xs:simpleType>
+            <xs:restriction base="xs:unsignedByte"/>
+          </xs:simpleType>
+        </xs:element>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- gAMA Chunk -->
+  <xs:complex

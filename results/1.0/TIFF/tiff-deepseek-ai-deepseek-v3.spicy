@@ -1,0 +1,60 @@
+module TIFF;
+
+public type FileHeader = unit {
+    byte_order: uint16 &convert=($$ == 0x4949 ? "LittleEndian" : "BigEndian") &requires=($$ == 0x4949 || $$ == 0x4D4D);
+    version:    uint16 &requires=($$ == 42);
+    ifd_offset: uint32;
+};
+
+public type IFDEntry = unit {
+    tag:     uint16;
+    type:    uint16 &convert=(
+        ($$ == 1)  ? "BYTE"     :
+        ($$ == 2)  ? "ASCII"    :
+        ($$ == 3)  ? "SHORT"    :
+        ($$ == 4)  ? "LONG"     :
+        ($$ == 5)  ? "RATIONAL" :
+        ($$ == 6)  ? "SBYTE"    :
+        ($$ == 7)  ? "UNDEFINED":
+        ($$ == 8)  ? "SSHORT"   :
+        ($$ == 9)  ? "SLONG"    :
+        ($$ == 10) ? "SRATIONAL":
+        ($$ == 11) ? "FLOAT"    :
+        ($$ == 12) ? "DOUBLE"   :
+                     "UNKNOWN");
+    count:   uint32;
+    value:   case (type) of {
+        "BYTE"      => b:  uint8[count];
+        "ASCII"     => s:  bytes[count] &convert=to_string($$);
+        "SHORT"     => h:  uint16[count];
+        "LONG"      => l:  uint32[count];
+        "RATIONAL"  => r:  uint32[2 * count] &convert=$$[0] / $$[1];
+        "SBYTE"     => sb: int8[count];
+        "UNDEFINED" => u:  bytes[count];
+        "SSHORT"    => sh: int16[count];
+        "SLONG"     => sl: int32[count];
+        "SRATIONAL" => sr: int32[2 * count] &convert=$$[0] / $$[1];
+        "FLOAT"     => f:  float[count];
+        "DOUBLE"    => d:  double[count];
+        *           => u:  bytes[count];
+    };
+    offset:  uint32;
+};
+
+public type IFD = unit {
+    num_entries: uint16;
+    entries: IFDEntry[num_entries];
+    next_ifd_offset: uint32;
+};
+
+public type TIFF = unit {
+    header: FileHeader;
+    ifds: IFD[] &until($$.next_ifd_offset == 0);
+};
+
+on TIFF::FileHeader::%done {
+    if ( self.byte_order == "LittleEndian" )
+        spicy::set_byteorder(spicy::ByteOrder::Little);
+    else
+        spicy::set_byteorder(spicy::ByteOrder::Big);
+};

@@ -1,12 +1,7 @@
 use nom::{
-    bytes::complete::{take, take_while},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::tuple,
+    number::complete::{be_u16, be_u32},
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
 
 #[derive(Debug)]
 struct DNSHeader {
@@ -18,8 +13,6 @@ struct DNSHeader {
     rd: u8,
     ra: u8,
     z: u8,
-    ad: u8,
-    cd: u8,
     rcode: u8,
     qdcount: u16,
     ancount: u16,
@@ -28,17 +21,17 @@ struct DNSHeader {
 }
 
 #[derive(Debug)]
-struct Question {
+struct DNSQuestion {
     qname: Vec<u8>,
     qtype: u16,
     qclass: u16,
 }
 
 #[derive(Debug)]
-struct ResourceRecord {
+struct DNSRecord {
     name: Vec<u8>,
     rtype: u16,
-    rclass: u16,
+    class: u16,
     ttl: u32,
     rdlength: u16,
     rdata: Vec<u8>,
@@ -47,24 +40,28 @@ struct ResourceRecord {
 #[derive(Debug)]
 struct DNSPacket {
     header: DNSHeader,
-    questions: Vec<Question>,
-    answers: Vec<ResourceRecord>,
-    authorities: Vec<ResourceRecord>,
-    additionals: Vec<ResourceRecord>,
+    questions: Vec<DNSQuestion>,
+    answers: Vec<DNSRecord>,
+    authorities: Vec<DNSRecord>,
+    additionals: Vec<DNSRecord>,
 }
 
 fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
-    let (input, (id, flags, qdcount, ancount, nscount, arcount)) = tuple((be_u16, be_u16, be_u16, be_u16, be_u16, be_u16))(input)?;
-    let qr = (flags >> 15) & 0x1;
-    let opcode = (flags >> 11) & 0xF;
-    let aa = (flags >> 10) & 0x1;
-    let tc = (flags >> 9) & 0x1;
-    let rd = (flags >> 8) & 0x1;
-    let ra = (flags >> 7) & 0x1;
-    let z = (flags >> 6) & 0x1;
-    let ad = (flags >> 5) & 0x1;
-    let cd = (flags >> 4) & 0x1;
-    let rcode = flags & 0xF;
+    let (input, id) = be_u16(input)?;
+    let (input, flags) = be_u16(input)?;
+    let (input, qdcount) = be_u16(input)?;
+    let (input, ancount) = be_u16(input)?;
+    let (input, nscount) = be_u16(input)?;
+    let (input, arcount) = be_u16(input)?;
+
+    let qr = ((flags >> 15) & 0x01) as u8;
+    let opcode = ((flags >> 11) & 0x0F) as u8;
+    let aa = ((flags >> 10) & 0x01) as u8;
+    let tc = ((flags >> 9) & 0x01) as u8;
+    let rd = ((flags >> 8) & 0x01) as u8;
+    let ra = ((flags >> 7) & 0x01) as u8;
+    let z = ((flags >> 4) & 0x07) as u8;
+    let rcode = (flags & 0x0F) as u8;
 
     Ok((
         input,
@@ -77,8 +74,6 @@ fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
             rd,
             ra,
             z,
-            ad,
-            cd,
             rcode,
             qdcount,
             ancount,
@@ -88,70 +83,71 @@ fn parse_dns_header(input: &[u8]) -> IResult<&[u8], DNSHeader> {
     ))
 }
 
-fn parse_question(input: &[u8]) -> IResult<&[u8], Question> {
-    let (input, qname) = take_while(|b: u8| b != 0)(input)?;
-    let (input, _) = take(1usize)(input)?;
-    let (input, (qtype, qclass)) = tuple((be_u16, be_u16))(input)?;
+fn parse_dns_question(input: &[u8], count: u16) -> IResult<&[u8], Vec<DNSQuestion>> {
+    let mut input = input;
+    let mut questions = Vec::new();
 
-    Ok((
-        input,
-        Question {
-            qname: qname.to_vec(),
+    for _ in 0..count {
+        let (next_input, qname) = parse_qname(input)?;
+        let (next_input, qtype) = be_u16(next_input)?;
+        let (next_input, qclass) = be_u16(next_input)?;
+        questions.push(DNSQuestion {
+            qname,
             qtype,
             qclass,
-        },
-    ))
+        });
+        input = next_input;
+    }
+
+    Ok((input, questions))
 }
 
-fn parse_rr(input: &[u8]) -> IResult<&[u8], ResourceRecord> {
-    let (input, name) = take_while(|b: u8| b != 0)(input)?;
-    let (input, _) = take(1usize)(input)?;
-    let (input, (rtype, rclass, ttl, rdlength)) = tuple((be_u16, be_u16, be_u32, be_u16))(input)?;
-    let (input, rdata) = take(rdlength)(input)?;
+fn parse_qname(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let mut input = input;
+    let mut qname = Vec::new();
+    loop {
+        let (next_input, length) = nom::number::complete::be_u8(input)?;
+        if length == 0 {
+            break;
+        }
+        let (next_input, label) = nom::bytes::complete::take(length)(next_input)?;
+        qname.extend_from_slice(label);
+        input = next_input;
+    }
+    Ok((input, qname))
+}
 
-    Ok((
-        input,
-        ResourceRecord {
-            name: name.to_vec(),
+fn parse_dns_record(input: &[u8], count: u16) -> IResult<&[u8], Vec<DNSRecord>> {
+    let mut input = input;
+    let mut records = Vec::new();
+
+    for _ in 0..count {
+        let (next_input, name) = parse_qname(input)?;
+        let (next_input, rtype) = be_u16(next_input)?;
+        let (next_input, class) = be_u16(next_input)?;
+        let (next_input, ttl) = be_u32(next_input)?;
+        let (next_input, rdlength) = be_u16(next_input)?;
+        let (next_input, rdata) = nom::bytes::complete::take(rdlength)(next_input)?;
+        records.push(DNSRecord {
+            name,
             rtype,
-            rclass,
+            class,
             ttl,
             rdlength,
             rdata: rdata.to_vec(),
-        },
-    ))
+        });
+        input = next_input;
+    }
+
+    Ok((input, records))
 }
 
 fn parse_dns_packet(input: &[u8]) -> IResult<&[u8], DNSPacket> {
     let (input, header) = parse_dns_header(input)?;
-    let mut input = input;
-    let mut questions = Vec::new();
-    for _ in 0..header.qdcount {
-        let (new_input, question) = parse_question(input)?;
-        questions.push(question);
-        input = new_input;
-    }
-
-    let mut answers = Vec::new();
-    for _ in 0..header.ancount {
-        let (new_input, rr) = parse_rr(input)?;
-        answers.push(rr);
-        input = new_input;
-    }
-
-    let mut authorities = Vec::new();
-    for _ in 0..header.nscount {
-        let (new_input, rr) = parse_rr(input)?;
-        authorities.push(rr);
-        input = new_input;
-    }
-
-    let mut additionals = Vec::new();
-    for _ in 0..header.arcount {
-        let (new_input, rr) = parse_rr(input)?;
-        additionals.push(rr);
-        input = new_input;
-    }
+    let (input, questions) = parse_dns_question(input, header.qdcount)?;
+    let (input, answers) = parse_dns_record(input, header.ancount)?;
+    let (input, authorities) = parse_dns_record(input, header.nscount)?;
+    let (input, additionals) = parse_dns_record(input, header.arcount)?;
 
     Ok((
         input,
@@ -165,23 +161,21 @@ fn parse_dns_packet(input: &[u8]) -> IResult<&[u8], DNSPacket> {
     ))
 }
 
-fn main() -> io::Result<()> {
+fn main() {
+    use std::env;
+    use std::fs;
+
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Usage: dns_parser <file_path>",
-        ));
+        eprintln!("Usage: {} <file>", args[0]);
+        std::process::exit(1);
     }
 
-    let mut file = File::open(&args[1])?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let filename = &args[1];
+    let data = fs::read(filename).expect("Failed to read file");
 
-    match parse_dns_packet(&buffer) {
+    match parse_dns_packet(&data) {
         Ok((_, packet)) => println!("{:#?}", packet),
-        Err(e) => println!("Failed to parse DNS packet: {:?}", e),
+        Err(e) => eprintln!("Failed to parse DNS packet: {:?}", e),
     }
-
-    Ok(())
 }

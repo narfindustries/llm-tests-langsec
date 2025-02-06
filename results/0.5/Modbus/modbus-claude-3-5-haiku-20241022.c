@@ -2,71 +2,143 @@
 #include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
 
-// Modbus Function Code Parser
-static HParser* modbus_function_code() {
-    return h_choice(
-        h_literal_uint(0x01),  // Read Coils
-        h_literal_uint(0x02),  // Read Discrete Inputs
-        h_literal_uint(0x03),  // Read Holding Registers
-        h_literal_uint(0x04),  // Read Input Registers
-        h_literal_uint(0x05),  // Write Single Coil
-        h_literal_uint(0x06),  // Write Single Register
-        h_literal_uint(0x0F),  // Write Multiple Coils
-        h_literal_uint(0x10),  // Write Multiple Registers
+typedef enum {
+    READ_COILS = 0x01,
+    READ_DISCRETE_INPUTS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    WRITE_SINGLE_COIL = 0x05,
+    WRITE_SINGLE_REGISTER = 0x06,
+    WRITE_MULTIPLE_COILS = 0x0F,
+    WRITE_MULTIPLE_REGISTERS = 0x10,
+    MASK_WRITE_REGISTER = 0x16,
+    READ_WRITE_MULTIPLE_REGISTERS = 0x17
+} ModbusFunctionCode;
+
+typedef enum {
+    ILLEGAL_FUNCTION = 0x01,
+    ILLEGAL_DATA_ADDRESS = 0x02,
+    ILLEGAL_DATA_VALUE = 0x03,
+    SLAVE_DEVICE_FAILURE = 0x04,
+    ACKNOWLEDGE = 0x05,
+    SLAVE_DEVICE_BUSY = 0x06,
+    NEGATIVE_ACKNOWLEDGE = 0x07,
+    MEMORY_PARITY_ERROR = 0x08
+} ModbusExceptionCode;
+
+typedef struct {
+    uint8_t slave_address;
+    ModbusFunctionCode function_code;
+    uint16_t starting_address;
+    uint16_t quantity;
+    uint8_t byte_count;
+    uint8_t* data;
+    uint16_t crc;
+} ModbusFrame;
+
+static HParsedToken* parse_slave_address(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint8_t*)p->ast);
+}
+
+static HParsedToken* parse_function_code(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint8_t*)p->ast);
+}
+
+static HParsedToken* parse_starting_address(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint16_t*)p->ast);
+}
+
+static HParsedToken* parse_quantity(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint16_t*)p->ast);
+}
+
+static HParsedToken* parse_byte_count(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint8_t*)p->ast);
+}
+
+static HParsedToken* parse_data(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_seq(arena);
+}
+
+static HParsedToken* parse_crc(const HParseResult* p, void* user_data) {
+    HArena* arena = h_new_arena();
+    return h_make_uint(arena, *(uint16_t*)p->ast);
+}
+
+HParser* modbus_parser() {
+    HParser* slave_address = h_action(h_uint8(), parse_slave_address, NULL);
+    HParser* function_code = h_action(h_uint8(), parse_function_code, NULL);
+    HParser* starting_address = h_action(h_uint16_big(), parse_starting_address, NULL);
+    HParser* quantity = h_action(h_uint16_big(), parse_quantity, NULL);
+    HParser* byte_count = h_action(h_uint8(), parse_byte_count, NULL);
+    HParser* data = h_action(h_many(h_uint8()), parse_data, NULL);
+    HParser* crc = h_action(h_uint16_big(), parse_crc, NULL);
+
+    HParser* modbus_frame = h_sequence(
+        slave_address,
+        function_code,
+        starting_address,
+        quantity,
+        byte_count,
+        data,
+        crc,
         NULL
     );
+
+    return modbus_frame;
 }
 
-// Modbus Address Parser
-static HParser* modbus_address() {
-    return h_uint16();
-}
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <modbus_binary_file>\n", argv[0]);
+        return 1;
+    }
 
-// Modbus Quantity Parser
-static HParser* modbus_quantity() {
-    return h_uint16();
-}
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-// Modbus Data Value Parser
-static HParser* modbus_data_value() {
-    return h_uint16();
-}
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-// Complete Modbus Request Parser
-static HParser* modbus_request_parser() {
-    return h_sequence(
-        modbus_function_code(),   // Function Code
-        modbus_address(),         // Starting Address
-        modbus_quantity(),        // Quantity of Registers/Coils
-        h_end_p(),
-        NULL
-    );
-}
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
 
-// Complete Modbus Response Parser
-static HParser* modbus_response_parser() {
-    return h_sequence(
-        modbus_function_code(),   // Function Code
-        h_uint8(),                // Byte Count
-        h_repeat(modbus_data_value(), 1, 125),  // Data Values
-        h_end_p(),
-        NULL
-    );
-}
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fclose(file);
 
-int main(int argc, char** argv) {
-    // Initialize Hammer
-    hammer_init();
+    if (bytes_read != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        return 1;
+    }
 
-    // Create parsers
-    HParser* request_parser = modbus_request_parser();
-    HParser* response_parser = modbus_response_parser();
+    HParser* parser = modbus_parser();
+    HParseResult* result = h_parse(parser, buffer, bytes_read);
 
-    // Cleanup
-    h_destroy_parser(request_parser);
-    h_destroy_parser(response_parser);
+    if (result) {
+        printf("Modbus frame parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Modbus frame parsing failed\n");
+    }
 
+    h_parser_free(parser);
+    free(buffer);
     return 0;
 }

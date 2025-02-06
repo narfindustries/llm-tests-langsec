@@ -1,86 +1,169 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:network-time-protocol-v4"
-           xmlns:ntp="urn:network-time-protocol-v4">
+           targetNamespace="urn:ntp:v4">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
       <dfdl:format
-        alignmentUnits="bytes"
         alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        initiator=""
-        terminator=""
-        separator=""
-        separatorPosition="infix"
-        separatorPolicy="suppressed"
-        representation="binary"
-        encoding="US-ASCII"
+        alignmentUnits="bits"
+        bitOrder="mostSignificantBitFirst"
         byteOrder="bigEndian"
-        binaryNumberRep="binary"
-        escapeSchemeRef=""
-        occursCountKind="parsed"
-        textNumberRep="standard"/>
+        encoding="UTF-8"
+        fillByte="%#r00"
+        representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="NTPPacket" dfdl:lengthKind="implicit">
+  <xs:element name="NTPPacket" dfdl:lengthKind="explicit" dfdl:length="384">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="LeapIndicator" type="xs:unsignedByte" 
-          dfdl:length="2" 
-          dfdl:lengthKind="explicit"/>
+        <xs:element name="Header">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="LeapIndicator">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Value">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:unsignedByte">
+                          <xs:enumeration value="0"/>
+                          <xs:enumeration value="1"/>
+                          <xs:enumeration value="2"/>
+                          <xs:enumeration value="3"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="2"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="VersionNumber">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Value">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:unsignedByte">
+                          <xs:enumeration value="3"/>
+                          <xs:enumeration value="4"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="3"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="Mode">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Value">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:unsignedByte">
+                          <xs:enumeration value="0"/>
+                          <xs:enumeration value="1"/>
+                          <xs:enumeration value="2"/>
+                          <xs:enumeration value="3"/>
+                          <xs:enumeration value="4"/>
+                          <xs:enumeration value="5"/>
+                          <xs:enumeration value="6"/>
+                          <xs:enumeration value="7"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="3"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="Stratum">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Value">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:unsignedByte">
+                          <xs:enumeration value="0"/>
+                          <xs:enumeration value="1"/>
+                          <xs:minInclusive value="2"/>
+                          <xs:maxInclusive value="255"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="8"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="PollInterval" type="xs:byte" dfdl:length="8"/>
+              <xs:element name="Precision" type="xs:byte" dfdl:length="8"/>
+              <xs:element name="RootDelay" type="xs:float" dfdl:length="32"/>
+              <xs:element name="RootDispersion" type="xs:float" dfdl:length="32"/>
+              <xs:element name="ReferenceIdentifier" type="xs:string" dfdl:length="32" dfdl:encoding="ASCII"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
         
-        <xs:element name="VersionNumber" type="xs:unsignedByte" 
-          dfdl:length="3" 
-          dfdl:lengthKind="explicit"/>
+        <xs:element name="Timestamps">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ReferenceTimestamp">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Seconds" type="xs:unsignedInt" dfdl:length="32"/>
+                    <xs:element name="Fraction" type="xs:unsignedInt" dfdl:length="32"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="OriginateTimestamp">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Seconds" type="xs:unsignedInt" dfdl:length="32"/>
+                    <xs:element name="Fraction" type="xs:unsignedInt" dfdl:length="32"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ReceiveTimestamp">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Seconds" type="xs:unsignedInt" dfdl:length="32"/>
+                    <xs:element name="Fraction" type="xs:unsignedInt" dfdl:length="32"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="TransmitTimestamp">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Seconds" type="xs:unsignedInt" dfdl:length="32"/>
+                    <xs:element name="Fraction" type="xs:unsignedInt" dfdl:length="32"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
         
-        <xs:element name="Mode" type="xs:unsignedByte" 
-          dfdl:length="3" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="Stratum" type="xs:unsignedByte" 
-          dfdl:length="8" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="PollInterval" type="xs:byte" 
-          dfdl:length="8" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="Precision" type="xs:byte" 
-          dfdl:length="8" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="RootDelay" type="xs:int" 
-          dfdl:length="32" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="RootDispersion" type="xs:int" 
-          dfdl:length="32" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="ReferenceIdentifier" type="xs:string" 
-          dfdl:length="32" 
-          dfdl:lengthKind="explicit" 
-          dfdl:encoding="ASCII"/>
-        
-        <xs:element name="ReferenceTimestamp" type="xs:double" 
-          dfdl:length="64" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="OriginTimestamp" type="xs:double" 
-          dfdl:length="64" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="ReceiveTimestamp" type="xs:double" 
-          dfdl:length="64" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="TransmitTimestamp" type="xs:double" 
-          dfdl:length="64" 
-          dfdl:lengthKind="explicit"/>
+        <xs:element name="Authenticator" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="KeyIdentifier" type="xs:unsignedInt"/>
+              <xs:element name="MessageDigest" type="xs:base64Binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>

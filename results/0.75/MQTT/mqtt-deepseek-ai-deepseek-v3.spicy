@@ -1,0 +1,197 @@
+module MQTT;
+
+import spicy;
+
+type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+};
+
+type ConnectFlags = unit {
+    username_flag: uint8 &bitfield(7);
+    password_flag: uint8 &bitfield(6);
+    will_retain: uint8 &bitfield(5);
+    will_qos: uint8 &bitfield(4, 3);
+    will_flag: uint8 &bitfield(2);
+    clean_start: uint8 &bitfield(1);
+    reserved: uint8 &bitfield(0);
+};
+
+type ConnectPacket = unit {
+    protocol_name: bytes &length=2;
+    protocol_version: uint8;
+    flags: ConnectFlags;
+    keep_alive: uint16;
+    client_id: bytes &length=2;
+    will_topic: optional bytes &length=2;
+    will_message: optional bytes &length=2;
+    username: optional bytes &length=2;
+    password: optional bytes &length=2;
+};
+
+type ConnackPacket = unit {
+    session_present: uint8;
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type PublishPacket = unit {
+    dup: uint8 &bitfield(7);
+    qos: uint8 &bitfield(6, 5);
+    retain: uint8 &bitfield(4);
+    topic_name: bytes &length=2;
+    packet_id: optional uint16;
+    properties: optional Properties;
+    payload: bytes;
+};
+
+type PubackPacket = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type PubrecPacket = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type PubrelPacket = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type PubcompPacket = unit {
+    packet_id: uint16;
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type SubscribePacket = unit {
+    packet_id: uint16;
+    properties: optional Properties;
+    topic_filters: vector<TopicFilter>;
+};
+
+type TopicFilter = unit {
+    topic: bytes &length=2;
+    options: uint8;
+};
+
+type SubackPacket = unit {
+    packet_id: uint16;
+    properties: optional Properties;
+    reason_codes: vector<uint8>;
+};
+
+type UnsubscribePacket = unit {
+    packet_id: uint16;
+    properties: optional Properties;
+    topics: vector<bytes> &length=2;
+};
+
+type UnsubackPacket = unit {
+    packet_id: uint16;
+    properties: optional Properties;
+    reason_codes: vector<uint8>;
+};
+
+type PingreqPacket = unit {};
+
+type PingrespPacket = unit {};
+
+type DisconnectPacket = unit {
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type AuthPacket = unit {
+    reason_code: uint8;
+    properties: optional Properties;
+};
+
+type Properties = unit {
+    properties: vector<Property> &length=properties_length;
+};
+
+type Property = unit {
+    identifier: uint8;
+    value: case (identifier) of {
+        0x01: payload_format_indicator: uint8;
+        0x02: message_expiry_interval: uint32;
+        0x03: content_type: bytes &length=2;
+        0x08: response_topic: bytes &length=2;
+        0x09: correlation_data: bytes &length=2;
+        0x0B: subscription_identifier: varint;
+        0x11: session_expiry_interval: uint32;
+        0x12: assigned_client_identifier: bytes &length=2;
+        0x13: server_keep_alive: uint16;
+        0x15: authentication_method: bytes &length=2;
+        0x16: authentication_data: bytes &length=2;
+        0x17: request_problem_information: uint8;
+        0x18: will_delay_interval: uint32;
+        0x19: request_response_information: uint8;
+        0x1A: response_information: bytes &length=2;
+        0x1C: server_reference: bytes &length=2;
+        0x1F: reason_string: bytes &length=2;
+        0x21: receive_maximum: uint16;
+        0x22: topic_alias_maximum: uint16;
+        0x23: topic_alias: uint16;
+        0x24: maximum_qos: uint8;
+        0x25: retain_available: uint8;
+        0x26: user_property: UserProperty;
+        0x27: maximum_packet_size: uint32;
+        0x28: wildcard_subscription_available: uint8;
+        0x29: subscription_identifier_available: uint8;
+        0x2A: shared_subscription_available: uint8;
+        default: unknown: bytes;
+    };
+};
+
+type UserProperty = unit {
+    name: bytes &length=2;
+    value: bytes &length=2;
+};
+
+type MQTTPacket = unit {
+    type: uint8;
+    flags: uint8;
+    length: varint;
+    payload: case (type) of {
+        1: connect: ConnectPacket;
+        2: connack: ConnackPacket;
+        3: publish: PublishPacket;
+        4: puback: PubackPacket;
+        5: pubrec: PubrecPacket;
+        6: pubrel: PubrelPacket;
+        7: pubcomp: PubcompPacket;
+        8: subscribe: SubscribePacket;
+        9: suback: SubackPacket;
+        10: unsubscribe: UnsubscribePacket;
+        11: unsuback: UnsubackPacket;
+        12: pingreq: PingreqPacket;
+        13: pingresp: PingrespPacket;
+        14: disconnect: DisconnectPacket;
+        15: auth: AuthPacket;
+        default: unknown: bytes &length=length;
+    };
+};
+
+on MQTTPacket::%done {
+    // Process the parsed packet
+}

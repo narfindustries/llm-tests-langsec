@@ -1,36 +1,271 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns="http://example.com/ICMP"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="icmp-meta-llama-llama-3">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="type" dfdl:occursCount="1"/>
-        <xs:element ref="code" dfdl:occursCount="1"/>
-        <xs:element ref="checksum" dfdl:occursCount="1"/>
-        <xs:element ref="identifier" dfdl:occursCount="1"/>
-        <xs:element ref="sequenceNumber" dfdl:occursCount="1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="type" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
-  <xs:element name="code" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
-  <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-  <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-  <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-
-  <xs:element name="icmp-data" dfdl:sequenceKind="delimited">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="icmp-meta-llama-llama-3" dfdl:occursCount="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dfdl:element name="icmpMessage">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:choice>
+        <dfdl:element name="identifier" dfdl:occurs="0..1">
+          <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+        </dfdl:element>
+        <dfdl:element name="unused" dfdl:occurs="0..1">
+          <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+        </dfdl:element>
+      </dfdl:choice>
+      <dfdl:choice>
+        <dfdl:element name="sequenceNumber" dfdl:occurs="0..1">
+          <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+        </dfdl:element>
+        <dfdl:element name="unused2" dfdl:occurs="0..1">
+          <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+        </dfdl:element>
+      </dfdl:choice>
+      <dfdl:element name="gatewayAddress" dfdl:occurs="0..1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpEchoRequest">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="8"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="identifier" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="sequenceNumber" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpEchoReply">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="identifier" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="sequenceNumber" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpDestinationUnreachable">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="3"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="unused" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="ipHeader" dfdl:occurs="1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpSourceQuench">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="4"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="unused" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="ipHeader" dfdl:occurs="1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpRedirect">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="5"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="gatewayAddress" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="ipHeader" dfdl:occurs="1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpTimeExceeded">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="11"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="unused" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="ipHeader" dfdl:occurs="1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpParameterProblem">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="12"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="pointer" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="ipHeader" dfdl:occurs="1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="data" dfdl:occurs="0..1" dfdl:lengthKind="explicit" dfdl:length="*">
+        <dfdl:byte length="*" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpTimestampRequest">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="13"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="identifier" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="sequenceNumber" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="originateTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="receiveTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="transmitTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpTimestampReply">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="14"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="identifier" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="sequenceNumber" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="originateTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="receiveTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="transmitTimestamp" dfdl:occurs="1">
+        <dfdl:byte length="4" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpInformationRequest">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="15"/>
+      </dfdl:element>
+      <dfdl:element name="code" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="0"/>
+      </dfdl:element>
+      <dfdl:element name="checksum" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="identifier" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+      <dfdl:element name="sequenceNumber" dfdl:occurs="1">
+        <dfdl:byte length="2" representation="binary" encoding="utf-8"/>
+      </dfdl:element>
+    </dfdl:sequence>
+  </dfdl:element>
+  <dfdl:element name="icmpInformationReply">
+    <dfdl:sequence>
+      <dfdl:element name="type" dfdl:occurs="1">
+        <dfdl:byte length="1" representation="binary" encoding="utf-8" dfdl:defaultValue="16"/>
+      </dfdl:element

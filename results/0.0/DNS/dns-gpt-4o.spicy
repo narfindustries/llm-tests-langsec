@@ -1,11 +1,17 @@
 module DNS;
 
-import spicy;
-import zeek;
-
 type DNSHeader = unit {
     id: uint16;
-    flags: uint16;
+    flags: bitfield(16) {
+        qr: uint8 &bits=1;
+        opcode: uint8 &bits=4;
+        aa: uint8 &bits=1;
+        tc: uint8 &bits=1;
+        rd: uint8 &bits=1;
+        ra: uint8 &bits=1;
+        z: uint8 &bits=3;
+        rcode: uint8 &bits=4;
+    };
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
@@ -13,55 +19,24 @@ type DNSHeader = unit {
 };
 
 type DNSQuestion = unit {
-    qname: bytes &until= (self.qname[-1] == 0);
+    qname: bytes &until=b"\x00";
     qtype: uint16;
     qclass: uint16;
 };
 
 type DNSResourceRecord = unit {
-    name: bytes &until= (self.name[-1] == 0);
+    name: bytes &until=b"\x00";
     type: uint16;
     class: uint16;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &size=rdlength;
+    rdata: bytes &length=rdlength;
 };
 
 type DNSMessage = unit {
     header: DNSHeader;
-    questions: array[DNSQuestion] &length=header.qdcount;
-    answers: array[DNSResourceRecord] &length=header.ancount;
-    authorities: array[DNSResourceRecord] &length=header.nscount;
-    additionals: array[DNSResourceRecord] &length=header.arcount;
+    questions: array of DNSQuestion &length=header.qdcount;
+    answers: array of DNSResourceRecord &length=header.ancount;
+    authorities: array of DNSResourceRecord &length=header.nscount;
+    additionals: array of DNSResourceRecord &length=header.arcount;
 };
-
-public type DNSAnalyzer = unit {
-    on %init {
-        print("DNS Analyzer initialized");
-    }
-
-    on %done {
-        print("DNS Analyzer done");
-    }
-
-    on %error {
-        print("Error in DNS Analyzer");
-    }
-
-    on %parse_complete {
-        print("DNS message parsed successfully");
-    }
-
-    on %parse_error {
-        print("Error parsing DNS message");
-    }
-
-    on %parse {
-        msg: DNSMessage;
-    }
-};
-
-public hook zeek_init() {
-    print("Loading DNS Spicy Analyzer");
-    zeek.register_protocol_analyzer("DNS", DNSAnalyzer);
-}

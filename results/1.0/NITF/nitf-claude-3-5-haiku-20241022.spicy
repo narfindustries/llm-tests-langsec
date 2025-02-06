@@ -1,22 +1,51 @@
 module NITF;
 
-import spicy;
+public type NITF = unit {
+    header: FileHeader;
+    image_segments: ImageSegment[] &convert=$$.size() == self.header.num_image_segments;
 
-public type Header = unit {
-    magic: bytes(4) &requires($$ == b"NITF");
-    version: bytes(2);
-    image_subheaders: uint16;
-    zero_segment: bytes(3);
+    type FileHeader = unit {
+        fhdr: bytes(4) &requires(self.fhdr == b"NITF");
+        fver: bytes(5) &requires(self.fver == b"02.10" || self.fver == b"02.00");
+        clevel: bytes(2);
+        stype: bytes(10);
+        ostaid: bytes(10);
+        fdt: bytes(14);
+        ftitle: bytes(80);
+        security: SecurityGroup;
+        encrypt: bytes(1);
+        num_image_segments: uint8;
+        num_graphics_segments: uint8;
+        num_text_segments: uint8;
+        num_des_segments: uint8;
+        num_reserved_segments: uint8;
+        user_header_length: uint16;
+        extended_header_length: uint16;
+    };
 
-    : void {
-        // Ensure NITF magic number
-        if (self.magic != b"NITF") {
-            throw "Invalid NITF file format";
-        }
-    }
-}
+    type SecurityGroup = unit {
+        classification: bytes(1);
+        country_code: bytes(2);
+        release_marking: bytes(11);
+    };
 
-public type File = unit {
-    header: Header;
-    # Placeholder for image subheaders and data parsing
-}
+    type ImageSegment = unit {
+        subheader: ImageSubheader;
+        image_data: bytes;
+    };
+
+    type ImageSubheader = unit {
+        name: bytes(10);
+        image_datetime: bytes(14);
+        target_id: bytes(10);
+        image_title: bytes(80);
+        security: SecurityGroup;
+        encryption: bytes(1);
+        image_source: bytes(42);
+        num_rows: uint32;
+        num_columns: uint32;
+        pixel_type: bytes(3);
+        image_representation: bytes(8);
+        image_category: bytes(3);
+    };
+};

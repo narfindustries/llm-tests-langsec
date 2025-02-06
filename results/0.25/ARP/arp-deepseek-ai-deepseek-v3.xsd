@@ -1,0 +1,49 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://www.example.com/dfdl/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" alignmentUnits="bytes" representation="binary" lengthKind="explicit" encoding="UTF-8" lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARP">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+        <xs:element name="HardwareType" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="ProtocolType" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="HardwareAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="ProtocolAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Operation" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="SenderHardwareAddress" dfdl:length="{../HardwareAddressLength}">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary">
+              <xs:length value="6"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="SenderProtocolAddress" dfdl:length="{../ProtocolAddressLength}">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary">
+              <xs:length value="4"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="TargetHardwareAddress" dfdl:length="{../HardwareAddressLength}">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary">
+              <xs:length value="6"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="TargetProtocolAddress" dfdl:length="{../ProtocolAddressLength}">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary">
+              <xs:length value="4"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

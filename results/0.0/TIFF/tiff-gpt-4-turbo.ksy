@@ -1,21 +1,13 @@
 meta:
   id: tiff
-  file-extension: tiff
+  file-extension: tif
   endian: le
-  title: TIFF (Tagged Image File Format)
-  license: CC0-1.0
-  ks-version: 0.9
-
+  title: Tagged Image File Format (TIFF)
 doc: |
-  TIFF is a flexible, adaptable file format for handling images and data
-  within a single file by including the header tags (size, definition, image-data arrangement, applied image compression) defining the image's geometry.
-  For example, a TIFF file can be a container holding compressed (lossy) JPEG and (lossless) PackBits compressed images.
-  TIFF files also can include multiple images, and each image in a TIFF file is called a "directory" because of the way it organizes the image data.
-
+  TIFF is a flexible, adaptable file format for handling images and data within a single file, by including the header tags (size, definition, image-data arrangement, applied image compression) defining the image's geometry. For example, a TIFF file can be a container holding compressed (lossy) JPEG and (lossless) PackBits compressed images. TIFF files also can include vector-based clipping paths (outlines, croppings, image frames). Other TIFF options include multiple subfiles, each of which can be of a different nature and might be individually compressed and/or encrypted.
 seq:
   - id: header
     type: header
-
   - id: ifds
     type: ifd
     repeat: eos
@@ -34,26 +26,25 @@ types:
           eq: 42
       - id: offset
         type: u4
+        doc: Offset to the first IFD
 
   ifd:
     seq:
       - id: num_entries
         type: u2
       - id: entries
-        type: entry
+        type: ifd_entry
         repeat: expr
         repeat-expr: num_entries
-      - id: next_ifd
+      - id: next_ifd_offset
         type: u4
     instances:
-      has_next_ifd:
-        value: next_ifd != 0
-      next:
-        pos: next_ifd
+      next_ifd:
+        pos: next_ifd_offset
         type: ifd
-        if: has_next_ifd
+        if: next_ifd_offset != 0
 
-  entry:
+  ifd_entry:
     seq:
       - id: tag
         type: u2
@@ -61,30 +52,15 @@ types:
       - id: type
         type: u2
         enum: field_type
-      - id: length
+      - id: count
         type: u4
-      - id: value_offset
+      - id: offset
         type: u4
     instances:
-      value:
-        io: _root._io
-        pos: value_offset
-        size: length * field_type_sizes[type]
-        type:
-          switch-on: type
-          cases:
-            'field_type::byte': u1
-            'field_type::ascii': str
-            'field_type::short': u2
-            'field_type::long': u4
-            'field_type::rational': rational
-
-  rational:
-    seq:
-      - id: numerator
-        type: u4
-      - id: denominator
-        type: u4
+      data:
+        pos: offset
+        size: count * field_type_size
+        if: count * field_type_size > 4
 
 enums:
   endian:
@@ -92,16 +68,19 @@ enums:
     0x4d4d: be
 
   tag_type:
-    0x0100: image_width
-    0x0101: image_length
-    0x0102: bits_per_sample
-    0x0103: compression
-    0x0106: photometric_interpretation
-    0x0112: orientation
-    0x0115: samples_per_pixel
-    0x011C: planar_configuration
-    0x0213: ycbcr_positioning
-    0x8769: exif_ifd
+    256: image_width
+    257: image_length
+    258: bits_per_sample
+    259: compression
+    262: photometric_interpretation
+    273: strip_offsets
+    277: samples_per_pixel
+    278: rows_per_strip
+    279: strip_byte_counts
+    282: x_resolution
+    283: y_resolution
+    296: resolution_unit
+    # Additional tags can be added here
 
   field_type:
     1: byte
@@ -111,10 +90,14 @@ enums:
     5: rational
 
 instances:
-  field_type_sizes:
-    value:
-      1: 1
-      2: 1
-      3: 2
-      4: 4
-      5: 8
+  field_type_size:
+    value: |
+      switch (type) {
+        case 1: return 1; // byte
+        case 2: return 1; // ascii
+        case 3: return 2; // short
+        case 4: return 4; // long
+        case 5: return 8; // rational (2 longs)
+        default: return 0;
+      }
+    type: u4

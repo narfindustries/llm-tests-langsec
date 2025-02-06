@@ -1,31 +1,40 @@
-module TIFF;
+module Tiff;
 
-import std::bitstream;
-import std::bytes::be_u16;
-import std::bytes::be_u32;
+import std::number::{u8, u16, u32, be, le};
+import std::collections::seq;
 
-type IfdEntry = struct {
-  tag : be_u16;
-  datatype : be_u16;
-  count : be_u32;
-  value_offset : be_u32;
+type ImageFileDirectoryEntry = struct {
+    Tag: u16,
+    Type: u16,
+    Count: u32,
+    ValueOffset: u32
 };
 
-type Ifd = struct {
-  num_entries : be_u16;
-  entries : IfdEntry[num_entries];
-  next_ifd : be_u32;
+type ImageFileDirectory = struct {
+    NumEntries: u16,
+    Entries: seq::sized(ImageFileDirectoryEntry, NumEntries),
+    NextIFDOffset: u32
 };
 
-type TiffHeader = struct {
-  endian_tag : bitstream[2*8];
-  magic_number : be_u16;
-  ifd0_offset : be_u32;
+type Rational = struct {
+    Numerator: u32,
+    Denominator: u32
 };
 
-type TiffFile = struct {
-  header : TiffHeader;
-  ifd0 : Ifd if header.ifd0_offset > 0 -> seek(header.ifd0_offset);
+type TIFFHeader = struct {
+    ByteOrder: u16,
+    Version: u16,
+    FirstIFDOffset: u32
 };
 
-entrypoint : TiffFile;
+type TIFFFile = struct {
+    Header: TIFFHeader,
+    IFDs: seq::offset(ImageFileDirectory, Header.FirstIFDOffset),
+    SubIFDs: seq::offset(ImageFileDirectory, ImageFileDirectory.NextIFDOffset)
+};
+
+derive endian from Header -> (
+    if Header.ByteOrder == 0x4949 then le else be
+);
+
+root TIFFFile;

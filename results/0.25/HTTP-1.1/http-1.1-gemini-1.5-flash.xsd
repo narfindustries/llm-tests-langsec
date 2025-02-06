@@ -1,27 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/http-1.1" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty" dfdl:lengthUnits="bytes">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/http1.1"
+           xmlns="http://example.org/http1.1"
+           elementFormDefault="qualified">
 
-  <xs:element name="http-1.1">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="HTTPMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="requestLine" type="xs:string" dfdl:length="1024" dfdl:occursCount="1"/>
-        <xs:element name="headers" type="headersType" dfdl:occursCount="unbounded"/>
-        <xs:element name="body" type="xs:string" dfdl:occursCount="1" dfdl:lengthKind="implicit"/>
+        <xs:element ref="StartLine"/>
+        <xs:element ref="Headers"/>
+        <xs:element minOccurs="0" name="Body" type="xs:base64Binary"/>
       </xs:sequence>
+      <xs:attribute name="textStandard" type="textStandardType" use="required"/>
+      <xs:attribute name="lengthUnits" type="lengthUnitsType" use="required"/>
+      <xs:attribute name="encoding" type="encodingType" use="required"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="headersType">
-    <xs:sequence>
-      <xs:element name="header" type="headerType" dfdl:occursCount="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="StartLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Method" type="xs:string"/>
+        <xs:element name="RequestURI" type="xs:string"/>
+        <xs:element name="HTTPVersion" type="xs:string"/>
+      </xs:sequence>
+      <xs:attribute name="separator" type="separatorType" use="required"/>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":" />
-      <xs:element name="value" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n" />
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="Header"/>
+      </xs:sequence>
+      <xs:attribute name="terminator" type="terminatorType" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HeaderName" type="xs:string"/>
+        <xs:element name="HeaderValue" type="xs:string"/>
+      </xs:sequence>
+      <xs:attribute name="separator" type="separatorType" use="required"/>
+      <xs:attribute name="terminator" type="terminatorType" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="textStandardType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="UTF-8"/>
+      <xs:enumeration value="UTF-16"/>
+      <!-- Add other allowed values as needed -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="lengthUnitsType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="bytes"/>
+      <xs:enumeration value="characters"/>
+      <!-- Add other allowed values as needed -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="encodingType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="UTF-8"/>
+      <xs:enumeration value="UTF-16"/>
+      <!-- Add other allowed values as needed -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="separatorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value=" "/>
+      <xs:enumeration value=":"/>
+      <!-- Add other allowed values as needed -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="terminatorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="\r\n"/>
+      <xs:enumeration value="\r\n\r\n"/>
+      <!-- Add other allowed values as needed -->
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

@@ -1,15 +1,14 @@
 use nom::{
-    bytes::complete::{tag, take_until, take_while},
-    character::complete::{digit1, space1},
+    bytes::complete::{tag, take_while},
+    character::complete::{char, digit1, space0, space1},
     combinator::{map_res, opt},
-    multi::many0,
-    sequence::{delimited, preceded, terminated, tuple},
+    multi::separated_list0,
+    sequence::{delimited, preceded, tuple},
     IResult,
 };
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::str;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -18,56 +17,47 @@ struct HttpRequest {
     uri: String,
     version: String,
     headers: Vec<(String, String)>,
-    body: Option<String>,
 }
 
 fn is_token(c: char) -> bool {
     c.is_alphanumeric() || "-!#$%&'*+.^_`|~".contains(c)
 }
 
-fn parse_method(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while(is_token), str::from_utf8)(input)
+fn is_header_value(c: char) -> bool {
+    c.is_ascii_graphic() || c == ' '
 }
 
-fn parse_uri(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while(|c| c != b' '), str::from_utf8)(input)
+fn parse_method(input: &str) -> IResult<&str, &str> {
+    take_while(is_token)(input)
 }
 
-fn parse_version(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(
-        preceded(tag("HTTP/"), take_while(|c| c.is_ascii_digit() || c == b'.')),
-        str::from_utf8,
-    )(input)
+fn parse_uri(input: &str) -> IResult<&str, &str> {
+    take_while(|c| c != ' ')(input)
 }
 
-fn parse_header_line(input: &[u8]) -> IResult<&[u8], (String, String)> {
-    let (input, (name, _, value)) = tuple((
-        map_res(take_while(is_token), str::from_utf8),
-        tag(": "),
-        map_res(take_until("\r\n"), str::from_utf8),
-    ))(input)?;
-    let (input, _) = tag("\r\n")(input)?;
-    Ok((input, (name.to_string(), value.to_string())))
+fn parse_version(input: &str) -> IResult<&str, &str> {
+    preceded(tag("HTTP/"), take_while(|c: char| c.is_digit(10) || c == '.'))(input)
 }
 
-fn parse_headers(input: &[u8]) -> IResult<&[u8], Vec<(String, String)>> {
-    many0(parse_header_line)(input)
+fn parse_header(input: &str) -> IResult<&str, (String, String)> {
+    let (input, name) = take_while(is_token)(input)?;
+    let (input, _) = char(':')(input)?;
+    let (input, _) = space0(input)?;
+    let (input, value) = take_while(is_header_value)(input)?;
+    Ok((input, (name.to_string(), value.trim().to_string())))
 }
 
-fn parse_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
+fn parse_request(input: &str) -> IResult<&str, HttpRequest> {
     let (input, (method, _, uri, _, version, _)) = tuple((
         parse_method,
         space1,
         parse_uri,
         space1,
         parse_version,
-        tag("\r\n"),
+        char('\n'),
     ))(input)?;
 
-    let (input, headers) = parse_headers(input)?;
-    let (input, _) = tag("\r\n")(input)?;
-
-    let (input, body) = opt(map_res(take_while(|_| true), str::from_utf8))(input)?;
+    let (input, headers) = separated_list0(char('\n'), parse_header)(input)?;
 
     Ok((
         input,
@@ -76,7 +66,6 @@ fn parse_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
             uri: uri.to_string(),
             version: version.to_string(),
             headers,
-            body: body.map(|s| s.to_string()),
         },
     ))
 }
@@ -84,16 +73,16 @@ fn parse_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
+        eprintln!("Usage: {} <file>", args[0]);
         return Ok(());
     }
 
     let mut file = File::open(&args[1])?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let mut buffer = String::new();
+    file.read_to_string(&mut buffer)?;
 
     match parse_request(&buffer) {
-        Ok((_, request)) => println!("{:#?}", request),
+        Ok((_, request)) => println!("{:?}", request),
         Err(e) => eprintln!("Failed to parse HTTP request: {:?}", e),
     }
 

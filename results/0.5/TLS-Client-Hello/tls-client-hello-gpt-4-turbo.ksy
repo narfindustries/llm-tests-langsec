@@ -1,96 +1,137 @@
 meta:
   id: tls_client_hello
-  title: TLS Client Hello
-  file-extension: dat
+  title: TLS Client Hello Message
   endian: be
-  license: CC0-1.0
-  ks-version: 0.9
-
-doc: |
-  The TLS Client Hello message, initiating a TLS handshake.
+  xref:
+    rfc: 8446
 
 seq:
-  - id: content_type
-    type: u1
-    enum: content_type
-  - id: version
-    type: tls_version
-  - id: length
+  - id: legacy_version
     type: u2
-  - id: handshake
-    type: handshake
+  - id: random
+    size: 32
+  - id: len_legacy_session_id
+    type: u1
+  - id: legacy_session_id
+    size: len_legacy_session_id
+  - id: cipher_suites_length
+    type: u2
+  - id: cipher_suites
+    type: cipher_suite
+    repeat: expr
+    repeat-expr: cipher_suites_length / 2
+  - id: len_legacy_compression_methods
+    type: u1
+  - id: legacy_compression_methods
+    size: len_legacy_compression_methods
+  - id: num_extensions
+    type: u2
+  - id: extensions
+    type: tls_extension
+    repeat: expr
+    repeat-expr: num_extensions
 
 types:
-  tls_version:
+  cipher_suite:
     seq:
-      - id: major
-        type: u1
-      - id: minor
-        type: u1
-
-  handshake:
-    seq:
-      - id: handshake_type
-        type: u1
-        enum: handshake_type
-      - id: length
-        type: u3
-      - id: client_hello
-        type: client_hello
-        if: handshake_type == handshake_type::client_hello
-
-  client_hello:
-    seq:
-      - id: version
-        type: tls_version
-      - id: random
-        size: 32
-      - id: session_id_length
-        type: u1
-      - id: session_id
-        size: session_id_length
-      - id: cipher_suites_length
+      - id: suite
         type: u2
-      - id: cipher_suites
-        type: u2
-        repeat: expr
-        repeat-expr: cipher_suites_length / 2
-      - id: compression_methods_length
-        type: u1
-      - id: compression_methods
-        type: u1
-        repeat: expr
-        repeat-expr: compression_methods_length
-      - id: extensions_length
-        type: u2
-        if: _io.pos + _io.size - 2 > _io.pos
-      - id: extensions
-        type: extension
-        repeat: eos
-        if: extensions_length > 0
 
-  extension:
+  tls_extension:
     seq:
       - id: type
         type: u2
-        enum: extension_type
       - id: length
         type: u2
       - id: data
         size: length
+        type:
+          switch-on: type
+          cases:
+            0: server_name_list
+            10: supported_groups_list
+            13: signature_algorithms_list
+            43: supported_versions_list
+            45: psk_key_exchange_modes
+            51: key_share_list
+            42: early_data
 
-enums:
-  content_type:
-    0x16: handshake
+  server_name_list:
+    seq:
+      - id: list_length
+        type: u2
+      - id: server_names
+        type: server_name
+        repeat: expr
+        repeat-expr: list_length
 
-  handshake_type:
-    0x01: client_hello
+  server_name:
+    seq:
+      - id: name_type
+        type: u1
+      - id: name_length
+        type: u2
+      - id: name
+        type: str
+        encoding: UTF-8
+        size: name_length
 
-  extension_type:
-    0x0000: server_name
-    0x000d: signature_algorithms
-    0x0010: supported_groups
-    0x0017: extended_master_secret
-    0x002b: supported_versions
-    0x002d: psk_key_exchange_modes
-    0x0033: key_share
+  supported_groups_list:
+    seq:
+      - id: list_length
+        type: u2
+      - id: groups
+        type: u2
+        repeat: expr
+        repeat-expr: list_length / 2
+
+  signature_algorithms_list:
+    seq:
+      - id: list_length
+        type: u2
+      - id: signatures
+        type: u2
+        repeat: expr
+        repeat-expr: list_length / 2
+
+  supported_versions_list:
+    seq:
+      - id: list_length
+        type: u1
+      - id: versions
+        type: u2
+        repeat: expr
+        repeat-expr: list_length / 2
+
+  psk_key_exchange_modes:
+    seq:
+      - id: num_modes
+        type: u1
+      - id: modes
+        type: u1
+        repeat: expr
+        repeat-expr: num_modes
+
+  key_share_list:
+    seq:
+      - id: list_length
+        type: u2
+      - id: key_shares
+        type: key_share
+        repeat: expr
+        repeat-expr: list_length
+
+  key_share:
+    seq:
+      - id: group
+        type: u2
+      - id: len_key_exchange
+        type: u2
+      - id: key_exchange
+        size: len_key_exchange
+
+  early_data:
+    seq:
+      - id: max_early_data_size
+        type: u4
+        if: _parent.length == 4

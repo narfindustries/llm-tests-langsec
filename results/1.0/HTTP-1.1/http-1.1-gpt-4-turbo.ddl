@@ -1,59 +1,41 @@
-module HTTP_1_1 {
-  type byte = UInt(8)
-  type uint16 = UInt(16)
-  type uint32 = UInt(32)
+module HTTP_1_1;
 
-  type ASCII = Byte
+type SP = ' ';
+type CRLF = '\r\n';
+type token = /[A-Za-z0-9!#$%&'*+\\-^_`|~]+/;
+type quoted_string = '"' (/[^\"]*/ -> String) '"';
+type value = token | quoted_string;
 
-  fun crlf = "\r\n" : ASCII*;
+type request_line = {
+  method: token,
+  _sp1: SP,
+  request_URI: token,
+  _sp2: SP,
+  HTTP_Version: "HTTP/" DIGIT+ "." DIGIT,
+  _crlf: CRLF
+};
 
-  type Method = {"GET" | "POST" | "PUT" | "DELETE" | "HEAD" | "OPTIONS" | "PATCH" | "CONNECT" | "TRACE"}
-  type Version = "HTTP/" + UDec + "." + UDec
-  
-  type RequestLine = {
-    method: Method,
-    space1: ' ',
-    uri: Until("\r\n", Except("\r\n ")),
-    space2: ' ',
-    version: Version,
-    crlf: crlf
-  }
+type response_line = {
+  HTTP_Version: "HTTP/" DIGIT+ "." DIGIT,
+  _sp1: SP,
+  status_code: DIGIT{3},
+  _sp2: SP,
+  reason_phrase: /[^\\r\\n]*/,
+  _crlf: CRLF
+};
 
-  type StatusMsg = Until("\r\n", ASCII)
-  
-  type StatusLine = {
-    version: Version,
-    space1: ' ',
-    statusCode: UInt(3),
-    space2: ' ',
-    reasonPhrase: StatusMsg,
-    crlf: crlf
-  }
-  
-  type Header = {
-    fieldName: While(":", IsUpper),
-    delim: ":",
-    fieldValue: Until("\r\n", IsSpace | ASCII),
-    crlf: crlf
-  }
+type header_field = {
+  field_name: token,
+  _: ":",
+  field_value: (SP | token | quoted_string)+,
+  _crlf: CRLF
+};
 
-  type Headers = List(Header, "\r\n")
+type header_fields = [header_field]+;
 
-  type Body = Data
-  
-  type Message = Data
-
-  type Request = {
-    requestLine: RequestLine,
-    headers: Headers,
-    crlf: crlf,
-    messageBody: Option(Body)
-  }
-
-  type Response = {
-    statusLine: StatusLine,
-    headers: Headers,
-    crlf: crlf,
-    messageBody: Option(Body)
-  }
-}
+type HTTP_message = {
+  start_line: request_line | response_line,
+  headers: header_fields,
+  _crlf: CRLF,
+  optional_body: /(.*)/ -> Bytes
+};

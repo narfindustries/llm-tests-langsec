@@ -1,88 +1,116 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Define TIFF field types
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16_le();
-static HParser *uint32 = h_uint32_le();
-static HParser *sint32 = h_int32_le();
+// Define TIFF data types
+#define BYTE 1
+#define SHORT 2
+#define LONG 3
+#define RATIONAL 4
+#define ASCII 5
 
-// Define a parser for the IFD (Image File Directory) entry
-static HParser *ifd_entry;
+// TIFF Tag Definitions
+#define ImageWidth 256
+#define ImageLength 257
+#define BitsPerSample 258
+#define Compression 259
+#define PhotometricInterpretation 262
+#define StripOffsets 273
+#define SamplesPerPixel 277
+#define RowsPerStrip 278
+#define StripByteCounts 279
+#define XResolution 282
+#define YResolution 283
+#define PlanarConfiguration 284
+#define ResolutionUnit 296
+#define ColorMap 320
+#define Software 305
 
-// Define a parser for the IFD
-static HParser *ifd;
-
-// Define a parser for the TIFF header
-static HParser *tiff_header;
-
-// Function to initialize parsers
-void init_parsers() {
-    ifd_entry = h_sequence(uint16, uint16, uint32, uint32, NULL);
-
-    ifd = h_length_value(uint16, h_many(ifd_entry));
-
-    tiff_header = h_sequence(uint16, uint16, uint32, h_indirect(ifd, NULL), NULL);
+// Helper function to parse a RATIONAL type
+static HParser *parse_rational() {
+    return h_sequence(h_uint32(), h_uint32(), NULL);
 }
 
-// Main function
-int main(int argc, char **argv) {
-    HParser *tiff_parser;
-    HParseResult *result;
-    HInputStream *input;
-    size_t len;
-    uint8_t *data;
+// Helper function to parse ASCII strings
+static HParser *parse_ascii() {
+    return h_length_value(h_uint32(), h_uint8());
+}
 
+// Parse a single TIFF tag
+static HParser *parse_tag() {
+    return h_sequence(
+        h_uint16(), // Tag
+        h_uint16(), // Type
+        h_uint32(), // Length
+        h_uint32(), // Value Offset (or Value if fits)
+        NULL
+    );
+}
+
+// Parse the TIFF header
+static HParser *parse_header() {
+    return h_sequence(
+        h_uint16(), // Byte order (II or MM)
+        h_uint16(), // TIFF magic number (42)
+        h_uint32(), // Offset to first IFD
+        NULL
+    );
+}
+
+// Parse the Image File Directory (IFD)
+static HParser *parse_ifd() {
+    return h_sequence(
+        h_uint16(), // Number of directory entries
+        h_many(parse_tag()), // Tags
+        h_uint32(), // Offset to next IFD
+        NULL
+    );
+}
+
+// Main parsing function for TIFF files
+static HParser *parse_tiff() {
+    return h_sequence(
+        parse_header(),
+        parse_ifd(),
+        NULL
+    );
+}
+
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <TIFF file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
         return EXIT_FAILURE;
     }
 
-    FILE *file = fopen(argv[1], "rb");
-    if (!file) {
-        perror("Failed to open file");
-        return EXIT_FAILURE;
-    }
+    // Create the TIFF parser
+    HParser *tiff_parser = parse_tiff();
 
-    fseek(file, 0, SEEK_END);
-    len = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    // Read the entire file into memory
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    uint8_t *buf = malloc(fsize);
+    fread(buf, fsize, 1, fp);
+    fclose(fp);
 
-    data = malloc(len);
-    if (!data) {
-        perror("Failed to allocate memory");
-        fclose(file);
-        return EXIT_FAILURE;
-    }
-
-    if (fread(data, 1, len, file) != len) {
-        fprintf(stderr, "Failed to read file\n");
-        free(data);
-        fclose(file);
-        return EXIT_FAILURE;
-    }
-
-    fclose(file);
-
-    init_parsers();
-
-    tiff_parser = tiff_header;
-
-    input = h_input_stream_new(data, len);
-    result = h_parse(tiff_parser, input);
-    h_input_stream_close(input);
-
+    // Parse the buffer
+    HParseResult *result = h_parse(tiff_parser, buf, fsize);
     if (result) {
-        printf("Parse successful!\n");
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
+        printf("TIFF parsed successfully.\n");
     } else {
-        fprintf(stderr, "Parse failed!\n");
+        printf("Failed to parse TIFF.\n");
     }
 
-    free(data);
+    // Cleanup
+    h_parse_result_free(result);
+    h_parser_free(tiff_parser);
+    free(buf);
 
-    return result ? EXIT_SUCCESS : EXIT_FAILURE;
+    return 0;
 }

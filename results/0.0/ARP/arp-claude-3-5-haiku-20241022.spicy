@@ -1,23 +1,29 @@
-module ARP;
+module arp;
 
 import spicy;
 
-public type Packet = unit {
+public type ARPPacket = unit {
     hardware_type: uint16;
     protocol_type: uint16;
-    hardware_size: uint8;
-    protocol_size: uint8;
-    opcode: uint16;
-    sender_mac: bytes(6);
-    sender_ip: bytes(4);
-    target_mac: bytes(6);
-    target_ip: bytes(4);
+    hardware_address_length: uint8;
+    protocol_address_length: uint8;
+    operation: uint16;
+    sender_hardware_address: bytes(self.hardware_address_length);
+    sender_protocol_address: bytes(self.protocol_address_length);
+    target_hardware_address: bytes(self.hardware_address_length);
+    target_protocol_address: bytes(self.protocol_address_length);
 
-    on %done {
-        print self;
+    on %init {
+        if ( hardware_type != 1 ) {
+            throw "Unsupported hardware type";
+        }
+        
+        if ( protocol_type != 0x0800 ) {
+            throw "Unsupported protocol type";
+        }
     }
 };
 
-public type Parser = unit {
-    packet: Packet;
+public type ARP = unit {
+    packet: ARPPacket;
 };

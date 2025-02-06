@@ -1,22 +1,17 @@
 use std::env;
-use std::fs;
-use std::error::Error;
+use std::fs::File;
+use std::io::Read;
 use nom::{
-    IResult,
-    bytes::complete::{take, tag},
-    number::complete::{u32, u16},
-    combinator::{map, map_res, all_consuming},
+    bytes::complete::{tag, take},
+    error::Error,
+    number::complete::{be_u32, be_u8},
     sequence::tuple,
-    multi::count,
+    IResult,
 };
+use crc32fast::Hasher;
 
 #[derive(Debug)]
 struct PngHeader {
-    signature: [u8; 8],
-}
-
-#[derive(Debug)]
-struct IHDR {
     width: u32,
     height: u32,
     bit_depth: u8,
@@ -27,72 +22,84 @@ struct IHDR {
 }
 
 #[derive(Debug)]
-struct Chunk {
-    length: u32,
-    type_: [u8; 4],
-    data: Vec<u8>,
-    crc: u32,
+enum ChunkType {
+    IHDR,
+    IDAT,
+    IEND,
+    Other(Vec<u8>),
 }
 
+fn parse_chunk_type(input: &[u8]) -> IResult<&[u8], ChunkType> {
+    let (input, chunk_type) = take(4usize)(input)?;
+    let chunk_type_str = std::str::from_utf8(chunk_type).unwrap();
 
-fn png_signature(input: &[u8]) -> IResult<&[u8], PngHeader> {
-    map(tag(b"\x89PNG\r\n\x1a\n"), |_| PngHeader { signature: *b"\x89PNG\r\n\x1a\n" })(input)
+    match chunk_type_str {
+        "IHDR" => Ok((input, ChunkType::IHDR)),
+        "IDAT" => Ok((input, ChunkType::IDAT)),
+        "IEND" => Ok((input, ChunkType::IEND)),
+        _ => Ok((input, ChunkType::Other(chunk_type.to_vec()))),
+    }
 }
 
-fn ihdr(input: &[u8]) -> IResult<&[u8], IHDR> {
-    map(tuple((u32, u32, u8, u8, u8, u8, u8)), |(width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)| IHDR {
-        width,
-        height,
-        bit_depth,
-        color_type,
-        compression_method,
-        filter_method,
-        interlace_method,
-    })(input)
+fn parse_chunk_data(input: &[u8], length: u32) -> IResult<&[u8], Vec<u8>> {
+    let (input, data) = take(length as usize)(input)?;
+    Ok((input, data.to_vec()))
 }
 
-fn chunk(input: &[u8]) -> IResult<&[u8], Chunk> {
-    map(tuple((u32, take(4usize), |i| take(i)(i), u32)), |(length, type_, data, crc)| Chunk {
-        length,
-        type_: type_.try_into().unwrap(),
-        data: data.to_vec(),
-        crc,
-    })(input)
+fn parse_chunk(input: &[u8]) -> IResult<&[u8], (ChunkType, Vec<u8>)> {
+    let (input, (length, chunk_type, data, crc)) = tuple((be_u32, parse_chunk_type, |i| parse_chunk_data(i, length), be_u32))(input)?;
+
+    let mut hasher = Hasher::new();
+    hasher.update(&length.to_be_bytes());
+    hasher.update(chunk_type);
+    hasher.update(&data);
+    let computed_crc = hasher.finalize();
+
+    if computed_crc != crc {
+        return Err(nom::Err::Error(Error::new(input,nom::error::ErrorKind::Verify)));
+    }
+
+    Ok((input, (chunk_type, data)))
 }
 
-fn png(input: &[u8]) -> IResult<&[u8], (PngHeader, Vec<Chunk>)> {
-    let (input, header) = png_signature(input)?;
-    let (input, chunks) = many0(chunk)(input)?;
+fn parse_png_header(input: &[u8]) -> IResult<&[u8], PngHeader> {
+    let (input, _) = tag(b"\x89PNG\r\n\x1a\n")(input)?;
+    let (input, (width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)) = tuple((be_u32, be_u32, be_u8, be_u8, be_u8, be_u8, be_u8))(input)?;
+
+    Ok((input, PngHeader { width, height, bit_depth, color_type, compression_method, filter_method, interlace_method }))
+}
+
+use nom::multi::many0;
+
+fn parse_png(input: &[u8]) -> IResult<&[u8], (PngHeader, Vec<(ChunkType, Vec<u8>)>)> {
+    let (input, header) = parse_png_header(input)?;
+    let (input, chunks) = many0(parse_chunk)(input)?;
     Ok((input, (header, chunks)))
 }
 
-fn many0<I, O, E: nom::error::ParseError<I>>(f: impl Fn(I) -> IResult<I, O, E>) -> impl Fn(I) -> IResult<I, Vec<O>, E> {
-    nom::multi::many0(f)
-}
 
-
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: png_parser <filename>");
-        return Ok(());
+        println!("Usage: {} <filename>", args[0]);
+        return;
     }
 
     let filename = &args[1];
-    let file_contents = fs::read(filename)?;
+    let mut file = File::open(filename).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
-
-    match all_consuming(png)(&file_contents) {
+    match parse_png(&buffer) {
         Ok((_, (header, chunks))) => {
             println!("PNG Header: {:?}", header);
-            for chunk in chunks {
-                println!("Chunk: {:?}", chunk);
+            println!("Chunks:");
+            for (chunk_type, data) in chunks {
+                println!("  Type: {:?}, Data length: {}", chunk_type, data.len());
             }
         }
         Err(e) => {
-            println!("Error parsing PNG: {}", e);
+            println!("Error parsing PNG: {:?}", e);
         }
     }
-
-    Ok(())
 }

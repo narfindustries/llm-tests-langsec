@@ -1,33 +1,33 @@
 use nom::{
-    bits::{complete::take_bits, streaming::take as take_bits_stream},
+    branch::alt,
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, many0},
-    number::complete::{le_u16, le_u32, le_u64},
-    sequence::{pair, tuple},
-    IResult, Parser,
+    combinator::{map, map_opt},
+    multi::{count, many0, many1},
+    number::complete::{le_u8, le_u16, le_u32, le_u64},
+    sequence::{preceded, tuple},
+    IResult,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct TransactionInput {
     prev_tx_hash: [u8; 32],
     prev_output_index: u32,
     script_sig_length: u64,
     script_sig: Vec<u8>,
-    sequence: u32,
+    sequence_number: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct TransactionOutput {
-    amount: u64,
+    value: u64,
     script_pubkey_length: u64,
     script_pubkey: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Transaction {
     version: u32,
     input_count: u64,
@@ -35,62 +35,51 @@ struct Transaction {
     output_count: u64,
     outputs: Vec<TransactionOutput>,
     locktime: u32,
-    witness: Option<Vec<Vec<u8>>>,
+}
+
+fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
+    alt((
+        map(le_u8, |v| v as u64),
+        map(preceded(tag(&[0xfd]), le_u16), |v| v as u64),
+        map(preceded(tag(&[0xfe]), le_u32), |v| v as u64),
+        map(preceded(tag(&[0xff]), le_u64), |v| v),
+    ))(input)
 }
 
 fn parse_transaction_input(input: &[u8]) -> IResult<&[u8], TransactionInput> {
     let (input, prev_tx_hash) = take(32usize)(input)?;
     let (input, prev_output_index) = le_u32(input)?;
-    let (input, script_sig_length) = nom::combinator::map(nom::number::complete::var_int, |x| x as u64)(input)?;
-    let (input, script_sig) = take(script_sig_length)(input)?;
-    let (input, sequence) = le_u32(input)?;
+    let (input, script_sig_length) = parse_varint(input)?;
+    let (input, script_sig) = take(script_sig_length as usize)(input)?;
+    let (input, sequence_number) = le_u32(input)?;
 
     Ok((input, TransactionInput {
         prev_tx_hash: prev_tx_hash.try_into().unwrap(),
         prev_output_index,
         script_sig_length,
         script_sig: script_sig.to_vec(),
-        sequence,
+        sequence_number,
     }))
 }
 
 fn parse_transaction_output(input: &[u8]) -> IResult<&[u8], TransactionOutput> {
-    let (input, amount) = le_u64(input)?;
-    let (input, script_pubkey_length) = nom::combinator::map(nom::number::complete::var_int, |x| x as u64)(input)?;
-    let (input, script_pubkey) = take(script_pubkey_length)(input)?;
+    let (input, value) = le_u64(input)?;
+    let (input, script_pubkey_length) = parse_varint(input)?;
+    let (input, script_pubkey) = take(script_pubkey_length as usize)(input)?;
 
     Ok((input, TransactionOutput {
-        amount,
+        value,
         script_pubkey_length,
         script_pubkey: script_pubkey.to_vec(),
     }))
 }
 
-fn parse_witness(input: &[u8]) -> IResult<&[u8], Vec<Vec<u8>>> {
-    let (input, witness_items) = many0(|i| {
-        let (i, witness_length) = nom::number::complete::var_int(i)?;
-        let (i, witness_data) = take(witness_length)(i)?;
-        Ok((i, witness_data.to_vec()))
-    })(input)?;
-
-    Ok((input, witness_items))
-}
-
 fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
     let (input, version) = le_u32(input)?;
-    let (input, is_witness) = take_bits(1u8)(input)?;
-    let (input, input_count) = nom::number::complete::var_int(input)?;
+    let (input, input_count) = parse_varint(input)?;
     let (input, inputs) = count(parse_transaction_input, input_count as usize)(input)?;
-    let (input, output_count) = nom::number::complete::var_int(input)?;
+    let (input, output_count) = parse_varint(input)?;
     let (input, outputs) = count(parse_transaction_output, output_count as usize)(input)?;
-
-    let (input, witness) = if is_witness == 1 {
-        let (input, witness_data) = parse_witness(input)?;
-        (input, Some(witness_data))
-    } else {
-        (input, None)
-    };
-
     let (input, locktime) = le_u32(input)?;
 
     Ok((input, Transaction {
@@ -100,11 +89,10 @@ fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
         output_count,
         outputs,
         locktime,
-        witness,
     }))
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <transaction_file>", args[0]);

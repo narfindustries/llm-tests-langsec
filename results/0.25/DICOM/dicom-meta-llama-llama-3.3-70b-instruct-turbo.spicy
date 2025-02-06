@@ -1,111 +1,106 @@
-# Zeek Spicy Specification for DICOM
+module dicom;
 
-@load base/protocols/dicom
+include "zeek/spicy/1.0/main.zeek";
 
-module DICOM;
+type PatientName: record {
+  value: bytestring;
+  type: uint8;
+};
 
-export {
-    redef enum Log::ID += { LOG_DICOM };
+type PatientID: bytestring;
+type PatientSex: enum {
+  M = 1;
+  F = 2;
+  O = 3;
+};
 
-    type Info: record {
-        ts: time         &log;
-        uid: string      &log;
-        message_type: string &log;
-        transfer_syntax: string &log;
-        data: string     &log;
-    };
-}
+type PatientBirthDate: date;
 
-event zeek_init() {
-    Log::create_stream(DICOM::LOG_DICOM, [$columns=Info, $ev=log_dcm]);
-}
+type StudyInstanceUID: bytestring;
+type StudyDate: date;
+type StudyTime: time;
 
-event log_dcm(info: Info) {
-    Log::write(DICOM::LOG_DICOM, info);
-}
+type Modality: enum {
+  CT = 1;
+  MR = 2;
+  US = 3;
+  NM = 4;
+  MG = 5;
+  DX = 6;
+  RF = 7;
+  SC = 8;
+  PT = 9;
+  OT = 10;
+};
 
-# DICOM Message Type
-const msg_types: table[string] of string = {
-    ["0000,1000"] = "Command Group Length",
-    ["0000,1001"] = "Affected SOP Class UID",
-    ["0000,1002"] = "Requested SOP Class UID",
-    ["0000,1003"] = "Priority",
-    ["0000,1004"] = "Command Data Set Type",
-    ["0000,1005"] = "Affected Instance UID",
-    ["0000,1006"] = "Requested Instance UID",
-    ["0000,1007"] = "Move Originator Application Entity Title",
-    ["0000,1008"] = "Move Originator Message ID",
-    ["0000,1009"] = "Data Set Type",
-    ["0000,1010"] = "Status",
-    ["0000,1011"] = "Offending Element",
-} &default="Unknown";
+type SeriesInstanceUID: bytestring;
+type SeriesNumber: uint16;
+type SeriesDescription: bytestring;
 
-# DICOM Transfer Syntax
-const transfer_syntaxes: table[string] of string = {
-    ["1.2.840.10008.1.2"] = "Implicit VR Little Endian",
-    ["1.2.840.10008.1.2.1"] = "Explicit VR Little Endian",
-    ["1.2.840.10008.1.2.2"] = "Implicit VR Big Endian",
-} &default="Unknown";
+type SOPInstanceUID: bytestring;
+type ImageType: enum {
+  ORIGINAL = 1;
+  DERIVED = 2;
+};
 
-# DICOM UID
-function parse_dicom_uid(uid: string): string
-{
-    local parts: vector of string;
-    local result: string;
+type PhotometricInterpretation: enum {
+  MONOCHROME1 = 1;
+  MONOCHROME2 = 2;
+  RGB = 3;
+  YBR_FULL = 4;
+  YBR_FULL_422 = 5;
+  YBR_PARTIAL_422 = 6;
+  YBR_PARTIAL_420 = 7;
+  YBR_ICT = 8;
+  YBR_RCT = 9;
+};
 
-    parts = split_string_all(uid, ".");
-    result = "";
-    for (i in parts)
-    {
-        if (i == 0)
-            result = parts[i];
-        else
-            result += "." + parts[i];
-    }
-    return result;
-}
+type PixelData: case uint16 of {
+  1 => bytestring;
+  2 => bytestring;
+  3 => bytestring;
+  4 => bytestring;
+  5 => bytestring;
+  6 => bytestring;
+  7 => bytestring;
+  8 => bytestring;
+};
 
-# Event Handler for DICOM Messages
-event dhcp_message(c: connection, msg_is_orig: bool, msg: DHCP::Message)
-{
-    # not implemented, you probably need a different event handler
-}
+type TransferSyntaxUID: bytestring;
+type MediaStorageSOPInstanceUID: bytestring;
+type ImplementationClassUID: bytestring;
 
-event tcp_packet(c: connection, is_orig: bool, seq: count, ack: count, len: count, contents: string)
-{
-    if (c$service != "dicom")
-        return;
+type DicomFile: record {
+  preamble: bytestring;
+  prefix: bytestring;
+  dicom_data_set: DicomDataSet;
+};
 
-    local Slav: string;
-    local type_pos: count;
-    local uid_pos: count;
-    local data_pos: count;
-    local message_type: string;
-    local transfer_syntax: string;
-    local data: string;
+type DicomDataSet: record {
+  patient_name: PatientName;
+  patient_id: PatientID;
+  patient_sex: PatientSex;
+  patient_birth_date: PatientBirthDate;
+  study_instance_uid: StudyInstanceUID;
+  study_date: StudyDate;
+  study_time: StudyTime;
+  modality: Modality;
+  series_instance_uid: SeriesInstanceUID;
+  series_number: SeriesNumber;
+  series_description: SeriesDescription;
+  sop_instance_uid: SOPInstanceUID;
+  image_type: ImageType;
+  photometric_interpretation: PhotometricInterpretation;
+  pixel_data: PixelData;
+  transfer_syntax_uid: TransferSyntaxUID;
+  media_storage_sop_instance_uid: MediaStorageSOPInstanceUID;
+  implementation_class_uid: ImplementationClassUID;
+};
 
-    # Check for DICOM Message
-    if (contents[0:2] == "\x28\x00")
-    {
-        Slav = contents;
-        type_pos = find_string(Slav, "0000,1000", 10);
-        uid_pos = find_string(Slav, "0000,1002", 10);
-        data_pos = find_string(Slav, "fffe,e000", 10);
-        if (type_pos != -1 && uid_pos != -1 && data_pos != -1)
-        {
-            message_type = msg_types[Slav[10:type_pos-1]];
-            transfer_syntax = transfer_syntaxes[parse_dicom_uid(Slav[uid_pos+8:uid_pos+43])];
-            data = Slav[data_pos:len];
+type DicomMessage: record {
+  dicom_file: DicomFile;
+};
 
-            local info: Info = [
-                $ts = network_time(),
-                $uid = parse_dicom_uid(Slav[uid_pos+8:uid_pos+43]),
-                $message_type = message_type,
-                $transfer_syntax = transfer_syntax,
-                $data = data,
-            ];
-
-            Log::write(DICOM::LOG_DICOM, info);
-        }
-    }
+event zeek::zeek_init() {
+  Input::add_event([stream_id=0x0, parent_id=0x0], DicomMessage);
 }

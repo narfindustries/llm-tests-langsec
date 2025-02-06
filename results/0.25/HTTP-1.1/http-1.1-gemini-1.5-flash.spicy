@@ -1,31 +1,45 @@
-#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
-#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+module HTTP_1_1;
 
-#include <http>
-#include <gemini>
+type HTTP_Request_Line = record {
+    method: string;
+    uri: string;
+    version: string;
+};
 
-event http_request_start(http_request_t req) {
-    // Add your logic here to handle HTTP requests
-    // Example: Log the request method and URI
-    print fmt("HTTP Request: %s %s", req.method, req.uri);
-}
+type HTTP_Header = record {
+    name: string;
+    value: string;
+};
 
-event http_response_start(http_response_t resp) {
-    // Add your logic here to handle HTTP responses
-    // Example: Log the response status code
-    print fmt("HTTP Response: %d", resp.status_code);
-}
+type HTTP_Headers = vector[HTTP_Header];
 
-event gemini_request_start(gemini_request_t req) {
-    // Add your logic here to handle Gemini requests
-    // Example: Log the request URI
-    print fmt("Gemini Request: %s", req.uri);
-}
+type HTTP_Message = record {
+    start_line: HTTP_Request_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
 
-event gemini_response_start(gemini_response_t resp) {
-    // Add your logic here to handle Gemini responses
-    // Example: Log the response status code
-    print fmt("Gemini Response: %d", resp.status_code);
-}
+type HTTP_Status_Line = record {
+    version: string;
+    status_code: int;
+    reason_phrase: string;
+};
 
-#endif // HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+type HTTP_Request = record {
+    request_line: HTTP_Request_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
+
+type HTTP_Response = record {
+    status_line: HTTP_Status_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
+
+global http_methods = {
+    "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "CONNECT", "TRACE", "PATCH"
+};
+
+# Note: This is a simplified representation. Many header fields are omitted for brevity and because their values are highly variable and context-dependent. RFC 2616 should be consulted for a complete and accurate specification. The body is of type 'bytes' to accommodate binary data.
+

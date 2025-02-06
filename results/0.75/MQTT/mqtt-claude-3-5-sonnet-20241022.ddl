@@ -1,78 +1,169 @@
-def Main = MQTT_Packet
+def Main = {
+    VarByteInt = {
+        x : uint8[];
+        x.length <= 4;
+        match x.length {
+            1 => x[0] < 128,
+            2 => x[0] >= 128 && x[1] < 128,
+            3 => x[0] >= 128 && x[1] >= 128 && x[2] < 128,
+            4 => x[0] >= 128 && x[1] >= 128 && x[2] >= 128 && x[3] < 128
+        }
+    }
 
-def MQTT_Packet = {
-  header = MQTT_Header;
-  payload = MQTT_Payload header;
-  FEnd
-}
+    UTF8String = {
+        length: uint16;
+        data: uint8[length]
+    }
 
-def MQTT_Header = {
-  message_type = $byte;
-  flags = $byte;
-  remaining_length = MQTT_RemainingLength;
-  §message_type >= 0 && message_type <= 15
-}
+    PacketType = {
+        type: uint4;
+        type >= 1 && type <= 15
+    }
 
-def MQTT_RemainingLength = {
-  value = 0;
-  multiplier = 1;
-  repeat {
-    digit = $byte;
-    value = value + ((digit & 127) * multiplier);
-    multiplier = multiplier * 128;
-    if (digit & 128) == 0 { break }
-  }
-  value
-}
+    Flags = {
+        dup: uint1;
+        qos: uint2;
+        retain: uint1
+    }
 
-def MQTT_Payload header = {
-  if header.message_type == 1 {
-    MQTT_Connect
-  } else if header.message_type == 2 {
-    MQTT_ConnAck
-  } else if header.message_type == 3 {
-    MQTT_Publish header
-  } else if header.message_type == 4 {
-    MQTT_PubAck
-  } else {
-    MQTT_Other header.remaining_length
-  }
-}
+    FixedHeader = {
+        packetType: PacketType;
+        flags: Flags;
+        remainingLength: VarByteInt
+    }
 
-def MQTT_Connect = {
-  protocol_name = MQTT_String;
-  protocol_level = $byte;
-  connect_flags = $byte;
-  keep_alive = $uint16BE;
-  client_id = MQTT_String;
-  §protocol_level == 4
-}
+    Property = {
+        identifier: uint8;
+        value: select identifier {
+            0x01 => uint8,
+            0x02 => uint32,
+            0x03 => UTF8String,
+            0x08 => UTF8String,
+            0x09 => uint8[],
+            0x0B => VarByteInt,
+            0x11 => uint32,
+            0x15 => UTF8String,
+            0x16 => uint8[],
+            0x17 => uint8,
+            0x19 => uint8,
+            0x21 => uint16,
+            0x22 => uint16,
+            0x23 => uint16,
+            0x26 => {
+                key: UTF8String;
+                value: UTF8String
+            },
+            0x27 => uint32,
+            0x1C => UTF8String,
+            0x1F => UTF8String
+        }
+    }
 
-def MQTT_ConnAck = {
-  flags = $byte;
-  return_code = $byte;
-  §return_code >= 0 && return_code <= 5
-}
+    Properties = {
+        length: VarByteInt;
+        properties: Property[while !EOF]
+    }
 
-def MQTT_Publish header = {
-  topic = MQTT_String;
-  packet_id = if (header.flags & 0x06) != 0 { $uint16BE };
-  payload = MQTT_Binary(header.remaining_length - @stream - @start)
-}
+    ConnectFlags = {
+        reserved: uint1 = 0;
+        cleanStart: uint1;
+        willFlag: uint1;
+        willQoS: uint2;
+        willRetain: uint1;
+        passwordFlag: uint1;
+        usernameFlag: uint1
+    }
 
-def MQTT_PubAck = {
-  packet_id = $uint16BE
-}
+    Connect = {
+        protocolName: UTF8String;
+        protocolVersion: uint8 = 5;
+        connectFlags: ConnectFlags;
+        keepAlive: uint16;
+        properties: Properties;
+        clientId: UTF8String;
+        willProperties: if connectFlags.willFlag then Properties else void;
+        willTopic: if connectFlags.willFlag then UTF8String else void;
+        willPayload: if connectFlags.willFlag then uint8[] else void;
+        username: if connectFlags.usernameFlag then UTF8String else void;
+        password: if connectFlags.passwordFlag then UTF8String else void
+    }
 
-def MQTT_Other length = {
-  data = MQTT_Binary(length)
-}
+    ConnAck = {
+        flags: uint8;
+        reasonCode: uint8;
+        properties: Properties
+    }
 
-def MQTT_String = {
-  length = $uint16BE;
-  value = $bytes(length)
-}
+    Publish = {
+        topicName: UTF8String;
+        packetId: if header.flags.qos > 0 then uint16 else void;
+        properties: Properties;
+        payload: uint8[]
+    }
 
-def MQTT_Binary length = {
-  $bytes(length)
+    PubAck = {
+        packetId: uint16;
+        reasonCode: uint8;
+        properties: Properties
+    }
+
+    Subscribe = {
+        packetId: uint16;
+        properties: Properties;
+        subscriptions: {
+            topicFilter: UTF8String;
+            options: uint8
+        }[]
+    }
+
+    SubAck = {
+        packetId: uint16;
+        properties: Properties;
+        reasonCodes: uint8[]
+    }
+
+    Unsubscribe = {
+        packetId: uint16;
+        properties: Properties;
+        topicFilters: UTF8String[]
+    }
+
+    UnsubAck = {
+        packetId: uint16;
+        properties: Properties;
+        reasonCodes: uint8[]
+    }
+
+    Disconnect = {
+        reasonCode: uint8;
+        properties: Properties
+    }
+
+    Auth = {
+        reasonCode: uint8;
+        properties: Properties
+    }
+
+    MQTTPacket = {
+        header: FixedHeader;
+        body: select header.packetType.type {
+            1 => Connect,
+            2 => ConnAck,
+            3 => Publish,
+            4 => PubAck,
+            5 => PubAck,
+            6 => PubAck,
+            7 => PubAck,
+            8 => Subscribe,
+            9 => SubAck,
+            10 => Unsubscribe,
+            11 => UnsubAck,
+            12 => void,
+            13 => void,
+            14 => Disconnect,
+            15 => Auth
+        }
+    }
+
+    MQTTPacket
 }

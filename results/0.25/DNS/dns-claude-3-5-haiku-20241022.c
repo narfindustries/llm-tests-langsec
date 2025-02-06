@@ -1,151 +1,131 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
-// DNS Message Types
-typedef enum {
-    QUERY = 0,
-    RESPONSE = 1
-} DNSMessageType;
-
-// DNS Record Types
-typedef enum {
-    A = 1,      // IPv4 Address
-    AAAA = 28,  // IPv6 Address
-    CNAME = 5,  // Canonical Name
-    MX = 15     // Mail Exchange
-} DNSRecordType;
-
-// DNS Header Structure
 typedef struct {
-    uint16_t id;
-    uint8_t qr;     // Query/Response Flag
-    uint8_t opcode;
-    uint8_t aa;     // Authoritative Answer
-    uint8_t tc;     // Truncation
-    uint8_t rd;     // Recursion Desired
-    uint8_t ra;     // Recursion Available
-    uint8_t z;      // Reserved
-    uint8_t rcode;  // Response Code
-    uint16_t qdcount;   // Question Count
-    uint16_t ancount;   // Answer Count
-    uint16_t nscount;   // Authority Count
-    uint16_t arcount;   // Additional Count
-} DNSHeader;
+    uint16_t transaction_id;
+    struct {
+        uint8_t qr : 1;
+        uint8_t opcode : 4;
+        uint8_t aa : 1;
+        uint8_t tc : 1;
+        uint8_t rd : 1;
+        uint8_t ra : 1;
+        uint8_t z : 3;
+        uint8_t rcode : 4;
+    } __attribute__((packed)) flags;
+    uint16_t question_count;
+    uint16_t answer_count;
+    uint16_t authority_count;
+    uint16_t additional_count;
+} __attribute__((packed)) DNSHeader;
 
-// DNS Question Structure
-typedef struct {
-    char* qname;
-    DNSRecordType qtype;
-    uint16_t qclass;
-} DNSQuestion;
-
-// DNS Resource Record Structure
-typedef struct {
-    char* name;
-    DNSRecordType type;
-    uint16_t class;
-    uint32_t ttl;
-    uint16_t rdlength;
-    void* rdata;
-} DNSResourceRecord;
-
-// DNS Packet Structure
-typedef struct {
-    DNSHeader header;
-    DNSQuestion* questions;
-    DNSResourceRecord* answers;
-    DNSResourceRecord* authority;
-    DNSResourceRecord* additional;
-} DNSPacket;
-
-// Hammer Parser Definitions
-static HParser* dns_label;
-static HParser* dns_name;
-static HParser* dns_header;
-static HParser* dns_question;
-static HParser* dns_resource_record;
-static HParser* dns_packet;
-
-// Hammer Action Functions
-static HAction* parse_dns_label(void* p) {
-    // Implementation for parsing DNS label
-    return NULL;
-}
-
-static HAction* parse_dns_name(void* p) {
-    // Implementation for parsing DNS name
-    return NULL;
-}
-
-static HAction* parse_dns_header(void* p) {
-    // Implementation for parsing DNS header
-    return NULL;
-}
-
-static HAction* parse_dns_question(void* p) {
-    // Implementation for parsing DNS question
-    return NULL;
-}
-
-static HAction* parse_dns_resource_record(void* p) {
-    // Implementation for parsing DNS resource record
-    return NULL;
-}
-
-static HAction* parse_dns_packet(void* p) {
-    // Implementation for parsing complete DNS packet
-    return NULL;
-}
-
-// Parser Initialization Function
-void init_dns_parsers() {
-    // Define Hammer parsers for DNS protocol
-    dns_label = h_choice(
-        h_ch_range('a', 'z'),
-        h_ch_range('A', 'Z'),
-        h_ch_range('0', '9'),
-        h_ch('-')
-    );
-
-    dns_name = h_many1(dns_label);
-
-    dns_header = h_struct(DNSHeader,
-        h_uint16(),   // id
-        h_uint8(),    // qr, opcode, etc.
-        h_uint16(),   // qdcount
-        h_uint16(),   // ancount
-        h_uint16(),   // nscount
-        h_uint16()    // arcount
-    );
-
-    dns_question = h_struct(DNSQuestion,
-        dns_name,     // qname
-        h_uint16(),   // qtype
-        h_uint16()    // qclass
-    );
-
-    dns_resource_record = h_struct(DNSResourceRecord,
-        dns_name,     // name
-        h_uint16(),   // type
-        h_uint16(),   // class
-        h_uint32(),   // ttl
-        h_uint16(),   // rdlength
-        h_bytes_sink() // rdata
-    );
-
-    dns_packet = h_struct(DNSPacket,
-        dns_header,
-        h_many(dns_question),
-        h_many(dns_resource_record),
-        h_many(dns_resource_record),
-        h_many(dns_resource_record)
+static HParser* parse_dns_header(void) {
+    return h_sequence(
+        h_uint16(),   // transaction_id
+        h_bits(16, false),  // flags
+        h_uint16(),   // question_count
+        h_uint16(),   // answer_count
+        h_uint16(),   // authority_count
+        h_uint16(),   // additional_count
+        NULL
     );
 }
 
-int main() {
-    init_dns_parsers();
-    return 0;
+static HParser* parse_dns_name(void) {
+    return h_sequence(
+        h_many(
+            h_sequence(
+                h_uint8(),  // label length
+                h_repeat_n(h_ch_range('a', 'z'), 63),  // label content
+                NULL
+            )
+        ),
+        h_ch(0),  // null terminator
+        NULL
+    );
+}
+
+static HParser* parse_dns_question(void) {
+    return h_sequence(
+        parse_dns_name(),  // name
+        h_uint16(),  // type
+        h_uint16(),  // class
+        NULL
+    );
+}
+
+static HParser* parse_dns_resource_record(void) {
+    return h_sequence(
+        parse_dns_name(),  // name
+        h_uint16(),  // type
+        h_uint16(),  // class
+        h_uint32(),  // ttl
+        h_length_value(h_uint16(), h_uint8()),  // rdlength and rdata
+        NULL
+    );
+}
+
+static HParser* parse_dns_message(void) {
+    return h_sequence(
+        parse_dns_header(),
+        h_repeat_n(parse_dns_question(), 1),
+        h_repeat_n(parse_dns_resource_record(), 1),
+        h_repeat_n(parse_dns_resource_record(), 1),
+        h_repeat_n(parse_dns_resource_record(), 1),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    size_t read_size = fread(buffer, 1, file_size, file);
+    if (read_size != file_size) {
+        perror("File read error");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    HParser* dns_parser = h_build_parser(parse_dns_message(), NULL);
+    HParseResult* result = h_parse(dns_parser, buffer, file_size);
+
+    if (result && result->ast) {
+        printf("DNS message parsed successfully\n");
+        h_parse_result_free(result);
+        h_parser_free(dns_parser);
+        free(buffer);
+        fclose(file);
+        return 0;
+    } else {
+        fprintf(stderr, "DNS message parsing failed\n");
+        h_parse_result_free(result);
+        h_parser_free(dns_parser);
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
 }

@@ -1,68 +1,116 @@
-Here's the corrected and complete C code specification using Hammer, assuming that the original problem was due to incorrect or incompatible library usage or some syntactic errors in the Hammer specification:
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <string.h>
 
-static HParser *nitf_length;
-static HParser *nitf_header;
-static HParser *nitf_data;
+// Parser declarations for various components
+HParser *nitf_version;
+HParser *complexity_level;
+HParser *standard_type;
+HParser *orig_station_id;
+HParser *file_datetime;
+HParser *file_title;
+HParser *classification;
+HParser *encrypt;
+HParser *fbkgc;
+HParser *oname;
+HParser *ophone;
+HParser *file_length;
+HParser *header_length;
 
-// Define parsers for each segment
-static void init_parsers() {
-    // Parser for the Length field (assuming Length is represented as a 6-byte ASCII numeric field)
-    nitf_length = h_token("999999", 6);
+HParser *image_identifier;
+HParser *image_date_time;
+HParser *target_id;
+HParser *image_source;
+HParser *num_rows;
+HParser *num_cols;
+HParser *pixel_value_type;
+HParser *image_repr;
+HParser *image_cat;
+HParser *actual_bits_per_pixel;
+HParser *image_geolo;
+HParser *image_compression;
+HParser *encryption;
 
-    // Example of an NITF header (simplified version)
-    nitf_header = h_sequence(
-        h_string("NITF"),
-        h_int8(),   // version, modeled as a single byte
-        h_int16(),  // field that could be an arbitrary number
-        NULL
-    );
+uint8_t *read_entire_file(const char *filename, size_t *length) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Unable to open file");
+        exit(EXIT_FAILURE);
+    }
 
-    // Data section placeholder (assuming data is a series of bytes)
-    nitf_data = h_many(h_int8());
+    fseek(f, 0, SEEK_END);
+    *length = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    // Bind the length field to the data
-    h_bind(nitf_length, nitf_data);
+    uint8_t *data = malloc(*length);
+    if (!data) {
+        perror("Unable to allocate memory");
+        fclose(f);
+        exit(EXIT_FAILURE);
+    }
+
+    if (fread(data, 1, *length, f) != *length) {
+        perror("Unable to read file");
+        free(data);
+        fclose(f);
+        exit(EXIT_FAILURE);
+    }
+
+    fclose(f);
+    return data;
 }
 
-int main(int argc, char **argv) {
-    HParseResult *result;
+void init_parsers() {
+    nitf_version = h_sequence(h_ch('N'), h_ch('I'), h_ch('T'), h_ch('F'), h_ch('0'), h_ch('2'), h_ch('.'), h_ch('1'), h_ch('0'), NULL);
+    complexity_level = h_int_range(h_uint8(), 1, 7);
+    standard_type = h_sequence(h_ch('B'), h_ch('F'), h_ch('0'), h_ch('1'), NULL);
+    orig_station_id = h_repeat_n(h_bit_range('0', '9', 1), 10);
+    file_datetime = h_repeat_n(h_bit_range('0', '9', 1), 14);
+    file_title = h_repeat_n(h_any(), 80);
+    classification = h_int_range(h_uint8(), 1, 7);
+    encrypt = h_int_range(h_uint8(), 0, 1);
+    fbkgc = h_int_range(h_uint8(), 0, 255);
+    oname = h_repeat_n(h_any(), 24);
+    ophone = h_repeat_n(h_any(), 18);
+    file_length = h_uint64();
+    header_length = h_uint32();
+
+    image_identifier = h_repeat_n(h_any(), 10);
+    image_date_time = h_repeat_n(h_any(), 14);
+    target_id = h_repeat_n(h_any(), 17);
+    image_source = h_repeat_n(h_any(), 42);
+    num_rows = h_uint32();
+    num_cols = h_uint32();
+    pixel_value_type = h_int_range(h_uint8(), 0, 3);
+    image_repr = h_repeat_n(h_any(), 8);
+    image_cat = h_repeat_n(h_any(), 8);
+    actual_bits_per_pixel = h_int_range(h_uint8(), 0, 8);
+    image_geolo = h_repeat_n(h_any(), 60);
+    image_compression = h_int_range(h_uint8(), 0, 1);
+    encryption = h_int_range(h_uint8(), 0, 1);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    size_t length = 0;
+    uint8_t *data = read_entire_file(argv[1], &length);
+
     init_parsers();
-    
-    // Example data which should be parsed, could be replaced with file reading or other input sources
-    uint8_t input_data[] = "999999NITF\x01\x02\x03\x04\x05";
-    size_t input_length = sizeof(input_data) - 1;
 
-    result = h_parse(nitf_header, input_data, input_length);
-    if (result) {
-        printf("Parse successful.\n");
-        H_ast_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Parse failed.\n");
+    HParseResult *result = h_parse(nitf_version, data, length);
+    if (!result) {
+        fprintf(stderr, "Parsing failed!\n");
+        free(data);
+        return EXIT_FAILURE;
     }
 
-    h_parse_result_free(result);
+    printf("Parsing succeeded.\n");
 
-    result = h_parse(nitf_data, input_data, input_length);
-    if (result) {
-        printf("Data parse successful.\n");
-        // Output the parsed data in a meaningful way
-        H_ast_pprint(stdout, result->ast, 0, 0);
-    } else {
-        printf("Data parse failed.\n");
-    }
-
-    h_parse_result_free(result);
-    h_free(nitf_length);
-    h_free(nitf_header);
-    h_free(nitf_data);
-    return 0;
+    free(data);
+    return EXIT_SUCCESS;
 }
-
-This code sets up basic parsing for an NITF file format where `nitf_length` ensures the beginning of the data meets a specific header requirement, and `nitf_header` parses the simplified NITF header. The `nitf_data` parser is designed to parse the data area. The `h_bind` call binds the data length described in the `nitf_length` field with the subsequent data bytes parsed by `nitf_data`. In reality, you would update the binding logic to more correctly reflect actual file content dependencies and use real data sizes.
-
-This provided code is simplified and assumes certain structure arrangements for educational purposes. For actual implementations, detailed specification validation and parser testing are recommended, including multiple test cases to handle varieties of expected inputs and edge cases.

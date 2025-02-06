@@ -1,42 +1,60 @@
-module Bitcoin::Transactions;
+module Bitcoin;
 
 import spicy;
 
-public type BitcoinTransaction = unit {
-    version:     bytes(4) &convert=$$.to_uint32();
-    input_count: uintptr &parse_with=parse_compact_size();
-    inputs:      Input[input_count];
-    output_count: uintptr &parse_with=parse_compact_size();
-    outputs:     Output[output_count];
-    locktime:    bytes(4) &convert=$$.to_uint32();
-
-    type Input = unit {
-        previous_tx_hash: bytes(32);
-        previous_tx_index: uint32;
-        script_length: uintptr &parse_with=parse_compact_size();
-        script_sig: bytes(script_length);
-        sequence_number: uint32;
-    };
-
-    type Output = unit {
-        value: uint64;
-        pk_script_length: uintptr &parse_with=parse_compact_size();
-        pk_script: bytes(pk_script_length);
-    };
-
-    function parse_compact_size: type<uintptr>() = {
-        local first_byte = self.input(1)[0];
-        if ( first_byte < 0xfd ) {
-            return first_byte;
-        }
-        else if ( first_byte == 0xfd ) {
-            return self.input(3)[0:2].to_uint16();
-        }
-        else if ( first_byte == 0xfe ) {
-            return self.input(5)[0:4].to_uint32();
-        }
+type CompactSize = unit {
+    var value: uint64;
+    
+    on %init {
+        if ( input[0] < 0xfd ) {
+            self.value = cast<uint64>(input[0]);
+        } 
+        else if ( input[0] == 0xfd ) {
+            value = stream.read_uint16_little();
+        } 
+        else if ( input[0] == 0xfe ) {
+            value = stream.read_uint32_little();
+        } 
         else {
-            return self.input(9)[0:8].to_uint64();
+            value = stream.read_uint64_little();
         }
     }
-}
+};
+
+type TransactionInput = unit {
+    prev_tx_hash: bytes &size=32;
+    prev_output_index: uint32 &byte_order=spicy::ByteOrder::Little;
+    script_sig_length: CompactSize;
+    script_sig: bytes &size=(self.script_sig_length.value());
+    sequence_number: uint32 &byte_order=spicy::ByteOrder::Little;
+};
+
+type TransactionOutput = unit {
+    amount: int64 &byte_order=spicy::ByteOrder::Little;
+    script_pubkey_length: CompactSize;
+    script_pubkey: bytes &size=(self.script_pubkey_length.value());
+};
+
+type WitnessItem = unit {
+    item_length: CompactSize;
+    item_data: bytes &size=(self.item_length.value());
+};
+
+type WitnessStack = unit {
+    witness_item_count: CompactSize;
+    witness_items: vector<WitnessItem> &count=(self.witness_item_count.value());
+};
+
+type Transaction = unit {
+    version: uint32 &byte_order=spicy::ByteOrder::Little;
+    
+    input_count: CompactSize;
+    inputs: vector<TransactionInput> &count=(self.input_count.value());
+    
+    output_count: CompactSize;
+    outputs: vector<TransactionOutput> &count=(self.output_count.value());
+    
+    locktime: uint32 &byte_order=spicy::ByteOrder::Little;
+    
+    witness_data: optional<WitnessStack> &optional;
+};

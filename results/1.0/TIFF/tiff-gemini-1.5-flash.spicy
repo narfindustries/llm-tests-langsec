@@ -1,50 +1,68 @@
-#ifndef _TIFF_GEMINI_1_5_FLASH_SPICY_H_
-#define _TIFF_GEMINI_1_5_FLASH_SPICY_H_
+module TIFF;
 
-#include <zeek/analyzer/protocol/spicy.h>
-
-namespace zeek::analyzer::protocol {
-
-class TIFFGemini1_5Flash : public Spicy {
- public:
-  TIFFGemini1_5Flash();
-  ~TIFFGemini1_5Flash() override;
-
-  // Add your Spicy methods here...  
-  //  e.g.,  bool check_header(const uint8_t* data, size_t len) override;
-  //        void dissect(const uint8_t* data, size_t len) override;
-  //        etc.
-};
-
-
-} // namespace zeek::analyzer::protocol
-
-#endif // _TIFF_GEMINI_1_5_FLASH_SPICY_H_
-
-// tiff-gemini-1.5-flash.spicy
-
-#include "tiff-gemini-1.5-flash.h"
-
-namespace zeek::analyzer::protocol {
-
-TIFFGemini1_5Flash::TIFFGemini1_5Flash() {
-  // Add your initialization code here
+type tiff_header {
+	uint16 byte_order;
+	uint16 magic_number;
 }
 
-TIFFGemini1_5Flash::~TIFFGemini1_5Flash() {
-  // Add your cleanup code here
+type tiff_ifd {
+	uint32 num_entries;
+	ifd_entry[num_entries] ifd_entries;
 }
 
-//Implement your Spicy methods here...
-bool TIFFGemini1_5Flash::check_header(const uint8_t* data, size_t len) {
-  // Check if the data matches the expected header of your TIFF Gemini 1.5 Flash protocol.
-  // Return true if it matches, false otherwise.
-  return false; // Replace with your actual header check
+type ifd_entry {
+	uint16 tag;
+	uint16 type;
+	uint32 count;
+    value value_data;
 }
 
-void TIFFGemini1_5Flash::dissect(const uint8_t* data, size_t len) {
-  // Implement your protocol dissection logic here.
-  // Use the Zeek API to extract relevant information and create events.
+type value {
+	switch (type) {
+		case 1: // BYTE
+			uint8[count] bytes;
+		case 2: // ASCII
+			string ascii;
+		case 3: // SHORT
+			uint16[count] shorts;
+		case 4: // LONG
+			uint32[count] longs;
+		case 5: // RATIONAL
+			rational[count] rationals;
+		case 6: // SBYTE
+			int8[count] sbytes;
+		case 7: // UNDEFINED
+			uint8[count] undefined;
+		case 8: // SSHORT
+			int16[count] sshorts;
+		case 9: // SLONG
+			int32[count] slongs;
+		case 10: // SRATIONAL
+			srational[count] srational;
+		case 11: // FLOAT
+			float32[count] floats;
+		case 12: // DOUBLE
+			float64[count] doubles;
+		default:
+			uint8[0]; // Handle unknown types
+	}
 }
 
-} // namespace zeek::analyzer::protocol
+type rational {
+	uint32 numerator;
+	uint32 denominator;
+}
+
+type srational {
+	int32 numerator;
+	int32 denominator;
+}
+
+type tiff {
+	tiff_header header;
+	uint32 ifd_offset;
+	tiff_ifd ifd;
+	// Potentially multiple IFDs linked through "NextIFD" tag
+
+	//Optional: Add support for Exif, GPS, IPTC, XMP, etc. as nested structures
+}

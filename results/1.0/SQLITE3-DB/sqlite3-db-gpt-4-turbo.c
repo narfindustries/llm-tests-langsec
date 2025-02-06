@@ -1,70 +1,72 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 
-// SQLite3 Database File Format
-
-// Define basic SQLite data types
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16le();
-static HParser *uint32 = h_uint32le();
-static HParser *uint64 = h_uint64le();
-
-// Helper function to parse SQLite version and header string
-static HParsedToken *act_version_and_header(const HParseResult *p, void *user_data) {
-    HBytes *bytes = h_seq_index(p->ast, 0)->token;
-    uint32_t *version = h_seq_index(p->ast, 1)->token;
-    
-    printf("SQLite Format Version: %d\n", *version);
-    fwrite(h_bytes_data(bytes), h_bytes_len(bytes), 1, stdout);
-    printf("\n");
-    
-    return NULL;
-}
-
-// Database Header
-static HParser *sqlite_header() {
+// Helper function to parse a SQLite file format
+HParser* sqlite_header() {
     return h_sequence(
-        h_tok_s("SQLite format 3\u0000", 16),  // Header String: "SQLite format 3\0"
-        h_action(uint32, act_version_and_header, NULL),
-        NULL);
+        h_token("SQLite format 3\000", 16),
+        h_uint16(),               // Page size
+        h_uint8(),                // Write version
+        h_uint8(),                // Read version
+        h_uint8(),                // Max embedded payload fraction (must be 64)
+        h_uint8(),                // Min embedded payload fraction (must be 32)
+        h_uint8(),                // Leaf payload fraction (must be 32)
+        h_uint32(),               // File change counter
+        h_uint32(),               // Number of pages in the database file
+        h_uint32(),               // First freelist trunk page
+        h_uint32(),               // Total number of freelist pages
+        h_uint32(),               // Schema cookie
+        h_uint32(),               // Schema format number
+        h_uint32(),               // Default page cache size
+        h_uint32(),               // Largest B-tree page
+        h_uint32(),               // Text encoding
+        h_uint32(),               // User version
+        h_uint32(),               // Incremental vacuum mode
+        h_uint32(),               // Application ID
+        h_uint32(),               // Version valid for number
+        h_uint32(),               // SQLite version number
+        NULL
+    );
 }
 
-// Page content parsers  
-static HParser *parse_btree_page() {
-    // Placeholder for BTree page parsing logic
-    return h_ignore(1);
-}
-
-// Database pager
-static HParser *database_pager() {
-    return h_sequence(
-        sqlite_header(),
-        h_many(
-            parse_btree_page(),
-            NULL
-        ), 
-        NULL);
-}
-
-int main() {
-    // Create a parser for SQLite3 Database File
-    HParser *sqlite_parser = database_pager();
-    
-    // Input to parse
-    uint8_t sqlite_db_input[] = "\x53\x51\x4c\x69\x74\x65\x20\x66\x6f\x72\x6d\x61\x74\x20\x33\x00\x01\x00\x00\x00";
-    
-    // Parse the input
-    HParseResult *result = h_parse(sqlite_parser, sqlite_db_input, sizeof(sqlite_db_input));
-    if(result) {
-        printf("Parsing successful!\n");
-    } else {
-        fprintf(stderr, "Failed to parse the SQLite3 Database\n");
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite3_db_file>\n", argv[0]);
+        exit(1);
     }
 
-    // Cleanup parser
-    h_parser_free(sqlite_parser);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
 
-    return 0;
+    fseek(fp, 0, SEEK_END);
+    size_t fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, fileSize, 1, fp);
+    fclose(fp);
+
+    HParseResult* result = h_parse(sqlite_header(), buffer, fileSize);
+    if (result == NULL) {
+        printf("Parsing failed.\n");
+        free(buffer);
+        return EXIT_FAILURE;
+    }
+
+    printf("Parsing successful. Header information is parsed.\n");
+    
+    // You would need additional handling here to process and interpret the parsed data, and walk through B-tree pages, etc.
+
+    free(buffer);
+    return EXIT_SUCCESS;
 }

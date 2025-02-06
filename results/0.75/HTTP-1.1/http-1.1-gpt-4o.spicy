@@ -1,35 +1,68 @@
-module HTTP::Spicy;
+module http;
 
 import spicy;
 import zeek;
 
-public type HTTPMessage = unit {
-    method: string &size = 4;
-    uri: string &until=' ';
-    version: string &size = 8;
-    headers: list<Header> &until=method_is_end();
-    body: bytes &restofdata;
-
-    on %init {
-        print "HTTP Message Parsed: ", self.method;
-    }
-
-    function method_is_end() : bool {
-        return |self.headers| > 0 && self.headers[|self.headers|-1].name == "Content-Length";
-    }
+type HTTPVersion = unit {
+    major: uint8;
+    minor: uint8;
 };
 
-public type Header = unit {
-    name: string &until=':';
-    value: string &until='\r\n';
+type RequestLine = unit {
+    method: string &until=" ";
+    _ws1: bytes &size=1; # Space
+    uri: string &until=" ";
+    _ws2: bytes &size=1; # Space
+    version: string &until="\r";
+    _end: bytes &size=2; # CRLF
 };
 
-public type HTTPParser = unit {
+type StatusLine = unit {
+    version: string &until=" ";
+    _ws1: bytes &size=1; # Space
+    status_code: string &until=" ";
+    _ws2: bytes &size=1; # Space
+    reason_phrase: string &until="\r";
+    _end: bytes &size=2; # CRLF
+};
+
+type Header = unit {
+    name: string &until=":";
+    _colon: bytes &size=1; # Colon
+    _ws: bytes &size=1; # Space
+    value: string &until="\r";
+    _end: bytes &size=2; # CRLF
+};
+
+type MessageHeaders = unit {
+    headers: Header[] &until="\r\n";
+    _end: bytes &size=2; # CRLF
+};
+
+type HTTPRequest = unit {
+    request_line: RequestLine;
+    headers: MessageHeaders;
+    body: bytes &restofdata; # Body of the message
+};
+
+type HTTPResponse = unit {
+    status_line: StatusLine;
+    headers: MessageHeaders;
+    body: bytes &restofdata; # Body of the message
+};
+
+type HTTPMessage = unit {
+    message: RequestLine | StatusLine;
+    headers: MessageHeaders;
+    body: bytes &restofdata; # Body of the message
+};
+
+public type HTTPProtocol = unit {
     message: HTTPMessage;
 };
 
-public hook zeek_init() {
-    # Register protocol parser
-    local analyzer = Spicy::register_analyzer(HTTP::Spicy::HTTPParser, "HTTP", /http/i);
-    Spicy::enable_analyzer(analyzer);
+public module HTTP {
+    type Analyzer = zeek::analyzer::Analyzer {
+        .connection = HTTPProtocol;
+    };
 }

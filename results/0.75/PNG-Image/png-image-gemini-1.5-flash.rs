@@ -1,109 +1,99 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, verify},
-    error::ErrorKind,
+    combinator::map,
+    error::ParseError,
     number::complete::be_u32,
-    sequence::{tuple, preceded},
     IResult,
 };
+use std::fs::read;
+use std::path::Path;
 
 #[derive(Debug)]
-struct PngHeader {
-    signature: [u8; 8],
-    ihdr: IHDR,
-    idat: Vec<u8>,
-    iend: [u8; 4],
-}
-
+struct PngSignature;
 
 #[derive(Debug)]
-struct IHDR {
-    width: u32,
-    height: u32,
-    bit_depth: u8,
-    color_type: u8,
-    compression_method: u8,
-    filter_method: u8,
-    interlace_method: u8,
+struct PngChunk {
+    length: u32,
+    chunk_type: [u8; 4],
+    data: Vec<u8>,
+    crc: u32,
 }
 
-fn png_signature(input: &[u8]) -> IResult<&[u8], [u8; 8]> {
-    map(take(8usize), |bytes: &[u8]| {
-        let mut arr = [0; 8];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)
+fn png_signature(input: &[u8]) -> IResult<&[u8], PngSignature> {
+    let signature = tag(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    map(signature, |_| PngSignature)(input)
 }
 
-fn chunk(input: &[u8]) -> IResult<&[u8], (u32, &[u8], [u8; 4])> {
+fn png_chunk(input: &[u8]) -> IResult<&[u8], PngChunk> {
     let (input, length) = be_u32(input)?;
-    let (input, type_bytes) = take(4usize)(input)?;
-    let (input, data) = take(length)(input)?;
-    let (input, crc) = take(4usize)(input)?;
-    let mut crc_arr = [0;4];
-    crc_arr.copy_from_slice(crc);
-    Ok((input, (length, data, crc_arr)))
+    let (input, chunk_type) = take(4usize)(input)?;
+    let (input, data) = take(length as usize)(input)?;
+    let (input, crc) = be_u32(input)?;
+
+    Ok((
+        input,
+        PngChunk {
+            length,
+            chunk_type: chunk_type.try_into().unwrap(),
+            data: data.to_vec(),
+            crc,
+        },
+    ))
 }
 
-fn ihdr(input: &[u8]) -> IResult<&[u8], IHDR> {
-    let (input, (width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)) = 
-        preceded(tag(b"IHDR"), tuple((be_u32, be_u32, map(take(1usize), |b| b[0]), map(take(1usize), |b| b[0]), map(take(1usize), |b| b[0]), map(take(1usize), |b| b[0]), map(take(1usize), |b| b[0]))))(input)?;
-    Ok((input, IHDR { width, height, bit_depth, color_type, compression_method, filter_method, interlace_method }))
+fn png_chunks(input: &[u8]) -> IResult<&[u8], Vec<PngChunk>> {
+    many0(png_chunk)(input)
 }
 
-fn idat(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, (length, data, _crc)) = preceded(tag(b"IDAT"), chunk)(input)?;
-    Ok((input, data.to_vec()))
+fn many0<I, O, E: ParseError<I>, F>(mut f: F) -> impl FnMut(I) -> IResult<I, Vec<O>, E>
+where
+    F: FnMut(I) -> IResult<I, O, E>,
+    I: Clone,
+{
+    move |mut i| {
+        let mut res = Vec::new();
+        loop {
+            match f(&mut i) {
+                Ok((i1, o)) => {
+                    res.push(o);
+                    i = i1;
+                }
+                Err(nom::Err::Error(_)) => break,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok((i, res))
+    }
 }
 
-
-fn iend(input: &[u8]) -> IResult<&[u8], [u8; 4]> {
-    map(preceded(tag(b"IEND"), take(4usize)), |bytes: &[u8]| {
-        let mut arr = [0; 4];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)
-}
-
-fn png(input: &[u8]) -> IResult<&[u8], PngHeader> {
-    let (input, signature) = png_signature(input)?;
-    let (input, ihdr) = ihdr(input)?;
-    let (input, idat) = idat(input)?;
-    let (input, iend) = iend(input)?;
-    Ok((input, PngHeader { signature, ihdr, idat, iend }))
-}
-
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <filename>", args[0]);
-        return;
+        eprintln!("Usage: {} <filename>", args[0]);
+        std::process::exit(1);
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
-        }
-    };
+    let data = read(Path::new(filename))?;
 
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
+    match png_signature(&data) {
+        Ok((remaining, _signature)) => {
+            match png_chunks(remaining) {
+                Ok((_, chunks)) => {
+                    println!("PNG file parsed successfully. Chunks:");
+                    for chunk in chunks {
+                        println!("{:?}", chunk);
+                    }
+                }
+                Err(e) => {
+                    println!("Error parsing PNG chunks: {:?}", e);
+                }
+            }
         }
-    };
-
-    match png(&buffer) {
-        Ok((_, header)) => println!("PNG Header: {:?}", header),
-        Err(e) => println!("Error parsing PNG: {:?}", e),
+        Err(e) => {
+            println!("Error parsing PNG signature: {:?}", e);
+        }
     }
+
+    Ok(())
 }

@@ -1,62 +1,85 @@
 meta:
   id: tiff
-  title: Tagged Image File Format
+  title: TIFF
   file-extension: tiff
   endian: be
+  license: |
+    This is a derived work, based on the TIFF 6.0 Specification.
+    The Kaitai Struct definition itself is licensed under CC0.
 
 seq:
   - id: header
     type: header
 
+  - id: ifd0
+    type: ifd
+    doc: The first Image File Directory.
+
 types:
   header:
     seq:
+      - id: byte_order
+        contents: ['I', 'I']
       - id: magic
-        contents: [0x49, 0x49, 0x2A, 0x00]
+        type: u2
       - id: ifd0_ofs
-        type: u4le
-        
+        type: u4
+
   ifd:
     seq:
-      - id: num_entries
+      - id: num_tags
         type: u2
-      - id: entries
-        type: ifd_entry
+      - id: tags
+        type: tag_entry
         repeat: expr
-        repeat-expr: num_entries
+        repeat-expr: num_tags
       - id: next_ifd_ofs
         type: u4
 
-  ifd_entry:
+  tag_entry:
     seq:
       - id: tag
         type: u2
+        enum: tag_codes
       - id: field_type
         type: u2
-      - id: num_values
+        enum: field_types
+      - id: length
         type: u4
-      - id: value_or_ofs
+      - id: value_or_offset
         type: u4
 
-    instances:
-      value:
-        io: _root._io
-        pos: value_or_ofs
-        repeat: expr
-        repeat-expr: num_values
-        size-eos: false
-        type:
-          switch-on: field_type
-          cases:
-            '1': u1   # BYTE
-            '2': str  # ASCII
-            '3': u2   # SHORT
-            '4': u4   # LONG
-            '5': rational  # RATIONAL
+enums:
+  tag_codes:
+    256: image_width
+    257: image_length
+    258: bits_per_sample
+    259: compression
+    262: photometric_interpretation
+    273: strip_offsets
+    274: orientation
+    277: samples_per_pixel
+    278: rows_per_strip
+    279: strip_byte_counts
+    282: x_resolution
+    283: y_resolution
+    284: planar_configuration
+    296: resolution_unit
+    305: software
+    306: date_time
+    315: artist
+    339: sample_format
 
-  rational:
-    seq:
-      - id: numerator
-        type: u4
-      - id: denominator
-        type: u4
+  field_types:
+    1: byte
+    2: ascii
+    3: short
+    4: long
+    5: rational
+    6: sbyte
+    7: undefined
+    8: sshort
+    9: slong
+    10: srational
+    11: float
+    12: double

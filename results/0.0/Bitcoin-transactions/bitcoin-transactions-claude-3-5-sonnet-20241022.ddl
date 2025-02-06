@@ -1,40 +1,47 @@
-specification BitcoinTransactions {
-    lexer {
-        digit = ['0'-'9']
-        hex = ['0'-'9' 'a'-'f' 'A'-'F']
-        ws = ' ' | '\t' | '\n' | '\r'
-        ignored = ws+
+def Bitcoin = {
+    Version: U32,
+    InputCount: VarInt,
+    Inputs: Input[InputCount],
+    OutputCount: VarInt,
+    Outputs: Output[OutputCount],
+    WitnessData: WitnessSection,
+    LockTime: U32
+}
+
+def WitnessSection = {
+    HasWitness: U8,
+    Data: if HasWitness == 0x00 then {
+        Flag: U8 where Flag == 0x01,
+        WitnessItems: WitnessItem[parent.InputCount]
     }
+}
 
-    token Amount = digit+
-    token TxHash = hex{64}
-    token Address = ['1' '3' 'b' 'B'][a-zA-Z0-9]{25,34}
+def VarInt = {
+    FirstByte: U8,
+    Value: if FirstByte < 0xFD then FirstByte
+           else if FirstByte == 0xFD then U16
+           else if FirstByte == 0xFE then U32
+           else U64
+}
 
-    Transaction = {
-        inputs: [Input+]
-        outputs: [Output+]
-        hash: TxHash
-        timestamp: Amount
-    }
+def Input = {
+    PrevTxHash: U8[32],
+    PrevTxIndex: U32,
+    ScriptLength: VarInt,
+    ScriptSig: U8[ScriptLength],
+    Sequence: U32
+}
 
-    Input = {
-        prevTxHash: TxHash
-        outputIndex: Amount
-        signature: TxHash
-    }
+def Output = {
+    Value: U64,
+    ScriptLength: VarInt,
+    ScriptPubKey: U8[ScriptLength]
+}
 
-    Output = {
-        amount: Amount
-        address: Address
-    }
-
-    BitcoinBlock = {
-        transactions: [Transaction+]
-        blockHeight: Amount
-        blockHash: TxHash
-        previousBlockHash: TxHash
-        timestamp: Amount
-    }
-
-    main = BitcoinBlock
+def WitnessItem = {
+    WitnessCount: VarInt,
+    WitnessData: {
+        Length: VarInt,
+        Data: U8[Length]
+    }[WitnessCount]
 }

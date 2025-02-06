@@ -1,30 +1,30 @@
 meta:
-  id: http_message
-  title: HTTP 1.1 Message
+  id: http
+  title: HTTP 1.1
+  application: http
   file-extension: http
-  endian: be
 
 seq:
-  - id: start_line
-    type: start_line
+  - id: request_line
+    type: request_line
   - id: headers
     type: headers
   - id: body
     size-eos: true
-    if: start_line.method == 'POST' or start_line.method == 'PUT' or start_line.method == 'PATCH'
+    if: headers.content_length > 0
 
 types:
-  start_line:
+  request_line:
     seq:
       - id: method
         type: strz
         encoding: ASCII
         terminator: 0x20
-      - id: uri
+      - id: request_uri
         type: strz
         encoding: ASCII
         terminator: 0x20
-      - id: version
+      - id: http_version
         type: strz
         encoding: ASCII
         terminator: 0x0d0a
@@ -32,20 +32,48 @@ types:
   headers:
     seq:
       - id: entries
-        type: header_entry
-        repeat: until
-        repeat-until: _.is_end_of_headers
+        type: header
+        repeat: eos
 
-  header_entry:
+  header:
     seq:
       - id: name
         type: strz
         encoding: ASCII
         terminator: 0x3a
+        include: false
       - id: value
         type: strz
         encoding: ASCII
         terminator: 0x0d0a
+        include: false
+
     instances:
-      is_end_of_headers:
-        value: name == "" and value == ""
+      content_length:
+        value: '(name.trim().to_lower() == "content-length") ? value.trim().to_i : 0'
+        if: name.trim().to_lower() == "content-length"
+
+  response:
+    seq:
+      - id: status_line
+        type: status_line
+      - id: headers
+        type: headers
+      - id: body
+        size-eos: true
+        if: headers.content_length > 0
+
+  status_line:
+    seq:
+      - id: http_version
+        type: strz
+        encoding: ASCII
+        terminator: 0x20
+      - id: status_code
+        type: strz
+        encoding: ASCII
+        terminator: 0x20
+      - id: reason_phrase
+        type: strz
+        encoding: ASCII
+        terminator: 0x0d0a

@@ -1,63 +1,103 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/zipgemini"
-           xmlns="http://example.org/zipgemini"
+           targetNamespace="http://example.org/zip"
+           xmlns="http://example.org/zip"
            elementFormDefault="qualified">
 
-  <xs:element name="zipGemini">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="zipFile">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCount="1"/>
-        <xs:element name="records" type="recordsType" dfdl:occursCount="unbounded"/>
-        <xs:element name="trailer" type="trailerType" dfdl:occursCount="1"/>
+        <xs:element ref="localFileHeader" maxOccurs="unbounded"/>
+        <xs:element ref="centralDirectoryHeader" maxOccurs="unbounded"/>
+        <xs:element ref="endOfCentralDirectoryRecord"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCount="1"/>
+      <xs:attribute name="dfdl:lengthKind" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="implicit"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
-        <dfdl:format ref="zipGeminiFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
 
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="creationDate" type="xs:date"/>
-      <xs:element name="recordCount" type="xs:integer"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="localFileHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="versionNeededToExtract" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="generalPurposeBitFlag" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="compressionMethod" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="lastModTime" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="lastModDate" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="crc32" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="compressedSize" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="uncompressedSize" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="fileNameLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="extraFieldLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="fileName" type="xs:string" dfdl:length="{fileNameLength}"/>
+        <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{extraFieldLength}"/>
+        <xs:element name="compressedData" type="xs:hexBinary" dfdl:length="{compressedSize}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="recordsType">
-    <xs:sequence>
-      <xs:element name="record" type="recordType"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="centralDirectoryHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="versionMadeBy" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="versionNeededToExtract" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="generalPurposeBitFlag" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="compressionMethod" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="lastModTime" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="lastModDate" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="crc32" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="compressedSize" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="uncompressedSize" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="fileNameLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="extraFieldLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="fileCommentLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="diskNumberStart" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="internalFileAttributes" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="externalFileAttributes" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="relativeOffsetOfLocalHeader" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="fileName" type="xs:string" dfdl:length="{fileNameLength}"/>
+        <xs:element name="extraField" type="xs:hexBinary" dfdl:length="{extraFieldLength}"/>
+        <xs:element name="fileComment" type="xs:string" dfdl:length="{fileCommentLength}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="id" type="xs:string"/>
-      <xs:element name="value" type="xs:decimal"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="endOfCentralDirectoryRecord">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="numberOfThisDisk" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="numberOfDiskWithStartOfCentralDirectory" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="totalNumberOfEntriesInCentralDirectoryOnThisDisk" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="totalNumberOfEntriesInCentralDirectory" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="sizeOfCentralDirectory" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="offsetOfStartOfCentralDirectory" type="unsignedInt" dfdl:length="4"/>
+        <xs:element name="zipFileCommentLength" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="zipFileComment" type="xs:string" dfdl:length="{zipFileCommentLength}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="trailerType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="unsignedShort">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
-      <dfdl:defineSchema name="zipGeminiFormat">
-          <dfdl:format binary="false" encoding="UTF-8" ignoreCase="no" lengthKind="delimited"
-                       lengthUnits="bytes" paddingAmount="0" separator="|"
-                       textSeparator="|" representation="text"
-                       byteOrder="bigEndian"
-                       textLayout="delimited"/>
-      </dfdl:defineSchema>
-    </xs:appinfo>
-  </xs:annotation>
-
+  <xs:simpleType name="unsignedInt">
+    <xs:restriction base="xs:unsignedLong">
+      <xs:maxInclusive value="4294967295"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

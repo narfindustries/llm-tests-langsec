@@ -1,40 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema" 
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-        targetNamespace="http://example.com/HL7v2" 
-        xmlns:tns="http://example.com/HL7v2" 
-        elementFormDefault="qualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/HL7v2" 
+           xmlns:tns="http://example.com/HL7v2" 
+           elementFormDefault="qualified">
 
-    <dfdl:format ref="tns:HL7v2Format"/>
-    
-    <dfdl:defineFormat name="HL7v2Format">
-        <dfdl:sequenceSep>0x0D</dfdl:sequenceSep> <!-- Carrige return for segment separator -->
-        <dfdl:initiator>%ES;|</dfdl:initiator> <!-- Start of segment identifier -->
-        <dfdl:terminator>%ES;</dfdl:terminator> <!-- End of segment identifier -->
-        <dfdl:initiatedContent>true</dfdl:initiatedContent>
-        <dfdl:encoding>US-ASCII</dfdl:encoding>
-        <dfdl:lengthKind>delimited</dfdl:lengthKind>
-    </dfdl:defineFormat>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format lengthKind="delimited" encoding="UTF-8" separator="|"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-    <element name="HL7Message">
-        <complexType>
-            <sequence dfdl:separator='|'>
-                <element name="MSH" type="tns:Segment"/>
-                <element name="Segments" minOccurs="0" maxOccurs="unbounded">
-                    <complexType>
-                        <sequence>
-                            <element name="Segment" type="tns:Segment"/>
-                        </sequence>
-                    </complexType>
-                </element>
-            </sequence>
-        </complexType>
-    </element>
+    <!-- Message Structure -->
+    <xs:element name="HL7Message">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="tns:MSH" minOccurs="1" maxOccurs="1"/>
+                <xs:element ref="tns:SegmentGroup" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-    <complexType name="Segment">
-        <sequence>
-            <element name="Field" type="string" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="delimited" dfdl:terminator='|'/>
-        </sequence>
-    </complexType>
+    <!-- Segment Group (A placeholder to organize various segments like PID, PV1, etc.) -->
+    <xs:element name="SegmentGroup">
+        <xs:complexType>
+            <xs:choice>
+                <xs:element ref="tns:PID" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="tns:PV1" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="tns:ORC" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="tns:OBR" minOccurs="0" maxOccurs="1"/>
+                <xs:element ref="tns:OBX" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element ref="tns:AL1" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
 
-</schema>
+    <!-- MSH Segment -->
+    <xs:element name="MSH">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FieldSeparator" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="EncodingCharacters" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="SendingApplication" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="SendingFacility" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="DateTimeOfMessage" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- PID Segment -->
+    <xs:element name="PID">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="PatientID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="PatientName" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="DateOfBirth" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="Sex" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="PatientAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- PV1 Segment -->
+    <xs:element name="PV1">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SetID" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="PatientClass" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="AssignedPatientLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="AdmissionType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ORC Segment -->
+    <xs:element name="ORC">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="OrderControl" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="PlacerOrderNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="FillerOrderNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="OrderStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- OBR Segment -->
+    <xs:element name="OBR">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SetID" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="PlacerOrderNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="UniversalServiceID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="Priority" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- OBX Segment -->
+    <xs:element name="OBX">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SetID" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="ValueType" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="ObservationIdentifier" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <xs:element name="ObservationValue" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- AL1 Segment -->
+    <xs:element name="AL1">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="SetID" type="xs:int" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="AllergenTypeCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="AllergenCodeMnemonicDescription" type="xs:string" minOccurs="1" maxOccurs="1"/>
+                <!-- Additional fields omitted for brevity -->
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

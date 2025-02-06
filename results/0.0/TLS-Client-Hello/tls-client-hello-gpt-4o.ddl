@@ -1,51 +1,107 @@
-module TLSClientHello
+ClientHello : structure {
+    ProtocolVersion : uint16;
+    Random : opaque[32];
+    SessionID : opaque[uint8];
+    CipherSuites : list of CipherSuite (uint16);
+    CompressionMethods : opaque[uint8];
+    Extensions : list of Extension (uint16);
+}
 
-import Data.ByteString
-import Data.Word
-import Data.List
+CipherSuite : structure {
+    CipherSuiteBytes : opaque[2];
+}
 
--- TLS Client Hello message structure
-data TLSClientHello = TLSClientHello
-  { clientVersion :: TLSVersion
-  , random        :: Random
-  , sessionId     :: SessionID
-  , cipherSuites  :: [CipherSuite]
-  , compressionMethods :: [CompressionMethod]
-  , extensions    :: [Extension]
-  }
+Extension : structure {
+    ExtensionType : uint16;
+    ExtensionData : opaque[uint16];
+}
 
-data TLSVersion = TLSVersion
-  { major :: Word8
-  , minor :: Word8
-  }
+SupportedVersions : structure {
+    SupportedVersionsList : opaque[uint8];
+}
 
-data Random = Random
-  { gmtUnixTime :: Word32
-  , randomBytes :: ByteString 28
-  }
+SupportedGroups : structure {
+    NamedGroupList : list of uint16 (uint16);
+}
 
-data SessionID = SessionID
-  { sessionIdLength :: Word8
-  , sessionIdBytes  :: ByteString sessionIdLength
-  }
+SignatureAlgorithms : structure {
+    SignatureSchemeList : list of uint16 (uint16);
+}
 
-data CipherSuite = CipherSuite
-  { cipherSuite :: Word16
-  }
+KeyShare : structure {
+    KeyShareList : list of KeyShareEntry (uint16);
+}
 
-data CompressionMethod = CompressionMethod
-  { compressionMethod :: Word8
-  }
+KeyShareEntry : structure {
+    Group : uint16;
+    KeyExchange : opaque[uint16];
+}
 
-data Extension = Extension
-  { extensionType   :: Word16
-  , extensionLength :: Word16
-  , extensionData   :: ByteString extensionLength
-  }
+PSKKeyExchangeModes : structure {
+    PSKKeyExchangeModeList : opaque[uint8];
+}
 
--- Helper functions
-parseTLSClientHello :: ByteString -> Either String TLSClientHello
-parseTLSClientHello = undefined
+PreSharedKey : structure {
+    Identifiers : list of PskIdentity (uint16);
+    Binders : list of PskBinderEntry (uint16);
+}
 
-serializeTLSClientHello :: TLSClientHello -> ByteString
-serializeTLSClientHello = undefined
+PskIdentity : structure {
+    Identity : opaque[uint16];
+    ObfuscatedTicketAge : uint32;
+}
+
+PskBinderEntry : structure {
+    Binder : opaque[uint8];
+}
+
+ServerName : structure {
+    NameList : list of ServerNameList (uint16);
+}
+
+ServerNameList : structure {
+    NameType : uint8;
+    HostName : opaque[uint16];
+}
+
+ApplicationLayerProtocolNegotiation : structure {
+    Protocols : list of ProtocolNameList (uint16);
+}
+
+ProtocolNameList : structure {
+    ProtocolName : opaque[uint8];
+}
+
+MaxFragmentLength : structure {
+    MaxFragmentLength : uint8;
+}
+
+StatusRequest : structure {
+    StatusType : uint8;
+    ResponderIDList : list of ResponderIDList (uint16);
+    RequestExtensions : opaque[uint16];
+}
+
+ResponderIDList : structure {
+    ResponderID : opaque[uint16];
+}
+
+SignatureAlgorithmsCert : structure {
+    SignatureSchemeList : list of uint16 (uint16);
+}
+
+RecordSizeLimit : structure {
+    RecordSizeLimit : uint16;
+}
+
+Cookie : structure {
+    Cookie : opaque[uint16];
+}
+
+EarlyData : structure {
+    MaxEarlyDataSize : uint32;
+}
+
+RenegotiationInfo : structure {
+    RenegotiatedConnection : opaque[uint8];
+}

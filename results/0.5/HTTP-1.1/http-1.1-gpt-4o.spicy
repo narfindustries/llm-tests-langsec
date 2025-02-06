@@ -1,36 +1,76 @@
 module HTTP;
 
-public type Request = unit {
-    method: string &restofdata;
-    uri: string &restofdata;
-    version: string &restofdata;
-    headers: Headers;
+type HTTPDate = bytes &size=29; // Simplified for illustration
+
+type EntityTag = string; // Simplified, usually quoted string
+
+public type HTTPMessage = unit {
+    is_request: bool;
+
+    # Request Line
+    method: string &if (is_request);
+    request_uri: string &if (is_request);
+    http_version: string;
+
+    # Status Line
+    status_code: uint16 &if (!is_request);
+    reason_phrase: string &if (!is_request);
+
+    # General Header Fields
+    cache_control: optional<string>;
+    connection: optional<string>;
+    date: optional<HTTPDate>;
+    pragma: optional<string>;
+    trailer: optional<string>;
+    transfer_encoding: optional<string>;
+    upgrade: optional<string>;
+    via: optional<string>;
+    warning: optional<string>;
+
+    # Request Header Fields
+    accept: optional<string> &if (is_request);
+    accept_charset: optional<string> &if (is_request);
+    accept_encoding: optional<string> &if (is_request);
+    accept_language: optional<string> &if (is_request);
+    authorization: optional<string> &if (is_request);
+    expect: optional<string> &if (is_request);
+    from: optional<string> &if (is_request);
+    host: optional<string> &if (is_request);
+    if_match: optional<EntityTag> &if (is_request);
+    if_modified_since: optional<HTTPDate> &if (is_request);
+    if_none_match: optional<EntityTag> &if (is_request);
+    if_range: optional<EntityTag> &if (is_request);
+    if_unmodified_since: optional<HTTPDate> &if (is_request);
+    max_forwards: optional<uint32> &if (is_request);
+    proxy_authorization: optional<string> &if (is_request);
+    range: optional<string> &if (is_request);
+    referer: optional<string> &if (is_request);
+    te: optional<string> &if (is_request);
+    user_agent: optional<string> &if (is_request);
+
+    # Response Header Fields
+    accept_ranges: optional<string> &if (!is_request);
+    age: optional<uint32> &if (!is_request);
+    etag: optional<EntityTag> &if (!is_request);
+    location: optional<string> &if (!is_request);
+    proxy_authenticate: optional<string> &if (!is_request);
+    retry_after: optional<HTTPDate> &if (!is_request);
+    server: optional<string> &if (!is_request);
+    vary: optional<string> &if (!is_request);
+    www_authenticate: optional<string> &if (!is_request);
+
+    # Entity Header Fields
+    allow: optional<string>;
+    content_encoding: optional<string>;
+    content_language: optional<string>;
+    content_length: optional<uint64>;
+    content_location: optional<string>;
+    content_md5: optional<string>;
+    content_range: optional<string>;
+    content_type: optional<string>;
+    expires: optional<HTTPDate>;
+    last_modified: optional<HTTPDate>;
+
+    # Message Body
     body: bytes &restofdata;
-} &byte-order=network;
-
-public type Headers = unit {
-    headers: repeat (Header) &until=|eos|;
-};
-
-public type Header = unit {
-    name: string &restofdata;
-    value: string &restofdata;
-} &byte-order=network;
-
-public type Response = unit {
-    version: string &restofdata;
-    status_code: uint16 &restofdata;
-    reason_phrase: string &restofdata;
-    headers: Headers;
-    body: bytes &restofdata;
-} &byte-order=network;
-
-public module Parser {
-    public function parse_request(data: bytes) : Request {
-        return parse(Request, data);
-    }
-
-    public function parse_response(data: bytes) : Response {
-        return parse(Response, data);
-    }
-}
+} &byteorder=big;

@@ -1,40 +1,51 @@
 meta:
   id: gzip
-  file-extension: gz
   endian: le
+  file-extension: gz
 seq:
-  - id: header
-    type: header
-  - id: body
-    type: body
-  - id: footer
-    type: footer
+  - id: id1
+    type: u1
+  - id: id2
+    type: u1
+  - id: cm
+    type: u1
+  - id: flags
+    type: u1
+  - id: mtime
+    type: u4
+  - id: xfl
+    type: u1
+  - id: os
+    type: u1
+  - id: extra
+    seq:
+      - id: xlen
+        type: u2
+      - id: extra_field
+        size: xlen
+        type: bytes
+    if: flags & 4 != 0
+  - id: filename
+    seq:
+      - id: filename_str
+        type: strz
+    if: flags & 8 != 0
+  - id: comment
+    seq:
+      - id: comment_str
+        type: strz
+    if: flags & 16 != 0
+  - id: hcrc
+    seq:
+      - id: hcrc_value
+        type: u2
+    if: flags & 2 != 0
+  - id: compressed_data
+    type: bytes
+    size: eos
 types:
-  header:
-    seq:
-      - id: magic
-        size: 2
-      - id: compression_method
-        size: 1
-      - id: flags
-        size: 1
-      - id: modification_time
-        size: 4
-      - id: extra_flags
-        size: 1
-      - id: operating_system
-        size: 1
-    instances:
-      is_gzip:
-        value: magic == [0x1f, 0x8b]
-  body:
-    seq:
-      - id: compressed_data
-        process: xz
-        size: until-eof
-  footer:
-    seq:
-      - id: crc32
-        size: 4
-      - id: uncompressed_size
-        size: 4
+  u1: uint8
+  u2: uint16
+  u4: uint32
+  bytes: byte-array
+  strz: strz

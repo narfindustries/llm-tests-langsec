@@ -2,105 +2,87 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define Modbus function codes
-#define MODBUS_FC_READ_COILS 0x01
-#define MODBUS_FC_READ_DISCRETE_INPUTS 0x02
-#define MODBUS_FC_READ_HOLDING_REGISTERS 0x03
-#define MODBUS_FC_READ_INPUT_REGISTERS 0x04
-#define MODBUS_FC_WRITE_SINGLE_COIL 0x05
-#define MODBUS_FC_WRITE_SINGLE_REGISTER 0x06
-#define MODBUS_FC_WRITE_MULTIPLE_COILS 0x0F
-#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS 0x10
+// Define Modbus data types
+typedef uint8_t  mb_uint8;
+typedef uint16_t mb_uint16;
+typedef uint32_t mb_uint32;
 
-
-// Structure to represent a Modbus request
-typedef struct {
-    uint8_t slave_address;
-    uint8_t function_code;
-    uint16_t start_address;
-    uint16_t quantity;
-    uint8_t *data;
-    uint8_t data_length;
-} ModbusRequest;
-
-
-// Structure to represent a Modbus response
-typedef struct {
-    uint8_t slave_address;
-    uint8_t function_code;
-    uint8_t *data;
-    uint8_t data_length;
-} ModbusResponse;
-
-
-// Function to calculate Modbus CRC16
-uint16_t modbus_crc16(uint8_t *data, uint8_t length) {
-    uint16_t crc = 0xFFFF;
-    for (int pos = 0; pos < length; pos++) {
-        crc ^= (uint16_t)data[pos];          // XOR byte into least sig. byte of crc
-        for (int i = 8; i != 0; i--) {    // Loop over each bit
-            if ((crc & 0x0001) != 0) {      // If the LSB is set
-                crc >>= 1;                    // Shift right and XOR 0xA001
-                crc ^= 0xA001;
-            } else                            // Else LSB is not set
-                crc >>= 1;                    // Just shift right
-        }
-    }
-    return crc;
+//Helper function to create a parser for a specific number of bytes
+hammer_parser hammer_bytes_n(size_t n){
+    return hammer_map(hammer_take(n),hammer_to_bytes);
 }
 
+// Modbus PDU parsers
+static hammer_parser mb_slave_address = hammer_uint8;
+static hammer_parser mb_function_code = hammer_uint8;
+static hammer_parser mb_starting_address = hammer_uint16_be;
+static hammer_parser mb_quantity = hammer_uint16_be;
+static hammer_parser mb_data = hammer_bytes(0); 
+static hammer_parser mb_exception_code = hammer_uint8;
 
-// Function to handle Modbus requests (replace with your actual Modbus logic)
-ModbusResponse* handle_modbus_request(ModbusRequest *request) {
-    ModbusResponse *response = (ModbusResponse*)malloc(sizeof(ModbusResponse));
-    response->slave_address = request->slave_address;
-    response->function_code = request->function_code;
 
-    //Example: Read Holding Registers
-    if(request->function_code == MODBUS_FC_READ_HOLDING_REGISTERS){
-        response->data_length = request->quantity * 2;
-        response->data = (uint8_t*)malloc(response->data_length);
-        //Simulate reading from holding registers. Replace with your actual register values.
-        for(int i = 0; i < response->data_length; i+=2){
-            *((uint16_t*)(response->data + i)) = request->start_address + i/2;
-        }
-    } else {
-        response->data_length = 0;
-        response->data = NULL;
+// Function to parse a Modbus PDU based on function code
+hammer_parser mb_pdu_parser(hammer_result func_code_result) {
+    mb_uint8 function_code = func_code_result.value;
+    switch (function_code) {
+        case 0x01: // Read Coils
+        case 0x02: // Read Discrete Inputs
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n((mb_quantity.value + 7) / 8), hammer_end);
+        case 0x03: // Read Holding Registers
+        case 0x04: // Read Input Registers
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n(mb_quantity.value * 2), hammer_end);
+        case 0x05: // Write Single Coil
+            return hammer_seq(mb_starting_address, hammer_uint16_be, hammer_end);
+        case 0x06: // Write Single Register
+            return hammer_seq(mb_starting_address, hammer_uint16_be, hammer_end);
+        case 0x0F: // Write Multiple Coils
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n((mb_quantity.value + 7) / 8), hammer_end);
+        case 0x10: // Write Multiple Registers
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n(mb_quantity.value * 2), hammer_end);
+        case 0x17: // Read/Write Multiple Registers
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n(mb_quantity.value * 2), hammer_end);
+        case 0x18: // Read File Record
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n(mb_quantity.value * 2), hammer_end);
+        case 0x14: // Read Device Identification
+            return hammer_seq(mb_starting_address, mb_quantity, hammer_bytes_n(mb_quantity.value), hammer_end);
+        default: // Exception handling for unknown function codes
+            return hammer_fail;
     }
-
-    return response;
 }
 
-
-int main() {
-    // Example usage:
-    ModbusRequest request;
-    request.slave_address = 1;
-    request.function_code = MODBUS_FC_READ_HOLDING_REGISTERS;
-    request.start_address = 0;
-    request.quantity = 5;
-    request.data = NULL;
-    request.data_length = 0;
-
-    ModbusResponse *response = handle_modbus_request(&request);
-
-    if(response != NULL){
-        //Process the response
-        printf("Response:\n");
-        printf("Slave Address: %d\n", response->slave_address);
-        printf("Function Code: %d\n", response->function_code);
-        printf("Data Length: %d\n", response->data_length);
-        for(int i = 0; i < response->data_length; i++){
-            printf("%02X ", response->data[i]);
-        }
-        printf("\n");
-        free(response->data);
-        free(response);
-    } else {
-        printf("Error handling Modbus request\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = (uint8_t *)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser parser = hammer_seq(mb_slave_address, mb_function_code, hammer_bind(mb_pdu_parser,mb_function_code));
+    hammer_result result = hammer_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        printf("Parsing successful!\n");
+        // Access parsed data here.  
+    } else {
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
+    }
+
+    free(buffer);
     return 0;
 }
+

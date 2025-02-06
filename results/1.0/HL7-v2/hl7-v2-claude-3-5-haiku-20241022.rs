@@ -1,123 +1,82 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while, take_while1},
-    character::complete::{char, digit1, space0, space1},
-    combinator::{map, opt},
-    multi::{many0, many1, separated_list0},
-    sequence::{preceded, separated_pair, terminated, tuple},
-    IResult,
+    bytes::complete::{tag, take_until},
+    character::complete::{char, digit1, space1},
+    multi::{many0, separated_list0},
+    sequence::{tuple, preceded, separated_pair},
+    IResult, branch::alt,
 };
 use std::env;
 use std::fs;
-use std::str;
+use std::error::Error;
 
 #[derive(Debug)]
 struct HL7Message {
-    segments: Vec<Segment>,
+    segments: Vec<Segment>
 }
 
 #[derive(Debug)]
 struct Segment {
     name: String,
-    fields: Vec<Field>,
+    fields: Vec<Field>
 }
 
 #[derive(Debug)]
 struct Field {
-    value: String,
-    repetitions: Vec<Repetition>,
-}
-
-#[derive(Debug)]
-struct Repetition {
-    components: Vec<Component>,
-}
-
-#[derive(Debug)]
-struct Component {
-    subcomponents: Vec<String>,
-}
-
-fn parse_hl7_message(input: &[u8]) -> IResult<&[u8], HL7Message> {
-    map(
-        many1(parse_segment),
-        |segments| HL7Message { segments }
-    )(input)
-}
-
-fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
-    map(
-        tuple((
-            take_while1(|c| c.is_ascii_uppercase()),
-            char('|'),
-            separated_list0(char('|'), parse_field)
-        )),
-        |(name, _, fields)| Segment {
-            name: str::from_utf8(name).unwrap().to_string(),
-            fields,
-        }
-    )(input)
+    components: Vec<String>
 }
 
 fn parse_field(input: &[u8]) -> IResult<&[u8], Field> {
-    map(
-        tuple((
-            opt(take_while(|c| c != b'|' && c != b'^' && c != b'~')),
-            many0(preceded(char('^'), parse_component)),
-            many0(preceded(char('~'), parse_repetition))
-        )),
-        |(value, components, repetitions)| Field {
-            value: value.map(|v| str::from_utf8(v).unwrap().to_string()).unwrap_or_default(),
-            repetitions: if components.is_empty() && repetitions.is_empty() {
-                vec![]
-            } else {
-                let mut reps = vec![];
-                if !components.is_empty() {
-                    reps.push(Repetition { components });
-                }
-                reps.extend(repetitions);
-                reps
-            },
-        }
-    )(input)
+    let (input, components) = separated_list0(
+        char('^'), 
+        take_until("|")
+    )(input)?;
+
+    Ok((input, Field { 
+        components: components.iter().map(|&x| String::from_utf8_lossy(x).to_string()).collect() 
+    }))
 }
 
-fn parse_repetition(input: &[u8]) -> IResult<&[u8], Repetition> {
-    map(
-        separated_list0(char('^'), parse_component),
-        |components| Repetition { components }
-    )(input)
+fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
+    let (input, segment_name) = take_until("|")(input)?;
+    let (input, _) = char('|')(input)?;
+    
+    let (input, fields) = separated_list0(
+        char('|'), 
+        parse_field
+    )(input)?;
+
+    Ok((input, Segment { 
+        name: String::from_utf8_lossy(segment_name).to_string(), 
+        fields 
+    }))
 }
 
-fn parse_component(input: &[u8]) -> IResult<&[u8], Component> {
-    map(
-        separated_list0(char('&'), opt(take_while(|c| c != b'|' && c != b'^' && c != b'~' && c != b'&'))),
-        |subcomponents| Component {
-            subcomponents: subcomponents
-                .into_iter()
-                .map(|sc| sc.map(|v| str::from_utf8(v).unwrap().to_string()).unwrap_or_default())
-                .collect(),
-        }
-    )(input)
+fn parse_hl7_message(input: &[u8]) -> IResult<&[u8], HL7Message> {
+    let (input, segments) = many0(parse_segment)(input)?;
+    Ok((input, HL7Message { segments }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <hl7_file>", args[0]);
+        eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }
 
-    let file_contents = fs::read(&args[1])?;
+    let filename = &args[1];
+    let contents = fs::read(filename)?;
     
-    match parse_hl7_message(&file_contents) {
+    match parse_hl7_message(&contents) {
         Ok((_, message)) => {
             println!("Parsed HL7 Message: {:?}", message);
             Ok(())
-        }
+        },
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
-            std::process::exit(1);
+            Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData, 
+                "Failed to parse HL7 message"
+            )))
         }
     }
 }

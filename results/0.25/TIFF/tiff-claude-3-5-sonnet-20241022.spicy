@@ -1,43 +1,125 @@
 module TIFF;
 
-import spicy;
-
-public type Header = unit {
+type Header = unit {
     byte_order: bytes &size=2;
     version: uint16;
     ifd_offset: uint32;
-
-    on %init {
-        if ( self.byte_order != b"II" && self.byte_order != b"MM" ) {
-            self.stop();
-        }
-    }
 };
 
 type IFDEntry = unit {
-    tag: uint16;
-    field_type: uint16;
+    tag_id: uint16;
+    data_type: uint16;
     count: uint32;
     value_offset: uint32;
 };
 
 type IFD = unit {
-    entry_count: uint16;
-    entries: IFDEntry[self.entry_count];
+    num_entries: uint16;
+    entries: IFDEntry[self.num_entries];
     next_ifd_offset: uint32;
+};
+
+type Rational = unit {
+    numerator: uint32;
+    denominator: uint32;
+};
+
+type SRational = unit {
+    numerator: int32;
+    denominator: int32;
 };
 
 public type File = unit {
     header: Header;
-    : skip bytes &size=self.header.ifd_offset - 8;
+    : bytes &size=self.header.ifd_offset - 8;
     ifd: IFD;
+
+    on %done {
+        if ( self.header.byte_order != b"II" && self.header.byte_order != b"MM" )
+            throw "Invalid byte order";
+        
+        if ( self.header.version != 42 )
+            throw "Invalid TIFF version";
+    }
 };
 
-on File::%done {
-    print "TIFF file processed";
-}
+const TAG_SUBFILE_TYPE = 254;
+const TAG_IMAGE_WIDTH = 256;
+const TAG_IMAGE_LENGTH = 257;
+const TAG_BITS_PER_SAMPLE = 258;
+const TAG_COMPRESSION = 259;
+const TAG_PHOTOMETRIC_INTERPRETATION = 262;
+const TAG_DOCUMENT_NAME = 269;
+const TAG_IMAGE_DESCRIPTION = 270;
+const TAG_MAKE = 271;
+const TAG_MODEL = 272;
+const TAG_STRIP_OFFSETS = 273;
+const TAG_ORIENTATION = 274;
+const TAG_SAMPLES_PER_PIXEL = 277;
+const TAG_ROWS_PER_STRIP = 278;
+const TAG_STRIP_BYTE_COUNTS = 279;
+const TAG_X_RESOLUTION = 282;
+const TAG_Y_RESOLUTION = 283;
+const TAG_PLANAR_CONFIGURATION = 284;
+const TAG_PAGE_NAME = 285;
+const TAG_X_POSITION = 286;
+const TAG_Y_POSITION = 287;
+const TAG_RESOLUTION_UNIT = 296;
+const TAG_PAGE_NUMBER = 297;
+const TAG_TRANSFER_FUNCTION = 301;
+const TAG_SOFTWARE = 305;
+const TAG_DATE_TIME = 306;
+const TAG_ARTIST = 315;
+const TAG_HOST_COMPUTER = 316;
+const TAG_PREDICTOR = 317;
+const TAG_WHITE_POINT = 318;
+const TAG_PRIMARY_CHROMATICITIES = 319;
+const TAG_COLOR_MAP = 320;
+const TAG_EXTRA_SAMPLES = 338;
+const TAG_COPYRIGHT = 33432;
+const TAG_JPEG_PROC = 512;
+const TAG_JPEG_INTERCHANGE_FORMAT = 513;
+const TAG_JPEG_INTERCHANGE_FORMAT_LENGTH = 514;
+const TAG_JPEG_RESTART_INTERVAL = 515;
+const TAG_JPEG_LOSSLESS_PREDICTORS = 517;
+const TAG_JPEG_POINT_TRANSFORMS = 518;
+const TAG_JPEG_Q_TABLES = 519;
+const TAG_JPEG_DC_TABLES = 520;
+const TAG_JPEG_AC_TABLES = 521;
 
-on IFDEntry::%done {
-    print fmt("IFD Entry - Tag: %d, Type: %d, Count: %d, Value/Offset: %d",
-        self.tag, self.field_type, self.count, self.value_offset);
-}
+const TYPE_BYTE = 1;
+const TYPE_ASCII = 2;
+const TYPE_SHORT = 3;
+const TYPE_LONG = 4;
+const TYPE_RATIONAL = 5;
+const TYPE_SBYTE = 6;
+const TYPE_UNDEFINED = 7;
+const TYPE_SSHORT = 8;
+const TYPE_SLONG = 9;
+const TYPE_SRATIONAL = 10;
+const TYPE_FLOAT = 11;
+const TYPE_DOUBLE = 12;
+
+const COMPRESSION_NONE = 1;
+const COMPRESSION_CCITT_GROUP3_1D = 2;
+const COMPRESSION_CCITT_GROUP3_FAX = 3;
+const COMPRESSION_CCITT_GROUP4_FAX = 4;
+const COMPRESSION_LZW = 5;
+const COMPRESSION_JPEG = 6;
+const COMPRESSION_PACKBITS = 32773;
+
+const PHOTOMETRIC_WHITE_IS_ZERO = 0;
+const PHOTOMETRIC_BLACK_IS_ZERO = 1;
+const PHOTOMETRIC_RGB = 2;
+const PHOTOMETRIC_PALETTE_COLOR = 3;
+const PHOTOMETRIC_TRANSPARENCY_MASK = 4;
+const PHOTOMETRIC_CMYK = 5;
+const PHOTOMETRIC_YCBCR = 6;
+const PHOTOMETRIC_CIELAB = 8;
+
+const PLANAR_CONFIGURATION_CHUNKY = 1;
+const PLANAR_CONFIGURATION_PLANAR = 2;
+
+const RESOLUTION_UNIT_NONE = 1;
+const RESOLUTION_UNIT_INCH = 2;
+const RESOLUTION_UNIT_CENTIMETER = 3;

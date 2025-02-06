@@ -1,35 +1,31 @@
-module BitcoinTransactions
-
-type BitcoinTransaction = struct {
-    version: u4,
-    input_count: varint,
-    inputs: array BitcoinInput(input_count),
-    output_count: varint,
-    outputs: array BitcoinOutput(output_count),
-    lock_time: u4
+RootStruct BitcoinTransaction {
+    version: u32;
+    input_count: VarInt;
+    inputs: Input[input_count];
+    output_count: VarInt;
+    outputs: Output[output_count];
+    lock_time: u32;
 }
 
-type BitcoinInput = struct {
-    previous_output: OutPoint,
-    script_length: varint,
-    script: bytes(script_length),
-    sequence: u4
+Struct Input {
+    prev_tx_hash: u8[32];
+    output_index: u32;
+    script_length: VarInt;
+    signature_script: u8[script_length];
+    sequence: u32;
 }
 
-type OutPoint = struct {
-    hash: bytes(32),
-    index: u4
+Struct Output {
+    value: u64;
+    script_length: VarInt;
+    public_key_script: u8[script_length];
 }
 
-type BitcoinOutput = struct {
-    value: u8,
-    script_length: varint,
-    script: bytes(script_length)
-}
-
-type varint = switch u1 {
-    0xfd => u2,
-    0xfe => u4,
-    0xff => u8,
-    _ => u1
+Struct VarInt {
+    value: u8;
+    switch (value) {
+        case 0xFD: extended_value: u16;
+        case 0xFE: extended_value: u32;
+        case 0xFF: extended_value: u64;
+    }
 }

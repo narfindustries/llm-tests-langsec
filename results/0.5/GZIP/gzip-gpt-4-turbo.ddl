@@ -1,35 +1,66 @@
-module GZIP {
-
-  import DAEDALUS::Core;
+module Gzip {
 
   struct GzipFile {
-    header: GzipHeader,
-    data:   Bytes(header.len),
-    footer: GzipFooter
+    GzipMember[] members;
   }
 
-  struct GzipHeader {
-    id1:     UInt8,              // ID1
-    id2:     UInt8,              // ID2
-    cm:      UInt8,              // Compression Method
-    flg:     UInt8,              // Flags
-    mtime:   UInt32,             // Modification Time
-    xfl:     UInt8,              // Extra flags
-    os:      UInt8,              // Operating system
-    xlen:    UInt16 ? (flg & 0x04) != 0,
-    xtra:    Bytes(xlen) ? (flg & 0x04) != 0,
-    fname:   NullTermString ? (flg & 0x08) != 0,
-    fcomment:NullTermString ? (flg & 0x10) != 0,
-    hcrc:    UInt16 ? (flg & 0x02) != 0,
-    len:     Compute <| UInt32 -> do
-                guard (flg & 0x02) != 0 else 0;
-                UInt32
-              end
+  struct GzipMember {
+    u8 id1 = 0x1f;
+    u8 id2 = 0x8b;
+    u8 cm = 0x08;
+    Flg flg;
+    u32 mtime;
+    Xfl xfl;
+    Os os;
+    u16 xlen if flg.FEXTRA;
+    u8[xlen] extraFields if flg.FEXTRA;
+    CString filename if flg.FNAME;
+    CString comment if flg.FCOMMENT;
+    u16 headerCrc16 if flg.FHCRC;
+    CompressedData compressedData;
+    u32 crc32;
+    u32 isize;
   }
 
-  struct GzipFooter {
-    crc32:   UInt32,
-    isize:   UInt32
+  struct Flg {
+    bool FTEXT : 1;
+    bool FHCRC : 1;
+    bool FEXTRA : 1;
+    bool FNAME : 1;
+    bool FCOMMENT : 1;
+    u8 reserved : 3;
+  }
+
+  enum Xfl : u8 {
+    Default = 0,
+    MaximumCompression = 2,
+    FastestCompression = 4
+  }
+
+  enum Os : u8 {
+    FAT = 0,    // MS-DOS, OS/2, NT/Win32
+    Amiga = 1,
+    VMS = 2,    // or OpenVMS
+    Unix = 3,
+    VMCMS = 4,
+    AtariTOS = 5,
+    HPFS = 6,   // OS/2, NT
+    Macintosh = 7,
+    ZSystem = 8,
+    CPM = 9,
+    TOPS20 = 10,
+    NTFS = 11,  // NT
+    QDOS = 12,
+    AcornRISCOS = 13,
+    Unknown = 255
+  }
+
+  struct CString {
+    stringz str;
+  }
+
+  struct CompressedData {
+    bytes data; // Placeholder for compressed data block
   }
 
 }

@@ -1,68 +1,103 @@
-Certainly! Below is an improved and complete Hammer specification in C format for parsing GZIP files, which attempts to address the potential issues that might have caused the compilation error. This includes ensuring all necessary library dependencies and data types are correctly defined:
-
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-// GZIP file format specification using Hammer for parsing
-// GZIP file structure:
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// |ID1|ID2|CM |FLG|     MTIME     |XFL|OS | (if FLG.FEXTRA set) XLEN  |
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// | XLEN bytes of "extra field" | (if FLG.FNAME set) 0-terminated |
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// | "file name" | (if FLG.FCOMMENT set) 0-terminated "file comment" |
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// | (if FLG.FHCRC set) CRC16 for the gzip header | Compressed blocks |
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-// |    CRC32     |     ISIZE     |
-// +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+// GZIP Magic numbers
+#define GZIP_ID1 0x1F
+#define GZIP_ID2 0x8B
 
-static const HParser *gzip_parser(void) {
-    H_RULE(id1, h_uint8());
-    H_RULE(id2, h_uint8());
-    H_RULE(cm, h_uint8());
-    H_RULE(flg, h_uint8());
-    H_RULE(mtime, h_uint32());
-    H_RULE(xfl, h_uint8());
-    H_RULE(os, h_uint8());
+// Compression method
+#define CM_DEFLATE 8
 
-    H_RULE(extra_length, h_uint16());
-    H_RULE(extra_field, h_length_value(extra_length, h_bytes(extra_length)));
+// Flags
+#define FTEXT    0x01
+#define FHCRC    0x02
+#define FEXTRA   0x04
+#define FNAME    0x08
+#define FCOMMENT 0x10
 
-    H_RULE(zero_terminated_string, h_cstring());
+// OS types
+enum OS {
+    OS_FAT = 0,
+    OS_AMIGA,
+    OS_VMS,
+    OS_UNIX,
+    OS_VM_CMS,
+    OS_ATARI_TOS,
+    OS_HPFS,
+    OS_MACINTOSH,
+    OS_Z_SYSTEM,
+    OS_CP_M,
+    OS_TOPS_20,
+    OS_NTFS,
+    OS_QDOS,
+    OS_ACORN_RISCOS,
+    OS_UNKNOWN = 255
+};
 
-    H_RULE(header_crc16, h_uint16());
-
-    H_RULE(compressed_data, h_many(h_uint8())); // Placeholder for actual compressed data parsing
-    H_RULE(crc32, h_uint32());
-    H_RULE(isize, h_uint32());
-
-    H_RULE(fextra, h_optional(h_sequence(extra_length, extra_field, NULL)));
-    H_RULE(fname, h_optional(zero_terminated_string));
-    H_RULE(fcomment, h_optional(zero_terminated_string));
-    H_RULE(fhcrc, h_optional(header_crc16));
-
-    H_RULE(gzip_body, h_sequence(fextra, fname, fcomment, fhcrc, compressed_data, NULL));
-
-    H_RULE(gzip_file, h_sequence(
-        id1, id2, cm, flg, mtime, xfl, os, gzip_body, crc32, isize, NULL));
-
-    return gzip_file;
+// Function to create a parser for the optional zero-terminated string
+HParser *optional_string() {
+    return h_sequence(h_many1(h_not(h_ch(0))), h_ch(0), NULL);
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = gzip_parser();
-    HParseResult *result = h_parse(parser, (const uint8_t *)argv[1], strlen(argv[1]));
+// Function to create a parser for the GZIP header
+HParser *gzip_header() {
+    HParser *id1 = h_ch(GZIP_ID1);
+    HParser *id2 = h_ch(GZIP_ID2);
+    HParser *cm = h_ch(CM_DEFLATE);
+    HParser *flg = h_uint8();
+    HParser *mtime = h_uint32();
+    HParser *xfl = h_uint8();
+    HParser *os = h_uint8();
+    HParser *fextra = h_optional(h_length_value(h_uint16(), h_repeat_n(h_any(), h_uint16())));
+    HParser *fname = optional_string();
+    HParser *fcomment = optional_string();
+    HParser *fhcrc = h_optional(h_uint16());
 
-    if (result) {
-        printf("Parse successful!\n");
-    } else {
-        printf("Parse failed!\n");
+    return h_sequence(id1, id2, cm, flg, mtime, xfl, os, fextra, fname, fcomment, fhcrc, NULL);
+}
+
+// Main function
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <GZIP File>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parse_result_free(result);
-    h_parser_free(parser);
-    return 0;
-}
+    // Open the GZIP file
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
 
-Ensure to resolve any dependencies by installing the Hammer parsing library and linking it correctly. The `h_many(h_uint8())` for `compressed_data` is a placeholder and should ideally be replaced with a more accurate rule depending on the compression format and other specifics of the GZIP compressed blocks.
+    // Read the file into memory
+    fseek(fp, 0, SEEK_END);
+    size_t fsize = ftell(fp);
+    rewind(fp);
+    uint8_t *buf = malloc(fsize);
+    if (!buf) {
+        fclose(fp);
+        perror("Memory allocation failed");
+        return EXIT_FAILURE;
+    }
+    fread(buf, fsize, 1, fp);
+    fclose(fp);
+
+    // Parse the buffer
+    HParser *header_parser = gzip_header();
+    HParseResult *result = h_parse(header_parser, buf, fsize);
+    if (result) {
+        printf("GZIP header parsed successfully.\n");
+        h_pprint(stdout, result->ast, 0, 0);
+    } else {
+        fprintf(stderr, "Failed to parse GZIP header.\n");
+    }
+
+    // Cleanup
+    h_parse_result_free(result);
+    free(buf);
+
+    return result ? EXIT_SUCCESS : EXIT_FAILURE;
+}

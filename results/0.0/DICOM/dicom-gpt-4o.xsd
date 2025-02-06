@@ -1,50 +1,46 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dicom"
-           xmlns:tns="http://example.com/dicom"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+            targetNamespace="http://example.com/dicom"
+            xmlns:tns="http://example.com/dicom"
+            elementFormDefault="qualified"
+            attributeFormDefault="unqualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:dicomFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <xsd:annotation>
+        <xsd:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:dicomFormat"/>
+        </xsd:appinfo>
+    </xsd:annotation>
 
-  <dfdl:format name="dicomFormat"
-               byteOrder="bigEndian"
-               encoding="utf-8"
-               lengthKind="explicit"
-               lengthUnits="bytes"
-               occursCountKind="expression"
-               occursCount="{ ../numberOfItems }"
-               alignmentUnits="bytes"
-               alignment="1"/>
+    <xsd:element name="DICOMFile">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="Preamble" type="xsd:hexBinary" dfdl:length="128"/>
+                <xsd:element name="Prefix" type="xsd:string" dfdl:length="4" dfdl:encoding="ascii"/>
+                <xsd:element name="DataSet" type="tns:DataSetType"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
 
-  <xs:element name="DICOMFile">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128"/>
-        <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:encoding="ascii"/>
-        <xs:element name="DataSet" type="tns:DataSetType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+    <xsd:complexType name="DataSetType">
+        <xsd:sequence>
+            <xsd:element name="DataElement" type="tns:DataElementType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
 
-  <xs:complexType name="DataSetType">
-    <xs:sequence>
-      <xs:element name="DataElement" type="tns:DataElementType" minOccurs="0" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
+    <xsd:complexType name="DataElementType">
+        <xsd:sequence>
+            <xsd:element name="Tag" type="xsd:hexBinary" dfdl:length="4"/>
+            <xsd:element name="VR" type="xsd:string" dfdl:length="2" dfdl:encoding="ascii"/>
+            <xsd:element name="Length" type="xsd:unsignedInt" dfdl:length="4"/>
+            <xsd:element name="Value" type="xsd:hexBinary" dfdl:length="{../Length}"/>
+        </xsd:sequence>
+    </xsd:complexType>
 
-  <xs:complexType name="DataElementType">
-    <xs:sequence>
-      <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4"/>
-      <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ascii"/>
-      <xs:element name="Length" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="Value" type="xs:hexBinary" dfdl:length="{ ../Length }"/>
-    </xs:sequence>
-  </xs:complexType>
+    <dfdl:defineFormat name="dicomFormat">
+        <dfdl:format dfdl:byteOrder="bigEndian"
+                     dfdl:encoding="utf-8"
+                     dfdl:lengthKind="explicit"
+                     dfdl:terminator=""/>
+    </dfdl:defineFormat>
 
-</xs:schema>
+</xsd:schema>

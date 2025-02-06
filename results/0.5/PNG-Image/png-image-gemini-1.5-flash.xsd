@@ -1,25 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/pngImage"
-           xmlns="http://example.org/pngImage"
+           targetNamespace="http://example.org/png"
+           xmlns="http://example.org/png"
            elementFormDefault="qualified">
 
-  <xs:element name="pngImage">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="PNGImage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:lengthKind="explicit" dfdl:length="8"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element ref="IHDR"/>
+        <xs:element ref="PLTE" minOccurs="0"/>
+        <xs:element ref="IDAT" maxOccurs="unbounded"/>
+        <xs:element ref="IEND"/>
+        <xs:element ref="OtherChunks" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="lengthDelimited"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="IHDR">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+              <dfdl:fixed value="IHDR"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="Width" type="xs:unsignedInt"/>
+        <xs:element name="Height" type="xs:unsignedInt"/>
+        <xs:element name="BitDepth" type="xs:unsignedByte"/>
+        <xs:element name="ColorType" type="xs:unsignedByte"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+        <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="headerType">
+  <xs:element name="PLTE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+              <dfdl:fixed value="PLTE"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="PaletteEntries" type="PaletteEntryType" maxOccurs="unbounded"/>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="PaletteEntryType">
     <xs:sequence>
-      <xs:element name="width" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="height" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
     </xs:sequence>
   </xs:complexType>
 
-</xs:schema>
+  <xs:element name="IDAT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+              <dfdl:fixed value="IDAT"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="ImageData" type="xs:base64Binary"/>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
+  <xs:element name="IEND">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+              <dfdl:fixed value="IEND"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="OtherChunks">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ChunkData" type="xs:hexBinary"/>
+        <xs:element name="CRC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,56 +1,68 @@
-<schema xmlns="http://www.w3.org/2001/XMLSchema"
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="http://example.com/tiff"
-        xmlns:tns="http://example.com/tiff"
-        elementFormDefault="qualified">
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tiff" xmlns="http://example.org/tiff" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" lengthKind="explicit" alignment="1" encoding="US-ASCII"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <annotation>
-        <appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:tiffFormat"/>
-        </appinfo>
-    </annotation>
-    
-    <dfdl:format name="tiffFormat" byteOrder="bigEndian" encoding="utf-8" lengthKind="delimited" initiator="" terminator=""/>
-    
-    <element name="TIFF">
-        <complexType>
-            <sequence>
-                <element name="Header" type="tns:HeaderType"/>
-                <element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
-            </sequence>
-        </complexType>
-    </element>
+  <xs:element name="TIFF" type="TIFFType"/>
 
-    <complexType name="HeaderType">
-        <sequence>
-            <element name="ByteOrder" type="tns:ByteOrderEnum"/>
-            <element name="Version" type="unsignedShort"/>
-            <element name="IFDOffset" type="unsignedInt"/>
-        </sequence>
-    </complexType>
+  <xs:complexType name="TIFFType">
+    <xs:sequence>
+      <xs:element name="Header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="8"/>
+      <xs:element name="IFD" type="IFDType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <simpleType name="ByteOrderEnum">
-        <restriction base="string">
-            <enumeration value="II"/>
-            <enumeration value="MM"/>
-        </restriction>
-    </simpleType>
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:outputValueCalc="{ 'II' if (dfdl:byteOrder eq 'littleEndian') else 'MM' }"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2" fixed="42"/>
+      <xs:element name="FirstIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="IFDType">
-        <sequence>
-            <element name="NumEntries" type="unsignedShort"/>
-            <element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
-            <element name="NextIFDOffset" type="unsignedInt"/>
-        </sequence>
-    </complexType>
+  <xs:complexType name="IFDType">
+    <xs:sequence dfdl:occursCountKind="expression" dfdl:occursCount="{ /Header/FirstIFDOffset }">
+      <xs:element name="NumEntries" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Entries" type="EntryType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../NumEntries }"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="EntryType">
-        <sequence>
-            <element name="Tag" type="unsignedShort"/>
-            <element name="Type" type="unsignedShort"/>
-            <element name="Count" type="unsignedInt"/>
-            <element name="ValueOffset" type="unsignedInt"/>
-        </sequence>
-    </complexType>
+  <xs:complexType name="EntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="TagEnum" dfdl:length="2"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
 
-</schema>
+  <xs:simpleType name="TagEnum">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="256"/> <!-- ImageWidth -->
+      <xs:enumeration value="257"/> <!-- ImageLength -->
+      <xs:enumeration value="258"/> <!-- BitsPerSample -->
+      <xs:enumeration value="259"/> <!-- Compression -->
+      <xs:enumeration value="262"/> <!-- PhotometricInterpretation -->
+      <xs:enumeration value="273"/> <!-- StripOffsets -->
+      <xs:enumeration value="274"/> <!-- Orientation -->
+      <xs:enumeration value="277"/> <!-- SamplesPerPixel -->
+      <xs:enumeration value="278"/> <!-- RowsPerStrip -->
+      <xs:enumeration value="279"/> <!-- StripByteCounts -->
+      <xs:enumeration value="282"/> <!-- XResolution -->
+      <xs:enumeration value="283"/> <!-- YResolution -->
+      <xs:enumeration value="284"/> <!-- PlanarConfiguration -->
+      <xs:enumeration value="296"/> <!-- ResolutionUnit -->
+      <xs:enumeration value="320"/> <!-- ColorMap -->
+      <xs:enumeration value="322"/> <!-- TileWidth -->
+      <xs:enumeration value="323"/> <!-- TileLength -->
+      <xs:enumeration value="324"/> <!-- TileOffsets -->
+      <xs:enumeration value="325"/> <!-- TileByteCounts -->
+      <xs:enumeration value="338"/> <!-- ExtraSamples -->
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

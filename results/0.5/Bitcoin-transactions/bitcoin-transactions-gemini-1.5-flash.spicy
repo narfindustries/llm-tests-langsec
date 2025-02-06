@@ -1,29 +1,24 @@
-#include <base64.zeek>
+module BitcoinTransactions;
 
-global bitcoin_transactions: table[string] of string;
-
-event bitcoin_transaction(transaction_id: string, data: string) {
-    bitcoin_transactions[transaction_id] = data;
+type bitcoin_transaction {
+	version: uint32;
+	inputs: count_of<bitcoin_transaction_input>;
+	outputs: count_of<bitcoin_transaction_output>;
+	locktime: uint32;
 }
 
-function decode_base64(encoded: string): string {
-    return base64_decode(encoded);
+type bitcoin_transaction_input {
+	prevout: bitcoin_transaction_outpoint;
+	scriptSig: bytes;
+	sequence: uint32;
 }
 
-event process_transaction(transaction_id: string) {
-    if (bitcoin_transactions[transaction_id] != "") {
-        local decoded_data: string = decode_base64(bitcoin_transactions[transaction_id]);
-        // Process decoded_data here.  Example:
-        print fmt("Transaction %s: %s", transaction_id, decoded_data);
-    } else {
-        print fmt("Transaction %s not found.", transaction_id);
-    }
+type bitcoin_transaction_outpoint {
+	hash: bytes:32;
+	index: uint32;
 }
 
-# Example usage:
-event zeek_init() {
-    bitcoin_transaction("tx123", "SGVsbG8gV29ybGQh"); // "Hello World!" in base64
-    process_transaction("tx123");
-    process_transaction("tx456"); // This will print a "not found" message.
-
+type bitcoin_transaction_output {
+	value: uint64;
+	scriptPubKey: bytes;
 }

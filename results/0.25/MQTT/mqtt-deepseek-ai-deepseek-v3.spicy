@@ -1,0 +1,253 @@
+module MQTT;
+
+import spicy;
+
+type MQTTFixedHeader = unit {
+    packet_type: uint8 &convert=static_cast<MQTTPacketType>(($$ >> 4) & 0x0F);
+    flags: uint8 &convert=$$ & 0x0F;
+};
+
+type MQTTVariableHeader = unit {
+    packet_identifier: optional uint16;
+    properties_length: optional varint;
+    properties: optional MQTTProperties;
+};
+
+type MQTTProperties = unit {
+    payload_format_indicator: optional uint8;
+    message_expiry_interval: optional uint32;
+    content_type: optional string;
+    response_topic: optional string;
+    correlation_data: optional bytes;
+    subscription_identifier: optional varint;
+    session_expiry_interval: optional uint32;
+    assigned_client_identifier: optional string;
+    server_keep_alive: optional uint16;
+    authentication_method: optional string;
+    authentication_data: optional bytes;
+    request_problem_information: optional uint8;
+    will_delay_interval: optional uint32;
+    request_response_information: optional uint8;
+    response_information: optional string;
+    server_reference: optional string;
+    reason_string: optional string;
+    receive_maximum: optional uint16;
+    topic_alias_maximum: optional uint16;
+    topic_alias: optional uint16;
+    maximum_qos: optional uint8;
+    retain_available: optional uint8;
+    user_property: optional vector<MQTTUserProperty>;
+    maximum_packet_size: optional uint32;
+    wildcard_subscription_available: optional uint8;
+    subscription_identifier_available: optional uint8;
+    shared_subscription_available: optional uint8;
+    client_identifier: optional string;
+    will_topic: optional string;
+    will_message: optional bytes;
+    will_qos: optional uint8;
+    will_retain: optional uint8;
+    will_delay_interval: optional uint32;
+    will_payload_format_indicator: optional uint8;
+    will_content_type: optional string;
+    will_response_topic: optional string;
+    will_correlation_data: optional bytes;
+    will_user_property: optional vector<MQTTUserProperty>;
+    will_expiry_interval: optional uint32;
+};
+
+type MQTTUserProperty = unit {
+    key: string;
+    value: string;
+};
+
+type MQTTPayload = unit {
+    data: bytes;
+};
+
+type MQTTConnect = unit {
+    protocol_name: string;
+    protocol_level: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
+    client_identifier: string;
+    will_topic: optional string;
+    will_message: optional bytes;
+    will_qos: optional uint8;
+    will_retain: optional uint8;
+    user_name: optional string;
+    password: optional bytes;
+};
+
+type MQTTConnAck = unit {
+    session_present: uint8;
+    reason_code: uint8;
+};
+
+type MQTTPublish = unit {
+    topic_name: string;
+    qos: uint8;
+    retain: uint8;
+    payload: MQTTPayload;
+};
+
+type MQTTSubscribe = unit {
+    topic_filters: vector<MQTTTopicFilter>;
+};
+
+type MQTTTopicFilter = unit {
+    topic: string;
+    options: uint8;
+};
+
+type MQTTSubAck = unit {
+    reason_codes: vector<uint8>;
+};
+
+type MQTTUnsubscribe = unit {
+    topic_filters: vector<string>;
+};
+
+type MQTTUnsubAck = unit {
+    reason_codes: vector<uint8>;
+};
+
+type MQTTDisconnect = unit {
+    reason_code: uint8;
+};
+
+type MQTTAuth = unit {
+    reason_code: uint8;
+};
+
+type MQTTPacket = unit {
+    fixed_header: MQTTFixedHeader;
+    variable_header: optional MQTTVariableHeader;
+    payload: optional MQTTPayload;
+};
+
+type MQTTPacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15,
+};
+
+type MQTTReasonCode = enum {
+    SUCCESS = 0,
+    UNSPECIFIED_ERROR = 128,
+    MALFORMED_PACKET = 129,
+    PROTOCOL_ERROR = 130,
+    IMPLEMENTATION_SPECIFIC_ERROR = 131,
+    UNSUPPORTED_PROTOCOL_VERSION = 132,
+    CLIENT_IDENTIFIER_NOT_VALID = 133,
+    BAD_USER_NAME_OR_PASSWORD = 134,
+    NOT_AUTHORIZED = 135,
+    SERVER_UNAVAILABLE = 136,
+    SERVER_BUSY = 137,
+    BANNED = 138,
+    BAD_AUTHENTICATION_METHOD = 140,
+    TOPIC_NAME_INVALID = 144,
+    PACKET_TOO_LARGE = 149,
+    QUOTA_EXCEEDED = 151,
+    PAYLOAD_FORMAT_INVALID = 153,
+    RETAIN_NOT_SUPPORTED = 154,
+    QOS_NOT_SUPPORTED = 155,
+    USE_ANOTHER_SERVER = 156,
+    SERVER_MOVED = 157,
+    CONNECTION_RATE_EXCEEDED = 159,
+};
+
+type MQTTConnectFlags = enum {
+    CLEAN_START = 0x02,
+    WILL_FLAG = 0x04,
+    WILL_QOS = 0x18,
+    WILL_RETAIN = 0x20,
+    PASSWORD_FLAG = 0x40,
+    USER_NAME_FLAG = 0x80,
+};
+
+type MQTTSubscriptionOptions = enum {
+    QOS = 0x03,
+    NO_LOCAL = 0x04,
+    RETAIN_AS_PUBLISHED = 0x08,
+    RETAIN_HANDLING = 0x30,
+};
+
+type MQTTDisconnectReasonCode = enum {
+    NORMAL_DISCONNECTION = 0,
+    DISCONNECT_WITH_WILL_MESSAGE = 4,
+    UNSPECIFIED_ERROR = 128,
+    MALFORMED_PACKET = 129,
+    PROTOCOL_ERROR = 130,
+    IMPLEMENTATION_SPECIFIC_ERROR = 131,
+    NOT_AUTHORIZED = 135,
+    SERVER_BUSY = 137,
+    SERVER_SHUTTING_DOWN = 139,
+    KEEP_ALIVE_TIMEOUT = 141,
+    SESSION_TAKEN_OVER = 142,
+    TOPIC_FILTER_INVALID = 143,
+    TOPIC_NAME_INVALID = 144,
+    RECEIVE_MAXIMUM_EXCEEDED = 147,
+    TOPIC_ALIAS_INVALID = 148,
+    PACKET_TOO_LARGE = 149,
+    MESSAGE_RATE_TOO_HIGH = 150,
+    QUOTA_EXCEEDED = 151,
+    ADMINISTRATIVE_ACTION = 152,
+    PAYLOAD_FORMAT_INVALID = 153,
+    RETAIN_NOT_SUPPORTED = 154,
+    QOS_NOT_SUPPORTED = 155,
+    USE_ANOTHER_SERVER = 156,
+    SERVER_MOVED = 157,
+    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED = 158,
+    CONNECTION_RATE_EXCEEDED = 159,
+    MAXIMUM_CONNECT_TIME = 160,
+    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED = 161,
+    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED = 162,
+};
+
+type MQTTAuthReasonCode = enum {
+    SUCCESS = 0,
+    CONTINUE_AUTHENTICATION = 24,
+    RE_AUTHENTICATE = 25,
+};
+
+type MQTTSubAckReasonCode = enum {
+    GRANTED_QOS_0 = 0,
+    GRANTED_QOS_1 = 1,
+    GRANTED_QOS_2 = 2,
+    UNSPECIFIED_ERROR = 128,
+    IMPLEMENTATION_SPECIFIC_ERROR = 131,
+    NOT_AUTHORIZED = 135,
+    TOPIC_FILTER_INVALID = 143,
+    PACKET_IDENTIFIER_IN_USE = 145,
+    QUOTA_EXCEEDED = 151,
+    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED = 158,
+    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED = 161,
+    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED = 162,
+};
+
+type MQTTUnsubAckReasonCode = enum {
+    SUCCESS = 0,
+    NO_SUBSCRIPTION_EXISTED = 17,
+    UNSPECIFIED_ERROR = 128,
+    IMPLEMENTATION_SPECIFIC_ERROR = 131,
+    NOT_AUTHORIZED = 135,
+    TOPIC_FILTER_INVALID = 143,
+    PACKET_IDENTIFIER_IN_USE = 145,
+};
+
+type MQTTPropertyIdentifier = enum {
+    PAYLOAD_FORMAT_INDICATOR = 1,
+    MESSAGE_EXPIRY_INTERVAL = 2,
+    CONTENT

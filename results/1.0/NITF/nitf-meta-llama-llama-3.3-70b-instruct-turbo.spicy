@@ -1,63 +1,70 @@
-# NITF (National Image Transmission Format) file format parser
-# Header section
-type NITF_Header = record {
-    file_header: bytestring(9),
-    file_title: bytestring(25),
-    file_class: bytestring(1),
-    file_security: bytestring(1),
-    file_control: bytestring(2),
-    file_date: bytestring(8),
-    file_time: bytestring(4),
-    file_release: bytestring(2),
-    file_exemption: bytestring(1),
-    file_authority: bytestring(10),
-};
+module NITF;
 
-# Image section
-type NITF_Image = record {
-    image_subheader: bytestring(1),
-    image_id: bytestring(25),
-    image_format: bytestring(4),
-    image_width: uint32,
-    image_height: uint32,
-    image_data: bytes(image_width * image_height),
-};
-
-# Lower level metadata (LLM)
-type NITF_LLM = record {
-    llm_id: bytestring(25),
-    llm_type: bytestring(4),
-    llm_data: bytes,
-};
-
-# DES (Data Extension Segment)
-type NITF_DES = record {
-    des_id: bytestring(25),
-    des_type: bytestring(4),
-    des_data: bytes,
-};
-
-# Main NITF parser
-type NITF_File = record {
-    header: NITF_Header,
-    images: array(NITF_Image),
-    llms: array(NITF_LLM),
-    deses: array(NITF_DES),
-    trailers: bytestring(0),
-};
-
-# Conditional types
-condition nitf_image_condition {
-    when image_subheader == "IM";
+type nitf_file = record {
+  file_header = bytestring;
+  file_format = bytestring;
+  file_version = bytestring;
+  file_level = uint8;
+  file_security_classification = uint8;
+  file_control_number = bytestring;
+  file_date = uint32;
+  file_title = bytestring;
+  file_security_classification_authority = bytestring;
+  file_security_classification_authority_title = bytestring;
+  file_security_classification_authority_country = bytestring;
+  file_control_number_authority = bytestring;
+  imageSegments = array[nitf_image];
+  descriptor = array[nitf_descriptor];
+  textRepresentationEntities = array[nitf_text_representation_entity];
+  cStrings = array[nitf_cstring];
+  spatialAndTemporalReferenceSystems = array[nitf_spatial_and_temporal_reference_system];
+  residualData = array[nitf_residual_data];
 }
 
-condition nitf_llm_condition {
-    when llm_type == "STD";
+type nitf_image = record {
+  image_identifier = bytestring;
+  image_security_classification = uint8;
+  image_control_number = bytestring;
+  image_date = uint32;
+  image_title = bytestring;
+  image_security_classification_authority = bytestring;
+  image_security_classification_authority_title = bytestring;
+  image_security_classification_authority_country = bytestring;
+  image_interpretability_rating = uint8;
+  image_quality_rating = uint8;
 }
 
-condition nitf_des_condition {
-    when des_type == "STD";
+type nitf_descriptor = record {
+  descriptor_identifier = bytestring;
+  descriptor_version = bytestring;
+  descriptor_date = uint32;
+  descriptor_title = bytestring;
 }
 
-# Parser start
-start NITF_File;
+type nitf_text_representation_entity = record {
+  tre_identifier = bytestring;
+  tre_version = bytestring;
+  tre_date = uint32;
+  tre_title = bytestring;
+}
+
+type nitf_cstring = record {
+  cs_identifier = bytestring;
+  cs_version = bytestring;
+  cs_date = uint32;
+  cs_title = bytestring;
+}
+
+type nitf_spatial_and_temporal_reference_system = record {
+  strs_identifier = bytestring;
+  strs_version = bytestring;
+  strs_date = uint32;
+  strs_title = bytestring;
+}
+
+type nitf_residual_data = record {
+  rd_identifier = bytestring;
+  rd_version = bytestring;
+  rd_date = uint32;
+  rd_title = bytestring;
+}

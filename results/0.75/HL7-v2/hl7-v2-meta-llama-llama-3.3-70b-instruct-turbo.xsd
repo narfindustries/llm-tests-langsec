@@ -1,42 +1,145 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-                 xmlns:ex="http://example.com" 
-                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                 xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"
-                 dfdl:sequenceKind="unordered"
-                 dfdl:syntax="binary"
-                 dfdl:encoding="UTF-8"
-                 dfdl:separatorSuppression="true"
-                 dfdl:separatorPolicy="ignore"
-                 dfdl:format="fixed"
-                 dfdl:extension="http://www.ogf.org/dfdl/dfdl-1.0/">
-
-  <dfdl:element ref="root"/>
-  
-  <dfdl:element name="root">
-    <dfdl:sequence>
-      <dfdl:element ref="hl7Segment"/>
-    </dfdl:sequence>
+<dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+             xmlns:ex="http://example.com" 
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+             xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ 
+             http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd" 
+             version="1.0" 
+             xml:lang="en">
+  <dfdl:element name="HL7v2Message" type="sequence" occurs="1" dfdl:separator="&#10;">
+    <dfdl:element name="MSH" type="MSHSegment" occurs="1"/>
+    <dfdl:element name="EVN" type="EVNSegment" occurs="0..1"/>
+    <dfdl:element name="PID" type="PIDSegment" occurs="0..1"/>
+    <dfdl:element name="PV1" type="PV1Segment" occurs="0..1"/>
+    <dfdl:element name="ORC" type="ORCSegment" occurs="0..1"/>
+    <dfdl:element name="OBR" type="OBRSegment" occurs="0..1"/>
+    <dfdl:element name="OBX" type="OBXSegment" occurs="0..1"/>
+    <dfdl:element name="AL1" type="AL1Segment" occurs="0..*"/>
+    <dfdl:element name="DG1" type="DG1Segment" occurs="0..*"/>
+    <dfdl:element name="RXE" type="RXESegment" occurs="0..*"/>
   </dfdl:element>
-  
-  <dfdl:element name="hl7Segment">
-    <dfdl:sequence>
-      <dfdl:element name="segmentIdentifier" dfdl:length="3" dfdl:executableAssertion="segmentIdentifier eq 'MSH'"/>
-      <dfdl:element name="fieldSeparator" dfdl:length="1" dfdl:completionByte="0x7c"/>
-      <dfdl:element name="sendingFacility" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <dfdl:element name="sendingFacilityNamespaceId" dfdl:length="20" dfdl:encoding="ASCII"/>
-      <dfdl:element name="receivingFacility" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <dfdl:element name="receivingFacilityNamespaceId" dfdl:length="20" dfdl:encoding="ASCII"/>
-      <dfdl:element name="date" dfdl:length="8" dfdl:encoding="ASCII"/>
-      <dfdl:element name="time" dfdl:length="6" dfdl:encoding="ASCII"/>
-      <dfdl:element name="security" dfdl:length="40" dfdl:encoding="ASCII"/>
-      <dfdl:element name="messageType" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <dfdl:element name="messageTypeTriggerEvent" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <dfdl:element name="messageControlId" dfdl:length="20" dfdl:encoding="ASCII"/>
-      <dfdl:element name="processingId" dfdl:length="3" dfdl:encoding="ASCII"/>
-      <dfdl:element name="versionId" dfdl:length="12" dfdl:encoding="ASCII"/>
-      <dfdl:element name="sequenceNumber" dfdl:length="10" dfdl:encoding="ASCII"/>
-      <dfdl:element name="continuationPointer" dfdl:length="180" dfdl:encoding="ASCII"/>
-    </dfdl:sequence>
+  <dfdl:element name="MSHSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="FieldSeparator" type="string" occurs="1" length="1" initValue="|"/>
+    <dfdl:element name="EncodingCharacters" type="string" occurs="1" length="3" initValue="^~\&"/>
+    <dfdl:element name="SendingFacility" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="SendingFacilityNamespaceID" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="ReceivingFacility" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="ReceivingFacilityNamespaceID" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="DateTimeOfMessage" type="string" occurs="1" length="14" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="Security" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="MessageType" type="string" occurs="1" length="3" initValue="MSH"/>
+    <dfdl:element name="MessageControlID" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="ProcessingID" type="string" occurs="1" length="1" initValue="P"/>
+    <dfdl:element name="VersionID" type="string" occurs="1" length="5" initValue="2.5"/>
+    <dfdl:element name="SequenceNumber" type="string" occurs="0..1" length="1..10"/>
+    <dfdl:element name="ContinuationPointer" type="string" occurs="0..1" length="1..180"/>
+    <dfdl:element name="AcceptAcknowledgmentType" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="ApplicationAcknowledgmentType" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="CountryCode" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="CharacterSet" type="string" occurs="0..1" length="1..10"/>
+    <dfdl:element name="PrincipalLanguageOfMessage" type="string" occurs="0..1" length="1..10"/>
   </dfdl:element>
-</dfdl:definition>
+  <dfdl:element name="EVNSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="EventTypeCode" type="string" occurs="1" length="3" initValue="A01"/>
+    <dfdl:element name="RecordedDateTime" type="string" occurs="1" length="14" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="DateTimePlannedEvent" type="string" occurs="0..1" length="14" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="EventReasonCode" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="OperatorID" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="EventOccurred" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="EventFacility" type="string" occurs="0..1" length="1..20"/>
+  </dfdl:element>
+  <dfdl:element name="PIDSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDPatientID" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="PatientID" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="PatientIDInternal" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="AlternatePatientID" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="PatientName" type="string" occurs="1" length="1..50"/>
+    <dfdl:element name="MothersMaidenName" type="string" occurs="0..1" length="1..50"/>
+    <dfdl:element name="DateOfBirth" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="Sex" type="string" occurs="0..1" length="1" initValue="M"/>
+    <dfdl:element name="PatientAlias" type="string" occurs="0..1" length="1..50"/>
+    <dfdl:element name="Race" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="PatientAddress" type="string" occurs="0..1" length="1..100"/>
+    <dfdl:element name="CountyCode" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="PhoneNumberHome" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="PhoneNumberBusiness" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="Citizenship" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="DeathDate" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="DeathIndicator" type="string" occurs="0..1" length="1" initValue="N"/>
+  </dfdl:element>
+  <dfdl:element name="PV1Segment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDPatientVisit" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="VisitNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="PatientClass" type="string" occurs="1" length="1" initValue="I"/>
+    <dfdl:element name="VisitNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="FinancialClass" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="VisitMode" type="string" occurs="0..1" length="1" initValue="A"/>
+    <dfdl:element name="AdmittingDoctor" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ReferringDoctor" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="DischargeDisposition" type="string" occurs="0..1" length="2" initValue="01"/>
+    <dfdl:element name="AdmittingTime" type="string" occurs="0..1" length="6" pattern="^[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="DischargeTime" type="string" occurs="0..1" length="6" pattern="^[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+  </dfdl:element>
+  <dfdl:element name="ORCSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="OrderControl" type="string" occurs="1" length="2" initValue="NW"/>
+    <dfdl:element name="PlacerOrderNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="FillerOrderNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="PlacerGroupNumber" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="OrderStatus" type="string" occurs="1" length="2" initValue="NW"/>
+    <dfdl:element name="ResponseFlag" type="string" occurs="1" length="1" initValue="Y"/>
+    <dfdl:element name="QuantityTiming" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ParentUniversalServiceIdentifier" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ParentUniversalServiceIdentifierText" type="string" occurs="0..1" length="1..50"/>
+    <dfdl:element name="ParentResultHandler" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ParentUniversalServiceIdentifierNameOfCodingSystem" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ParentUniversalServiceIdentifierAlternateIdentifier" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ParentUniversalServiceIdentifierAlternateText" type="string" occurs="0..1" length="1..50"/>
+    <dfdl:element name="ParentUniversalServiceIdentifierNameOfAlternateCodingSystem" type="string" occurs="0..1" length="1..20"/>
+  </dfdl:element>
+  <dfdl:element name="OBRSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDObservationRequest" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="PlacerOrderNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="FillerOrderNumber" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="UniversalServiceID" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="Priority" type="string" occurs="1" length="4" initValue="STAT"/>
+    <dfdl:element name="RequestedDateTime" type="string" occurs="1" length="14" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="ObservationDateTime" type="string" occurs="1" length="14" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="ObservationResultStatus" type="string" occurs="1" length="1" initValue="P"/>
+    <dfdl:element name="WhoSubjectDefinition" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ObservationResultStatusEffectiveDateOfReferenceRangeValues" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="DigitalSignature" type="string" occurs="0..1" length="1..200"/>
+    <dfdl:element name="ResultRptStatus" type="string" occurs="0..1" length="1" initValue="F"/>
+  </dfdl:element>
+  <dfdl:element name="OBXSegment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDObservationResult" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="ValueType" type="string" occurs="1" length="2" initValue="NM"/>
+    <dfdl:element name="ObservationIdentifier" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="ObservationSubID" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ObservationValue" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="Units" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="ReferenceRange" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="AbnormalFlags" type="string" occurs="0..1" length="1" initValue="H"/>
+    <dfdl:element name="Probability" type="string" occurs="0..1" length="1..10"/>
+    <dfdl:element name="NatureOfAbnormalTest" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="ObservationResultStatusEffectiveDateOfReferenceRangeValues" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="UserDefinedAccessChecks" type="string" occurs="0..1" length="1..10"/>
+    <dfdl:element name="ObservationResultHandling" type="string" occurs="0..1" length="1..2"/>
+  </dfdl:element>
+  <dfdl:element name="AL1Segment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDAllergy" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="Allergen" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="AllergySeverity" type="string" occurs="0..1" length="1" initValue="S"/>
+    <dfdl:element name="AllergyReaction" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="IdentificationDate" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+  </dfdl:element>
+  <dfdl:element name="DG1Segment" type="sequence" occurs="1" dfdl:separator="|">
+    <dfdl:element name="SetIDDagnosis" type="string" occurs="1" length="1" initValue="1"/>
+    <dfdl:element name="DiagnosisCode" type="string" occurs="1" length="1..20"/>
+    <dfdl:element name="DiagnosisDescription" type="string" occurs="0..1" length="1..50"/>
+    <dfdl:element name="DiagnosisDate" type="string" occurs="0..1" length="8" pattern="^[0-9]{4}[0-9]{2}[0-9]{2}$"/>
+    <dfdl:element name="DiagnosisType" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="MajorDiagnosticCategory" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="DiagnosticRelatedGroup" type="string" occurs="0..1" length="1..20"/>
+    <dfdl:element name="DRGApprovalIndicator" type="string" occurs="0..1" length="1" initValue="0"/>
+    <dfdl:element name="GrouperReviewCode" type="string" occurs="0..1" length="1..2"/>
+    <dfdl:element name="DRGGroupingUsage" type="string" occurs="0..1"

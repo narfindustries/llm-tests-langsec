@@ -1,52 +1,66 @@
-module ZipGemini where
-
-import Daedalus.String
-import Daedalus.Map
-import Daedalus.Array
-
-data GeminiHeader = GeminiHeader {
-  magic :: ByteString 4,
-  version :: Word32,
-  data_len :: Word32
+datadef ZipFile {
+  centralDirectory: CentralDirectory,
+  endOfCentralDirectoryRecord: EndOfCentralDirectoryRecord,
+  digitalSignature: DigitalSignature?,
 }
 
-parseGeminiHeader :: Parser GeminiHeader
-parseGeminiHeader = do
-  magic' <- bytes 4
-  version' <- word32be
-  data_len' <- word32be
-  guard (magic' == "GEMI")
-  return GeminiHeader { magic = magic', version = version', data_len = data_len' }
-
-data GeminiData = GeminiData {
-  data :: ByteString
+datadef CentralDirectory {
+  entries: seq(CentralDirectoryEntry),
 }
 
-parseGeminiData :: Word32 -> Parser GeminiData
-parseGeminiData len = do
-  data' <- bytes (fromIntegral len)
-  return GeminiData { data = data' }
+datadef CentralDirectoryEntry {
+  signature: uint32 := 0x02014b50,
+  versionMadeBy: uint16,
+  versionNeededToExtract: uint16,
+  generalPurposeBitFlag: uint16,
+  compressionMethod: uint16,
+  lastModFileTime: uint16,
+  lastModFileDate: uint16,
+  crc32: uint32,
+  compressedSize: uint32,
+  uncompressedSize: uint32,
+  fileNameLength: uint16,
+  extraFieldLength: uint16,
+  fileCommentLength: uint16,
+  diskNumberStart: uint16,
+  internalFileAttributes: uint16,
+  externalFileAttributes: uint32,
+  relativeOffsetOfLocalHeader: uint32,
+  fileName: bytes(fileNameLength),
+  extraField: bytes(extraFieldLength),
+  fileComment: bytes(fileCommentLength),
+}
 
-parseZipGemini :: Parser (Maybe GeminiHeader, Maybe GeminiData)
-parseZipGemini = do
-  header <- option Nothing (Just <$> parseGeminiHeader)
-  case header of
-    Just h -> do
-      data' <- option Nothing (Just <$> parseGeminiData (data_len h))
-      return (header, data')
-    Nothing -> return (Nothing, Nothing)
+datadef LocalFileHeader {
+  signature: uint32 := 0x04034b50,
+  versionNeededToExtract: uint16,
+  generalPurposeBitFlag: uint16,
+  compressionMethod: uint16,
+  lastModFileTime: uint16,
+  lastModFileDate: uint16,
+  crc32: uint32,
+  compressedSize: uint32,
+  uncompressedSize: uint32,
+  fileNameLength: uint16,
+  extraFieldLength: uint16,
+  fileName: bytes(fileNameLength),
+  extraField: bytes(extraFieldLength),
+  fileData: bytes,
+}
 
--- Example usage (replace with your actual input)
-main :: Parser ()
-main = do
-  result <- parseZipGemini
-  case result of
-    (Just header, Just data) -> do
-      -- Process the header and data here.  Example:
-      -- putStrLn ("Magic: " ++ show (magic header))
-      -- putStrLn ("Version: " ++ show (version header))
-      -- putStrLn ("Data Length: " ++ show (data_len header))
-      -- putStrLn ("Data: " ++ show (data data))
-      return ()
-    _ -> return ()
+datadef EndOfCentralDirectoryRecord {
+  signature: uint32 := 0x06054b50,
+  diskNumber: uint16,
+  startDisk: uint16,
+  numEntriesThisDisk: uint16,
+  numEntriesTotal: uint16,
+  sizeOfCentralDirectory: uint32,
+  offsetOfCentralDirectory: uint32,
+  commentLength: uint16,
+  comment: bytes(commentLength),
+}
 
+datadef DigitalSignature {
+  // Placeholder - Complex structure; Refer to PKWARE specification for details.
+  data: bytes,
+}

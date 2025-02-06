@@ -1,0 +1,1 @@
+(fn(_) -> Result<(_, u32), nom::Err<_>> {nom::number::complete::be_u32::<_, _>}, impl Fn(_) -> Result<(_, _), nom::Err<_>>, fn(_) -> impl Fn(_) -> Result<(_, _), nom::Err<_>> {nom::bytes::complete::take::<_, _, _>}, fn(_) -> Result<(_, u32), nom::Err<_>> {nom::number::complete::be_u32::<_, _>})

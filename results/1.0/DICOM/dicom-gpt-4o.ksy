@@ -1,61 +1,74 @@
 meta:
   id: dicom
-  title: DICOM
-  application: Digital Imaging and Communications in Medicine
-  file_extension: dcm
+  file-extension: dcm
   endian: le
-  ks-version: 0.9
-
-doc: |
-  DICOM is a standard for handling, storing, printing, and transmitting information
-  in medical imaging. It includes a file format definition and a network communications
-  protocol. This specification covers the basic file format structure.
 
 seq:
   - id: preamble
     size: 128
   - id: magic
-    type: str
-    size: 4
-    doc: |
-      Magic bytes `DICM` which indicate the start of the DICOM file meta information.
-    assert: _ == "DICM"
-  - id: file_meta_information
-    type: file_meta_information
+    contents: "DICM"
+  - id: elements
+    type: element
+    repeat: eos
 
 types:
-  file_meta_information:
+  element:
     seq:
-      - id: group_length
-        type: u4
-        doc: "Length of the file meta information group."
-      - id: dataset_elements
-        type: dataset_element
-        repeat: eos
-        doc: "Sequence of dataset elements."
-
-  dataset_element:
-    seq:
-      - id: tag_group
+      - id: group
         type: u2
-      - id: tag_element
+      - id: element
         type: u2
       - id: vr
-        type: str
         size: 2
-        doc: "Value representation. Indicates the data type."
+        type: str
+        if: group >= 0x0002
       - id: reserved
         type: u2
-        if: vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UT" or vr == "UN"
+        if: vr == 'OB' || vr == 'OW' || vr == 'OF' || vr == 'SQ' || vr == 'UT' || vr == 'UN'
       - id: value_length
-        type: u2
-        if: vr != "OB" and vr != "OW" and vr != "OF" and vr != "SQ" and vr != "UT" and vr != "UN"
-      - id: value_length_extended
         type: u4
-        if: vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UT" or vr == "UN"
+        if: vr == 'OB' || vr == 'OW' || vr == 'OF' || vr == 'SQ' || vr == 'UT' || vr == 'UN'
+      - id: value_length_short
+        type: u2
+        if: vr != 'OB' && vr != 'OW' && vr != 'OF' && vr != 'SQ' && vr != 'UT' && vr != 'UN'
       - id: value
-        size: value_length
-        if: vr != "OB" and vr != "OW" and vr != "OF" and vr != "SQ" and vr != "UT" and vr != "UN"
-      - id: value_extended
-        size: value_length_extended
-        if: vr == "OB" or vr == "OW" or vr == "OF" or vr == "SQ" or vr == "UT" or vr == "UN"
+        size: 
+          if: vr == 'OB' || vr == 'OW' || vr == 'OF' || vr == 'SQ' || vr == 'UT' || vr == 'UN'
+          value: value_length
+        size: 
+          if: vr != 'OB' && vr != 'OW' && vr != 'OF' && vr != 'SQ' && vr != 'UT' && vr != 'UN'
+          value: value_length_short
+        type:
+          switch-on: vr
+          cases:
+            'AE': str
+            'AS': str
+            'CS': str
+            'DA': str
+            'DS': str
+            'DT': str
+            'IS': str
+            'LO': str
+            'LT': str
+            'PN': str
+            'SH': str
+            'ST': str
+            'TM': str
+            'UI': str
+            'UT': str
+            'US': u2
+            'UL': u4
+            'SS': s2
+            'SL': s4
+            'FL': f4
+            'FD': f8
+            'SQ': seq_items
+
+  seq_items:
+    seq:
+      - id: item_length
+        type: u4
+      - id: items
+        type: element
+        repeat: eos

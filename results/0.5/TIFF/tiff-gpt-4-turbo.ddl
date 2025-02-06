@@ -1,55 +1,41 @@
-module TIFF.GPT4Turbo {
+module TIFF;
 
-  import DAEDALUS::BitStream;
+import std::{uint16, uint32, array};
 
-  type Byte = UInt8;
+type WORD = uint16;
+type DWORD = uint32;
+type LONG = int32;
+type RATIONAL = struct {
+    numerator : DWORD;
+    denominator : DWORD;
+};
 
-  type Word = UInt16 {
-    littleEndian
-  };
+type IFD_Entry = struct {
+    Tag : WORD;
+    Type : WORD;
+    Count : DWORD;
+    Value_Offset : DWORD;
+};
 
-  type DWord = UInt32 {
-    littleEndian
-  };
+type IFD = struct {
+    NumEntries : WORD;
+    Entries : array<IFD_Entry> of NumEntries;
+    NextIFDOffset : DWORD;
+};
 
-  type Long = UInt32 {
-    littleEndian
-  };
+type TIFF_Header = struct {
+    ByteOrder : WORD;
+    MagicNumber : WORD;
+    IFDOffset : DWORD;
+};
 
-  type Rational = struct {
-    numerator : Long;
-    denominator : Long;
-  };
+type ImageFileDirectory = struct {
+    IFDs : array<IFD> while not @.NextIFDOffset == 0;
+};
 
-  type TIFFHeader = struct {
-    endianess : Word;     // 0x4949 (little endian) or 0x4D4D (big endian)
-    magic : Word;         // Fixed value: 42
-    ifdOffset : Long;     // Offset to the first Image File Directory (IFD)
-  };
+type TIFF_File = struct {
+    Header : TIFF_Header;
+    FirstIFD : @ImageFileDirectory(Header.IFDOffset);
+};
 
-  type IFDEntry = struct {
-    tag : Word;
-    type : Word;
-    count : Long;
-    valueOffset : Long;
-  };
-
-  type IFD = struct {
-    numEntries : Word;
-    entries : IFDEntry[numEntries];
-    nextIFDOffset : Long;
-  };
-
-  type ImageData = struct {
-    data : Byte[];
-  };
-
-  type TIFFFile = struct {
-    header : TIFFHeader;
-    firstIFD : IFD @ header.ifdOffset;
-    image : ImageData @ firstIFD.entries[1].valueOffset; // Assuming the second entry points to image data
-  };
-
-  // Entry point for parsing
-  let parse_tiff = parse TIFFFile from BitStream;
-}
+root TIFF_File;

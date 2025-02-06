@@ -1,32 +1,44 @@
-module GZIP.GzipGemini15Flash where
-
-import Daedalus.Type.AST
-
-data GzipGemini15Flash = GzipGemini15Flash {
-  field1 :: { a :: Word8, b :: Word16 }
-, field2 :: [Word8]
+gzip = record {
+    id1: u8,
+    id2: u8,
+    cm: u8,
+    flg: u8,
+    mtime: u32,
+    xfl: u8,
+    os: u8,
+    data: bytes,
+    crc32: u32,
+    isize: u32,
+    optional_fields: seq(optional_field),
 }
 
-parse :: Parser GzipGemini15Flash
-parse = do
-  field1 <- parseField1
-  field2 <- parseField2
-  return GzipGemini15Flash { field1 = field1, field2 = field2 }
+optional_field = record {
+    type: u16,
+    data: bytes,
+}
 
-parseField1 :: Parser { a :: Word8, b :: Word16 }
-parseField1 = do
-  a <- word8
-  b <- word16
-  return { a = a, b = b }
+optional_field_types = {
+    0x0001: extra_fields,
+    0x0002: filename,
+    0x0003: comment,
+}
 
-parseField2 :: Parser [Word8]
-parseField2 = many word8
+extra_fields = record {
+    subfields: seq(extra_subfield),
+}
 
--- Example usage (for testing):
-main :: IO ()
-main = do
-  let exampleData = [0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-  case runParser parse exampleData of
-    Just result -> print result
-    Nothing -> putStrLn "Parsing failed"
+extra_subfield = record {
+    id: u16,
+    size: u16,
+    data: bytes(size),
+}
 
+filename = record {
+    name: string,
+}
+
+comment = record {
+    comment: string,
+}
+
+string = seq(u8)

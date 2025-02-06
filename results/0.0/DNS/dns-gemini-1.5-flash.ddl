@@ -1,144 +1,36 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+grammar DNS {
+  header = ID:uint16, QR:uint1, OPCODE:uint4, AA:uint1, TC:uint1, RD:uint1, RA:uint1, Z:uint3, RCODE:uint4, QDCOUNT:uint16, ANCOUNT:uint16, NSCOUNT:uint16, ARCOUNT:uint16;
 
-module DNS where
+  question = QNAME:domain, QTYPE:uint16, QCLASS:uint16;
 
-import Daedalus.AST
-import Daedalus.Type
-import Daedalus.Value
-import Daedalus.PP
+  resourceRecord = NAME:domain, TYPE:uint16, CLASS:uint16, TTL:uint32, RDLENGTH:uint16, RDATA:rData;
 
-import qualified Data.ByteString as BS
-import qualified Data.Map as Map
-import qualified Data.List as List
+  domain = label*;
 
--- | A simple DNS record type
-data DNSRecord = A { ip :: BS.ByteString }
-              | CNAME { name :: BS.ByteString }
-              deriving (Show, Generic, ToJSON, FromJSON, ToDaedalus)
+  label = length:uint8, data:bytes:length;
 
--- | A DNS message type
-data DNSMessage = DNSMessage {
-  header :: DNSHeader,
-  questions :: [DNSQuestion],
-  answers :: [DNSRecord],
-  authority :: [DNSRecord],
-  additional :: [DNSRecord]
-} deriving (Show, Generic, ToJSON, FromJSON, ToDaedalus)
+  rData = TYPE:uint16, data:switch TYPE {
+    case 1: A_RDATA;
+    case 28: AAAA_RDATA;
+    case 15: MX_RDATA;
+    case 2: NS_RDATA;
+    case 5: CNAME_RDATA;
+    case 6: SOA_RDATA;
+    case 16: TXT_RDATA;
+    default: bytes:RDLENGTH;
+  };
 
--- | DNS header
-data DNSHeader = DNSHeader {
-  id :: Word16,
-  qr :: Bool,
-  opcode :: Word8,
-  aa :: Bool,
-  tc :: Bool,
-  rd :: Bool,
-  ra :: Bool,
-  z :: Word8,
-  rcode :: Word8,
-  qdcount :: Word16,
-  ancount :: Word16,
-  nscount :: Word16,
-  arcount :: Word16
-} deriving (Show, Generic, ToJSON, FromJSON, ToDaedalus)
+  A_RDATA = address:ipv4;
+  AAAA_RDATA = address:ipv6;
+  MX_RDATA = preference:uint16, exchange:domain;
+  NS_RDATA = nameserver:domain;
+  CNAME_RDATA = canonicalName:domain;
+  SOA_RDATA = mname:domain, rname:domain, serial:uint32, refresh:uint32, retry:uint32, expire:uint32, minimum:uint32;
+  TXT_RDATA = text:string;
 
--- | DNS question
-data DNSQuestion = DNSQuestion {
-  qname :: BS.ByteString,
-  qtype :: Word16,
-  qclass :: Word16
-} deriving (Show, Generic, ToJSON, FromJSON, ToDaedalus)
+  message = header, questions:question*, answers:resourceRecord*, authorities:resourceRecord*, additionals:resourceRecord*;
 
-
--- | Parser for a DNS message
-parseDNS :: Parser DNSMessage
-parseDNS = do
-  header <- parseDNSHeader
-  questions <- many (parseDNSQuestion)
-  answers <- many (parseDNSRecord)
-  authority <- many (parseDNSRecord)
-  additional <- many (parseDNSRecord)
-  return $ DNSMessage header questions answers authority additional
-
--- | Parser for a DNS header
-parseDNSHeader :: Parser DNSHeader
-parseDNSHeader = do
-  id' <- beWord16
-  flags <- beWord16
-  qdcount <- beWord16
-  ancount <- beWord16
-  nscount <- beWord16
-  arcount <- beWord16
-  let qr' = (flags `shiftR` 15) == 1
-  let opcode' = (flags `shiftR` 11) .&. 0xF
-  let aa' = (flags `shiftR` 10) == 1
-  let tc' = (flags `shiftR` 9) == 1
-  let rd' = (flags `shiftR` 8) == 1
-  let ra' = (flags `shiftR` 7) == 1
-  let z' = (flags `shiftR` 4) .&. 0x7
-  let rcode' = flags .&. 0xF
-  return $ DNSHeader id' qr' opcode' aa' tc' rd' ra' z' rcode' qdcount ancount nscount arcount
-
--- | Parser for a DNS question
-parseDNSQuestion :: Parser DNSQuestion
-parseDNSQuestion = do
-  qname <- parseName
-  qtype <- beWord16
-  qclass <- beWord16
-  return $ DNSQuestion qname qtype qclass
-
--- | Parser for a DNS record
-parseDNSRecord :: Parser DNSRecord
-parseDNSRecord = do
-  rtype <- beWord16
-  case rtype of
-    1 -> do
-      ip' <- parseIP
-      return $ A ip'
-    5 -> do
-      cname <- parseName
-      return $ CNAME cname
-    _ -> fail "Unsupported record type"
-
--- | Parser for a domain name
-parseName :: Parser BS.ByteString
-parseName = do
-  labels <- many parseLabel
-  return $ BS.concat labels
-
--- | Parser for a label
-parseLabel :: Parser BS.ByteString
-parseLabel = do
-  len <- beUInt8
-  if len == 0 then return BS.empty else BS.take len <$> take len
-
--- | Parser for an IPv4 address
-parseIP :: Parser BS.ByteString
-parseIP = BS.pack <$> replicateM 4 beUInt8
-
--- | Helper function to read a word in big-endian order
-beWord16 :: Parser Word16
-beWord16 = do
-  h <- beUInt8
-  l <- beUInt8
-  return $ fromIntegral h `shiftL` 8 .|. fromIntegral l
-
--- | Helper function to read an unsigned integer in big-endian order
-beUInt8 :: Parser Word8
-beUInt8 = getUInt8
-
+  ipv4 = octet1:uint8, octet2:uint8, octet3:uint8, octet4:uint8;
+  ipv6 = hextet1:uint16, hextet2:uint16, hextet3:uint16, hextet4:uint16, hextet5:uint16, hextet6:uint16, hextet7:uint16, hextet8:uint16;
+  string = length:uint8, data:bytes:length;
+}

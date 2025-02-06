@@ -1,46 +1,156 @@
 module PNG;
 
-import zeek;
+import Zeek;
 
-type PNGSignature = unit {
-    magic: bytes &length=8 &check=$magic == "\x89PNG\r\n\x1a\n";
-};
+type PNGFile = unit {
+    # PNG Signature
+    signature: bytes[8] &eod="Invalid PNG signature",
+    
+    # Chunks
+    chunks: Chunk[] &until($$ == "IEND");
 
-type PNGChunk = unit {
-    length: uint32;
-    type: bytes &length=4;
-    data: bytes &length=length;
-    crc: uint32;
-
-    on %done {
-        if (crc != compute_crc32(type + data)) {
-            warn fmt("CRC mismatch in chunk type %s", type);
+    on %init {
+        if ( self.signature != "\x89PNG\x0D\x0A\x1A\x0A" ) {
+            error("Invalid PNG signature");
         }
     }
-
-    function compute_crc32(data: bytes): uint32 {
-        local crc = 0xffffffff;
-        for (local b: bytes in data) {
-            crc = crc32_table[(crc ^ b) & 0xff] ^ (crc >> 8);
-        }
-        return crc ^ 0xffffffff;
-    }
-
-    const crc32_table: vector of uint32 = {
-        0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, // first four entries
-        // ... (continue the CRC table initialization)
-    };
 };
 
-public type PNGImage = unit {
-    signature: PNGSignature;
-    chunks: [PNGChunk] &until=$chunk.type == "IEND";
+type Chunk = unit {
+    length: uint32,
+    type: string &length=4,
+    data: bytes[length],
+    crc: uint32,
 
     on %done {
-        print fmt("Parsed PNG Image with %d chunks", len(chunks));
+        if ( not check_crc(self.type, self.data, self.crc) ) {
+            error("CRC check failed for chunk");
+        }
     }
 };
 
-public export {
-    global PNGImage: function(input: parse::Input) -> PNG::PNGImage;
+type IHDR = unit {
+    width: uint32,
+    height: uint32,
+    bit_depth: uint8,
+    color_type: uint8,
+    compression_method: uint8,
+    filter_method: uint8,
+    interlace_method: uint8
+};
+
+type PLTE = unit {
+    entries: RGBTriplet[] &length=(self._parent.length / 3)
+};
+
+type RGBTriplet = unit {
+    red: uint8,
+    green: uint8,
+    blue: uint8
+};
+
+type IDAT = unit {
+    data: bytes[self._parent.length]
+};
+
+type IEND = unit {
+    # No data for IEND
+};
+
+type tEXt = unit {
+    keyword: string,
+    null_separator: uint8 &value=0,
+    text: bytes &restofdata
+};
+
+type zTXt = unit {
+    keyword: string,
+    null_separator: uint8 &value=0,
+    compression_method: uint8,
+    compressed_text: bytes &restofdata
+};
+
+type iTXt = unit {
+    keyword: string,
+    null_separator: uint8 &value=0,
+    compression_flag: uint8,
+    compression_method: uint8,
+    language_tag: string,
+    translated_keyword: string,
+    null_separator2: uint8 &value=0,
+    text: bytes &restofdata
+};
+
+type bKGD = unit {
+    # Depends on color type
+    data: bytes[self._parent.length]
+};
+
+type cHRM = unit {
+    white_point_x: uint32,
+    white_point_y: uint32,
+    red_x: uint32,
+    red_y: uint32,
+    green_x: uint32,
+    green_y: uint32,
+    blue_x: uint32,
+    blue_y: uint32
+};
+
+type gAMA = unit {
+    gamma: uint32
+};
+
+type hIST = unit {
+    frequencies: uint16[] &length=(self._parent.length / 2)
+};
+
+type pHYs = unit {
+    pixels_per_unit_x: uint32,
+    pixels_per_unit_y: uint32,
+    unit_specifier: uint8
+};
+
+type sBIT = unit {
+    # Depends on color type
+    data: bytes[self._parent.length]
+};
+
+type sPLT = unit {
+    name: string,
+    null_separator: uint8 &value=0,
+    sample_depth: uint8,
+    entries: SuggestedPaletteEntry[] &restofdata &convert=convert_entries
+};
+
+type SuggestedPaletteEntry = unit {
+    red: uint8,
+    green: uint8,
+    blue: uint8,
+    alpha: uint8,
+    frequency: uint16
+};
+
+type sRGB = unit {
+    rendering_intent: uint8
+};
+
+type tIME = unit {
+    year: uint16,
+    month: uint8,
+    day: uint8,
+    hour: uint8,
+    minute: uint8,
+    second: uint8
+};
+
+type tRNS = unit {
+    # Depends on color type
+    data: bytes[self._parent.length]
+};
+
+# Function to check CRC (Placeholder)
+function check_crc(type: string, data: bytes, crc: uint32) -> bool {
+    # Actual CRC check logic needs to be implemented here
+    return true;
 }

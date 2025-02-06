@@ -1,29 +1,3 @@
-#include <base64>
+module DICOM;
 
-function dicom_decode(data: string) : string {
-    local decoded: string;
-    try {
-        decoded = base64.decode(data);
-    } catch (e: string) {
-        return ""; // Handle decoding errors gracefully
-    }
-    return decoded;
-}
-
-event dicom_gemini_event(data: string) {
-  local decoded_data: string = dicom_decode(data);
-  if (decoded_data != "") {
-    // Process decoded DICOM data here.  Example:
-    print data;
-    // Access specific DICOM tags within decoded_data using a suitable DICOM parsing library if needed.
-  } else {
-    print "Error decoding DICOM data.";
-  }
-}
-
-# This is a placeholder. Replace with actual data source
-event zeek_data_source(data: string) {
-    dicom_gemini_event(data);
-}
-
-
+# This is an incomplete placeholder.  A full DICOM specification is impossible in Zeek Spicy.

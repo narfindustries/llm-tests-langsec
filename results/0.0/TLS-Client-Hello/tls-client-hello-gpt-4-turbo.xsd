@@ -1,37 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/TLS-Client-Hello"
-           xmlns:tns="http://example.com/dfdl/TLS-Client-Hello">
-
-  <xs:include schemaLocation="DFDLGeneralTypes.xsd"/>
+           targetNamespace="http://example.com/dfdl/tls-client-hello"
+           xmlns:tns="http://example.com/dfdl/tls-client-hello">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat"/>
+      <dfdl:defineFormat name="generalFormat">
+        <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                     binaryNumberRep="packed" textNumberRep="standard"
+                     lengthKind="delimited" encoding="UTF-8"/>
+      </dfdl:defineFormat>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:complexType name="TLSClientHello">
-    <xs:sequence>
-      <xs:element name="ContentType" type="tns:ContentType" dfdl:length="1" dfdl:lengthKind="explicit"/>
-      <xs:element name="Version" type="tns:ProtocolVersion" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="HandshakeType" type="tns:HandshakeType" dfdl:length="1" dfdl:lengthKind="explicit"/>
-      <xs:element name="HandshakeLength" type="xs:unsignedInt" dfdl:length="3" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="HandshakeVersion" type="tns:ProtocolVersion" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Random" type="xs:hexBinary" dfdl:length="32" dfdl:lengthKind="explicit"/>
-      <xs:element name="SessionIDLength" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-      <xs:element name="SessionID" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
-      <xs:element name="CipherSuitesLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="CipherSuites" type="tns:CipherSuites" dfdl:lengthKind="implicit"/>
-      <xs:element name="CompressionMethodsLength" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-      <xs:element name="CompressionMethods" type="tns:CompressionMethods" dfdl:lengthKind="implicit"/>
-      <xs:element name="ExtensionsLength" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="Extensions" type="tns:Extensions" dfdl:lengthKind="implicit"/>
+  <xs:complexType name="ClientHello">
+    <xs:sequence dfdl:lengthKind="delimited">
+      <xs:element name="legacy_version" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="random" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="legacy_session_id_length" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="legacy_session_id" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../legacy_session_id_length }"/>
+      <xs:element name="cipher_suites_length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="cipher_suites" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../cipher_suites_length }"/>
+      <xs:element name="legacy_compression_methods_length" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="legacy_compression_methods" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../legacy_compression_methods_length }"/>
+      <xs:element name="extensions_length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+      <xs:element name="extensions" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../extensions_length }"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="TLSClientHello" type="tns:TLSClientHello"/>
+  <xs:element name="TLSClientHello" type="tns:ClientHello"/>
 
 </xs:schema>

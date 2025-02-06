@@ -1,29 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tiff" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/tiff"
+           xmlns="http://example.org/tiff"
+           elementFormDefault="qualified">
 
-  <xs:element name="tiffGemini">
+  <xs:annotation>
+    <xs:documentation>DFDL schema for TIFF 6.0.  Note: This is a highly simplified representation and does not capture the full complexity and extensibility of the TIFF specification.  Many optional fields and variations are omitted for brevity. A complete DFDL schema for TIFF would be extremely large and complex.</xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="TIFF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="imageHeader" type="ImageHeaderType" dfdl:lengthKind="explicit" dfdl:length="8"/>
-        <xs:element name="imageData" type="ImageData" dfdl:lengthKind="implicit" dfdl:lengthUnits="bytes" dfdl:occursCountKind="implicit"/>
+        <xs:element name="ByteOrder" type="xs:unsignedShort" dfdl:length="2" dfdl:occursCount="1"/>
+        <xs:element name="IFD0" type="IFDType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="ImageHeaderType">
+  <xs:complexType name="IFDType">
     <xs:sequence>
-      <xs:element name="width" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="height" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="bitsPerPixel" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="compression" type="xs:unsignedInt" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="EntryCount" type="xs:unsignedShort" dfdl:length="2" dfdl:occursCount="1"/>
+      <xs:element name="IFDEntry" type="IFDEntryType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="ImageData">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-      </xs:extension>
-    </xs:simpleContent>
+  <xs:complexType name="IFDEntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Count" type="xs:unsignedLong" dfdl:length="4"/>
+      <xs:element name="Value" type="xs:hexBinary" dfdl:lengthKind="explicit"/>
+    </xs:sequence>
+    <xs:attribute name="ValueLength" type="xs:unsignedLong" use="required"/>
   </xs:complexType>
 
+  <xs:simpleType name="ImageWidthType">
+    <xs:restriction base="xs:unsignedLong">
+      <xs:minInclusive value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <dfdl:format byteOrder="bigEndian" lengthKind="implicit" encoding="UTF-8" />
 </xs:schema>

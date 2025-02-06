@@ -19,7 +19,7 @@ class Modbus(KaitaiStruct):
         server_device_busy = 6
         memory_parity_error = 8
         gateway_path_unavailable = 10
-        gateway_target_device_failed_to_respond = 11
+        gateway_target_device_failed = 11
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -27,44 +27,10 @@ class Modbus(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.transaction_id = self._io.read_u2be()
-        self.protocol_id = self._io.read_u2be()
-        self.length = self._io.read_u2be()
-        self.unit_id = self._io.read_u1()
-        self.function_code = self._io.read_u1()
-        _on = self.function_code
-        if _on == 131:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 4:
-            self.data = Modbus.ReadInputRegistersRequest(self._io, self, self._root)
-        elif _on == 6:
-            self.data = Modbus.WriteSingleRegisterRequest(self._io, self, self._root)
-        elif _on == 1:
-            self.data = Modbus.ReadCoilsRequest(self._io, self, self._root)
-        elif _on == 144:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 143:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 3:
-            self.data = Modbus.ReadHoldingRegistersRequest(self._io, self, self._root)
-        elif _on == 5:
-            self.data = Modbus.WriteSingleCoilRequest(self._io, self, self._root)
-        elif _on == 15:
-            self.data = Modbus.WriteMultipleCoilsRequest(self._io, self, self._root)
-        elif _on == 130:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 133:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 129:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 16:
-            self.data = Modbus.WriteMultipleRegistersRequest(self._io, self, self._root)
-        elif _on == 134:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
-        elif _on == 2:
-            self.data = Modbus.ReadDiscreteInputsRequest(self._io, self, self._root)
-        elif _on == 132:
-            self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+        self.mbap = Modbus.MbapHeader(self._io, self, self._root)
+        self._raw_pdu = self._io.read_bytes((self.mbap.length - 1))
+        _io__raw_pdu = KaitaiStream(BytesIO(self._raw_pdu))
+        self.pdu = Modbus.ProtocolDataUnit(_io__raw_pdu, self, self._root)
 
     class WriteMultipleRegistersRequest(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -77,7 +43,19 @@ class Modbus(KaitaiStruct):
             self.starting_address = self._io.read_u2be()
             self.quantity = self._io.read_u2be()
             self.byte_count = self._io.read_u1()
-            self.register_values = self._io.read_bytes(self.byte_count)
+            self.registers_value = self._io.read_bytes(self.byte_count)
+
+
+    class WriteMultipleCoilsResponse(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.starting_address = self._io.read_u2be()
+            self.quantity = self._io.read_u2be()
 
 
     class ReadInputRegistersRequest(KaitaiStruct):
@@ -103,7 +81,7 @@ class Modbus(KaitaiStruct):
             self.starting_address = self._io.read_u2be()
             self.quantity = self._io.read_u2be()
             self.byte_count = self._io.read_u1()
-            self.coil_values = self._io.read_bytes(self.byte_count)
+            self.outputs_value = self._io.read_bytes(self.byte_count)
 
 
     class WriteSingleRegisterRequest(KaitaiStruct):
@@ -130,6 +108,50 @@ class Modbus(KaitaiStruct):
             self.quantity = self._io.read_u2be()
 
 
+    class ProtocolDataUnit(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.function_code = self._io.read_u1()
+            _on = self.function_code
+            if _on == 131:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 4:
+                self.data = Modbus.ReadInputRegistersRequest(self._io, self, self._root)
+            elif _on == 6:
+                self.data = Modbus.WriteSingleRegisterRequest(self._io, self, self._root)
+            elif _on == 1:
+                self.data = Modbus.ReadCoilsRequest(self._io, self, self._root)
+            elif _on == 144:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 143:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 3:
+                self.data = Modbus.ReadHoldingRegistersRequest(self._io, self, self._root)
+            elif _on == 5:
+                self.data = Modbus.WriteSingleCoilRequest(self._io, self, self._root)
+            elif _on == 15:
+                self.data = Modbus.WriteMultipleCoilsRequest(self._io, self, self._root)
+            elif _on == 130:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 133:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 129:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 16:
+                self.data = Modbus.WriteMultipleRegistersRequest(self._io, self, self._root)
+            elif _on == 134:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+            elif _on == 2:
+                self.data = Modbus.ReadDiscreteInputsRequest(self._io, self, self._root)
+            elif _on == 132:
+                self.data = Modbus.ExceptionResponse(self._io, self, self._root)
+
+
     class WriteSingleCoilRequest(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -142,6 +164,42 @@ class Modbus(KaitaiStruct):
             self.output_value = self._io.read_u2be()
 
 
+    class ReadHoldingRegistersResponse(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.byte_count = self._io.read_u1()
+            self.register_value = self._io.read_bytes(self.byte_count)
+
+
+    class ReadInputRegistersResponse(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.byte_count = self._io.read_u1()
+            self.input_registers = self._io.read_bytes(self.byte_count)
+
+
+    class ReadDiscreteInputsResponse(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.byte_count = self._io.read_u1()
+            self.input_status = self._io.read_bytes(self.byte_count)
+
+
     class ExceptionResponse(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
@@ -151,6 +209,18 @@ class Modbus(KaitaiStruct):
 
         def _read(self):
             self.exception_code = KaitaiStream.resolve_enum(Modbus.ExceptionCodes, self._io.read_u1())
+
+
+    class ReadCoilsResponse(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.byte_count = self._io.read_u1()
+            self.coil_status = self._io.read_bytes(self.byte_count)
 
 
     class ReadHoldingRegistersRequest(KaitaiStruct):
@@ -166,6 +236,32 @@ class Modbus(KaitaiStruct):
 
 
     class ReadCoilsRequest(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.starting_address = self._io.read_u2be()
+            self.quantity = self._io.read_u2be()
+
+
+    class MbapHeader(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.transaction_id = self._io.read_u2be()
+            self.protocol_id = self._io.read_u2be()
+            self.length = self._io.read_u2be()
+            self.unit_id = self._io.read_u1()
+
+
+    class WriteMultipleRegistersResponse(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent

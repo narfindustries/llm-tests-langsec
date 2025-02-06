@@ -1,0 +1,66 @@
+module DICOM;
+
+public type FileMetaInformation = unit {
+    FilePreamble: bytes &size=128;
+    Prefix: bytes &size=4;
+    GroupLength: uint32;
+    FileMetaInformationVersion: bytes[] &until=$$ == b"\x00";
+    MediaStorageSOPClassUID: bytes[] &until=$$ == b"\x00";
+    MediaStorageSOPInstanceUID: bytes[] &until=$$ == b"\x00";
+    TransferSyntaxUID: bytes[] &until=$$ == b"\x00";
+    ImplementationClassUID: bytes[] &until=$$ == b"\x00";
+    ImplementationVersionName: bytes[] &until=$$ == b"\x00";
+    SourceApplicationEntityTitle: bytes[] &until=$$ == b"\x00";
+    SendingApplicationEntityTitle: bytes[] &until=$$ == b"\x00";
+    ReceivingApplicationEntityTitle: bytes[] &until=$$ == b"\x00";
+    PrivateInformationCreatorUID: bytes[] &until=$$ == b"\x00";
+    PrivateInformation: bytes[] &until=$$ == b"\x00";
+};
+
+public type DataSet = unit {
+    elements: DataElement[] &until=$$.tag == 0x00000000;
+};
+
+public type DataElement = unit {
+    tag: uint32;
+    vr: bytes &size=2;
+    length: uint16;
+    value: case (vr) {
+        b"AE" -> ApplicationEntity: bytes[] &size=length;
+        b"AS" -> AgeString: bytes[] &size=length;
+        b"AT" -> AttributeTag: bytes[] &size=length;
+        b"CS" -> CodeString: bytes[] &size=length;
+        b"DA" -> Date: bytes[] &size=length;
+        b"DS" -> DecimalString: bytes[] &size=length;
+        b"DT" -> DateTime: bytes[] &size=length;
+        b"FL" -> FloatingPointSingle: bytes[] &size=length;
+        b"FD" -> FloatingPointDouble: bytes[] &size=length;
+        b"IS" -> IntegerString: bytes[] &size=length;
+        b"LO" -> LongString: bytes[] &size=length;
+        b"LT" -> LongText: bytes[] &size=length;
+        b"OB" -> OtherByte: bytes[] &size=length;
+        b"OD" -> OtherDouble: bytes[] &size=length;
+        b"OF" -> OtherFloat: bytes[] &size=length;
+        b"OL" -> OtherLong: bytes[] &size=length;
+        b"OW" -> OtherWord: bytes[] &size=length;
+        b"PN" -> PersonName: bytes[] &size=length;
+        b"SH" -> ShortString: bytes[] &size=length;
+        b"SL" -> SignedLong: bytes[] &size=length;
+        b"SQ" -> Sequence: bytes[] &size=length;
+        b"SS" -> SignedShort: bytes[] &size=length;
+        b"ST" -> ShortText: bytes[] &size=length;
+        b"TM" -> Time: bytes[] &size=length;
+        b"UI" -> UniqueIdentifier: bytes[] &size=length;
+        b"UL" -> UnsignedLong: bytes[] &size=length;
+        b"UN" -> Unknown: bytes[] &size=length;
+        b"UR" -> URI: bytes[] &size=length;
+        b"US" -> UnsignedShort: bytes[] &size=length;
+        b"UT" -> UnlimitedText: bytes[] &size=length;
+        default -> UnknownValue: bytes[] &size=length;
+    };
+};
+
+public type DICOMFile = unit {
+    fileMetaInformation: FileMetaInformation;
+    dataSet: DataSet;
+};

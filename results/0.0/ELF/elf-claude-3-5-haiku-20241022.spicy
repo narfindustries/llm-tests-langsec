@@ -2,33 +2,46 @@ module ELF;
 
 import spicy;
 
-public type Header = unit {
-    magic: bytes(4) where $$ == b"\x7fELF";
-    class: uint8 where $$ == 1 || $$ == 2;
-    data_encoding: uint8 where $$ == 1 || $$ == 2;
+public type Header = struct {
+    magic: bytes &size=4;
+    
+    class: uint8;
+    
+    endian: uint8;
+    
     version: uint8;
+    
     os_abi: uint8;
+    
     abi_version: uint8;
-    padding: bytes(7);
+    
+    padding: bytes &size=7;
+    
     type: uint16;
+    
     machine: uint16;
+    
     elf_version: uint32;
+    
     entry_point: uint64;
+    
     program_header_offset: uint64;
+    
     section_header_offset: uint64;
+    
     flags: uint32;
+    
     header_size: uint16;
-    program_header_size: uint16;
-    program_header_count: uint16;
-    section_header_size: uint16;
-    section_header_count: uint16;
-    section_names_index: uint16;
-
-    on %done {
-        print self;
-    }
+    
+    program_header_entry_size: uint16;
+    
+    program_header_num_entries: uint16;
+    
+    section_header_entry_size: uint16;
+    
+    section_header_num_entries: uint16;
+    
+    section_header_string_table_index: uint16;
 };
 
-public type Parser = unit {
-    header: Header;
-};
+public type Parser = spicy::FileFormat<Header>;

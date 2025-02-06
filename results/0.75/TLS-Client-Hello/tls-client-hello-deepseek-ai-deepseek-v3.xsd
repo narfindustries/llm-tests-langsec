@@ -1,0 +1,89 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/tls" xmlns:tls="http://example.com/tls">
+
+    <xs:annotation>
+        <xs:appinfo source="http://极昨dfdl/">
+            <dfdl:format representation="binary" byteOrder="bigEndian"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="ClientHello">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="legacy_version" type="tls:ProtocolVersion"/>
+                <xs:element name="random" type极昨tls:Random"/>
+                <xs:element name="legacy_session_id" type="tls:OpaqueVariableLength"/>
+                <xs:element name="cipher_suites" type="tls:CipherSuites"/>
+                <xs:element name="legacy_compression_methods" type="tls:OpaqueVariableLength"/>
+                <xs:element name="extensions" type="tls:Extensions"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="ProtocolVersion">
+        <xs:sequence>
+            <xs:element name="major" type="xs:byte"/>
+            <xs:element name="minor" type="xs:byte"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Random">
+        <xs:sequence>
+            <xs:element name="gmt_unix_time" type="xs:unsignedInt"/>
+            <xs:element name="random_bytes" type="xs:hexBinary" dfdl:length="28"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="OpaqueVariableLength">
+        <xs:sequence>
+            <xs:element name="length" type="xs:unsignedByte"/>
+            <xs:element name="data" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length>{ ../length }</dfdl:length>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CipherSuites">
+        <xs:sequence>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="cipher_suite" type="xs:unsignedShort" maxOccurs="unbounded">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length>{ ../length div 2 }</dfdl:length>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:极昨complexType>
+
+    <xs:complexType name="Extensions">
+        <xs:sequence>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="extension" type="tls:Extension" maxOccurs="unbounded">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length>{ ../length }</dfdl:length>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Extension">
+        <xs:sequence>
+            <xs:element name="extension_type" type="xs:unsignedShort"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="extension_data" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:length>{ ../length }</dfdl:length>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

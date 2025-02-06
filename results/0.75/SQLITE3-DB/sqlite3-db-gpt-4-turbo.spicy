@@ -1,46 +1,74 @@
-module SQLite3;
+module SQLite;
 
 import spicy;
 
 type FileHeader = unit {
     magic: bytes &size=16;
     pageSize: uint16;
-    on condition { self.magic == b"SQLite format 3\0" };
+    writeVersion: uint8;
+    readVersion: uint8;
+    reservedSpace: uint8;
+    maxPayloadFrac: uint8;
+    minPayloadFrac: uint8;
+    leafPayloadFrac: uint8;
+    changeCounter: uint32;
+    dbSize: uint32;
+    firstFreelistTrunkPage: uint32;
+    totalFreelistPages: uint32;
+    schemaCookie: uint32;
+    schemaFormat: uint32;
+    defaultCacheSize: uint32;
+    largestRootBTreePage: uint32;
+    textEncoding: uint32;
+    userVersion: uint32;
+    incrementalVacuumMode: uint32;
+    applicationID: uint32;
+    reserved: bytes &size=20;
+    versionValidFor: uint32;
+    sqliteVersion: uint32;
 };
 
-type Record = unit {
-    length: uint32;
-    content: bytes &size=self.length;
+type BTreePageHeader = unit {
+    pageType: uint8;
+    firstFreeblock: uint16;
+    numCells: uint16;
+    cellContentOffset: uint16;
+    numFragFreeBytes: uint8;
+};
+
+type CellPointer = unit {
+    pointer: uint16;
+};
+
+type InteriorCell = unit {
+    leftChildPage: uint32;
+    rowidOrKey: uint64;
+};
+
+type LeafCell = unit {
+    payloadSize: uint32;
+    rowid: uint64;
+    payload: bytes &size=this.payloadSize;
+    overflowPageNumber: uint32;
+};
+
+type Cell = unit(pageType: uint8) {
+    switch (pageType) {
+        case 2, 5: InteriorCell;
+        case 10, 13: LeafCell;
+        default: void;
+    }
 };
 
 type BTreePage = unit {
-    header: PageHeader;
-    cells: CellArray(self.header.numCells) &eod;
+    header: BTreePageHeader;
+    cellPointers: CellPointer[] &size=this.header.numCells;
+    cells: Cell(this.header.pageType)[] &size=this.header.numCells;
 };
 
-type PageHeader = unit {
-    pageType: uint8;
-    firstFreeBlock: uint16;
-    numCells: uint16;
-    cellContentOffset: uint16;
-    numFragmentedFreeBytes: uint8;
-};
-
-type Cell = unit {
-    leftChildPage: uint32;  # If table-interior or index-interior
-    rowid: uint64;  # If table-leaf
-    payload: Record;
-};
-
-type CellArray = unit(count: uint16) {
-    items: Cell[count];
-};
-
-type Database = unit {
+type SQLiteDB = unit {
     header: FileHeader;
     pages: BTreePage[] &eod;
 };
 
-public type SQLite3_DB = unit {
-    db: Database;
-} &byte_order=spicy::ByteOrder::Little;
+public type SQLiteFile = SQLiteDB;

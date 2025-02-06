@@ -1,56 +1,29 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
 HParser *create_zip_parser() {
-    // Local file header signature
-    HParser *local_file_header_sig = h_sequence(
-        h_uint32(0x04034b50), // Local file header signature
-        NULL
-    );
+    HParser *signature = h_bits(32, false);
+    HParser *version = h_bits(16, false);
+    HParser *bit_flag = h_bits(16, false);
+    HParser *compression_method = h_bits(16, false);
+    HParser *mod_time = h_bits(16, false);
+    HParser *mod_date = h_bits(16, false);
+    HParser *crc32 = h_bits(32, false);
+    HParser *compressed_size = h_bits(32, false);
+    HParser *uncompressed_size = h_bits(32, false);
+    HParser *file_name_length = h_bits(16, false);
+    HParser *extra_field_length = h_bits(16, false);
+    HParser *file_name = h_length_value(file_name_length, h_uint8());
+    HParser *extra_field = h_length_value(extra_field_length, h_uint8());
 
-    // Version needed to extract
-    HParser *version_needed = h_uint16();
-
-    // General purpose bit flag
-    HParser *general_purpose_bit_flag = h_uint16();
-
-    // Compression method
-    HParser *compression_method = h_uint16();
-
-    // File last modification time
-    HParser *last_mod_time = h_uint16();
-
-    // File last modification date
-    HParser *last_mod_date = h_uint16();
-
-    // CRC-32
-    HParser *crc32 = h_uint32();
-
-    // Compressed size
-    HParser *compressed_size = h_uint32();
-
-    // Uncompressed size
-    HParser *uncompressed_size = h_uint32();
-
-    // File name length
-    HParser *file_name_length = h_uint16();
-
-    // Extra field length
-    HParser *extra_field_length = h_uint16();
-
-    // File name
-    HParser *file_name = h_length_value(file_name_length, h_bytes_p(1));
-
-    // Extra field
-    HParser *extra_field = h_length_value(extra_field_length, h_bytes_p(1));
-
-    // Local file header
     HParser *local_file_header = h_sequence(
-        local_file_header_sig,
-        version_needed,
-        general_purpose_bit_flag,
+        h_token((const uint8_t *)"\x50\x4b\x03\x04", 4),
+        version,
+        bit_flag,
         compression_method,
-        last_mod_time,
-        last_mod_date,
+        mod_time,
+        mod_date,
         crc32,
         compressed_size,
         uncompressed_size,
@@ -61,87 +34,90 @@ HParser *create_zip_parser() {
         NULL
     );
 
-    // Central directory file header signature
-    HParser *central_dir_file_header_sig = h_sequence(
-        h_uint32(0x02014b50), // Central directory file header signature
-        NULL
-    );
-
-    // Version made by
-    HParser *version_made_by = h_uint16();
-
-    // Central directory file header
-    HParser *central_dir_file_header = h_sequence(
-        central_dir_file_header_sig,
-        version_made_by,
-        version_needed,
-        general_purpose_bit_flag,
+    HParser *central_directory_file_header = h_sequence(
+        h_token((const uint8_t *)"\x50\x4b\x01\x02", 4),
+        version,
+        version,
+        bit_flag,
         compression_method,
-        last_mod_time,
-        last_mod_date,
+        mod_time,
+        mod_date,
         crc32,
         compressed_size,
         uncompressed_size,
         file_name_length,
         extra_field_length,
+        h_bits(16, false), // file comment length
+        h_bits(16, false), // disk number start
+        h_bits(16, false), // internal file attributes
+        h_bits(32, false), // external file attributes
+        h_bits(32, false), // relative offset of local header
         file_name,
         extra_field,
+        h_length_value(h_bits(16, false), h_uint8()), // file comment
         NULL
     );
 
-    // End of central directory signature
-    HParser *end_of_central_dir_sig = h_sequence(
-        h_uint32(0x06054b50), // End of central directory signature
+    HParser *end_of_central_directory_record = h_sequence(
+        h_token((const uint8_t *)"\x50\x4b\x05\x06", 4),
+        h_bits(16, false), // number of this disk
+        h_bits(16, false), // disk where central directory starts
+        h_bits(16, false), // number of central directory records on this disk
+        h_bits(16, false), // total number of central directory records
+        h_bits(32, false), // size of central directory
+        h_bits(32, false), // offset of start of central directory
+        h_length_value(h_bits(16, false), h_uint8()), // zip file comment
         NULL
     );
 
-    // Number of this disk
-    HParser *number_of_this_disk = h_uint16();
-
-    // Number of the disk with the start of the central directory
-    HParser *number_of_disk_with_start = h_uint16();
-
-    // Total number of entries in the central directory on this disk
-    HParser *total_entries_on_this_disk = h_uint16();
-
-    // Total number of entries in the central directory
-    HParser *total_entries = h_uint16();
-
-    // Size of the central directory
-    HParser *size_of_central_dir = h_uint32();
-
-    // Offset of start of central directory with respect to the starting disk number
-    HParser *offset_of_start_of_central_dir = h_uint32();
-
-    // ZIP file comment length
-    HParser *zip_file_comment_length = h_uint16();
-
-    // ZIP file comment
-    HParser *zip_file_comment = h_length_value(zip_file_comment_length, h_bytes_p(1));
-
-    // End of central directory record
-    HParser *end_of_central_dir = h_sequence(
-        end_of_central_dir_sig,
-        number_of_this_disk,
-        number_of_disk_with_start,
-        total_entries_on_this_disk,
-        total_entries,
-        size_of_central_dir,
-        offset_of_start_of_central_dir,
-        zip_file_comment_length,
-        zip_file_comment,
+    HParser *zip_parser = h_many1(h_choice(
+        local_file_header,
+        central_directory_file_header,
+        end_of_central_directory_record,
         NULL
-    );
-
-    // ZIP file parser
-    HParser *zip_parser = h_many(
-        h_choice(
-            local_file_header,
-            central_dir_file_header,
-            end_of_central_dir,
-            NULL
-        )
-    );
+    ));
 
     return zip_parser;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zipfile>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(file_size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, file_size, file);
+    fclose(file);
+
+    HParser *zip_parser = create_zip_parser();
+    HParseResult *result = h_parse(zip_parser, data, file_size);
+
+    if (result) {
+        printf("ZIP file parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse ZIP file.\n");
+    }
+
+    free(data);
+    h_parser_free(zip_parser);
+
+    return EXIT_SUCCESS;
 }

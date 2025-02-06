@@ -1,27 +1,47 @@
 module TIFF;
 
-import zeek;
-import zeek.ftp; 
-import zeek.b58; 
+type TIFF_File = unit {
+    endianness: uint16 {
+        if (endianness == 0x4949) { set_byteorder(Spicy::ByteOrder::LittleEndian); }
+        else if (endianness == 0x4D4D) { set_byteorder(Spicy::ByteOrder::BigEndian); }
+        else { throw ValueError("Unsupported endianness"); }
+    };
 
-public type TIFF = unit {
-    endianness: Endianness,
-    tiff_tag: array[uint16] of TIFFTagBody(endian => endianness),
-} &byte-order=le;
+    magic_number: uint16 &requires(magic_number == 42);
 
-public type Endianness = enum {
-    LE = 0x4949,       // Little Endian
-    BE = 0x4D4D        // Big Endian
+    ifd_offset: uint32;
+
+    ifds: IFD[] &until($input.eod());
 };
 
-public type TIFFTagBody = unit(endian : Endianness) {
-    tag_id: uint16 &byte-order=endian,
-    data_type: uint16 &byte-order=endian,
-    num_values: uint32 &byte-order=endian,
-    value_offset: uint32 &byte-order=endian,
+type IFD = unit {
+    num_entries: uint16;
+    entries: IFDEntry[num_entries];
+    next_ifd_offset: uint32;
 };
 
-public type TIFFTag = unit {
-    tags: uint16,
-    body: array[tags] of TIFFTagBody,
+type IFDEntry = unit {
+    tag: uint16;
+    field_type: uint16;
+    count: uint32;
+    value_offset: uint32;
+
+    value: Value(field_type, count, value_offset);
 };
+
+type Value = unit(field_type: uint16, count: uint32, value_offset: uint32) {
+    data: bytestring &length=BytesRequired(field_type, count);
+};
+
+function BytesRequired(field_type: uint16, count: uint32) -> uint32 {
+    return switch (field_type) {
+        1, 2, 7 => count,       # BYTE, ASCII, UNDEFINED
+        3, 8 => count * 2,     # SHORT, SSHORT
+        4, 9 => count * 4,     # LONG, SLONG
+        5, 10 => count * 8,    # RATIONAL, SRATIONAL
+        6 => count,            # SBYTE
+        11 => count * 4,       # FLOAT
+        12 => count * 8,       # DOUBLE
+        default => 0,
+    };
+}

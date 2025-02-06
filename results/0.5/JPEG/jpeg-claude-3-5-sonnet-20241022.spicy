@@ -1,45 +1,136 @@
 module JPEG;
 
-import spicy;
-
-public type JPEG = unit {
-    on %init { self.markers = vector(); }
-
-    : SOI;
-    : Segments[] &until($input.at_end());
-
-    var markers: vector<uint16>;
+public type Marker = enum {
+    SOI = 0xFFD8,
+    EOI = 0xFFD9,
+    SOF0 = 0xFFC0,
+    SOF2 = 0xFFC2,
+    DHT = 0xFFC4,
+    DQT = 0xFFDB,
+    DRI = 0xFFDD,
+    SOS = 0xFFDA,
+    APP0 = 0xFFE0,
+    APP1 = 0xFFE1,
+    APP2 = 0xFFE2,
+    APP3 = 0xFFE3,
+    APP4 = 0xFFE4,
+    APP5 = 0xFFE5,
+    APP6 = 0xFFE6,
+    APP7 = 0xFFE7,
+    APP8 = 0xFFE8,
+    APP9 = 0xFFE9,
+    APP10 = 0xFFEA,
+    APP11 = 0xFFEB,
+    APP12 = 0xFFEC,
+    APP13 = 0xFFED,
+    APP14 = 0xFFEE,
+    APP15 = 0xFFEF,
+    COM = 0xFFFE
 };
 
-type SOI = unit {
-    magic: bytes &size=2 &requires=(magic == b"\xFF\xD8");
+type Component = unit {
+    component_id: uint8;
+    sampling_factors: uint8;
+    qt_number: uint8;
+};
+
+type SOFComponent = unit {
+    component_id: uint8;
+    huffman_table: uint8;
+};
+
+type QuantizationTable = unit {
+    qt_info: uint8;
+    qt_values: bytes &size=(qt_info >> 4 == 0 ? 64 : 128);
+};
+
+type HuffmanTable = unit {
+    table_info: uint8;
+    code_lengths: bytes &size=16;
+    table_values: bytes &size=self.get_table_size();
+
+    var table_size: uint64;
+
+    on code_lengths {
+        self.table_size = 0;
+        for ( i in 0..15 )
+            self.table_size += self.code_lengths[i];
+    }
+
+    function get_table_size(): uint64 {
+        return self.table_size;
+    }
+};
+
+type SOFSegment = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[num_components];
+};
+
+type SOSSegment = unit {
+    length: uint16;
+    num_components: uint8;
+    components: SOFComponent[num_components];
+    spectral_start: uint8;
+    spectral_end: uint8;
+    approx: uint8;
+    image_data: bytes &eod;
+};
+
+type DQTSegment = unit {
+    length: uint16;
+    tables: QuantizationTable[] &until($input.offset() >= self.offset() + self.length);
+};
+
+type DHTSegment = unit {
+    length: uint16;
+    tables: HuffmanTable[] &until($input.offset() >= self.offset() + self.length);
+};
+
+type DRISegment = unit {
+    length: uint16;
+    interval: uint16;
+};
+
+type APPnSegment = unit {
+    length: uint16;
+    data: bytes &size=length-2;
+};
+
+type COMSegment = unit {
+    length: uint16;
+    data: bytes &size=length-2;
 };
 
 type Segment = unit {
-    marker: uint16 &requires=(($$ & 0xFF00) == 0xFF00);
-    size: uint16 if (marker != 0xFFD8 && marker != 0xFFD9);
-    data: bytes &size=(self.size - 2) if (self.size > 0);
-
-    on marker {
-        self.parent.markers.push_back($$);
-    }
+    marker: uint16;
+    data: bytes &parse-with=parse_segment(marker);
 };
 
-type Segments = unit {
-    segment: Segment;
+public type JPEG = unit {
+    soi: uint16 &requires=($$ == Marker::SOI);
+    segments: Segment[] &until($input.at_end());
+    eoi: uint16 &requires=($$ == Marker::EOI);
 };
 
-on JPEG::%done {
-    local seen_soi = 0;
-    local seen_eoi = 0;
-
-    for ( m in self.markers ) {
-        if ( m == 0xFFD8 )
-            seen_soi += 1;
-        if ( m == 0xFFD9 )
-            seen_eoi += 1;
-    }
-
-    if ( seen_soi != 1 || seen_eoi != 1 )
-        spicy::accept_input(False);
+public function parse_segment(marker: uint16) : bytes {
+    if ( marker == Marker::SOF0 || marker == Marker::SOF2 )
+        return SOFSegment;
+    if ( marker == Marker::SOS )
+        return SOSSegment;
+    if ( marker == Marker::DQT )
+        return DQTSegment;
+    if ( marker == Marker::DHT )
+        return DHTSegment;
+    if ( marker == Marker::DRI )
+        return DRISegment;
+    if ( marker >= Marker::APP0 && marker <= Marker::APP15 )
+        return APPnSegment;
+    if ( marker == Marker::COM )
+        return COMSegment;
+    return b"";
 }

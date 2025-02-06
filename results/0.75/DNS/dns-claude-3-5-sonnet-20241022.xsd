@@ -1,52 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    targetNamespace="urn:dns"
-    xmlns:dns="urn:dns">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dns="http://example.com/dns"
+           targetNamespace="http://example.com/dns">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        occursCountKind="parsed"
-                        representation="binary"
-                        byteOrder="bigEndian"
+                        alignmentUnits="bits"
                         binaryNumberRep="binary"
-                        encodingErrorPolicy="error"/>
+                        byteOrder="bigEndian"
+                        representation="binary"
+                        lengthUnits="bits"
+                        occursCountKind="expression"
+                        lengthKind="explicit"
+                        encoding="UTF-8"
+                        ignoreCase="no"
+                        initiator=""
+                        terminator=""
+                        separator=""
+                        separatorPolicy="required"
+                        separatorPosition="infix"
+                        textNumberRep="standard"
+                        textStringJustification="left"
+                        textTrimKind="none"
+                        textPadKind="none"
+                        escapeSchemeRef=""/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="DNSPacket">
+    <xs:element name="DNSMessage">
         <xs:complexType>
-            <xs:sequence>
+            <xs:sequence dfdl:separator="">
                 <xs:element name="Header">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="ID" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
-                            <xs:element name="QR" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bits"/>
-                            <xs:element name="Opcode" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bits"/>
-                            <xs:element name="AA" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bits"/>
-                            <xs:element name="TC" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bits"/>
-                            <xs:element name="RD" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bits"/>
-                            <xs:element name="RA" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:lengthUnits="bits"/>
-                            <xs:element name="Z" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="3" dfdl:lengthUnits="bits"/>
-                            <xs:element name="RCODE" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:lengthUnits="bits"/>
-                            <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
-                            <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
-                            <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
-                            <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
+                        <xs:sequence dfdl:separator="">
+                            <xs:element name="ID" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="QR" type="xs:unsignedInt" dfdl:length="1"/>
+                            <xs:element name="OPCODE" type="xs:unsignedInt" dfdl:length="4"/>
+                            <xs:element name="AA" type="xs:unsignedInt" dfdl:length="1"/>
+                            <xs:element name="TC" type="xs:unsignedInt" dfdl:length="1"/>
+                            <xs:element name="RD" type="xs:unsignedInt" dfdl:length="1"/>
+                            <xs:element name="RA" type="xs:unsignedInt" dfdl:length="1"/>
+                            <xs:element name="Z" type="xs:unsignedInt" dfdl:length="3"/>
+                            <xs:element name="RCODE" type="xs:unsignedInt" dfdl:length="4"/>
+                            <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:length="16"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-                
-                <xs:element name="Question" maxOccurs="unbounded">
+
+                <xs:element name="Question" minOccurs="0" maxOccurs="unbounded">
                     <xs:complexType>
-                        <xs:sequence>
+                        <xs:sequence dfdl:separator="">
                             <xs:element name="QNAME" type="dns:DomainNameType"/>
-                            <xs:element name="QTYPE" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
-                            <xs:element name="QCLASS" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="16" dfdl:lengthUnits="bits"/>
+                            <xs:element name="QTYPE" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="QCLASS" type="xs:unsignedShort" dfdl:length="16"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="ResourceRecord" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence dfdl:separator="">
+                            <xs:element name="NAME" type="dns:DomainNameType"/>
+                            <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="32"/>
+                            <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="16"/>
+                            <xs:element name="RDATA" type="xs:hexBinary" 
+                                      dfdl:lengthUnits="bytes" 
+                                      dfdl:length="{ ../RDLENGTH }"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
@@ -55,16 +81,20 @@
     </xs:element>
 
     <xs:complexType name="DomainNameType">
-        <xs:sequence>
-            <xs:element name="Label" maxOccurs="unbounded">
+        <xs:sequence dfdl:separator="">
+            <xs:element name="Label" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="Length" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bits"/>
-                        <xs:element name="Value" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../Length }" dfdl:lengthUnits="bytes" dfdl:encoding="ASCII"/>
+                    <xs:sequence dfdl:separator="">
+                        <xs:element name="Length" type="xs:unsignedByte" dfdl:length="8"/>
+                        <xs:element name="Value" type="xs:string" 
+                                  dfdl:lengthUnits="bytes" 
+                                  dfdl:length="{ ../Length }"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="Terminator" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:lengthUnits="bits" dfdl:outputValueCalc="{ 0 }"/>
+            <xs:element name="Terminator" type="xs:unsignedByte" 
+                       dfdl:length="8" 
+                       dfdl:outputValueCalc="{ xs:unsignedByte(0) }"/>
         </xs:sequence>
     </xs:complexType>
 

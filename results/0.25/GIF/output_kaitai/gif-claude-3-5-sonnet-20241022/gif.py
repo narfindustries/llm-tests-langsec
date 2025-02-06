@@ -16,6 +16,7 @@ class Gif(KaitaiStruct):
         end_of_file = 59
 
     class ExtensionType(Enum):
+        plain_text = 1
         graphics_control = 249
         comment = 254
         application = 255
@@ -27,15 +28,33 @@ class Gif(KaitaiStruct):
 
     def _read(self):
         self.header = Gif.Header(self._io, self, self._root)
-        self.logical_screen = Gif.LogicalScreen(self._io, self, self._root)
+        self.logical_screen = Gif.LogicalScreenDescriptor(self._io, self, self._root)
+        if self.logical_screen.has_color_table:
+            self._raw_global_color_table = self._io.read_bytes(self.logical_screen.color_table_size)
+            _io__raw_global_color_table = KaitaiStream(BytesIO(self._raw_global_color_table))
+            self.global_color_table = Gif.ColorTable(_io__raw_global_color_table, self, self._root)
+
         self.blocks = []
         i = 0
         while True:
             _ = Gif.Block(self._io, self, self._root)
             self.blocks.append(_)
-            if _.block_type == Gif.BlockType.end_of_file:
+            if _.block_type == 59:
                 break
             i += 1
+
+    class Rgb(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.r = self._io.read_u1()
+            self.g = self._io.read_u1()
+            self.b = self._io.read_u1()
+
 
     class ImageData(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -46,36 +65,61 @@ class Gif(KaitaiStruct):
 
         def _read(self):
             self.lzw_min_code_size = self._io.read_u1()
-            self.data = Gif.DataBlocks(self._io, self, self._root)
-
-
-    class SkipBlock(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.data = Gif.DataBlocks(self._io, self, self._root)
-
-
-    class DataBlocks(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
             self.blocks = []
             i = 0
             while True:
                 _ = Gif.DataBlock(self._io, self, self._root)
                 self.blocks.append(_)
-                if _.block_size == 0:
+                if _.len_data == 0:
                     break
                 i += 1
+
+
+    class LogicalScreenDescriptor(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.screen_width = self._io.read_u2le()
+            self.screen_height = self._io.read_u2le()
+            self.flags = self._io.read_u1()
+            self.bg_color_index = self._io.read_u1()
+            self.pixel_aspect_ratio = self._io.read_u1()
+
+        @property
+        def has_color_table(self):
+            if hasattr(self, '_m_has_color_table'):
+                return self._m_has_color_table
+
+            self._m_has_color_table = (self.flags & 128) != 0
+            return getattr(self, '_m_has_color_table', None)
+
+        @property
+        def color_resolution(self):
+            if hasattr(self, '_m_color_resolution'):
+                return self._m_color_resolution
+
+            self._m_color_resolution = ((self.flags & 112) >> 4)
+            return getattr(self, '_m_color_resolution', None)
+
+        @property
+        def sort_flag(self):
+            if hasattr(self, '_m_sort_flag'):
+                return self._m_sort_flag
+
+            self._m_sort_flag = (self.flags & 8) != 0
+            return getattr(self, '_m_sort_flag', None)
+
+        @property
+        def color_table_size(self):
+            if hasattr(self, '_m_color_table_size'):
+                return self._m_color_table_size
+
+            self._m_color_table_size = (3 * (1 << ((self.flags & 7) + 1)))
+            return getattr(self, '_m_color_table_size', None)
 
 
     class ExtensionBlock(KaitaiStruct):
@@ -86,16 +130,16 @@ class Gif(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.extension_type = KaitaiStream.resolve_enum(Gif.ExtensionType, self._io.read_u1())
+            self.extension_type = self._io.read_u1()
             _on = self.extension_type
-            if _on == Gif.ExtensionType.graphics_control:
-                self.extension_data = Gif.GraphicsControlExt(self._io, self, self._root)
-            elif _on == Gif.ExtensionType.comment:
-                self.extension_data = Gif.CommentExt(self._io, self, self._root)
-            elif _on == Gif.ExtensionType.application:
-                self.extension_data = Gif.ApplicationExt(self._io, self, self._root)
-            else:
-                self.extension_data = Gif.SkipBlock(self._io, self, self._root)
+            if _on == 249:
+                self.body = Gif.GraphicsControlExt(self._io, self, self._root)
+            elif _on == 254:
+                self.body = Gif.CommentExt(self._io, self, self._root)
+            elif _on == 1:
+                self.body = Gif.PlainTextExt(self._io, self, self._root)
+            elif _on == 255:
+                self.body = Gif.ApplicationExt(self._io, self, self._root)
 
 
     class ImageBlock(KaitaiStruct):
@@ -106,12 +150,49 @@ class Gif(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.left = self._io.read_u2le()
-            self.top = self._io.read_u2le()
-            self.width = self._io.read_u2le()
-            self.height = self._io.read_u2le()
+            self.image_left = self._io.read_u2le()
+            self.image_top = self._io.read_u2le()
+            self.image_width = self._io.read_u2le()
+            self.image_height = self._io.read_u2le()
             self.flags = self._io.read_u1()
+            if self.has_local_color_table:
+                self._raw_local_color_table = self._io.read_bytes(self.len_local_color_table)
+                _io__raw_local_color_table = KaitaiStream(BytesIO(self._raw_local_color_table))
+                self.local_color_table = Gif.ColorTable(_io__raw_local_color_table, self, self._root)
+
             self.image_data = Gif.ImageData(self._io, self, self._root)
+
+        @property
+        def has_local_color_table(self):
+            if hasattr(self, '_m_has_local_color_table'):
+                return self._m_has_local_color_table
+
+            self._m_has_local_color_table = (self.flags & 128) != 0
+            return getattr(self, '_m_has_local_color_table', None)
+
+        @property
+        def interlace(self):
+            if hasattr(self, '_m_interlace'):
+                return self._m_interlace
+
+            self._m_interlace = (self.flags & 64) != 0
+            return getattr(self, '_m_interlace', None)
+
+        @property
+        def sort(self):
+            if hasattr(self, '_m_sort'):
+                return self._m_sort
+
+            self._m_sort = (self.flags & 32) != 0
+            return getattr(self, '_m_sort', None)
+
+        @property
+        def len_local_color_table(self):
+            if hasattr(self, '_m_len_local_color_table'):
+                return self._m_len_local_color_table
+
+            self._m_len_local_color_table = (3 * (1 << ((self.flags & 7) + 1)))
+            return getattr(self, '_m_len_local_color_table', None)
 
 
     class GraphicsControlExt(KaitaiStruct):
@@ -132,20 +213,29 @@ class Gif(KaitaiStruct):
             if not self.terminator == b"\x00":
                 raise kaitaistruct.ValidationNotEqualError(b"\x00", self.terminator, self._io, u"/types/graphics_control_ext/seq/4")
 
+        @property
+        def disposal_method(self):
+            if hasattr(self, '_m_disposal_method'):
+                return self._m_disposal_method
 
-    class LogicalScreen(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
+            self._m_disposal_method = ((self.flags & 28) >> 2)
+            return getattr(self, '_m_disposal_method', None)
 
-        def _read(self):
-            self.width = self._io.read_u2le()
-            self.height = self._io.read_u2le()
-            self.flags = self._io.read_u1()
-            self.bg_color_index = self._io.read_u1()
-            self.pixel_aspect_ratio = self._io.read_u1()
+        @property
+        def user_input(self):
+            if hasattr(self, '_m_user_input'):
+                return self._m_user_input
+
+            self._m_user_input = (self.flags & 2) != 0
+            return getattr(self, '_m_user_input', None)
+
+        @property
+        def transparent_color_flag(self):
+            if hasattr(self, '_m_transparent_color_flag'):
+                return self._m_transparent_color_flag
+
+            self._m_transparent_color_flag = (self.flags & 1) != 0
+            return getattr(self, '_m_transparent_color_flag', None)
 
 
     class Block(KaitaiStruct):
@@ -156,12 +246,41 @@ class Gif(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.block_type = KaitaiStream.resolve_enum(Gif.BlockType, self._io.read_u1())
+            self.block_type = self._io.read_u1()
             _on = self.block_type
-            if _on == Gif.BlockType.extension:
-                self.block_data = Gif.ExtensionBlock(self._io, self, self._root)
-            elif _on == Gif.BlockType.image:
-                self.block_data = Gif.ImageBlock(self._io, self, self._root)
+            if _on == 33:
+                self.block_body = Gif.ExtensionBlock(self._io, self, self._root)
+            elif _on == 44:
+                self.block_body = Gif.ImageBlock(self._io, self, self._root)
+
+
+    class PlainTextExt(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.block_size = self._io.read_bytes(1)
+            if not self.block_size == b"\x0C":
+                raise kaitaistruct.ValidationNotEqualError(b"\x0C", self.block_size, self._io, u"/types/plain_text_ext/seq/0")
+            self.grid_left = self._io.read_u2le()
+            self.grid_top = self._io.read_u2le()
+            self.grid_width = self._io.read_u2le()
+            self.grid_height = self._io.read_u2le()
+            self.cell_width = self._io.read_u1()
+            self.cell_height = self._io.read_u1()
+            self.fg_color = self._io.read_u1()
+            self.bg_color = self._io.read_u1()
+            self.blocks = []
+            i = 0
+            while True:
+                _ = Gif.DataBlock(self._io, self, self._root)
+                self.blocks.append(_)
+                if _.len_data == 0:
+                    break
+                i += 1
 
 
     class DataBlock(KaitaiStruct):
@@ -172,8 +291,24 @@ class Gif(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.block_size = self._io.read_u1()
-            self.data = self._io.read_bytes(self.block_size)
+            self.len_data = self._io.read_u1()
+            self.data = self._io.read_bytes(self.len_data)
+
+
+    class ColorTable(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.entries = []
+            i = 0
+            while not self._io.is_eof():
+                self.entries.append(Gif.Rgb(self._io, self, self._root))
+                i += 1
+
 
 
     class Header(KaitaiStruct):
@@ -203,7 +338,14 @@ class Gif(KaitaiStruct):
                 raise kaitaistruct.ValidationNotEqualError(b"\x0B", self.block_size, self._io, u"/types/application_ext/seq/0")
             self.application_id = (self._io.read_bytes(8)).decode(u"ASCII")
             self.auth_code = self._io.read_bytes(3)
-            self.data = Gif.DataBlocks(self._io, self, self._root)
+            self.blocks = []
+            i = 0
+            while True:
+                _ = Gif.DataBlock(self._io, self, self._root)
+                self.blocks.append(_)
+                if _.len_data == 0:
+                    break
+                i += 1
 
 
     class CommentExt(KaitaiStruct):
@@ -214,7 +356,14 @@ class Gif(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.data = Gif.DataBlocks(self._io, self, self._root)
+            self.blocks = []
+            i = 0
+            while True:
+                _ = Gif.DataBlock(self._io, self, self._root)
+                self.blocks.append(_)
+                if _.len_data == 0:
+                    break
+                i += 1
 
 
 

@@ -1,54 +1,21 @@
-# GZIP File Format Specification
-file gzip_meta {
-    # Magic number (2 bytes)
-    uint16(0x1f, 0x8b) gzip_magic;
+module GZIP;
 
-    # Compression method (1 byte)
-    uint8(8) compression_method;
+type Gzip = record {
+  id1      = uint8; id1_value = 0x1F;
+  id2      = uint8; id2_value = 0x8B;
+  cm       = uint8; cm_value = 8;
+  flags    = uint8;
+  mtime    = uint32;
+  xfl      = uint8;
+  os       = uint8;
+  xlen     = uint16 &iff = (flags & 0x04 != 0);
+  extra    = bytestring &length = xlen;
+  fname    = bytestring &length = (flags & 0x08 != 0) ? until(0x00) : 0;
+  fcomment = bytestring &length = (flags & 0x10 != 0) ? until(0x00) : 0;
+  hcrc     = uint16 &iff = (flags & 0x02 != 0);
+  compressed_data = bytestring;
+  crc32    = uint32;
+  isize    = uint32;
+};
 
-    # Flags (1 byte)
-    uint8 flags;
-
-    # Modification time (4 bytes)
-    uint32 modification_time;
-
-    # Extra flags (1 byte)
-    uint8 extra_flags;
-
-    # Operating system (1 byte)
-    uint8 operating_system;
-
-    # Optional extra field
-    if (flags & 0x04) != 0 {
-        uint16 extra_field_length;
-        bytes(extra_field_length) extra_field;
-    }
-
-    # Optional file name
-    if (flags & 0x08) != 0 {
-        string file_name;
-    }
-
-    # Optional comment
-    if (flags & 0x10) != 0 {
-        string comment;
-    }
-
-    # Optional header CRC
-    if (flags & 0x02) != 0 {
-        uint16 header_crc;
-    }
-
-    # Compressed data
-    bytes acad compression_method;
-}
-
-# Example usage
-event zeek_init() {
-    local f: file;
-    f = open("example.gz");
-    local res: gzip_meta;
-    res = gzip_meta(f);
-    close(f);
-    print res;
-}
+&raw-output Gzip;

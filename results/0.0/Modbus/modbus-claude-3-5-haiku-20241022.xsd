@@ -1,92 +1,110 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/modbus"
-           xmlns:modbus="http://example.com/modbus">
+           targetNamespace="http://example.com/modbus">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
+      <dfdl:format
         alignment="1"
         alignmentUnits="bytes"
-        fillByte="0"
+        byteOrder="bigEndian"
+        encoding="ISO-8859-1"
+        representation="binary"
+        separatorPosition="infix"
+        separatorSuppressionPolicy="never"
+        textNumberPattern="#0"
+        textNumberRep="standard"
+        textZonedSignStyle="asciiStandard"
+        initiatedContent="no"
+        sequenceKind="ordered"
         occursCountKind="parsed"
-        truncateSpecifiedLengthString="no"
-        escapeSchemeRef=""
-        representation="binary"/>
+        leadingSkip="0"
+        trailingSkip="0"
+        encodingErrorPolicy="replace"
+        textBidi="no"
+        floating="no"
+        initiator=""
+        terminator=""/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ModbusFrame">
+  <xs:element name="ModbusFrame" dfdl:lengthKind="implicit" dfdl:lengthUnits="bytes">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="SlaveAddress" type="xs:unsignedByte">
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+        <xs:element name="SlaveAddress" type="xs:unsignedByte"
+                    dfdl:lengthKind="explicit"
+                    dfdl:length="1"
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"/>
+        
+        <xs:element name="FunctionCode" type="xs:unsignedByte"
+                    dfdl:lengthKind="explicit"
+                    dfdl:length="1"
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0">
           <xs:annotation>
             <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:element representation="binary" lengthKind="explicit" length="1"/>
+              <dfdl:assert test="{ ../FunctionCode = 0x01 or 
+                                   ../FunctionCode = 0x02 or 
+                                   ../FunctionCode = 0x03 or 
+                                   ../FunctionCode = 0x04 or 
+                                   ../FunctionCode = 0x05 or 
+                                   ../FunctionCode = 0x06 or 
+                                   ../FunctionCode = 0x0F or 
+                                   ../FunctionCode = 0x10 or 
+                                   ../FunctionCode = 0x14 or 
+                                   ../FunctionCode = 0x15 or 
+                                   ../FunctionCode = 0x16 or 
+                                   ../FunctionCode = 0x17 or 
+                                   ../FunctionCode = 0x2B }"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="FunctionCode" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:element representation="binary" lengthKind="explicit" length="1"/>
-            </xs:appinfo>
-          </xs:annotation>
+
+        <xs:element name="RequestData" dfdl:lengthKind="implicit"
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="StartingAddress" type="xs:unsignedShort"
+                          dfdl:lengthKind="explicit"
+                          dfdl:length="2"
+                          minOccurs="0"
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"/>
+              
+              <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"
+                          dfdl:lengthKind="explicit"
+                          dfdl:length="2"
+                          minOccurs="0"
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"/>
+              
+              <xs:element name="ByteCount" type="xs:unsignedByte"
+                          dfdl:lengthKind="explicit"
+                          dfdl:length="1"
+                          minOccurs="0"
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"/>
+              
+              <xs:element name="RegisterData" type="xs:hexBinary"
+                          dfdl:lengthKind="delimited"
+                          minOccurs="0"
+                          dfdl:encoding="ISO-8859-1"
+                          dfdl:floating="no"
+                          dfdl:textBidi="no"
+                          dfdl:trailingSkip="0"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
-        <xs:element name="Data" type="modbus:DataType">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:element representation="binary" lengthKind="implicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="CRC" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:element representation="binary" lengthKind="explicit" length="2"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
+
+        <xs:element name="CRC" type="xs:unsignedShort"
+                    dfdl:lengthKind="explicit"
+                    dfdl:length="2"
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="DataType">
-    <xs:sequence>
-      <xs:element name="ByteCount" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element representation="binary" lengthKind="explicit" length="1"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="RegisterData" type="modbus:RegisterDataType">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element representation="binary" lengthKind="explicit" 
-                       length="{ ../ByteCount }"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="RegisterDataType">
-    <xs:sequence>
-      <xs:element name="Register" type="xs:unsignedShort" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element representation="binary" lengthKind="explicit" length="2"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

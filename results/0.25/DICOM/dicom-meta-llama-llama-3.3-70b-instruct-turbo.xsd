@@ -1,306 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dicom"
-           xmlns="http://example.com/dicom"
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
-
+  <xs:element name="definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="format" type="dfdl:formatType"/>
+        <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="formatType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
+    <xs:attribute name="encoding" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="length" type="xs:string" use="optional"/>
+    <xs:attribute name="occurs" type="xs:string" use="optional"/>
+  </xs:complexType>
   <xs:element name="DICOM">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="dicomFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="Preamble" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="Prefix" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="TransferSyntaxUID" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="ImplicitVR" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="Data" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Preamble" type="dfdl:elementType"/>
+        <xs:element name="Prefix" type="dfdl:elementType"/>
+        <xs:element name="DICOMDataSet" type="dfdl:elementType"/>
+      </xs:sequence>
+      <xs:attribute name="representation" type="xs:string" fixed="binary"/>
+      <xs:attribute name="encoding" type="xs:string" fixed="binary"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="DataElement">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Tag" type="dfdl:elementType"/>
+        <xs:element name="VR" type="dfdl:elementType"/>
+        <xs:element name="Length" type="dfdl:elementType"/>
+        <xs:element name="Value" type="dfdl:elementType" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="Preamble">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="preambleFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="length" type="xs:integer" fixed="128"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Prefix">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="prefixFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="length" type="xs:integer" fixed="4"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="TransferSyntaxUID">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="transferSyntaxUIDFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="length" type="xs:integer" fixed="32"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ImplicitVR">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="implicitVRFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:boolean">
-          <xs:attribute name="length" type="xs:integer" fixed="1"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Data">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="dataFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="Element" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Element">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="elementFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="Tag" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="VR" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="Length" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="Value" minOccurs="1" maxOccurs="1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
   <xs:element name="Tag">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="tagFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="length" type="xs:integer" fixed="4"/>
-        </xs:extension>
-      </xs:simpleContent>
+      <xs:attribute name="type" type="xs:string" fixed="binary"/>
+      <xs:attribute name="length" type="xs:string" fixed="2"/>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="VR">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="vrFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="length" type="xs:integer" fixed="2"/>
-        </xs:extension>
-      </xs:simpleContent>
+      <xs:attribute name="type" type="xs:string" fixed="string"/>
+      <xs:attribute name="length" type="xs:string" fixed="2"/>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="Length">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="lengthFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:integer">
-          <xs:attribute name="length" type="xs:integer" fixed="4"/>
-        </xs:extension>
-      </xs:simpleContent>
+      <xs:attribute name="type" type="xs:string" fixed="integer"/>
+      <xs:attribute name="length" type="xs:string" fixed="2"/>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="Value">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="valueFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="Data" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="AE" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="AS" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="AT" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="CS" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="DA" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="DS" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="DT" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="FL" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="FD" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="IS" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="LO" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="LT" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="OB" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="OD" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="OF" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="OL" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="OW" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="PN" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="SH" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="SL" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="SQ" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="SS" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="ST" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="TM" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="UI" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="UL" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="US" type="dfdl:elementType" minOccurs="0"/>
+        <xs:element name="UT" type="dfdl:elementType" minOccurs="0"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="dicomFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="PatientModule">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PatientID" type="dfdl:elementType"/>
+        <xs:element name="PatientName" type="dfdl:elementType"/>
+        <xs:element name="PatientBirthDate" type="dfdl:elementType"/>
+        <xs:element name="PatientSex" type="dfdl:elementType"/>
+        <xs:element name="PatientAge" type="dfdl:elementType"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
-
-  <xs:element name="preambleFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="GeneralStudyModule">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="StudyInstanceUID" type="dfdl:elementType"/>
+        <xs:element name="StudyDate" type="dfdl:elementType"/>
+        <xs:element name="StudyTime" type="dfdl:elementType"/>
+        <xs:element name="StudyDescription" type="dfdl:elementType"/>
+        <xs:element name="StudyStatus" type="dfdl:elementType"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
-
-  <xs:element name="prefixFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="GeneralSeriesModule">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SeriesInstanceUID" type="dfdl:elementType"/>
+        <xs:element name="SeriesNumber" type="dfdl:elementType"/>
+        <xs:element name="SeriesDescription" type="dfdl:elementType"/>
+        <xs:element name="SeriesStatus" type="dfdl:elementType"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
-
-  <xs:element name="transferSyntaxUIDFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="ImagePixelModule">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ImageType" type="dfdl:elementType"/>
+        <xs:element name="ImageOrientation" type="dfdl:elementType"/>
+        <xs:element name="ImagePosition" type="dfdl:elementType"/>
+        <xs:element name="PixelData" type="dfdl:elementType"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
-
-  <xs:element name="implicitVRFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="dataFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="elementFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="tagFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="vrFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="lengthFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="valueFormat">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format>
-          <dfdl:binaryData>
-            <dfdl:byteOrder bigEndian="false"/>
-          </dfdl:binaryData>
-        </dfdl:format>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
 </xs:schema>

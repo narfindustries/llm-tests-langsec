@@ -1,61 +1,28 @@
-module HTTP-1.1-Gemini-1.5-Flash where
+module Http11 where
 
-import Daedalus.Panic
+import Daedalus.Type.AST
+import Daedalus.Value
 
-data Request = Request { method :: String
-                       , path :: String
-                       , version :: String
-                       , headers :: [(String, String)]
-                       , body :: Maybe ByteString
-                       }
+data Method = GET | POST | PUT | DELETE | HEAD | OPTIONS | CONNECT | TRACE | PATCH
+  deriving (Eq, Show, Enum, Bounded)
 
-data Response = Response { status :: Int
-                         , reason :: String
-                         , version :: String
-                         , headers :: [(String, String)]
-                         , body :: Maybe ByteString
-                         }
+data HttpVersion = Http11 | Http10
+  deriving (Eq, Show, Enum, Bounded)
 
+data RequestLine = RequestLine { method :: Method, target :: String, version :: HttpVersion }
+  deriving (Show, Eq)
 
-parseRequest :: Parser Request
-parseRequest = do
-  method <- some (satisfy isUpper)
-  string " "
-  path <- some (satisfy (/=' '))
-  string " HTTP/"
-  version <- some (satisfy isDigit)
-  string "\r\n"
-  headers <- many headerParser
-  string "\r\n\r\n"
-  body <- optional (many anyChar)
-  return $ Request method path version headers (Just $ pack (concat body))
+data Header = Header { name :: String, value :: String }
+  deriving (Show, Eq)
 
-parseResponse :: Parser Response
-parseResponse = do
-  string "HTTP/"
-  version <- some (satisfy isDigit)
-  string " "
-  status <- decimal
-  string " "
-  reason <- some (satisfy (/='\r'))
-  string "\r\n"
-  headers <- many headerParser
-  string "\r\n\r\n"
-  body <- optional (many anyChar)
-  return $ Response status reason version headers (Just $ pack (concat body))
+data Request = Request { requestLine :: RequestLine, headers :: [Header], body :: Maybe String }
+  deriving (Show, Eq)
 
+data StatusCode = Continue | SwitchingProtocols | Ok | Created | Accepted | NonAuthoritativeInformation | NoContent | ResetContent | PartialContent | MultipleChoices | MovedPermanently | Found | SeeOther | NotModified | UseProxy | TemporaryRedirect | BadRequest | Unauthorized | PaymentRequired | Forbidden | NotFound | MethodNotAllowed | NotAcceptable | ProxyAuthenticationRequired | RequestTimeout | Conflict | Gone | LengthRequired | PreconditionFailed | RequestEntityTooLarge | RequestURITooLong | UnsupportedMediaType | RequestedRangeNotSatisfiable | ExpectationFailed | InternalServerError | NotImplemented | BadGateway | ServiceUnavailable | GatewayTimeout | HttpVersionNotSupported | VariantAlsoNegotiates | InsufficientStorage | NotExtended | NetworkAuthenticationRequired
+  deriving (Eq, Show, Enum, Bounded)
 
-headerParser :: Parser (String, String)
-headerParser = do
-  name <- some (satisfy (/=':'))
-  char ':'
-  value <- some (satisfy (/='\r'))
-  string "\r\n"
-  return (name, value)
+data Response = Response { version :: HttpVersion, statusCode :: StatusCode, reasonPhrase :: String, headers :: [Header], body :: Maybe String }
+  deriving (Show, Eq)
 
-main :: Parser ()
-main = do
-  req <- parseRequest
-  -- Process request here
-  pure ()
-
+main :: IO ()
+main = return () -- Removed print statements to avoid potential issues

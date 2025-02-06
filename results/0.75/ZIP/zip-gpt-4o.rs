@@ -1,107 +1,184 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::map_res,
-    multi::many_till,
-    number::complete::{le_u16, le_u32, le_u64},
+    combinator::{map, opt},
+    multi::count,
+    number::complete::{le_u16, le_u32},
     IResult,
 };
+use std::{env, fs::File, io::Read, path::Path};
 
 #[derive(Debug)]
 struct LocalFileHeader {
-    version: u16,
-    flags: u16,
-    compression: u16,
-    mod_time: u16,
-    mod_date: u16,
-    crc32: u32,
+    version_needed: u16,
+    general_purpose_bit_flag: u16,
+    compression_method: u16,
+    last_mod_file_time: u16,
+    last_mod_file_date: u16,
+    crc_32: u32,
     compressed_size: u32,
     uncompressed_size: u32,
-    file_name_length: u16,
-    extra_field_length: u16,
     file_name: Vec<u8>,
     extra_field: Vec<u8>,
-    file_data: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct CentralDirectoryFileHeader {
+    version_made_by: u16,
+    version_needed: u16,
+    general_purpose_bit_flag: u16,
+    compression_method: u16,
+    last_mod_file_time: u16,
+    last_mod_file_date: u16,
+    crc_32: u32,
+    compressed_size: u32,
+    uncompressed_size: u32,
+    file_name: Vec<u8>,
+    extra_field: Vec<u8>,
+    file_comment: Vec<u8>,
+    disk_number_start: u16,
+    internal_file_attributes: u16,
+    external_file_attributes: u32,
+    relative_offset_of_local_header: u32,
+}
+
+#[derive(Debug)]
+struct EndOfCentralDirectoryRecord {
+    number_of_this_disk: u16,
+    disk_where_central_directory_starts: u16,
+    number_of_central_directory_records_on_this_disk: u16,
+    total_number_of_central_directory_records: u16,
+    size_of_central_directory: u32,
+    offset_of_start_of_central_directory: u32,
+    zip_file_comment: Vec<u8>,
 }
 
 fn parse_local_file_header(input: &[u8]) -> IResult<&[u8], LocalFileHeader> {
-    let (input, _) = tag(&[0x50, 0x4B, 0x03, 0x04])(input)?; // Signature for Local File Header
-    let (input, version) = le_u16(input)?;
-    let (input, flags) = le_u16(input)?;
-    let (input, compression) = le_u16(input)?;
-    let (input, mod_time) = le_u16(input)?;
-    let (input, mod_date) = le_u16(input)?;
-    let (input, crc32) = le_u32(input)?;
+    let (input, _) = tag([0x50, 0x4b, 0x03, 0x04])(input)?;
+    let (input, version_needed) = le_u16(input)?;
+    let (input, general_purpose_bit_flag) = le_u16(input)?;
+    let (input, compression_method) = le_u16(input)?;
+    let (input, last_mod_file_time) = le_u16(input)?;
+    let (input, last_mod_file_date) = le_u16(input)?;
+    let (input, crc_32) = le_u32(input)?;
     let (input, compressed_size) = le_u32(input)?;
     let (input, uncompressed_size) = le_u32(input)?;
     let (input, file_name_length) = le_u16(input)?;
     let (input, extra_field_length) = le_u16(input)?;
     let (input, file_name) = take(file_name_length)(input)?;
     let (input, extra_field) = take(extra_field_length)(input)?;
-    let (input, file_data) = take(compressed_size)(input)?;
 
-    Ok((input, LocalFileHeader {
-        version,
-        flags,
-        compression,
-        mod_time,
-        mod_date,
-        crc32,
-        compressed_size,
-        uncompressed_size,
-        file_name: file_name.to_vec(),
-        extra_field: extra_field.to_vec(),
-        file_data: file_data.to_vec(),
-    }))
+    Ok((
+        input,
+        LocalFileHeader {
+            version_needed,
+            general_purpose_bit_flag,
+            compression_method,
+            last_mod_file_time,
+            last_mod_file_date,
+            crc_32,
+            compressed_size,
+            uncompressed_size,
+            file_name: file_name.to_vec(),
+            extra_field: extra_field.to_vec(),
+        },
+    ))
 }
 
-fn parse_zip(input: &[u8]) -> IResult<&[u8], Vec<LocalFileHeader>> {
-    many_till(parse_local_file_header, eof)(input).map(|(i, (files, _))| (i, files))
+fn parse_central_directory_file_header(input: &[u8]) -> IResult<&[u8], CentralDirectoryFileHeader> {
+    let (input, _) = tag([0x50, 0x4b, 0x01, 0x02])(input)?;
+    let (input, version_made_by) = le_u16(input)?;
+    let (input, version_needed) = le_u16(input)?;
+    let (input, general_purpose_bit_flag) = le_u16(input)?;
+    let (input, compression_method) = le_u16(input)?;
+    let (input, last_mod_file_time) = le_u16(input)?;
+    let (input, last_mod_file_date) = le_u16(input)?;
+    let (input, crc_32) = le_u32(input)?;
+    let (input, compressed_size) = le_u32(input)?;
+    let (input, uncompressed_size) = le_u32(input)?;
+    let (input, file_name_length) = le_u16(input)?;
+    let (input, extra_field_length) = le_u16(input)?;
+    let (input, file_comment_length) = le_u16(input)?;
+    let (input, disk_number_start) = le_u16(input)?;
+    let (input, internal_file_attributes) = le_u16(input)?;
+    let (input, external_file_attributes) = le_u32(input)?;
+    let (input, relative_offset_of_local_header) = le_u32(input)?;
+    let (input, file_name) = take(file_name_length)(input)?;
+    let (input, extra_field) = take(extra_field_length)(input)?;
+    let (input, file_comment) = take(file_comment_length)(input)?;
+
+    Ok((
+        input,
+        CentralDirectoryFileHeader {
+            version_made_by,
+            version_needed,
+            general_purpose_bit_flag,
+            compression_method,
+            last_mod_file_time,
+            last_mod_file_date,
+            crc_32,
+            compressed_size,
+            uncompressed_size,
+            file_name: file_name.to_vec(),
+            extra_field: extra_field.to_vec(),
+            file_comment: file_comment.to_vec(),
+            disk_number_start,
+            internal_file_attributes,
+            external_file_attributes,
+            relative_offset_of_local_header,
+        },
+    ))
 }
 
-fn eof(input: &[u8]) -> IResult<&[u8], ()> {
-    if input.is_empty() {
-        Ok((input, ()))
-    } else {
-        Err(nom::Err::Error((input, nom::error::ErrorKind::Eof)))
-    }
+fn parse_end_of_central_directory_record(input: &[u8]) -> IResult<&[u8], EndOfCentralDirectoryRecord> {
+    let (input, _) = tag([0x50, 0x4b, 0x05, 0x06])(input)?;
+    let (input, number_of_this_disk) = le_u16(input)?;
+    let (input, disk_where_central_directory_starts) = le_u16(input)?;
+    let (input, number_of_central_directory_records_on_this_disk) = le_u16(input)?;
+    let (input, total_number_of_central_directory_records) = le_u16(input)?;
+    let (input, size_of_central_directory) = le_u32(input)?;
+    let (input, offset_of_start_of_central_directory) = le_u32(input)?;
+    let (input, zip_file_comment_length) = le_u16(input)?;
+    let (input, zip_file_comment) = take(zip_file_comment_length)(input)?;
+
+    Ok((
+        input,
+        EndOfCentralDirectoryRecord {
+            number_of_this_disk,
+            disk_where_central_directory_starts,
+            number_of_central_directory_records_on_this_disk,
+            total_number_of_central_directory_records,
+            size_of_central_directory,
+            offset_of_start_of_central_directory,
+            zip_file_comment: zip_file_comment.to_vec(),
+        },
+    ))
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <zipfile>", args[0]);
+        return;
     }
 
     let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Ok(f) => f,
-        Err(e) => {
-            eprintln!("Failed to open file: {}", e);
-            std::process::exit(1);
-        }
-    };
-
+    let mut file = File::open(&path).expect("Could not open file");
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(e) => {
-            eprintln!("Failed to read file: {}", e);
-            std::process::exit(1);
-        }
-    };
+    file.read_to_end(&mut buffer).expect("Could not read file");
 
-    match parse_zip(&buffer) {
-        Ok((_, headers)) => {
-            for header in headers {
-                println!("{:?}", header);
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to parse ZIP file: {:?}", e);
+    let mut input = &buffer[..];
+    while !input.is_empty() {
+        if let Ok((remaining, header)) = parse_local_file_header(input) {
+            println!("Local File Header: {:?}", header);
+            input = remaining;
+        } else if let Ok((remaining, header)) = parse_central_directory_file_header(input) {
+            println!("Central Directory File Header: {:?}", header);
+            input = remaining;
+        } else if let Ok((remaining, record)) = parse_end_of_central_directory_record(input) {
+            println!("End of Central Directory Record: {:?}", record);
+            input = remaining;
+        } else {
+            break;
         }
     }
 }

@@ -1,73 +1,107 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-// Define HL7 v2 message parsing structures
-static HParser* hl7_message;
-static HParser* hl7_segment;
-static HParser* hl7_field;
-static HParser* hl7_component;
+typedef struct {
+    char* set_id;
+    char* patient_id;
+    char* patient_identifier_list;
+    char* alternate_patient_id;
+    char* patient_name;
+    char* mothers_maiden_name;
+    char* date_of_birth;
+    char* sex;
+    char* patient_alias;
+} PIDSegment;
 
-// Helper function to parse delimiters
-static HParser* parse_delimiter(char delimiter) {
-    return h_ch(delimiter);
-}
+typedef struct {
+    char* sending_application;
+    char* sending_facility;
+    char* receiving_application;
+    char* receiving_facility;
+    char* datetime;
+    char* security;
+    char* message_type;
+} MSHSegment;
 
-// Create parsers for different HL7 v2 message components
-static void create_hl7_parsers() {
-    // Define delimiter characters
-    HParser* segment_delimiter = parse_delimiter('|');
-    HParser* field_delimiter = parse_delimiter('^');
-    HParser* component_delimiter = parse_delimiter('&');
+typedef struct {
+    MSHSegment* msh;
+    PIDSegment* pid;
+} HL7Message;
 
-    // Parse individual characters/text
-    HParser* text = h_many1(h_not_in("\r\n|^&"));
-
-    // Component parser
-    hl7_component = h_choice(text, h_epsilon(), NULL);
-
-    // Field parser with optional components
-    hl7_field = h_sepBy1(hl7_component, field_delimiter);
-
-    // Segment parser with fields
-    hl7_segment = h_sequence(
-        text,  // Segment identifier
-        segment_delimiter,
-        h_sepBy(hl7_field, segment_delimiter),
+HParser* create_msh_parser() {
+    HParser* not_pipe = h_ch_range(0x01, '|' - 1);
+    return h_sequence(
+        h_token_str("MSH"),
+        h_ch('|'),
+        h_many(not_pipe),
         NULL
     );
-
-    // Complete HL7 message parser
-    hl7_message = h_many1(hl7_segment);
 }
 
-// Main parsing function
-int parse_hl7_message(const char* message) {
-    create_hl7_parsers();
+HParser* create_pid_parser() {
+    HParser* not_pipe = h_ch_range(0x01, '|' - 1);
+    return h_sequence(
+        h_token_str("PID"),
+        h_ch('|'),
+        h_many(not_pipe),
+        NULL
+    );
+}
 
-    HParseResult* result = h_parse(hl7_message, 
-        (const uint8_t*)message, 
-        strlen(message));
+HL7Message* parse_hl7_message(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return NULL;
+    }
 
-    if (result && result->ast) {
-        // Successful parsing
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    fread(buffer, 1, file_size, file);
+
+    HParser* msh_parser = create_msh_parser();
+    HParser* pid_parser = create_pid_parser();
+
+    HParseResult* msh_result = h_parse(msh_parser, buffer, file_size);
+    HParseResult* pid_result = h_parse(pid_parser, buffer, file_size);
+
+    HL7Message* message = malloc(sizeof(HL7Message));
+    message->msh = malloc(sizeof(MSHSegment));
+    message->pid = malloc(sizeof(PIDSegment));
+
+    free(buffer);
+    fclose(file);
+
+    if (msh_result) h_parse_result_free(msh_result);
+    if (pid_result) h_parse_result_free(pid_result);
+
+    return message;
+}
+
+void free_hl7_message(HL7Message* message) {
+    if (message) {
+        free(message->msh);
+        free(message->pid);
+        free(message);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
         return 1;
     }
-    return 0;
-}
 
-int main(int argc, char** argv) {
-    // Example HL7 v2 message
-    const char* sample_message = 
-        "MSH|^~\\&|SENDING_APP|SENDING_FACILITY|RECEIVING_APP|RECEIVING_FACILITY|20230101120000||ADT^A01|MSG00001|P|2.5.1\r"
-        "PID|1||123456^^^MRN^MRN||DOE^JOHN^^^MR.||19800101|M|||123 MAIN ST^^ANYTOWN^NY^12345||555-555-1234|||S\r";
-
-    if (parse_hl7_message(sample_message)) {
-        printf("HL7 Message parsed successfully\n");
-        return 0;
+    HL7Message* message = parse_hl7_message(argv[1]);
+    if (!message) {
+        return 1;
     }
-    
-    printf("HL7 Message parsing failed\n");
-    return 1;
+
+    free_hl7_message(message);
+    return 0;
 }

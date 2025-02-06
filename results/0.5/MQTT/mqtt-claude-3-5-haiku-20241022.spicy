@@ -2,37 +2,193 @@ module MQTT;
 
 import spicy;
 
-public type Packet = unit {
-    header: Header;
-    payload: bytes &size=(header.remaining_length);
-
-    type Header = unit {
-        control_type: uint8 &parse_with=control_type_parse;
-        flags: uint8;
-        remaining_length: varint;
-
-        function control_type_parse(data: uint8) : uint8 {
-            return data >> 4;
-        }
-    };
-
-    type varint = unit {
-        value: bytes &until=($$.decode() & 0x80 == 0);
-
-        function decode(): uint32 {
-            local result: uint32 = 0;
-            local multiplier: uint32 = 1;
-
-            for ( b in self.value ) {
-                result += (b & 0x7F) * multiplier;
-                multiplier *= 0x80;
-            }
-
-            return result;
-        }
-    };
+public type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14
 };
 
-public type MQTTFlow = unit {
-    packets: Packet[];
+public type ReasonCode = enum {
+    SUCCESS = 0,
+    NORMAL_DISCONNECTION = 0,
+    GRANTED_QOS_0 = 0,
+    GRANTED_QOS_1 = 1,
+    GRANTED_QOS_2 = 2,
+    DISCONNECT_WITH_WILL_MESSAGE = 4,
+    NO_MATCHING_SUBSCRIBERS = 16,
+    NO_SUBSCRIPTION_EXISTED = 17,
+    CONTINUE_AUTHENTICATION = 24,
+    REAUTHENTICATE = 25,
+    UNSPECIFIED_ERROR = 128,
+    MALFORMED_PACKET = 129,
+    PROTOCOL_ERROR = 130,
+    IMPLEMENTATION_SPECIFIC_ERROR = 131,
+    UNSUPPORTED_PROTOCOL_VERSION = 132,
+    CLIENT_IDENTIFIER_NOT_VALID = 133,
+    BAD_USERNAME_OR_PASSWORD = 134,
+    NOT_AUTHORIZED = 135,
+    SERVER_UNAVAILABLE = 136,
+    SERVER_BUSY = 137,
+    BANNED = 138,
+    SERVER_SHUTTING_DOWN = 139,
+    BAD_AUTHENTICATION_METHOD = 140,
+    KEEP_ALIVE_TIMEOUT = 141,
+    SESSION_TAKEN_OVER = 142,
+    TOPIC_FILTER_INVALID = 143,
+    TOPIC_NAME_INVALID = 144,
+    PACKET_IDENTIFIER_IN_USE = 145,
+    PACKET_IDENTIFIER_NOT_FOUND = 146,
+    RECEIVE_MAXIMUM_EXCEEDED = 147,
+    TOPIC_ALIAS_INVALID = 148,
+    PACKET_TOO_LARGE = 149,
+    MESSAGE_RATE_TOO_HIGH = 150,
+    QUOTA_EXCEEDED = 151,
+    ADMINISTRATIVE_ACTION = 152,
+    PAYLOAD_FORMAT_INVALID = 153,
+    RETAIN_NOT_SUPPORTED = 154,
+    QOS_NOT_SUPPORTED = 155,
+    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED = 156,
+    CONNECTION_RATE_EXCEEDED = 157,
+    MAXIMUM_CONNECT_TIME = 158,
+    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED = 159,
+    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED = 160
+};
+
+public type Property = enum {
+    PAYLOAD_FORMAT_INDICATOR = 1,
+    MESSAGE_EXPIRY_INTERVAL = 2,
+    CONTENT_TYPE = 3,
+    RESPONSE_TOPIC = 8,
+    CORRELATION_DATA = 9,
+    SUBSCRIPTION_IDENTIFIER = 11,
+    SESSION_EXPIRY_INTERVAL = 17,
+    ASSIGNED_CLIENT_IDENTIFIER = 18,
+    SERVER_KEEP_ALIVE = 19,
+    AUTHENTICATION_METHOD = 21,
+    AUTHENTICATION_DATA = 22,
+    REQUEST_PROBLEM_INFORMATION = 23,
+    WILL_DELAY_INTERVAL = 24,
+    REQUEST_RESPONSE_INFORMATION = 25,
+    RESPONSE_INFORMATION = 26,
+    SERVER_REFERENCE = 28,
+    REASON_STRING = 31,
+    RECEIVE_MAXIMUM = 33,
+    TOPIC_ALIAS_MAXIMUM = 34,
+    TOPIC_ALIAS = 35,
+    MAXIMUM_QOS = 36,
+    RETAIN_AVAILABLE = 37,
+    USER_PROPERTY = 38,
+    MAXIMUM_PACKET_SIZE = 39,
+    WILDCARD_SUBSCRIPTION_AVAILABLE = 40,
+    SUBSCRIPTION_IDENTIFIER_AVAILABLE = 41,
+    SHARED_SUBSCRIPTION_AVAILABLE = 42
+};
+
+type VarInt = uint64;
+
+type UserProperty = tuple<string, string>;
+
+type PropertyList = vector<tuple<Property, bytes>>;
+
+type FixedHeader = unit {
+    packet_type: bitfield(4) {
+        type_: 0..3 as PacketType;
+        flags: 4..7;
+    };
+    remaining_length: VarInt;
+};
+
+type ConnectFlags = bitfield(8) {
+    username_flag: 7;
+    password_flag: 6;
+    will_retain: 5;
+    will_qos: 4..3;
+    will_flag: 2;
+    clean_start: 1;
+    zero_reserved: 0;
+};
+
+type Connect = unit {
+    protocol_name: bytes(4) == b"MQTT";
+    protocol_version: uint8 == 5;
+    connect_flags: ConnectFlags;
+    keep_alive: uint16;
+    properties: PropertyList;
+    client_id: string;
+    will_properties: optional<PropertyList> if (connect_flags.will_flag);
+    will_topic: optional<string> if (connect_flags.will_flag);
+    will_payload: optional<bytes> if (connect_flags.will_flag);
+    username: optional<string> if (connect_flags.username_flag);
+    password: optional<string> if (connect_flags.password_flag);
+};
+
+type Connack = unit {
+    connect_flags: bitfield(8) {
+        session_present: 0;
+    };
+    reason_code: uint8 as ReasonCode;
+    properties: PropertyList;
+};
+
+type Publish = unit {
+    topic_name: string;
+    packet_identifier: optional<uint16>;
+    properties: PropertyList;
+    payload: bytes;
+};
+
+type SubscriptionOptions = bitfield(8) {
+    qos: 0..1;
+    no_local: 2;
+    retain_as_published: 3;
+    retain_handling: 4..5;
+};
+
+type Subscribe = unit {
+    packet_identifier: uint16;
+    properties: PropertyList;
+    subscriptions: vector<tuple<string, SubscriptionOptions>>;
+};
+
+type Suback = unit {
+    packet_identifier: uint16;
+    properties: PropertyList;
+    reason_codes: vector<uint8 as ReasonCode>;
+};
+
+type Unsubscribe = unit {
+    packet_identifier: uint16;
+    properties: PropertyList;
+    topic_filters: vector<string>;
+};
+
+type Unsuback = unit {
+    packet_identifier: uint16;
+    properties: PropertyList;
+    reason_codes: vector<uint8 as ReasonCode>;
+};
+
+type Disconnect = unit {
+    reason_code: uint8 as ReasonCode;
+    properties: PropertyList;
+};
+
+type Packet = unit {
+    fixed_header: FixedHeader;
+    payload: bytes;
+};
+
+public type MQTT = unit {
+    packet: Packet;
 };

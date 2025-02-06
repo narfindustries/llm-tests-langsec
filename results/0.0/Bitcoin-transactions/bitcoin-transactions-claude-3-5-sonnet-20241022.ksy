@@ -1,67 +1,71 @@
 meta:
   id: bitcoin_transaction
-  file-extension: bin
+  title: Bitcoin Transaction
+  file-extension: btc
   endian: le
 
 seq:
   - id: version
     type: u4
+  - id: is_segwit
+    type: u1
+    if: version >= 2
   - id: input_count
-    type: varint
+    type: var_int
   - id: inputs
-    type: transaction_input
+    type: tx_in
     repeat: expr
-    repeat-expr: input_count.value
+    repeat-expr: input_count.int_value
   - id: output_count
-    type: varint
+    type: var_int
   - id: outputs
-    type: transaction_output
+    type: tx_out
     repeat: expr
-    repeat-expr: output_count.value
-  - id: locktime
+    repeat-expr: output_count.int_value
+  - id: witnesses
+    type: witness_data
+    repeat: expr
+    repeat-expr: input_count.int_value
+    if: is_segwit == 0x01
+  - id: lock_time
     type: u4
 
 types:
-  varint:
+  var_int:
     seq:
-      - id: prefix
+      - id: flag
         type: u1
-      - id: value
+      - id: data
         type:
-          switch-on: prefix
+          switch-on: flag
           cases:
-            0xff: u8
-            0xfe: u4
             0xfd: u2
-            _: u1
+            0xfe: u4
+            0xff: u8
+        if: flag >= 0xfd
     instances:
-      value:
-        value: |
-          prefix < 0xfd ? prefix : (
-            prefix == 0xfd ? value_u2 : (
-              prefix == 0xfe ? value_u4 : value_u8
-            )
-          )
+      int_value:
+        value: 'flag < 0xfd ? flag : data'
 
-  transaction_input:
+  tx_in:
     seq:
       - id: previous_output
         type: outpoint
       - id: script_length
-        type: varint
+        type: var_int
       - id: script_sig
-        size: script_length.value
+        size: script_length.int_value
       - id: sequence
         type: u4
 
-  transaction_output:
+  tx_out:
     seq:
       - id: value
         type: u8
       - id: script_length
-        type: varint
+        type: var_int
       - id: script_pubkey
-        size: script_length.value
+        size: script_length.int_value
 
   outpoint:
     seq:
@@ -69,3 +73,19 @@ types:
         size: 32
       - id: index
         type: u4
+
+  witness_data:
+    seq:
+      - id: witness_count
+        type: var_int
+      - id: witness_items
+        type: witness_item
+        repeat: expr
+        repeat-expr: witness_count.int_value
+
+  witness_item:
+    seq:
+      - id: item_length
+        type: var_int
+      - id: witness_data
+        size: item_length.int_value

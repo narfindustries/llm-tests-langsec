@@ -1,34 +1,33 @@
-module NetworkTimeProtocol;
+module NTP;
 
-public type NTPHeader = unit {
-    li : uint2;               // Leap Indicator
-    vn : uint2;               // Version Number
-    mode : uint2;             // Mode
-    stratum : uint8;          // Stratum
-    poll : int8;              // Poll Interval
-    precision : int8;         // Precision
-
-    rootDelay : interval;     // Root Delay
-    rootDispersion : interval; // Root Dispersion
-    refID : uint32;           // Reference ID
-
-    refTm_s : time;           // Reference Timestamp (seconds)
-    refTm_f : uint32;         // Reference Timestamp (fraction)
-
-    origTm_s : time;          // Originate Timestamp (seconds)
-    origTm_f : uint32;        // Originate Timestamp (fraction)
-
-    rxTm_s : time;            // Receive Timestamp (seconds)
-    rxTm_f : uint32;          // Receive Timestamp (fraction)
-
-    txTm_s : time;            // Transmit Timestamp (seconds)
-    txTm_f : uint32;          // Transmit Timestamp (fraction)
-
-    on %done {
-        print self;
-    }
+public type NTPShortFormat = unit {
+    seconds: uint16;
+    fraction: uint16;
 };
 
-public type Main = unit {
-    ntp: NTPHeader;
+public type NTPTimestamp = unit {
+    seconds: uint32;
+    fraction: uint32;
 };
+
+public type NTPMessage = unit {
+    li_vn_mode: bitfield(8) {
+        li: 2;
+        vn: 3;
+        mode: 3;
+    };
+    stratum: uint8;
+    poll: int8;
+    precision: int8;
+    rootDelay: NTPShortFormat;
+    rootDispersion: NTPShortFormat;
+    referenceID: bytes &size=4;
+    referenceTimestamp: NTPTimestamp;
+    originTimestamp: NTPTimestamp;
+    receiveTimestamp: NTPTimestamp;
+    transmitTimestamp: NTPTimestamp;
+} &byteorder=big;
+
+public type NTPPacket = unit {
+    msg: NTPMessage;
+} &byteorder=big;

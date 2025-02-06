@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="UTF-8" alignmentUnits="bytes" lengthKind="explicit" representation="binary" encodingErrorPolicy="replace" lengthUnits="bytes" initiatedContent="no" />
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="ARP">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no">
+        <xs:element name="HardwareType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="ProtocolType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="HardwareLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="ProtocolLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="Operation" type="xs:unsignedShort" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="SenderHardwareAddress" type="xs:hexBinary" dfdl:length="{ ../HardwareLength }" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="SenderProtocolAddress" type="xs:hexBinary" dfdl:length="{ ../ProtocolLength }" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="TargetHardwareAddress" type="xs:hexBinary" dfdl:length="{ ../HardwareLength }" dfdl:representation="binary" dfdl:leadingSkip="0" />
+        <xs:element name="TargetProtocolAddress" type="xs:hexBinary" dfdl:length="{ ../ProtocolLength }" dfdl:representation="binary" dfdl:leadingSkip="0" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

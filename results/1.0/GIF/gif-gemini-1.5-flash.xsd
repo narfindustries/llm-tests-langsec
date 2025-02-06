@@ -1,64 +1,130 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" xmlns:tns="http://example.org/gif">
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:dfdlVersion>1.0</dfdl:dfdlVersion>
-      <dfdl:format ref="tns:GIFFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-  <xs:element name="gifGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/gif" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="tns:HeaderType">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:length kind="implicit" lengthUnits="bytes"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="Signature" type="dfdl:string" dfdl:length="6" dfdl:textString="GIF89a"/>
+        <xs:element name="LogicalScreenDescriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="Height" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="PackedFields" type="dfdl:byte">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/1.0/">
+                    <dfdl:bitField>
+                      <dfdl:bit name="GlobalColorTableFlag" length="1"/>
+                      <dfdl:bit name="ColorResolution" length="3"/>
+                      <dfdl:bit name="SortFlag" length="1"/>
+                      <dfdl:bit name="SizeOfGlobalColorTable" length="3"/>
+                    </dfdl:bitField>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="BackgroundColorIndex" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+              <xs:element name="PixelAspectRatio" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
-        <xs:element name="imageData" type="xs:base64Binary">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:length kind="implicit" lengthUnits="bytes"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="GlobalColorTable" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ColorTableEntry" type="dfdl:rgb" maxOccurs="unbounded" dfdl:occurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
-        <xs:element name="footer" type="tns:FooterType">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:length kind="implicit" lengthUnits="bytes"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="ImageDescriptor" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageSeparator" type="dfdl:string" dfdl:length="1" dfdl:textString=","/>
+              <xs:element name="ImageLeftPosition" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="ImageTopPosition" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="ImageWidth" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="ImageHeight" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+              <xs:element name="PackedFields" type="dfdl:byte">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/1.0/">
+                    <dfdl:bitField>
+                      <dfdl:bit name="LocalColorTableFlag" length="1"/>
+                      <dfdl:bit name="InterlaceFlag" length="1"/>
+                      <dfdl:bit name="SortFlag" length="1"/>
+                      <dfdl:bit name="Reserved" length="5"/>
+                    </dfdl:bitField>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="LocalColorTable" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ColorTableEntry" type="dfdl:rgb" maxOccurs="unbounded" dfdl:occurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" type="dfdl:bytes" dfdl:occurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
+        <xs:element name="ExtensionBlock" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="GraphicsControlExtension">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ExtensionIntroducer" type="dfdl:bytes" dfdl:length="2"/>
+                    <xs:element name="GraphicsControlLabel" type="dfdl:byte"/>
+                    <xs:element name="PackedFields" type="dfdl:byte"/>
+                    <xs:element name="DelayTime" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+                    <xs:element name="TransparentColorIndex" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="CommentExtension">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ExtensionIntroducer" type="dfdl:bytes" dfdl:length="2"/>
+                    <xs:element name="CommentLabel" type="dfdl:byte"/>
+                    <xs:element name="CommentData" type="dfdl:string" dfdl:lengthKind="implicit"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="PlainTextExtension">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ExtensionIntroducer" type="dfdl:bytes" dfdl:length="2"/>
+                    <xs:element name="PlainTextLabel" type="dfdl:byte"/>
+                    <xs:element name="TextGridLeftPosition" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+                    <xs:element name="TextGridTopPosition" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+                    <xs:element name="TextGridWidth" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+                    <xs:element name="TextGridHeight" type="dfdl:unsignedInt" dfdl:representation="binary" dfdl:length="16"/>
+                    <xs:element name="CharacterCellWidth" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+                    <xs:element name="CharacterCellHeight" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+                    <xs:element name="TextData" type="dfdl:string" dfdl:lengthKind="implicit"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ApplicationExtension">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ExtensionIntroducer" type="dfdl:bytes" dfdl:length="2"/>
+                    <xs:element name="ApplicationIdentifier" type="dfdl:string" dfdl:lengthKind="implicit"/>
+                    <xs:element name="ApplicationAuthenticationCode" type="dfdl:string" dfdl:lengthKind="implicit"/>
+                    <xs:element name="ApplicationData" type="dfdl:bytes" dfdl:occurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Trailer" type="dfdl:byte" dfdl:textString="3B"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="rgb">
     <xs:sequence>
-      <xs:element name="version" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length length="3" lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="Red" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="Green" type="dfdl:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="Blue" type="dfdl:unsignedByte" dfdl:representation="binary"/>
     </xs:sequence>
-  </xs:complexType>
-  <xs:complexType name="FooterType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length length="4" lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-  <xs:complexType name="GIFFormat">
-    <xs:sequence/>
-    <xs:attribute name="encoding" type="xs:string" use="required" fixed="UTF-8"/>
-    <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
-    <xs:attribute name="separator" type="xs:string" use="required" fixed="\n"/>
   </xs:complexType>
 </xs:schema>
+
+The error message now points to a problem with comments within the XML schema itself.  The previous responses included explanatory comments within the XML.  This corrected version removes those comments, ensuring that no text nodes exist outside of the properly structured XML elements.  This should resolve the parsing error reported by the error message.  As before, the LZW compression within the GIF data will likely require additional DFDL constructs beyond what's included here for full functionality.

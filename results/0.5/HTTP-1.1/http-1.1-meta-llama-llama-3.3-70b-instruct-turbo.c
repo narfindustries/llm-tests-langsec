@@ -1,88 +1,718 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
-// Define the HTTP message structure
+#define HAMMER_NO_PARSER
+
 typedef struct {
-    char method[4];
-    char path[256];
-    char http_version[9];
-    char headers[1024];
-    char body[1024];
+    char* method;
+    char* request_uri;
+    char* http_version;
+} request_line_t;
+
+typedef struct {
+    char* accept;
+    char* accept_charset;
+    char* accept_encoding;
+    char* accept_language;
+    char* authorization;
+    char* cache_control;
+    char* connection;
+    char* content_length;
+    char* content_type;
+    char* date;
+    char* expect;
+    char* from;
+    char* host;
+    char* if_match;
+    char* if_modified_since;
+    char* if_none_match;
+    char* if_range;
+    char* if_unmodified_since;
+    char* max_forwards;
+    char* proxy_authorization;
+    char* range;
+    char* referer;
+    char* te;
+    char* user_agent;
+} request_headers_t;
+
+typedef struct {
+    char* http_version;
+    int status_code;
+    char* reason_phrase;
+} status_line_t;
+
+typedef struct {
+    char* accept_ranges;
+    char* age;
+    char* allow;
+    char* cache_control;
+    char* connection;
+    char* content_encoding;
+    char* content_language;
+    char* content_length;
+    char* content_location;
+    char* content_md5;
+    char* content_range;
+    char* content_type;
+    char* date;
+    char* etag;
+    char* expires;
+    char* last_modified;
+    char* location;
+    char* proxy_authenticate;
+    char* retry_after;
+    char* server;
+    char* set_cookie;
+    char* trailer;
+    char* transfer_encoding;
+    char* upgrade;
+    char* vary;
+    char* via;
+    char* warning;
+    char* www_authenticate;
+} response_headers_t;
+
+typedef struct {
+    request_line_t request_line;
+    request_headers_t request_headers;
+    status_line_t status_line;
+    response_headers_t response_headers;
 } http_message_t;
 
-// Define the HTTP request parser
-int parse_http_request(const char* data, size_t len, http_message_t* msg) {
-    // Parse the request line
-    if (sscanf(data, "%3s %255s %8s", msg->method, msg->path, msg->http_version) != 3) {
-        return 0; // Invalid request line
-    }
+HParser* request_line_parser;
+HParser* request_headers_parser;
+HParser* status_line_parser;
+HParser* response_headers_parser;
+HParser* http_message_parser;
 
-    // Parse the headers
-    size_t headers_start = 0;
-    for (size_t i = 0; i < len; i++) {
-        if (data[i] == '\r' && data[i + 1] == '\n' && data[i + 2] == '\r' && data[i + 3] == '\n') {
-            headers_start = i + 4;
-            break;
+void init_parsers() {
+    request_line_parser = h_sequence(
+        h_string("GET"),
+        h_string(" "),
+        h_regex("[^ ]+"),
+        h_string(" "),
+        h_regex("HTTP/1\\.1"),
+        h_eol,
+        &(request_line_t){
+            .method = h_capture(1),
+            .request_uri = h_capture(2),
+            .http_version = h_capture(3)
         }
-    }
-    if (headers_start == 0) {
-        return 0; // No headers found
-    }
-    size_t headers_len = len - headers_start;
-    strncpy(msg->headers, data + headers_start, headers_len);
-    msg->headers[headers_len] = '\0';
+    );
 
-    // Parse the body
-    size_t body_start = headers_start + headers_len;
-    if (body_start >= len) {
-        return 0; // No body found
-    }
-    size_t body_len = len - body_start;
-    strncpy(msg->body, data + body_start, body_len);
-    msg->body[body_len] = '\0';
+    request_headers_parser = h_sequence(
+        h_optional(
+            h_sequence(
+                h_string("Accept: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .accept = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Accept-Charset: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .accept_charset = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Accept-Encoding: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .accept_encoding = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Accept-Language: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .accept_language = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Authorization: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .authorization = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Cache-Control: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .cache_control = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Connection: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .connection = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Length: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .content_length = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Type: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .content_type = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Date: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .date = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Expect: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .expect = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("From: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .from = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Host: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .host = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("If-Match: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .if_match = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("If-Modified-Since: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .if_modified_since = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("If-None-Match: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .if_none_match = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("If-Range: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .if_range = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("If-Unmodified-Since: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .if_unmodified_since = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Max-Forwards: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .max_forwards = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Proxy-Authorization: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .proxy_authorization = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Range: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .range = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Referer: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .referer = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("TE: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .te = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("User-Agent: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(request_headers_t){
+                    .user_agent = h_capture(1)
+                }
+            )
+        ),
+        h_eol
+    );
 
-    return 1; // Successfully parsed the HTTP request
+    status_line_parser = h_sequence(
+        h_string("HTTP/1.1 "),
+        h_regex("\\d{3}"),
+        h_string(" "),
+        h_regex("[^\\r\\n]+"),
+        h_eol,
+        &(status_line_t){
+            .http_version = h_capture(0),
+            .status_code = atoi(h_capture(1)),
+            .reason_phrase = h_capture(2)
+        }
+    );
+
+    response_headers_parser = h_sequence(
+        h_optional(
+            h_sequence(
+                h_string("Accept-Ranges: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .accept_ranges = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Age: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .age = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Allow: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .allow = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Cache-Control: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .cache_control = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Connection: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .connection = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Encoding: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_encoding = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Language: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_language = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Length: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_length = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Location: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_location = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-MD5: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_md5 = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Range: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_range = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Content-Type: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .content_type = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Date: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .date = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("ETag: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .etag = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Expires: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .expires = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Last-Modified: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .last_modified = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Location: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .location = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Proxy-Authenticate: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .proxy_authenticate = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Retry-After: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .retry_after = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Server: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .server = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Set-Cookie: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .set_cookie = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Trailer: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .trailer = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Transfer-Encoding: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .transfer_encoding = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Upgrade: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .upgrade = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Vary: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .vary = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Via: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .via = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("Warning: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .warning = h_capture(1)
+                }
+            )
+        ),
+        h_optional(
+            h_sequence(
+                h_string("WWW-Authenticate: "),
+                h_regex("[^\\r\\n]+"),
+                h_eol,
+                &(response_headers_t){
+                    .www_authenticate = h_capture(1)
+                }
+            )
+        ),
+        h_eol
+    );
+
+    http_message_parser = h_sequence(
+        request_line_parser,
+        request_headers_parser,
+        status_line_parser,
+        response_headers_parser,
+        &(http_message_t){
+            .request_line = h_capture(0),
+            .request_headers = h_capture(1),
+            .status_line = h_capture(2),
+            .response_headers = h_capture(3)
+        }
+    );
 }
 
-// Define the HTTP response generator
-int generate_http_response(const http_message_t* msg, char* data, size_t len) {
-    // Generate the response line
-    size_t written = sprintf(data, "HTTP/1.1 200 OK\r\n");
+int main(int argc, char** argv) {
+    init_parsers();
 
-    // Generate the headers
-    written += sprintf(data + written, "Content-Type: text/plain\r\n");
-    written += sprintf(data + written, "Content-Length: %zu\r\n", strlen(msg->body));
-    written += sprintf(data + written, "\r\n");
-
-    // Generate the body
-    written += sprintf(data + written, "%s", msg->body);
-
-    return written; // Successfully generated the HTTP response
-}
-
-int main() {
-    http_message_t msg;
-
-    // Example HTTP request data
-    const char* request_data = "GET /path/to/resource HTTP/1.1\r\nHost: example.com\r\n\r\nHello, World!";
-    size_t request_len = strlen(request_data);
-
-    // Parse the HTTP request
-    if (!parse_http_request(request_data, request_len, &msg)) {
-        fprintf(stderr, "Failed to parse HTTP request\n");
+    if (argc != 2) {
+        printf("Usage: %s <file>\n", argv[0]);
         return 1;
     }
 
-    // Process the HTTP request (e.g., execute a handler function)
-    printf("Received HTTP request: %s %s %s\n", msg.method, msg.path, msg.http_version);
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Failed to open file %s\n", argv[1]);
+        return 1;
+    }
 
-    // Generate an HTTP response
-    char response_data[1024];
-    size_t response_len = generate_http_response(&msg, response_data, sizeof(response_data));
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Send the HTTP response
-    printf("Sending HTTP response: %.*s\n", (int)response_len, response_data);
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        printf("Failed to allocate memory\n");
+        fclose(file);
+        return 1;
+    }
 
-    return 0;
-}
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    if (bytes_read != file_size) {
+        printf("Failed to read file %s\n", argv[1]);
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    http_message_t message;
+    HParseResult* result = h_parse(http_message_parser, buffer, file_size);
+    if (result->status != H_OK) {
+        printf("Failed to parse HTTP message\n");
+        free(buffer);
+        return 1;
+    }
+
+    printf("Request Line:\n");
+    printf("  Method: %s\n", message.request_line.method);
+    printf("  Request URI: %s\n", message.request_line.request_uri);
+    printf("  HTTP Version: %s\n", message.request_line.http_version);
+
+    printf("Request Headers:\n");
+    if (message.request_headers.accept) printf("  Accept: %s\n", message.request_headers.accept);
+    if (message.request_headers.accept_charset) printf("  Accept-Charset: %s\n", message.request_headers.accept_charset);
+    if (message.request_headers.accept_encoding) printf("  Accept-Encoding: %s\n", message.request_headers.accept_encoding);
+    if (message.request_headers.accept_language) printf("  Accept-Language: %s\n", message.request_headers.accept_language);
+    if (message.request_headers.authorization) printf("  Authorization: %s\n", message.request_headers.authorization);
+    if (message.request_headers.cache_control) printf("  Cache-Control: %s\n", message.request_headers.cache_control);
+    if (message.request_headers.connection) printf("  Connection: %s\n", message.request_headers.connection);
+    if (message.request_headers.content_length) printf("  Content-Length: %s\n", message.request_headers.content_length);
+    if (message.request_headers.content_type) printf("  Content

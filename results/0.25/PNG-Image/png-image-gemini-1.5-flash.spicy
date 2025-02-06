@@ -1,10 +1,152 @@
-#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+module PNG;
 
-event png_image_gemini_1_5_flash_event(uint8 data) {
-    // Add your logic here to process the data
-    // This is a placeholder, replace with your actual processing
-    print("Received data: ", data);
+type png_signature {
+    uint8 magic[8];
 }
 
-#endif
+type png_ihdr {
+    uint32 width;
+    uint32 height;
+    uint8 bit_depth;
+    uint8 color_type;
+    uint8 compression_method;
+    uint8 filter_method;
+    uint8 interlace_method;
+}
+
+type png_idat {
+    uint32 length;
+    bytes data;
+    uint32 crc;
+}
+
+type png_chunk {
+    uint32 length;
+    uint32 type;
+    bytes data;
+    uint32 crc;
+}
+
+type png_text_chunk {
+    uint32 length;
+    uint32 type = 0x74455874; // tEXt
+    string keyword;
+    string text;
+    uint32 crc;
+}
+
+type png_ztext_chunk {
+    uint32 length;
+    uint32 type = 0x7a545874; // zTXt
+    string keyword;
+    uint8 compression_flag;
+    bytes compressed_text;
+    uint32 crc;
+}
+
+type png_itext_chunk {
+    uint32 length;
+    uint32 type = 0x69545874; // iTXt
+    string keyword;
+    uint8 compression_flag;
+    uint8 compression_method;
+    uint8 language_tag_length;
+    string language_tag;
+    uint8 translated_keyword_length;
+    string translated_keyword;
+    bytes text;
+    uint32 crc;
+}
+
+type png_gama_chunk {
+    uint32 length;
+    uint32 type = 0x67414D41; // gAMA
+    uint32 gamma;
+    uint32 crc;
+}
+
+type png_chrm_chunk {
+    uint32 length;
+    uint32 type = 0x6348524D; // cHRM
+    uint32 white_point_x;
+    uint32 white_point_y;
+    uint32 red_x;
+    uint32 red_y;
+    uint32 green_x;
+    uint32 green_y;
+    uint32 blue_x;
+    uint32 blue_y;
+    uint32 crc;
+}
+
+type png_sbit_chunk {
+    uint32 length;
+    uint32 type = 0x73424954; // sBIT
+    uint8 significant_bits;
+    uint32 crc;
+}
+
+type png_phys_chunk {
+    uint32 length;
+    uint32 type = 0x70485973; // pHYs
+    uint32 pixels_per_unit_x;
+    uint32 pixels_per_unit_y;
+    uint8 unit_specifier;
+    uint32 crc;
+}
+
+type png_time_chunk {
+    uint32 length;
+    uint32 type = 0x74494D45; // tIME
+    uint16 year;
+    uint8 month;
+    uint8 day;
+    uint8 hour;
+    uint8 minute;
+    uint8 second;
+    uint32 crc;
+}
+
+type png_bkgd_chunk {
+    uint32 length;
+    uint32 type = 0x624B4744; // bKGD
+    uint16 gray; // or uint16 red, uint16 green, uint16 blue
+    uint32 crc;
+}
+
+type png_hist_chunk {
+    uint32 length;
+    uint32 type = 0x68495354; // hIST
+    uint16 frequency[]; // Variable length array
+    uint32 crc;
+}
+
+type png_splt_chunk {
+    uint32 length;
+    uint32 type = 0x73504C54; // sPLT
+    string name;
+    uint8 sample_depth;
+    uint16 entries[]; // Variable length array
+    uint32 crc;
+}
+
+type png_srgb_chunk {
+    uint32 length;
+    uint32 type = 0x73524742; // sRGB
+    uint8 rendering_intent;
+    uint32 crc;
+}
+
+type png_iend {
+    uint32 length;
+    uint32 type = 0x49454E44; // IEND
+    uint32 crc;
+}
+
+
+root_type png_image {
+    png_signature signature;
+    png_ihdr ihdr;
+    repeat png_chunk chunks;
+    png_iend iend;
+}

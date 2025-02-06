@@ -1,21 +1,75 @@
-#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
-#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+module HTTP_1_1;
 
-event http_1_1_gemini_1_5_flash_event(http::HTTP_Request, gemini::Gemini_Request, flash::Flash_Request) {
-    // Add your logic here to handle HTTP 1.1, Gemini 1.5, and Flash requests simultaneously.
-    // This event will trigger whenever a request matches the criteria of all three protocols.
-    // You can access the fields of each request object using the dot notation.
-    // For example, to access the URI of the HTTP request, you would use http_request.URI.
-    // Ensure proper error handling and logging are included.
-    // Consider using a switch statement or if-else blocks for more complex logic.
+type HTTP_Message {
+    start_time: time;
+    method: string;
+    uri: string;
+    http_version: string;
+    headers: table[string, string];
+    body: string;
+};
 
-    print("HTTP 1.1 Request: ", http_request);
-    print("Gemini 1.5 Request: ", gemini_request);
-    print("Flash Request: ", flash_request);
+type HTTP_Request extends HTTP_Message {
+    cache_control: string;
+    connection: string;
+    date: time;
+    pragma: string;
+    trailer: string;
+    transfer_encoding: string;
+    upgrade: string;
+    via: string;
+    warning: string;
+    accept: string;
+    accept_charset: string;
+    accept_encoding: string;
+    accept_language: string;
+    authorization: string;
+    expect: string;
+    from: string;
+    host: string;
+    if_match: string;
+    if_modified_since: time;
+    if_none_match: string;
+    if_range: string;
+    if_unmodified_since: time;
+    max_forwards: int;
+    proxy_authorization: string;
+    range: string;
+    referer: string;
+    te: string;
+    user_agent: string;
+};
 
-    // Example: Log the combination of protocols detected
-    log_info("Detected HTTP 1.1, Gemini 1.5, and Flash requests simultaneously.");
-
-}
-
-#endif
+type HTTP_Response extends HTTP_Message {
+    status_code: int;
+    status_text: string;
+    cache_control: string;
+    connection: string;
+    date: time;
+    pragma: string;
+    trailer: string;
+    transfer_encoding: string;
+    upgrade: string;
+    via: string;
+    warning: string;
+    accept_ranges: string;
+    age: int;
+    etag: string;
+    location: string;
+    proxy_authenticate: string;
+    retry_after: time;
+    server: string;
+    set_cookie: string;
+    vary: string;
+    www_authenticate: string;
+    allow: string;
+    content_encoding: string;
+    content_language: string;
+    content_length: int;
+    content_location: string;
+    content_md5: string;
+    content_range: string;
+    content_type: string;
+    expires: time;
+    last_modified: time;
+};

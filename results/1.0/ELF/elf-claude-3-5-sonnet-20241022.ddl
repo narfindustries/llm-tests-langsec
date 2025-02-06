@@ -1,76 +1,123 @@
-def Main = SeqStrict {
-  §ELF;
-  TestChecksum;
-  end_of_file
+Grammar {
+
+let EI_NIDENT = 16
+let EI_CLASS_NONE = 0
+let EI_CLASS_32   = 1
+let EI_CLASS_64   = 2
+let EI_DATA_NONE = 0
+let EI_DATA_2LSB = 1
+let EI_DATA_2MSB = 2
+let ET_NONE = 0
+let ET_REL  = 1
+let ET_EXEC = 2
+let ET_DYN  = 3
+let ET_CORE = 4
+
+ELF_Ident = {
+    magic      : UINT8[4]   -- 0x7F 'E' 'L' 'F'
+    class      : UINT8
+    data       : UINT8
+    version    : UINT8
+    osabi      : UINT8
+    abiversion : UINT8
+    pad        : UINT8[7]
 }
 
-def ELF = {
-  ELFHeader;
-  ProgramHeaders;
-  §SectionHeaders;
-  §PayloadData
+Elf32_Ehdr = {
+    ident      : ELF_Ident
+    type       : UINT16
+    machine    : UINT16
+    version    : UINT32
+    entry      : UINT32
+    phoff      : UINT32
+    shoff      : UINT32
+    flags      : UINT32
+    ehsize     : UINT16
+    phentsize  : UINT16
+    phnum      : UINT16
+    shentsize  : UINT16
+    shnum      : UINT16
+    shstrndx   : UINT16
 }
 
-def ELFHeader = {
-  magic       = Array 4 (Byte value = [0x7f, 'E', 'L', 'F']);
-  class       = Byte value = 2;  -- 64-bit
-  endianness  = Byte value = 1;  -- little endian
-  version     = Byte value = 1;  -- version 1
-  osabi       = Byte value = 0;  -- System V
-  abiversion  = Byte value = 0;
-  pad         = Array 7 (Byte value = 0);
-  type        = UInt16LE value = 2;  -- executable
-  machine     = UInt16LE value = 0x3E;  -- AMD x86-64
-  version2    = UInt32LE value = 1;
-  entry       = UInt64LE;
-  phoff       = UInt64LE;
-  shoff       = UInt64LE;
-  flags       = UInt32LE value = 0;
-  ehsize      = UInt16LE;
-  phentsize   = UInt16LE;
-  phnum       = UInt16LE;
-  shentsize   = UInt16LE;
-  shnum       = UInt16LE;
-  shstrndx    = UInt16LE
+Elf64_Ehdr = {
+    ident      : ELF_Ident
+    type       : UINT16
+    machine    : UINT16
+    version    : UINT32
+    entry      : UINT64
+    phoff      : UINT64
+    shoff      : UINT64
+    flags      : UINT32
+    ehsize     : UINT16
+    phentsize  : UINT16
+    phnum      : UINT16
+    shentsize  : UINT16
+    shnum      : UINT16
+    shstrndx   : UINT16
 }
 
-def ProgramHeaders = {
-  pheaders = Array @ehsize (@phnum) ProgramHeader
+Elf32_Phdr = {
+    type       : UINT32
+    offset     : UINT32
+    vaddr      : UINT32
+    paddr      : UINT32
+    filesz     : UINT32
+    memsz      : UINT32
+    flags      : UINT32
+    align      : UINT32
 }
 
-def ProgramHeader = {
-  ptype    = UInt32LE;
-  flags    = UInt32LE;
-  offset   = UInt64LE;
-  vaddr    = UInt64LE;
-  paddr    = UInt64LE;
-  filesz   = UInt64LE;
-  memsz    = UInt64LE;
-  align    = UInt64LE
+Elf64_Phdr = {
+    type       : UINT32
+    flags      : UINT32
+    offset     : UINT64
+    vaddr      : UINT64
+    paddr      : UINT64
+    filesz     : UINT64
+    memsz      : UINT64
+    align      : UINT64
 }
 
-def SectionHeaders = {
-  sheaders = Array @shentsize (@shnum) SectionHeader
+Elf32_Shdr = {
+    name       : UINT32
+    type       : UINT32
+    flags      : UINT32
+    addr       : UINT32
+    offset     : UINT32
+    size       : UINT32
+    link       : UINT32
+    info       : UINT32
+    addralign  : UINT32
+    entsize    : UINT32
 }
 
-def SectionHeader = {
-  name      = UInt32LE;
-  type      = UInt32LE;
-  flags     = UInt64LE;
-  addr      = UInt64LE;
-  offset    = UInt64LE;
-  size      = UInt64LE;
-  link      = UInt32LE;
-  info      = UInt32LE;
-  addralign = UInt64LE;
-  entsize   = UInt64LE
+Elf64_Shdr = {
+    name       : UINT32
+    type       : UINT32
+    flags      : UINT64
+    addr       : UINT64
+    offset     : UINT64
+    size       : UINT64
+    link       : UINT32
+    info       : UINT32
+    addralign  : UINT64
+    entsize    : UINT64
 }
 
-def PayloadData = {
-  data = Many Byte Until end_of_file
+ELF = {
+    ident : ELF_Ident
+    switch (ident.class) {
+        case EI_CLASS_32:
+            header32 : Elf32_Ehdr
+            pheaders : Elf32_Phdr[header32.phnum]
+            sheaders : Elf32_Shdr[header32.shnum]
+        case EI_CLASS_64:
+            header64 : Elf64_Ehdr
+            pheaders : Elf64_Phdr[header64.phnum]
+            sheaders : Elf64_Shdr[header64.shnum]
+    }
 }
 
-def TestChecksum = {
-  computed_sum = UInt32LE value = 0;
-  true
+Main = ELF
 }

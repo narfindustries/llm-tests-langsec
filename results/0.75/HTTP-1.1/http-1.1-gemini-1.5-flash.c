@@ -1,69 +1,86 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Structure to represent a Gemini document
-typedef struct {
-    char *title;
-    char *content;
-} GeminiDoc;
-
-
-// Function to parse a Gemini document (simplified)
-GeminiDoc* parseGemini(const char *input) {
-    GeminiDoc *doc = malloc(sizeof(GeminiDoc));
-    if (doc == NULL) return NULL;
-
-    doc->title = strdup("Default Title"); //Simplified title handling
-    doc->content = strdup(input); //Simplified content handling
-
-    return doc;
-
+//Corrected helper function to parse HTTP-date (still simplified)
+HParser http_date_parser() {
+  return h_string("Date:"); //Example - needs a real date parser
 }
 
-
-// Function to generate HTTP response (simplified)
-char* generateHTTP(const GeminiDoc *doc) {
-    char *response = malloc(1024); // Adjust size as needed
-    if (response == NULL) return NULL;
-
-    sprintf(response, "HTTP/1.1 200 OK\r\nContent-Type: text/gemini\r\n\r\n# %s\n%s", doc->title, doc->content);
-
-
-    return response;
+//Corrected helper function to parse header fields
+HParser header_field_parser(){
+    return h_until(h_char(':'), h_not(h_char('\r')));
 }
 
-int main() {
-    // Example Gemini document
-    const char *geminiInput = "# Example Gemini Document\nThis is some example content.";
+//Corrected helper function to parse header values
+HParser header_value_parser(){
+    return h_until(h_string("\r\n"), h_any_char());
+}
 
+//Corrected Helper function to parse a header field-value pair
+HParser header_field_value_parser() {
+    return h_seq(header_field_parser(),
+                  h_char(':'),
+                  h_whitespace(),
+                  header_value_parser(),
+                  h_map(h_tuple(h_first, h_second), h_pair));
+}
 
-    // Parse the Gemini document
-    GeminiDoc *geminiDoc = parseGemini(geminiInput);
-    if (geminiDoc == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
+//Corrected Parser for HTTP headers
+HParser headers_parser() {
+    return h_many(&header_field_value_parser());
+}
+
+//Corrected Simplified HTTP message parser (still incomplete)
+HParser http_message_parser() {
+    return h_seq(h_string("HTTP/1.1"),
+                  h_whitespace(),
+                  h_int(),
+                  h_whitespace(),
+                  h_string("OK"), //Simplified status line
+                  h_whitespace(),
+                  h_string("\r\n"),
+                  headers_parser(),
+                  h_string("\r\n"),
+                  h_end());
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
 
-    // Generate the HTTP response
-    char *httpOutput = generateHTTP(geminiDoc);
-    if (httpOutput == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        free(geminiDoc->title);
-        free(geminiDoc->content);
-        free(geminiDoc);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    //Simulate writing to output (replace with actual file writing if needed).
-    printf("%s\n", httpOutput);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
+    unsigned char *buffer = (unsigned char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
-    // Free allocated memory
-    free(geminiDoc->title);
-    free(geminiDoc->content);
-    free(geminiDoc);
-    free(httpOutput);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
+    HParseResult result = h_parse(&http_message_parser(), buffer, fsize);
+
+    if (result.status == H_PARSE_SUCCESS) {
+        printf("HTTP message parsed successfully!\n");
+        //Process the parsed result (result.value) - Add your logic here
+    } else {
+        fprintf(stderr, "HTTP message parsing failed at position %zu: %s\n", result.position, result.error);
+    }
+
+    free(buffer);
     return 0;
 }

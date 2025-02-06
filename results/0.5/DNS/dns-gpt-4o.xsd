@@ -1,76 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/dns"
            xmlns:tns="http://example.com/dns"
            elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat" />
-    </xs:appinfo>
-  </xs:annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="implicit"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <dfdl:format name="GeneralFormat"
-               byteOrder="bigEndian"
-               lengthKind="explicit"
-               encoding="utf-8"
-               alignmentUnits="bytes"
-               />
+    <xs:element name="DNSMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Header" type="tns:HeaderType"/>
+                <xs:element name="Question" type="tns:QuestionType" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:occursCountKind value="expression"/>
+                            <dfdl:occursCount expression="{Header/QDCOUNT}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Answer" type="tns:ResourceRecordType" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:occursCountKind value="expression"/>
+                            <dfdl:occursCount expression="{Header/ANCOUNT}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Authority" type="tns:ResourceRecordType" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:occursCountKind value="expression"/>
+                            <dfdl:occursCount expression="{Header/NSCOUNT}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Additional" type="tns:ResourceRecordType" maxOccurs="unbounded">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:occursCountKind value="expression"/>
+                            <dfdl:occursCount expression="{Header/ARCOUNT}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:element name="DNSMessage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="TransactionID" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Flags" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Questions" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="AnswerRRs" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="AuthorityRRs" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="AdditionalRRs" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:property name="lengthKind" value="explicit" />
-              <dfdl:property name="length" value="2" />
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <!-- Add additional elements as needed for the DNS message structure -->
-      </xs:sequence>
+    <xs:complexType name="HeaderType">
+        <xs:sequence>
+            <xs:element name="ID" type="xs:unsignedShort"/>
+            <xs:element name="Flags" type="tns:FlagsType"/>
+            <xs:element name="QDCOUNT" type="xs:unsignedShort"/>
+            <xs:element name="ANCOUNT" type="xs:unsignedShort"/>
+            <xs:element name="NSCOUNT" type="xs:unsignedShort"/>
+            <xs:element name="ARCOUNT" type="xs:unsignedShort"/>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
+
+    <xs:complexType name="FlagsType">
+        <xs:sequence>
+            <xs:element name="QR" type="xs:boolean"/>
+            <xs:element name="Opcode" type="xs:unsignedByte"/>
+            <xs:element name="AA" type="xs:boolean"/>
+            <xs:element name="TC" type="xs:boolean"/>
+            <xs:element name="RD" type="xs:boolean"/>
+            <xs:element name="RA" type="xs:boolean"/>
+            <xs:element name="Z" type="xs:unsignedByte"/>
+            <xs:element name="AD" type="xs:boolean"/>
+            <xs:element name="CD" type="xs:boolean"/>
+            <xs:element name="Rcode" type="xs:unsignedByte"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="QuestionType">
+        <xs:sequence>
+            <xs:element name="QNAME" type="tns:DomainNameType"/>
+            <xs:element name="QTYPE" type="xs:unsignedShort"/>
+            <xs:element name="QCLASS" type="xs:unsignedShort"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ResourceRecordType">
+        <xs:sequence>
+            <xs:element name="NAME" type="tns:DomainNameType"/>
+            <xs:element name="TYPE" type="xs:unsignedShort"/>
+            <xs:element name="CLASS" type="xs:unsignedShort"/>
+            <xs:element name="TTL" type="xs:unsignedInt"/>
+            <xs:element name="RDLENGTH" type="xs:unsignedShort"/>
+            <xs:element name="RDATA" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:lengthKind value="explicit"/>
+                        <dfdl:length expression="{../RDLENGTH}"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="DomainNameType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}"/>
+        </xs:restriction>
+    </xs:simpleType>
 
 </xs:schema>

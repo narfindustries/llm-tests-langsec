@@ -1,0 +1,94 @@
+module ZIP;
+
+public type LocalFileHeader = unit {
+    signature:      uint32 &convert=0x04034b50;
+    version_needed: uint16;
+    bit_flag:       uint16;
+    compression:    uint16;
+    last_mod_time:  uint16;
+    last_mod_date:  uint16;
+    crc32:          uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_len:  uint16;
+    extra_field_len: uint16;
+    file_name:      bytes &size=self.file_name_len;
+    extra_field:    bytes &size=self.extra_field_len;
+};
+
+public type CentralDirectoryFileHeader = unit {
+    signature:      uint32 &convert=0x02014b50;
+    version_made_by: uint16;
+    version_needed: uint16;
+    bit_flag:       uint16;
+    compression:    uint16;
+    last_mod_time:  uint16;
+    last_mod_date:  uint16;
+    crc32:          uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    file_name_len:  uint16;
+    extra_field_len: uint16;
+    file_comment_len: uint16;
+    disk_num_start: uint16;
+    internal_attrs: uint16;
+    external_attrs: uint32;
+    local_header_offset: uint32;
+    file_name:      bytes &size=self.file_name_len;
+    extra_field:    bytes &size=self.extra_field_len;
+    file_comment:   bytes &size=self.file_comment_len;
+};
+
+public type EndOfCentralDirectoryRecord = unit {
+    signature:      uint32 &convert=0x06054b50;
+    disk_num:       uint16;
+    cd_disk_num:    uint16;
+    cd_records_on_disk: uint16;
+    total_cd_records: uint16;
+    cd_size:        uint32;
+    cd_offset:      uint32;
+    comment_len:    uint16;
+    comment:        bytes &size=self.comment_len;
+};
+
+public type DataDescriptor = unit {
+    signature:      uint32 &convert=0x08074b50;
+    crc32:          uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+};
+
+public type ExtraField = unit {
+    header_id:      uint16;
+    data_size:      uint16;
+    data:           bytes &size=self.data_size;
+};
+
+public type ZIP64EndOfCentralDirectoryRecord = unit {
+    signature:      uint32 &convert=0x06064b50;
+    size:           uint64;
+    version_made_by: uint16;
+    version_needed: uint16;
+    disk_num:       uint32;
+    cd_disk_num:    uint32;
+    cd_records_on_disk: uint64;
+    total_cd_records: uint64;
+    cd_size:        uint64;
+    cd_offset:      uint64;
+};
+
+public type ZIP64EndOfCentralDirectoryLocator = unit {
+    signature:      uint32 &convert=0x07064b50;
+    disk_num:       uint32;
+    cd_offset:      uint64;
+    total_disks:    uint32;
+};
+
+public type ZIPFile = unit {
+    local_file_headers: LocalFileHeader[];
+    central_directory: CentralDirectoryFileHeader[];
+    eocd:            EndOfCentralDirectoryRecord;
+    data_descriptors: DataDescriptor[];
+    zip64_eocd:      ZIP64EndOfCentralDirectoryRecord;
+    zip64_locator:   ZIP64EndOfCentralDirectoryLocator;
+};

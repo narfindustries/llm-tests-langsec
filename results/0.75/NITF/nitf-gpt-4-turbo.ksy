@@ -1,15 +1,15 @@
 meta:
   id: nitf
-  endian: be
-  title: National Imagery Transmission Format
+  title: National Imagery Transmission Format (NITF)
   file-extension: nitf
-  license: CC0-1.0
-  ks-version: 0.9
+  endian: be
+  xref:
+    wikidata: Q6953607
 
 doc: |
-  The National Imagery Transmission Format (NITF) is a standard for formatting digital
-  imagery and imagery-related products and exchanging them among members of the
-  Intelligence Community (IC) as defined by the United States.
+  The NITF (National Imagery Transmission Format) standard is designed to
+  handle formatted image and associated textual and other data. NITF is
+  used by the US government and military for transmitting digital images.
 
 seq:
   - id: header
@@ -18,172 +18,357 @@ seq:
   - id: image_segments
     type: image_segment
     repeat: expr
-    repeat-expr: header.num_image_segments
+    repeat-expr: header.numi
 
   - id: graphics_segments
     type: graphics_segment
     repeat: expr
-    repeat-expr: header.num_graphics_segments
+    repeat-expr: header.numg
 
   - id: text_segments
     type: text_segment
     repeat: expr
-    repeat-expr: header.num_text_segments
+    repeat-expr: header.numt
+
+  - id: data_extension_segments
+    type: data_extension_segment
+    repeat: expr
+    repeat-expr: header.numdes
+
+  - id: reserved_extension_segments
+    type: reserved_extension_segment
+    repeat: expr
+    repeat-expr: header.numres
 
 types:
   file_header:
     seq:
       - id: file_profile_name
+        type: str
         size: 4
-        type: str
         encoding: ASCII
-
       - id: file_version
-        size: 5
         type: str
+        size: 5
         encoding: ASCII
-
-      - id: complexity_level
+      - id: clevel
         type: str
         size: 2
         encoding: ASCII
-
-      - id: system_type
+      - id: stype
         type: str
         size: 4
         encoding: ASCII
-
-      - id: origin_station_id
+      - id: osta_id
         type: str
         size: 10
         encoding: ASCII
-
-      - id: file_date_time
+      - id: fdt
         type: str
         size: 14
         encoding: ASCII
-
-      - id: file_title
+      - id: ftitle
         type: str
         size: 80
         encoding: ASCII
-
-      - id: file_security
-        type: security_marking
-
-      - id: num_image_segments
-        type: u2
-
-      - id: num_graphics_segments
-        type: u2
-
-      - id: num_text_segments
-        type: u2
-
-  security_marking:
-    seq:
-      - id: classification
+      - id: fsclas
         type: str
         size: 1
         encoding: ASCII
-
-      - id: classification_system
+      - id: fsclas_sys
         type: str
         size: 2
         encoding: ASCII
-
-      - id: codewords
+      - id: fscode
         type: str
         size: 11
         encoding: ASCII
-
-      - id: control_and_handling
+      - id: fsctlh
         type: str
         size: 2
         encoding: ASCII
-
-      - id: releaseability
+      - id: fsrel
         type: str
         size: 20
         encoding: ASCII
-
-      - id: declass_type
+      - id: fsdctp
         type: str
         size: 2
         encoding: ASCII
-
-      - id: declass_date
+      - id: fsdcdt
         type: str
         size: 8
         encoding: ASCII
-
-      - id: declass_exemption
+      - id: fsdcxm
         type: str
         size: 4
         encoding: ASCII
-
-      - id: downgrade
+      - id: fsdg
         type: str
         size: 1
         encoding: ASCII
-
-      - id: downgrade_date
+      - id: fsdgdt
         type: str
         size: 8
         encoding: ASCII
+      - id: fscltx
+        type: str
+        size: 43
+        encoding: ASCII
+      - id: fscatp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: fscaut
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fscrsn
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: fssrdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: fsctln
+        type: str
+        size: 15
+        encoding: ASCII
+      - id: fscop
+        type: str
+        size: 5
+        encoding: ASCII
+      - id: fscpys
+        type: str
+        size: 5
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: fbkgc
+        type: str
+        size: 3
+        encoding: ASCII
+      - id: oname
+        type: str
+        size: 27
+        encoding: ASCII
+      - id: ophone
+        type: str
+        size: 18
+        encoding: ASCII
+      - id: numi
+        type: u2
+      - id: linfo
+        type: length_info
+        repeat: expr
+        repeat-expr: numi
+      - id: numg
+        type: u1
+      - id: numx
+        type: u1
+      - id: numt
+        type: u1
+      - id: numdes
+        type: u1
+      - id: numres
+        type: u1
+      - id: udidl
+        type: u4
+      - id: udid
+        size: udidl
+      - id: xhdl
+        type: u4
+      - id: xhd
+        size: xhdl
+
+  length_info:
+    seq:
+      - id: length_image_segment
+        type: u4
 
   image_segment:
     seq:
-      - id: image_sub_header
-        type: image_sub_header
+      - id: image_subheader
+        type: image_subheader
+      - id: image_data_field
+        size-eos: true
 
-  image_sub_header:
+  image_subheader:
     seq:
-      - id: image_id
+      - id: iid1
         type: str
         size: 10
         encoding: ASCII
-
-      - id: image_date_time
+      - id: idatim
         type: str
         size: 14
         encoding: ASCII
-
-      - id: target_id
+      - id: tgtid
         type: str
         size: 17
         encoding: ASCII
-
-      - id: image_title
+      - id: iid2
         type: str
         size: 80
+        encoding: ASCII
+      - id: isclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: isclas_sys
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: iscode
+        type: str
+        size: 11
+        encoding: ASCII
+      - id: isctlh
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: isrel
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: isdctp
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: isdcdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: isdcxm
+        type: str
+        size: 4
+        encoding: ASCII
+      - id: isdg
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: isdgdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: iscltx
+        type: str
+        size: 43
+        encoding: ASCII
+      - id: iscatp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: iscaut
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: iscrsn
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: issrdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: isctln
+        type: str
+        size: 15
+        encoding: ASCII
+      - id: isorce
+        type: str
+        size: 42
         encoding: ASCII
 
   graphics_segment:
     seq:
-      - id: graphic_sub_header
-        type: graphic_sub_header
+      - id: graphic_subheader
+        type: graphic_subheader
+      - id: graphic_data_field
+        size-eos: true
 
-  graphic_sub_header:
+  graphic_subheader:
     seq:
-      - id: graphic_id
+      - id: sid
+        type: str
+        size: 10
+        encoding: ASCII
+      - id: sname
         type: str
         size: 20
+        encoding: ASCII
+      - id: sclass
+        type: str
+        size: 1
         encoding: ASCII
 
   text_segment:
     seq:
-      - id: text_sub_header
-        type: text_sub_header
+      - id: text_subheader
+        type: text_subheader
+      - id: text_data_field
+        size-eos: true
 
-  text_sub_header:
+  text_subheader:
     seq:
-      - id: text_id
+      - id: textid
         type: str
         size: 7
         encoding: ASCII
-
-      - id: text_date_time
+      - id: txtalvl
+        type: u2
+      - id: txtdate
         type: str
         size: 14
+        encoding: ASCII
+      - id: txttitl
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: txtcls
+        type: str
+        size: 1
+        encoding: ASCII
+
+  data_extension_segment:
+    seq:
+      - id: des_subheader
+        type: des_subheader
+      - id: des_data_field
+        size-eos: true
+
+  des_subheader:
+    seq:
+      - id: desid
+        type: str
+        size: 25
+        encoding: ASCII
+      - id: desver
+        type: u1
+      - id: dessclas
+        type: str
+        size: 1
+        encoding: ASCII
+
+  reserved_extension_segment:
+    seq:
+      - id: res_subheader
+        type: res_subheader
+      - id: res_data_field
+        size-eos: true
+
+  res_subheader:
+    seq:
+      - id: res_type
+        type: str
+        size: 25
+        encoding: ASCII
+      - id: res_version
+        type: u1
+      - id: ressclas
+        type: str
+        size: 1
         encoding: ASCII

@@ -1,14 +1,15 @@
 meta:
   id: modbus
-  title: Modbus Protocol Specification
+  title: Modbus Protocol
   file-extension: modbus
   endian: be
 
 seq:
   - id: mbap_header
     type: mbap_header
+    if: is_tcp_encapsulation
   - id: pdu
-    type: pdu
+    type: protocol_data_unit
 
 types:
   mbap_header:
@@ -22,7 +23,7 @@ types:
       - id: unit_id
         type: u1
 
-  pdu:
+  protocol_data_unit:
     seq:
       - id: function_code
         type: u1
@@ -31,7 +32,7 @@ types:
         type:
           switch-on: function_code
           cases:
-            'function_codes::read_coils': read_discrete_inputs_request
+            'function_codes::read_coils': read_coils_request
             'function_codes::read_discrete_inputs': read_discrete_inputs_request
             'function_codes::read_holding_registers': read_holding_registers_request
             'function_codes::read_input_registers': read_input_registers_request
@@ -39,34 +40,43 @@ types:
             'function_codes::write_single_register': write_single_register_request
             'function_codes::write_multiple_coils': write_multiple_coils_request
             'function_codes::write_multiple_registers': write_multiple_registers_request
-            _: generic_response
+            'function_codes::mask_write_register': mask_write_register_request
+            'function_codes::read_write_multiple_registers': read_write_multiple_registers_request
+            '_': exception_response
+
+  read_coils_request:
+    seq:
+      - id: starting_address
+        type: u2
+      - id: quantity_of_coils
+        type: u2
 
   read_discrete_inputs_request:
     seq:
       - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_inputs
         type: u2
 
   read_holding_registers_request:
     seq:
       - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_registers
         type: u2
 
   read_input_registers_request:
     seq:
       - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_registers
         type: u2
 
   write_single_coil_request:
     seq:
-      - id: output_address
+      - id: coil_address
         type: u2
-      - id: output_value
+      - id: coil_value
         type: u2
 
   write_single_register_request:
@@ -80,7 +90,7 @@ types:
     seq:
       - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_coils
         type: u2
       - id: byte_count
         type: u1
@@ -93,20 +103,46 @@ types:
     seq:
       - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_registers
         type: u2
       - id: byte_count
         type: u1
       - id: register_values
         type: u2
         repeat: expr
-        repeat-expr: quantity
+        repeat-expr: quantity_of_registers
 
-  generic_response:
+  mask_write_register_request:
     seq:
-      - id: raw_data
+      - id: reference_address
+        type: u2
+      - id: and_mask
+        type: u2
+      - id: or_mask
+        type: u2
+
+  read_write_multiple_registers_request:
+    seq:
+      - id: read_starting_address
+        type: u2
+      - id: quantity_to_read
+        type: u2
+      - id: write_starting_address
+        type: u2
+      - id: quantity_to_write
+        type: u2
+      - id: write_byte_count
         type: u1
-        repeat: eos
+      - id: write_register_values
+        type: u2
+        repeat: expr
+        repeat-expr: quantity_to_write
+
+  exception_response:
+    seq:
+      - id: exception_code
+        type: u1
+        enum: exception_codes
 
 enums:
   function_codes:
@@ -118,3 +154,20 @@ enums:
     6: write_single_register
     15: write_multiple_coils
     16: write_multiple_registers
+    22: mask_write_register
+    23: read_write_multiple_registers
+
+  exception_codes:
+    1: illegal_function
+    2: illegal_data_address
+    3: illegal_data_value
+    4: slave_device_failure
+    5: acknowledge
+    6: slave_device_busy
+    7: negative_acknowledge
+    8: memory_parity_error
+
+instances:
+  is_tcp_encapsulation:
+    value: true
+    doc: Determines if the Modbus frame is encapsulated in TCP

@@ -1,25 +1,26 @@
-module Main where
+data NITF = NITF { fileHeader: FileHeader, segments: [Segment] }
 
-import Daedalus.AST
-import Daedalus.PP
+data FileHeader = FileHeader {
+  signature: String,
+  version: String,
+  uniqueFileIdentifier: String,
+  offsetToNextSegment: Integer,
+  optionalFields: [(String, FieldValue)]
+}
 
---  I cannot provide a corrected Daedalus specification without knowing the 
---  original specification that produced the error. The error message only 
---  indicates a compilation failure, not the nature of the problem within the 
---  Daedalus code itself.  The "nitf-gemini-1.5-flash.ddl" file contents are crucial.
+data Segment = ImageSegment { header: ImageSegmentHeader, data: ImageData } |
+              TextSegment { header: TextSegmentHeader, data: TextData } |
+              GenericSegment { header: GenericSegmentHeader, data: GenericData } |
+              UnknownSegment { header: [Byte], data: [Byte] }
 
--- To help me generate a correct specification, please provide:
 
--- 1. The original `nitf-gemini-1.5-flash.ddl` file contents.
--- 2.  A description of what the Daedalus code is supposed to do.  What data structure 
---     is it supposed to represent? What are the expected inputs and outputs?
--- 3. The intended purpose of the compilation step (what is the target language/format?).
+data ImageSegmentHeader = ImageSegmentHeader { optionalFields: [(String, FieldValue)] }
+data ImageData = ImageData { data: [Byte] }
 
---  This placeholder demonstrates a simple Daedalus program.  Replace this with your actual code.
+data TextSegmentHeader = TextSegmentHeader { optionalFields: [(String, FieldValue)] }
+data TextData = TextData { data: String }
 
-type MyType = { a :: Integer, b :: String }
+data GenericSegmentHeader = GenericSegmentHeader { optionalFields: [(String, FieldValue)] }
+data GenericData = GenericData { data: [Byte] }
 
-main :: Daedalus.AST.Program
-main = do
-  let x = MyType 123 "hello"
-  return x
+data FieldValue = StringValue String | IntegerValue Integer | ByteValue Byte | BooleanValue Boolean | FloatValue Float | DoubleValue Double

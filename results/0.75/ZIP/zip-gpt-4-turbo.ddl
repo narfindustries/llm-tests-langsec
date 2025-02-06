@@ -1,80 +1,83 @@
--- Daedalus .ddl file for parsing a ZIP file format
+type u16le = U16
+type u32le = U32
 
-type U4 = UInt 32
-
-type U2 = UInt 16
-
-type U1 = UInt 8
-
-type EOCD = struct {
-  disk_num           : U2;
-  start_disk_num     : U2;
-  num_records        : U2;
-  total_records      : U2;
-  central_dir_size   : U4;
-  central_dir_offset : U4;
-  comment_len        : U2;
-  comment            : Bytes .Size(comment_len);
+struct ZipDateTime {
+    U16 year: 7,
+    U16 month: 4,
+    U16 day: 5,
+    U16 hour: 5,
+    U16 minute: 6,
+    U16 second: 5
 }
 
-type CentralDirEntry = struct {
-  version_made       : U2;
-  version_needed     : U2;
-  flag               : U2;
-  compression        : U2;
-  mod_time           : U2;
-  mod_date           : U2;
-  crc32              : U4;
-  compressed_size    : U4;
-  uncompressed_size  : U4;
-  filename_len       : U2;
-  extra_field_len    : U2;
-  comment_len        : U2;
-  disk_start         : U2;
-  internal_attr      : U2;
-  external_attr      : U4;
-  local_header_offset: U4;
-  filename           : Bytes .Size(filename_len);
-  extra_field        : Bytes .Size(extra_field_len);
-  comment            : Bytes .Size(comment_len);
+struct ZipGeneralPurposeBitFlag {
+    U16 encrypted: 1,
+    U16 compressionOption1: 1,
+    U16 compressionOption2: 1,
+    U16 dataDescriptor: 1,
+    U16 enhancedDeflation: 1,
+    U16 compressedPatchedData: 1,
+    U16 strongEncryption: 1,
+    U16 unused: 4,
+    U16 langEncoding: 1,
+    U16 reserved1: 1,
+    U16 maskHeaderValues: 1,
+    U16 reserved2: 2
 }
 
-type LocalFileHeader = struct {
-  version_needed     : U2;
-  flag               : U2;
-  compression        : U2;
-  mod_time           : U2;
-  mod_date           : U2;
-  crc32              : U4;
-  compressed_size    : U4;
-  uncompressed_size  : U4;
-  filename_len       : U2;
-  extra_field_len    : U2;
-  filename           : Bytes .Size(filename_len);
-  extra_field        : Bytes .Size(extra_field_len);
-  data               : Bytes .Size(compressed_size);
+struct ZipLocalFileHeader {
+    U32 signature,
+    u16le versionNeededToExtract,
+    ZipGeneralPurposeBitFlag generalPurposeBitFlag,
+    u16le compressionMethod,
+    u16le lastModFileTime,
+    u16le lastModFileDate,
+    u32le crc32,
+    u32le compressedSize,
+    u32le uncompressedSize,
+    u16le fileNameLength,
+    u16le extraFieldLength,
+    U8[fileNameLength] fileName,
+    U8[extraFieldLength] extraField
 }
 
-type ZIPFile = struct {
-  files              : [LocalFileHeader];
-  _                  : Seek (getCentralDirOffset());
-  central_dir        : [CentralDirEntry] .Until (@.offset == getEOCDOffset());
-  eocd               : EOCD;
+struct ZipCentralDirectoryFileHeader {
+    U32 signature,
+    u16le versionMadeBy,
+    u16le versionNeededToExtract,
+    ZipGeneralPurposeBitFlag generalPurposeBitFlag,
+    u16le compressionMethod,
+    u16le lastModFileTime,
+    u16le lastModFileDate,
+    u32le crc32,
+    u32le compressedSize,
+    u32le uncompressedSize,
+    u16le fileNameLength,
+    u16le extraFieldLength,
+    u16le fileCommentLength,
+    u16le diskNumberStart,
+    u16le internalFileAttributes,
+    u32le externalFileAttributes,
+    u32le offsetOfLocalHeader,
+    U8[fileNameLength] fileName,
+    U8[extraFieldLength] extraField,
+    U8[fileCommentLength] fileComment
 }
 
-function getCentralDirOffset(): [U1] {
-  Seek(-22, SeekEnd);
-  FindEOCD();
-  return u4;
+struct ZipEndOfCentralDirectoryRecord {
+    U32 signature,
+    u16le numberOfThisDisk,
+    u16le diskWhereCentralDirectoryStarts,
+    u16le numberOfCentralDirectoryRecordsOnThisDisk,
+    u16le totalNumberOfCentralDirectoryRecords,
+    u32le sizeOfCentralDirectory,
+    u32le offsetOfStartOfCentralDirectory,
+    u16le zipFileCommentLength,
+    U8[zipFileCommentLength] zipFileComment
 }
 
-function FindEOCD():[U1] {
-  if Peek .Size(4) != [0x50, 0x4b, 0x05, 0x06] {
-    Seek(-5, SeekCur);
-    FindEOCD();
-  }
-}
-
-function getEOCDOffset(): U4 {
-  return current_offset - 22;
+struct ZipFile {
+    [ZipLocalFileHeader] localFileHeaders,
+    [ZipCentralDirectoryFileHeader] centralDirectoryHeaders,
+    ZipEndOfCentralDirectoryRecord endOfCentralDirectory
 }

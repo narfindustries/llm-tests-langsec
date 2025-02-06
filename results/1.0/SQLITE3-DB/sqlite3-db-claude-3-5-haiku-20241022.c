@@ -1,163 +1,147 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-#define MAX_NAME_LENGTH 100
-#define MAX_RECORDS 1000
+typedef enum {
+    SQLITE_VERSION_3 = 0
+} sqlite_magic_version;
+
+typedef enum {
+    LEGACY_WRITE = 1,
+    WAL_WRITE = 2
+} sqlite_write_version;
+
+typedef enum {
+    LEGACY_READ = 1,
+    WAL_READ = 2
+} sqlite_read_version;
+
+typedef enum {
+    INTERIOR_INDEX = 0x02,
+    INTERIOR_TABLE = 0x05,
+    LEAF_INDEX = 0x0A,
+    LEAF_TABLE = 0x0D
+} sqlite_page_type;
+
+typedef enum {
+    UTF8 = 1,
+    UTF16LE = 2,
+    UTF16BE = 3
+} sqlite_text_encoding;
 
 typedef struct {
-    int id;
-    char name[MAX_NAME_LENGTH];
-    double salary;
-} Employee;
+    uint8_t magic_header[16];
+    uint16_t page_size;
+    sqlite_write_version write_version;
+    sqlite_read_version read_version;
+    uint8_t unused_space;
+    uint8_t max_embedded_payload_fraction;
+    uint8_t min_embedded_payload_fraction;
+    uint8_t leaf_payload_fraction;
+    uint32_t file_change_counter;
+    uint32_t database_size_pages;
+    uint32_t first_freelist_trunk_page;
+    uint32_t total_freelist_pages;
+    uint32_t schema_cookie;
+    uint32_t schema_format;
+    uint32_t default_page_cache_size;
+    uint32_t largest_root_page;
+    sqlite_text_encoding text_encoding;
+    uint32_t user_version;
+    uint32_t incremental_vacuum_mode;
+    uint32_t application_id;
+    uint8_t reserved_space[20];
+} sqlite_file_header;
 
-static HParser* employee_parser(void);
-static HParseResult* employee_action(void* parsed, void* user_data);
-static int sqlite_callback(void* data, int argc, char** argv, char** col_names);
-static int save_to_sqlite(Employee* employees, int num_employees);
-static int read_from_sqlite(Employee* employees);
+typedef struct {
+    sqlite_page_type page_type;
+    uint16_t first_freeblock_offset;
+    uint16_t number_of_cells;
+    uint16_t cell_content_area_start;
+    uint8_t fragmented_free_bytes;
+    uint32_t right_child_page;
+} sqlite_page_header;
 
-static HParser* employee_parser() {
-    HParser* id_parser = h_int(10);
-    HParser* name_parser = h_many1(h_ch_range('a', 'z'));
-    HParser* salary_parser = h_double();
+static HParser* sqlite_magic_parser() {
+    const char* magic_str = "SQLite format 3\0";
+    return h_literal_str(magic_str, 16);
+}
 
-    HParser* employee_struct = h_sequence(
-        id_parser,
-        h_whitespace(h_ch(' ')),
-        h_whitespace(name_parser),
-        h_whitespace(h_ch(' ')),
-        salary_parser,
+static HParser* sqlite_file_header_parser() {
+    return h_sequence(
+        sqlite_magic_parser(),
+        h_uint16(),
+        h_uint8(),
+        h_uint8(),
+        h_uint8(),
+        h_uint8(),
+        h_uint8(),
+        h_uint8(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_uint32(),
+        h_repeat_n(h_uint8(), 20),
         NULL
     );
-
-    return h_action(employee_struct, employee_action, NULL);
 }
 
-static HParseResult* employee_action(void* parsed, void* user_data) {
-    HArrayList* list = (HArrayList*)parsed;
-    Employee* emp = malloc(sizeof(Employee));
-
-    emp->id = *(int*)h_arr_get(list, 0);
-    strncpy(emp->name, h_arr_get(list, 2), MAX_NAME_LENGTH - 1);
-    emp->salary = *(double*)h_arr_get(list, 4);
-
-    return h_make_result(NULL, emp);
-}
-
-static int sqlite_callback(void* data, int argc, char** argv, char** col_names) {
-    Employee* employees = (Employee*)data;
-    static int count = 0;
-
-    if (count < MAX_RECORDS) {
-        employees[count].id = atoi(argv[0]);
-        strncpy(employees[count].name, argv[1], MAX_NAME_LENGTH - 1);
-        employees[count].salary = atof(argv[2]);
-        count++;
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_file>\n", argv[0]);
+        return 1;
     }
 
-    return 0;
-}
-
-static int save_to_sqlite(Employee* employees, int num_employees) {
-    sqlite3* db;
-    char* err_msg = 0;
-    int rc = sqlite3_open("employees.db", &db);
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return rc;
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
     }
 
-    const char* create_table = 
-        "CREATE TABLE IF NOT EXISTS employees ("
-        "id INTEGER PRIMARY KEY, "
-        "name TEXT, "
-        "salary REAL);";
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    rc = sqlite3_exec(db, create_table, 0, 0, &err_msg);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        return rc;
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
     }
 
-    for (int i = 0; i < num_employees; i++) {
-        char sql[256];
-        snprintf(sql, sizeof(sql), 
-            "INSERT INTO employees (id, name, salary) VALUES (%d, '%s', %f);", 
-            employees[i].id, employees[i].name, employees[i].salary);
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fclose(file);
 
-        rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
-        if (rc != SQLITE_OK) {
-            fprintf(stderr, "SQL error: %s\n", err_msg);
-            sqlite3_free(err_msg);
-            sqlite3_close(db);
-            return rc;
-        }
+    if (bytes_read != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        return 1;
     }
 
-    sqlite3_close(db);
-    return SQLITE_OK;
-}
+    HParser* header_parser = sqlite_file_header_parser();
+    HParseResult* parsed_result = h_parse(header_parser, buffer, file_size);
 
-static int read_from_sqlite(Employee* employees) {
-    sqlite3* db;
-    char* err_msg = 0;
-    int rc = sqlite3_open("employees.db", &db);
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return rc;
+    if (!parsed_result || !parsed_result->ast) {
+        fprintf(stderr, "Parsing failed\n");
+        h_parse_result_free(parsed_result);
+        h_parser_free(header_parser);
+        free(buffer);
+        return 1;
     }
 
-    const char* sql = "SELECT * FROM employees;";
-    rc = sqlite3_exec(db, sql, sqlite_callback, employees, &err_msg);
+    h_parse_result_free(parsed_result);
+    h_parser_free(header_parser);
+    free(buffer);
 
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-        sqlite3_close(db);
-        return rc;
-    }
-
-    sqlite3_close(db);
-    return SQLITE_OK;
-}
-
-int main() {
-    HParser* parser = employee_parser();
-    Employee employees[MAX_RECORDS];
-    int num_employees = 0;
-
-    char input[] = "1 johndoe 50000.50\n2 janedoe 60000.75\n3 bobsmith 55000.25";
-    HParseResult* result = h_parse(parser, (uint8_t*)input, strlen(input));
-
-    if (result && result->ast) {
-        HArrayList* parsed_list = (HArrayList*)result->ast;
-        for (size_t i = 0; i < h_arraylist_length(parsed_list); i++) {
-            Employee* emp = h_arraylist_get(parsed_list, i);
-            employees[num_employees++] = *emp;
-        }
-
-        if (save_to_sqlite(employees, num_employees) == SQLITE_OK) {
-            memset(employees, 0, sizeof(employees));
-            read_from_sqlite(employees);
-
-            for (int i = 0; i < num_employees; i++) {
-                printf("ID: %d, Name: %s, Salary: %.2f\n", 
-                    employees[i].id, employees[i].name, employees[i].salary);
-            }
-        }
-    }
-
-    h_parse_result_free(result);
-    h_parser_free(parser);
     return 0;
 }

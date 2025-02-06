@@ -1,106 +1,92 @@
 use nom::{
-    bytes::complete::{tag, take_while, take_while1},
-    combinator::{map, map_res, opt},
-    error::ErrorKind,
-    number::complete::le_u32,
-    sequence::{preceded, tuple},
+    bytes::complete::take,
+    number::complete::{le_u16, le_u32, le_u64},
     IResult,
 };
-use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::process;
+use std::path::Path;
 
 #[derive(Debug)]
-struct Sqlite3Header {
-    magic: u32,
-    page_size: u32,
-    write_version: u32,
-    read_version: u32,
-    reserved_space: u32,
-    max_page_count: u32,
-    change_count: u32,
-    first_freelist_page: u32,
-    database_size_pages: u32,
-    schema_cookie: u32,
-    schema_format: u32,
-    default_page_cache_size: u32,
-    largest_btree_page: u32,
-    file_format_write_version: u32,
-    source_id: u32,
+struct SqliteHeader {
+    magic: [u8; 16],
+    page_size: u16,
+    write_count: u32,
     text_encoding: u32,
-    user_version: u32,
-    incremental_vacuum_mode: u32,
-    application_id: u32,
-    version_valid_for: u32,
-    sqlite_version: u32,
+    default_page_cache_size: u32,
+    large_file_support: u32,
+    version_number: u32,
+    application_id: u64,
+    unused: [u8; 60],
+}
+
+#[derive(Debug)]
+struct SqlitePageHeader {
+    page_number: u32,
+    page_type: u8,
+    free_bytes: u8,
+    checksum: u16,
+    // cell pointer array and cell data are complex and omitted for brevity
 }
 
 
-fn parse_header(input: &[u8]) -> IResult<&[u8], Sqlite3Header> {
-    let (input, magic) = le_u32(input)?;
-    let (input, page_size) = le_u32(input)?;
-    let (input, write_version) = le_u32(input)?;
-    let (input, read_version) = le_u32(input)?;
-    let (input, reserved_space) = le_u32(input)?;
-    let (input, max_page_count) = le_u32(input)?;
-    let (input, change_count) = le_u32(input)?;
-    let (input, first_freelist_page) = le_u32(input)?;
-    let (input, database_size_pages) = le_u32(input)?;
-    let (input, schema_cookie) = le_u32(input)?;
-    let (input, schema_format) = le_u32(input)?;
-    let (input, default_page_cache_size) = le_u32(input)?;
-    let (input, largest_btree_page) = le_u32(input)?;
-    let (input, file_format_write_version) = le_u32(input)?;
-    let (input, source_id) = le_u32(input)?;
-    let (input, text_encoding) = le_u32(input)?;
-    let (input, user_version) = le_u32(input)?;
-    let (input, incremental_vacuum_mode) = le_u32(input)?;
-    let (input, application_id) = le_u32(input)?;
-    let (input, version_valid_for) = le_u32(input)?;
-    let (input, sqlite_version) = le_u32(input)?;
+fn sqlite_header(input: &[u8]) -> IResult<&[u8], SqliteHeader> {
+    let (rest, magic) = take(16usize)(input)?;
+    let (rest, page_size) = le_u16(rest)?;
+    let (rest, write_count) = le_u32(rest)?;
+    let (rest, text_encoding) = le_u32(rest)?;
+    let (rest, default_page_cache_size) = le_u32(rest)?;
+    let (rest, large_file_support) = le_u32(rest)?;
+    let (rest, version_number) = le_u32(rest)?;
+    let (rest, application_id) = le_u64(rest)?;
+    let (rest, unused) = take(60usize)(rest)?;
 
     Ok((
-        input,
-        Sqlite3Header {
-            magic,
+        rest,
+        SqliteHeader {
+            magic: magic.try_into().unwrap(),
             page_size,
-            write_version,
-            read_version,
-            reserved_space,
-            max_page_count,
-            change_count,
-            first_freelist_page,
-            database_size_pages,
-            schema_cookie,
-            schema_format,
-            default_page_cache_size,
-            largest_btree_page,
-            file_format_write_version,
-            source_id,
+            write_count,
             text_encoding,
-            user_version,
-            incremental_vacuum_mode,
+            default_page_cache_size,
+            large_file_support,
+            version_number,
             application_id,
-            version_valid_for,
-            sqlite_version,
+            unused: unused.try_into().unwrap(),
+        },
+    ))
+}
+
+fn sqlite_page_header(input: &[u8]) -> IResult<&[u8], SqlitePageHeader> {
+    let (rest, page_number) = le_u32(input)?;
+    let (rest, page_type) = take(1usize)(rest)?;
+    let (rest, free_bytes) = take(1usize)(rest)?;
+    let (rest, checksum) = le_u16(rest)?;
+
+    Ok((
+        rest,
+        SqlitePageHeader {
+            page_number,
+            page_type: page_type[0],
+            free_bytes: free_bytes[0],
+            checksum,
         },
     ))
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
-        process::exit(1);
+        eprintln!("Usage: {} <sqlite_db_file>", args[0]);
+        return;
     }
 
-    let filename = &args[1];
-    let mut file = match File::open(filename) {
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
         Ok(file) => file,
         Err(err) => {
-            eprintln!("Failed to open file {}: {}", filename, err);
-            process::exit(1);
+            eprintln!("Error opening file: {}", err);
+            return;
         }
     };
 
@@ -108,16 +94,22 @@ fn main() {
     match file.read_to_end(&mut buffer) {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("Failed to read file {}: {}", filename, err);
-            process::exit(1);
+            eprintln!("Error reading file: {}", err);
+            return;
         }
     };
 
-    match parse_header(&buffer) {
-        Ok((_, header)) => println!("{:#?}", header),
-        Err(e) => {
-            println!("Error parsing header: {:?}", e);
-            process::exit(1);
+    match sqlite_header(&buffer) {
+        Ok((rest, header)) => {
+            println!("Header: {:?}", header);
+            let page_size = header.page_size as usize;
+            if rest.len() >= page_size {
+                match sqlite_page_header(&rest[..page_size]) {
+                    Ok((_, page_header)) => println!("First Page Header: {:?}", page_header),
+                    Err(e) => eprintln!("Error parsing page header: {:?}", e),
+                }
+            }
         }
+        Err(e) => eprintln!("Error parsing header: {:?}", e),
     }
 }

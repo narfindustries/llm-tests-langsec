@@ -1,47 +1,96 @@
-module DNS
+PDU DNSMessage {
+    uint16 id;
+    BitField16 flags {
+        uint1 qr;
+        uint4 opcode;
+        uint1 aa;
+        uint1 tc;
+        uint1 rd;
+        uint1 ra;
+        uint3 z;
+        uint4 rcode;
+    }
+    uint16 qdcount;
+    uint16 ancount;
+    uint16 nscount;
+    uint16 arcount;
 
-type DNSMessage = struct {
-    id: uint16;
-    flags: DNSFlags;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
-    questions: array[qdcount] of DNSQuestion;
-    answers: array[ancount] of DNSResourceRecord;
-    authorities: array[nscount] of DNSResourceRecord;
-    additionals: array[arcount] of DNSResourceRecord;
+    for (int i = 0; i < qdcount; i++) {
+        Question questions;
+    }
+
+    for (int i = 0; i < ancount; i++) {
+        ResourceRecord answers;
+    }
+
+    for (int i = 0; i < nscount; i++) {
+        ResourceRecord authorities;
+    }
+
+    for (int i = 0; i < arcount; i++) {
+        ResourceRecord additionals;
+    }
 }
 
-type DNSFlags = struct {
-    qr: bit; // Query/Response
-    opcode: bits[4];
-    aa: bit; // Authoritative Answer
-    tc: bit; // Truncation
-    rd: bit; // Recursion Desired
-    ra: bit; // Recursion Available
-    z: bits[3]; // Reserved
-    rcode: bits[4]; // Response Code
+PDU Question {
+    DomainName qname;
+    uint16 qtype;
+    uint16 qclass;
 }
 
-type DNSQuestion = struct {
-    qname: DNSName;
-    qtype: uint16;
-    qclass: uint16;
+PDU ResourceRecord {
+    DomainName name;
+    uint16 type;
+    uint16 class;
+    uint32 ttl;
+    uint16 rdlength;
+    RData rdata;
 }
 
-type DNSResourceRecord = struct {
-    name: DNSName;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes[rdlength];
+PDU RData {
+    switch (outer.type) {
+        case 1: IPv4Address;
+        case 2: DomainName;
+        case 5: DomainName;
+        case 6: SOARecord;
+        case 12: DomainName;
+        case 15: MXRecord;
+        case 28: IPv6Address;
+        default: RawData;
+    }
 }
 
-type DNSName = array of DNSLabel;
+PDU IPv4Address {
+    uint8 octet[4];
+}
 
-type DNSLabel = struct {
-    length: uint8;
-    label: bytes[length];
+PDU IPv6Address {
+    uint16 segment[8];
+}
+
+PDU SOARecord {
+    DomainName mname;
+    DomainName rname;
+    uint32 serial;
+    uint32 refresh;
+    uint32 retry;
+    uint32 expire;
+    uint32 minimum;
+}
+
+PDU MXRecord {
+    uint16 preference;
+    DomainName exchange;
+}
+
+PDU DomainName {
+    while (true) {
+        uint8 length;
+        if (length == 0) break;
+        uint8 label[length];
+    }
+}
+
+PDU RawData {
+    uint8 data[outer.rdlength];
 }

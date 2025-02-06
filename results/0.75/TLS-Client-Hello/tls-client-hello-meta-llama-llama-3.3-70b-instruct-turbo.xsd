@@ -1,63 +1,201 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/TLS"
-           xmlns="http://example.com/TLS"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="TLSClientHello">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element dfdl:ref="TLSClientHello"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="type" type="xs:unsignedByte" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="type" dfdl:outputValueCalculator="1"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="version" dfdl:outputValueCalculator="0x0303"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="length" dfdl:outputValueCalculator="43"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="sessionId" type="xs:hexBinary" dfdl:length="32" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="sessionId" dfdl:outputValueCalculator="00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="cipherSuites" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="explicit" dfdl:occurs="{2}">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="cipherSuites" dfdl:outputValueCalculator="0x0005 0x0004"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="compressionMethods" type="xs:unsignedByte" dfdl:byteOrder="bigEndian" dfdl:sequenceKind="explicit" dfdl:occurs="{1}">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="compressionMethods" dfdl:outputValueCalculator="0x00"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com"! 
+           xmlns="http://example.com" 
+           elementFormDefault="qualified" 
+           dfdl:format="binary">
+  <xs:element name="ClientHello" type="ClientHelloType" dfdl:occurs="1..1"/>
+  <xs:complexType name="ClientHelloType">
+    <xs:sequence>
+      <xs:element name="legacy_version" type="ProtocolVersionType" dfdl:occurs="1..1"/>
+      <xs:element name="random" type="RandomType" dfdl:occurs="1..1"/>
+      <xs:element name="legacy_session_id" type="LegacySessionIdType" dfdl:occurs="1..1"/>
+      <xs:element name="legacy_compressed" type="LegacyCompressedType" dfdl:occurs="1..1"/>
+      <xs:element name="handshake_length" type="xs:unsignedShort" dfdl:occurs="1..1"/>
+      <xs:element name="msg_type" type="HandshakeType" dfdl:occurs="1..1"/>
+      <xs:element name="handshake_length_2" type="xs:unsignedInt" dfdl:occurs="1..1"/>
+      <xs:element name="protocol_version" type="ProtocolVersionType" dfdl:occurs="1..1"/>
+      <xs:element name="random_2" type="RandomType2" dfdl:occurs="1..1"/>
+      <xs:element name="legacy_session_id_length" type="xs:unsignedByte" dfdl:occurs="1..1"/>
+      <xs:element name="legacy_session_id_2" type="LegacySessionIdType" dfdl:occurs="1..1"/>
+      <xs:element name="cipher_suites" type="CipherSuitesType" dfdl:occurs="1..1"/>
+      <xs:element name="compression_methods" type="CompressionMethodsType" dfdl:occurs="1..1"/>
+      <xs:element name="extensions" type="ExtensionsType" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ProtocolVersionType">
+    <xs:sequence>
+      <xs:element name="major" type="xs:unsignedByte" dfdl:occurs="1..1"/>
+      <xs:element name="minor" type="xs:unsignedByte" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="RandomType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" fixed="32"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="RandomType2">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" fixed="32"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="LegacySessionIdType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" default="32"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="LegacyCompressedType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" default="1"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="HandshakeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="CipherSuitesType">
+    <xs:sequence>
+      <xs:element name="cipher_suite" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occurs="2..65534"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CompressionMethodsType">
+    <xs:sequence>
+      <xs:element name="compression_method" type="xs:unsignedByte" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ExtensionsType">
+    <xs:sequence>
+      <xs:element name="extension" type="ExtensionType" maxOccurs="unbounded" dfdl:occurs="0..65535"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ExtensionType">
+    <xs:choice>
+      <xs:element name="supported_versions" type="SupportedVersionsType" dfdl:occurs="0..1"/>
+      <xs:element name="cookie" type="CookieType" dfdl:occurs="0..1"/>
+      <xs:element name="supported_groups" type="SupportedGroupsType" dfdl:occurs="0..1"/>
+      <xs:element name="key_share" type="KeyShareType" dfdl:occurs="0..1"/>
+      <xs:element name="pre_shared_key" type="PreSharedKeyType" dfdl:occurs="0..1"/>
+      <xs:element name="early_data" type="EarlyDataType" dfdl:occurs="0..1"/>
+      <xs:element name="server_name" type="ServerNameType" dfdl:occurs="0..1"/>
+      <xs:element name="signature_algorithms" type="SignatureAlgorithmsType" dfdl:occurs="0..1"/>
+      <xs:element name="signature_algorithms_cert" type="SignatureAlgorithmsCertType" dfdl:occurs="0..1"/>
+      <xs:element name="encrypted_client_hello" type="EncryptedClientHelloType" dfdl:occurs="0..1"/>
+      <xs:element name="certificate_authorities" type="CertificateAuthoritiesType" dfdl:occurs="0..1"/>
+      <xs:element name="oid_filters" type="OIDFiltersType" dfdl:occurs="0..1"/>
+      <xs:element name="post_handshake_auth" type="PostHandshakeAuthType" dfdl:occurs="0..1"/>
+      <xs:element name="retry_latency" type="RetryLatencyType" dfdl:occurs="0..1"/>
+      <xs:element name="draft-ietf-tls-external-psk-importer" type="ExternalPSKImporterType" dfdl:occurs="0..1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="SupportedVersionsType">
+    <xs:sequence>
+      <xs:element name="version" type="ProtocolVersionType" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CookieType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" default="0"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="SupportedGroupsType">
+    <xs:sequence>
+      <xs:element name="group" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KeyShareType">
+    <xs:sequence>
+      <xs:element name="key_share_entry" type="KeyShareEntryType" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KeyShareEntryType">
+    <xs:sequence>
+      <xs:element name="group" type="xs:unsignedShort" dfdl:occurs="1..1"/>
+      <xs:element name="key_exchange" type="xs:hexBinary" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PreSharedKeyType">
+    <xs:sequence>
+      <xs:element name="identity" type="xs:hexBinary" dfdl:occurs="1..1"/>
+      <xs:element name="obfuscated_ticket_age" type="xs:unsignedInt" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EarlyDataType">
+    <xs:sequence>
+      <xs:element name="max_early_data_size" type="xs:unsignedInt" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ServerNameType">
+    <xs:sequence>
+      <xs:element name="server_name" type="ServerNameEntryType" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ServerNameEntryType">
+    <xs:sequence>
+      <xs:element name="name_type" type="xs:unsignedByte" dfdl:occurs="1..1"/>
+      <xs:element name="name" type="xs:hexBinary" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="SignatureAlgorithmsType">
+    <xs:sequence>
+      <xs:element name="signature_algorithm" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="SignatureAlgorithmsCertType">
+    <xs:sequence>
+      <xs:element name="signature_algorithm" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EncryptedClientHelloType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" default="0"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="CertificateAuthoritiesType">
+    <xs:sequence>
+      <xs:element name="certificate_authority" type="xs:hexBinary" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OIDFiltersType">
+    <xs:sequence>
+      <xs:element name="oid_filter" type="OIDFilterType" maxOccurs="unbounded" dfdl:occurs="1..255"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OIDFilterType">
+    <xs:sequence>
+      <xs:element name="object_identifier" type="xs:hexBinary" dfdl:occurs="1..1"/>
+      <xs:element name="filter" type="xs:hexBinary" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PostHandshakeAuthType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary">
+        <xs:attribute name="length" type="xs:integer" default="0"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="RetryLatencyType">
+    <xs:restriction base="xs:unsignedShort">
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ExternalPSKImporterType">
+    <xs:sequence>
+      <xs:element name="binding" type="xs:hexBinary" dfdl:occurs="1..1"/>
+      <xs:element name="key_id" type="xs:hexBinary" dfdl:occurs="1..1"/>
+      <xs:element name="context" type="xs:hexBinary" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

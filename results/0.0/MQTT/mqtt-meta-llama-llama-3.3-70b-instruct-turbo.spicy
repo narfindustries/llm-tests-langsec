@@ -1,99 +1,170 @@
-# MQTT Protocol Specification in Zeek Spicy format
+module MQTT;
 
-%header {
-    import Frameworks
-}
+type mqtt_fixed_header = record {
+  msg_type = uint4;
+  dup = bool;
+  qos = uint2;
+  retain = bool;
+};
 
-%config {
-    # MQTT protocol configuration
-    const protocol_name = "MQTT"
-    const protocol_version = 3.1
-}
+type mqtt_variable_header = record {
+  packet_identifier = uint16 &optional;
+  properties = mqtt_properties &optional;
+};
 
-%layer mqtt {
-    # MQTT layer specification
-    type MQTT_Message = record {
-        msg_type: uint8,
-        dup: bool,
-        qos: uint8,
-        retain: bool,
-        remaining_length: uint32,
-        payload: bytestring &length=remaining_length,
-    };
+type mqtt_properties = record {
+  payload_format_indicator = uint8 &optional;
+  message_expiry_interval = uint32 &optional;
+  content_type = string &optional;
+  response_topic = string &optional;
+  correlation_data = bytes &optional;
+  subscription_identifier = uint32 &optional;
+  session_expiry_interval = uint32 &optional;
+  assigned_client_identifier = string &optional;
+  server_keep_alive = uint16 &optional;
+  authentication_method = string &optional;
+  authentication_data = bytes &optional;
+  request_problem_information = bool &optional;
+  request_response_information = bool &optional;
+  response_information = string &optional;
+  server_reference = string &optional;
+  reason_string = string &optional;
+  receive_maximum = uint16 &optional;
+  topic_alias_maximum = uint16 &optional;
+  topic_alias = uint16 &optional;
+  maximum_qos = uint8 &optional;
+  retain_available = bool &optional;
+  user_property = table[string] of string &optional;
+  maximum_packet_size = uint32 &optional;
+  wildcard_subscription_available = bool &optional;
+  subscription_identifier_available = bool &optional;
+  shared_subscription_available = bool &optional;
+};
 
-    # MQTT message types
-    const MSG_CONNECT = 1;
-    const MSG_CONNACK = 2;
-    const MSG_PUBLISH = 3;
-    const MSG_PUBACK = 4;
-    const MSG_PUBREC = 5;
-    const MSG_PUBREL = 6;
-    const MSG_PUBCOMP = 7;
-    const MSG_SUBSCRIBE = 8;
-    const MSG_SUBACK = 9;
-    const MSG_UNSUBSCRIBE = 10;
-    const MSG_UNSUBACK = 11;
-    const MSG_PINGREQ = 12;
-    const MSG_PINGRESP = 13;
-    const MSG_DISCONNECT = 14;
+type mqtt_connect_flags = record {
+  username = bool;
+  password = bool;
+  will_retain = bool;
+  will_qos = uint2;
+  will_flag = bool;
+  clean_session = bool;
+};
 
-    # MQTT message type mapping
-    type msg_type_map = table[uint8] of string = {
-        [MSG_CONNECT] = "CONNECT",
-        [MSG_CONNACK] = "CONNACK",
-        [MSG_PUBLISH] = "PUBLISH",
-        [MSG_PUBACK] = "PUBACK",
-        [MSG_PUBREC] = "PUBREC",
-        [MSG_PUBREL] = "PUBREL",
-        [MSG_PUBCOMP] = "PUBCOMP",
-        [MSG_SUBSCRIBE] = "SUBSCRIBE",
-        [MSG_SUBACK] = "SUBACK",
-        [MSG_UNSUBSCRIBE] = "UNSUBSCRIBE",
-        [MSG_UNSUBACK] = "UNSUBACK",
-        [MSG_PINGREQ] = "PINGREQ",
-        [MSG_PINGRESP] = "PINGRESP",
-        [MSG_DISCONNECT] = "DISCONNECT",
-    };
+type mqtt_connect = record {
+  protocol_name = string;
+  protocol_version = uint8;
+  connect_flags = mqtt_connect_flags;
+  keep_alive = uint16;
+  properties = mqtt_properties &optional;
+  client_identifier = string;
+  will_topic = string &optional;
+  will_message = bytes &optional;
+  username = string &optional;
+  password = bytes &optional;
+};
 
-    # MQTT message parsing
-    function parse_mqtt_message(msg: bytestring): MQTT_Message {
-        local msg_type = msg[0] >> 4;
-        local dup = (msg[0] & 0x08) != 0;
-        local qos = (msg[0] & 0x06) >> 1;
-        local retain = (msg[0] & 0x01) != 0;
-        local remaining_length = 0;
-        local payload = "";
+type mqtt_connack = record {
+  connect_return_code = uint8;
+  properties = mqtt_properties &optional;
+};
 
-        # Parse remaining length
-        local multiplier = 1;
-        local i = 1;
-        while (i < |msg|) {
-            local byte = msg[i];
-            remaining_length += (byte & 0x7F) * multiplier;
-            if ((byte & 0x80) == 0) {
-                break;
-            }
-            multiplier *= 128;
-            i++;
-        }
+type mqtt_publish = record {
+  topic_name = string;
+  packet_identifier = uint16 &optional;
+  properties = mqtt_properties &optional;
+  payload = bytes;
+};
 
-        # Parse payload
-        payload = msg[1 + i:|msg| - (1 + i)];
+type mqtt_puback = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+};
 
-        return MQTT_Message($msg_type=msg_type, $dup=dup, $qos=qos, $retain=retain, $remaining_length=remaining_length, $payload=payload);
-    }
-}
+type mqtt_pubrec = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+};
 
-%parser mqtt_parser {
-    # MQTT parser specification
-    local msg: bytestring;
-    local mqtt_msg: MQTT_Message;
+type mqtt_pubrel = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+};
 
-    # Parse MQTT message
-    msg = input;
-    mqtt_msg = parse_mqtt_message(msg);
+type mqtt_pubcomp = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+};
 
-    # Log parsed MQTT message
-    Frameworks::log_info(fmt("Parsed MQTT message: type=%s, dup=%s, qos=%s, retain=%s, remaining_length=%d, payload=%s",
-                             msg_type_map[mqtt_msg=msg_type], mqtt_msg=dup, mqtt_msg=qos, mqtt_msg=retain, mqtt_msg=remaining_length, mqtt_msg=payload));
-}
+type mqtt_subscribe = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+  subscriptions = table[string] of uint8;
+};
+
+type mqtt_suback = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+  return_codes = vector[uint8];
+};
+
+type mqtt_unsubscribe = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+  unsubscriptions = vector[string];
+};
+
+type mqtt_unsuback = record {
+  packet_identifier = uint16;
+  properties = mqtt_properties &optional;
+};
+
+type mqtt_pingreq = record {
+};
+
+type mqtt_pingresp = record {
+};
+
+type mqtt_disconnect = record {
+  disconnect_reason_code = uint8;
+  properties = mqtt_properties &optional;
+};
+
+type mqtt_message = record {
+  fixed_header = mqtt_fixed_header;
+  variable_header = mqtt_variable_header &optional;
+  payload = bytes &optional;
+};
+
+let mqtt_connect_pattern = /$fixed_header=0x10, $variable_header=mqtt_connect/;
+let mqtt_connack_pattern = /$fixed_header=0x20, $variable_header=mqtt_connack/;
+let mqtt_publish_pattern = /$fixed_header=0x30, $variable_header=mqtt_publish/;
+let mqtt_puback_pattern = /$fixed_header=0x40, $variable_header=mqtt_puback/;
+let mqtt_pubrec_pattern = /$fixed_header=0x50, $variable_header=mqtt_pubrec/;
+let mqtt_pubrel_pattern = /$fixed_header=0x60, $variable_header=mqtt_pubrel/;
+let mqtt_pubcomp_pattern = /$fixed_header=0x70, $variable_header=mqtt_pubcomp/;
+let mqtt_subscribe_pattern = /$fixed_header=0x80, $variable_header=mqtt_subscribe/;
+let mqtt_suback_pattern = /$fixed_header=0x90, $variable_header=mqtt_suback/;
+let mqtt_unsubscribe_pattern = /$fixed_header=0xA0, $variable_header=mqtt_unsubscribe/;
+let mqtt_unsuback_pattern = /$fixed_header=0xB0, $variable_header=mqtt_unsuback/;
+let mqtt_pingreq_pattern = /$fixed_header=0xC0, $variable_header=mqtt_pingreq/;
+let mqtt_pingresp_pattern = /$fixed_header=0xD0, $variable_header=mqtt_pingresp/;
+let mqtt_disconnect_pattern = /$fixed_header=0xE0, $variable_header=mqtt_disconnect/;
+
+let mqtt_parser = {
+  $grammar = choice(
+    mqtt_connect_pattern,
+    mqtt_connack_pattern,
+    mqtt_publish_pattern,
+    mqtt_puback_pattern,
+    mqtt_pubrec_pattern,
+    mqtt_pubrel_pattern,
+    mqtt_pubcomp_pattern,
+    mqtt_subscribe_pattern,
+    mqtt_suback_pattern,
+    mqtt_unsubscribe_pattern,
+    mqtt_unsuback_pattern,
+    mqtt_pingreq_pattern,
+    mqtt_pingresp_pattern,
+    mqtt_disconnect_pattern
+  );
+};

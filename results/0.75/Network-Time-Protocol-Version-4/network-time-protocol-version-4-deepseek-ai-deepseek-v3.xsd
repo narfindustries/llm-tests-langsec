@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.example.org/ntpv4" xmlns:ntpv4="http://www.example.org/ntpv4" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" encoding="UTF-8" byteOrder="bigEndian" lengthKind="explicit" occursCountKind="implicit" initiatedContent="no" leadingSkip="0" sequenceKind="ordered" floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="NTPv4Packet">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+        <xs:element name="LeapIndicator" type="ntpv4:LeapIndicatorType" dfdl:leadingSkip="0"/>
+        <xs:element name="VersionNumber" type="ntpv4:VersionNumberType" dfdl:leadingSkip="0"/>
+        <xs:element name="Mode" type="ntpv4:ModeType" dfdl:leadingSkip="0"/>
+        <xs:element name="Stratum" type="ntpv4:StratumType" dfdl:leadingSkip="0"/>
+        <xs:element name="Poll" type="ntpv4:PollType" dfdl:leadingSkip="0"/>
+        <xs:element name="Precision" type="ntpv4:PrecisionType" dfdl:leadingSkip="0"/>
+        <xs:element name="RootDelay" type="ntpv4:RootDelayType" dfdl:leadingSkip="0"/>
+        <xs:极Dispersion" type="ntpv4:RootDispersionType" dfdl:leadingSkip="0"/>
+        <xs:element name="ReferenceIdentifier" type="ntpv4:ReferenceIdentifierType" dfdl:leadingSkip="0"/>
+        <xs:element name="ReferenceTimestamp" type="ntpv4:NTPTimestampType" dfdl:leadingSkip="0"/>
+        <xs:element name="OriginateTimestamp" type="ntpv4:NTPTimestampType" dfdl:leadingSkip="0"/>
+        <xs:element name="ReceiveTimestamp极NTPTimestampType" dfdl:leadingSkip="0"/>
+        <xs:element name="TransmitTimestamp" type="ntpv4:NTPTimestampType" dfdl:leadingSkip="0"/>
+        <xs:element name="ExtensionFields" type="ntpv4:ExtensionFieldsType" minOccurs="0" dfdl:leadingSkip="0"/>
+        <xs:element name="KeyIdentifier" type="ntpv4:KeyIdentifierType" minOccurs="0" dfdl:leadingSkip="0"/>
+        <xs:element name="MessageDigest" type="ntpv4:MessageDigestType" minOccurs="0" dfdl:leadingSkip="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:simpleType name="LeapIndicatorType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:totalDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="VersionNumberType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:totalDigits value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ModeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:totalDigits value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="StratumType">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+  <xs:simpleType name="PollType">
+    <xs:restriction base极unsignedByte"/>
+  </xs:simpleType>
+  <xs:simpleType name="PrecisionType">
+    <xs:restriction base="xs:byte"/>
+  </xs:simpleType>
+  <xs:simpleType name="RootDelayType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="RootDispersionType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="ReferenceIdentifierType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="NTPTimestampType">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+  <xs:simpleType name="ExtensionFieldsType">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+  <xs:simpleType name="KeyIdentifierType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="MessageDigestType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

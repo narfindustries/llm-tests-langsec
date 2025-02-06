@@ -1,74 +1,84 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic building blocks of HTTP 1.1
-static HParser *token;
-static HParser *CRLF;
-static HParser *SP;
-static HParser *colon;
-static HParser *OWS; // Optional whitespace
-
-// HTTP components
-static HParser *request_line;
-static HParser *status_line;
-static HParser *header_field;
-static HParser *message_body;
+// Define parsers for HTTP tokens based on RFC 2616
 static HParser *http_version;
 static HParser *method;
-static HParser *request_target;
-static HParser *reason_phrase;
+static HParser *uri;
 static HParser *status_code;
-static HParser *headers;
-static HParser *http_message;
+static HParser *reason_phrase;
+static HParser *header_name;
+static HParser *header_value;
+static HParser *request_line;
+static HParser *status_line;
+static HParser *header;
+static HParser *message_body;
+static HParser *http_request;
+static HParser *http_response;
 
-void init_parser() {
-    // Basic tokens as per the HTTP/1.1 spec
-    SP = h_ch(' ');
-    colon = h_ch(':');
-    CRLF = h_sequence(h_ch('\r'), h_ch('\n'), NULL);
-    OWS = h_optional(h_many(h_ch(' ')));
-
-    // Token definitions
-    token = h_many1(h_ch_range(0x21, 0x7E));
-
-    // HTTP version
-    http_version = h_sequence(h_string("HTTP/"), h_int_range(h_uint8(), 0, 1), h_ch('.'), h_int_range(h_uint8(), 0, 1), NULL);
-
-    // Request line components
-    method = token;
-    request_target = token;
-    request_line = h_sequence(method, SP, request_target, SP, http_version, CRLF, NULL);
-
-    // Status line components
-    status_code = h_int_range(h_uint16(), 100, 599);
-    reason_phrase = h_many(h_ch_range(0x20, 0x7E)); // Reason-Phrase characters
-    status_line = h_sequence(http_version, SP, status_code, SP, reason_phrase, CRLF, NULL);
-
-    // Header field
-    header_field = h_sequence(token, colon, OWS, token, OWS, CRLF, NULL);
-
-    // Headers
-    headers = h_many(header_field);
-
-    // Message body
-    message_body = h_many(h_any());
-
-    // Complete HTTP message
-    http_message = h_sequence(h_choice(request_line, status_line, NULL), headers, h_optional(message_body), NULL);
+void init_parsers() {
+    http_version = h_sequence(h_bytes("HTTP/", 5), h_ch_range('1', '1'), h_ch('.'), h_ch_range('0', '1'), NULL);
+    method = h_choice(h_bytes("GET", 3), h_bytes("POST", 4), h_bytes("HEAD", 4), h_bytes("PUT", 3), h_bytes("DELETE", 6), h_bytes("TRACE", 5), h_bytes("OPTIONS", 7), h_bytes("CONNECT", 7), NULL);
+    uri = h_token(h_many1(h_not_char(' ')));
+    status_code = h_int_range(h_uint(), 100, 599);
+    reason_phrase = h_token(h_many1(h_not_char('\r')));
+    header_name = h_token(h_many1(h_not_char(':')));
+    header_value = h_token(h_many1(h_not_char('\r')));
+    request_line = h_sequence(method, h_whitespace(), uri, h_whitespace(), http_version, h_end_p(), NULL);
+    status_line = h_sequence(http_version, h_whitespace(), status_code, h_whitespace(), reason_phrase, h_end_p(), NULL);
+    header = h_sequence(header_name, h_ch(':'), h_whitespace(), header_value, h_end_p(), NULL);
+    message_body = h_greedy(h_any(), NULL);
+    http_request = h_sequence(request_line, h_many(header), h_optional(message_body), NULL);
+    http_response = h_sequence(status_line, h_many(header), h_optional(message_body), NULL);
 }
 
-int main(int argc, char **argv) {
-    init_parser();
-
-    // Example usage
-    uint8_t input[] = "GET /index.html HTTP/1.1\r\nHost: example.com\r\n\r\n";
-    size_t input_len = sizeof(input) - 1;
-    HParseResult *result = h_parse(http_message, input, input_len);
-    if (result) {
-        printf("Parse successful!\n");
-    } else {
-        printf("Parse failed.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <http_message_file>\n", argv[0]);
+        return 1;
     }
 
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(length);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(data, 1, length, file) != length) {
+        perror("Failed to read file");
+        free(data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    init_parsers();
+
+    HParseResult *result = h_parse(http_request, data, length);
+    if (!result) {
+        result = h_parse(http_response, data, length);
+    }
+
+    if (result) {
+        printf("Parsing succeeded.\n");
+    } else {
+        printf("Parsing failed.\n");
+    }
+
+    free(data);
+    h_parse_result_free(result);
     return 0;
 }

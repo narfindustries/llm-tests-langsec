@@ -1,39 +1,114 @@
-domain DICOM {
-  types {
-    uint16 uint16;
-    uint32 uint32;
-    string string;
-    seq sequence;
-  }
+format dicom 3.0
 
-  decoding {
-    DICOM_META_INFO {
-      GROUP_0002 {
-        FILE_META_VERSION: uint16 = 0x0000;
-        MEDIA_STORAGE_SOP_INSTANCE_UID: string = 0x0002;
-        MEDIA_STORAGE_SOP_CLASS_UID: string = 0x0004;
-        IMPLEMENTATION_CLASS_UID: string = 0x0006;
-        TRANSFER_SYNTAX_UID: string = 0x0010;
-        IMPLEMENTATION_VERSION_NAME: string = 0x0012;
-      }
+type patient_name = string
+type patient_id = string
+type patient_birth_date = date
+type patient_sex = enum { M, F, O }
+type patient_age = string
 
-      GROUP_0008 {
-        REFERENCE_DATE: string = 0x0022;
-        REFERENCE_TIME: string = 0x0032;
-      }
+type study_instance_uid = string
+type study_date = date
+type study_time = time
+type study_description = string
+type referring_physician_name = string
 
-      PATIENT_INFO {
-        PATIENT_NAME: string = 0x0010;
-        PATIENT_ID: string = 0x0020;
-        PATIENT_BIRTH_DATE: string = 0x0030;
-      }
-    }
-  }
+type series_instance_uid = string
+type series_number = uint16
+type series_description = string
+type series_date = date
+type series_time = time
 
-  grammar {
-    DICOM_META_INFO: GROUP_0002 GROUP_0008 PATIENT_INFO;
-    GROUP_0002: FILE_META_VERSION MEDIA_STORAGE_SOP_INSTANCE_UID MEDIA_STORAGE_SOP_CLASS_UID IMPLEMENTATION_CLASS_UID TRANSFER_SYNTAX_UID IMPLEMENTATION_VERSION_NAME;
-    GROUP_0008: REFERENCE_DATE REFERENCE_TIME;
-    PATIENT_INFO: PATIENT_NAME PATIENT_ID PATIENT_BIRTH_DATE;
-  }
+type instance_number = uint16
+type image_type = enum { ORIGINAL, DERIVED }
+type image_orientation = enum { AXIAL, CORONAL, SAGITTAL }
+type image_position = enum { FEET_FIRST, HEAD_FIRST }
+type pixel_data = bytes
+
+type modality = enum { CT, MR, US }
+type modality_instance_uid = string
+
+segment patient_information {
+  patient_name: patient_name
+  patient_id: patient_id
+  patient_birth_date: patient_birth_date
+  patient_sex: patient_sex
+  patient_age: patient_age
+}
+
+segment study_information {
+  study_instance_uid: study_instance_uid
+  study_date: study_date
+  study_time: study_time
+  study_description: study_description
+  referring_physician_name: referring_physician_name
+}
+
+segment series_information {
+  series_instance_uid: series_instance_uid
+  series_number: series_number
+  series_description: series_description
+  series_date: series_date
+  series_time: series_time
+}
+
+segment image_information {
+  instance_number: instance_number
+  image_type: image_type
+  image_orientation: image_orientation
+  image_position: image_position
+  pixel_data: pixel_data
+}
+
+segment modality_information {
+  modality: modality
+  modality_instance_uid: modality_instance_uid
+}
+
+segment dicom_file {
+  transfer_syntax_uid: string
+  media_storage_sop_instance_uid: string
+  sop_instance_uid: string
+  sop_class_uid: string
+  patient_information: patient_information
+  study_information: study_information
+  series_information: series_information
+  image_information: image_information
+  modality_information: modality_information
+}
+
+segment dicom_file_header {
+  file_size: uint32
+  preamble: string
+  dicom_file: dicom_file
+}
+
+segment dicom_directory_record {
+  offset: uint32
+  length_of_record: uint32
+  record_type: string
+}
+
+segment dicom_directory {
+  records: array[dicom_directory_record]
+}
+
+segment dicom_file_dataset {
+  items: array[uint16]
+  dicom_file: dicom_file
+}
+
+segment dicom_file_meta_information {
+  transfer_syntax_uid: string
+  media_storage_sop_instance_uid: string
+  sop_instance_uid: string
+  sop_class_uid: string
+  patient_information: patient_information
+  study_information: study_information
+  series_information: series_information
+  image_information: image_information
+  modality_information: modality_information
+}
+
+segment dicom_file_pixel_data {
+  pixel_data: bytes
 }

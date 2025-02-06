@@ -1,47 +1,79 @@
-module PNG-Image;
+module PNG;
 
-import spicy;
-
-public type PNG_File = unit {
-    signature: bytes &size=8 &requires=($$ == b"\x89PNG\x0d\x0a\x1a\x0a");
-    chunks: PNG_Chunk[];
-
-    on %done {
-        print "PNG parsing completed";
-    }
+public type PNG = unit {
+    magic: bytes &size=8 &requires=($$ == b"\x89PNG\r\n\x1a\n");
+    chunks: Chunk[];
 };
 
-type PNG_Chunk = unit {
-    length: uint32 &byte-order=BigEndian;
-    type: bytes &size=4;
-    data: bytes &size=self.length;
-    crc: bytes &size=4;
+public type Chunk = unit {
+    length: uint32;
+    chunk_type: bytes &size=4;
+    data: ChunkData(self.chunk_type, self.length);
+    crc: uint32;
+};
 
-    on %done {
-        print fmt("Chunk Type: %s, Length: %d", self.type, self.length);
+public type ChunkData = unit(chunk_type: bytes, chunk_length: uint32) {
+    var type_str: bytes &optional;
+    
+    on %init {
+        self.type_str = chunk_type;
     }
+
+    switch {
+        self.type_str == b"IHDR" -> ihdr: IHDR;
+        self.type_str == b"PLTE" -> plte: bytes &size=chunk_length;
+        self.type_str == b"IDAT" -> idat: bytes &size=chunk_length;
+        self.type_str == b"IEND" -> : void;
+        self.type_str == b"tRNS" -> trns: bytes &size=chunk_length;
+        self.type_str == b"cHRM" -> chrm: CHRM;
+        self.type_str == b"gAMA" -> gama: uint32;
+        self.type_str == b"iCCP" -> iccp: bytes &size=chunk_length;
+        self.type_str == b"sBIT" -> sbit: bytes &size=chunk_length;
+        self.type_str == b"sRGB" -> srgb: uint8;
+        self.type_str == b"tEXt" -> text: bytes &size=chunk_length;
+        self.type_str == b"zTXt" -> ztxt: bytes &size=chunk_length;
+        self.type_str == b"iTXt" -> itxt: bytes &size=chunk_length;
+        self.type_str == b"bKGD" -> bkgd: bytes &size=chunk_length;
+        self.type_str == b"hIST" -> hist: bytes &size=chunk_length;
+        self.type_str == b"pHYs" -> phys: PHYS;
+        self.type_str == b"sPLT" -> splt: bytes &size=chunk_length;
+        self.type_str == b"tIME" -> time_data: PNGTime;
+        * -> unknown: bytes &size=chunk_length;
+    };
 };
 
 public type IHDR = unit {
-    width: uint32 &byte-order=BigEndian;
-    height: uint32 &byte-order=BigEndian;
+    width: uint32;
+    height: uint32;
     bit_depth: uint8;
     color_type: uint8;
-    compression: uint8;
-    filter: uint8;
-    interlace: uint8;
-
-    on %done {
-        print fmt("Image dimensions: %dx%d", self.width, self.height);
-        print fmt("Bit depth: %d", self.bit_depth);
-        print fmt("Color type: %d", self.color_type);
-    }
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
 };
 
-on PNG_File::%init {
-    print "Starting PNG file analysis";
-}
+public type CHRM = unit {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
 
-on PNG_File::%error {
-    print "Error parsing PNG file";
-}
+public type PHYS = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+public type PNGTime = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};

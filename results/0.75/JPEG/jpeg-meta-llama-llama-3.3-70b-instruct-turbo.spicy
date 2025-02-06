@@ -1,84 +1,139 @@
-# Define the JPEG file format
-file_format jpeg {
-  magic "\xFF\xD8\xFF"
+module JPEG;
+
+type SOI = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xD8
 }
 
-# Define the structure of the JPEG file
-struct jpeg_file {
-  uint8 soi; # Start of Image
-  while (soi == 0xFF) {
-    uint8 marker;
-    if (marker == 0xD8) {
-      # Start of Image
-    } else if (marker == 0xC0) {
-      # Start of Frame
-      uint8 precision;
-      uint16 image_height;
-      uint16 image_width;
-      uint8 num_components;
-      component {
-        uint8 id;
-        uint8 sampling_factors;
-        uint8 quantization_table_id;
-      }[num_components];
-    } else if (marker == 0xC4) {
-      # Define Huffman Tables
-      uint8 tables_defined;
-      while (tables_defined > 0) {
-        uint8 table_class;
-        uint8 table_id;
-        uint16 num_codes;
-        code {
-          uint8 code_value;
-          uint8 code_length;
-        }[num_codes];
-        tables_defined -= 1;
-      }
-    } else if (marker == 0xDB) {
-      # Define Quantization Tables
-      uint8 tables_defined;
-      while (tables_defined > 0) {
-        uint8 table_id;
-        uint8 precision;
-        uint16 table_values;
-        tables_defined -= 1;
-      }
-    } else if (marker == 0xDA) {
-      # Start of Scan
-      uint8 num_components;
-      component {
-        uint8 id;
-        uint8 dc_table_id;
-        uint8 ac_table_id;
-      }[num_components];
-      uint8 spectral_selection_start;
-      uint8 spectral_selection_end;
-      uint8 approximation_high;
-      uint8 approximation_low;
-      # Scan data
-      while (true) {
-        uint8 byte;
-        # Process the byte
-      }
-    }
+type APP0 = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xE0
+  length: uint16
+  identifier: string(5) = "JFIF\0"
+  version: uint16
+  units: uint8
+  density_units: enum {
+    no_units = 0x00
+    pixels_per_inch = 0x01
+    pixels_per_centimeter = 0x02
+  }
+  x_density: uint16
+  y_density: uint16
+  x_thumbnail: uint8
+  y_thumbnail: uint8
+}
+
+type APP1 = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xE1
+  length: uint16
+  identifier: string = "Exif\0"
+  exif_data: bytes
+}
+
+type DQT = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xDB
+  length: uint16
+  table_number: uint8
+  precision: uint8
+  quantization_table: bytes
+}
+
+type DHT = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xC4
+  length: uint16
+  table_class: uint8
+  table_number: uint8
+  huffman_table: bytes
+}
+
+type SOF0 = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xC0
+  length: uint16
+  precision: uint8
+  image_height: uint16
+  image_width: uint16
+  number_of_components: uint8
+  components: array[number_of_components] of struct {
+    component_id: uint8
+    horizontal_sampling_factor: uint8
+    vertical_sampling_factor: uint8
+    quantization_table_number: uint8
   }
 }
 
-# Process the JPEG file
-event zeek::header(c: connection) {
-  local file: fa_file;
-  file = c$service;
-  if (is_jpeg(file)) {
-    # Process the JPEG file
+type SOF2 = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xC2
+  length: uint16
+  progressive: uint8
+  image_height: uint16
+  image_width: uint16
+  number_of_components: uint8
+  components: array[number_of_components] of struct {
+    component_id: uint8
+    horizontal_sampling_factor: uint8
+    vertical_sampling_factor: uint8
+    quantization_table_number: uint8
   }
 }
 
-event zeek::file_sniff(f: fa_file, meta: fa_metadata) {
-  if (is_jpeg(f)) {
-    # Process the JPEG file
-  }
+type DRI = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xDD
+  length: uint16
+  restart_interval: uint16
 }
 
-function is_jpeg(f: fa_file): bool {
-  return f$file_format == jpeg;
+type SOS = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xDA
+  length: uint16
+  number_of_components: uint8
+  components: array[number_of_components] of struct {
+    component_id: uint8
+    dc_entropy_coding_table_number: uint8
+    ac_entropy_coding_table_number: uint8
+  }
+  scan_data: bytes
 }
+
+type RST = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8
+  valid_marker_type: enum {
+    rst0 = 0xD0
+    rst1 = 0xD1
+    rst2 = 0xD2
+    rst3 = 0xD3
+    rst4 = 0xD4
+    rst5 = 0xD5
+    rst6 = 0xD6
+    rst7 = 0xD7
+  }
+  marker_type: valid_marker_type
+}
+
+type EOI = struct {
+  marker: uint8 = 0xFF
+  marker_type: uint8 = 0xD9
+}
+
+type JPEG = struct {
+  soi: SOI
+  app0: APP0
+  app1: optional APP1
+  dqt: array[4] of optional DQT
+  dht: array[4] of optional DHT
+  sof0: SOF0
+  sof2: optional SOF2
+  dri: optional DRI
+  sos: SOS
+  rst: array[8] of optional RST
+  eoi: EOI
+}
+
+let jpeg = JPEG;

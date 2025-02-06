@@ -1,64 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema"
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="http://example.com/nitf"
-        xmlns:tns="http://example.com/nitf"
-        elementFormDefault="qualified"
-        attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf"
+           elementFormDefault="qualified"
+           version="1.0">
+    
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="text" lengthKind="explicit" encoding="US-ASCII" occursCountKind="expression" leadingSkip="0"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-    <dfdl:format ref="tns:nitfFormat"/>
+    <xs:element name="NITF">
+        <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+                <xs:element name="ImageSegment" type="tns:ImageSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="DataExtensionSegment" type="tns:DataExtensionSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="TextSegment" type="tns:TextSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-    <dfdl:defineFormat name="nitfFormat">
-        <dfdl:byteOrder value="bigEndian"/>
-        <dfdl:encoding value="UTF-8"/>
-        <dfdl:lengthKind value="explicit"/>
-        <dfdl:binaryNumberRep value="binary"/>
-        <dfdl:alignmentUnits value="bytes"/>
-    </dfdl:defineFormat>
+    <xs:complexType name="FileHeaderType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="FHDR" type="xs:string" dfdl:length="9"/>
+            <xs:element name="CLEVEL" type="xs:string" dfdl:length="2"/>
+            <xs:element name="STYPE" type="xs:string" dfdl:length="4"/>
+            <xs:element name="OSTAID" type="xs:string" dfdl:length="10"/>
+            <xs:element name="FDT" type="xs:string" dfdl:length="14"/>
+            <xs:element name="FTITLE" type="xs:string" dfdl:length="80"/>
+            <xs:element name="FSCLAS" type="xs:string" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
 
-    <element name="NITF" type="tns:NITFType"/>
+    <xs:complexType name="ImageSegmentType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="IM" type="xs:string" dfdl:length="2"/>
+            <xs:element name="IID1" type="xs:string" dfdl:length="10"/>
+            <xs:element name="IDATIM" type="xs:string" dfdl:length="14"/>
+            <xs:element name="TGTID" type="xs:string" dfdl:length="17" minOccurs="0"/>
+            <xs:element name="ISCLAS" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ENCRYP" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ICAT" type="xs:string" dfdl:length="3"/>
+            <xs:element name="ABPP" type="xs:string" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
 
-    <complexType name="NITFType">
-        <sequence>
-            <element name="FileHeader" type="tns:FileHeaderType"/>
-            <element name="ImageSegment" type="tns:ImageSegmentType" maxOccurs="unbounded"/>
-            <element name="TextSegment" type="tns:TextSegmentType" maxOccurs="unbounded"/>
-        </sequence>
-    </complexType>
+    <xs:complexType name="DataExtensionSegmentType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="DE" type="xs:string" dfdl:length="2"/>
+            <xs:element name="DESID" type="xs:string" dfdl:length="25"/>
+            <xs:element name="DESVER" type="xs:string" dfdl:length="2"/>
+            <xs:element name="DECLAS" type="xs:string" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
 
-    <complexType name="FileHeaderType">
-        <sequence>
-            <element name="FileType" type="string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <element name="FileVersion" type="string" dfdl:length="5" dfdl:lengthKind="explicit"/>
-            <element name="ComplexityLevel" type="int" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <element name="SystemType" type="string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-        </sequence>
-    </complexType>
+    <xs:complexType name="TextSegmentType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="TE" type="xs:string" dfdl:length="2"/>
+            <xs:element name="TEXTID" type="xs:string" dfdl:length="80"/>
+            <xs:element name="TEXTDATE" type="xs:string" dfdl:length="8"/>
+        </xs:sequence>
+    </xs:complexType>
 
-    <complexType name="ImageSegmentType">
-        <sequence>
-            <element name="ImageId" type="string" dfdl:length="10" dfdl:lengthKind="explicit"/>
-            <element name="ImageDate" type="date" dfdl:length="8" dfdl:lengthKind="explicit" dfdl:calendarPattern="yyyyMMdd"/>
-            <element name="ImageSecurity" type="tns:SecurityType"/>
-            <element name="ImageData" type="hexBinary" dfdl:lengthKind="delimited"/>
-        </sequence>
-    </complexType>
-
-    <complexType name="TextSegmentType">
-        <sequence>
-            <element name="TextId" type="string" dfdl:length="10" dfdl:lengthKind="explicit"/>
-            <element name="TextDate" type="date" dfdl:length="8" dfdl:lengthKind="explicit" dfdl:calendarPattern="yyyyMMdd"/>
-            <element name="TextSecurity" type="tns:SecurityType"/>
-            <element name="TextData" type="string" dfdl:lengthKind="delimited"/>
-        </sequence>
-    </complexType>
-
-    <complexType name="SecurityType">
-        <sequence>
-            <element name="Classification" type="string" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <element name="ClassificationSystem" type="string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <element name="Codewords" type="string" dfdl:length="11" dfdl:lengthKind="explicit"/>
-        </sequence>
-    </complexType>
-
-</schema>
+</xs:schema>

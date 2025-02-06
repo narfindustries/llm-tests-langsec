@@ -1,27 +1,22 @@
-global tls_client_hello_gemini_1: record {
-    uint32 client_hello_length;
-    string client_hello_data;
+module TLS_Client_Hello;
+
+type tls_client_hello_record = record {
+    content_type: uint8;
+    version: uint16;
+    length: uint16;
+    client_hello: tls_client_hello;
 };
 
-event tls_client_hello_gemini_1_event(tls_client_hello_gemini_1: tls_client_hello_gemini_1) {
-    print fmt("Client Hello Length: %u", tls_client_hello_gemini_1.client_hello_length);
-    print fmt("Client Hello Data: %s", tls_client_hello_gemini_1.client_hello_data);
-}
+type tls_client_hello = record {
+    protocol_version: uint16;
+    random: bytes;
+    session_id: bytes;
+    cipher_suites: vector[uint16];
+    compression_methods: vector[uint8];
+    extensions: vector[tls_extension];
+};
 
-redef record::TLS::ClientHello {
-    client_hello_gemini_1: tls_client_hello_gemini_1;
-}
-
-event tls_client_hello_gemini_1_redef_event(tls_client_hello_gemini_1: tls_client_hello_gemini_1) {
-    print fmt("Client Hello Length (Redef): %u", tls_client_hello_gemini_1.client_hello_length);
-    print fmt("Client Hello Data (Redef): %s", tls_client_hello_gemini_1.client_hello_data);
-}
-
-local tls_client_hello_gemini_1_data: tls_client_hello_gemini_1;
-
-event zeek_init() {
-    tls_client_hello_gemini_1_data.client_hello_length = 1234;
-    tls_client_hello_gemini_1_data.client_hello_data = "This is a test client hello";
-    tls_client_hello_gemini_1_event(tls_client_hello_gemini_1_data);
-    tls_client_hello_gemini_1_redef_event(tls_client_hello_gemini_1_data);
-}
+type tls_extension = record {
+    extension_type: uint16;
+    extension_data: bytes;
+};

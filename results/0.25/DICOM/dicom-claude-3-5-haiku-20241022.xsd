@@ -1,71 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://www.example.org/DICOM"
-           xmlns:dicom="http://www.example.org/DICOM">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
+           targetNamespace="http://example.com/dicom"
+           xmlns:dicom="http://example.com/dicom"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
-        alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        separator=""
-        separatorSuppressionPolicy="never"
-        separatorPosition="infix"
-        documentFinalTerminatorCanBeMissing="yes"
-        byteOrder="bigEndian"
-        encoding="UTF-8"
+    <xs:appinfo>
+      <dfdl:format
         representation="binary"
+        byteOrder="littleEndian"
+        alignment="1"
+        alignmentUnits="bytes"
+        encoding="UTF-8"
         occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberRounding="roundUp"
-        textZonedSignStyle="asciiSignSeparate"/>
+        lengthKind="implicit"
+        initiatedContent="no"/>
     </xs:appinfo>
   </xs:annotation>
 
   <xs:element name="DICOMFile" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FileHeader" dfdl:lengthKind="implicit">
+      <xs:sequence dfdl:separator="">
+        <xs:element name="Preamble" type="xs:hexBinary" 
+                    dfdl:length="128" 
+                    dfdl:lengthUnits="bytes"/>
+        
+        <xs:element name="Prefix" type="xs:string" 
+                    dfdl:length="4" 
+                    dfdl:lengthUnits="bytes"
+                    dfdl:encoding="ASCII"/>
+        
+        <xs:element name="MetadataElements">
           <xs:complexType>
-            <xs:sequence>
-              <xs:element name="Preamble" type="xs:hexBinary" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="128"/>
-              <xs:element name="Signature" type="xs:string" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="4"/>
+            <xs:sequence dfdl:separator="">
+              <xs:element name="Tag" type="dicom:DicomTag" 
+                          minOccurs="0" 
+                          maxOccurs="unbounded"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="DataElements" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="DataElement" maxOccurs="unbounded">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="Tag" type="xs:hexBinary" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="4"/>
-                    <xs:element name="VR" type="xs:string" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="2"/>
-                    <xs:element name="Length" type="xs:unsignedInt" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="2"/>
-                    <xs:element name="Value" type="xs:hexBinary" 
-                                dfdl:lengthKind="explicit" 
-                                dfdl:length="{ ../Length }"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
+        
+        <xs:element name="PixelData" type="xs:hexBinary" 
+                    minOccurs="0" 
+                    maxOccurs="unbounded" 
+                    dfdl:lengthKind="implicit"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
+  <xs:complexType name="DicomTag">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Group" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:lengthUnits="bytes"/>
+      <xs:element name="Element" type="xs:hexBinary" 
+                  dfdl:length="2" 
+                  dfdl:lengthUnits="bytes"/>
+      <xs:element name="VR" type="xs:string" 
+                  dfdl:length="2" 
+                  dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedInt"/>
+      <xs:element name="Value" type="xs:hexBinary" 
+                  dfdl:lengthKind="explicit" 
+                  dfdl:length="{../Length}"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

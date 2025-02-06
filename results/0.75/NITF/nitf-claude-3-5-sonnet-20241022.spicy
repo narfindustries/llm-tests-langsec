@@ -1,57 +1,178 @@
 module NITF;
 
-public type Message = unit {
-    file_header: FileHeader;
-    image_segments: ImageSegment[];
-};
+type Header = unit {
+    fhdr: bytes &size=4;
+    fver: bytes &size=5;
+    clevel: bytes &size=2;
+    stype: bytes &size=2;
+    ostaid: bytes &size=10;
+    fdt: bytes &size=14;
+    ftitle: bytes &size=80;
+    fsclas: bytes &size=1;
+    fsclsy: bytes &size=2;
+    fscode: bytes &size=11;
+    fsctlh: bytes &size=2;
+    fsrel: bytes &size=20;
+    fsdctp: bytes &size=2;
+    fsdcdt: bytes &size=8;
+    fsdcxm: bytes &size=4;
+    fsdg: bytes &size=1;
+    fsdgdt: bytes &size=8;
+    fscltx: bytes &size=43;
+    fscatp: bytes &size=1;
+    fscaut: bytes &size=40;
+    fscrsn: bytes &size=1;
+    fssrdt: bytes &size=8;
+    fsctln: bytes &size=15;
+    fscop: bytes &size=5;
+    fscpys: bytes &size=5;
+    encryp: bytes &size=1;
+    fbkgc: bytes &size=3;
+    oname: bytes &size=24;
+    ophone: bytes &size=18;
+    fl: bytes &size=12;
+    hl: bytes &size=6;
+    numi: uint8[3];
+    nums: uint8[3];
+    numx: uint8[3];
+    numt: uint8[3];
+    numdes: uint8[3];
+    numres: uint8[3];
 
-type FileHeader = unit {
-    file_profile_name: bytes &size=4;
-    file_version: bytes &size=5;
-    complexity_level: bytes &size=2;
-    standard_type: bytes &size=4;
-    originating_station_id: bytes &size=10;
-    date_time: bytes &size=14;
-    file_title: bytes &size=80;
-    security_class: bytes &size=1;
-    copy_number: bytes &size=5;
-    num_image_segments: uint16 &convert=cast<uint16>($$);
-    
+    var num_images: uint64;
+    var num_symbols: uint64;
+    var num_labels: uint64;
+    var num_texts: uint64;
+    var num_des: uint64;
+    var num_reserved: uint64;
+
     on %done {
-        self.num_image_segments = cast<uint16>(self.num_image_segments);
+        self.num_images = cast<uint64>(self.numi[0]);
+        self.num_symbols = cast<uint64>(self.nums[0]);
+        self.num_labels = cast<uint64>(self.numx[0]);
+        self.num_texts = cast<uint64>(self.numt[0]);
+        self.num_des = cast<uint64>(self.numdes[0]);
+        self.num_reserved = cast<uint64>(self.numres[0]);
     }
 };
 
 type ImageSegment = unit {
     im: bytes &size=2;
-    image_id: bytes &size=10;
-    date_time: bytes &size=14;
-    target_id: bytes &size=17;
-    image_title: bytes &size=80;
-    image_security_class: bytes &size=1;
-    encryption: bytes &size=1;
-    image_source: bytes &size=42;
-    num_sig_rows: uint32;
-    num_sig_cols: uint32;
-    pixel_value_type: bytes &size=3;
-    image_representation: bytes &size=8;
-    image_category: bytes &size=8;
-    actual_bits_per_pixel: uint8;
-    pixel_justification: bytes &size=1;
-    image_coord_system: bytes &size=1;
-    image_geo_loc: bytes &size=60;
-    num_comments: uint8;
-    image_compression: bytes &size=2;
-    compression_rate: bytes &size=4;
-    
-    on %done {
-        self.num_sig_rows = cast<uint32>(self.num_sig_rows);
-        self.num_sig_cols = cast<uint32>(self.num_sig_cols);
-        self.actual_bits_per_pixel = cast<uint8>(self.actual_bits_per_pixel);
-        self.num_comments = cast<uint8>(self.num_comments);
-    }
+    iid1: bytes &size=10;
+    idatim: bytes &size=14;
+    tgtid: bytes &size=17;
+    iid2: bytes &size=80;
+    isclas: bytes &size=1;
+    isclsy: bytes &size=2;
+    iscode: bytes &size=11;
+    isctlh: bytes &size=2;
+    isrel: bytes &size=20;
+    isdctp: bytes &size=2;
+    isdcdt: bytes &size=8;
+    isdcxm: bytes &size=4;
+    isdg: bytes &size=1;
+    isdgdt: bytes &size=8;
+    iscltx: bytes &size=43;
+    iscatp: bytes &size=1;
+    iscaut: bytes &size=40;
+    iscrsn: bytes &size=1;
+    issrdt: bytes &size=8;
+    isctln: bytes &size=15;
+    encryp: bytes &size=1;
+    isorce: bytes &size=42;
+    nrows: bytes &size=8;
+    ncols: bytes &size=8;
+    pvtype: bytes &size=3;
+    irep: bytes &size=8;
+    icat: bytes &size=8;
+    abpp: bytes &size=2;
+    pjust: bytes &size=1;
+    icords: bytes &size=1;
+    igeolo: bytes &size=60;
+    nicom: bytes &size=1;
+    ic: bytes &size=2;
+    comrat: bytes &size=4;
+    nbands: bytes &size=1;
+    xbands: bytes &size=5;
 };
 
-on Message::%done {
-    print self;
-}
+type SymbolSegment = unit {
+    sy: bytes &size=2;
+    sid: bytes &size=10;
+    sname: bytes &size=20;
+    ssclas: bytes &size=1;
+    encryp: bytes &size=1;
+    srep: bytes &size=8;
+    sal: bytes &size=1;
+    nrows: bytes &size=8;
+    ncols: bytes &size=8;
+    sdlvl: bytes &size=3;
+    salvl: bytes &size=3;
+    sloc: bytes &size=10;
+    sbnd1: bytes &size=10;
+    scolor: bytes &size=1;
+    sbnd2: bytes &size=10;
+    sres2: bytes &size=2;
+};
+
+type LabelSegment = unit {
+    la: bytes &size=2;
+    lid: bytes &size=10;
+    lsclas: bytes &size=1;
+    encryp: bytes &size=1;
+    fontcode: bytes &size=1;
+    style: bytes &size=1;
+    cbtn: bytes &size=1;
+    cbtf: bytes &size=1;
+    color: bytes &size=1;
+    lbl_columns: bytes &size=2;
+    row_count: bytes &size=2;
+    type_family: bytes &size=1;
+    rotation: bytes &size=3;
+};
+
+type TextSegment = unit {
+    te: bytes &size=2;
+    textid: bytes &size=7;
+    txtalvl: bytes &size=3;
+    txtdt: bytes &size=14;
+    txtitl: bytes &size=80;
+    tsclas: bytes &size=1;
+    encryp: bytes &size=1;
+    txtfmt: bytes &size=3;
+    txshdl: bytes &size=5;
+};
+
+type DataExtensionSegment = unit {
+    de: bytes &size=2;
+    desid: bytes &size=25;
+    desver: bytes &size=2;
+    desclas: bytes &size=1;
+    encryp: bytes &size=1;
+    desshf: bytes &size=1;
+    desoflw: bytes &size=6;
+    desitem: bytes &size=3;
+    desshl: bytes &size=4;
+};
+
+type ReservedSegment = unit {
+    re: bytes &size=2;
+    resid: bytes &size=25;
+    resver: bytes &size=2;
+    resclas: bytes &size=1;
+    encryp: bytes &size=1;
+    resshf: bytes &size=1;
+    resoflw: bytes &size=6;
+    resitem: bytes &size=3;
+    resshl: bytes &size=4;
+};
+
+public type NITF = unit {
+    header: Header;
+    image: ImageSegment[self.header.num_images];
+    symbol: SymbolSegment[self.header.num_symbols];
+    label: LabelSegment[self.header.num_labels];
+    text: TextSegment[self.header.num_texts];
+    data_extension: DataExtensionSegment[self.header.num_des];
+    reserved: ReservedSegment[self.header.num_reserved];
+};

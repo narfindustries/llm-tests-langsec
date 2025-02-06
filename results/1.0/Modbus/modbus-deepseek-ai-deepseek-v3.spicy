@@ -1,0 +1,42 @@
+module Modbus;
+
+type UnitID = uint8;
+type FunctionCode = uint8;
+type ExceptionCode = uint8;
+type Data = bytes;
+
+type ModbusHeader = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: UnitID;
+};
+
+type ModbusRequest = unit {
+    header: ModbusHeader;
+    function_code: FunctionCode;
+    data: Data;
+};
+
+type ModbusResponse = unit {
+    header: ModbusHeader;
+    function_code: FunctionCode;
+    data: Data;
+};
+
+type ModbusException = unit {
+    header: ModbusHeader;
+    function_code: FunctionCode;
+    exception_code: ExceptionCode;
+};
+
+type ModbusPDU = unit {
+    request: ModbusRequest;
+    response: ModbusResponse;
+    exception: ModbusException;
+};
+
+type ModbusMessage = unit {
+    header: ModbusHeader;
+    pdu: ModbusPDU;
+};

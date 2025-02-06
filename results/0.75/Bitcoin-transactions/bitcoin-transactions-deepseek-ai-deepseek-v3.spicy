@@ -1,0 +1,40 @@
+module Bitcoin;
+
+public type Transaction = unit {
+    version: uint32;
+    input_count: varint;
+    inputs: Input[$$.input_count];
+    output_count: varint;
+    outputs: Output[$$.output_count];
+    lock_time: uint32;
+    witness: optional Witness;
+};
+
+type Input = unit {
+    previous_txid: bytes &size=32;
+    previous_output_index: uint32;
+    script_sig_length: varint;
+    script_sig: bytes &size=$$.script_sig_length;
+    sequence: uint32;
+};
+
+type Output = unit {
+    value: uint64;
+    script_pubkey_length: varint;
+    script_pubkey: bytes &size=$$.script_pubkey_length;
+};
+
+type Witness = unit {
+    witness_count: varint;
+    witness_data: bytes[$$.witness_count];
+};
+
+type varint = unit {
+    first_byte: uint8;
+    value: case $$.first_byte of {
+        0xFD -> uint16;
+        0xFE -> uint32;
+        0xFF -> uint64;
+        *    -> uint8;
+    };
+};

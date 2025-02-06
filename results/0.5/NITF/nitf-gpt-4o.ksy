@@ -1,97 +1,327 @@
 meta:
   id: nitf
-  title: National Imagery Transmission Format
+  title: National Imagery Transmission Format (NITF)
   file-extension: nitf
   endian: be
+  encoding: ASCII
 
 seq:
-  - id: header
-    type: header
-
-  - id: image_segments
-    type: image_segment
-    repeat: expr
-    repeat-expr: header.num_image_segments
-
-  - id: graphic_segments
-    type: graphic_segment
-    repeat: expr
-    repeat-expr: header.num_graphic_segments
-
-  - id: text_segments
-    type: text_segment
-    repeat: expr
-    repeat-expr: header.num_text_segments
-
-  - id: data_extension_segments
-    type: data_extension_segment
-    repeat: expr
-    repeat-expr: header.num_data_extension_segments
-
-  - id: reserved_extension_segments
-    type: reserved_extension_segment
-    repeat: expr
-    repeat-expr: header.num_reserved_extension_segments
+  - id: file_header
+    type: file_header
 
 types:
-  header:
+  file_header:
     seq:
-      - id: file_type
+      - id: fhdr
         type: str
-        size: 4
-      - id: version
-        type: str
-        size: 5
-      - id: complexity_level
+        size: 9
+        encoding: ASCII
+      - id: clevel
         type: str
         size: 2
-      - id: num_image_segments
-        type: u1
-      - id: num_graphic_segments
-        type: u1
-      - id: num_text_segments
-        type: u1
-      - id: num_data_extension_segments
-        type: u1
-      - id: num_reserved_extension_segments
-        type: u1
-
-  image_segment:
-    seq:
-      - id: segment_header
+        encoding: ASCII
+      - id: stype
+        type: str
+        size: 4
+        encoding: ASCII
+      - id: ostaid
         type: str
         size: 10
-      - id: segment_data
-        size: 100  # Placeholder size, replace with actual size logic
+        encoding: ASCII
+      - id: fdt
+        type: str
+        size: 14
+        encoding: ASCII
+      - id: ftitle
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: fsclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: fscode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fscctlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fsrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fscaut
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: fsctln
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: fsdwng
+        type: str
+        size: 6
+        encoding: ASCII
+      - id: fsdwngdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: fsdevt
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: oname
+        type: str
+        size: 24
+        encoding: ASCII
+      - id: ophone
+        type: str
+        size: 18
+        encoding: ASCII
+      - id: fl
+        type: u4
+      - id: hl
+        type: u4
+      - id: numi
+        type: u2
+      - id: lish
+        type: u4
+      - id: li
+        type: u4
+        repeat: expr
+        repeat-expr: numi
+      - id: nums
+        type: u2
+      - id: lssh
+        type: u4
+      - id: ls
+        type: u4
+        repeat: expr
+        repeat-expr: nums
+      - id: numt
+        type: u2
+      - id: ltsh
+        type: u4
+      - id: lt
+        type: u4
+        repeat: expr
+        repeat-expr: numt
+      - id: numdes
+        type: u2
+      - id: ldesh
+        type: u4
+      - id: lde
+        type: u4
+        repeat: expr
+        repeat-expr: numdes
+      - id: numres
+        type: u2
+      - id: lresh
+        type: u4
+      - id: lre
+        type: u4
+        repeat: expr
+        repeat-expr: numres
 
-  graphic_segment:
+  image_subheader:
     seq:
-      - id: segment_header
+      - id: im
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: iid1
         type: str
         size: 10
-      - id: segment_data
-        size: 50  # Placeholder size, replace with actual size logic
-
-  text_segment:
-    seq:
-      - id: segment_header
+        encoding: ASCII
+      - id: idatim
         type: str
-        size: 10
-      - id: segment_data
-        size: 200  # Placeholder size, replace with actual size logic
-
-  data_extension_segment:
-    seq:
-      - id: segment_header
+        size: 14
+        encoding: ASCII
+      - id: tgtid
         type: str
-        size: 10
-      - id: segment_data
-        size: 150  # Placeholder size, replace with actual size logic
-
-  reserved_extension_segment:
-    seq:
-      - id: segment_header
+        size: 17
+        encoding: ASCII
+      - id: iid2
         type: str
-        size: 10
-      - id: segment_data
-        size: 75  # Placeholder size, replace with actual size logic
+        size: 80
+        encoding: ASCII
+      - id: isclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: iscode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: isctlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: isrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: iscauth
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: isctln
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: isdwng
+        type: str
+        size: 6
+        encoding: ASCII
+      - id: isdwngdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: isdevt
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: isorce
+        type: str
+        size: 42
+        encoding: ASCII
+      - id: nrows
+        type: u4
+      - id: ncols
+        type: u4
+      - id: pvtype
+        type: str
+        size: 3
+        encoding: ASCII
+      - id: irep
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: icat
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: abpp
+        type: u2
+      - id: pjust
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: icords
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: igeolo
+        type: str
+        size: 60
+        encoding: ASCII
+      - id: nicom
+        type: u2
+      - id: icom
+        type: str
+        repeat: expr
+        repeat-expr: nicom
+        size: 80
+        encoding: ASCII
+
+  text_subheader:
+    seq:
+      - id: te
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: textid
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: txtalvl
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: txtcode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: txtctlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: txtrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: txtauth
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: txtctln
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: txtdwng
+        type: str
+        size: 6
+        encoding: ASCII
+      - id: txtdwngdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: txtdevt
+        type: str
+        size: 40
+        encoding: ASCII
+
+  data_extension_subheader:
+    seq:
+      - id: de
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: desid
+        type: str
+        size: 25
+        encoding: ASCII
+      - id: desver
+        type: u2
+      - id: declas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: decode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: dectlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: derel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: decaut
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: dectln
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: dedwng
+        type: str
+        size: 6
+        encoding: ASCII
+      - id: dedwngdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: dedevt
+        type: str
+        size: 40
+        encoding: ASCII

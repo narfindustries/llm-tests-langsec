@@ -1,38 +1,128 @@
-module PNG-Image;
+module PNG;
 
-import spicy;
-
-public type PNG_Image = unit {
+public type PNG = unit {
     magic: bytes &size=8 &requires=($$ == b"\x89PNG\r\n\x1a\n");
     chunks: Chunk[];
 };
 
 type Chunk = unit {
     length: uint32 &byte-order=BigEndian;
-    type: bytes &size=4;
-    data: bytes &size=self.length;
-    crc: bytes &size=4;
-    
-    on %done {
-        if ( self.type == b"IHDR" ) {
-            local width = spicy::bytes_to_uint(self.data[0:4], spicy::ByteOrder::Big);
-            local height = spicy::bytes_to_uint(self.data[4:8], spicy::ByteOrder::Big);
-            local bit_depth = self.data[8];
-            local color_type = self.data[9];
-            local compression = self.data[10];
-            local filter = self.data[11];
-            local interlace = self.data[12];
-            
-            print fmt("PNG Image: %dx%d pixels", width, height);
-            print fmt("Bit Depth: %d", bit_depth);
-            print fmt("Color Type: %d", color_type);
-            print fmt("Compression: %d", compression);
-            print fmt("Filter: %d", filter);
-            print fmt("Interlace: %d", interlace);
+    chunk_type: bytes &size=4;
+    chunk_data: bytes &size=self.length {
+        switch self.chunk_type {
+            b"IHDR" -> parse_with(IHDR_Data);
+            b"PLTE" -> parse_with(PLTE_Data);
+            b"bKGD" -> parse_with(bKGD_Data);
+            b"cHRM" -> parse_with(cHRM_Data);
+            b"gAMA" -> parse_with(gAMA_Data);
+            b"hIST" -> parse_with(hIST_Data);
+            b"iCCP" -> parse_with(iCCP_Data);
+            b"iTXt" -> parse_with(iTXt_Data);
+            b"pHYs" -> parse_with(pHYs_Data);
+            b"sBIT" -> parse_with(sBIT_Data);
+            b"sPLT" -> parse_with(sPLT_Data);
+            b"sRGB" -> parse_with(sRGB_Data);
+            b"tEXt" -> parse_with(tEXt_Data);
+            b"tIME" -> parse_with(tIME_Data);
+            b"tRNS" -> parse_with(tRNS_Data);
+            b"zTXt" -> parse_with(zTXt_Data);
         }
-    }
+    };
+    crc: uint32 &byte-order=BigEndian;
 };
 
-on PNG_Image::%done {
-    print "PNG parsing completed";
-}
+type IHDR_Data = unit {
+    width: uint32 &byte-order=BigEndian;
+    height: uint32 &byte-order=BigEndian;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
+
+type PLTE_Data = unit {
+    entries: bytes &size=self.length &requires=(self.length % 3 == 0);
+};
+
+type bKGD_Data = unit {
+    data: bytes &size=self.length;
+};
+
+type cHRM_Data = unit {
+    white_point_x: uint32 &byte-order=BigEndian;
+    white_point_y: uint32 &byte-order=BigEndian;
+    red_x: uint32 &byte-order=BigEndian;
+    red_y: uint32 &byte-order=BigEndian;
+    green_x: uint32 &byte-order=BigEndian;
+    green_y: uint32 &byte-order=BigEndian;
+    blue_x: uint32 &byte-order=BigEndian;
+    blue_y: uint32 &byte-order=BigEndian;
+};
+
+type gAMA_Data = unit {
+    gamma: uint32 &byte-order=BigEndian;
+};
+
+type hIST_Data = unit {
+    frequencies: bytes &size=self.length;
+};
+
+type iCCP_Data = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &size=self.length - (|self.profile_name| + 2);
+};
+
+type iTXt_Data = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &size=self.length - (|self.keyword| + |self.language_tag| + |self.translated_keyword| + 5);
+};
+
+type pHYs_Data = unit {
+    pixels_per_unit_x: uint32 &byte-order=BigEndian;
+    pixels_per_unit_y: uint32 &byte-order=BigEndian;
+    unit_specifier: uint8;
+};
+
+type sBIT_Data = unit {
+    significant_bits: bytes &size=self.length;
+};
+
+type sPLT_Data = unit {
+    palette_name: bytes &until=b"\x00";
+    sample_depth: uint8;
+    palette_entries: bytes &size=self.length - (|self.palette_name| + 2);
+};
+
+type sRGB_Data = unit {
+    rendering_intent: uint8;
+};
+
+type tEXt_Data = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &size=self.length - (|self.keyword| + 1);
+};
+
+type tIME_Data = unit {
+    year: uint16 &byte-order=BigEndian;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type tRNS_Data = unit {
+    transparency_data: bytes &size=self.length;
+};
+
+type zTXt_Data = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &size=self.length - (|self.keyword| + 2);
+};

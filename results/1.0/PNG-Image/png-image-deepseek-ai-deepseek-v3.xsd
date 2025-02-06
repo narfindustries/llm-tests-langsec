@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:ex="http://example.com/dfdl/">
+
+    <xs:include schemaLocation="dfdl-general.dfdl.xsd"/>
+
+    <xs:element name="PNGFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:lengthKind="explicit"/>
+                <xs:element name="Chunks">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="Chunk" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="Length" type="xs:unsignedInt"/>
+                                        <xs:element name="ChunkType" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+                                        <xs:element name="ChunkData" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../Length }">
+                                            <xs:complexType>
+                                                <xs:choice>
+                                                    <xs:element name="IHDR" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="Width" type="xs:unsignedInt"/>
+                                                                <xs:element name="Height" type="xs:unsignedInt"/>
+                                                                <xs:element name="BitDepth" type="xs:unsignedByte"/>
+                                                                <xs:element name="ColorType" type="xs:unsignedByte"/>
+                                                                <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+                                                                <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+                                                                <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="IDAT" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="CompressedData" type="xs:hexBinary"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="IEND" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence/>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="tEXt" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="Keyword" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                                <xs:element name="Text" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="zTXt" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="Keyword" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                                <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+                                                                <xs:element name="CompressedText" type="xs:hexBinary"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="iTXt" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="Keyword" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                                <xs:element name="CompressionFlag" type="xs:unsignedByte"/>
+                                                                <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+                                                                <xs:element name="LanguageTag" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                                <xs:element name="TranslatedKeyword" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                                <xs:element name="Text" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="bKGD" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="Color">
+                                                                    <xs:complexType>
+                                                                        <xs:choice>
+                                                                            <xs:element name="Grayscale" type="xs:unsignedShort"/>
+                                                                            <xs:element name="Truecolor">
+                                                                                <xs:complexType>
+                                                                                    <xs:sequence>
+                                                                                        <xs:element name="Red" type="xs:unsignedShort"/>
+                                                                                        <xs:element name="Green" type="xs:unsignedShort"/>
+                                                                                        <xs:element name="Blue" type="xs:unsignedShort"/>
+                                                                                    </xs:sequence>
+                                                                                </xs:complexType>
+                                                                            </xs:element>
+                                                                            <xs:element name="IndexedColor" type="xs:unsignedByte"/>
+                                                                        </xs:choice>
+                                                                    </xs:complexType>
+                                                                </xs:element>
+                                                            </xs:sequence>
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="cHRM" dfdl:choiceDispatchKey="{ ../ChunkType }">
+                                                        <xs:complexType>
+                                                            <xs:sequence>
+                                                                <xs:element name="WhitePointX" type="xs:unsignedInt"/>
+                                                                <xs:element name="WhitePointY" type="xs:unsignedInt"/>
+                                                                <xs:element name="RedX" type="xs:unsignedInt"/>
+                                                                <xs:element name="RedY" type="xs:unsignedInt"/>
+                                                               

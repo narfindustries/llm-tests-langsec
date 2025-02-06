@@ -1,59 +1,90 @@
 module GIF;
 
-import zeek;
-
-type GIFHeader = unit {
-    magic: bytes &length=3 &check=magic == "GIF",
-    version: bytes &length=3 &check=(version == "87a" || version == "89a"),
-    width: uint16,
-    height: uint16,
-    packed_fields: uint8,
-    background_color_index: uint8,
-    pixel_aspect_ratio: uint8
+type GlobalColorTable = unit {
+    entries: bytes &size=(3 * (1 << (context.size_of_global_color_table + 1)));
 };
 
-type LogicalScreenDescriptor = unit {
-    width: uint16,
-    height: uint16,
-    packed_fields: uint8,
-    background_color_index: uint8,
-    pixel_aspect_ratio: uint8
+type LocalColorTable = unit {
+    entries: bytes &size=(3 * (1 << (context.size_of_local_color_table + 1)));
 };
 
-type ColorTable = unit {
-    colors: array[3] of uint8
+type ImageDataBlock = unit {
+    block_size: uint8;
+    data: bytes &size=block_size;
+};
+
+type ImageData = unit {
+    lzw_minimum_code_size: uint8;
+    blocks: array of ImageDataBlock &until(.block_size == 0);
+};
+
+type GraphicControlExtension = unit {
+    block_size: uint8 &assert(block_size == 4);
+    packed_fields: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8 &assert(block_terminator == 0);
+};
+
+type CommentExtension = unit {
+    blocks: array of ImageDataBlock &until(.block_size == 0);
+};
+
+type PlainTextExtension = unit {
+    block_size: uint8 &assert(block_size == 12);
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    character_cell_width: uint8;
+    character_cell_height: uint8;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    blocks: array of ImageDataBlock &until(.block_size == 0);
+};
+
+type ApplicationExtension = unit {
+    block_size: uint8 &assert(block_size == 11);
+    application_identifier: bytes &size=8;
+    application_auth_code: bytes &size=3;
+    blocks: array of ImageDataBlock &until(.block_size == 0);
+};
+
+type Extension = unit {
+    extension_introducer: uint8 &assert(extension_introducer == 0x21);
+    extension_label: uint8;
+    body: switch(extension_label) {
+        0xF9 => GraphicControlExtension,
+        0xFE => CommentExtension,
+        0x01 => PlainTextExtension,
+        0xFF => ApplicationExtension,
+    };
 };
 
 type ImageDescriptor = unit {
-    separator: uint8 &check=separator == 0x2C,
-    left_position: uint16,
-    top_position: uint16,
-    width: uint16,
-    height: uint16,
-    packed_fields: uint8
+    image_separator: uint8 &assert(image_separator == 0x2C);
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: uint8;
+    size_of_local_color_table: uint8 &eval=(packed_fields & 0x07);
+    local_color_table: optional<LocalColorTable> &if(packed_fields & 0x80 != 0);
+    image_data: ImageData;
 };
 
-type Block = unit {
-    block_type: uint8,
-    data: bytes &length=block_size
-} &enrich {
-    block_size: uint16 {
-        parse: |self| { return 0; } # dummy size, should be determined dynamically
-    }
+type GIF = unit {
+    header: bytes &size=6 &assert(header == "GIF89a");
+    logical_screen_width: uint16;
+    logical_screen_height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+    size_of_global_color_table: uint8 &eval=(packed_fields & 0x07);
+    global_color_table: optional<GlobalColorTable> &if(packed_fields & 0x80 != 0);
+    blocks: array of unit {
+        extension: optional<Extension> &if(peek() == 0x21);
+        image_descriptor: optional<ImageDescriptor> &if(peek() == 0x2C);
+    } &until(peek() == 0x3B);
+    trailer: uint8 &assert(trailer == 0x3B);
 };
-
-public type GIFFile = unit {
-    header: GIFHeader,
-    logical_screen_descriptor: LogicalScreenDescriptor,
-    global_color_table: optional ColorTable {
-        parse when: header.packed_fields & 0x80 != 0,
-        repeat: header.packed_fields & 0x80 != 0 ? (1 << ((header.packed_fields & 0x07) + 1)) : 0
-    },
-    blocks: Block[]
-};
-
-public export {
-    hook zeek_init() {
-        print("GIF Spicy Analyzer Loaded");
-    }
-}

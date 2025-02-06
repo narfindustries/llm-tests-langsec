@@ -1,82 +1,81 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schema xmlns="http://www.w3.org/2001/XMLSchema"
         xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="http://example.com/tls-client-hello"
-        xmlns:tns="http://example.com/tls-client-hello"
+        targetNamespace="http://example.com/tls"
+        xmlns:ex="http://example.com/tls"
         elementFormDefault="qualified">
 
-  <dfdl:format ref="tns:TLSClientHelloFormat"/>
+  <annotation>
+    <appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="dfdl:GeneralFormat" byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes"/>
+    </appinfo>
+  </annotation>
 
-  <dfdl:defineFormat name="TLSClientHelloFormat">
-    <dfdl:format lengthKind="explicit"
-                 encoding="utf-8"
-                 byteOrder="bigEndian"
-                 alignmentUnits="bytes"/>
-  </dfdl:defineFormat>
-
-  <element name="TLSClientHello" type="tns:TLSClientHelloType"/>
-
-  <complexType name="TLSClientHelloType">
-    <sequence>
-      <element name="handshakeType" type="unsignedByte">
-        <dfdl:length value="1" lengthUnits="bytes"/>
-      </element>
-      <element name="length" type="unsignedShort">
-        <dfdl:length value="2" lengthUnits="bytes"/>
-      </element>
-      <element name="version" type="unsignedShort">
-        <dfdl:length value="2" lengthUnits="bytes"/>
-      </element>
-      <element name="random" type="tns:RandomType"/>
-      <element name="sessionId" type="tns:SessionIdType"/>
-      <element name="cipherSuites" type="tns:CipherSuitesType"/>
-      <element name="compressionMethods" type="tns:CompressionMethodsType"/>
-      <!-- Add extensions if needed -->
-    </sequence>
-  </complexType>
-
-  <complexType name="RandomType">
-    <sequence>
-      <element name="gmtUnixTime" type="unsignedInt">
-        <dfdl:length value="4" lengthUnits="bytes"/>
-      </element>
-      <element name="randomBytes" type="hexBinary">
-        <dfdl:length value="28" lengthUnits="bytes"/>
-      </element>
-    </sequence>
-  </complexType>
-
-  <complexType name="SessionIdType">
-    <sequence>
-      <element name="sessionIdLength" type="unsignedByte">
-        <dfdl:length value="1" lengthUnits="bytes"/>
-      </element>
-      <element name="sessionId" type="hexBinary">
-        <dfdl:length expression="{../sessionIdLength}" lengthUnits="bytes"/>
-      </element>
-    </sequence>
-  </complexType>
-
-  <complexType name="CipherSuitesType">
-    <sequence>
-      <element name="cipherSuitesLength" type="unsignedShort">
-        <dfdl:length value="2" lengthUnits="bytes"/>
-      </element>
-      <element name="cipherSuites" type="hexBinary">
-        <dfdl:length expression="{../cipherSuitesLength}" lengthUnits="bytes"/>
-      </element>
-    </sequence>
-  </complexType>
-
-  <complexType name="CompressionMethodsType">
-    <sequence>
-      <element name="compressionMethodsLength" type="unsignedByte">
-        <dfdl:length value="1" lengthUnits="bytes"/>
-      </element>
-      <element name="compressionMethods" type="hexBinary">
-        <dfdl:length expression="{../compressionMethodsLength}" lengthUnits="bytes"/>
-      </element>
-    </sequence>
-  </complexType>
+  <element name="ClientHello">
+    <complexType>
+      <sequence>
+        <element name="legacy_version">
+          <simpleType>
+            <restriction base="hexBinary">
+              <length value="2"/>
+            </restriction>
+          </simpleType>
+        </element>
+        <element name="random">
+          <simpleType>
+            <restriction base="hexBinary">
+              <length value="32"/>
+            </restriction>
+          </simpleType>
+        </element>
+        <element name="legacy_session_id">
+          <complexType>
+            <sequence>
+              <element name="session_id_length" type="unsignedByte" dfdl:length="1"/>
+              <element name="session_id" type="hexBinary" dfdl:length="{../session_id_length}"/>
+            </sequence>
+          </complexType>
+        </element>
+        <element name="cipher_suites">
+          <complexType>
+            <sequence>
+              <element name="cipher_suites_length" type="unsignedShort" dfdl:length="2"/>
+              <element name="cipher_suites_list" type="hexBinary" dfdl:length="{../cipher_suites_length}"/>
+            </sequence>
+          </complexType>
+        </element>
+        <element name="legacy_compression_methods">
+          <complexType>
+            <sequence>
+              <element name="compression_methods_length" type="unsignedByte" dfdl:length="1"/>
+              <element name="compression_methods" type="hexBinary" dfdl:length="{../compression_methods_length}"/>
+            </sequence>
+          </complexType>
+        </element>
+        <element name="extensions" minOccurs="0" maxOccurs="1">
+          <complexType>
+            <sequence>
+              <element name="extensions_length" type="unsignedShort" dfdl:length="2"/>
+              <element name="extension" minOccurs="0" maxOccurs="unbounded">
+                <complexType>
+                  <sequence>
+                    <element name="extension_type" type="unsignedShort" dfdl:length="2"/>
+                    <element name="extension_data">
+                      <complexType>
+                        <sequence>
+                          <element name="extension_data_length" type="unsignedShort" dfdl:length="2"/>
+                          <element name="extension_data_value" type="hexBinary" dfdl:length="{../extension_data_length}"/>
+                        </sequence>
+                      </complexType>
+                    </element>
+                  </sequence>
+                </complexType>
+              </element>
+            </sequence>
+          </complexType>
+        </element>
+      </sequence>
+    </complexType>
+  </element>
 
 </schema>

@@ -1,80 +1,76 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <hammer/hammer.h>
 
-// Define the basic structures used in Bitcoin transactions
-static HParser *uint256;
-static HParser *varint;
-static HParser *tx_in;
-static HParser *tx_out;
-static HParser *transaction;
-
-// Util function to parse uint256 commonly used in Bitcoin for hashes
-static HParsedToken *act_uint256(const HParseResult *p, void *user_data) {
-    // Assuming uint256 is just a sequence of 32 bytes (little-endian)
-    return H_MAKE_BYTES(p->ast->token);
+// Parser for a variable-length integer
+static HParser *var_int() {
+    return h_choice(h_int64(), h_int32(), h_int16(), h_int8(), NULL);
 }
 
-// Parser for variable length integers used in Bitcoin
-static HParser *build_varint() {
-    return h_choice(h_sequence(h_bits(8, false), NULL),
-                    h_sequence(h_bits(8, false), h_bits(16, false), NULL),
-                    h_sequence(h_bits(8, false), h_bits(32, false), NULL),
-                    h_sequence(h_bits(8, false), h_bits(64, false), NULL),
-                    NULL);
+// Parser for a Bitcoin transaction input
+static HParser *tx_input() {
+    HParser *prev_tx_hash = h_bits(256, false);
+    HParser *output_index = h_uint32();
+    HParser *script_length = var_int();
+    HParser *script_sig = h_length_value(script_length, h_bits(h_uint_value(script_length), false));
+    HParser *sequence = h_uint32();
+
+    return h_sequence(prev_tx_hash, output_index, script_sig, sequence, NULL);
 }
 
-// Parser for a transaction input
-static HParser *build_tx_in() {
-    return h_sequence(
-        uint256, // previous output hash
-        h_bits(32, false), // previous output index
-        h_length_value(h_bits(16, false), h_uint8()), // script (length + data)
-        h_bits(32, false), // sequence
-        NULL);
+// Parser for a Bitcoin transaction output
+static HParser *tx_output() {
+    HParser *value = h_uint64();
+    HParser *script_length = var_int();
+    HParser *script_pubkey = h_length_value(script_length, h_bits(h_uint_value(script_length), false));
+
+    return h_sequence(value, script_pubkey, NULL);
 }
 
-// Parser for a transaction output
-static HParser *build_tx_out() {
-    return h_sequence(
-        h_bits(64, false), // value in satoshis
-        h_length_value(h_bits(16, false), h_uint8()), // script (length + data)
-        NULL);
-}
+// Main parser for a Bitcoin transaction
+static HParser *bitcoin_tx() {
+    HParser *version = h_uint32();
+    HParser *input_count = var_int();
+    HParser *inputs = h_many1(tx_input());
+    HParser *output_count = var_int();
+    HParser *outputs = h_many1(tx_output());
+    HParser *locktime = h_uint32();
 
-// Parser for a Bitcoin transaction
-static HParser *build_transaction() {
-    return h_sequence(
-        h_bits(32, false), // version
-        h_length_value(varint, tx_in), // inputs
-        h_length_value(varint, tx_out), // outputs
-        h_bits(32, false), // locktime
-        NULL);
+    return h_sequence(version, input_count, inputs, output_count, outputs, locktime, NULL);
 }
 
 int main(int argc, char **argv) {
-    HParser *uint256 = h_repeat_n(h_uint8(), 32);
-    varint = build_varint();
-    tx_in = build_tx_in();
-    tx_out = build_tx_out();
-    transaction = build_transaction();
-
-    // Read binary data from stdin
-    uint8_t *input = malloc(10000); // Adjust size as needed
-    size_t input_size = fread(input, 1, 10000, stdin);
-
-    // Parse the input data
-    HParseResult *result = h_parse(transaction, input, input_size);
-    if (result) {
-        printf("Transaction parsed successfully!\n");
-        h_pprint(stdout, result->ast, 0, 0);
-    } else {
-        fprintf(stderr, "Failed to parse transaction\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <bitcoin_tx_file>\n", argv[0]);
+        return 1;
     }
 
-    // Cleanup
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buf = malloc(fsize);
+    fread(buf, 1, fsize, fp);
+    fclose(fp);
+
+    HParser *btc_parser = bitcoin_tx();
+    HParseResult *result = h_parse(btc_parser, buf, fsize);
+
+    if (result) {
+        printf("Parse successful!\n");
+    } else {
+        printf("Parse failed!\n");
+    }
+
     h_parse_result_free(result);
-    free(input);
+    h_parser_free(btc_parser);
+    free(buf);
+
     return 0;
 }

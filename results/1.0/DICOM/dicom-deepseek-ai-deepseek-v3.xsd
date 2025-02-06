@@ -1,0 +1,25 @@
+<xs:schema xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="littleEndian" encoding="ISO-8859-1" lengthKind="explicit" occursCountKind="implicit" sequenceKind="ordered" initiatedContent="no" leadingSkip="0" encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:leadingSkip="0"/>
+        <xs:element name="Prefix" type="xs:string" dfdl:length="4" fixed="DICM" dfdl:occursCountKind="implicit" dfdl:leadingSkip="0" dfdl:encodingErrorPolicy="replace"/>
+        <xs:element name="DataElements" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:leadingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+              <xs:element name="Tag" type="xs:string" dfdl:length="4" dfdl:encoding="ISO-8859-1" dfdl:lengthKind="explicit" dfdl:leadingSkip="0"/>
+              <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ISO-8859-1" dfdl:lengthKind="explicit" dfdl:leadingSkip="0"/>
+              <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:leadingSkip="0"/>
+              <xs:element name="Value" type="xs:string" dfdl:length="{../Length}" dfdl:encoding="ISO-8859-1" dfdl:lengthKind="explicit" dfdl:leadingSkip="0" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

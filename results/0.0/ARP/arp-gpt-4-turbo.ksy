@@ -1,83 +1,49 @@
 meta:
   id: arp_packet
-  title: ARP (Address Resolution Protocol)
+  title: ARP (Address Resolution Protocol) Packet
   license: CC0-1.0
   endian: be
 
 doc: |
-  The Address Resolution Protocol (ARP) is a network protocol used to find out the address of a network node from its IP address.
+  The Address Resolution Protocol (ARP) is a network layer protocol
+  used for mapping an IP address to a physical machine address that is
+  recognized in the local network.
 
 seq:
-  - id: hw_type
+  - id: htype
     type: u2
-    enum: hardware_type
     doc: Hardware type (e.g., Ethernet = 1)
-
-  - id: proto_type
+  - id: ptype
     type: u2
-    enum: protocol_type
     doc: Protocol type (e.g., IPv4 = 0x0800)
-
-  - id: hw_size
+  - id: hlen
     type: u1
-    doc: Hardware address length (e.g., Ethernet MAC address length is 6)
-
-  - id: proto_size
+    doc: Hardware address length (e.g., Ethernet = 6)
+  - id: plen
     type: u1
-    doc: Protocol address length (e.g., IPv4 address length is 4)
-
-  - id: opcode
+    doc: Protocol address length (e.g., IPv4 = 4)
+  - id: oper
     type: u2
-    enum: operation
-    doc: ARP opcode (command)
-
-  - id: src_hw_addr
-    size: src_hw_addr_size
-    doc: Sender hardware address (MAC)
-
-  - id: src_proto_addr
-    size: src_proto_addr_size
-    doc: Sender protocol address (IP)
-
-  - id: dst_hw_addr
-    size: dst_hw_addr_size
-    doc: Target hardware address (MAC)
-
-  - id: dst_proto_addr
-    size: dst_proto_addr_size
-    doc: Target protocol address (IP)
+    doc: Operation (1 = request, 2 = reply)
+  - id: sha
+    size: sha_size
+    doc: Sender hardware address
+  - id: spa
+    size: spa_size
+    doc: Sender protocol address
+  - id: tha
+    size: tha_size
+    doc: Target hardware address
+  - id: tpa
+    size: tpa_size
+    doc: Target protocol address
 
 instances:
-  src_hw_addr_size:
-    value: hw_size
-
-  src_proto_addr_size:
-    value: proto_size
-
-  dst_hw_addr_size:
-    value: hw_size
-
-  dst_proto_addr_size:
-    value: proto_size
-
-enums:
-  hardware_type:
-    1: ethernet
-    6: ieee_802
-    7: arcnet
-    15: frame_relay
-    16: atm
-    17: hdsl
-    18: fibre_channel
-    19: atm2
-    20: serial_line
-
-  protocol_type:
-    0x0800: ipv4
-    0x86DD: ipv6
-
-  operation:
-    1: request
-    2: reply
-    3: request_reverse
-    4: reply_reverse
+  sha_size:
+    value: hlen
+  spa_size:
+    value: plen
+  tha_size:
+    value: hlen
+  tpa_size:
+    value: plen

@@ -1,39 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/zipgemini"
-           xmlns="http://example.org/zipgemini"
-           elementFormDefault="qualified">
+           targetNamespace="http://example.org/zip"
+           xmlns="http://example.org/zip"
+           elementFormDefault="qualified"
+           xmlns:tns="http://example.org/zip">
 
-  <xs:element name="zipGemini">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="zipFile">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="10"/>
-        <xs:element name="data" type="xs:string" dfdl:lengthKind="implicit" dfdl:occursCountKind="unbounded"/>
-        <xs:element name="footer" type="FooterType" dfdl:lengthKind="explicit" dfdl:length="5"/>
+        <xs:element ref="localFileHeader" maxOccurs="unbounded"/>
+        <xs:element ref="centralDirectoryEntry" maxOccurs="unbounded"/>
+        <xs:element ref="endOfCentralDirectoryRecord"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:string" dfdl:length="2"/>
-      <xs:element name="id" type="xs:string" dfdl:length="8"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="localFileHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="signatureType"/>
+        <xs:element name="versionNeededToExtract" type="unsignedShortType"/>
+        <xs:element name="generalPurposeBitFlag" type="unsignedShortType"/>
+        <xs:element name="compressionMethod" type="unsignedShortType"/>
+        <xs:element name="lastModTime" type="unsignedIntType"/>
+        <xs:element name="lastModDate" type="unsignedIntType"/>
+        <xs:element name="crc32" type="unsignedIntType"/>
+        <xs:element name="compressedSize" type="unsignedIntType"/>
+        <xs:element name="uncompressedSize" type="unsignedIntType"/>
+        <xs:element name="filenameLength" type="unsignedShortType"/>
+        <xs:element name="extraFieldLength" type="unsignedShortType"/>
+        <xs:element name="filename" type="stringType"/>
+        <xs:element name="extraField" type="bytesType" minOccurs="0"/>
+        <xs:element name="data" type="bytesType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="FooterType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="checksum" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
+  <xs:element name="centralDirectoryEntry">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="signatureType"/>
+        <xs:element name="versionMadeBy" type="unsignedShortType"/>
+        <xs:element name="versionNeededToExtract" type="unsignedShortType"/>
+        <xs:element name="generalPurposeBitFlag" type="unsignedShortType"/>
+        <xs:element name="compressionMethod" type="unsignedShortType"/>
+        <xs:element name="lastModTime" type="unsignedIntType"/>
+        <xs:element name="lastModDate" type="unsignedIntType"/>
+        <xs:element name="crc32" type="unsignedIntType"/>
+        <xs:element name="compressedSize" type="unsignedIntType"/>
+        <xs:element name="uncompressedSize" type="unsignedIntType"/>
+        <xs:element name="filenameLength" type="unsignedShortType"/>
+        <xs:element name="extraFieldLength" type="unsignedShortType"/>
+        <xs:element name="fileCommentLength" type="unsignedShortType"/>
+        <xs:element name="diskNumberStart" type="unsignedShortType"/>
+        <xs:element name="internalFileAttributes" type="unsignedShortType"/>
+        <xs:element name="externalFileAttributes" type="unsignedIntType"/>
+        <xs:element name="localHeaderOffset" type="unsignedIntType"/>
+        <xs:element name="filename" type="stringType"/>
+        <xs:element name="extraField" type="bytesType" minOccurs="0"/>
+        <xs:element name="fileComment" type="stringType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <dfdl:defineSchema>
-    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8"
-                 lengthUnits="bytes" representation="text"/>
-    <dfdl:textStandard dfdl:representation="text"/>
-  </dfdl:defineSchema>
+  <xs:element name="endOfCentralDirectoryRecord">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="signature" type="signatureType"/>
+        <xs:element name="numberOfThisDisk" type="unsignedShortType"/>
+        <xs:element name="numberOfDiskWithStartOfCentralDirectory" type="unsignedShortType"/>
+        <xs:element name="totalNumberOfEntriesInCentralDirectoryOnThisDisk" type="unsignedShortType"/>
+        <xs:element name="totalNumberOfEntriesInCentralDirectory" type="unsignedShortType"/>
+        <xs:element name="sizeOfCentralDirectory" type="unsignedIntType"/>
+        <xs:element name="offsetOfStartOfCentralDirectory" type="unsignedIntType"/>
+        <xs:element name="zipFileCommentLength" type="unsignedShortType"/>
+        <xs:element name="zipFileComment" type="stringType" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="signatureType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="unsignedShortType">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="unsignedIntType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="stringType">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="bytesType">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
 
 </xs:schema>

@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:icmp="urn:icmp:1.0"
-    targetNamespace="urn:icmp:1.0">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:icmp="http://example.com/icmp"
+           targetNamespace="http://example.com/icmp">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        representation="binary"
-                        byteOrder="bigEndian"
-                        binaryNumberRep="binary"
-                        occursCountKind="implicit"/>
+                         lengthKind="implicit"
+                         byteOrder="bigEndian"
+                         representation="binary"
+                         binaryNumberRep="binary"
+                         occursCountKind="fixed"/>
         </xs:appinfo>
     </xs:annotation>
 
@@ -23,17 +21,54 @@
                 <xs:element name="type" type="xs:unsignedByte"/>
                 <xs:element name="code" type="xs:unsignedByte"/>
                 <xs:element name="checksum" type="xs:unsignedShort"/>
-                <xs:element name="restOfHeader">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="identifier" type="xs:unsignedShort"/>
-                            <xs:element name="sequenceNumber" type="xs:unsignedShort"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="remainder"/>
+                
+                <xs:choice>
+                    <xs:sequence dfdl:initiator="{ if (../type = 0 or ../type = 8) then '' else dfdl:error() }">
+                        <xs:element name="identifier" type="xs:unsignedShort"/>
+                        <xs:element name="sequenceNumber" type="xs:unsignedShort"/>
+                        <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 3) then '' else dfdl:error() }">
+                        <xs:element name="unused1" type="xs:unsignedInt" fixed="0"/>
+                        <xs:element name="originalPacket1" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 4) then '' else dfdl:error() }">
+                        <xs:element name="unused2" type="xs:unsignedInt" fixed="0"/>
+                        <xs:element name="originalPacket2" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 5) then '' else dfdl:error() }">
+                        <xs:element name="gatewayInternetAddress" type="xs:unsignedInt"/>
+                        <xs:element name="originalPacket3" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 11) then '' else dfdl:error() }">
+                        <xs:element name="unused3" type="xs:unsignedInt" fixed="0"/>
+                        <xs:element name="originalPacket4" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 12) then '' else dfdl:error() }">
+                        <xs:element name="pointer" type="xs:unsignedByte"/>
+                        <xs:element name="unused4" type="xs:hexBinary" dfdl:length="3"/>
+                        <xs:element name="originalPacket5" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 13 or ../type = 14) then '' else dfdl:error() }">
+                        <xs:element name="identifier" type="xs:unsignedShort"/>
+                        <xs:element name="sequenceNumber" type="xs:unsignedShort"/>
+                        <xs:element name="originateTimestamp" type="xs:unsignedInt"/>
+                        <xs:element name="receiveTimestamp" type="xs:unsignedInt"/>
+                        <xs:element name="transmitTimestamp" type="xs:unsignedInt"/>
+                    </xs:sequence>
+
+                    <xs:sequence dfdl:initiator="{ if (../type = 15 or ../type = 16) then '' else dfdl:error() }">
+                        <xs:element name="identifier" type="xs:unsignedShort"/>
+                        <xs:element name="sequenceNumber" type="xs:unsignedShort"/>
+                    </xs:sequence>
+                </xs:choice>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
 </xs:schema>

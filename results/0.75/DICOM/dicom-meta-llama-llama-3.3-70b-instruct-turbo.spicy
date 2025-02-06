@@ -1,35 +1,226 @@
-# Spicy specification for DICOM metadata
-%header {
-  import "zeek/spicy/standard/dicom.types"
-}
+module DICOM;
 
-%spicy -name DICOM::Metadata -transport DICOM::Types:: associates -base-types {
+type PatientName = string;
+type PatientID = string;
+type PatientBirthDate = date;
+type PatientSex = enum { M, F, O, UNK };
 
-  # Define DICOM metadata structure
-  module DICOM::Metadata {
-    %doc "DICOM metadata structure"
+type StudyInstanceUID = string;
+type StudyDate = date;
+type StudyTime = time;
+type StudyDescription = string;
 
-   -export {
-      # Group 0002: File Meta Information
-      meta_info: DICOM::Types::Element[
-        id=0x00020001, # FileMetaInformationGroupLength
-        id=0x00020002, # FileMetaInformationVersion
-        id=0x00020003, # MediaStorageSOPInstanceUID
-        id=0x00020010, # TransferSyntaxUID
-        id=0x00020012, # ImplementationClassUID
-      ],
+type SeriesInstanceUID = string;
+type SeriesNumber = int;
+type SeriesDescription = string;
+type Modality = enum { 
+  CT, 
+  MR, 
+  US, 
+  RF, 
+  NM, 
+  MG, 
+  DX, 
+  EC, 
+  IO, 
+  LS, 
+  PT, 
+  RTDOSE, 
+  RTIMAGE, 
+  RTPLAN, 
+  RTRECORD, 
+  RTSTRUCT, 
+  SM, 
+  SR, 
+  US, 
+  XA 
+};
 
-      # Group 0008: Identify Image
-      identify_image: DICOM::Types::Element[
-        id=0x00080010, # RecognitionCode
-        id=0x00080016, # SOPClassUID
-        id=0x00080018, # SOPInstanceUID
-        id=0x00080020, # StudyDate
-        id=0x00080030, # StudyTime
-      ]
-    }
-  }
-}
+type ImageInstanceUID = string;
+type ImageType = enum { 
+  ORIGINAL, 
+  DERIVED, 
+  PRIMARY, 
+  SECONDARY 
+};
+type ImageOrientation = enum { 
+  AXIAL, 
+  SAGITTAL, 
+  CORONAL, 
+  OBLIQUE 
+};
 
-%footer {
-}
+type PixelData = binary;
+
+type Manufacturer = string;
+type ModelName = string;
+type DeviceSerialNumber = string;
+
+type AcquisitionDate = date;
+type AcquisitionTime = time;
+type AcquisitionProtocol = string;
+
+type PixelSpacing = float;
+type PixelAspectRatio = float;
+type BitsAllocated = int;
+type BitsStored = int;
+
+type FrameOfReferenceUID = string;
+type PositionerPosition = float;
+type ImagePosition = float;
+type ImageOrientationPatient = float;
+type UltrasoundRegion = enum { 
+  REGION_0, 
+  REGION_1, 
+  REGION_2, 
+  REGION_3 
+};
+type UltrasoundType = enum { 
+  M_MODE, 
+  B_MODE, 
+  Doppler 
+};
+type FrameAnatomy = enum { 
+  ANTERIOR, 
+  POSTERIOR, 
+  LEFT, 
+  RIGHT, 
+  SUPERIOR, 
+  INFERIOR 
+};
+type FrameLaterality = enum { 
+  LEFT, 
+  RIGHT, 
+  UNASSIGNED 
+};
+type PatientPosition = enum { 
+  HFP, 
+  HFS, 
+  HFDR, 
+  FFP, 
+  FFS, 
+  FFDR 
+};
+
+type ProtocolName = string;
+type AcquisitionProtocolDescription = string;
+type ScheduledProcedureStepDescription = string;
+type PerformedProcedureStepDescription = string;
+
+type ContrastAgent = string;
+type ContrastAgentAdministrationRoute = enum { 
+  INTRAVENOUS, 
+  INTRAMUSCULAR, 
+  INTRAARTERIAL, 
+  INTRATHECAL 
+};
+type Radiopharmaceutical = string;
+type RadiopharmaceuticalAdministrationRoute = enum { 
+  INTRAVENOUS, 
+  INTRAMUSCULAR, 
+  INTRAARTERIAL, 
+  INTRATHECAL 
+};
+
+type Device = struct {
+  manufacturer: Manufacturer = "";
+  modelName: ModelName = "";
+  deviceSerialNumber: DeviceSerialNumber = "";
+};
+
+type Patient = struct {
+  patientName: PatientName = "";
+  patientID: PatientID = "";
+  patientBirthDate: PatientBirthDate = "";
+  patientSex: PatientSex = M;
+};
+
+type Study = struct {
+  studyInstanceUID: StudyInstanceUID = "";
+  studyDate: StudyDate = "";
+  studyTime: StudyTime = "";
+  studyDescription: StudyDescription = "";
+  referringPhysicianName: PatientName = "";
+  patientAge: string = "";
+  patientSize: float = 0;
+  patientWeight: float = 0;
+  occupation: string = "";
+  additionalPatientHistory: string = "";
+};
+
+type Series = struct {
+  seriesInstanceUID: SeriesInstanceUID = "";
+  seriesNumber: SeriesNumber = 0;
+  seriesDate: StudyDate = "";
+  seriesTime: StudyTime = "";
+  seriesDescription: SeriesDescription = "";
+  modality: Modality = CT;
+  manufacturer: Manufacturer = "";
+  modelName: ModelName = "";
+  deviceSerialNumber: DeviceSerialNumber = "";
+  softwareVersions: string = "";
+  protocolName: ProtocolName = "";
+  acquisitionProtocolDescription: AcquisitionProtocolDescription = "";
+};
+
+type Image = struct {
+  imageInstanceUID: ImageInstanceUID = "";
+  imageType: ImageType = ORIGINAL;
+  imageOrientation: ImageOrientation = AXIAL;
+  pixelData: PixelData = "";
+  pixelSpacing: PixelSpacing = 0.0;
+  pixelAspectRatio: PixelAspectRatio = 0.0;
+  bitsAllocated: BitsAllocated = 0;
+  bitsStored: BitsStored = 0;
+  highBit: int = 0;
+  pixelRepresentation: int = 0;
+  windowCenter: float = 0.0;
+  windowWidth: float = 0.0;
+  rescaleIntercept: float = 0.0;
+  rescaleSlope: float = 0.0;
+  lossyImageCompression: string = "";
+  derivationDescription: string = "";
+};
+
+type Ultrasound = struct {
+  ultrasoundRegion: UltrasoundRegion = REGION_0;
+  ultrasoundType: UltrasoundType = M_MODE;
+  frameOfReferenceUID: FrameOfReferenceUID = "";
+  positionerPosition: PositionerPosition = 0.0;
+  imagePosition: ImagePosition = 0.0;
+  imageOrientationPatient: ImageOrientationPatient = 0.0;
+  frameAnatomy: FrameAnatomy = ANTERIOR;
+  frameLaterality: FrameLaterality = LEFT;
+  patientPosition: PatientPosition = HFP;
+};
+
+type Frame = struct {
+  frameOfReferenceUID: FrameOfReferenceUID = "";
+  positionerPosition: PositionerPosition = 0.0;
+  imagePosition: ImagePosition = 0.0;
+  imageOrientationPatient: ImageOrientationPatient = 0.0;
+};
+
+type ContrastBolus = struct {
+  contrastAgent: ContrastAgent = "";
+  contrastAgentAdministrationRoute: ContrastAgentAdministrationRoute = INTRAVENOUS;
+};
+
+type RadiopharmaceuticalAdministration = struct {
+  radiopharmaceutical: Radiopharmaceutical = "";
+  radiopharmaceuticalAdministrationRoute: RadiopharmaceuticalAdministrationRoute = INTRAVENOUS;
+};
+
+type Dicom = struct {
+  patient: Patient = Patient;
+  study: Study = Study;
+  series: Series = Series;
+  image: Image = Image;
+  device: Device = Device;
+  ultrasound: optional Ultrasound = optional Ultrasound;
+  frame: optional Frame = optional Frame;
+  contrastBolus: optional ContrastBolus = optional ContrastBolus;
+  radiopharmaceuticalAdministration: optional RadiopharmaceuticalAdministration = optional RadiopharmaceuticalAdministration;
+};
+
+let main: Dicom = Dicom;

@@ -1,63 +1,17 @@
-#ifndef _NETWORK_TIME_PROTOCOL_VERSION_4_H_
-#define _NETWORK_TIME_PROTOCOL_VERSION_4_H_
+module Network_Time_Protocol_Version_4;
 
-#include <zeek/zeek.h>
-
-// Define necessary structures and functions here based on the NTPv4 specification.  
-// This will require careful examination of the NTPv4 protocol to accurately represent
-// the message format and fields.  This is a placeholder and needs to be completed.
-
-// Example (incomplete and needs to be expanded):
-typedef struct {
-    uint8_t leap;
-    uint8_t version;
-    uint8_t mode;
-    uint8_t stratum;
-    uint32_t poll;
-    uint32_t precision;
-    uint64_t root_delay;
-    uint64_t root_dispersion;
-    uint32_t ref_id;
-    uint64_t ref_time;
-    uint64_t origin_time;
-    uint64_t receive_time;
-    uint64_t transmit_time;
-} ntpv4_packet;
-
-
-// Function to parse the NTPv4 packet.  This is a placeholder and needs to be completed.
-ntpv4_packet* parse_ntpv4(const uint8_t* data, int len);
-
-#endif // _NETWORK_TIME_PROTOCOL_VERSION_4_H_
-
-
-// Example Spicy file (incomplete and needs to be expanded based on the above structures)
-event ntpv4_event(conn, data)
-{
-    ntpv4_packet* pkt = parse_ntpv4(data, len(data));
-    if (pkt == nullptr) {
-        return;
-    }
-
-    // Process the parsed packet data here.  Extract relevant fields and log them.
-    // Example:
-    // print fmt("NTPv4 packet received: Leap=%d, Version=%d, Mode=%d", pkt->leap, pkt->version, pkt->mode);
-
-    // Free the allocated memory
-    free(pkt);
-}
-
-// Example of how to use the event in a Zeek script:
-global ntpv4_event_count = 0;
-
-event zeek_init()
-{
-    // Register the event handler for UDP traffic on port 123 (NTP)
-    register_event_handler(UDP, 123, ntpv4_event);
-}
-
-event ntpv4_event(conn, data)
-{
-    ntpv4_event_count++;
-    // Add your NTPv4 packet processing logic here
-}
+type ntp_packet = record {
+	li:2:uint8;
+	vn:3:uint8;
+	mode:3:uint8;
+	stratum:uint8;
+	poll:uint8;
+	precision:uint8;
+	root_delay:uint32;
+	root_dispersion:uint32;
+	reference_id:uint32;
+	reference_timestamp:uint64;
+	originate_timestamp:uint64;
+	receive_timestamp:uint64;
+	transmit_timestamp:uint64;
+};

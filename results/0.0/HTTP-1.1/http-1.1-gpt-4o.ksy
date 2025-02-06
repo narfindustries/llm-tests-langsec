@@ -1,39 +1,58 @@
 meta:
-  id: http_message
-  title: HTTP Message
+  id: http
+  title: HTTP 1.1
   file-extension: http
   endian: be
 
 seq:
-  - id: start_line
-    type: start_line
+  - id: request_line
+    type: request_line
   - id: headers
-    type: header
-    repeat: until
-    repeat-until: _.is_empty
+    type: headers
   - id: body
     size-eos: true
-    if: start_line.is_request == false
+    if: headers.has_body
 
 types:
-  start_line:
+  request_line:
     seq:
-      - id: line
-        type: strz
-        encoding: utf-8
-        terminator: 0x0a
-    instances:
-      is_request:
-        value: line.starts_with('GET') or line.starts_with('POST') or line.starts_with('PUT') or line.starts_with('DELETE') or line.starts_with('HEAD') or line.starts_with('OPTIONS') or line.starts_with('PATCH')
-      is_response:
-        value: not is_request
+      - id: method
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: request_uri
+        type: str
+        encoding: ASCII
+        terminator: 0x20
+      - id: http_version
+        type: str
+        encoding: ASCII
+        terminator: 0x0d0a
 
-  header:
+  headers:
     seq:
-      - id: line
-        type: strz
-        encoding: utf-8
-        terminator: 0x0a
+      - id: fields
+        type: header_field
+        repeat: until
+        repeat-until: _.is_end_of_headers
+      - id: end_of_headers
+        type: str
+        encoding: ASCII
+        terminator: 0x0d0a
     instances:
-      is_empty:
-        value: line == ""
+      has_body:
+        value: fields.exists { it.name == "Content-Length" } or fields.exists { it.name == "Transfer-Encoding" }
+
+  header_field:
+    seq:
+      - id: name
+        type: str
+        encoding: ASCII
+        terminator: 0x3a  # ':'
+      - id: value
+        type: str
+        encoding: ASCII
+        terminator: 0x0d0a
+    instances:
+      is_end_of_headers:
+        value: name == "" and value == ""

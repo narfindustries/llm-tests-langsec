@@ -4,14 +4,10 @@ import spicy;
 
 public type Message = unit {
     header: Header;
-    questions: list<Question> &length(header.qdcount);
-    answers: list<ResourceRecord> &length(header.ancount);
-    authority: list<ResourceRecord> &length(header.nscount);
-    additional: list<ResourceRecord> &length(header.arcount);
-
-    on %done {
-        // Optional post-processing or validation
-    }
+    questions: Question[] &count(self.header.qdcount);
+    answers: ResourceRecord[] &count(self.header.ancount);
+    authorities: ResourceRecord[] &count(self.header.nscount);
+    additional: ResourceRecord[] &count(self.header.arcount);
 };
 
 type Header = unit {
@@ -24,52 +20,48 @@ type Header = unit {
 };
 
 type Flags = unit {
-    data: uint16;
-
-    qr:     bool = data[15:1];   # Query/Response
-    opcode: uint8 = data[14:4];  # Operation Code
-    aa:     bool = data[10:1];   # Authoritative Answer
-    tc:     bool = data[9:1];    # Truncation
-    rd:     bool = data[8:1];    # Recursion Desired
-    ra:     bool = data[7:1];    # Recursion Available
-    z:      uint8 = data[6:3];   # Reserved
-    rcode:  uint8 = data[3:4];   # Response Code
+    bits: bitfield(16) {
+        qr     : 1;
+        opcode : 4;
+        aa     : 1;
+        tc     : 1;
+        rd     : 1;
+        ra     : 1;
+        z      : 1;
+        ad     : 1;
+        cd     : 1;
+        rcode  : 4;
+    };
 };
 
 type Question = unit {
-    name: DNS::DomainName;
+    name: Name;
     qtype: uint16;
     qclass: uint16;
 };
 
 type ResourceRecord = unit {
-    name: DNS::DomainName;
+    name: Name;
     type: uint16;
-    class_: uint16;
+    class: uint16;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &length=rdlength;
+    rdata: bytes &length=(self.rdlength);
 };
 
-type DomainName = unit {
-    labels: list<Label> { 
-        local continue = true;
-        while ( continue ) {
-            local label = Label();
-            if ( label.length == 0 ) {
-                continue = false;
-            }
-        }
-    }
+type Name = unit {
+    labels: Label[] &until($$.type == 0);
+};
 
-    type Label = unit {
-        length: uint8;
-        if ( length > 0 && length < 64 ) {
-            name: bytes &length=length;
+type Label = unit {
+    type: uint8;
+    switch (self.type) {
+        0 -> { }
+        0xc0 -> { 
+            offset: uint8;
         }
-        else if ( length >= 192 ) {
-            # Handle DNS name compression
-            offset: uint16 &parse_at=(length & 0x3f) * 256 + input.read(1);
+        default -> {
+            label: bytes &length=(self.type);
         }
-    }
+    };
 };

@@ -1,27 +1,20 @@
-module GZIP.Gemini (..) where
+gzip = struct {
+    id1: u8 := 0x1f;
+    id2: u8 := 0x8b;
+    cm: u8;
+    flg: u8;
+    mtime: u32;
+    xfl: u8;
+    os: u8;
+    extra: if (flg & 0x04) { size: u16; data: bytes:size; };
+    fname: if (flg & 0x08) { name: string; };
+    comment: if (flg & 0x10) { comment: string; };
+    hcrc: if (flg & 0x02) { hcrc: u16; };
+    compressed: bytes;
+    crc32: u32;
+    isize: u32;
+};
 
-import Daedalus.Type.AST
-
-data GzipHeader = GzipHeader {
-  id :: { id :: Integer }
-}
-
-data GzipTrailer = GzipTrailer {
-  crc32 :: { crc32 :: Integer }
-}
-
-
-gzip_gemini_1 :: Daedalus GzipHeader
-gzip_gemini_1 = GzipHeader { id = 1 }
-
-gzip_gemini_2 :: Daedalus GzipTrailer
-gzip_gemini_2 = GzipTrailer { crc32 = 0 }
-
-
---Example usage,  replace with your actual data and encoding/decoding logic.
-main :: Daedalus ()
-main = do
-  h <- gzip_gemini_1
-  t <- gzip_gemini_2
-  return ()
+string = seq u8;
+bytes = seq u8;
 

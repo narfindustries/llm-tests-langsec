@@ -1,30 +1,49 @@
-#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
-#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+module HTTP_1_1;
 
-event http_request_gemini_flash(http_request_t req)
-{
-    if (req.method == "GET" &&
-        re_search("gemini://", req.uri) &&
-        re_search("\\.flash$", req.uri))
-    {
-        print("HTTP request for Gemini Flash resource detected: ", req.uri);
-        #ifdef DEBUG
-        print("Request headers: ", req.headers);
-        #endif
-    }
+type HTTP {
+	version: string;
+	method: string;
+	uri: string;
+	headers: record {
+		Cache_Control: string = "";
+		Connection: string = "";
+		Date: string = "";
+		Expect: string = "";
+		From: string = "";
+		Host: string = "";
+		If_Match: string = "";
+		If_Modified_Since: string = "";
+		If_None_Match: string = "";
+		If_Range: string = "";
+		If_Unmodified_Since: string = "";
+		Max_Forwards: int = 0;
+		Pragma: string = "";
+		Proxy_Authorization: string = "";
+		Range: string = "";
+		Referer: string = "";
+		TE: string = "";
+		User_Agent: string = "";
+		Accept_Ranges: string = "";
+		Age: int = 0;
+		Content_Encoding: string = "";
+		Content_Language: string = "";
+		Content_Length: int = 0;
+		Content_Location: string = "";
+		Content_MD5: string = "";
+		Content_Range: string = "";
+		Content_Type: string = "";
+		Expires: string = "";
+		Last_Modified: string = "";
+		Location: string = "";
+		Proxy_Authenticate: string = "";
+		Retry_After: int = 0;
+		Server: string = "";
+		Transfer_Encoding: string = "";
+		Vary: string = "";
+		WWW_Authenticate: string = "";
+		Via: string = "";
+		Warning: string = "";
+		# Add other optional headers as needed
+	};
+	body: bytes;
 }
-
-event http_response_gemini_flash(http_response_t resp)
-{
-    if (resp.status_code == 200 &&
-        re_search("gemini://", resp.uri) &&
-        re_search("\\.flash$", resp.uri))
-    {
-        print("HTTP response for Gemini Flash resource received: ", resp.uri);
-        #ifdef DEBUG
-        print("Response headers: ", resp.headers);
-        #endif
-    }
-}
-
-#endif

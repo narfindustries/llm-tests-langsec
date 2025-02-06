@@ -1,0 +1,19 @@
+module NTPv4;
+
+public type NTP_Packet = unit {
+    li: uint8;
+    vn: uint8;
+    mode: uint8;
+    stratum: uint8;
+    poll: uint8;
+    precision: uint8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    ref_id: uint32;
+    ref_timestamp: uint64;
+    orig_timestamp: uint64;
+    recv_timestamp: uint64;
+    transmit_timestamp: uint64;
+    key_id: uint32 &optional;
+    mac: bytes[16] &optional;
+};

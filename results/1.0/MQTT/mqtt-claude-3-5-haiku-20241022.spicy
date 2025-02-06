@@ -2,43 +2,205 @@ module MQTT;
 
 import spicy;
 
-public type Packet = unit {
-    %byteorder = spicy::ByteOrder::Little;
+public type MQTTPacket = unit {
+    fixed_header: FixedHeader;
 
-    var fixed_header: FixedHeader;
-    var variable_header: VariableHeader;
-    var payload: bytes &optional;
+    var packet_type: uint8;
 
-    : void {
-        self.fixed_header = fixed_header;
-        self.variable_header = variable_header;
-        
-        if ( fixed_header.remaining_length > 0 ) {
-            self.payload = bytes(fixed_header.remaining_length);
-        }
+    on fixed_header { packet_type = fixed_header.packet_type; }
+
+    switch ( packet_type ) {
+        1  => connect: Connect;
+        2  => connack: ConnAck;
+        3  => publish: Publish;
+        4  => puback: PubAck;
+        5  => pubrec: PubRec;
+        6  => pubrel: PubRel;
+        7  => pubcomp: PubComp;
+        8  => subscribe: Subscribe;
+        9  => suback: SubAck;
+        10 => unsubscribe: Unsubscribe;
+        11 => unsuback: UnsubAck;
+        12 => pingreq: PingReq;
+        13 => pingresp: PingResp;
+        14 => disconnect: Disconnect;
+        15 => auth: Auth;
+        *   => unknown: Unknown;
+    };
+}
+
+type FixedHeader = unit {
+    control_type: bitfield(1) {
+        packet_type:  4;
+        dup:          1;
+        qos:          2;
+        retain:       1;
+    };
+    remaining_length: var_uint;
+}
+
+type VarString = unit {
+    length: uint16;
+    data: bytes &length=length;
+}
+
+type Property = unit {
+    identifier: uint8;
+    switch ( identifier ) {
+        0x01 => payload_format_indicator: uint8;
+        0x02 => message_expiry_interval: uint32;
+        0x03 => content_type: VarString;
+        0x08 => response_topic: VarString;
+        0x09 => correlation_data: bytes;
+        0x11 => subscription_identifier: var_uint;
+        0x21 => session_expiry_interval: uint32;
+        0x24 => maximum_packet_size: uint32;
+        0x25 => topic_alias_maximum: uint16;
+        0x26 => receive_maximum: uint16;
+        0x27 => user_properties: vector<UserProperty>;
+        *    => unknown: bytes;
     }
+}
 
-    type FixedHeader = unit {
-        packet_type: bitfield(8) {
-            type: 4 [+0];
-            flags: 4 [+4];
-        };
-        
-        remaining_length: varint;
-    }
+type UserProperty = unit {
+    key: VarString;
+    value: VarString;
+}
 
-    type VariableHeader = unit {
-        protocol_name: bytes(6) &requires( self == b"MQTT" );
-        protocol_version: uint8;
-        connect_flags: bitfield(8) {
-            username_flag: 1 [+7];
-            password_flag: 1 [+6];
-            will_retain: 1 [+5];
-            will_qos: 2 [+3];
-            will_flag: 1 [+2];
-            clean_session: 1 [+1];
-            reserved: 1 [+0];
-        };
-        keep_alive: uint16;
-    }
+type Properties = unit {
+    length: var_uint;
+    properties: vector<Property> &count=length.value;
+}
+
+type Connect = unit {
+    protocol_name: bytes &length=4;
+    protocol_version: uint8;
+    connect_flags: bitfield(1) {
+        username_flag:      1;
+        password_flag:      1;
+        will_retain:        1;
+        will_qos:           2;
+        will_flag:          1;
+        clean_start:        1;
+        reserved:           1;
+    };
+    keep_alive: uint16;
+    properties: Properties;
+    client_id: VarString;
+    will_topic: optional<VarString>;
+    will_payload: optional<bytes>;
+    username: optional<VarString>;
+    password: optional<VarString>;
+}
+
+type ConnAck = unit {
+    connect_flags: bitfield(1) {
+        session_present:    1;
+        reserved:           7;
+    };
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Publish = unit {
+    topic_name: VarString;
+    packet_identifier: optional<uint16>;
+    properties: Properties;
+    payload: bytes;
+}
+
+type PubAck = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type PubRec = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type PubRel = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type PubComp = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Subscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    subscriptions: vector<Subscription>;
+}
+
+type Subscription = unit {
+    topic_filter: VarString;
+    options: bitfield(1) {
+        qos:                2;
+        no_local:           1;
+        retain_as_published: 1;
+        retain_handling:    2;
+        reserved:           2;
+    };
+}
+
+type SubAck = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector<uint8>;
+}
+
+type Unsubscribe = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: vector<VarString>;
+}
+
+type UnsubAck = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector<uint8>;
+}
+
+type PingReq = unit {}
+type PingResp = unit {}
+
+type Disconnect = unit {
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Auth = unit {
+    reason_code: uint8;
+    properties: Properties;
+}
+
+type Unknown = unit {
+    data: bytes;
+}
+
+function var_uint(input: bytes) : uint64 {
+    local result: uint64 = 0;
+    local multiplier: uint64 = 1;
+    local encoded_byte: uint8 = 0;
+    local i: uint8 = 0;
+
+    do {
+        encoded_byte = input[i];
+        result |= (encoded_byte & 0x7F) * multiplier;
+        multiplier *= 0x80;
+        i += 1;
+    } while ( (encoded_byte & 0x80) != 0 );
+
+    return result;
+}
+
+public type MQTT = unit {
+    packets: vector<MQTTPacket>;
 }

@@ -1,55 +1,155 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/mqtt"
-           xmlns:tns="http://example.com/mqtt"
-           elementFormDefault="qualified"
-           dfdl:format="byteOrder='bigEndian', lengthKind='explicit', byteOrderRuntimeByteOrder='bigEndian'
-                        encoding='UTF-8', lengthUnits='bytes'">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/mqtt" xmlns:tns="http://example.com/mqtt" elementFormDefault="qualified" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <xs:include schemaLocation="ogf-dfdl.xsd"/>  
 
-  <xs:element name="MQTT">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
-        <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
-        <xs:element name="Payload" type="tns:PayloadType" minOccurs="0"/>
-      </xs:sequence>
+    <xs:element name="MQTTMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+                <xs:element name="VariableHeaderAndPayload" type="tns:VariableHeaderAndPayloadType" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../FixedHeader/RemainingLength }"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Fixed Header Type -->
+    <xs:complexType name="FixedHeaderType">
+        <xs:sequence>
+            <xs:element name="ControlPacketType" type="tns:ControlPacketTypeEnum" dfdl:length="4" dfdl:lengthUnits="bits"/>
+            <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="4" dfdl:lengthUnits="bits"/>
+            <xs:element name="RemainingLength" type="tns:VariableLengthIntegerType"/>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
 
-  <xs:complexType name="FixedHeaderType">
-    <xs:sequence>
-      <xs:element name="ControlPacketType" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="RemainingLength" type="xs:unsignedInt">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/"><dfdl:property name="length" value="{expression=> tns:calcRemainingLength}" /></xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+    <!-- Variable Header and Payload Type -->
+    <xs:complexType name="VariableHeaderAndPayloadType">
+        <xs:choice dfdl:initiatedContent="yes">
+            <!-- CONNECT Packet -->
+            <xs:element name="Connect" type="tns:ConnectPacketType" dfdl:initiator="0x10" minOccurs="0"/>
 
-  <xs:complexType name="VariableHeaderType">
-    <xs:sequence>
-      <!-- Define variable header elements based on MQTT packet type -->
-      <xs:element name="VariableHeaderData" type="xs:hexBinary" dfdl:lengthKind="explicit"
-                  dfdl:length="{expression=>tns:calcVariableHeaderLength}" minOccurs="0"/>
-    </xs:sequence>
-  </xs:complexType>
+            <!-- CONNACK Packet -->
+            <xs:element name="Connack" type="tns:ConnackPacketType" dfdl:initiator="0x20" minOccurs="0"/>
 
-  <xs:complexType name="PayloadType">
-    <xs:sequence>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit"
-                  dfdl:length="{expression=>tns:calcPayloadLength}" minOccurs="0"/>
-    </xs:sequence>
-  </xs:complexType>
-  
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineVariable name="calcRemainingLength" type="xs:unsignedInt" external="false"/>
-      <dfdl:defineVariable name="calcVariableHeaderLength" type="xs:unsignedInt" external="false"/>
-      <dfdl:defineVariable name="calcPayloadLength" type="xs:unsignedInt" external="false"/>
-    </xs:appinfo>
-  </xs:annotation>
+            <!-- PUBLISH Packet -->
+            <xs:element name="Publish" type="tns:PublishPacketType" dfdl:initiator="0x30" minOccurs="0"/>
 
+            <!-- PUBACK Packet -->
+            <xs:element name="Puback" type="tns:PubackPacketType" dfdl:initiator="0x40" minOccurs="0"/>
+
+            <!-- PUBREC Packet -->
+            <xs:element name="Pubrec" type="tns:PubrecPacketType" dfdl:initiator="0x50" minOccurs="0"/>
+
+            <!-- PUBREL Packet -->
+            <xs:element name="Pubrel" type="tns:PubrelPacketType" dfdl:initiator="0x60" minOccurs="0"/>
+
+            <!-- PUBCOMP Packet -->
+            <xs:element name="Pubcomp" type="tns:PubcompPacketType" dfdl:initiator="0x70" minOccurs="0"/>
+
+            <!-- SUBSCRIBE Packet -->
+            <xs:element name="Subscribe" type="tns:SubscribePacketType" dfdl:initiator="0x80" minOccurs="0"/>
+
+            <!-- UNSUBSCRIBE Packet -->
+            <xs:element name="Unsubscribe" type="tns:UnsubscribePacketType" dfdl:initiator="0xA0" minOccurs="0"/>
+
+            <!-- PINGREQ Packet -->
+            <xs:element name="Pingreq" type="tns:PingreqPacketType" dfdl:initiator="0xC0" minOccurs="0"/>
+
+            <!-- PINGRESP Packet -->
+            <xs:element name="Pingresp" type="tns:PingrespPacketType" dfdl:initiator="0xD0" minOccurs="0"/>
+
+            <!-- DISCONNECT Packet -->
+            <xs:element name="Disconnect" type="tns:DisconnectPacketType" dfdl:initiator="0xE0" minOccurs="0"/>
+
+            <!-- AUTH Packet -->
+            <xs:element name="Auth" type="tns:AuthPacketType" dfdl:initiator="0xF0" minOccurs="0"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <!-- Control Packet Types Enumeration -->
+    <xs:simpleType name="ControlPacketTypeEnum">
+        <xs:restriction base="xs:unsignedByte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="5"/>
+            <xs:enumeration value="6"/>
+            <xs:enumeration value="7"/>
+            <xs:enumeration value="8"/>
+            <xs:enumeration value="9"/>
+            <xs:enumeration value="10"/>
+            <xs:enumeration value="11"/>
+            <xs:enumeration value="12"/>
+            <xs:enumeration value="13"/>
+            <xs:enumeration value="14"/>
+            <xs:enumeration value="15"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Variable Length Integer Type -->
+    <xs:simpleType name="VariableLengthIntegerType">
+        <xs:restriction base="xs:unsignedInt">
+            <xs:pattern value="([0-9A-Fa-f]{1,8})"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Sample Packet Types -->
+    <xs:complexType name="ConnectPacketType">
+        <xs:sequence>
+            <xs:element name="ProtocolName" type="xs:string"/>
+            <xs:element name="ProtocolLevel" type="xs:unsignedByte"/>
+            <xs:element name="ConnectFlags" type="xs:unsignedByte"/>
+            <xs:element name="KeepAlive" type="xs:unsignedShort"/>
+            <xs:element name="Properties" type="tns:ConnectPropertiesType" minOccurs="0"/>
+            <xs:element name="ClientIdentifier" type="xs:string"/>
+            <xs:element name="WillProperties" type="tns:WillPropertiesType" minOccurs="0"/>
+            <xs:element name="WillTopic" type="xs:string" minOccurs="0"/>
+            <xs:element name="WillPayload" type="xs:base64Binary" minOccurs="0"/>
+            <xs:element name="UserName" type="xs:string" minOccurs="0"/>
+            <xs:element name="Password" type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Connect Properties -->
+    <xs:complexType name="ConnectPropertiesType">
+        <xs:sequence>
+            <xs:element name="SessionExpiryInterval" type="xs:unsignedInt" minOccurs="0"/>
+            <xs:element name="ReceiveMaximum" type="xs:unsignedShort" minOccurs="0"/>
+            <xs:element name="MaximumPacketSize" type="xs:unsignedInt" minOccurs="0"/>
+            <xs:element name="TopicAliasMaximum" type="xs:unsignedShort" minOccurs="0"/>
+            <xs:element name="RequestResponseInformation" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="RequestProblemInformation" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="UserProperties" type="tns:UserPropertiesType" minOccurs="0"/>
+            <xs:element name="AuthenticationMethod" type="xs:string" minOccurs="0"/>
+            <xs:element name="AuthenticationData" type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- User Properties -->
+    <xs:complexType name="UserPropertiesType">
+        <xs:sequence>
+            <xs:element name="UserProperty" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Name" type="xs:string"/>
+                        <xs:element name="Value" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Will Properties -->
+    <xs:complexType name="WillPropertiesType">
+        <xs:sequence>
+            <xs:element name="WillDelayInterval" type="xs:unsignedInt" minOccurs="0"/>
+            <xs:element name="PayloadFormatIndicator" type="xs:boolean" minOccurs="0"/>
+            <xs:element name="MessageExpiryInterval" type="xs:unsignedInt" minOccurs="0"/>
+            <xs:element name="ContentType" type="xs:string" minOccurs="0"/>
+            <xs:element name="ResponseTopic" type="xs:string" minOccurs="0"/>
+            <xs:element name="CorrelationData" type="xs:base64Binary" minOccurs="0"/>
+            <xs:element name="UserProperties" type="tns:UserPropertiesType" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Additional Packet Types like Connack, Publish, etc., will follow a similar pattern -->
 </xs:schema>

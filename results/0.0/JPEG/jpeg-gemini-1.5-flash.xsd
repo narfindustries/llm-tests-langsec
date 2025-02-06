@@ -1,16 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/jpeg" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/jpeg"
+           xmlns="http://example.org/jpeg"
+           elementFormDefault="qualified"
+           dfdl:lengthKind="implicit">
 
-  <xs:element name="jpegImage">
+  <xs:element name="JPEG" dfdl:lengthKind="implicit">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="SOI" type="xs:hexBinary" dfdl:length="2" dfdl:occursCount="1"/>
-        <xs:element name="APP0" type="xs:hexBinary" dfdl:length="16" dfdl:occursCount="1"/>
-        <xs:element name="DQT" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="67" dfdl:occursCount="1"/>
-        <xs:element name="SOF0" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="17" dfdl:occursCount="1"/>
-        <xs:element name="DHT" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="134" dfdl:occursCount="1"/>
-        <xs:element name="ScanData" type="xs:hexBinary" dfdl:lengthKind="unbounded" dfdl:occursCount="1"/>
-        <xs:element name="EOI" type="xs:hexBinary" dfdl:length="2" dfdl:occursCount="1"/>
+        <xs:element ref="SOI"/>
+        <xs:element ref="APPn" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DQT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DHT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DRI" minOccurs="0"/>
+        <xs:element ref="SOS"/>
+        <xs:element ref="EOI"/>
+        <xs:element ref="OtherMarkers" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SOI">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="APPn">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DQT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="tableInfo" type="xs:hexBinary" dfdl:length="{length - 2}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DHT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="tableInfo" type="xs:hexBinary" dfdl:length="{length - 2}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DRI">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="restartInterval" type="xs:integer" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SOS">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="scanInfo" type="xs:hexBinary" dfdl:length="{length - 2}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EOI">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="OtherMarkers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="length" type="xs:integer" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:length="{length - 2}"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>

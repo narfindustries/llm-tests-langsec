@@ -1,58 +1,120 @@
-version = 0.1
-
 module JPEG;
 
 public type JPEGFile = unit {
-    segments: JPEGSegment[];
+    segments: JPEG_Segment[];
 };
 
-type JPEGSegment = unit {
-    marker: uint8 &requires=(self == 0xFF);
-    type: uint8;
+type JPEG_Segment = unit {
+    marker: uint16;
     
-    switch ( self.type ) {
-        0xD8 -> : void;  # SOI
-        0xD9 -> : void;  # EOI
-        0xDA -> : ScanHeader;  # SOS
-        0xC0, 0xC2 -> : FrameHeader;  # SOF0/SOF2
-        * -> : RegularSegment;
+    switch ( self.marker ) {
+        0xFFD8 : empty;  # SOI
+        0xFFD9 : empty;  # EOI
+        0xFFC0 : SOF0;  # Baseline DCT
+        0xFFC2 : SOF2;  # Progressive DCT
+        0xFFC4 : DHT;   # Huffman Table
+        0xFFDB : DQT;   # Quantization Table
+        0xFFDD : DRI;   # Restart Interval
+        0xFFDA : SOS;   # Start of Scan
+        0xFFE0 : APP0;  # JFIF
+        0xFFE1 : APP1;  # EXIF
+        0xFFFE : COM;   # Comment
+        * : GenericSegment;
     };
 };
 
-type RegularSegment = unit {
-    length: uint16;
-    data: bytes &size=(self.length - 2);
-};
+type empty = unit {};
 
-type ScanHeader = unit {
-    length: uint16;
-    num_components: uint8;
-    components: ScanComponent[self.num_components];
-    start_spectral: uint8;
-    end_spectral: uint8;
-    ah_al: uint8;
-    scan_data: bytes &eod;
-};
-
-type ScanComponent = unit {
-    id: uint8;
-    dc_ac: uint8;
-};
-
-type FrameHeader = unit {
+type SOF0 = unit {
     length: uint16;
     precision: uint8;
     height: uint16;
     width: uint16;
     num_components: uint8;
-    components: FrameComponent[self.num_components];
+    components: Component[self.num_components];
 };
 
-type FrameComponent = unit {
-    id: uint8;
+type Component = unit {
+    component_id: uint8;
     sampling_factors: uint8;
-    qt: uint8;
+    qt_number: uint8;
 };
 
-on JPEG::JPEGFile -> event JPEG::file_ready($file);
-on JPEG::FrameHeader -> event JPEG::dimensions(self.width, self.height);
+type DHT = unit {
+    length: uint16;
+    table_info: uint8;
+    code_lengths: bytes &size=16;
+    codes: bytes &size=(self.length - 19);
+};
+
+type DQT = unit {
+    length: uint16;
+    table_info: uint8;
+    qt_values: bytes &size=(self.table_info >> 4 == 0 ? 64 : 128);
+};
+
+type DRI = unit {
+    length: uint16;
+    restart_interval: uint16;
+};
+
+type SOS = unit {
+    length: uint16;
+    num_components: uint8;
+    components: SOSComponent[self.num_components];
+    start_spectral: uint8;
+    end_spectral: uint8;
+    approx: uint8;
+    scan_data: bytes &eod;
+};
+
+type SOSComponent = unit {
+    component_id: uint8;
+    huffman_table: uint8;
+};
+
+type APP0 = unit {
+    length: uint16;
+    identifier: bytes &size=5;
+    version: uint16;
+    units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumb_width: uint8;
+    thumb_height: uint8;
+    thumb_data: bytes &size=(self.thumb_width * self.thumb_height * 3);
+};
+
+type APP1 = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type COM = unit {
+    length: uint16;
+    comment: bytes &size=(self.length - 2);
+};
+
+type GenericSegment = unit {
+    length: uint16;
+    data: bytes &size=(self.length - 2);
+};
+
+type SOF2 = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[self.num_components];
+};
+
+on JPEG_Segment::%done {
+    if ( self.marker == 0xFFD9 )
+        self.set_mode(0);
+}
+
+on JPEG_Segment::%init {
+    if ( self.marker == 0xFFDA )
+        self.set_mode(2);
+}

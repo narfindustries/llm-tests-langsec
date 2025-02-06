@@ -1,8 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take_while, take_until},
-    combinator::{map, map_res, opt},
-    number::complete::be_u32,
-    sequence::{preceded, tuple},
+    bytes::complete::{tag, take},
+    combinator::{map, opt, value},
+    number::complete::{be_u16, be_u8},
+    sequence::tuple,
     IResult,
 };
 use std::env;
@@ -10,93 +10,74 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct MqttPacket {
-    fixed_header: FixedHeader,
-    // Add other fields as needed based on the variable header and payload
+enum PacketType {
+    Connect,
+    Connack,
+    Publish,
+    Puback,
+    Pubrec,
+    Pubrel,
+    Pubcomp,
+    Subscribe,
+    Suback,
+    Unsubscribe,
+    Unsuback,
+    Pingreq,
+    Pingresp,
+    Disconnect,
 }
-
 
 #[derive(Debug)]
-struct FixedHeader {
-    packet_type: u8,
-    flags: u8,
-    remaining_length: u32,
+struct MqttPacket {
+    packet_type: PacketType,
+    // ... other fields (this is a simplified example)
 }
 
-fn parse_remaining_length(input: &[u8]) -> IResult<&[u8], u32> {
-    let mut remaining_length: u32 = 0;
-    let mut multiplier: u32 = 1;
-    let mut i = 0;
-
-    loop {
-        let byte = input[i];
-        remaining_length += ((byte & 0x7F) as u32) * multiplier;
-        multiplier *= 128;
-        if byte & 0x80 == 0 {
-            break;
-        }
-        i += 1;
-        if i >= input.len() {
-            return Err(nom::Err::Incomplete(nom::Needed::Size(i + 1)));
-        }
+fn parse_packet_type(input: &[u8]) -> IResult<&[u8], PacketType> {
+    let (input, packet_type) = be_u8(input)?;
+    match packet_type {
+        1 => Ok((input, PacketType::Connect)),
+        2 => Ok((input, PacketType::Connack)),
+        3 => Ok((input, PacketType::Publish)),
+        4 => Ok((input, PacketType::Puback)),
+        5 => Ok((input, PacketType::Pubrec)),
+        6 => Ok((input, PacketType::Pubrel)),
+        7 => Ok((input, PacketType::Pubcomp)),
+        8 => Ok((input, PacketType::Subscribe)),
+        9 => Ok((input, PacketType::Suback)),
+        10 => Ok((input, PacketType::Unsubscribe)),
+        11 => Ok((input, PacketType::Unsuback)),
+        12 => Ok((input, PacketType::Pingreq)),
+        13 => Ok((input, PacketType::Pingresp)),
+        14 => Ok((input, PacketType::Disconnect)),
+        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify))),
     }
-    Ok((&input[i + 1..], remaining_length))
-
-}
-
-fn parse_fixed_header(input: &[u8]) -> IResult<&[u8], FixedHeader> {
-    let (input, packet_type) = take_while(|b| b != &0x00)(input)?;
-    let (input, flags) = take_while(|b| b != &0x00)(input)?;
-    let (input, remaining_length) = parse_remaining_length(input)?;
-
-
-    Ok((
-        input,
-        FixedHeader {
-            packet_type: packet_type[0],
-            flags: flags[0],
-            remaining_length,
-        },
-    ))
 }
 
 
 fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, fixed_header) = parse_fixed_header(input)?;
+    let (input, packet_type) = parse_packet_type(input)?;
+    //  Parse remaining packet based on packet_type.  This requires extensive parsing logic for each packet type.
 
-    // Parse variable header and payload based on packet type
-    // This is a placeholder, you'll need to implement the specific parsers for each packet type
-
-    Ok((input, MqttPacket { fixed_header }))
+    Ok((input, MqttPacket { packet_type }))
 }
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
+        println!("Usage: mqtt_parser <binary_file>");
         return;
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Failed to open file {}: {}", filename, err);
-            return;
-        }
-    };
-
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Failed to read file: {}", err);
-            return;
-        }
-    };
+    file.read_to_end(&mut buffer).expect("Failed to read file");
+
 
     match parse_mqtt_packet(&buffer) {
         Ok((_, packet)) => println!("Parsed MQTT packet: {:?}", packet),
-        Err(err) => eprintln!("Failed to parse MQTT packet: {:?}", err),
+        Err(e) => println!("Error parsing MQTT packet: {:?}", e),
     }
 }

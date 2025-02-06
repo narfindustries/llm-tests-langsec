@@ -1,188 +1,125 @@
-# DNS Protocol Implementation in Zeek Spicy
+module DNS;
 
-%header {
-    import * from Core
-}
+type DNS_Message: Record {
+  header: DNS_Header;
+  questions: Vector of DNS_Question &length = header.qdcount;
+  answers: Vector of DNS_RR &length = header.ancount;
+  authorities: Vector of DNS_RR &length = header.nscount;
+  additionals: Vector of DNS_RR &length = header.arcount;
+};
 
-%protocol dns {
-    # Define constants for DNS types and classes
-    const type_a = 1
-    const type_ns = 2
-    const type_md = 3
-    const type_mf = 4
-    const type_cname = 5
-    const type_soa = 6
-    const type_mb = 7
-    const type_mg = 8
-    const type_mr = 9
-    const type_null = 10
-    const type_wks = 11
-    const type_ptr = 12
-    const type_hinfo = 13
-    const type_minfo = 14
-    const type_mx = 15
-    const type_txt = 16
-    const type_rp = 17
-    const type_afsdb = 18
-    const type_x25 = 19
-    const type_ispn = 20
-    const type_rt = 21
-    const type_nsap = 22
-    const type_nsap-ptr = 23
-    const type_sig = 24
-    const type_key = 25
-    const type_pxm = 26
-    const type_gpos = 27
-    const type_aaaa = 28
-    const type_loc = 29
-    const type_nxt = 30
-    const type_eid = 31
-    const type_nimloc = 32
-    const type_srv = 33
-    const type_atma = 34
-    const type_naptr = 35
-    const type_kx = 36
-    const type_cert = 37
-    const type_a6 = 38
-    const type_dname = 39
-    const type_sink = 40
-    const type_opt = 41
-    const type_apl = 42
-    const type_ds = 43
-    const type_sshfp = 44
-    const type_ipseckey = 45
-    const type_rrsig = 46
-    const type_nsec = 47
-    const type_dnskey = 48
-    const type_dhcid = 49
-    const type_nsec3 = 50
-    const type_nsec3param = 51
-    const type_tlsa = 52
-    const type_smimea = 53
-    const type_hip = 55
-    const type_ninfo = 56
-    const type_rkey = 57
-    const type_tal = 58
-    const type_cds = 59
-    const type_cdnskey = 60
-    const type_openpgpkey = 61
-    const type_csync = 62
-    const type_zonemd = 63
+type DNS_Header: Record {
+  id: uint16;
+  qr: bool;
+  opcode: uint4;
+  aa: bool;
+  tc: bool;
+  rd: bool;
+  ra: bool;
+  z: uint3;
+  rcode: uint4;
+  qdcount: uint16;
+  ancount: uint16;
+  nscount: uint16;
+  arcount: uint16;
+};
 
-    const class_in = 1
-    const class_cs = 2
-    const class_ch = 3
-    const class_hs = 4
-    const class_none = 254
-    const class_any = 255
+type DNS_Question: Record {
+  qname: DNS_Name;
+  qtype: uint16;
+  qclass: uint16;
+};
 
-    %sqlite_initialize(
-        {
-            "database": "/tmp/dns_database.db",
-            "dns_table": "dns_events"
-        }
-    )
+type DNS_RR: Record {
+  name: DNS_Name;
+  type: uint16;
+  class: uint16;
+  ttl: uint32;
+  rdlength: uint16;
+  rdata: bytestring &length = rdlength;
+};
 
-    %layers {
-        # DNS Header Layer
-        header: DnsHeader
+type DNS_Name: Record {
+  labels: Vector of bytestring;
+};
 
-        # DNS Question Layer
-        question*: DnsQuestion
+type A_RR: Record {
+  addr: uint32;
+};
 
-        # DNS Answer Layer
-        answer*: DnsAnswer
+type AAAA_RR: Record {
+  addr: bytestring &length = 16;
+};
 
-        # DNS Authority Layer
-        authority*: DnsAuthority
+type NS_RR: Record {
+  nsdname: DNS_Name;
+};
 
-        # DNS Additional Layer
-        additional*: DnsAdditional
-    }
+type MD_RR: Record {
+  madname: DNS_Name;
+};
 
-    %types {
-        # DNS Header Type
-        DnsHeader: struct {
-            id: uint16
-            flags: uint16
-            qdcount: uint16
-            ancount: uint16
-            nscount: uint16
-            arcount: uint16
-        }
+type MF_RR: Record {
+  madname: DNS_Name;
+};
 
-        # DNS Question Type
-        DnsQuestion: struct {
-            qname: bytestring &length = :4
-            qtype: uint16
-            qclass: uint16
-        }
+type CNAME_RR: Record {
+  cname: DNS_Name;
+};
 
-        # DNS Answer Type
-        DnsAnswer: struct {
-            name: uint16
-            type: uint16
-            class: uint16
-            ttl: uint32
-            rdlength: uint16
-            rdata: bytestring &length = :rdlength
-        }
+type SOA_RR: Record {
+  mname: DNS_Name;
+  rname: DNS_Name;
+  serial: uint32;
+  refresh: uint32;
+  retry: uint32;
+  expire: uint32;
+  min_ttl: uint32;
+};
 
-        # DNS Authority Type
-        DnsAuthority: struct {
-            name: uint16
-            type: uint16
-            class: uint16
-            ttl: uint32
-            rdlength: uint16
-            rdata: bytestring &length = :rdlength
-        }
+type MB_RR: Record {
+  madname: DNS_Name;
+};
 
-        # DNS Additional Type
-        DnsAdditional: struct {
-            name: uint16
-            type: uint16
-            class: uint16
-            ttl: uint32
-            rdlength: uint16
-            rdata: bytestring &length = :rdlength
-        }
-    }
+type MG_RR: Record {
+  mgmname: DNS_Name;
+};
 
-    %events {
-        dns_request: on header
-        dns_response: on answer
-    }
+type MR_RR: Record {
+  newname: DNS_Name;
+};
 
-    %sql_logging {
-        log_dns_events: into sqlite database "dns_database.db" as "dns_events" (
-            id: header.id,
-            flags: header.flags,
-            qdcount: header.qdcount,
-            ancount: header.ancount,
-            nscount: header.nscount,
-            arcount: header.arcount,
-            qname: question.qname,
-            qtype: question.qtype,
-            qclass: question.qclass,
-            answer_name: answer.name,
-            answer_type: answer.type,
-            answer_class: answer.class,
-            answer_ttl: answer.ttl,
-            answer_rdlength: answer.rdlength,
-            answer_rdata: answer.rdata,
-            authority_name: authority.name,
-            authority_type: authority.type,
-            authority_class: authority.class,
-            authority_ttl: authority.ttl,
-            authority_rdlength: authority.rdlength,
-            authority_rdata: authority.rdata,
-            additional_name: additional.name,
-            additional_type: additional.type,
-            additional_class: additional.class,
-            additional_ttl: additional.ttl,
-            additional_rdlength: additional.rdlength,
-            additional_rdata: additional.rdata
-        )
-    }
-}
+type NULL_RR: Record {
+  anything: bytestring;
+};
+
+type WKS_RR: Record {
+  address: uint32;
+  protocol: uint8;
+  bitmap: bytestring;
+};
+
+type PTR_RR: Record {
+  ptrdname: DNS_Name;
+};
+
+type HINFO_RR: Record {
+  cpu: bytestring;
+  os: bytestring;
+};
+
+type MINFO_RR: Record {
+  rmailbx: DNS_Name;
+  emailbx: DNS_Name;
+};
+
+type MX_RR: Record {
+  preference: uint16;
+  exchange: DNS!_Name;
+};
+
+type TXT_RR: Record {
+  txt_data: Vector of bytestring;
+};
+
+let dns$msg: DNS_Message;

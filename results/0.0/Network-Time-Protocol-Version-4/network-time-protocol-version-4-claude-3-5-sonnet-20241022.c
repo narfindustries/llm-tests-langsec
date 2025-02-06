@@ -1,41 +1,70 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
-// NTP v4 Parser Combinators
-HParser* create_ntp_parser() {
+typedef struct {
+    uint8_t li_vn_mode;
+    uint8_t stratum;
+    uint8_t poll;
+    uint8_t precision;
+    uint32_t root_delay;
+    uint32_t root_dispersion;
+    uint32_t reference_id;
+    uint64_t reference_timestamp;
+    uint64_t origin_timestamp;
+    uint64_t receive_timestamp;
+    uint64_t transmit_timestamp;
+} ntp_packet;
+
+static void print_token(const HParsedToken *token) {
+    if (!token) return;
+
+    switch (token->token_type) {
+        case TT_SEQUENCE:
+            for (size_t i = 0; i < token->seq->used; i++) {
+                print_token(token->seq->elements[i]);
+            }
+            break;
+        case TT_UINT:
+            printf("0x%llx\n", (unsigned long long)token->uint);
+            break;
+        case TT_BYTES:
+            for (size_t i = 0; i < token->bytes.len; i++) {
+                printf("%02x", token->bytes.token[i]);
+            }
+            printf("\n");
+            break;
+        default:
+            break;
+    }
+}
+
+static HParser* create_ntp_parser(void) {
     // Basic fields
-    HParser* li_vn_mode = h_bits(8, false);
-    HParser* stratum = h_bits(8, false);
-    HParser* poll = h_bits(8, false);
-    HParser* precision = h_bits(8, false);
-    HParser* root_delay = h_bits(32, false);
-    HParser* root_dispersion = h_bits(32, false);
-    HParser* reference_id = h_bits(32, false);
-    HParser* reference_timestamp = h_bits(64, false);
-    HParser* origin_timestamp = h_bits(64, false);
-    HParser* receive_timestamp = h_bits(64, false);
-    HParser* transmit_timestamp = h_bits(64, false);
+    HParser *li_vn_mode = h_uint8();
+    HParser *stratum = h_uint8();
+    HParser *poll = h_uint8();
+    HParser *precision = h_uint8();
+    HParser *root_delay = h_uint32();
+    HParser *root_dispersion = h_uint32();
+    HParser *reference_id = h_uint32();
+    HParser *reference_timestamp = h_uint64();
+    HParser *origin_timestamp = h_uint64();
+    HParser *receive_timestamp = h_uint64();
+    HParser *transmit_timestamp = h_uint64();
 
-    // Optional Extension Fields
-    HParser* extension_field = h_sequence(
-        h_bits(16, false),  // Field Type
-        h_bits(16, false),  // Length
-        h_many(h_bits(8, false)),  // Value
-        NULL
-    );
-    HParser* extension_fields = h_many(extension_field);
+    // Extension field parser
+    HParser *extension_value = h_length_value(h_uint16(), h_uint8());
+    HParser *extension_field = h_sequence(h_uint16(), h_uint16(), extension_value, NULL);
+    
+    // MAC field parser
+    HParser *mac_field = h_sequence(h_uint32(), h_many1(h_uint8()), NULL);
 
-    // Optional MAC
-    HParser* mac = h_sequence(
-        h_bits(16, false),  // Key ID
-        h_bits(16, false),  // Length
-        h_many(h_bits(8, false)),  // MAC
-        NULL
-    );
+    // Optional fields
+    HParser *optional_extensions = h_many(extension_field);
+    HParser *optional_mac = h_optional(mac_field);
 
-    // Complete NTP Packet
+    // Complete NTP packet
     return h_sequence(
         li_vn_mode,
         stratum,
@@ -48,19 +77,18 @@ HParser* create_ntp_parser() {
         origin_timestamp,
         receive_timestamp,
         transmit_timestamp,
-        extension_fields,
-        h_optional(mac),
+        optional_extensions,
+        optional_mac,
         NULL
     );
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <ntp_packet_file>\n", argv[0]);
         return 1;
     }
 
-    // Read input file
     FILE *f = fopen(argv[1], "rb");
     if (!f) {
         perror("Failed to open file");
@@ -71,33 +99,39 @@ int main(int argc, char *argv[]) {
     size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    uint8_t *input = malloc(size);
-    if (!input) {
-        perror("Failed to allocate memory");
+    uint8_t *data = malloc(size);
+    if (!data) {
         fclose(f);
+        fprintf(stderr, "Memory allocation failed\n");
         return 1;
     }
 
-    if (fread(input, 1, size, f) != size) {
-        perror("Failed to read file");
-        free(input);
+    if (fread(data, 1, size, f) != size) {
+        free(data);
         fclose(f);
+        fprintf(stderr, "Failed to read file\n");
         return 1;
     }
     fclose(f);
 
-    // Parse NTP packet
     HParser *ntp_parser = create_ntp_parser();
-    HParseResult *result = h_parse(ntp_parser, input, size);
-
-    if (!result) {
-        fprintf(stderr, "Failed to parse NTP packet\n");
-        free(input);
+    if (!ntp_parser) {
+        free(data);
+        fprintf(stderr, "Failed to create parser\n");
         return 1;
     }
 
-    // Cleanup
+    HParseResult *result = h_parse(ntp_parser, data, size);
+    if (!result) {
+        free(data);
+        fprintf(stderr, "Parse failed\n");
+        return 1;
+    }
+
+    printf("NTP Packet Contents:\n");
+    print_token(result->ast);
+
     h_parse_result_free(result);
-    free(input);
+    free(data);
     return 0;
 }

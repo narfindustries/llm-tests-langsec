@@ -2,67 +2,109 @@ module JPEG;
 
 import spicy;
 
-public type File = unit {
-    start_marker: StartMarker;
-    segments: Segment[] while( self.segments[-1].marker != Marker::EOI );
-
-    var width: uint16 = 0;
-    var height: uint16 = 0;
-
-    on %done {
-        self.width = self.segments[0].width;
-        self.height = self.segments[0].height;
-    }
+public type JPEG = unit {
+    start_of_image: StartOfImage;
+    markers: Marker[] &until($input.eof());
+    end_of_image: EndOfImage;
 };
 
-type StartMarker = unit {
-    marker: Marker = marker::SOI;
+type StartOfImage = unit {
+    magic: bytes &size=2 &requires=(magic == b"\xff\xd8");
 };
 
-type Segment = unit {
-    marker: Marker;
-    
-    switch ( self.marker ) {
-        Marker::SOF0 -> {
-            length: uint16;
-            precision: uint8;
-            height: uint16;
-            width: uint16;
-            components: uint8;
-        }
-        Marker::DHT -> {
-            length: uint16;
-            data: bytes &size=(self.length - 2);
-        }
-        Marker::DQT -> {
-            length: uint16;
-            data: bytes &size=(self.length - 2);
-        }
-        Marker::SOS -> {
-            length: uint16;
-            data: bytes &size=(self.length - 2);
-        }
-        Marker::APP0 -> {
-            length: uint16;
-            identifier: bytes &size=5;
-            version: uint16;
-            units: uint8;
-            x_density: uint16;
-            y_density: uint16;
-        }
-        * -> {
-            length: uint16 if ( self.marker != Marker::EOI );
-            data: bytes &size=(self.length - 2) if ( self.marker != Marker::EOI );
-        }
-    }
+type EndOfImage = unit {
+    magic: bytes &size=2 &requires=(magic == b"\xff\xd9");
 };
 
-enum Marker: uint16 {
-    SOI  = 0xFFD8,
-    EOI  = 0xFFD9,
-    SOF0 = 0xFFC0,
-    DHT  = 0xFFC4,
-    DQT  = 0xFFDB,
-    SOS  = 0xFFDA,
-    APP0 = 0xFFE0
+type Marker = unit {
+    marker_type: uint16;
+    switch (marker_type) {
+        0xffe0 => app0_marker: APP0Marker;
+        0xffdb => dqt_marker: DQTMarker;
+        0xffc0 => sof0_marker: SOF0Marker;
+        0xffc2 => sof2_marker: SOF2Marker;
+        0xffc4 => dht_marker: DHTMarker;
+        0xffdd => dri_marker: DRIMarker;
+        0xffc0 => sos_marker: SOSMarker;
+        0xffd0 => restart_marker: RestartMarker;
+        * => unknown_marker: UnknownMarker;
+    };
+};
+
+type APP0Marker = unit {
+    length: uint16;
+    identifier: bytes &size=5;
+    version_major: uint8;
+    version_minor: uint8;
+    density_units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumbnail_width: uint8;
+    thumbnail_height: uint8;
+    thumbnail_data: bytes &size=(thumbnail_width * thumbnail_height * 3);
+};
+
+type DQTMarker = unit {
+    length: uint16;
+    precision: uint8;
+    tables: DQTTable[] &until($input.offset() >= length);
+};
+
+type DQTTable = unit {
+    table_info: uint8;
+    table_data: bytes &size=64;
+};
+
+type SOF0Marker = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: SOFComponent[num_components];
+};
+
+type SOF2Marker = SOF0Marker;
+
+type SOFComponent = unit {
+    component_id: uint8;
+    sampling_factors: uint8;
+    quantization_table_number: uint8;
+};
+
+type DHTMarker = unit {
+    length: uint16;
+    tables: DHTTable[] &until($input.offset() >= length);
+};
+
+type DHTTable = unit {
+    table_info: uint8;
+    code_lengths: bytes &size=16;
+    values: bytes &size=(|code_lengths| > 0 ? code_lengths[0] : 0);
+};
+
+type DRIMarker = unit {
+    length: uint16;
+    restart_interval: uint16;
+};
+
+type SOSMarker = unit {
+    length: uint16;
+    num_components: uint8;
+    components: SOSComponent[num_components];
+    spectral_selection_start: uint8;
+    spectral_selection_end: uint8;
+    approximation_bit_pos: uint8;
+};
+
+type SOSComponent = unit {
+    component_selector: uint8;
+    dc_ac_huffman_tables: uint8;
+};
+
+type RestartMarker = unit {};
+
+type UnknownMarker = unit {
+    length: uint16;
+    data: bytes &size=(length - 2);
 };

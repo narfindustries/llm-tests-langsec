@@ -2,21 +2,23 @@ meta:
   id: gif
   file-extension: gif
   endian: le
-  license: CC0-1.0
   title: Graphics Interchange Format (GIF)
+  license: CC0-1.0
 doc: |
-  The Graphics Interchange Format (GIF) is a bitmap image format developed
-  by CompuServe, using the LZW lossless data compression, can be used to display
-  animation, allows a separate palette of up to 256 colors for each frame.
+  The Graphics Interchange Format (GIF) is a bitmap image format that was developed
+  by a team at the online services provider CompuServe led by American computer scientist
+  Steve Wilhite on June 15, 1987.
+
 seq:
   - id: header
     type: header
-  - id: logical_screen
+  - id: logical_screen_descriptor
     type: logical_screen_descriptor
   - id: global_color_table
     type: color_table
-    if: header.flags.has_global_color_table == 1
-    size: logical_screen.global_color_table_size
+    if: logical_screen_descriptor.gct_flag
+    repeat: expr
+    repeat-expr: 1 << (logical_screen_descriptor.gct_size + 1)
   - id: blocks
     type: block
     repeat: eos
@@ -27,53 +29,36 @@ types:
       - id: magic
         contents: "GIF"
       - id: version
-        contents: ["89a", "87a"]
-      - id: flags
-        type: global_flags
-
-  global_flags:
-    seq:
-      - id: has_global_color_table
-        type: b1
-      - id: color_resolution
-        type: b3
-      - id: sort_flag
-        type: b1
-      - id: size_of_global_color_table
-        type: b3
-    instances:
-      has_global_color_table_i:
-        value: has_global_color_table == 1
+        contents: "89a"
 
   logical_screen_descriptor:
     seq:
-      - id: screen_width
+      - id: canvas_width
         type: u2
-      - id: screen_height
+      - id: canvas_height
         type: u2
-      - id: flags
-        type: screen_flags
+      - id: packed_fields
+        type: u1
+      - id: bg_color_index
+        type: u1
+      - id: pixel_aspect_ratio
+        type: u1
     instances:
-      global_color_table_size:
-        value: '(2 ** (flags.size_of_global_color_table + 1)) * 3'
-
-  screen_flags:
-    seq:
-      - id: has_global_color_table
-        type: b1
-      - id: color_resolution
-        type: b3
-      - id: sort_flag
-        type: b1
-      - id: size_of_global_color_table
-        type: b3
+      gct_flag:
+        value: (packed_fields & 0b10000000) != 0
+      color_resolution:
+        value: ((packed_fields & 0b01110000) >> 4) + 1
+      sort_flag:
+        value: (packed_fields & 0b00001000) != 0
+      gct_size:
+        value: packed_fields & 0b00000111
 
   color_table:
     seq:
       - id: colors
         type: rgb
         repeat: expr
-        repeat-expr: '_parent.logical_screen.global_color_table_size // 3'
+        repeat-expr: 1 << (_parent.gct_size + 1)
 
   rgb:
     seq:
@@ -88,75 +73,116 @@ types:
     seq:
       - id: block_type
         type: u1
-    instances:
-      body:
-        pos: 1
+      - id: body
         type:
           switch-on: block_type
           cases:
             0x2c: image_block
-            0x21: extension_block
+            0x21: extension
+            0x3b: end_block
 
   image_block:
     seq:
-      - id: image_descriptor
-        type: image_descriptor
-      - id: local_color_table
+      - id: image_left
+        type: u2
+      - id: image_top
+        type: u2
+      - id: image_width
+        type: u2
+      - id: image_height
+        type: u2
+      - id: packed_fields
+        type: u1
+      - id: lct
         type: color_table
-        if: image_descriptor.flags.has_local_color_table == 1
-        size: image_descriptor.local_color_table_size
-      - id: image_data
-        type: image_data
-
-  extension_block:
-    seq:
-      - id: extension_type
-        type: u1
-      - id: block_size
-        type: u1
-      - id: block_body
-        size: block_size
-
-  image_descriptor:
-    seq:
-      - id: left
-        type: u2
-      - id: top
-        type: u2
-      - id: width
-        type: u2
-      - id: height
-        type: u2
-      - id: flags
-        type: image_descriptor_flags
-    instances:
-      local_color_table_size:
-        value: '(2 ** (flags.size_of_local_color_table + 1)) * 3'
-
-  image_descriptor_flags:
-    seq:
-      - id: has_local_color_table
-        type: b1
-      - id: interlace
-        type: b1
-      - id: sort
-        type: b1
-      - id: reserved
-        type: b2
-      - id: size_of_local_color_table
-        type: b3
-
-  image_data:
-    seq:
+        if: (packed_fields & 0b10000000) != 0
       - id: lzw_min_code_size
         type: u1
-      - id: data_blocks
-        type: data_block
-        repeat: eos
+      - id: image_data
+        type: data_sub_blocks
 
-  data_block:
+  data_sub_blocks:
+    seq:
+      - id: len_data
+        type: u1
+      - id: data
+        size: len_data
+      - id: next_block
+        type: data_sub_blocks
+        if: len_data != 0
+
+  extension:
+    seq:
+      - id: label
+        type: u1
+      - id: body
+        type:
+          switch-on: label
+          cases:
+            0xf9: graphic_control
+            0xfe: comment_extension
+            0x01: plain_text_extension
+            0xff: application_extension
+
+  graphic_control:
+    seq:
+      - id: block_size
+        contents: [0x04]
+      - id: packed_fields
+        type: u1
+      - id: delay_time
+        type: u2
+      - id: transparent_color_index
+        type: u1
+      - id: terminator
+        type: u1
+
+  comment_extension:
     seq:
       - id: block_size
         type: u1
-      - id: data
+      - id: comment_data
+        type: str
+        encoding: ASCII
         size: block_size
+
+  plain_text_extension:
+    seq:
+      - id: block_size
+        contents: [0x0c]
+      - id: text_grid_left
+        type: u2
+      - id: text_grid_top
+        type: u2
+      - id: text_grid_width
+        type: u2
+      - id: text_grid_height
+        type: u2
+      - id: char_width
+        type: u1
+      - id: char_height
+        type: u1
+      - id: text_fg_color_index
+        type: u1
+      - id: text_bg_color_index
+        type: u1
+      - id: plain_text_data
+        type: data_sub_blocks
+
+  application_extension:
+    seq:
+      - id: block_size
+        contents: [0x0b]
+      - id: app_identifier
+        type: str
+        encoding: ASCII
+        size: 8
+      - id: app_code
+        type: str
+        encoding: ASCII
+        size: 3
+      - id: app_data
+        type: data_sub_blocks
+
+  end_block:
+    seq: []

@@ -1,77 +1,219 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-static HParser* init_jpeg_parser() {
-    // JPEG markers
-    H_RULE(soi, h_sequence(h_ch(0xFF), h_ch(0xD8)));  // Start of Image
-    H_RULE(eoi, h_sequence(h_ch(0xFF), h_ch(0xD9)));  // End of Image
-    H_RULE(app0, h_sequence(h_ch(0xFF), h_ch(0xE0))); // APP0 marker
-    H_RULE(dqt, h_sequence(h_ch(0xFF), h_ch(0xDB)));  // DQT marker
-    H_RULE(sof0, h_sequence(h_ch(0xFF), h_ch(0xC0))); // SOF0 marker
-    H_RULE(dht, h_sequence(h_ch(0xFF), h_ch(0xC4)));  // DHT marker
-    H_RULE(sos, h_sequence(h_ch(0xFF), h_ch(0xDA))); // SOS marker
+// Forward declarations
+HParser* jpeg_parser;
+
+// Marker parsers
+static HParser* soi_marker;
+static HParser* eoi_marker;
+static HParser* app0_marker;
+static HParser* dqt_marker;
+static HParser* sof_marker;
+static HParser* dht_marker;
+static HParser* sos_marker;
+static HParser* rst_marker;
+static HParser* com_marker;
+static HParser* appn_marker;
+
+// Helper parsers
+static HParser* jpeg_segment;
+static HParser* entropy_coded_data;
+
+void init_parsers() {
+    // Basic markers
+    soi_marker = h_sequence(h_ch(0xFF), h_ch(0xD8), NULL);
+    eoi_marker = h_sequence(h_ch(0xFF), h_ch(0xD9), NULL);
     
-    // Length fields
-    H_RULE(length, h_uint16_be());
+    // APP0 (JFIF) segment
+    HParser* jfif_identifier = h_sequence(
+        h_token((const uint8_t*)"JFIF\0", 5),
+        h_uint8(), // Major version
+        h_uint8(), // Minor version
+        h_uint8(), // Units
+        h_uint16(), // X density
+        h_uint16(), // Y density
+        h_uint8(), // Thumbnail width
+        h_uint8(), // Thumbnail height
+        NULL
+    );
     
-    // APP0 segment
-    H_RULE(jfif_identifier, h_token((const uint8_t*)"JFIF\0", 5));
-    H_RULE(version, h_sequence(h_uint8(), h_uint8()));
-    H_RULE(units, h_uint8());
-    H_RULE(density, h_sequence(h_uint16_be(), h_uint16_be()));
-    H_RULE(thumbnail, h_sequence(h_uint8(), h_uint8()));
-    H_RULE(app0_segment, h_sequence(app0, length, jfif_identifier, version, 
-                                   units, density, thumbnail));
+    app0_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xE0),
+        h_length_value(h_uint16(), jfif_identifier),
+        NULL
+    );
     
-    // DQT segment
-    H_RULE(precision_and_id, h_uint8());
-    H_RULE(qtable, h_repeat_n(h_uint8(), 64));
-    H_RULE(dqt_segment, h_sequence(dqt, length, precision_and_id, qtable));
+    // Quantization table
+    HParser* dqt_data = h_sequence(
+        h_uint8(), // Precision and table ID
+        h_repeat_n(h_uint8(), 64), // Table elements
+        NULL
+    );
     
-    // SOF0 segment
-    H_RULE(precision, h_uint8());
-    H_RULE(dimensions, h_sequence(h_uint16_be(), h_uint16_be()));
-    H_RULE(components, h_uint8());
-    H_RULE(component_spec, h_repeat_n(h_sequence(h_uint8(), h_uint8(), h_uint8()), 3));
-    H_RULE(sof0_segment, h_sequence(sof0, length, precision, dimensions, 
-                                   components, component_spec));
+    dqt_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xDB),
+        h_length_value(h_uint16(), dqt_data),
+        NULL
+    );
     
-    // DHT segment
-    H_RULE(table_class_and_id, h_uint8());
-    H_RULE(count_array, h_repeat_n(h_uint8(), 16));
-    H_RULE(value_array, h_length_value(h_length_func(), h_uint8()));
-    H_RULE(dht_table, h_sequence(table_class_and_id, count_array, value_array));
-    H_RULE(dht_segment, h_sequence(dht, length, dht_table));
+    // Component info for SOF
+    HParser* component_info = h_sequence(
+        h_uint8(), // Component ID
+        h_uint8(), // Sampling factors
+        h_uint8(), // Quantization table ID
+        NULL
+    );
     
-    // SOS segment
-    H_RULE(component_count, h_uint8());
-    H_RULE(component_mapping, h_repeat_n(h_sequence(h_uint8(), h_uint8()), 3));
-    H_RULE(spectral_selection, h_repeat_n(h_uint8(), 3));
-    H_RULE(sos_segment, h_sequence(sos, length, component_count, 
-                                  component_mapping, spectral_selection));
+    // Start of Frame
+    HParser* sof_data = h_sequence(
+        h_uint8(), // Precision
+        h_uint16(), // Height
+        h_uint16(), // Width
+        h_uint8(), // Number of components
+        h_repeat_n(component_info, 3), // Component info
+        NULL
+    );
     
-    // Entropy coded data
-    H_RULE(entropy_data, h_many(h_uint8()));
+    sof_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xC0),
+        h_length_value(h_uint16(), sof_data),
+        NULL
+    );
     
-    // Complete JPEG structure
-    H_RULE(jpeg, h_sequence(soi, 
-                           app0_segment,
-                           h_many(dqt_segment),
-                           sof0_segment,
-                           h_many(dht_segment),
-                           sos_segment,
-                           entropy_data,
-                           eoi));
+    // Huffman table
+    HParser* dht_data = h_sequence(
+        h_uint8(), // Table class and ID
+        h_repeat_n(h_uint8(), 16), // Number of codes
+        h_many(h_uint8()), // Table values
+        NULL
+    );
     
-    return jpeg;
+    dht_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xC4),
+        h_length_value(h_uint16(), dht_data),
+        NULL
+    );
+    
+    // Scan component info
+    HParser* scan_component = h_sequence(
+        h_uint8(), // Component ID
+        h_uint8(), // DC/AC table selector
+        NULL
+    );
+    
+    // Start of Scan
+    HParser* sos_data = h_sequence(
+        h_uint8(), // Number of components
+        h_repeat_n(scan_component, 3),
+        h_uint8(), // Start of spectral selection
+        h_uint8(), // End of spectral selection
+        h_uint8(), // Successive approximation
+        NULL
+    );
+    
+    sos_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xDA),
+        h_length_value(h_uint16(), sos_data),
+        NULL
+    );
+    
+    // Restart markers
+    rst_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch_range(0xD0, 0xD7),
+        NULL
+    );
+    
+    // Comment marker
+    com_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch(0xFE),
+        h_length_value(h_uint16(), h_many(h_uint8())),
+        NULL
+    );
+    
+    // Generic APPn markers
+    appn_marker = h_sequence(
+        h_ch(0xFF),
+        h_ch_range(0xE0, 0xEF),
+        h_length_value(h_uint16(), h_many(h_uint8())),
+        NULL
+    );
+    
+    // Entropy coded data (simplified)
+    entropy_coded_data = h_many(h_uint8());
+    
+    // Segment parser
+    jpeg_segment = h_choice(
+        app0_marker,
+        dqt_marker,
+        sof_marker,
+        dht_marker,
+        sos_marker,
+        rst_marker,
+        com_marker,
+        appn_marker,
+        NULL
+    );
+    
+    // Complete JPEG parser
+    jpeg_parser = h_sequence(
+        soi_marker,
+        h_many(jpeg_segment),
+        entropy_coded_data,
+        eoi_marker,
+        NULL
+    );
 }
 
 int main(int argc, char* argv[]) {
-    HParser* jpeg_parser = init_jpeg_parser();
-    if (!jpeg_parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
         return 1;
     }
     
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+    
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(fp);
+        return 1;
+    }
+    
+    if (fread(buffer, 1, size, fp) != size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(fp);
+        return 1;
+    }
+    
+    init_parsers();
+    
+    HParseResult* result = h_parse(jpeg_parser, buffer, size);
+    if (result) {
+        printf("Successfully parsed JPEG file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse JPEG file\n");
+    }
+    
+    free(buffer);
+    fclose(fp);
     return 0;
 }

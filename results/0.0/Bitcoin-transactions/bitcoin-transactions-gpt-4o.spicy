@@ -1,53 +1,50 @@
-module BitcoinTransactions;
+module BitcoinTransaction;
 
-import spicy;
+public type VarInt = unit {
+    var value: uint64;
 
-public type BitcoinTransaction = unit {
-    version: uint32;
-    input_count: varint;
-    inputs: array[input_count] of Input;
-    output_count: varint;
-    outputs: array[output_count] of Output;
-    lock_time: uint32;
+    on %init {
+        local first_byte = self.input.peek<uint8>();
+        if ( first_byte < 0xfd ) {
+            self.value = self.input.read<uint8>();
+        }
+        else if ( first_byte == 0xfd ) {
+            self.input.skip(1);
+            self.value = self.input.read<uint16>();
+        }
+        else if ( first_byte == 0xfe ) {
+            self.input.skip(1);
+            self.value = self.input.read<uint32>();
+        }
+        else {
+            self.input.skip(1);
+            self.value = self.input.read<uint64>();
+        }
+    }
 };
 
-type varint = unit {
-    value: uint64 &convert=to_varint;
-} &byteorder=le;
-
-function to_varint(bytes: bytes): uint64 {
-    local first_byte = bytes[0];
-    if ( first_byte < 0xfd )
-        return first_byte;
-    else if ( first_byte == 0xfd )
-        return bytes[1:3].to_uint16();
-    else if ( first_byte == 0xfe )
-        return bytes[1:5].to_uint32();
-    else
-        return bytes[1:9].to_uint64();
-}
+public type Script = unit {
+    var length: VarInt;
+    var script: bytes &restofdata;
+};
 
 public type Input = unit {
-    previous_output: OutPoint;
-    script_length: varint;
-    script: bytes &length=script_length.value;
-    sequence: uint32;
-};
-
-public type OutPoint = unit {
-    hash: bytes &length=32;
-    index: uint32;
+    var prev_tx_hash: bytes &length=32;
+    var output_index: uint32;
+    var script_sig: Script;
+    var sequence: uint32;
 };
 
 public type Output = unit {
-    value: int64;
-    script_length: varint;
-    script: bytes &length=script_length.value;
+    var value: uint64;
+    var script_pub_key: Script;
 };
 
-public module Parser = spicy::Parser for BitcoinTransaction {
-    on %done {
-        print fmt("Parsed Bitcoin transaction: version=%d, inputs=%d, outputs=%d, lock_time=%d",
-                  self.version, self.input_count, self.output_count, self.lock_time);
-    }
-}
+public type Transaction = unit {
+    var version: uint32;
+    var input_count: VarInt;
+    var inputs: Input[] &length=input_count.value;
+    var output_count: VarInt;
+    var outputs: Output[] &length=output_count.value;
+    var locktime: uint32;
+};

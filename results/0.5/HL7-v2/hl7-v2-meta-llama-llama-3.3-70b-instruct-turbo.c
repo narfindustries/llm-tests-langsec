@@ -1,84 +1,192 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
-// HL7 v2 message structure
+#define HAMMER_NO_PREFIX
+
 typedef struct {
-    char message_type[3];
-    char trigger_event[3];
+    char field_separator;
+    char encoding_characters[4];
+    char sending_facility[20];
+    char sending_facility_namespace_id[20];
+    char receiving_facility[20];
+    char receiving_facility_namespace_id[20];
+    char date_time_of_message[14];
+    char security[10];
+    char message_type[10];
     char message_control_id[20];
-    char processing_id[3];
-    char version_id[12];
-    char sequence_number[15];
-    // ... other fields ...
-} hl7_v2_message_t;
+    char processing_id;
+    char version_id[10];
+} msh_segment_t;
 
-// Segment structure
 typedef struct {
-    char segment_id[3];
-    uint8_t field_count;
-    char** fields;
-} hl7_v2_segment_t;
+    char set_id_patient_id;
+    char patient_id[20];
+    char patient_id_identifier[10];
+    char alternate_patient_id[20];
+    char patient_name[50];
+    char mothers_maiden_name[20];
+    char date_of_birth[8];
+    char sex;
+    char patient_alias[20];
+    char race[10];
+    char patient_address[50];
+} pid_segment_t;
 
-// Field structure
 typedef struct {
-    char* value;
-    uint8_t repetition;
-} hl7_v2_field_t;
+    char set_id_patient_visit;
+    char visit_number[20];
+    char visit_indicator;
+    char admission_type;
+    char preadmit_number[20];
+    char prior_patient_location[20];
+    char admission_date_time[14];
+    char discharge_date_time[14];
+    char visit_number_other[20];
+} pv1_segment_t;
 
-// Define a function to parse an HL7 v2 message
-int parse_hl7_v2_message(const char* message, hl7_v2_message_t* msg) {
-    // Tokenize the message into segments
-    char* token = strtok((char*)message, "\r");
-    while (token != NULL) {
-        // Parse each segment
-        hl7_v2_segment_t segment;
-        segment.segment_id[0] = token[0];
-        segment.segment_id[1] = token[1];
-        segment.segment_id[2] = token[2];
-        segment.field_count = 0;
-        segment.fields = NULL;
+typedef struct {
+    char order_control[2];
+    char placer_order_number[20];
+    char filler_order_number[20];
+    char order_status[2];
+    char response_flag;
+    char quantity_timing[10];
+} orc_segment_t;
 
-        // Split the segment into fields
-        char* field_token = strtok(token + 3, "|");
-        while (field_token != NULL) {
-            // Allocate memory for the field
-            hl7_v2_field_t* field = malloc(sizeof(hl7_v2_field_t));
-            field->value = strdup(field_token);
-            field->repetition = 0;
+typedef struct {
+    char set_id_observation_request;
+    char placer_order_number[20];
+    char filler_order_number[20];
+    char universal_service_id[20];
+    char priority[10];
+    char requested_date_time[14];
+} obr_segment_t;
 
-            // Add the field to the segment
-            segment.field_count++;
-            segment.fields = realloc(segment.fields, segment.field_count * sizeof(char*));
-            segment.fields[segment.field_count - 1] = field;
+typedef enum {
+    HAMMER_PARSER_STATUS_OK,
+    HAMMER_PARSER_STATUS_ERROR
+} hammer_parser_status_t;
 
-            // Move to the next field
-            field_token = strtok(NULL, "|");
-        }
+typedef struct hammer_parser hammer_parser_t;
 
-        // Add the segment to the message
-        // ... implementation ...
-
-        // Move to the next segment
-        token = strtok(NULL, "\r");
-    }
-
-    return 0;
+void msh_segment_parser(hammer_parser_t *parser, void *data) {
+    msh_segment_t *segment = (msh_segment_t *)data;
+    hammer_string_char(parser, &segment->field_separator);
+    hammer_string_chars(parser, segment->encoding_characters, 3);
+    hammer_string_chars(parser, segment->sending_facility, 19);
+    hammer_string_chars(parser, segment->sending_facility_namespace_id, 19);
+    hammer_string_chars(parser, segment->receiving_facility, 19);
+    hammer_string_chars(parser, segment->receiving_facility_namespace_id, 19);
+    hammer_string_chars(parser, segment->date_time_of_message, 13);
+    hammer_string_chars(parser, segment->security, 9);
+    hammer_string_chars(parser, segment->message_type, 9);
+    hammer_string_chars(parser, segment->message_control_id, 19);
+    hammer_string_char(parser, &segment->processing_id);
+    hammer_string_chars(parser, segment->version_id, 9);
 }
 
-int main() {
-    // Example HL7 v2 message
-    const char* message = "MSH|^~\\&| SendingApp | SendingFacility | ReceivingApp | ReceivingFacility | 20220101 | 1200 || ORU^R01 | 12345 | P | 2.3 |\r"
-                         "PID|1||12345||Doe^John||19600101|M||1 Main St^^Anytown^CA^12345";
+void pid_segment_parser(hammer_parser_t *parser, void *data) {
+    pid_segment_t *segment = (pid_segment_t *)data;
+    hammer_string_char(parser, &segment->set_id_patient_id);
+    hammer_string_chars(parser, segment->patient_id, 19);
+    hammer_string_chars(parser, segment->patient_id_identifier, 9);
+    hammer_string_chars(parser, segment->alternate_patient_id, 19);
+    hammer_string_chars(parser, segment->patient_name, 50);
+    hammer_string_chars(parser, segment->mothers_maiden_name, 19);
+    hammer_string_chars(parser, segment->date_of_birth, 7);
+    hammer_string_char(parser, &segment->sex);
+    hammer_string_chars(parser, segment->patient_alias, 19);
+    hammer_string_chars(parser, segment->race, 9);
+    hammer_string_chars(parser, segment->patient_address, 50);
+}
 
-    hl7_v2_message_t msg;
-    int result = parse_hl7_v2_message(message, &msg);
+void pv1_segment_parser(hammer_parser_t *parser, void *data) {
+    pv1_segment_t *segment = (pv1_segment_t *)data;
+    hammer_string_char(parser, &segment->set_id_patient_visit);
+    hammer_string_chars(parser, segment->visit_number, 19);
+    hammer_string_char(parser, &segment->visit_indicator);
+    hammer_string_char(parser, &segment->admission_type);
+    hammer_string_chars(parser, segment->preadmit_number, 19);
+    hammer_string_chars(parser, segment->prior_patient_location, 19);
+    hammer_string_chars(parser, segment->admission_date_time, 13);
+    hammer_string_chars(parser, segment->discharge_date_time, 13);
+    hammer_string_chars(parser, segment->visit_number_other, 19);
+}
+
+void orc_segment_parser(hammer_parser_t *parser, void *data) {
+    orc_segment_t *segment = (orc_segment_t *)data;
+    hammer_string_chars(parser, segment->order_control, 1);
+    hammer_string_chars(parser, segment->placer_order_number, 19);
+    hammer_string_chars(parser, segment->filler_order_number, 19);
+    hammer_string_chars(parser, segment->order_status, 1);
+    hammer_string_char(parser, &segment->response_flag);
+    hammer_string_chars(parser, segment->quantity_timing, 9);
+}
+
+void obr_segment_parser(hammer_parser_t *parser, void *data) {
+    obr_segment_t *segment = (obr_segment_t *)data;
+    hammer_string_char(parser, &segment->set_id_observation_request);
+    hammer_string_chars(parser, segment->placer_order_number, 19);
+    hammer_string_chars(parser, segment->filler_order_number, 19);
+    hammer_string_chars(parser, segment->universal_service_id, 19);
+    hammer_string_chars(parser, segment->priority, 9);
+    hammer_string_chars(parser, segment->requested_date_time, 13);
+}
+
+void hl7_message_parser(hammer_parser_t *parser, void *data) {
+    void *segment_data = malloc(sizeof(msh_segment_t) + sizeof(pid_segment_t) + sizeof(pv1_segment_t) + sizeof(orc_segment_t) + sizeof(obr_segment_t));
+    hammer_repeat(
+        hammer_choice(
+            msh_segment_parser, segment_data,
+            pid_segment_parser, segment_data,
+            pv1_segment_parser, segment_data,
+            orc_segment_parser, segment_data,
+            obr_segment_parser, segment_data
+        )
+    );
+    free(segment_data);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        printf("Error opening input file\n");
+        return 1;
+    }
+
+    fseek(input_file, 0, SEEK_END);
+    long file_size = ftell(input_file);
+    rewind(input_file);
+
+    char *input_data = malloc(file_size);
+    if (!input_data) {
+        printf("Error allocating memory\n");
+        fclose(input_file);
+        return 1;
+    }
+
+    fread(input_data, 1, file_size, input_file);
+    fclose(input_file);
+
+    hammer_parser_t *parser = hammer_parser_new();
+    hammer_parser_set_parser(parser, hl7_message_parser, NULL);
+    int result = hammer_parser_parse(parser, input_data, file_size);
 
     if (result == 0) {
-        printf("Message parsed successfully\n");
+        printf("Parsed HL7 message successfully\n");
     } else {
-        printf("Error parsing message\n");
+        printf("Error parsing HL7 message\n");
     }
+
+    free(input_data);
+    hammer_parser_free(parser);
 
     return 0;
 }

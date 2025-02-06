@@ -2,48 +2,71 @@ module ELF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    sections: Section[] &until($!.is_done);
-
-    var is_done: bool = false;
-};
-
-type Header = unit {
-    magic: bytes &size=4 
-        where $$ == b"\x7fELF";
-    
-    class: uint8 
-        where $$ == 1 || $$ == 2;  # 32-bit or 64-bit
-    
-    endian: uint8 
-        where $$ == 1 || $$ == 2;  # Little or big endian
-    
+public type Header = struct {
+    magic: bytes(4);
+    class: uint8;
+    data_encoding: uint8;
     version: uint8;
-    
     os_abi: uint8;
     abi_version: uint8;
+    padding: bytes(7);
     
-    padding: bytes &size=7;
-    
-    type: uint16;
+    type_: uint16;
     machine: uint16;
     elf_version: uint32;
+    
+    entry_point: uint64;
+    program_header_offset: uint64;
+    section_header_offset: uint64;
+    
+    flags: uint32;
+    header_size: uint16;
+    program_header_entry_size: uint16;
+    program_header_count: uint16;
+    section_header_entry_size: uint16;
+    section_header_count: uint16;
+    section_header_string_index: uint16;
+
+    on init {
+        assert self.magic == b"\x7FELF";
+        assert self.class == 1 || self.class == 2;
+        assert self.data_encoding == 1 || self.data_encoding == 2;
+        assert self.version == 1;
+        assert self.type_ == 0 || self.type_ == 1 || self.type_ == 2 || self.type_ == 3 || self.type_ == 4;
+        assert self.header_size == 52 || self.header_size == 64;
+    }
 };
 
-type Section = unit {
-    name_index: uint32;
+public type ProgramHeader = struct {
     type: uint32;
-    flags: uint64;
-    addr: uint64;
+    flags: uint32 &optional;
+    segment_offset: uint64;
+    segment_virtual_address: uint64;
+    segment_physical_address: uint64;
+    segment_size_in_file: uint64;
+    segment_size_in_memory: uint64;
+    alignment: uint64;
+};
+
+public type SectionHeader = struct {
+    name_offset: uint32;
+    type: uint32;
+    flags: uint64 &optional;
+    virtual_address: uint64 &optional;
     offset: uint64;
     size: uint64;
     link: uint32;
     info: uint32;
-    addr_align: uint64;
-    entry_size: uint64;
-
-    on %done { 
-        self.parent<File>().is_done = true if self.type == 0; 
-    }
+    address_alignment: uint64;
+    entry_size: uint64 &optional;
 };
+
+public type ELF = struct {
+    header: Header;
+    program_headers: vector<ProgramHeader> &length=header.program_header_count;
+    section_headers: vector<SectionHeader> &length=header.section_header_count;
+};
+
+public function parse(data: bytes) : ELF {
+    return ELF::parse(data);
+}

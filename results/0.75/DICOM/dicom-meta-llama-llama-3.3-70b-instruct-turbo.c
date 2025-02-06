@@ -1,79 +1,160 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Define the structure for DICOM meta information
+#define UI_LEN 64
+#define LO_LEN 64
+#define PN_LEN 64
+#define DA_LEN 8
+#define TM_LEN 6
+#define CS_LEN 16
+#define IS_LEN 12
+#define DS_LEN 32
+#define US_LEN 4
+
 typedef struct {
-    char patient_name[64];
-    char patient_id[64];
-    char study_description[128];
-    char study_date[32];
-    char study_time[32];
-} dicom_meta_t;
+    char transfer_syntax_uid[UI_LEN];
+    char media_storage_sop_instance_uid[UI_LEN];
+    char media_storage_sop_class_uid[UI_LEN];
+} file_meta_info;
 
-// Define the structure for DICOM image data
 typedef struct {
-    int width;
-    int height;
-    unsigned short *pixel_data;
-} dicom_image_t;
+    char patient_name[PN_LEN];
+    char patient_id[LO_LEN];
+    char patient_birth_date[DA_LEN];
+    char patient_sex[CS_LEN];
+} patient_info;
 
-// Define the function to parse DICOM meta information
-dicom_meta_t *parse_dicom_meta(const unsigned char *data, int length) {
-    dicom_meta_t *meta = (dicom_meta_t *)malloc(sizeof(dicom_meta_t));
-    if (meta == NULL) {
-        return NULL;
-    }
-    // Initialize the meta structure with default values
-    memset(meta, 0, sizeof(dicom_meta_t));
-    // Parse the DICOM meta information from the data
-    // This is a simplified example and actual implementation may vary
-    // depending on the DICOM standard and the specific requirements
-    meta->patient_name[0] = '\0';
-    meta->patient_id[0] = '\0';
-    meta->study_description[0] = '\0';
-    meta->study_date[0] = '\0';
-    meta->study_time[0] = '\0';
-    return meta;
-}
+typedef struct {
+    char study_instance_uid[UI_LEN];
+    char study_date[DA_LEN];
+    char study_time[TM_LEN];
+    char study_description[LO_LEN];
+} study_info;
 
-// Define the function to parse DICOM image data
-dicom_image_t *parse_dicom_image(const unsigned char *data, int length) {
-    dicom_image_t *image = (dicom_image_t *)malloc(sizeof(dicom_image_t));
-    if (image == NULL) {
-        return NULL;
-    }
-    // Initialize the image structure with default values
-    image->width = 0;
-    image->height = 0;
-    image->pixel_data = NULL;
-    // Parse the DICOM image data from the data
-    // This is a simplified example and actual implementation may vary
-    // depending on the DICOM standard and the specific requirements
-    return image;
-}
+typedef struct {
+    char series_instance_uid[UI_LEN];
+    char series_number[IS_LEN];
+    char series_description[LO_LEN];
+} series_info;
 
-int main() {
-    // Example usage:
-    unsigned char data[] = { /* example DICOM data */ };
-    int length = sizeof(data);
-    dicom_meta_t *meta = parse_dicom_meta(data, length);
-    if (meta != NULL) {
-        printf("Patient Name: %s\n", meta->patient_name);
-        printf("Patient ID: %s\n", meta->patient_id);
-        printf("Study Description: %s\n", meta->study_description);
-        printf("Study Date: %s\n", meta->study_date);
-        printf("Study Time: %s\n", meta->study_time);
-        free(meta);
+typedef struct {
+    char sop_instance_uid[UI_LEN];
+    char instance_number[IS_LEN];
+    char image_type[CS_LEN];
+    char photometric_interpretation[CS_LEN];
+} image_info;
+
+typedef struct {
+    uint16_t rows;
+    uint16_t columns;
+    char pixel_spacing[DS_LEN];
+    uint8_t* pixel_data;
+} pixel_data;
+
+typedef struct {
+    file_meta_info file_meta;
+    patient_info patient;
+    study_info study;
+    series_info series;
+    image_info image;
+    pixel_data pixel;
+} dicom_data;
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <dicom_file>\n", argv[0]);
+        return 1;
     }
-    dicom_image_t *image = parse_dicom_image(data, length);
-    if (image != NULL) {
-        printf("Image Width: %d\n", image->width);
-        printf("Image Height: %d\n", image->height);
-        if (image->pixel_data != NULL) {
-            // Process the pixel data
-        }
-        free(image);
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file %s\n", argv[1]);
+        return 1;
     }
+
+    dicom_data data;
+    HParser* parser = h_file(file);
+    if (!parser) {
+        printf("Error creating parser\n");
+        return 1;
+    }
+
+    HParser* file_meta_parser = h_sequence(
+        h_string("TransferSyntaxUID", data.file_meta.transfer_syntax_uid),
+        h_string("MediaStorageSOPInstanceUID", data.file_meta.media_storage_sop_instance_uid),
+        h_string("MediaStorageSOPClassUID", data.file_meta.media_storage_sop_class_uid)
+    );
+
+    HParser* patient_parser = h_sequence(
+        h_string("PatientName", data.patient.patient_name),
+        h_string("PatientID", data.patient.patient_id),
+        h_string("PatientBirthDate", data.patient.patient_birth_date),
+        h_string("PatientSex", data.patient.patient_sex)
+    );
+
+    HParser* study_parser = h_sequence(
+        h_string("StudyInstanceUID", data.study.study_instance_uid),
+        h_string("StudyDate", data.study.study_date),
+        h_string("StudyTime", data.study.study_time),
+        h_string("StudyDescription", data.study.study_description)
+    );
+
+    HParser* series_parser = h_sequence(
+        h_string("SeriesInstanceUID", data.series.series_instance_uid),
+        h_string("SeriesNumber", data.series.series_number),
+        h_string("SeriesDescription", data.series.series_description)
+    );
+
+    HParser* image_parser = h_sequence(
+        h_string("SOPInstanceUID", data.image.sop_instance_uid),
+        h_string("InstanceNumber", data.image.instance_number),
+        h_string("ImageType", data.image.image_type),
+        h_string("PhotometricInterpretation", data.image.photometric_interpretation)
+    );
+
+    HParser* pixel_parser = h_sequence(
+        h_uint16(),
+        h_uint16(),
+        h_string("PixelSpacing", data.pixel.pixel_spacing),
+        h_bytes()
+    );
+
+    HParser* dicom_parser = h_sequence(
+        file_meta_parser,
+        patient_parser,
+        study_parser,
+        series_parser,
+        image_parser,
+        pixel_parser
+    );
+
+    if (h_parse(parser, dicom_parser)) {
+        printf("Error parsing DICOM file\n");
+        return 1;
+    }
+
+    printf("Transfer Syntax UID: %s\n", data.file_meta.transfer_syntax_uid);
+    printf("Media Storage SOP Instance UID: %s\n", data.file_meta.media_storage_sop_instance_uid);
+    printf("Media Storage SOP Class UID: %s\n", data.file_meta.media_storage_sop_class_uid);
+    printf("Patient Name: %s\n", data.patient.patient_name);
+    printf("Patient ID: %s\n", data.patient.patient_id);
+    printf("Patient Birth Date: %s\n", data.patient.patient_birth_date);
+    printf("Patient Sex: %s\n", data.patient.patient_sex);
+    printf("Study Instance UID: %s\n", data.study.study_instance_uid);
+    printf("Study Date: %s\n", data.study.study_date);
+    printf("Study Time: %s\n", data.study.study_time);
+    printf("Study Description: %s\n", data.study.study_description);
+    printf("Series Instance UID: %s\n", data.series.series_instance_uid);
+    printf("Series Number: %s\n", data.series.series_number);
+    printf("Series Description: %s\n", data.series.series_description);
+    printf("SOP Instance UID: %s\n", data.image.sop_instance_uid);
+    printf("Instance Number: %s\n", data.image.instance_number);
+    printf("Image Type: %s\n", data.image.image_type);
+    printf("Photometric Interpretation: %s\n", data.image.photometric_interpretation);
+
+    fclose(file);
     return 0;
 }

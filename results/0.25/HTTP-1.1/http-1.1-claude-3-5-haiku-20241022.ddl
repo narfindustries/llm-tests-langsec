@@ -1,45 +1,63 @@
-// HTTP/1.1 Protocol Specification
-module HTTP-1.1
+enum Version {
+    HTTP_1_0,
+    HTTP_1_1
+}
 
-// Basic types
-type Digit = '0'-'9'
-type Alpha = 'a'-'z' | 'A'-'Z'
-type AlphaNum = Alpha | Digit
-type Unreserved = Alpha | Digit | '-' | '.' | '_' | '~'
-type SubDelims = '!' | '$' | '&' | ''' | '(' | ')' | '*' | '+' | ',' | ';' | '='
+enum Method {
+    GET,
+    POST,
+    HEAD,
+    PUT,
+    DELETE,
+    TRACE,
+    OPTIONS,
+    CONNECT
+}
 
-// Whitespace and Control Characters
-type SP = ' '
-type CRLF = '\r\n'
-type WSP = SP | '\t'
-type VCHAR = '\x21'-'\x7E'
+type StatusCode = Int where 100 <= value and value < 600
 
-// Header Field Parsing
-type HeaderName = (Alpha | Digit | '-')+
-type HeaderValue = VCHAR*
+enum StatusClass {
+    INFORMATIONAL,
+    SUCCESSFUL,
+    REDIRECTION,
+    CLIENT_ERROR,
+    SERVER_ERROR
+}
 
-// Request Line Components
-type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'TRACE' | 'CONNECT'
-type AbsolutePath = '/' (Unreserved | SubDelims | ':' | '@')*
-type HTTPVersion = 'HTTP/1.1'
+record HeaderField {
+    name: String,
+    value: String
+}
 
-// Request Line Structure
-type RequestLine = 
-    Method SP 
-    AbsolutePath SP 
-    HTTPVersion 
-    CRLF
+variant RequestURI {
+    AbsoluteURI(uri: String),
+    AbsolutePath(path: String),
+    Authority(host: String),
+    Asterisk
+}
 
-// Header Field
-type HeaderField = 
-    HeaderName ':' SP HeaderValue CRLF
+record Request {
+    method: Method,
+    uri: RequestURI,
+    version: Version,
+    headers: List<HeaderField>,
+    body: Optional<Bytes>
+}
 
-// Message Body (optional)
-type MessageBody = VCHAR*
+record Response {
+    version: Version,
+    status_code: StatusCode,
+    status_class: StatusClass,
+    status_text: String,
+    headers: List<HeaderField>,
+    body: Optional<Bytes>
+}
 
-// Complete HTTP Request
-type HTTPRequest = 
-    RequestLine 
-    HeaderField* 
-    CRLF 
-    MessageBody?
+variant Message {
+    RequestMessage(request: Request),
+    ResponseMessage(response: Response)
+}
+
+parser HTTPParser {
+    parse(input: Bytes) -> Message
+}

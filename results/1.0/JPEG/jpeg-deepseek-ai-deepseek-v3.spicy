@@ -1,0 +1,113 @@
+module JPEG;
+
+public type JPEG_File = unit {
+    soi: SOI;
+    segments: JPEG_Segment[] until $context.is_eoi;
+    eoi: EOI;
+};
+
+type SOI = unit {
+    marker: bytes &size=2 &convert=0xFFD8;
+};
+
+type EOI = unit {
+    marker: bytes &size=2 &convert=0xFFD9;
+};
+
+type JPEG_Segment = unit {
+    marker: uint8 &convert=0xFF;
+    type: uint8;
+    length: uint16 &endian=big if $context.type != 0xD8 && $context.type != 0xD9;
+    data: case $context.type of {
+        0xC0 => SOF0,
+        0xC1 => SOF1,
+        0xC2 => SOF2,
+        0xC3 => SOF3,
+        0xC4 => DHT,
+        0xC5 => SOF5,
+        0xC6 => SOF6,
+        0xC7 => SOF7,
+        0xC8 => JPG,
+        0xC9 => SOF9,
+        0xCA => SOF10,
+        0xCB => SOF11,
+        0xCC => DAC,
+        0xCD => SOF13,
+        0xCE => SOF14,
+        0xCF => SOF15,
+        0xDB => DQT,
+        0xDC => DNL,
+        0xDD => DRI,
+        0xDE => DHP,
+        0xDF => EXP,
+        0xE0 => APP0,
+        0xE1 => APP1,
+        0xE2 => APP2,
+        0xE3 => APP3,
+        0xE4 => APP4,
+        0xE5 => APP5,
+        0xE6 => APP6,
+        0xE7 => APP7,
+        0xE8 => APP8,
+        0xE9 => APP9,
+        0xEA => APP10,
+        0xEB => APP11,
+        0xEC => APP12,
+        0xED => APP13,
+        0xEE => APP14,
+        0xEF => APP15,
+        0xFE => COM,
+        default => raw_data: bytes &size=$context.length - 2;
+    };
+};
+
+type SOF0 = unit {
+    precision: uint8;
+    height: uint16 &endian=big;
+    width: uint16 &endian=big;
+    num_components: uint8;
+    components: Component[] &size=$context.num_components;
+};
+
+type Component = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    quantization_table: uint8;
+};
+
+type DHT = unit {
+    table_class: uint8;
+    destination_id: uint8;
+    code_lengths: bytes &size=16;
+    code_values: bytes &size=sum($context.code_lengths);
+};
+
+type DQT = unit {
+    precision: uint8;
+    destination_id: uint8;
+    table: bytes &size=64 * (($context.precision & 0xF0) >> 4 + 1);
+};
+
+type DRI = unit {
+    restart_interval: uint16 &endian=big;
+};
+
+type APP0 = unit {
+    identifier: bytes &size=5;
+    version: uint16 &endian=big;
+    units: uint8;
+    xdensity: uint16 &endian=big;
+    ydensity: uint16 &endian=big;
+    xthumbnail: uint8;
+    ythumbnail: uint8;
+    thumbnail: bytes &size=$context.xthumbnail * $context.ythumbnail * 3;
+};
+
+type APP1 = unit {
+    identifier: bytes &size=6;
+    exif_data: bytes &size=$context.length - 8;
+};
+
+type COM = unit {
+    comment: bytes &size=$context.length - 2;
+};

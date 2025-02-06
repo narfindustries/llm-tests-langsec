@@ -1,22 +1,66 @@
-module Main where
+module NITF {
+  type FileHeader = {
+    signature: String8,
+    version: String4,
+    headerLength: UInt32,
+    securityMetadata: SecurityMetadata,
+    imageHeaderLocation: UInt32,
+    logicalFileLength: UInt64,
+    optionalFields: OptionalFields,
+  }
 
-import Daedalus.AST
-import Daedalus.PP
-import Daedalus.Compile.Daedalus
+  type ImageHeader = {
+    signature: String8,
+    version: String4,
+    headerLength: UInt32,
+    imageDataLocation: UInt32,
+    imageDimensions: { rows: UInt32, cols: UInt32, bands: UInt16 },
+    imageDataType: ImageDataType,
+    imageCompression: CompressionType,
+    geographicInformation: GeographicInfo,
+    metadataKeywords: List String,
+    optionalFields: OptionalFields,
+  }
 
---  I cannot provide a fixed Daedalus specification without knowing the 
---  original specification that caused the error. The error message only 
---  indicates a compilation failure, not the nature of the problem within 
---  the Daedalus code itself.  The number 999999 suggests a potentially 
---  temporary file or directory issue.
+  type SecurityMetadata = {
+    classification: String,
+    handlingInstructions: String,
+  }
 
--- To help me fix your code, please provide the original Daedalus 
--- specification (`nitf-gemini-1.5-flash.ddl`).  I will then attempt to 
--- identify and correct the compilation errors.
+  type GeographicInfo = {
+    projection: ProjectionType,
+    coordinates: List Coordinate,
+  }
 
---  Example of a simple Daedalus specification (replace with your actual code):
+  type Coordinate = {
+    latitude: Float64,
+    longitude: Float64,
+    altitude: Float64?,
+  }
 
-main :: Daedalus.AST.Program
-main = Program [] $ do
-  let x = 1 :: Integer
-  return x
+  type ImageDataType = Enum { UINT8, INT16, UINT16, FLOAT32, FLOAT64 }
+  type CompressionType = Enum { NONE, JPEG, JPEG2000 }
+  type ProjectionType = Enum { UTM, WGS84 }
+
+  type OptionalFields = {
+    fields: Map String Any,
+  }
+
+  type NITFFile = {
+    fileHeader: FileHeader,
+    imageHeaders: List ImageHeader,
+    dataSegments: List DataSegment,
+  }
+
+  type DataSegment = {
+    type: String,
+    data: Bytes,
+  }
+
+  type String8 = String { length: 8 }
+  type String4 = String { length: 4 }
+  type List a = [a]
+  type Map k v = { entries: [(k, v)] }
+  type Any = oneof { UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32, Int64, Float32, Float64, String, Bytes, Boolean }
+
+}

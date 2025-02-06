@@ -10,6 +10,42 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Tiff(KaitaiStruct):
 
+    class ByteOrder(Enum):
+        le = 18761
+        be = 19789
+
+    class TagType(Enum):
+        image_width = 256
+        image_length = 257
+        bits_per_sample = 258
+        compression = 259
+        photometric_interpretation = 262
+        strip_offsets = 273
+        samples_per_pixel = 277
+        rows_per_strip = 278
+        strip_byte_counts = 279
+        x_resolution = 282
+        y_resolution = 283
+        planar_configuration = 284
+        resolution_unit = 296
+        software = 305
+        date_time = 306
+        artist = 315
+        host_computer = 316
+        color_map = 320
+        tile_width = 322
+        tile_length = 323
+        tile_offsets = 324
+        tile_byte_counts = 325
+        sub_ifds = 330
+        jpeg_proc = 512
+        jpeg_interchange_format = 513
+        jpeg_interchange_format_length = 514
+        ycbcr_coefficients = 529
+        ycbcr_sub_sampling = 530
+        ycbcr_positioning = 531
+        reference_black_white = 532
+
     class FieldType(Enum):
         byte = 1
         ascii = 2
@@ -40,13 +76,9 @@ class Tiff(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.byte_order = self._io.read_bytes(4)
-            if not self.byte_order == b"\x49\x49\x4D\x4D":
-                raise kaitaistruct.ValidationNotEqualError(b"\x49\x49\x4D\x4D", self.byte_order, self._io, u"/types/header/seq/0")
-            self.version = self._io.read_bytes(1)
-            if not self.version == b"\x2A":
-                raise kaitaistruct.ValidationNotEqualError(b"\x2A", self.version, self._io, u"/types/header/seq/1")
-            self.ifd_offset = self._io.read_u4le()
+            self.byte_order = KaitaiStream.resolve_enum(Tiff.ByteOrder, self._io.read_u2be())
+            self.version = self._io.read_u2be()
+            self.ifd_offset = self._io.read_u4be()
 
 
     class Ifd(KaitaiStruct):
@@ -57,12 +89,12 @@ class Tiff(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.num_entries = self._io.read_u2le()
+            self.num_entries = self._io.read_u2be()
             self.entries = []
             for i in range(self.num_entries):
                 self.entries.append(Tiff.IfdEntry(self._io, self, self._root))
 
-            self.next_ifd_offset = self._io.read_u4le()
+            self.next_ifd_offset = self._io.read_u4be()
 
 
     class IfdEntry(KaitaiStruct):
@@ -73,32 +105,10 @@ class Tiff(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.tag = self._io.read_u2le()
-            self.field_type = self._io.read_u2le()
-            self.num_values = self._io.read_u4le()
-            self.value_offset = self._io.read_u4le()
+            self.tag = KaitaiStream.resolve_enum(Tiff.TagType, self._io.read_u2be())
+            self.field_type = KaitaiStream.resolve_enum(Tiff.FieldType, self._io.read_u2be())
+            self.num_values = self._io.read_u4be()
+            self.value_offset = self._io.read_u4be()
 
-
-    @property
-    def ifds(self):
-        if hasattr(self, '_m_ifds'):
-            return self._m_ifds
-
-        _pos = self._io.pos()
-        self._io.seek(self.header.ifd_offset)
-        self._raw__m_ifds = []
-        self._m_ifds = []
-        i = 0
-        while True:
-            _buf = self._io.read_bytes_full()
-            self._raw__m_ifds.append(_buf)
-            _io__raw__m_ifds = KaitaiStream(BytesIO(self._raw__m_ifds[-1]))
-            _ = Tiff.Ifd(_io__raw__m_ifds, self, self._root)
-            self._m_ifds.append(_)
-            if _.next_ifd_offset == 0:
-                break
-            i += 1
-        self._io.seek(_pos)
-        return getattr(self, '_m_ifds', None)
 
 

@@ -1,30 +1,26 @@
-module Bitcoin::Transactions;
+module Bitcoin;
 
-import spicy;
+protocol analyzer Bitcoin {
+    parse Tx {
+        version: uint32;
+        input_count: uint64;
+        inputs: vector<TxInput>(input_count);
+        output_count: uint64;
+        outputs: vector<TxOutput>(output_count);
+        locktime: uint32;
+    }
 
-public type Transaction = unit {
-    version: uint32;
-    input_count: varint;
-    inputs: Input[input_count.value];
-    output_count: varint;
-    outputs: Output[output_count.value];
-    locktime: uint32;
-
-    type Input = unit {
-        previous_tx_hash: bytes(32);
-        previous_output_index: uint32;
-        script_length: varint;
-        script_sig: bytes(script_length.value);
+    type TxInput {
+        prev_tx_hash: bytes(32);
+        prev_output_index: uint32;
+        script_sig_length: uint64;
+        script_sig: bytes(script_sig_length);
         sequence_number: uint32;
-    };
+    }
 
-    type Output = unit {
-        value: uint64;
-        script_length: varint;
-        script_pubkey: bytes(script_length.value);
-    };
-};
-
-public function parse(data: bytes) : Transaction {
-    return Transaction(data);
+    type TxOutput {
+        amount: uint64;
+        script_pubkey_length: uint64;
+        script_pubkey: bytes(script_pubkey_length);
+    }
 }

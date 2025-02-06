@@ -1,101 +1,152 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::{length_data, many0},
-    number::complete::{be_u16, be_u24, be_u32, be_u8},
-    sequence::{pair, preceded, tuple},
+    bytes::complete::take,
+    number::complete::{be_u16, be_u8},
+    multi::length_data,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct ClientHello {
-    version: (u8, u8),
-    random: Random,
-    session_id: Option<Vec<u8>>,
+    legacy_version: u16,
+    random: Vec<u8>,
+    legacy_session_id: Vec<u8>,
     cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
     extensions: Vec<Extension>,
 }
 
 #[derive(Debug)]
-struct Random {
-    gmt_unix_time: u32,
-    random_bytes: [u8; 28],
+enum Extension {
+    ServerName(String),
+    SupportedGroups(Vec<u16>),
+    SignatureAlgorithms(Vec<u16>),
+    KeyShare(Vec<KeyShareEntry>),
+    SupportedVersions(Vec<u16>),
+    PskKeyExchangeModes(Vec<u8>),
+    PreSharedKey(PreSharedKeyExtension),
+    EarlyData,
+    Cookie(Vec<u8>),
+    CertificateAuthorities(Vec<Vec<u8>>),
+    PostHandshakeAuth,
+    Unknown(u16, Vec<u8>),
 }
 
 #[derive(Debug)]
-struct Extension {
-    extension_type: u16,
-    extension_data: Vec<u8>,
+struct KeyShareEntry {
+    group: u16,
+    key_exchange: Vec<u8>,
 }
 
-fn parse_random(input: &[u8]) -> IResult<&[u8], Random> {
-    let (input, gmt_unix_time) = be_u32(input)?;
-    let (input, random_bytes) = map(take(28usize), |bytes: &[u8]| {
-        let mut arr = [0u8; 28];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)?;
-    Ok((input, Random { gmt_unix_time, random_bytes }))
+#[derive(Debug)]
+struct PreSharedKeyExtension {
+    identities: Vec<PskIdentity>,
+    binders: Vec<Vec<u8>>,
 }
 
-fn parse_session_id(input: &[u8]) -> IResult<&[u8], Option<Vec<u8>>> {
-    let (input, length) = be_u8(input)?;
-    if length == 0 {
-        Ok((input, None))
-    } else {
-        let (input, session_id) = take(length as usize)(input)?;
-        Ok((input, Some(session_id.to_vec())))
-    }
+#[derive(Debug)]
+struct PskIdentity {
+    identity: Vec<u8>,
+    obfuscated_ticket_age: u32,
 }
 
-fn parse_cipher_suites(input: &[u8]) -> IResult<&[u8], Vec<u16>> {
-    let (input, length) = be_u16(input)?;
-    let (input, cipher_suites) = many0(be_u16)(take(length as usize)(input)?.0)?;
-    Ok((input, cipher_suites))
+fn parse_key_share_entry(input: &[u8]) -> IResult<&[u8], KeyShareEntry> {
+    let (input, group) = be_u16(input)?;
+    let (input, key_exchange) = length_data(be_u16)(input)?;
+    Ok((input, KeyShareEntry {
+        group,
+        key_exchange: key_exchange.to_vec(),
+    }))
 }
 
-fn parse_compression_methods(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, length) = be_u8(input)?;
-    let (input, compression_methods) = take(length as usize)(input)?;
-    Ok((input, compression_methods.to_vec()))
+fn parse_psk_identity(input: &[u8]) -> IResult<&[u8], PskIdentity> {
+    let (input, identity) = length_data(be_u16)(input)?;
+    let (input, obfuscated_ticket_age) = be_u16(input)?;
+    Ok((input, PskIdentity {
+        identity: identity.to_vec(),
+        obfuscated_ticket_age: obfuscated_ticket_age as u32,
+    }))
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     let (input, extension_type) = be_u16(input)?;
     let (input, extension_data) = length_data(be_u16)(input)?;
-    Ok((input, Extension {
-        extension_type,
-        extension_data: extension_data.to_vec(),
-    }))
-}
-
-fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
-    let (input, length) = be_u16(input)?;
-    let (input, extensions) = many0(parse_extension)(take(length as usize)(input)?.0)?;
-    Ok((input, extensions))
+    
+    match extension_type {
+        0x0000 => {
+            let (_, hostname) = length_data(be_u16)(extension_data)?;
+            Ok((input, Extension::ServerName(String::from_utf8_lossy(hostname).to_string())))
+        }
+        0x000a => {
+            let (remaining, _) = be_u16(extension_data)?;
+            let mut groups = Vec::new();
+            let mut current = remaining;
+            while !current.is_empty() {
+                let (remaining, group) = be_u16(current)?;
+                groups.push(group);
+                current = remaining;
+            }
+            Ok((input, Extension::SupportedGroups(groups)))
+        }
+        0x000d => {
+            let (remaining, _) = be_u16(extension_data)?;
+            let mut algorithms = Vec::new();
+            let mut current = remaining;
+            while !current.is_empty() {
+                let (remaining, alg) = be_u16(current)?;
+                algorithms.push(alg);
+                current = remaining;
+            }
+            Ok((input, Extension::SignatureAlgorithms(algorithms)))
+        }
+        0x0033 => {
+            let (remaining, _) = be_u16(extension_data)?;
+            let mut entries = Vec::new();
+            let mut current = remaining;
+            while !current.is_empty() {
+                let (remaining, entry) = parse_key_share_entry(current)?;
+                entries.push(entry);
+                current = remaining;
+            }
+            Ok((input, Extension::KeyShare(entries)))
+        }
+        _ => Ok((input, Extension::Unknown(extension_type, extension_data.to_vec()))),
+    }
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, _) = tag(&[0x16])(input)?; // Content Type: Handshake
-    let (input, _) = tag(&[0x03, 0x03])(input)?; // TLS Version 1.2
-    let (input, length) = be_u16(input)?;
-    let (input, _) = tag(&[0x01])(input)?; // Handshake Type: Client Hello
-    let (input, _) = be_u24(input)?; // Length
-    let (input, version) = pair(be_u8, be_u8)(input)?;
-    let (input, random) = parse_random(input)?;
-    let (input, session_id) = parse_session_id(input)?;
-    let (input, cipher_suites) = parse_cipher_suites(input)?;
-    let (input, compression_methods) = parse_compression_methods(input)?;
-    let (input, extensions) = parse_extensions(input)?;
-
+    let (input, legacy_version) = be_u16(input)?;
+    let (input, random) = take(32usize)(input)?;
+    let (input, legacy_session_id) = length_data(be_u8)(input)?;
+    
+    let (input, cipher_suites_data) = length_data(be_u16)(input)?;
+    let mut cipher_suites = Vec::new();
+    let mut current = cipher_suites_data;
+    while !current.is_empty() {
+        let (remaining, suite) = be_u16(current)?;
+        cipher_suites.push(suite);
+        current = remaining;
+    }
+    
+    let (input, compression_methods) = length_data(be_u8)(input)?;
+    
+    let (input, extensions_data) = length_data(be_u16)(input)?;
+    let mut extensions = Vec::new();
+    let mut current = extensions_data;
+    while !current.is_empty() {
+        let (remaining, extension) = parse_extension(current)?;
+        extensions.push(extension);
+        current = remaining;
+    }
+    
     Ok((input, ClientHello {
-        version,
-        random,
-        session_id,
+        legacy_version,
+        random: random.to_vec(),
+        legacy_session_id: legacy_session_id.to_vec(),
         cipher_suites,
-        compression_methods,
+        compression_methods: compression_methods.to_vec(),
         extensions,
     }))
 }
@@ -103,7 +154,7 @@ fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
+        eprintln!("Usage: {} <tls_client_hello_file>", args[0]);
         std::process::exit(1);
     }
 
@@ -113,10 +164,13 @@ fn main() -> std::io::Result<()> {
 
     match parse_client_hello(&buffer) {
         Ok((remaining, client_hello)) => {
-            println!("Parsed Client Hello: {:#?}", client_hello);
+            println!("Parsed ClientHello: {:#?}", client_hello);
             println!("Remaining bytes: {} bytes", remaining.len());
         }
-        Err(e) => eprintln!("Failed to parse Client Hello: {:?}", e),
+        Err(e) => {
+            eprintln!("Failed to parse ClientHello: {:?}", e);
+            std::process::exit(1);
+        }
     }
 
     Ok(())

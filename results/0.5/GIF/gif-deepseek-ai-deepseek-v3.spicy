@@ -1,0 +1,93 @@
+module GIF;
+
+public type GIF_Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+};
+
+public type LogicalScreenDescriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type ColorTable = unit {
+    entries: bytes[] &until($input->is_empty());
+};
+
+public type ImageDescriptor = unit {
+    separator: uint8;
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+};
+
+public type ImageData = unit {
+    lzw_min_code_size: uint8;
+    data_blocks: bytes[] &until($input->is_empty());
+};
+
+public type GraphicControlExtension = unit {
+    extension_introducer: uint8;
+    graphic_control_label: uint8;
+    block_size: uint8;
+    packed_fields: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8;
+};
+
+public type PlainTextExtension = unit {
+    extension_introducer: uint8;
+    plain_text_label: uint8;
+    block_size: uint8;
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    character_cell_width: uint8;
+    character_cell_height: uint8;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    plain_text_data: bytes[] &until($input->is_empty());
+    block_terminator: uint8;
+};
+
+public type ApplicationExtension = unit {
+    extension_introducer: uint8;
+    application_extension_label: uint8;
+    block_size: uint8;
+    application_identifier: bytes &size=8;
+    application_authentication_code: bytes &size=3;
+    application_data: bytes[] &until($input->is_empty());
+    block_terminator: uint8;
+};
+
+public type CommentExtension = unit {
+    extension_introducer: uint8;
+    comment_label: uint8;
+    comment_data: bytes[] &until($input->is_empty());
+    block_terminator: uint8;
+};
+
+public type GIF_Trailer = unit {
+    trailer: uint8;
+};
+
+public type GIF = unit {
+    header: GIF_Header;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: ColorTable &if(self.logical_screen_descriptor.packed_fields & 0x80);
+    image_descriptor: ImageDescriptor;
+    local_color_table: ColorTable &if(self.image_descriptor.packed_fields & 0x80);
+    image_data: ImageData;
+    graphic_control_extension: GraphicControlExtension &if(self.image_descriptor.separator == 0x21);
+    plain_text_extension: PlainTextExtension &if(self.image_descriptor.separator == 0x21);
+    application_extension: ApplicationExtension &if(self.image_descriptor.separator == 0x21);
+    comment_extension: CommentExtension &if(self.image_descriptor.separator == 0x21);
+    trailer: GIF_Trailer;
+};

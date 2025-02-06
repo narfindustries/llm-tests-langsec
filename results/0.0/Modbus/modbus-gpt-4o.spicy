@@ -1,52 +1,59 @@
 module Modbus;
 
-import spicy;
-import zeek;
-
-public type ModbusRequest = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
+type ModbusMessage = unit {
+    transaction_id: uint16;  # Only for Modbus TCP
+    protocol_id: uint16;     # Only for Modbus TCP, should be 0x0000
+    length: uint16;          # Only for Modbus TCP
+    unit_id: uint8;          # Only for Modbus TCP
     function_code: uint8;
-    data: bytes &restofdata;
+    body: bytes;
 };
 
-public type ModbusResponse = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
+type ReadRequest = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+type WriteSingleCoilRequest = unit {
+    output_address: uint16;
+    value: uint16;  # 0x0000 for OFF, 0xFF00 for ON
+};
+
+type WriteSingleRegisterRequest = unit {
+    register_address: uint16;
+    value: uint16;
+};
+
+type WriteMultipleCoilsRequest = unit {
+    starting_address: uint16;
+    quantity_of_outputs: uint16;
+    byte_count: uint8;
+    output_values: bytes &size=byte_count;
+};
+
+type WriteMultipleRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+    byte_count: uint8;
+    register_values: bytes &size=byte_count;
+};
+
+type ExceptionResponse = unit {
+    exception_code: uint8;
+};
+
+type ModbusRTUMessage = unit {
+    address: uint8;
     function_code: uint8;
-    data: bytes &restofdata;
+    body: bytes;
+    crc: uint16;
 };
 
-public type ModbusMessage = unit {
-    is_request: bool;
-    body: case is_request of {
-        true  -> ModbusRequest,
-        false -> ModbusResponse
-    };
+type ModbusASCIIMessage = unit {
+    start: uint8 &assert(start == 0x3A);  # ASCII ':'
+    address: uint8;
+    function_code: uint8;
+    body: bytes;
+    lrc: uint8;
+    end: uint16 &assert(end == 0x0D0A);  # ASCII CRLF
 };
-
-public global modbus_request: event(msg: ModbusRequest);
-public global modbus_response: event(msg: ModbusResponse);
-
-public function process_modbus_message(msg: ModbusMessage) {
-    if ( msg.is_request ) {
-        event modbus_request(msg.body as ModbusRequest);
-    }
-    else {
-        event modbus_response(msg.body as ModbusResponse);
-    }
-}
-
-public module Parser = spicy::Parser for ModbusMessage {
-    on %done {
-        process_modbus_message(self);
-    }
-};
-
-public hook zeek_init() {
-    Parser::register();
-}

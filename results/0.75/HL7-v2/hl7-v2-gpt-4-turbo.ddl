@@ -1,19 +1,141 @@
-module HL7v2GPT4Turbo {
+type HL7v2 = struct {
+    segments []HL7Segment
+}
 
-  -- Define the Segment structure
-  struct Segment {
-    segType : String(3);
-    segContent : UntilEOL;
-  }
+type HL7Segment = struct {
+    segmentId string @size(3),
+    fields []Field
+}
 
-  -- Define a Message containing an array of segments, stops when the EOF is reached
-  struct Message {
-    segments : [Segment];
-  }
+type Field = union {
+    msh MSH,
+    pid PID,
+    pv1 PV1,
+    obx OBX
+}
 
-  -- Top-level structure for HL7 messages
-  struct HL7v2Messages {
-    messages : [Message]('\r');
-  }
+type MSH = struct {
+    fieldSeparator string @size(1),
+    encodingCharacters string @size(4),
+    sendingApplication string?,
+    sendingFacility string?,
+    receivingApplication string?,
+    receivingFacility string?,
+    dateTimeOfMessage string?,
+    security string?,
+    messageType string @size(7),
+    messageControlID string,
+    processingID string @size(1),
+    versionID string @size(5)
+}
 
+type PID = struct {
+    setIDPID string?,
+    patientID string?,
+    patientIdentifierList string?,
+    alternatePatientIDPID string?,
+    patientName string?,
+    motherSMaidenName string?,
+    dateTimeOfBirth string?,
+    administrativeSex string @size(1),
+    patientAlias string?,
+    race string?,
+    patientAddress string?,
+    countyCode string?,
+    phoneNumberHome string?,
+    phoneNumberBusiness string?,
+    primaryLanguage string?,
+    maritalStatus string?,
+    religion string?,
+    patientAccountNumber string?,
+    ssnNumberPatient string?,
+    driverSLicenseNumberPatient string?,
+    motherSIdentifier string?,
+    ethnicGroup string?,
+    birthPlace string?,
+    multipleBirthIndicator string @size(1),
+    birthOrder string?,
+    citizenship string?,
+    veteransMilitaryStatus string?,
+    nationalHealthPlanID string?,
+    ethnicGroup string?,
+    maritalStatus string?,
+    religion string?
+}
+
+type PV1 = struct {
+    setIDPV1 string?,
+    patientClass string @size(1),
+    assignedPatientLocation string?,
+    admissionType string?,
+    preadmitNumber string?,
+    priorPatientLocation string?,
+    attendingDoctor string?,
+    referringDoctor string?,
+    consultingDoctor string?,
+    hospitalService string?,
+    temporaryLocation string?,
+    preadmitTestIndicator string?,
+    readmissionIndicator string?,
+    admitSource string?,
+    ambulatoryStatus string?,
+    vipIndicator string?,
+    admittingDoctor string?,
+    patientType string?,
+    visitNumber string?,
+    financialClass string?,
+    chargePriceIndicator string?,
+    courtesyCode string?,
+    creditRating string?,
+    contractCode string?,
+    contractEffectiveDate string?,
+    contractAmount string?,
+    contractPeriod string?,
+    interestCode string?,
+    transferToBadDebtCode string?,
+    transferToBadDebtDate string?,
+    badDebtAgencyCode string?,
+    badDebtTransferAmount string?,
+    badDebtRecoveryAmount string?,
+    deleteAccountIndicator string?,
+    deleteAccountDate string?,
+    dischargeDisposition string?,
+    dischargedToLocation string?,
+    dietType string?,
+    servicingFacility string?,
+    bedStatus string?,
+    accountStatus string?,
+    pendingLocation string?,
+    priorTemporaryLocation string?,
+    admitDateTime string?,
+    dischargeDateTime string?,
+    currentPatientBalance string?,
+    totalCharges string?,
+    totalAdjustments string?,
+    totalPayments string?,
+    alternateVisitID string?,
+    visitIndicator string?,
+    otherHealthcareProvider string?
+}
+
+type OBX = struct {
+    setIDOBX string?,
+    valueType string @size(2),
+    observationIdentifier string?,
+    observationSubID string?,
+    observationValue string?,
+    units string?,
+    referencesRange string?,
+    abnormalFlags string?,
+    probability string?,
+    natureOfAbnormalTest string?,
+    observationResultStatus string @size(1),
+    effectiveDateOfReferenceRange string?,
+    userDefinedAccessChecks string?,
+    dateTimeOfTheObservation string?,
+    producerSID string?,
+    responsibleObserver string?,
+    observationMethod string?,
+    equipmentInstanceIdentifier string?,
+    dateTimeOfTheAnalysis string?
 }

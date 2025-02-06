@@ -1,36 +1,38 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/dicom" targetNamespace="http://example.org/dicom" elementFormDefault="qualified" attributeFormDefault="unqualified">
+I cannot provide a fully functional DFDL schema for the entirety of DICOM. The DICOM standard is too vast and complex for a single, automatically generated DFDL schema.  The previous attempts failed because they tried to generate a schema of unrealistic scope.  A complete DICOM schema would require many thousands of lines of code and a deep understanding of all possible DICOM data types and variations.
 
-  <xs:element name="DICOM">
+Furthermore, the `schemaLocation` error indicates that the DFDL schema definition itself (`dfdl.xsd`) is missing.  This file is *not* part of a standard library and must be provided separately depending on which DFDL implementation you are using.   You'll need to locate the appropriate DFDL schema file for your DFDL processor.
+
+To proceed, you'll need a more targeted approach:
+
+1. **Choose a subset of DICOM:**  Focus on a specific DICOM modality (e.g., CT, MR) or a limited set of attributes relevant to a particular application.
+
+2. **Manual Schema Creation:**  Manually create the DFDL schema for this subset.  This is significantly more feasible and will allow you to accurately model the data types and structures.
+
+3. **Correct `schemaLocation`:** Ensure that the `schemaLocation` in your `<xs:import>` statement points to the correct path of your DFDL schema (`dfdl.xsd` or its equivalent).
+
+
+Here's a *very* minimal example demonstrating a subset, illustrating the proper schema inclusion (you still need to replace `path/to/dfdl.xsd` with the correct path).  This is far from a complete DICOM schema but avoids the `schemaLocation` error.
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/dicomSubset"
+           xmlns="http://example.org/dicomSubset"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="path/to/dfdl.xsd"/>
+
+  <xs:element name="DICOMSubset">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="PatientName" type="tns:PatientNameType" dfdl:lengthKind="implicit"/>
-        <xs:element name="StudyDate" type="xs:date" dfdl:lengthKind="explicit" dfdl:length="8"/>
-        <xs:element name="StudyID" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="16"/>
-        <!-- Add other DICOM elements as needed -->
+        <xs:element name="PatientID" type="dfdl:string" dfdl:length="64"/>
+        <xs:element name="Modality" type="dfdl:string" dfdl:length="16"/>
+        <xs:element name="StudyDate" type="dfdl:date"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="PatientNameType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="encoding" type="xs:string" use="required" dfdl:occurs="1"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
-
-  <dfdl:defineSchema>
-    <dfdl:format ref="tns:DICOM"/>
-    <dfdl:textStandard name="US-ASCII"/>
-    <dfdl:separator separatorPosition="trailing">
-      <dfdl:occurs>1</dfdl:occurs>
-      <dfdl:value>0x0000</dfdl:value>
-    </dfdl:separator>
-    <dfdl:representation name="text"/>
-    <dfdl:binaryNumberRepresentation binaryNumberType="binary"/>
-    <dfdl:encoding encodingScheme="UTF-8"/>
-  </dfdl:defineSchema>
 </xs:schema>
 
+Remember to replace `"path/to/dfdl.xsd"` with the actual path to your DFDL schema file.  This revised example is much smaller and focuses only on a few DICOM attributes.  You would need to expand this significantly to represent a larger portion of the DICOM standard.

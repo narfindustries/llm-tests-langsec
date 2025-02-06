@@ -1,36 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-typedef struct {
-    uint16_t htype;
-    uint16_t ptype;
-    uint8_t hlen;
-    uint8_t plen;
-    uint16_t oper;
-    uint8_t sha[6];
-    uint8_t spa[4];
-    uint8_t tha[6];
-    uint8_t tpa[4];
-} arp_packet_t;
+HParser *arp_parser() {
+    // Define the ARP packet fields
+    HParser *htype = h_uint16(); // Hardware Type
+    HParser *ptype = h_uint16(); // Protocol Type
+    HParser *hlen = h_uint8();   // Hardware Address Length
+    HParser *plen = h_uint8();   // Protocol Address Length
+    HParser *oper = h_uint16();  // Operation
 
-static HParser *create_arp_parser(void) {
-    HParser *htype = h_uint16();
-    HParser *ptype = h_uint16();
-    HParser *hlen = h_uint8();
-    HParser *plen = h_uint8();
-    HParser *oper = h_uint16();
-    HParser *sha = h_repeat_n(h_uint8(), 6);
-    HParser *spa = h_repeat_n(h_uint8(), 4);
-    HParser *tha = h_repeat_n(h_uint8(), 6);
-    HParser *tpa = h_repeat_n(h_uint8(), 4);
+    // Hardware and Protocol addresses are variable length
+    HParser *sha = h_length_value(hlen, h_uint8()); // Sender Hardware Address
+    HParser *spa = h_length_value(plen, h_uint8()); // Sender Protocol Address
+    HParser *tha = h_length_value(hlen, h_uint8()); // Target Hardware Address
+    HParser *tpa = h_length_value(plen, h_uint8()); // Target Protocol Address
 
-    HParser *arp_packet = h_sequence(htype, ptype, hlen, plen, oper, sha, spa, tha, tpa, NULL);
-
-    return arp_packet;
+    // Combine all fields into an ARP packet parser
+    return h_sequence(htype, ptype, hlen, plen, oper, sha, spa, tha, tpa, NULL);
 }
 
-int main(int argc, char **argv) {
-    HParser *arp_parser = create_arp_parser();
-    // Add code to use the parser, e.g., parse a buffer
-    h_parser_free(arp_parser);
-    return 0;
+void print_bytes(const uint8_t *data, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02x ", data[i]);
+    }
+    printf("\n");
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *parser = arp_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
+
+    if (result->ast) {
+        printf("ARP Packet Parsed Successfully:\n");
+        print_bytes(buffer, file_size);
+    } else {
+        fprintf(stderr, "Failed to parse ARP packet\n");
+    }
+
+    h_parse_result_free(result);
+    hobj_unref(parser); // Correct function to free parser
+    free(buffer);
+
+    return EXIT_SUCCESS;
 }

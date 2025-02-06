@@ -1,39 +1,165 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ntp"
-           xmlns:tns="http://example.com/ntp"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+        targetNamespace="http://example.org/ntp"
+        xmlns:ntp="http://example.org/ntp"
+        elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:ntpFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" />
+        </appinfo>
+    </annotation>
 
-    <dfdl:format name="ntpFormat"
-                 byteOrder="bigEndian"
-                 encoding="ascii"
-                 lengthKind="explicit"
-                 lengthUnits="bytes"/>
+    <element name="NTPMessage">
+        <complexType>
+            <sequence>
+                <element name="LI" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bits" />
+                            <dfdl:length value="2" />
+                            <dfdl:representation value="binary" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="VN" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bits" />
+                            <dfdl:length value="3" />
+                            <dfdl:representation value="binary" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Mode" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bits" />
+                            <dfdl:length value="3" />
+                            <dfdl:representation value="binary" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Stratum" type="unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="1" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Poll" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="1" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Precision" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="1" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="RootDelay" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="4" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="RootDispersion" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="4" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="ReferenceIdentifier" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="4" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="ReferenceTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="8" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="OriginateTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="8" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="ReceiveTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="8" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="TransmitTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                            <dfdl:lengthKind value="explicit" />
+                            <dfdl:lengthUnits value="bytes" />
+                            <dfdl:length value="8" />
+                        </appinfo>
+                    </annotation>
+                </element>
+                <element name="Authenticator" minOccurs="0">
+                    <complexType>
+                        <sequence>
+                            <element name="KeyIdentifier" type="unsignedInt">
+                                <annotation>
+                                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                                        <dfdl:lengthKind value="explicit" />
+                                        <dfdl:lengthUnits value="bytes" />
+                                        <dfdl:length value="4" />
+                                    </appinfo>
+                                </annotation>
+                            </element>
+                            <element name="MessageDigest" type="hexBinary">
+                                <annotation>
+                                    <appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                                        <dfdl:lengthKind value="explicit" />
+                                        <dfdl:lengthUnits value="bytes" />
+                                        <dfdl:length value="8" />
+                                    </appinfo>
+                                </annotation>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
 
-    <xs:element name="NTPMessage">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="LI_VN_Mode" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
-                <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
-                <xs:element name="Poll" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
-                <xs:element name="Precision" type="xs:byte" dfdl:length="1" dfdl:representation="binary"/>
-                <xs:element name="RootDelay" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-                <xs:element name="RootDispersion" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-                <xs:element name="ReferenceID" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-                <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
-                <xs:element name="OriginateTimestamp" type="xs:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
-                <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
-                <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-</xs:schema>
+</schema>

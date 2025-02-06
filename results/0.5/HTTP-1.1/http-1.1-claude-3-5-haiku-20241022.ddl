@@ -1,116 +1,100 @@
-format HTTP-1.1 {
-    // Header definition
-    type Header = struct {
-        name: string<1..256>,
-        value: string<1..4096>
-    }
+def Version:
+  major: u8
+  minor: u8
 
-    // Request line components
-    type Method = enum {
-        GET, POST, PUT, DELETE, HEAD, OPTIONS, PATCH, TRACE, CONNECT
-    }
+def Method:
+  | GET
+  | POST
+  | PUT
+  | DELETE
+  | HEAD
+  | OPTIONS
+  | TRACE
+  | CONNECT
+  | PATCH
 
-    type RequestURI = string<1..2048>
+def Header:
+  name: string
+  value: string
 
-    type HTTPVersion = enum {
-        HTTP_1_0, 
-        HTTP_1_1
-    }
+def Headers: list(Header)
 
-    // Request structure
-    type Request = struct {
-        method: Method,
-        uri: RequestURI,
-        version: HTTPVersion,
-        headers: list<Header>,
-        body: optional<bytes<0..65536>>
-    }
+def Request:
+  method: Method
+  uri: string
+  version: Version
+  headers: Headers
+  body: optional(bytes)
 
-    // Response structure 
-    type StatusCode = uint16 where value >= 100 && value < 600
+def Response:
+  version: Version
+  status_code: u16
+  status_text: string
+  headers: Headers
+  body: optional(bytes)
 
-    type Response = struct {
-        version: HTTPVersion,
-        status: StatusCode,
-        headers: list<Header>,
-        body: optional<bytes<0..1048576>>
-    }
+def CacheControl:
+  | NoCache
+  | NoStore
+  | MaxAge(u32)
+  | Private
+  | Public
+  | MustRevalidate
 
-    // Main parsing rules
-    rule request: Request = {
-        method: parse_method(),
-        uri: parse_uri(),
-        version: parse_version(),
-        headers: parse_headers(),
-        body: optional_body()
-    }
+def ConnectionType:
+  | Close
+  | KeepAlive
 
-    rule response: Response = {
-        version: parse_version(),
-        status: parse_status_code(),
-        headers: parse_headers(),
-        body: optional_body()
-    }
+def AcceptEncoding:
+  | Gzip
+  | Deflate
+  | Compress
+  | Identity
 
-    // Helper parsing functions
-    func parse_method(): Method = {
-        match input {
-            "GET" => Method.GET,
-            "POST" => Method.POST,
-            "PUT" => Method.PUT,
-            "DELETE" => Method.DELETE,
-            "HEAD" => Method.HEAD,
-            "OPTIONS" => Method.OPTIONS,
-            "PATCH" => Method.PATCH,
-            "TRACE" => Method.TRACE,
-            "CONNECT" => Method.CONNECT
-        }
-    }
+def ContentType:
+  | TextHtml
+  | ApplicationJson
+  | ApplicationXml
+  | MultipartFormData
 
-    func parse_uri(): RequestURI = {
-        take_while(is_valid_uri_char)
-    }
+def Authorization:
+  | Basic(string)
+  | Digest(string)
+  | Bearer(string)
 
-    func parse_version(): HTTPVersion = {
-        match input {
-            "HTTP/1.0" => HTTPVersion.HTTP_1_0,
-            "HTTP/1.1" => HTTPVersion.HTTP_1_1
-        }
-    }
+def Message:
+  | RequestMsg(Request)
+  | ResponseMsg(Response)
 
-    func parse_headers(): list<Header> = {
-        many(parse_header())
-    }
+parser parse_version:
+  major: u8
+  minor: u8
 
-    func parse_header(): Header = {
-        name: take_while(is_header_name_char),
-        value: take_while(is_header_value_char)
-    }
+parser parse_method:
+  | "GET" => Method.GET
+  | "POST" => Method.POST
+  | "PUT" => Method.PUT
+  | "DELETE" => Method.DELETE
+  | "HEAD" => Method.HEAD
+  | "OPTIONS" => Method.OPTIONS
+  | "TRACE" => Method.TRACE
+  | "CONNECT" => Method.CONNECT
+  | "PATCH" => Method.PATCH
 
-    func parse_status_code(): StatusCode = {
-        take_uint16()
-    }
+parser parse_header:
+  name: string
+  value: string
 
-    func optional_body(): optional<bytes<0..65536>> = {
-        optional(take_bytes())
-    }
+parser parse_request:
+  method: parse_method
+  uri: string
+  version: parse_version
+  headers: list(parse_header)
+  body: optional(bytes)
 
-    // Character validation helpers
-    func is_valid_uri_char(c: char): bool = {
-        (c >= 'a' && c <= 'z') || 
-        (c >= 'A' && c <= 'Z') || 
-        (c >= '0' && c <= '9') || 
-        c == '/' || c == '.' || c == '-' || c == '_' || c == '?' || c == '='
-    }
-
-    func is_header_name_char(c: char): bool = {
-        (c >= 'a' && c <= 'z') || 
-        (c >= 'A' && c <= 'Z') || 
-        (c >= '0' && c <= '9') || 
-        c == '-' || c == '_'
-    }
-
-    func is_header_value_char(c: char): bool = {
-        c >= 32 && c <= 126
-    }
-}
+parser parse_response:
+  version: parse_version
+  status_code: u16
+  status_text: string
+  headers: list(parse_header)
+  body: optional(bytes)

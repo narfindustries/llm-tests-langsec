@@ -1,21 +1,34 @@
 module ARP;
 
-public type ARP_Header = unit {
-    htype: uint16;  # Hardware type
-    ptype: uint16;  # Protocol type
-    hlen:  uint8;   # Hardware address length
-    plen:  uint8;   # Protocol address length
-    oper:  uint16;  # Operation (1=request, 2=reply)
-    sha:   bytes &size=6;  # Sender hardware address
-    spa:   bytes &size=4;  # Sender protocol address
-    tha:   bytes &size=6;  # Target hardware address
-    tpa:   bytes &size=4;  # Target protocol address
+public type HardwareType : enum {
+    Ethernet = 1,
+    IEEE_802 = 6,
+    ARCNET = 7
+}
 
-    on %done {
-        print self;
-    }
-};
+public type ProtocolType : enum {
+    IPv4 = 0x0800
+}
 
-event zeek_init() {
-    print "ARP analyzer loaded.";
+public type Operation : enum {
+    Request = 1,
+    Reply = 2,
+    RARP_Request = 3,
+    RARP_Reply = 4
+}
+
+public type MACAddress = bytes &size=6;
+public type IPAddress = bytes &size=4;
+
+public type ARPMessage : unit {
+    htype: HardwareType;       # Hardware Type
+    ptype: ProtocolType;       # Protocol Type
+    hlen:  uint8;              # Hardware Length
+    plen:  uint8;              # Protocol Length
+    oper:  Operation;          # Operation
+
+    sha:   MACAddress;         # Sender hardware address
+    spa:   IPAddress;          # Sender protocol address
+    tha:   MACAddress;         # Target hardware address
+    tpa:   IPAddress;          # Target protocol address
 }

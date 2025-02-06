@@ -1,71 +1,74 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{length_data, take_till},
-    number::complete::{be_u16, be_u24, be_u8},
-    sequence::{preceded, tuple},
+    bytes::complete::{take, take_while_m_n},
+    combinator::{map, map_res},
+    number::complete::{be_u16, be_u8},
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::Read;
-
-#[derive(Debug, PartialEq)]
-enum CipherSuite {
-    TLS_NULL_WITH_NULL_NULL,
-    TLS_RSA_WITH_NULL_MD5,
-    TLS_RSA_WITH_NULL_SHA,
-    // ... add other cipher suites
-}
+use std::{
+    env,
+    fs::File,
+    io::{BufReader, Read},
+};
 
 #[derive(Debug, PartialEq)]
 enum CompressionMethod {
-    NULL,
-    // ... add other compression methods
+    Null,
+    Deflate,
+    Other(u8),
+}
+
+#[derive(Debug, PartialEq)]
+enum CipherSuite {
+    TlsAes128GcmSha256,
+    TlsAes256GcmSha384,
+    TlsChacha20Poly1305Sha256,
+    TlsAes128CcmSha256,
+    TlsAes128Ccm8Sha256,
+    Other(u16),
 }
 
 #[derive(Debug, PartialEq)]
 enum ExtensionType {
-    SERVER_NAME,
-    MAX_FRAGMENT_LENGTH,
-    CLIENT_CERTIFICATE_URL,
-    TRUSTED_CA_KEYS,
-    TRUNCATED_HMAC,
-    STATUS_REQUEST,
-    // ... add other extension types
+    SupportedVersions,
+    SupportedGroups,
+    SignatureAlgorithms,
+    KeyShare,
+    PskKeyExchangeModes,
+    Other(u16),
 }
 
 #[derive(Debug, PartialEq)]
-struct ServerName {
-    name_type: u8,
-    host_name: String,
+enum SupportedVersion {
+    Tls13,
+    Other(u16),
 }
 
 #[derive(Debug, PartialEq)]
-struct MaxFragmentLength {
-    max_fragment_length: u8,
+enum NamedGroup {
+    Secp256r1,
+    Secp384r1,
+    Secp521r1,
+    Other(u16),
 }
 
 #[derive(Debug, PartialEq)]
-struct ClientCertificateURL {
-    url_and_hash_id_list: Vec<u8>,
+enum SignatureAlgorithm {
+    RsaPkcs1Sha256,
+    RsaPkcs1Sha384,
+    RsaPkcs1Sha512,
+    Other(u16),
 }
 
 #[derive(Debug, PartialEq)]
-struct TrustedCAKeys {
-    trusted_ca_keys: Vec<u8>,
+struct KeyShareEntry {
+    group: NamedGroup,
+    key_exchange: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq)]
-struct TruncatedHMAC {
-    truncated_hmac: u8,
-}
-
-#[derive(Debug, PartialEq)]
-struct StatusRequest {
-    status_type: u8,
-    responder_id_list: Vec<u8>,
-    request_extensions: Vec<u8>,
+enum PskKeyExchangeMode {
+    PskModeDhe,
+    Other(u8),
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,193 +77,238 @@ struct Extension {
     extension_data: Vec<u8>,
 }
 
-fn cipher_suite(i: &[u8]) -> IResult<&[u8], CipherSuite> {
-    map(be_u16, |x| match x {
-        0x0000 => CipherSuite::TLS_NULL_WITH_NULL_NULL,
-        0x0001 => CipherSuite::TLS_RSA_WITH_NULL_MD5,
-        0x0002 => CipherSuite::TLS_RSA_WITH_NULL_SHA,
-        // ... add other cipher suites
-        _ => unreachable!(),
-    })(i)
+#[derive(Debug, PartialEq)]
+struct ClientHello {
+    legacy_version: (u8, u8),
+    random: Vec<u8>,
+    legacy_session_id: Vec<u8>,
+    cipher_suites: Vec<CipherSuite>,
+    compression_methods: Vec<CompressionMethod>,
+    extensions: Vec<Extension>,
 }
 
-fn compression_method(i: &[u8]) -> IResult<&[u8], CompressionMethod> {
-    map(be_u8, |x| match x {
-        0x00 => CompressionMethod::NULL,
-        // ... add other compression methods
-        _ => unreachable!(),
-    })(i)
+fn parse_legacy_version(input: &[u8]) -> IResult<&[u8], (u8, u8)> {
+    map(take(2usize), |bytes: &[u8]| (bytes[0], bytes[1]))(input)
 }
 
-fn extension_type(i: &[u8]) -> IResult<&[u8], ExtensionType> {
-    map(be_u16, |x| match x {
-        0x0000 => ExtensionType::SERVER_NAME,
-        0x0001 => ExtensionType::MAX_FRAGMENT_LENGTH,
-        0x0002 => ExtensionType::CLIENT_CERTIFICATE_URL,
-        0x0003 => ExtensionType::TRUSTED_CA_KEYS,
-        0x0004 => ExtensionType::TRUNCATED_HMAC,
-        0x0005 => ExtensionType::STATUS_REQUEST,
-        // ... add other extension types
-        _ => unreachable!(),
-    })(i)
+fn parse_random(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    map(take(32usize), |bytes: &[u8]| bytes.to_vec())(input)
 }
 
-fn server_name(i: &[u8]) -> IResult<&[u8], ServerName> {
-    map(
-        tuple((be_u8, length_data(be_u16))),
-        |(name_type, host_name)| ServerName { name_type, host_name: String::from_utf8_lossy(host_name).into_owned() },
-    )(i)
+fn parse_legacy_session_id(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    map_res(take_while_m_n(1, 32, |byte| byte != 0), |bytes: &[u8]| {
+        Ok(bytes.to_vec())
+    })(input)
 }
 
-fn max_fragment_length(i: &[u8]) -> IResult<&[u8], MaxFragmentLength> {
-    map(be_u8, |x| MaxFragmentLength { max_fragment_length: x })(i)
+fn parse_cipher_suite(input: &[u8]) -> IResult<&[u8], CipherSuite> {
+    map(be_u16, |value: u16| match value {
+        0x1301 => CipherSuite::TlsAes128GcmSha256,
+        0x1302 => CipherSuite::TlsAes256GcmSha384,
+        0x1303 => CipherSuite::TlsChacha20Poly1305Sha256,
+        0x1304 => CipherSuite::TlsAes128CcmSha256,
+        0x1305 => CipherSuite::TlsAes128Ccm8Sha256,
+        _ => CipherSuite::Other(value),
+    })(input)
 }
 
-fn client_certificate_url(i: &[u8]) -> IResult<&[u8], ClientCertificateURL> {
-    map(length_data(be_u16), |x| ClientCertificateURL { url_and_hash_id_list: x.to_vec() })(i)
+fn parse_cipher_suites(input: &[u8]) -> IResult<&[u8], Vec<CipherSuite>> {
+    let (input, length) = be_u16(input)?;
+    let (input, cipher_suites) = take(length / 2)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = cipher_suites;
+    while !remaining.is_empty() {
+        let (new_remaining, cipher_suite) = parse_cipher_suite(remaining)?;
+        result.push(cipher_suite);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
 }
 
-fn trusted_ca_keys(i: &[u8]) -> IResult<&[u8], TrustedCAKeys> {
-    map(length_data(be_u16), |x| TrustedCAKeys { trusted_ca_keys: x.to_vec() })(i)
+fn parse_compression_method(input: &[u8]) -> IResult<&[u8], CompressionMethod> {
+    map(be_u8, |value: u8| match value {
+        0x00 => CompressionMethod::Null,
+        0x01 => CompressionMethod::Deflate,
+        _ => CompressionMethod::Other(value),
+    })(input)
 }
 
-fn truncated_hmac(i: &[u8]) -> IResult<&[u8], TruncatedHMAC> {
-    map(be_u8, |x| TruncatedHMAC { truncated_hmac: x })(i)
+fn parse_compression_methods(input: &[u8]) -> IResult<&[u8], Vec<CompressionMethod>> {
+    let (input, length) = be_u8(input)?;
+    let (input, compression_methods) = take(length)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = compression_methods;
+    while !remaining.is_empty() {
+        let (new_remaining, compression_method) = parse_compression_method(remaining)?;
+        result.push(compression_method);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
 }
 
-fn status_request(i: &[u8]) -> IResult<&[u8], StatusRequest> {
-    map(
-        tuple((be_u8, length_data(be_u16), length_data(be_u16))),
-        |(status_type, responder_id_list, request_extensions)| StatusRequest {
-            status_type,
-            responder_id_list: responder_id_list.to_vec(),
-            request_extensions: request_extensions.to_vec(),
-        },
-    )(i)
+fn parse_extension_type(input: &[u8]) -> IResult<&[u8], ExtensionType> {
+    map(be_u16, |value: u16| match value {
+        43 => ExtensionType::SupportedVersions,
+        10 => ExtensionType::SupportedGroups,
+        13 => ExtensionType::SignatureAlgorithms,
+        51 => ExtensionType::KeyShare,
+        45 => ExtensionType::PskKeyExchangeModes,
+        _ => ExtensionType::Other(value),
+    })(input)
 }
 
-fn extension(i: &[u8]) -> IResult<&[u8], Extension> {
-    map(
-        tuple((extension_type, length_data(be_u16))),
-        |(extension_type, extension_data)| match extension_type {
-            ExtensionType::SERVER_NAME => {
-                let (_, server_name) = server_name(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: server_name.host_name.as_bytes().to_vec(),
-                }
-            }
-            ExtensionType::MAX_FRAGMENT_LENGTH => {
-                let (_, max_fragment_length) = max_fragment_length(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: vec![max_fragment_length.max_fragment_length],
-                }
-            }
-            ExtensionType::CLIENT_CERTIFICATE_URL => {
-                let (_, client_certificate_url) = client_certificate_url(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: client_certificate_url.url_and_hash_id_list,
-                }
-            }
-            ExtensionType::TRUSTED_CA_KEYS => {
-                let (_, trusted_ca_keys) = trusted_ca_keys(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: trusted_ca_keys.trusted_ca_keys,
-                }
-            }
-            ExtensionType::TRUNCATED_HMAC => {
-                let (_, truncated_hmac) = truncated_hmac(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: vec![truncated_hmac.truncated_hmac],
-                }
-            }
-            ExtensionType::STATUS_REQUEST => {
-                let (_, status_request) = status_request(extension_data)?;
-                Extension {
-                    extension_type,
-                    extension_data: status_request
-                        .responder_id_list
-                        .iter()
-                        .chain(status_request.request_extensions.iter())
-                        .copied()
-                        .collect(),
-                }
-            }
-        },
-    )(i)
+fn parse_supported_version(input: &[u8]) -> IResult<&[u8], SupportedVersion> {
+    map(be_u16, |value: u16| match value {
+        0x0304 => SupportedVersion::Tls13,
+        _ => SupportedVersion::Other(value),
+    })(input)
 }
 
-fn client_hello(i: &[u8]) -> IResult<&[u8], (&[u8], Vec<CipherSuite>, Vec<CompressionMethod>, Vec<Extension>)> {
-    map(
-        tuple((
-            tag([0x03, 0x01]), // record layer
-            be_u16, // record length
-            tag([0x01]), // handshake message type
-            be_u24, // handshake message length
-            be_u16, // protocol version
-            take(32), // random
-            be_u8, // session id length
-            length_data(be_u8), // session id
-            length_data(be_u16), // cipher suite length
-            map(length_data(be_u16), |cipher_suites| {
-                cipher_suites
-                    .chunks(2)
-                    .map(|x| cipher_suite(x).unwrap().1)
-                    .collect()
-            }), // cipher suites
-            length_data(be_u8), // compression methods length
-            map(length_data(be_u8), |compression_methods| {
-                compression_methods
-                    .iter()
-                    .map(|x| compression_method(std::slice::from_ref(x)).unwrap().1)
-                    .collect()
-            }), // compression methods
-            opt(length_data(be_u16)), // extensions length
-        )),
-        |(
-            _,
-            _,
-            _,
-            _,
-            _,
-            _,
-            _,
-            _,
-            cipher_suites,
-            compression_methods,
-            extensions_length,
-        )| {
-            (
-                extensions_length.unwrap_or_default().as_slice(),
-                cipher_suites,
-                compression_methods,
-                extensions_length
-                    .unwrap_or_default()
-                    .chunks(4)
-                    .map(|x| extension(x).unwrap().1)
-                    .collect(),
-            )
-        },
-    )(i)
+fn parse_supported_versions(input: &[u8]) -> IResult<&[u8], Vec<SupportedVersion>> {
+    let (input, length) = be_u16(input)?;
+    let (input, supported_versions) = take(length / 2)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = supported_versions;
+    while !remaining.is_empty() {
+        let (new_remaining, supported_version) = parse_supported_version(remaining)?;
+        result.push(supported_version);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_named_group(input: &[u8]) -> IResult<&[u8], NamedGroup> {
+    map(be_u16, |value: u16| match value {
+        0x0017 => NamedGroup::Secp256r1,
+        0x0018 => NamedGroup::Secp384r1,
+        0x0019 => NamedGroup::Secp521r1,
+        _ => NamedGroup::Other(value),
+    })(input)
+}
+
+fn parse_supported_groups(input: &[u8]) -> IResult<&[u8], Vec<NamedGroup>> {
+    let (input, length) = be_u16(input)?;
+    let (input, supported_groups) = take(length / 2)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = supported_groups;
+    while !remaining.is_empty() {
+        let (new_remaining, supported_group) = parse_named_group(remaining)?;
+        result.push(supported_group);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_signature_algorithm(input: &[u8]) -> IResult<&[u8], SignatureAlgorithm> {
+    map(be_u16, |value: u16| match value {
+        0x0401 => SignatureAlgorithm::RsaPkcs1Sha256,
+        0x0402 => SignatureAlgorithm::RsaPkcs1Sha384,
+        0x0403 => SignatureAlgorithm::RsaPkcs1Sha512,
+        _ => SignatureAlgorithm::Other(value),
+    })(input)
+}
+
+fn parse_signature_algorithms(input: &[u8]) -> IResult<&[u8], Vec<SignatureAlgorithm>> {
+    let (input, length) = be_u16(input)?;
+    let (input, signature_algorithms) = take(length / 2)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = signature_algorithms;
+    while !remaining.is_empty() {
+        let (new_remaining, signature_algorithm) = parse_signature_algorithm(remaining)?;
+        result.push(signature_algorithm);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_key_share_entry(input: &[u8]) -> IResult<&[u8], KeyShareEntry> {
+    let (input, group) = parse_named_group(input)?;
+    let (input, length) = be_u16(input)?;
+    let (input, key_exchange) = take(length)(input)?;
+    Ok((input, KeyShareEntry { group, key_exchange: key_exchange.to_vec() }))
+}
+
+fn parse_key_share(input: &[u8]) -> IResult<&[u8], Vec<KeyShareEntry>> {
+    let (input, length) = be_u16(input)?;
+    let (input, key_share) = take(length)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = key_share;
+    while !remaining.is_empty() {
+        let (new_remaining, key_share_entry) = parse_key_share_entry(remaining)?;
+        result.push(key_share_entry);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_psk_key_exchange_mode(input: &[u8]) -> IResult<&[u8], PskKeyExchangeMode> {
+    map(be_u8, |value: u8| match value {
+        0x01 => PskKeyExchangeMode::PskModeDhe,
+        _ => PskKeyExchangeMode::Other(value),
+    })(input)
+}
+
+fn parse_psk_key_exchange_modes(input: &[u8]) -> IResult<&[u8], Vec<PskKeyExchangeMode>> {
+    let (input, length) = be_u8(input)?;
+    let (input, psk_key_exchange_modes) = take(length)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = psk_key_exchange_modes;
+    while !remaining.is_empty() {
+        let (new_remaining, psk_key_exchange_mode) = parse_psk_key_exchange_mode(remaining)?;
+        result.push(psk_key_exchange_mode);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+    let (input, extension_type) = parse_extension_type(input)?;
+    let (input, length) = be_u16(input)?;
+    let (input, extension_data) = take(length)(input)?;
+    Ok((input, Extension { extension_type, extension_data: extension_data.to_vec() }))
+}
+
+fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
+    let (input, length) = be_u16(input)?;
+    let (input, extensions) = take(length)(input)?;
+    let mut result = Vec::new();
+    let mut remaining = extensions;
+    while !remaining.is_empty() {
+        let (new_remaining, extension) = parse_extension(remaining)?;
+        result.push(extension);
+        remaining = new_remaining;
+    }
+    Ok((input, result))
+}
+
+fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
+    let (input, legacy_version) = parse_legacy_version(input)?;
+    let (input, random) = parse_random(input)?;
+    let (input, legacy_session_id) = parse_legacy_session_id(input)?;
+    let (input, cipher_suites) = parse_cipher_suites(input)?;
+    let (input, compression_methods) = parse_compression_methods(input)?;
+    let (input, extensions) = parse_extensions(input)?;
+    Ok((input, ClientHello {
+        legacy_version,
+        random,
+        legacy_session_id,
+        cipher_suites,
+        compression_methods,
+        extensions,
+    }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        panic!("Usage: {} <input_file>", args[0]);
+        println!("Usage: {} <input_file>", args[0]);
+        return;
     }
-
-    let mut file = File::open(&args[1]).unwrap();
-    let mut data = Vec::new();
-    file.read_to_end(&mut data).unwrap();
-
-    let (_, (_, cipher_suites, compression_methods, extensions)) = client_hello(&data).unwrap();
-
-    println!("Cipher Suites: {:?}", cipher_suites);
-    println!("Compression Methods: {:?}", compression_methods);
-    println!("Extensions: {:?}", extensions);
+    let input_file = &args[1];
+    let file = File::open(input_file).unwrap();
+    let mut reader = BufReader::new(file);
+    let mut input = Vec::new();
+    reader.read_to_end(&mut input).unwrap();
+    let (_remaining, client_hello) = parse_client_hello(&input).unwrap();
+    println!("{:?}", client_hello);
 }

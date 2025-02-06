@@ -1,0 +1,30 @@
+module Bitcoin;
+
+public type Version = unit {
+    version: uint32;
+};
+
+public type Input = unit {
+    previous_tx_hash: bytes &size=32;
+    previous_output_index: uint32;
+    script_length: uint64;
+    script_sig: bytes &size=script_length;
+    sequence: uint32;
+};
+
+public type Output = unit {
+    value: uint64;
+    script_length: uint64;
+    script_pubkey: bytes &size=script_length;
+};
+
+public type Transaction = unit {
+    version: Version;
+    input_count: uint64;
+    inputs: Input[$$.input_count];
+    output_count: uint64;
+    outputs: Output[$$.output_count];
+    lock_time: uint32;
+    witness_count: uint64;
+    witness_data: bytes[$$.witness_count];
+};

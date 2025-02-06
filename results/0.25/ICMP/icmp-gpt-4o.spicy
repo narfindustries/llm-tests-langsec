@@ -1,47 +1,70 @@
 module ICMP;
 
-import spicy;
-import zeek;
-
-type ICMPMessage = unit {
-    type: uint8;
+public type ICMPMessage = unit {
+    icmp_type: uint8;
     code: uint8;
     checksum: uint16;
-    rest_of_header: bytes &restof;
-
-    on %init {
-        if (type == 8) {
-            print "ICMP Echo Request";
-        }
-        else if (type == 0) {
-            print "ICMP Echo Reply";
-        }
-        else {
-            print "Other ICMP Message";
-        }
-    }
-};
-
-public type ICMPAnalyzer = spicy::Analyzer {
-    .config = {
-        .ports = [ 7/tcp, 7/udp, 1/icmp ]
-    };
-
-    .parse = (data: bytes) -> ICMPMessage {
-        return parse_ICMPMessage(data);
-    };
-
-    .on_message = (msg: ICMPMessage) {
-        print fmt("ICMP Message: type=%d, code=%d", msg.type, msg.code);
+    body: case (icmp_type) of {
+        0, 8 => EchoMessage,
+        3 => DestinationUnreachable,
+        4 => SourceQuench,
+        5 => RedirectMessage,
+        11 => TimeExceeded,
+        12 => ParameterProblem,
+        13, 14 => TimestampMessage,
+        17, 18 => AddressMaskMessage,
+        // Add additional cases for other types if needed
+        : bytes &restofdata;
     };
 };
 
-export {
-    redef enum zeek::Analyzer::Tag += {
-        ANICMP
-    };
+type EchoMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    data: bytes &restofdata;
+};
 
-    redef zeek::analyzer::Manager += {
-        [ANICMP] = ICMPAnalyzer
-    };
-}
+type DestinationUnreachable = unit {
+    unused: uint32;
+    original_datagram: OriginalDatagram;
+};
+
+type SourceQuench = unit {
+    unused: uint32;
+    original_datagram: OriginalDatagram;
+};
+
+type RedirectMessage = unit {
+    gateway_internet_address: uint32;
+    original_datagram: OriginalDatagram;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    original_datagram: OriginalDatagram;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: uint24;
+    original_datagram: OriginalDatagram;
+};
+
+type TimestampMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type AddressMaskMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    address_mask: uint32;
+};
+
+type OriginalDatagram = unit {
+    ip_header: bytes &length=20; // Assuming no IP options
+    first_8_bytes: bytes &length=8;
+};

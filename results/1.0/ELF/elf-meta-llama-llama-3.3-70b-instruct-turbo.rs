@@ -1,231 +1,338 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::length_data,
-    number::complete::{be_u16, be_u32, be_u64, be_u8},
-    sequence::{tuple, pair},
+    combinator::{map, opt},
+    error::{context, VerboseError},
+    multi::{count, many_till},
+    number::complete::{be_u16, be_u32, be_u8},
+    sequence::{pair, tuple},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::{env, fs};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum ElfClass {
     Elf32,
     Elf64,
 }
 
-#[derive(Debug, PartialEq)]
-enum ElfDataEncoding {
+#[derive(Debug)]
+enum DataEncoding {
     LittleEndian,
     BigEndian,
 }
 
-#[derive(Debug, PartialEq)]
-enum ElfOsAbi {
+#[derive(Debug)]
+enum OsAbi {
     SystemV,
     HpUx,
     NetBsd,
-    Linux,
+    Gnu,
+    Bsd,
     Solaris,
     Aix,
     Irix,
     FreeBSD,
-    OpenBSD,
-    Other(u8),
+    Tru64,
+    Modesto,
+    OpenBsd,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum ElfType {
     Rel,
     Exec,
     Dyn,
     Core,
-    Other(u16),
 }
 
-#[derive(Debug, PartialEq)]
-enum ElfMachine {
-    NoMachine,
+#[derive(Debug)]
+enum Machine {
     M32,
     Sparc,
     I386,
     M68K,
     M88K,
-    I860,
+    I486,
+    M860,
     Mips,
-    Other(u16),
+    S370,
+    MipsRs4Be,
+    Parisc,
+    Vpp500,
+    Sparc32Plus,
+    I960,
+    Ppc,
+    Ppc64,
+    S390,
+    Spu,
+    V9,
+    Sha,
+    S390X,
+    Mma,
+    Tpf,
+    Hppa,
+    X86_64,
+    Vax,
+    Cris,
+    CrisV32,
+    Fr30,
+    Frv,
+    Xtensa,
+    Mn10200,
+    Mn10300,
+    M32R,
+    Fr60,
+    OpenRisc,
+    Rl78,
+    Ip2K,
+    MmdspPlus,
+    X86OpenRiscCore1,
+    X86OpenRiscCore2,
+    OpenRisc1200,
+    RiscV,
+    Lanai,
+    L10M,
+    TilePro,
+    TileGx,
 }
 
-#[derive(Debug, PartialEq)]
-struct ElfHeader32 {
-    ident: ElfIdent,
-    type_: ElfType,
-    machine: ElfMachine,
-    version: u32,
-    entry: u32,
-    phoff: u32,
-    shoff: u32,
-    flags: u32,
-    ehsize: u16,
-    phentsize: u16,
-    phnum: u16,
-    shentsize: u16,
-    shnum: u16,
-    shstrndx: u16,
+#[derive(Debug)]
+enum ProgramHeaderType {
+    Null,
+    Load,
+    Dynamic,
+    Interp,
+    Note,
+    Shlib,
+    Phdr,
+    Tls,
+    GnuEhFrame,
+    GnuStack,
+    GnuRelro,
+    OpenBsdAnnotations,
+    OpenBsdInfo,
+    OpenBsdLdpcrel,
+    OpenBsdSymbolicInfo,
 }
 
-#[derive(Debug, PartialEq)]
-struct ElfHeader64 {
-    ident: ElfIdent,
-    type_: ElfType,
-    machine: ElfMachine,
-    version: u32,
-    entry: u64,
-    phoff: u64,
-    shoff: u64,
-    flags: u32,
-    ehsize: u16,
-    phentsize: u16,
-    phnum: u16,
-    shentsize: u16,
-    shnum: u16,
-    shstrndx: u16,
+#[derive(Debug)]
+struct ProgramHeader {
+    p_type: ProgramHeaderType,
+    p_offset: u64,
+    p_vaddr: u64,
+    p_paddr: u64,
+    p_filesz: u64,
+    p_memsz: u64,
+    p_flags: u64,
+    p_align: u64,
 }
 
-#[derive(Debug, PartialEq)]
-struct ElfIdent {
-    class: ElfClass,
-    data_encoding: ElfDataEncoding,
-    os_abi: ElfOsAbi,
-    abi_version: u8,
-    pad: [u8; 7],
+fn parse_elf_class(i: &[u8]) -> IResult<&[u8], ElfClass> {
+    context(
+        "ELF Class",
+        map(be_u8, |x| match x {
+            1 => ElfClass::Elf32,
+            2 => ElfClass::Elf64,
+            _ => panic!("Invalid ELF Class"),
+        }),
+    )(i)
 }
 
-fn elf_class(input: &[u8]) -> IResult<&[u8], ElfClass> {
-    map(be_u8, |class| match class {
-        1 => ElfClass::Elf32,
-        2 => ElfClass::Elf64,
-        _ => panic!("Invalid ELF class"),
-    })(input)
+fn parse_data_encoding(i: &[u8]) -> IResult<&[u8], DataEncoding> {
+    context(
+        "Data Encoding",
+        map(be_u8, |x| match x {
+            1 => DataEncoding::LittleEndian,
+            2 => DataEncoding::BigEndian,
+            _ => panic!("Invalid Data Encoding"),
+        }),
+    )(i)
 }
 
-fn elf_data_encoding(input: &[u8]) -> IResult<&[u8], ElfDataEncoding> {
-    map(be_u8, |encoding| match encoding {
-        1 => ElfDataEncoding::LittleEndian,
-        2 => ElfDataEncoding::BigEndian,
-        _ => panic!("Invalid ELF data encoding"),
-    })(input)
+fn parse_os_abi(i: &[u8]) -> IResult<&[u8], OsAbi> {
+    context(
+        "OS ABI",
+        map(be_u8, |x| match x {
+            0 => OsAbi::SystemV,
+            1 => OsAbi::HpUx,
+            2 => OsAbi::NetBsd,
+            3 => OsAbi::Gnu,
+            4 => OsAbi::Bsd,
+            6 => OsAbi::Solaris,
+            7 => OsAbi::Aix,
+            8 => OsAbi::Irix,
+            9 => OsAbi::FreeBSD,
+            10 => OsAbi::Tru64,
+            11 => OsAbi::Modesto,
+            12 => OsAbi::OpenBsd,
+            _ => panic!("Invalid OS ABI"),
+        }),
+    )(i)
 }
 
-fn elf_os_abi(input: &[u8]) -> IResult<&[u8], ElfOsAbi> {
-    map(be_u8, |abi| match abi {
-        0 => ElfOsAbi::SystemV,
-        1 => ElfOsAbi::HpUx,
-        2 => ElfOsAbi::NetBsd,
-        3 => ElfOsAbi::Linux,
-        4 => ElfOsAbi::Solaris,
-        5 => ElfOsAbi::Aix,
-        6 => ElfOsAbi::Irix,
-        7 => ElfOsAbi::FreeBSD,
-        8 => ElfOsAbi::OpenBSD,
-        abi => ElfOsAbi::Other(abi),
-    })(input)
+fn parse_elf_type(i: &[u8]) -> IResult<&[u8], ElfType> {
+    context(
+        "ELF Type",
+        map(be_u16, |x| match x {
+            1 => ElfType::Rel,
+            2 => ElfType::Exec,
+            3 => ElfType::Dyn,
+            4 => ElfType::Core,
+            _ => panic!("Invalid ELF Type"),
+        }),
+    )(i)
 }
 
-fn elf_type(input: &[u8]) -> IResult<&[u8], ElfType> {
-    map(be_u16, |type_| match type_ {
-        1 => ElfType::Rel,
-        2 => ElfType::Exec,
-        3 => ElfType::Dyn,
-        4 => ElfType::Core,
-        type_ => ElfType::Other(type_),
-    })(input)
+fn parse_machine(i: &[u8]) -> IResult<&[u8], Machine> {
+    context(
+        "Machine",
+        map(be_u16, |x| match x {
+            1 => Machine::M32,
+            2 => Machine::Sparc,
+            3 => Machine::I386,
+            4 => Machine::M68K,
+            5 => Machine::M88K,
+            6 => Machine::I486,
+            7 => Machine::M860,
+            8 => Machine::Mips,
+            9 => Machine::S370,
+            10 => Machine::MipsRs4Be,
+            11 => Machine::Parisc,
+            12 => Machine::Vpp500,
+            13 => Machine::Sparc32Plus,
+            14 => Machine::I960,
+            15 => Machine::Ppc,
+            16 => Machine::Ppc64,
+            17 => Machine::S390,
+            18 => Machine::Spu,
+            19 => Machine::V9,
+            20 => Machine::Sha,
+            21 => Machine::S390X,
+            22 => Machine::Mma,
+            23 => Machine::Tpf,
+            24 => Machine::Hppa,
+            25 => Machine::X86_64,
+            26 => Machine::Vax,
+            27 => Machine::Cris,
+            28 => Machine::CrisV32,
+            29 => Machine::Fr30,
+            30 => Machine::Frv,
+            31 => Machine::Xtensa,
+            32 => Machine::Mn10200,
+            33 => Machine::Mn10300,
+            34 => Machine::M32R,
+            35 => Machine::Fr60,
+            36 => Machine::OpenRisc,
+            37 => Machine::Rl78,
+            38 => Machine::Ip2K,
+            39 => Machine::MmdspPlus,
+            40 => Machine::X86OpenRiscCore1,
+            41 => Machine::X86OpenRiscCore2,
+            42 => Machine::OpenRisc1200,
+            43 => Machine::RiscV,
+            44 => Machine::Lanai,
+            45 => Machine::L10M,
+            46 => Machine::TilePro,
+            47 => Machine::TileGx,
+            _ => panic!("Invalid Machine"),
+        }),
+    )(i)
 }
 
-fn elf_machine(input: &[u8]) -> IResult<&[u8], ElfMachine> {
-    map(be_u16, |machine| match machine {
-        0 => ElfMachine::NoMachine,
-        1 => ElfMachine::M32,
-        2 => ElfMachine::Sparc,
-        3 => ElfMachine::I386,
-        4 => ElfMachine::M68K,
-        5 => ElfMachine::M88K,
-        7 => ElfMachine::I860,
-        8 => ElfMachine::Mips,
-        machine => ElfMachine::Other(machine),
-    })(input)
+fn parse_program_header_type(i: &[u8]) -> IResult<&[u8], ProgramHeaderType> {
+    context(
+        "Program Header Type",
+        map(be_u32, |x| match x {
+            0 => ProgramHeaderType::Null,
+            1 => ProgramHeaderType::Load,
+            2 => ProgramHeaderType::Dynamic,
+            3 => ProgramHeaderType::Interp,
+            4 => ProgramHeaderType::Note,
+            5 => ProgramHeaderType::Shlib,
+            6 => ProgramHeaderType::Phdr,
+            7 => ProgramHeaderType::Tls,
+            1685382480 => ProgramHeaderType::GnuEhFrame,
+            1685382481 => ProgramHeaderType::GnuStack,
+            1685382482 => ProgramHeaderType::GnuRelro,
+            1702919312 => ProgramHeaderType::OpenBsdAnnotations,
+            1702919313 => ProgramHeaderType::OpenBsdInfo,
+            1702919314 => ProgramHeaderType::OpenBsdLdpcrel,
+            1702919315 => ProgramHeaderType::OpenBsdSymbolicInfo,
+            _ => panic!("Invalid Program Header Type"),
+        }),
+    )(i)
 }
 
-fn elf_ident(input: &[u8]) -> IResult<&[u8], ElfIdent> {
-    let (input, magic) = tag("\x7fELF".as_bytes())(input)?;
-    let (input, class) = elf_class(input)?;
-    let (input, data_encoding) = elf_data_encoding(input)?;
-    let (input, os_abi) = elf_os_abi(input)?;
-    let (input, abi_version) = be_u8(input)?;
-    let (input, pad) = take(7u8)(input)?;
-    Ok((input, ElfIdent { class, data_encoding, os_abi, abi_version, pad: pad.try_into().unwrap() }))
+fn parse_program_header(i: &[u8]) -> IResult<&[u8], ProgramHeader> {
+    context(
+        "Program Header",
+        map(
+            tuple((
+                parse_program_header_type,
+                be_u32,
+                be_u32,
+                be_u32,
+                be_u32,
+                be_u32,
+                be_u32,
+                be_u32,
+            )),
+            |(p_type, p_offset, p_vaddr, p_paddr, p_filesz, p_memsz, p_flags, p_align)| {
+                ProgramHeader {
+                    p_type,
+                    p_offset: p_offset as u64,
+                    p_vaddr: p_vaddr as u64,
+                    p_paddr: p_paddr as u64,
+                    p_filesz: p_filesz as u64,
+                    p_memsz: p_memsz as u64,
+                    p_flags: p_flags as u64,
+                    p_align: p_align as u64,
+                }
+            },
+        ),
+    )(i)
 }
 
-fn elf_header32(input: &[u8]) -> IResult<&[u8], ElfHeader32> {
-    let (input, ident) = elf_ident(input)?;
-    let (input, type_) = elf_type(input)?;
-    let (input, machine) = elf_machine(input)?;
-    let (input, version) = be_u32(input)?;
-    let (input, entry) = be_u32(input)?;
-    let (input, phoff) = be_u32(input)?;
-    let (input, shoff) = be_u32(input)?;
-    let (input, flags) = be_u32(input)?;
-    let (input, ehsize) = be_u16(input)?;
-    let (input, phentsize) = be_u16(input)?;
-    let (input, phnum) = be_u16(input)?;
-    let (input, shentsize) = be_u16(input)?;
-    let (input, shnum) = be_u16(input)?;
-    let (input, shstrndx) = be_u16(input)?;
-    Ok((input, ElfHeader32 { ident, type_, machine, version, entry, phoff, shoff, flags, ehsize, phentsize, phnum, shentsize, shnum, shstrndx }))
+fn parse_elf_header(i: &[u8]) -> IResult<&[u8], (ElfClass, DataEncoding, OsAbi, ElfType, Machine)> {
+    context(
+        "ELF Header",
+        map(
+            tuple((
+                tag([0x7F, 0x45, 0x4c, 0x46]),
+                parse_elf_class,
+                parse_data_encoding,
+                parse_os_abi,
+                parse_elf_type,
+                parse_machine,
+            )),
+            |(_, e_class, data_encoding, os_abi, elf_type, machine)| {
+                (e_class, data_encoding, os_abi, elf_type, machine)
+            },
+        ),
+    )(i)
 }
 
-fn elf_header64(input: &[u8]) -> IResult<&[u8], ElfHeader64> {
-    let (input, ident) = elf_ident(input)?;
-    let (input, type_) = elf_type(input)?;
-    let (input, machine) = elf_machine(input)?;
-    let (input, version) = be_u32(input)?;
-    let (input, entry) = be_u64(input)?;
-    let (input, phoff) = be_u64(input)?;
-    let (input, shoff) = be_u64(input)?;
-    let (input, flags) = be_u32(input)?;
-    let (input, ehsize) = be_u16(input)?;
-    let (input, phentsize) = be_u16(input)?;
-    let (input, phnum) = be_u16(input)?;
-    let (input, shentsize) = be_u16(input)?;
-    let (input, shnum) = be_u16(input)?;
-    let (input, shstrndx) = be_u16(input)?;
-    Ok((input, ElfHeader64 { ident, type_, machine, version, entry, phoff, shoff, flags, ehsize, phentsize, phnum, shentsize, shnum, shstrndx }))
-}
-
-fn main() -> std::io::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        println!("Usage: {} <elf_file>", args[0]);
-        return Ok(());
+    if args.len() < 2 {
+        println!("Please provide a file path");
+        return;
     }
-    let file = File::open(&args[1])?;
-    let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer)?;
-    let (input, header) = verify(elf_ident, |ident| ident.class == ElfClass::Elf32)(buffer.as_slice())?;
-    match header.ident.class {
-        ElfClass::Elf32 => {
-            let (_input, header) = elf_header32(input)?;
-            println!("{:?}", header);
-        }
-        ElfClass::Elf64 => {
-            let (_input, header) = elf_header64(input)?;
-            println!("{:?}", header);
+    let file_path = &args[1];
+    let data = fs::read(file_path).expect("Failed to read file");
+    let (remaining, result) = parse_elf_header(&data).expect("Failed to parse ELF Header");
+    println!("ELF Class: {:?}", result.0);
+    let ph_offset = 32 + 16;
+    let mut i = &data[ph_offset..];
+    while !i.is_empty() {
+        match parse_program_header(i) {
+            Ok((remaining, ph)) => {
+                println!("Program Header: {:?}", ph);
+                i = remaining;
+            }
+            Err(_) => {
+                break;
+            }
         }
     }
-    Ok(())
 }

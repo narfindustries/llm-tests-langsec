@@ -1,53 +1,111 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
-// Structure to represent a PNG image header
 typedef struct {
-    uint8_t signature[8];
-    uint32_t width;
-    uint32_t height;
-    uint8_t bit_depth;
-    uint8_t color_type;
-    uint8_t compression_method;
-    uint8_t filter_method;
-    uint8_t interlace_method;
-} png_header_t;
+    uint32_t length;
+    char type[4];
+    void* data; //Data will be a union based on type
+    uint32_t crc;
+} png_chunk_t;
 
 
-//Simplified PNG reader (error handling omitted for brevity)
-png_header_t read_png_header(const char* filename) {
-    png_header_t header;
-    FILE *fp = fopen(filename, "rb");
-    fread(header.signature, 1, 8, fp);
-    fseek(fp, 4, SEEK_CUR); //skip IHDR length
-    fread(&header.width, 4, 1, fp);
-    fread(&header.height, 4, 1, fp);
-    fread(&header.bit_depth, 1, 1, fp);
-    fread(&header.color_type, 1, 1, fp);
-    fread(&header.compression_method, 1, 1, fp);
-    fread(&header.filter_method, 1, 1, fp);
-    fread(&header.interlace_method, 1, 1, fp);
-    fclose(fp);
-    return header;
+// Helper function to read a specific number of bytes
+static int read_bytes(FILE *fp, void *buffer, size_t count) {
+    return fread(buffer, 1, count, fp) == count;
 }
 
+// Define parsers for PNG chunks
+static hammer_parser_t* png_chunk_length() {
+    return hammer_uint32_t();
+}
 
-int main() {
-    // Example usage:  Replace "input.png" with your actual PNG file
-    png_header_t header = read_png_header("input.png");
+static hammer_parser_t* png_chunk_type() {
+    return hammer_bytes(4);
+}
 
-    printf("PNG Header Information:\n");
-    printf("Width: %u\n", header.width);
-    printf("Height: %u\n", header.height);
-    printf("Bit Depth: %u\n", header.bit_depth);
-    printf("Color Type: %u\n", header.color_type);
+static hammer_parser_t* png_chunk_crc() {
+    return hammer_uint32_t();
+}
 
+static hammer_parser_t* png_ihdr() {
+    return hammer_seq(
+        hammer_uint32_t(), // width
+        hammer_uint32_t(), // height
+        hammer_uint8_t(),  // bit depth
+        hammer_uint8_t(),  // color type
+        hammer_uint8_t(),  // compression method
+        hammer_uint8_t(),  // filter method
+        hammer_uint8_t()   // interlace method
+    );
+}
 
-    //Further processing or Hammer integration would go here.  
-    //The error message suggests a linking issue with the Hammer library.
-    //Ensure that the Hammer library is correctly installed and linked during compilation.
+static hammer_parser_t* png_plte() {
+    // Placeholder, needs dynamic length handling based on chunk length
+    return hammer_bytes(0); 
+}
 
+static hammer_parser_t* png_idat() {
+    // Placeholder, needs dynamic length handling based on chunk length
+    return hammer_bytes(0); 
+}
+
+static hammer_parser_t* png_iend() {
+    return hammer_succeed(); // Empty chunk
+}
+
+// Placeholder for other chunk parsers (cHRM, gAMA, etc.) - these would need individual implementations based on the PNG spec
+static hammer_parser_t* png_other_chunk() {
+    return hammer_bytes(0); // Placeholder
+}
+
+// Generic PNG chunk parser
+static hammer_parser_t* png_chunk() {
+    return hammer_seq(
+        png_chunk_length(),
+        png_chunk_type(),
+        hammer_choice( // Choose the correct chunk parser based on the chunk type
+            hammer_map(png_ihdr, hammer_succeed()),
+            hammer_map(png_plte, hammer_succeed()),
+            hammer_map(png_idat, hammer_succeed()),
+            hammer_map(png_iend, hammer_succeed()),
+            hammer_map(png_other_chunk, hammer_succeed())
+            // Add more choices for other chunk types here
+        ),
+        png_chunk_crc()
+    );
+}
+
+// PNG file parser (currently parses chunks sequentially)
+static hammer_parser_t* png_file() {
+    return hammer_many(png_chunk);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <png_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    hammer_parser_t* parser = png_file();
+    hammer_result_t result = hammer_parse_file(parser, fp);
+
+    if (result.success) {
+        printf("PNG file parsed successfully!\n");
+        // Process the parsed data (result.value) here...  This is a placeholder. You'll need to handle the nested structure of the parsed chunks.
+    } else {
+        fprintf(stderr, "PNG parsing failed at offset %zu: %s\n", result.offset, result.error);
+    }
+
+    fclose(fp);
+    hammer_free(parser); // Free the parser
     return 0;
 }

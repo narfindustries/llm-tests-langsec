@@ -1,56 +1,50 @@
 meta:
-  id: gzip_meta
-  file-extension: gz
-  kaitai-struct-version: 0.9
-doc: GZIP file format
+  id: gzip
+  endian: be
 seq:
-  - id: compression_method
+  - id: id1
+    type: u1
+  - id: id2
+    type: u1
+  - id: cm
     type: u1
   - id: flags
     type: u1
+  - id: mtime
+    type: u4be
+  - id: xfl
+    type: u1
   - id: os
     type: u1
-  - id: mod_time
-    type: u4le
-  - id: extra_flags
-    type: u1
-  - id: extra_field
+  - id: extra
     type:
-      proc: if flags & 4 != 0
-      type: extra_field
-  - id: file_name
+      seq:
+        - id: xlen
+          type: u2be
+          if: flags & 4 != 0
+        - id: extra_data
+          type: bytes
+          size: xlen
+          if: flags & 4 != 0
+  - id: name
     type:
-      proc: if flags & 8 != 0
-      type: file_name
+      str:
+        encoding: ascii
+        terminator: 0
+        size: eos
+      if: flags & 8 != 0
   - id: comment
     type:
-      proc: if flags & 16 != 0
-      type: comment
-  - id: header_crc16
-    type:
-      proc: if flags & 2 != 0
-      type: u2le
-
-types:
-  extra_field:
-    seq:
-      - id: len
-        type: u2le
-      - id: data
-        type: str
-        size: len
-        encoding: latin1
-
-  file_name:
-    seq:
-      - id: data
-        type: str
-        encoding: latin1
-        term: \x00
-
-  comment:
-    seq:
-      - id: data
-        type: str
-        encoding: latin1
-        term: \x00
+      str:
+        encoding: ascii
+        terminator: 0
+        size: eos
+      if: flags & 16 != 0
+  - id: hcrc
+    type: u2be
+    if: flags & 2 != 0
+  - id: compressed
+    type: bytes
+    size: eos
+  - id: isize
+    type: u4be

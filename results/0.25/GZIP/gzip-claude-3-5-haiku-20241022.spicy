@@ -1,37 +1,46 @@
-module GZIP;
+module gzip;
 
 import spicy;
 
-public type Compressor = unit {
-    magic: bytes(2) &requires { self == b"\x1f\x8b" };
-    compression_method: uint8 &requires { self == 8 };
+public type Header = unit {
+    magic: bytes(2) = b"\x1f\x8b";
+    compression_method: uint8 = 0x08;
     flags: uint8;
     mtime: uint32;
     extra_flags: uint8;
     os: uint8;
 
-    extra_data: optional bytes if (flags & 0x04) {
-        length: uint16;
-        data: bytes(length);
-    };
+    extra: optional<Extra> if ( self.flags & 0x04 );
+    filename: optional<Filename> if ( self.flags & 0x08 );
+    comment: optional<Comment> if ( self.flags & 0x10 );
+    header_crc: optional<HeaderCRC> if ( self.flags & 0x02 );
 
-    original_filename: optional string if (flags & 0x08) {
-        value: bytes &until b"\x00";
-    };
-
-    comment: optional string if (flags & 0x10) {
-        value: bytes &until b"\x00";
-    };
-
-    header_crc: optional uint16 if (flags & 0x02);
-
-    compressed_data: bytes;
-    crc32: uint32;
-    uncompressed_size: uint32;
-
-    on %done {
-        print "GZIP file parsed successfully";
+    on %init {
+        if ( self.flags & 0x20 )
+            throw "Encryption not supported";
     }
 };
 
-public type GZIP = Compressor;
+type Extra = unit {
+    length: uint16;
+    data: bytes(self.length);
+};
+
+type Filename = unit {
+    value: bytes &until b"\x00";
+};
+
+type Comment = unit {
+    value: bytes &until b"\x00";
+};
+
+type HeaderCRC = unit {
+    value: uint16;
+};
+
+public type File = unit {
+    header: Header;
+    compressed_data: bytes;
+    crc32: uint32;
+    original_size: uint32;
+};

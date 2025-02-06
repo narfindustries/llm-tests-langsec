@@ -1,79 +1,101 @@
 module NITF;
 
-public type NITFFile = unit {
-    file_header: FileHeader,
-    image_segments: array of ImageSegment,
-    data_extension_segments: array of DataExtensionSegment,
-    reserved_extension_segments: array of ReservedExtensionSegment,
-    user_defined_header_data_extension_segments: array of UserDefinedHeaderDataExtensionSegment,
-    extended_header_data_segments: array of ExtendedHeaderDataSegment
-} &requires (file_header.num_image_segments == image_segments.size())
-  &requires (file_header.num_data_extension_segments == data_extension_segments.size())
-  &requires (file_header.num_reserved_extension_segments == reserved_extension_segments.size())
-  &requires (file_header.num_user_defined_header_data_extension_segments == user_defined_header_data_extension_segments.size())
-  &requires (file_header.num_extended_header_data_segments == extended_header_data_segments.size());
-
-type FileHeader = unit {
-    file_type: string &length = 4 &validate ($$ == "NITF"),
-    version: string &length = 5,
-    complexity_level: string &length = 2,
-    system_type: string &length = 4,
-    origin_station_id: string &length = 10,
-    file_date_time: string &length = 14,
-    file_title: string &length = 80,
-    num_image_segments: uint32,
-    num_data_extension_segments: uint32,
-    num_reserved_extension_segments: uint32,
-    num_user_defined_header_data_extension_segments: uint32,
-    num_extended_header_data_segments: uint32
+type NITF_File = unit {
+    header: File_Header;
+    image_segments: array of Image_Segment(header.num_image_segments);
+    graphic_segments: array of Graphic_Segment(header.num_graphic_segments);
+    text_segments: array of Text_Segment(header.num_text_segments);
+    data_extension_segments: array of Data_Extension_Segment(header.num_data_extension_segments);
 };
 
-type ImageSegment = unit {
-    header: ImageSegmentHeader,
-    data: bytes &length = header.data_length
+type File_Header = unit {
+    fheader: bytes &length=9; # e.g., "NITF02.10"
+    clevel: bytes &length=2; # Complexity Level
+    stype: bytes &length=4; # Standard Type
+    ostaid: bytes &length=10; # Originating Station ID
+    fdt: bytes &length=14; # File Date and Time
+    ftitle: bytes &length=80; # File Title
+    fsclas: bytes &length=1; # File Security Classification
+    fscode: bytes &length=40; # File Security Classification Code
+    fsctlh: bytes &length=40; # File Security Control and Handling
+    fsrel: bytes &length=40; # File Security Release Instructions
+    fsdctp: bytes &length=6; # File Security Downgrade
+    fsdev: bytes &length=40; # File Security Downgrade Event
+    fsdg: bytes &length=6; # File Security Downgrade Date
+    fscltx: bytes &length=43; # File Security Classification Text
+    fscatp: bytes &length=1; # File Security Classification Authority Type
+    fscrsn: bytes &length=1; # File Security Classification Reason
+    fssrdt: bytes &length=8; # File Security Source Date
+    fsctln: bytes &length=15; # File Security Control Number
+    num_image_segments: uint16; # Number of Image Segments
+    num_graphic_segments: uint16; # Number of Graphic Segments
+    num_text_segments: uint16; # Number of Text Segments
+    num_data_extension_segments: uint16; # Number of Data Extension Segments
 };
 
-type ImageSegmentHeader = unit {
-    data_length: uint32,
-    image_id: string &length = 10
+type Image_Segment = unit {
+    subheader: Image_Subheader;
+    image_data: bytes &length=subheader.image_length;
 };
 
-type DataExtensionSegment = unit {
-    header: DataExtensionHeader,
-    data: bytes &length = header.data_length
+type Image_Subheader = unit {
+    im: bytes &length=2; # "IM"
+    iid1: bytes &length=10; # Image Identifier
+    idatim: bytes &length=14; # Image Date and Time
+    tgtid: bytes &length=17; # Target Identifier
+    iid2: bytes &length=80; # Image Identifier 2
+    isclas: bytes &length=1; # Image Security Classification
+    iscode: bytes &length=40; # Image Security Code
+    isctlh: bytes &length=40; # Image Security Control and Handling
+    isrel: bytes &length=40; # Image Security Release Instructions
+    isdctp: bytes &length=6; # Image Security Downgrade
+    isdev: bytes &length=40; # Image Security Downgrade Event
+    isdg: bytes &length=6; # Image Security Downgrade Date
+    iscltx: bytes &length=43; # Image Security Classification Text
+    iscatp: bytes &length=1; # Image Security Classification Authority Type
+    iscrsn: bytes &length=1; # Image Security Classification Reason
+    issrdt: bytes &length=8; # Image Security Source Date
+    isctln: bytes &length=15; # Image Security Control Number
+    image_length: uint32; # Length of the image data
 };
 
-type DataExtensionHeader = unit {
-    data_length: uint32,
-    data_id: string &length = 10
+type Graphic_Segment = unit {
+    subheader: Graphic_Subheader;
+    graphic_data: bytes &length=subheader.graphic_length;
 };
 
-type ReservedExtensionSegment = unit {
-    header: ReservedExtensionHeader,
-    data: bytes &length = header.data_length
+type Graphic_Subheader = unit {
+    lish: uint16; # Length of Graphic Identifier Subheader
+    lis: bytes &length=lish; # Graphic Identifier Subheader
+    id: bytes &length=10; # Graphic Identifier
+    idate: bytes &length=14; # Graphic Date
+    graphic_length: uint32; # Length of the graphic data
 };
 
-type ReservedExtensionHeader = unit {
-    data_length: uint32,
-    reserved_id: string &length = 10
+type Text_Segment = unit {
+    subheader: Text_Subheader;
+    text_data: bytes &length=subheader.text_length;
 };
 
-type UserDefinedHeaderDataExtensionSegment = unit {
-    header: UserDefinedHeaderDataExtensionHeader,
-    data: bytes &length = header.data_length
+type Text_Subheader = unit {
+    ltsh: uint16; # Length of Text Subheader
+    lt: bytes &length=ltsh; # Text Subheader Content
+    textid: bytes &length=10; # Text Identifier
+    textdt: bytes &length=14; # Text Date
+    text_length: uint32; # Length of the text data
 };
 
-type UserDefinedHeaderDataExtensionHeader = unit {
-    data_length: uint32,
-    user_header_id: string &length = 10
+type Data_Extension_Segment = unit {
+    subheader: Data_Extension_Subheader;
+    data_extension_data: bytes &length=subheader.data_extension_length;
 };
 
-type ExtendedHeaderDataSegment = unit {
-    header: ExtendedHeaderDataHeader,
-    data: bytes &length = header.data_length
-};
-
-type ExtendedHeaderDataHeader = unit {
-    data_length: uint32,
-    extended_header_id: string &length = 10
+type Data_Extension_Subheader = unit {
+    desid: bytes &length=25; # Data Extension Segment Identifier
+    desver: bytes &length=2; # Data Extension Segment Version
+    declas: bytes &length=1; # Data Extension Security Classification
+    decode: bytes &length=40; # Data Extension Security Code
+    dectlh: bytes &length=40; # Data Extension Security Control and Handling
+    derel: bytes &length=40; # Data Extension Security Release Instructions
+    data_extension_length: uint32; # Length of the data extension
 };

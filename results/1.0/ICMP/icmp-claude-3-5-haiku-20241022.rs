@@ -1,142 +1,81 @@
 use nom::{
-    bits::{streaming::take as take_bits, streaming::tag as tag_bits},
-    bytes::streaming::{take, tag},
-    combinator::{map, complete},
-    error::ErrorKind,
-    multi::count,
-    number::streaming::{be_u8, be_u16, be_u32},
-    sequence::{tuple, preceded},
-    IResult, Parser,
+    bits::{streaming::take as take_bits, complete::take as take_bits_complete},
+    bytes::complete::{take},
+    error::Error,
+    multi::many0,
+    number::complete::{be_u8, be_u16, be_u32},
+    sequence::{tuple},
+    IResult,
+    Parser,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct ICMPPacket {
-    icmp_type: u8,
-    code: u8,
-    checksum: u16,
-    rest_of_header: Option<ICMPHeader>,
-    payload: Option<Vec<u8>>,
+enum ICMPType {
+    EchoReply,
+    DestinationUnreachable,
+    SourceQuench,
+    Redirect,
+    EchoRequest,
+    RouterAdvertisement,
+    RouterSolicitation,
+    TimeExceeded,
+    ParameterProblem,
+    Timestamp,
+    TimestampReply,
+    InformationRequest,
+    InformationReply,
+    Unknown(u8),
 }
 
 #[derive(Debug)]
-enum ICMPHeader {
-    EchoRequest {
-        identifier: u16,
-        sequence_number: u16,
-    },
-    EchoReply {
-        identifier: u16,
-        sequence_number: u16,
-    },
-    DestinationUnreachable {
-        unused: u32,
-    },
-    TimeExceeded {
-        unused: u32,
-    },
-    Redirect {
-        gateway_address: u32,
-    },
-    RouterAdvertisement {
-        num_addresses: u8,
-        entry_size: u8,
-        lifetime: u16,
-        addresses: Vec<u32>,
-    },
-    RouterSolicitation,
-    Other {
-        rest_of_header: u32,
-    },
+struct ICMPPacket {
+    icmp_type: ICMPType,
+    code: u8,
+    checksum: u16,
+    rest_of_header: Vec<u8>,
+}
+
+fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], ICMPType> {
+    be_u8.map(|val| match val {
+        0 => ICMPType::EchoReply,
+        3 => ICMPType::DestinationUnreachable,
+        4 => ICMPType::SourceQuench,
+        5 => ICMPType::Redirect,
+        8 => ICMPType::EchoRequest,
+        9 => ICMPType::RouterAdvertisement,
+        10 => ICMPType::RouterSolicitation,
+        11 => ICMPType::TimeExceeded,
+        12 => ICMPType::ParameterProblem,
+        13 => ICMPType::Timestamp,
+        14 => ICMPType::TimestampReply,
+        15 => ICMPType::InformationRequest,
+        16 => ICMPType::InformationReply,
+        x => ICMPType::Unknown(x)
+    }).parse(input)
 }
 
 fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], ICMPPacket> {
-    let (input, (icmp_type, code, checksum)) = tuple((be_u8, be_u8, be_u16))(input)?;
-
-    let (input, (rest_of_header, payload)) = match icmp_type {
-        8 => {
-            let (input, (identifier, sequence_number)) = tuple((be_u16, be_u16))(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::EchoRequest { identifier, sequence_number }),
-                Some(payload.to_vec())
-            ))
-        },
-        0 => {
-            let (input, (identifier, sequence_number)) = tuple((be_u16, be_u16))(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::EchoReply { identifier, sequence_number }),
-                Some(payload.to_vec())
-            ))
-        },
-        3 => {
-            let (input, unused) = be_u32(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::DestinationUnreachable { unused }),
-                Some(payload.to_vec())
-            ))
-        },
-        11 => {
-            let (input, unused) = be_u32(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::TimeExceeded { unused }),
-                Some(payload.to_vec())
-            ))
-        },
-        5 => {
-            let (input, gateway_address) = be_u32(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::Redirect { gateway_address }),
-                Some(payload.to_vec())
-            ))
-        },
-        9 => {
-            let (input, (num_addresses, entry_size, lifetime)) = tuple((be_u8, be_u8, be_u16))(input)?;
-            let (input, addresses) = count(be_u32, num_addresses as usize)(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::RouterAdvertisement { 
-                    num_addresses, 
-                    entry_size, 
-                    lifetime, 
-                    addresses 
-                }),
-                Some(payload.to_vec())
-            ))
-        },
-        10 => {
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::RouterSolicitation),
-                Some(payload.to_vec())
-            ))
-        },
-        _ => {
-            let (input, rest_of_header) = be_u32(input)?;
-            let (input, payload) = take(input.len())(input)?;
-            (input, (
-                Some(ICMPHeader::Other { rest_of_header }),
-                Some(payload.to_vec())
-            ))
-        }
-    };
+    let (input, icmp_type) = parse_icmp_type(input)?;
+    let (input, code) = be_u8(input)?;
+    let (input, checksum) = be_u16(input)?;
+    let (input, rest_of_header) = take(4usize)(input)?;
 
     Ok((input, ICMPPacket {
         icmp_type,
         code,
         checksum,
-        rest_of_header,
-        payload,
+        rest_of_header: rest_of_header.to_vec(),
     }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn parse_icmp_packets(input: &[u8]) -> IResult<&[u8], Vec<ICMPPacket>> {
+    many0(parse_icmp_packet)(input)
+}
+
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <input_file>", args[0]);
@@ -147,14 +86,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_icmp_packet(&buffer) {
-        Ok((_, packet)) => {
-            println!("Parsed ICMP Packet: {:?}", packet);
-            Ok(())
+    match parse_icmp_packets(&buffer) {
+        Ok((_, packets)) => {
+            for packet in packets {
+                println!("ICMP Packet: {:?}", packet);
+            }
         },
         Err(e) => {
-            eprintln!("Failed to parse ICMP packet: {:?}", e);
+            eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);
         }
     }
+
+    Ok(())
 }

@@ -1,49 +1,75 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *icmp_type_parser() {
-    return h_choice(h_int8(8), h_int8(0), NULL);
+HParser *icmp_parser() {
+    // Define the ICMP header fields
+    HParser *type = h_uint8();
+    HParser *code = h_uint8();
+    HParser *checksum = h_uint16();
+
+    // Capture all remaining bytes in the packet
+    HParser *rest_of_header = h_many(h_uint8());
+
+    // Construct the ICMP parser
+    return h_sequence(type, code, checksum, rest_of_header, NULL);
 }
 
-HParser *icmp_code_parser() {
-    return h_choice(
-        h_int8(0),  // Echo Reply
-        h_int8(3),  // Destination Unreachable
-        h_int8(11), // Time Exceeded
-        h_int8(8),  // Echo Request
-        NULL
-    );
-}
+void parse_icmp(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Could not open file");
+        return;
+    }
 
-HParser *icmp_checksum_parser() {
-    return h_int16();
-}
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-HParser *icmp_identifier_parser() {
-    return h_int16();
-}
+    unsigned char *data = (unsigned char *)malloc(file_size);
+    if (!data) {
+        perror("Could not allocate memory");
+        fclose(file);
+        return;
+    }
 
-HParser *icmp_sequence_number_parser() {
-    return h_int16();
-}
+    fread(data, 1, file_size, file);
+    fclose(file);
 
-HParser *icmp_header_parser() {
-    return h_sequence(
-        icmp_type_parser(),
-        icmp_code_parser(),
-        icmp_checksum_parser(),
-        icmp_identifier_parser(),
-        icmp_sequence_number_parser(),
-        NULL
-    );
-}
+    HParser *parser = icmp_parser();
+    HParseResult *result = h_parse(parser, data, file_size);
 
-HParser *create_icmp_parser() {
-    return icmp_header_parser();
-}
+    if (result) {
+        const HParsedToken *ast = result->ast;
+        printf("Parsed ICMP Packet:\n");
+        printf("Type: %u\n", ast->seq->elements[0]->uint);
+        printf("Code: %u\n", ast->seq->elements[1]->uint);
+        printf("Checksum: %u\n", ast->seq->elements[2]->uint);
+        
+        // Print the rest of the header
+        printf("Rest of Header: ");
+        HParsedToken *rest = ast->seq->elements[3];
+        for (size_t i = 0; i < rest->seq->used; i++) {
+            printf("%02x ", rest->seq->elements[i]->uint);
+        }
+        printf("\n");
 
-int main() {
-    HParser *parser = create_icmp_parser();
-    // Here you can add code to use the parser, like parsing input data.
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse ICMP packet.\n");
+    }
+
+    free(data);
     h_parser_free(parser);
-    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_icmp(argv[1]);
+
+    return EXIT_SUCCESS;
 }

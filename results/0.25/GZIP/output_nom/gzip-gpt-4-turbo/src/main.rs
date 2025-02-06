@@ -1,63 +1,72 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::{tag, take, take_until},
+    combinator::{map, map_opt, opt},
     number::complete::{le_u16, le_u32, le_u8},
-    sequence::tuple,
+    sequence::{preceded, tuple},
     IResult,
 };
-use std::env;
 use std::fs::File;
 use std::io::{self, Read};
+use std::path::PathBuf;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    #[clap(parse(from_os_str))]
+    input_file: PathBuf,
+}
 
 #[derive(Debug)]
 struct GzipHeader {
     id1: u8,
     id2: u8,
-    compression_method: u8,
-    flags: u8,
+    cm: u8,
+    flg: u8,
     mtime: u32,
-    extra_flags: u8,
+    xfl: u8,
     os: u8,
     extra: Option<Vec<u8>>,
-    original_filename: Option<String>,
+    filename: Option<String>,
     comment: Option<String>,
     crc16: Option<u16>,
 }
 
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, (id1, id2, compression_method, flags, mtime, extra_flags, os)) =
-        tuple((le_u8, le_u8, le_u8, le_u8, le_u32, le_u8, le_u8))(input)?;
+    let (input, (id1, id2, cm, flg, mtime, xfl, os)) = tuple((
+        tag([0x1f, 0x8b]), // ID1 and ID2
+        tag([0x08]),        // CM
+        le_u32,             // MTIME
+        le_u8,              // XFL
+        le_u8,              // OS
+    ))(input)?;
 
-    if id1 != 0x1f || id2 != 0x8b {
-        return Err(nom::Err::Error((input, nom::error::ErrorKind::Tag)));
-    }
-
-    let (input, extra) = if flags & 0x04 != 0 {
-        let (input, xlen) = le_u16(input)?;
-        let (input, extra) = take(xlen)(input)?;
-        (input, Some(extra.to_vec()))
+    let (input, extra) = if flg & 0x04 != 0 {
+        let (input, len) = le_u16(input)?;
+        let (input, data) = take(len)(input)?;
+        (input, Some(data.to_vec()))
     } else {
         (input, None)
     };
 
-    let (input, original_filename) = if flags & 0x08 != 0 {
-        let (input, filename) = nom::bytes::complete::take_till(|b| b == 0)(input)?;
-        let (input, _) = tag(b"\x00")(input)?;
-        (input, Some(String::from_utf8_lossy(filename).to_string()))
+    let (input, filename) = if flg & 0x08 != 0 {
+        map_opt(preceded(tag([0]), take_until("\0")), |s: &[u8]| {
+            String::from_utf8(s.to_vec()).ok()
+        })(input)?
     } else {
         (input, None)
     };
 
-    let (input, comment) = if flags & 0x10 != 0 {
-        let (input, comment_bytes) = nom::bytes::complete::take_till(|b| b == 0)(input)?;
-        let (input, _) = tag(b"\x00")(input)?;
-        (input, Some(String::from_utf8_lossy(comment_bytes).to_string()))
+    let (input, comment) = if flg & 0x10 != 0 {
+        map_opt(preceded(tag([0]), take_until("\0")), |s: &[u8]| {
+            String::from_utf8(s.to_vec()).ok()
+        })(input)?
     } else {
         (input, None)
     };
 
-    let (input, crc16) = if flags & 0x02 != 0 {
-        let (input, crc16) = le_u16(input)?;
-        (input, Some(crc16))
+    let (input, crc16) = if flg & 0x02 != 0 {
+        map(le_u16, Some)(input)?
     } else {
         (input, None)
     };
@@ -67,13 +76,13 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
         GzipHeader {
             id1,
             id2,
-            compression_method,
-            flags,
+            cm,
+            flg,
             mtime,
-            extra_flags,
+            xfl,
             os,
             extra,
-            original_filename,
+            filename,
             comment,
             crc16,
         },
@@ -81,13 +90,8 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
 }
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
-    }
-
-    let mut file = File::open(&args[1])?;
+    let args = Cli::parse();
+    let mut file = File::open(args.input_file)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 

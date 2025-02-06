@@ -1,90 +1,261 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/MQTT"
-           xmlns="http://example.com/MQTT"
+           targetNamespace="http://www.example.org/MQTT"
+           xmlns="http://www.example.org/MQTT"
            elementFormDefault="qualified">
 
-  <xs:include schemaLocation="MQTT-DFDL.xsd"/>
-
   <xs:element name="MQTTMessage">
-    <xs:annotation>
-      <xs:documentation>MQTT Message</xs:documentation>
-    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="FixedHeader" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:documentation>Fixed Header</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-        <xs:element ref="VariableHeader" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:documentation>Variable Header</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-        <xs:element ref="Payload" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:documentation>Payload</xs:documentation>
-          </xs:annotation>
-        </xs:element>
+        <xs:element name="FixedHeader" type="FixedHeaderType"/>
+        <xs:element name="VariableHeader" type="VariableHeaderType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Payload" type="xs:hexBinary" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="FixedHeader">
-    <xs:annotation>
-      <xs:documentation>Fixed Header</xs:documentation>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="MessageType" type="xs:unsignedByte" dfdl:length="4" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:documentation>Message Type</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="4" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:documentation>Flags</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:length="8" dfdl:byteOrder="bigEndian">
-          <xs:annotation>
-            <xs:documentation>Remaining Length</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="MessageType" type="MessageTypeType"/>
+      <xs:element name="Flags" type="FlagsType"/>
+      <xs:element name="RemainingLength" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:element name="VariableHeader">
-    <xs:annotation>
-      <xs:documentation>Variable Header</xs:documentation>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="16" dfdl:byteOrder="bigEndian" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:documentation>Packet Identifier</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:simpleType name="MessageTypeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:element name="Payload">
-    <xs:annotation>
-      <xs:documentation>Payload</xs:documentation>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="fixed" dfdl:delimiter+="0x00" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:documentation>Data</xs:documentation>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="RETAIN" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="QoS" type="QoSType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="DUP" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="QoSForPUBREL" type="QoSType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="QoSType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:choice>
+      <xs:element name="CONNACK" type="CONNACKType"/>
+      <xs:element name="PUBLISH" type="PUBLISHType"/>
+      <xs:element name="PUBACK" type="PUBACKType"/>
+      <xs:element name="PUBREC" type="PUBRECType"/>
+      <xs:element name="PUBREL" type="PUBRELType"/>
+      <xs:element name="PUBCOMP" type="PUBCOMPType"/>
+      <xs:element name="SUBSCRIBE" type="SUBSCRIBEType"/>
+      <xs:element name="SUBACK" type="SUBACKType"/>
+      <xs:element name="UNSUBSCRIBE" type="UNSUBSCRIBEType"/>
+      <xs:element name="UNSUBACK" type="UNSUBACKType"/>
+      <xs:element name="PINGREQ" type="PINGREQType"/>
+      <xs:element name="PINGRESP" type="PINGRESPType"/>
+      <xs:element name="DISCONNECT" type="DISCONNECTType"/>
+      <xs:element name="AUTH" type="AUTHTYPE"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="CONNACKType">
+    <xs:sequence>
+      <xs:element name="SessionPresent" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReturnCode" type="ReturnCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ReturnCodeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="PUBLISHType">
+    <xs:sequence>
+      <xs:element name="TopicName" type="xs:string"/>
+      <xs:element name="PacketIdentifier" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PUBACKType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PUBRECType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PUBRELType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PUBCOMPType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SUBSCRIBEType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="TopicFilters" type="TopicFiltersType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SUBACKType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReasonCodes" type="ReasonCodeType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UNSUBSCRIBEType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="TopicFilters" type="TopicFiltersType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UNSUBACKType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:integer"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ReasonCodes" type="ReasonCodeType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PINGREQType">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="PINGRESPType">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="DISCONNECTType">
+    <xs:sequence>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AUTHTYPE">
+    <xs:sequence>
+      <xs:element name="ReasonCode" type="ReasonCodeType"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:sequence>
+      <xs:element name="Property" type="PropertyType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertyType">
+    <xs:choice>
+      <xs:element name="SessionExpiryInterval" type="xs:integer"/>
+      <xs:element name="ReceiveMaximum" type="xs:integer"/>
+      <xs:element name="MaximumPacketSize" type="xs:integer"/>
+      <xs:element name="TopicAliasMaximum" type="xs:integer"/>
+      <xs:element name="RequestResponseInformation" type="xs:integer"/>
+      <xs:element name="RequestProblemInformation" type="xs:integer"/>
+      <xs:element name="UserProperty" type="UserPropertyType"/>
+      <xs:element name="AuthenticationMethod" type="xs:string"/>
+      <xs:element name="AuthenticationData" type="xs:hexBinary"/>
+      <xs:element name="ReasonString" type="xs:string"/>
+      <xs:element name="ServerReference" type="xs:string"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="UserPropertyType">
+    <xs:sequence>
+      <xs:element name="Key" type="xs:string"/>
+      <xs:element name="Value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TopicFiltersType">
+    <xs:sequence>
+      <xs:element name="Filter" type="xs:string"/>
+      <xs:element name="QoS" type="QoSType"/>
+      <xs:element name="NoLocal" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="RetainAsPublished" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="RetainHandling" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ReasonCodeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+      <xs:enumeration value="17"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

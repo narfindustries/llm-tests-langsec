@@ -1,0 +1,1 @@
+(for<'a> fn(&'a [u8]) -> Result<(&'a [u8], (u16, u16)), nom::Err<nom::error::Error<&'a [u8]>>> {tag_parser}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], DataType), nom::Err<nom::error::Error<&'a [u8]>>> {vr_parser}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], u32), nom::Err<nom::error::Error<&'a [u8]>>> {vl_parser}, {closure@src/main.rs:139:9: 139:22})

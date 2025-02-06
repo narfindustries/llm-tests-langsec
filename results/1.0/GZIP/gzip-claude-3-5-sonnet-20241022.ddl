@@ -1,65 +1,43 @@
-def Main = gzipFile
+include "std.ddl"
 
-def gzipFile = {
-    header : gzipHeader
-    blocks : compressed_blocks
-    footer : gzipFooter
+@LittleEndian
+typedef struct gzip_header {
+    id1         : u8 where id1 == 0x1f;
+    id2         : u8 where id2 == 0x8b;
+    cm          : u8 where cm == 0x08;
+    flags       : flags_type;
+    mtime       : u32;
+    xfl         : u8;
+    os          : u8 where os <= 13 || os == 255;
 }
 
-def gzipHeader = {
-    id1     = 0x1f
-    id2     = 0x8b
-    cm      = 0x08
-    flg     = !uint8
-    mtime   = !uint32
-    xfl     = !uint8
-    os      = !uint8
+typedef bitfield[8] flags_type {
+    ftext    : 0;
+    fhcrc    : 1;
+    fextra   : 2;
+    fname    : 3;
+    fcomment : 4;
+    reserved : 5..7;
 }
 
-def compressed_blocks = {
-    block* until BlockEnd
+typedef struct gzip_optional {
+    extra_field : struct {
+        xlen : u16;
+        data : u8[xlen];
+    } if flags.fextra;
+    filename    : string(0) if flags.fname;
+    comment     : string(0) if flags.fcomment;
+    header_crc  : u16 if flags.fhcrc;
 }
 
-def block = {
-    bFinal = !uint1
-    bType  = !uint2
-    @check (bType == 0 || bType == 1 || bType == 2)
-    
-    blockData = case bType of {
-        0 => uncompressedBlock
-        1 => fixedHuffmanBlock
-        2 => dynamicHuffmanBlock
-    }
+typedef struct gzip_footer {
+    crc32    : u32;
+    isize    : u32;
 }
 
-def BlockEnd = {
-    $$ == 1
-} where {
-    $$ = currentBlock.bFinal
-}
-
-def uncompressedBlock = {
-    @padToByte
-    len     = !uint16
-    nlen    = !uint16
-    @check (len == (~nlen & 0xFFFF))
-    data    = !byte[len]
-}
-
-def fixedHuffmanBlock = !bit*
-def dynamicHuffmanBlock = !bit*
-
-def gzipFooter = {
-    crc32   = !uint32
-    isize   = !uint32
-}
-
-def uint1  = !uint(1)
-def uint2  = !uint(2)
-def uint8  = !uint(8)
-def uint16 = !uint(16)
-def uint32 = !uint(32)
-
-def padToByte = null where {
-    $$ = SetNextByteAligned
+typedef struct gzip_file {
+    header          : gzip_header;
+    optional_fields : gzip_optional;
+    compressed_data : u8[] while offset < $-8;
+    footer          : gzip_footer;
 }

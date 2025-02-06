@@ -1,34 +1,86 @@
-{-# LANGUAGE OverloadedStrings #-}
-module SQLite3DB where
+module SQLite3 where
 
-import Daedalus.AST
-import Daedalus.PP
+import Daedalus.Type.AST
 
-data Gemini = Gemini {
-  version :: Integer,
-  entries :: [Entry]
-} deriving (Show, Eq)
+data SQLiteHeader = SQLiteHeader
+  { magic :: String 16
+  , pageSize :: Word16
+  , writeCount :: Word32
+  , pageSizeExtension :: Word32
+  , fileFormatExtension :: Word32
+  , reservedBytes :: [Word8] 10
+  }
 
-data Entry = Entry {
-  key :: String,
-  value :: String
-} deriving (Show, Eq)
+data PageHeader = PageHeader
+  { pageNumber :: Word32
+  , pageType :: Word8
+  , freeblockOffset :: Word16
+  , numberOfCells :: Word16
+  , rightChildPage :: Word32
+  , cellPointers :: [Word32]
+  }
 
+data CellData = CellData {
+    type_ :: Word8,
+    payload :: Bytes
+  }
 
-instance Semigroup Gemini where
-  Gemini v1 e1 <> Gemini v2 e2 = Gemini (max v1 v2) (e1 ++ e2)
+data Cell = Cell
+  { cellData :: CellData
+  }
 
-instance Monoid Gemini where
-  mempty = Gemini 0 []
+data SQLiteDatabase = SQLiteDatabase
+  { header :: SQLiteHeader
+  , pages :: [Page]
+  }
 
-sqlite3DB :: Daedalus.AST.Value
-sqlite3DB = do
-  let version = 1
-  entries <- many (Entry <$> some (char 'a' -- example, replace with actual key parsing) <*> some (char 'b' -- example, replace with actual value parsing))
-  return $ Gemini version entries
+data Page = Page
+  { header :: PageHeader
+  , cells :: [Cell]
+  }
 
+parseSQLiteHeader :: Parser SQLiteHeader
+parseSQLiteHeader = do
+  magic <- string "SQLite format 3"
+  pageSize <- word16le
+  writeCount <- word32le
+  pageSizeExtension <- word32le
+  fileFormatExtension <- word32le
+  reservedBytes <- bytes 10
+  return $ SQLiteHeader {..}
+
+parsePageHeader :: Parser PageHeader
+parsePageHeader = do
+  pageNumber <- word32le
+  pageType <- word8
+  freeblockOffset <- word16le
+  numberOfCells <- word16le
+  rightChildPage <- word32le
+  cellPointers <- count (fromIntegral . numberOfCells) (word32le)
+  return $ PageHeader {..}
+
+parseCellData :: Parser CellData
+parseCellData = do
+  type_ <- word8
+  payload <- bytes
+  return $ CellData {..}
+
+parseCell :: Parser Cell
+parseCell = do
+  cellData <- parseCellData
+  return $ Cell {..}
+
+parsePage :: Parser Page
+parsePage = do
+  header <- parsePageHeader
+  cells <- replicateM (fromIntegral $ numberOfCells header) parseCell
+  return $ Page {..}
+
+parseSQLiteDatabase :: Parser SQLiteDatabase
+parseSQLiteDatabase = do
+  header <- parseSQLiteHeader
+  pages <- many parsePage
+  return $ SQLiteDatabase {..}
 
 main :: IO ()
-main = do
-  let compiled = compile sqlite3DB
-  putStrLn $ show compiled
+main = return ()

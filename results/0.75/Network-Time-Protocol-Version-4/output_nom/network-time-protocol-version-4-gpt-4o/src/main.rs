@@ -1,58 +1,75 @@
 use nom::{
     bytes::complete::take,
     combinator::map_res,
-    number::complete::{be_f32, be_i32, be_u32, be_u8},
+    number::complete::{be_u32, be_u64, be_u8},
     IResult,
 };
-use std::{env, fs::File, io::Read, path::Path};
+use std::env;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 #[derive(Debug)]
 struct NtpPacket {
-    leap_indicator: u8,
-    version_number: u8,
+    li: u8,
+    vn: u8,
     mode: u8,
     stratum: u8,
-    poll: i8,
-    precision: i8,
+    poll: u8,
+    precision: u8,
     root_delay: f32,
     root_dispersion: f32,
     reference_id: u32,
-    reference_timestamp: u32,
-    originate_timestamp: u32,
-    receive_timestamp: u32,
-    transmit_timestamp: u32,
-    optional_extensions: Option<Vec<u8>>,
+    reference_timestamp: u64,
+    originate_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    key_identifier: Option<u32>,
+    message_digest: Option<[u8; 16]>, // Assuming MD5 for simplicity, modify if SHA-1 or other
 }
 
 fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
     let (input, li_vn_mode) = be_u8(input)?;
-    let leap_indicator = (li_vn_mode >> 6) & 0x03;
-    let version_number = (li_vn_mode >> 3) & 0x07;
-    let mode = li_vn_mode & 0x07;
+    let li = (li_vn_mode >> 6) & 0b11;
+    let vn = (li_vn_mode >> 3) & 0b111;
+    let mode = li_vn_mode & 0b111;
 
     let (input, stratum) = be_u8(input)?;
-    let (input, poll) = map_res(be_u8, |v| Ok(v as i8))(input)?;
-    let (input, precision) = map_res(be_u8, |v| Ok(v as i8))(input)?;
-
-    let (input, root_delay) = be_f32(input)?;
-    let (input, root_dispersion) = be_f32(input)?;
+    let (input, poll) = be_u8(input)?;
+    let (input, precision) = be_u8(input)?;
+    let (input, root_delay) = map_res(be_u32, |x| -> Result<f32, std::num::TryFromIntError> {
+        Ok(x as f32 / (1 << 16) as f32)
+    })(input)?;
+    let (input, root_dispersion) = map_res(be_u32, |x| -> Result<f32, std::num::TryFromIntError> {
+        Ok(x as f32 / (1 << 16) as f32)
+    })(input)?;
     let (input, reference_id) = be_u32(input)?;
-    let (input, reference_timestamp) = be_u32(input)?;
-    let (input, originate_timestamp) = be_u32(input)?;
-    let (input, receive_timestamp) = be_u32(input)?;
-    let (input, transmit_timestamp) = be_u32(input)?;
+    let (input, reference_timestamp) = be_u64(input)?;
+    let (input, originate_timestamp) = be_u64(input)?;
+    let (input, receive_timestamp) = be_u64(input)?;
+    let (input, transmit_timestamp) = be_u64(input)?;
 
-    let optional_extensions = if !input.is_empty() {
-        Some(input.to_vec())
+    let (input, key_identifier) = if input.len() >= 4 {
+        let (input, key_id) = be_u32(input)?;
+        (input, Some(key_id))
     } else {
-        None
+        (input, None)
+    };
+
+    let (input, message_digest) = if input.len() >= 16 {
+        let (input, md) = take(16u8)(input)?;
+        let mut md_array = [0u8; 16];
+        md_array.copy_from_slice(md);
+        (input, Some(md_array))
+    } else {
+        (input, None)
     };
 
     Ok((
-        &[],
+        input,
         NtpPacket {
-            leap_indicator,
-            version_number,
+            li,
+            vn,
             mode,
             stratum,
             poll,
@@ -64,38 +81,32 @@ fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
             originate_timestamp,
             receive_timestamp,
             transmit_timestamp,
-            optional_extensions,
+            key_identifier,
+            message_digest,
         },
     ))
+}
+
+fn read_file_to_end<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, std::io::Error> {
+    let mut file = File::open(path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    Ok(buffer)
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
+        eprintln!("Usage: {} <input_file>", args[0]);
         return;
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = match File::open(&path) {
-        Err(e) => {
-            eprintln!("Couldn't open {}: {}", path.display(), e);
-            return;
-        }
-        Ok(file) => file,
-    };
-
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Err(e) => {
-            eprintln!("Couldn't read {}: {}", path.display(), e);
-            return;
-        }
-        Ok(_) => {}
-    };
-
-    match parse_ntp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(e) => eprintln!("Failed to parse NTP packet: {:?}", e),
+    let file_path = &args[1];
+    match read_file_to_end(file_path) {
+        Ok(data) => match parse_ntp_packet(&data) {
+            Ok((_, packet)) => println!("{:#?}", packet),
+            Err(e) => eprintln!("Failed to parse NTP packet: {:?}", e),
+        },
+        Err(e) => eprintln!("Failed to read file: {:?}", e),
     }
 }

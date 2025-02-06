@@ -1,101 +1,145 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <stddef.h>
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 4433
+typedef struct {
+    uint16_t client_version;
+    uint8_t random[64];
+} ClientHelloHeader;
 
-int main() {
-    SSL_CTX *ctx;
-    SSL *ssl;
-    int sockfd;
-    struct sockaddr_in server_addr;
+typedef struct {
+    uint8_t legacy_session_id_length;
+    uint8_t legacy_session_id[32];
+} LegacySessionID;
 
-    // Initialize OpenSSL
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_all_algorithms();
+typedef struct {
+    uint16_t cipher_suite_length;
+    uint16_t cipher_suites[100];
+} CipherSuites;
 
-    // Create SSL context
-    ctx = SSL_CTX_new(TLS_client_method());
-    if (ctx == NULL) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
+typedef struct {
+    uint8_t compression_method_length;
+    uint8_t compression_methods[1];
+} CompressionMethods;
+
+typedef struct {
+    uint16_t extension_type;
+    uint16_t extension_length;
+    uint8_t extension_data[1024];
+} Extension;
+
+typedef struct {
+    uint16_t extensions_length;
+    Extension extensions[100];
+} Extensions;
+
+typedef struct {
+    ClientHelloHeader header;
+    LegacySessionID legacy_session_id;
+    CipherSuites cipher_suites;
+    CompressionMethods compression_methods;
+    Extensions extensions;
+} ClientHello;
+
+static HParser client_hello_header_parser() {
+    return h_seq(
+        h_map(h_uint16, offsetof(ClientHelloHeader, client_version)),
+        h_map(h_bytes(64), offsetof(ClientHelloHeader, random)),
+        h_ret(ClientHelloHeader)
+    );
+}
+
+static HParser legacy_session_id_parser() {
+    return h_seq(
+        h_map(h_uint8, offsetof(LegacySessionID, legacy_session_id_length)),
+        h_map(h_bytes_n(offsetof(LegacySessionID, legacy_session_id), sizeof(((LegacySessionID*)0)->legacy_session_id)), offsetof(LegacySessionID, legacy_session_id)),
+        h_ret(LegacySessionID)
+    );
+}
+
+static HParser cipher_suites_parser() {
+    return h_seq(
+        h_map(h_uint16, offsetof(CipherSuites, cipher_suite_length)),
+        h_map(h_array_n(offsetof(CipherSuites, cipher_suites), sizeof(((CipherSuites*)0)->cipher_suites)/sizeof(((CipherSuites*)0)->cipher_suites[0]), h_uint16), offsetof(CipherSuites, cipher_suites)),
+        h_ret(CipherSuites)
+    );
+}
+
+static HParser compression_methods_parser() {
+    return h_seq(
+        h_map(h_uint8, offsetof(CompressionMethods, compression_method_length)),
+        h_map(h_bytes_n(offsetof(CompressionMethods, compression_methods), sizeof(((CompressionMethods*)0)->compression_methods)), offsetof(CompressionMethods, compression_methods)),
+        h_ret(CompressionMethods)
+    );
+}
+
+static HParser extension_parser() {
+    return h_seq(
+        h_map(h_uint16, offsetof(Extension, extension_type)),
+        h_map(h_uint16, offsetof(Extension, extension_length)),
+        h_map(h_bytes_n(offsetof(Extension, extension_data), sizeof(((Extension*)0)->extension_data)), offsetof(Extension, extension_data)),
+        h_ret(Extension)
+    );
+}
+
+static HParser extensions_parser() {
+    return h_seq(
+        h_map(h_uint16, offsetof(Extensions, extensions_length)),
+        h_map(h_array_n(offsetof(Extensions, extensions), sizeof(((Extensions*)0)->extensions)/sizeof(((Extensions*)0)->extensions[0]), extension_parser), offsetof(Extensions, extensions)),
+        h_ret(Extensions)
+    );
+}
+
+static HParser client_hello_parser() {
+    return h_seq(
+        h_map(client_hello_header_parser, offsetof(ClientHello, header)),
+        h_map(legacy_session_id_parser, offsetof(ClientHello, legacy_session_id)),
+        h_map(cipher_suites_parser, offsetof(ClientHello, cipher_suites)),
+        h_map(compression_methods_parser, offsetof(ClientHello, compression_methods)),
+        h_map(extensions_parser, offsetof(ClientHello, extensions)),
+        h_ret(ClientHello)
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Create socket
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("socket");
-        exit(1);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    // Set up server address
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_PORT);
-    if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
-        perror("inet_pton");
-        exit(1);
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = (uint8_t *)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
     }
 
-    // Connect to server
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect");
-        exit(1);
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
+
+    HParseResult result = h_parse(&client_hello_parser(), buffer, fileSize);
+
+    if (result.status == H_SUCCESS) {
+        ClientHello *clientHello = (ClientHello *)result.value;
+        printf("ClientHello parsed successfully!\n");
+        free(clientHello);
+    } else {
+        fprintf(stderr, "Parsing failed: %s\n", result.error);
     }
 
-    // Create SSL object
-    ssl = SSL_new(ctx);
-    if (ssl == NULL) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-
-    // Connect SSL to socket
-    if (SSL_set_fd(ssl, sockfd) == 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-
-    // Perform SSL handshake
-    if (SSL_connect(ssl) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-
-    printf("Connected to server!\n");
-
-
-    //Send and receive data (example)
-    char buffer[1024] = "Hello from client!";
-    int bytes_sent = SSL_write(ssl, buffer, strlen(buffer));
-    if (bytes_sent <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-
-    char recv_buffer[1024];
-    int bytes_received = SSL_read(ssl, recv_buffer, sizeof(recv_buffer));
-    if (bytes_received <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(1);
-    }
-    recv_buffer[bytes_received] = '\0';
-    printf("Received: %s\n", recv_buffer);
-
-
-    // Clean up
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
-    close(sockfd);
-
+    free(buffer);
     return 0;
 }

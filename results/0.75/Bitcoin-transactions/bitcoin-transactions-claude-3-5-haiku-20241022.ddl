@@ -1,74 +1,51 @@
-type BlockHeight = Integer
-type TransactionID = ByteString
-type ScriptPubKey = ByteString
-type Signature = ByteString
-type PublicKey = ByteString
+schema Bitcoin {
+    endian little;
 
-enum TransactionType {
-    | Regular
-    | Coinbase
-    | MultiSig
-}
+    type varint = varlen_int;
+    type u256 = bytes[32];
 
-struct Transaction {
-    version: Integer,
-    inputs: List<TransactionInput>,
-    outputs: List<TransactionOutput>,
-    lockTime: BlockHeight,
-    transactionType: TransactionType
-}
+    struct Outpoint {
+        tx_hash: u256;
+        output_index: u32;
+    }
 
-struct TransactionInput {
-    previousTransactionID: TransactionID,
-    previousOutputIndex: Integer,
-    scriptSig: ByteString,
-    sequence: Integer,
-    witness: Option<ByteString>
-}
+    struct ScriptElement {
+        length: varint;
+        data: bytes[length];
+    }
 
-struct TransactionOutput {
-    amount: Integer,  // Satoshis
-    scriptPubKey: ScriptPubKey
-}
+    struct WitnessItem {
+        item_length: varint;
+        item_data: bytes[item_length];
+    }
 
-struct BlockHeader {
-    version: Integer,
-    previousBlockHash: ByteString,
-    merkleRoot: ByteString,
-    timestamp: Integer,
-    difficulty: Integer,
-    nonce: Integer
-}
+    struct WitnessData {
+        stack_items_count: varint;
+        witness_stack: WitnessItem[stack_items_count];
+    }
 
-struct Block {
-    header: BlockHeader,
-    transactions: List<Transaction>
-}
+    struct TxInput {
+        previous_output: Outpoint;
+        script_sig: ScriptElement;
+        sequence: u32;
+        witness: optional WitnessData;
+    }
 
-predicate isValidTransaction(tx: Transaction) {
-    // Basic transaction validation rules
-    tx.inputs.length > 0 &&
-    tx.outputs.length > 0 &&
-    sumInputs(tx) >= sumOutputs(tx) &&
-    validateScripts(tx)
-}
+    struct TxOutput {
+        value: u64;
+        script_pubkey: ScriptElement;
+    }
 
-function sumInputs(tx: Transaction) -> Integer {
-    // Sum of all input amounts
-    tx.inputs.map(input => getInputAmount(input)).sum()
-}
-
-function sumOutputs(tx: Transaction) -> Integer {
-    // Sum of all output amounts
-    tx.outputs.map(output => output.amount).sum()
-}
-
-function validateScripts(tx: Transaction) -> Bool {
-    // Placeholder for script validation logic
-    true
-}
-
-function getInputAmount(input: TransactionInput) -> Integer {
-    // Retrieve input amount from previous transaction output
-    0  // Placeholder implementation
+    struct Transaction {
+        version: u32;
+        marker: optional {
+            flag_byte1: u8 = 0x00;
+            flag_byte2: u8 = 0x01;
+        };
+        input_count: varint;
+        inputs: TxInput[input_count];
+        output_count: varint;
+        outputs: TxOutput[output_count];
+        locktime: u32;
+    }
 }

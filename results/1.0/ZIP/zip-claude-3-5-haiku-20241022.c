@@ -1,103 +1,135 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Define ZIP file structure parser
-static HParser* zip_parser(void) {
-    // File signature
-    HParser* signature = h_token("\x50\x4B\x03\x04", 4);
+#define LOCAL_FILE_HEADER_SIG 0x04034B50
+#define CENTRAL_DIR_FILE_HEADER_SIG 0x02014B50
+#define END_OF_CENTRAL_DIR_SIG 0x06054B50
+#define ZIP64_END_OF_CENTRAL_DIR_SIG 0x06064B50
 
-    // Version needed to extract 
-    HParser* version = h_uint16();
+typedef enum {
+    NO_COMPRESSION = 0,
+    SHRUNK = 1,
+    REDUCED1 = 2,
+    REDUCED2 = 3,
+    REDUCED3 = 4,
+    REDUCED4 = 5,
+    IMPLODED = 6,
+    DEFLATED = 8,
+    ENHANCED_DEFLATED = 9,
+    PKWARE_DCL_IMPLODED = 10,
+    BZIP2 = 12,
+    LZMA = 14
+} CompressionMethod;
 
-    // General purpose bit flag
-    HParser* flags = h_uint16();
+HParser* parse_local_file_header() {
+    return h_sequence(
+        h_token((const uint8_t*)&(uint32_t){LOCAL_FILE_HEADER_SIG}, 4),
+        h_uint16(),  // version needed
+        h_uint16(),  // bit flag
+        h_uint16(),  // compression method
+        h_uint16(),  // last mod time
+        h_uint16(),  // last mod date
+        h_uint32(),  // crc32
+        h_uint32(),  // compressed size
+        h_uint32(),  // uncompressed size
+        h_uint16(),  // filename length
+        h_uint16(),  // extra field length
+        h_repeat_n(h_ch_range('0', '9'), 1),  // dynamic filename
+        h_many(h_uint8()),  // extra field
+        NULL
+    );
+}
 
-    // Compression method 
-    HParser* compression = h_uint16();
+HParser* parse_central_directory_header() {
+    return h_sequence(
+        h_token((const uint8_t*)&(uint32_t){CENTRAL_DIR_FILE_HEADER_SIG}, 4),
+        h_uint16(),  // version made by
+        h_uint16(),  // version needed
+        h_uint16(),  // bit flag
+        h_uint16(),  // compression method
+        h_uint16(),  // last mod time
+        h_uint16(),  // last mod date
+        h_uint32(),  // crc32
+        h_uint32(),  // compressed size
+        h_uint32(),  // uncompressed size
+        h_uint16(),  // filename length
+        h_uint16(),  // extra field length
+        h_uint16(),  // file comment length
+        h_uint16(),  // disk number start
+        h_uint16(),  // internal file attributes
+        h_uint32(),  // external file attributes
+        h_uint32(),  // local header offset
+        h_repeat_n(h_ch_range('0', '9'), 1),  // filename
+        h_many(h_uint8()),  // extra field
+        h_repeat_n(h_ch_range(' ', '~'), 1),  // file comment
+        NULL
+    );
+}
 
-    // Last mod time
-    HParser* mod_time = h_uint16();
+HParser* parse_end_of_central_directory() {
+    return h_sequence(
+        h_token((const uint8_t*)&(uint32_t){END_OF_CENTRAL_DIR_SIG}, 4),
+        h_uint16(),  // number of this disk
+        h_uint16(),  // disk with central directory
+        h_uint16(),  // total entries on this disk
+        h_uint16(),  // total entries in directory
+        h_uint32(),  // size of central directory
+        h_uint32(),  // offset of central directory
+        h_uint16(),  // comment length
+        h_repeat_n(h_ch_range(' ', '~'), 1),  // comment
+        NULL
+    );
+}
 
-    // Last mod date
-    HParser* mod_date = h_uint16();
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
+        return 1;
+    }
 
-    // CRC-32 checksum
-    HParser* crc32 = h_uint32();
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    // Compressed size
-    HParser* compressed_size = h_uint32();
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Uncompressed size
-    HParser* uncompressed_size = h_uint32(); 
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
 
-    // Filename length
-    HParser* filename_len = h_uint16();
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
 
-    // Extra field length
-    HParser* extra_len = h_uint16();
-
-    // Filename 
-    HParser* filename = h_repeat_upto(h_ch_range('A', 'Z'), 0, 256);
-
-    // Extra field (optional)
-    HParser* extra_field = h_repeat_upto(h_any_char(), 0, 256);
-
-    // File data 
-    HParser* file_data = h_repeat_upto(h_any_char(), 0, 65535);
-
-    // Combine parsers into complete ZIP local file header
-    HParser* zip_local_header = h_sequence(
-        signature,     // 0: File signature 
-        version,       // 1: Version 
-        flags,         // 2: Flags
-        compression,   // 3: Compression 
-        mod_time,      // 4: Modification time
-        mod_date,      // 5: Modification date 
-        crc32,         // 6: CRC checksum
-        compressed_size, // 7: Compressed size
-        uncompressed_size, // 8: Uncompressed size
-        filename_len,  // 9: Filename length
-        extra_len,     // 10: Extra field length
-        filename,      // 11: Filename 
-        extra_field,   // 12: Extra field
-        file_data,     // 13: File data
+    HParser* zip_parser = h_choice(
+        parse_local_file_header(),
+        parse_central_directory_header(),
+        parse_end_of_central_directory(),
         NULL
     );
 
-    return zip_local_header;
-}
+    HParseResult* result = h_parse(zip_parser, buffer, file_size);
+    if (result) {
+        printf("Successfully parsed ZIP file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse ZIP file\n");
+    }
 
-int main(int argc, char** argv) {
-    // Initialize Hammer 
-    h_init(NULL, NULL);
-
-    // Create ZIP parser
-    HParser* parser = zip_parser();
-
-    // Example ZIP file data (simplified)
-    const char zip_data[] = {
-        0x50, 0x4B, 0x03, 0x04,  // Signature
-        0x14, 0x00,              // Version
-        0x00, 0x00,              // Flags
-        0x00, 0x00,              // Compression method
-        0x00, 0x00,              // Last mod time
-        0x00, 0x00,              // Last mod date
-        0x00, 0x00, 0x00, 0x00,  // CRC-32
-        0x00, 0x00, 0x00, 0x00,  // Compressed size
-        0x00, 0x00, 0x00, 0x00,  // Uncompressed size
-        0x04, 0x00,              // Filename length
-        0x00, 0x00,              // Extra field length
-        'T', 'E', 'S', 'T'       // Filename
-    };
-
-    // Parse ZIP file
-    HParseResult* result = h_parse(parser, (const uint8_t*)zip_data, sizeof(zip_data));
-
-    // Cleanup
-    h_parse_result_free(result);
-    h_destroy(parser);
-
+    free(buffer);
+    fclose(file);
     return 0;
 }

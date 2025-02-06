@@ -1,58 +1,206 @@
-# Zeek Spicy specification for Modbus protocol
+module Modbus;
 
-# Import necessary modules
-import builtins
-import zeek
+type Address = uint8;
+type FunctionCode = uint8;
+type CRC = uint16;
+type ReferenceType = uint8;
+type ReferenceNumber = uint16;
+type NumCoilsRegisters = uint16;
+type ByteCount = uint8;
+type RegisterValues = uint8;
+type CoilStatus = uint8;
+type InputStatus = uint8;
 
-# Define the Modbus protocol
-protocol modbus {
-    # Define the layers
-    layer meta {
-        # Define the metadata fields
-        uint8(unit_id) = 1;
-        uint8(function_code) = 2;
-        uint16(address) = 3;
-        uint16(quantity) = 4;
-    }
+type ModbusMessage = record {
+  address: Address;
+  function_code: FunctionCode;
+  data: DataField;
+  crc: CRC;
+};
 
-    layer ll {
-        # Define the link layer fields
-        uint8(transaction_id) = 1;
-        uint8(protocol_id) = 2;
-        uint16(length) = 3;
-    }
+type DataField = record {
+  ref_type: ReferenceType;
+  ref_number: ReferenceNumber;
+  num_coils_registers: NumCoilsRegisters;
+  byte_count: ByteCount;
+  register_values: RegisterValues[byte_count];
+  coil_status: CoilStatus[num_coils_registers];
+  input_status: InputStatus[num_coils_registers];
+};
 
-    layer data {
-        # Define the data fields
-        bytes(data) = 4;
-    }
-}
+type ReadCoilStatus = record {
+  byte_count: ByteCount;
+  coil_status: CoilStatus[byte_count];
+};
 
-# Define the analyzer for the Modbus protocol
-analyzer modbus {
-    # Define the protocol layers
-    layer meta: Modbus::meta = meta;
-    layer ll: Modbus::ll = ll;
-    layer data: Modbus::data = data;
+type ReadInputStatus = record {
+  byte_count: ByteCount;
+  input_status: InputStatus[byte_count];
+};
 
-    # Define the decoding steps
-    step decode_meta {
-        # Decode the metadata fields
-        uint8(unit_id);
-        uint8(function_code);
-        uint16(address);
-        uint16(quantity);
-    }
+type ReadHoldingRegisters = record {
+  byte_count: ByteCount;
+  register_values: uint16[byte_count/2];
+};
 
-    step decode_ll {
-        # Decode the link layer fields
-        uint8(transaction_id);
-        uint8(protocol_id);
-        uint16(length);
-    }
+type ReadInputRegisters = record {
+  byte_count: ByteCount;
+  register_values: uint16[byte_count/2];
+};
 
-    step decode_data {
-        # Decode the data fields
-        bytes(data);
-    }
-}
+type WriteSingleCoil = record {
+  output_address: uint16;
+  output_value: uint16;
+};
+
+type WriteSingleRegister = record {
+  register_address: uint16;
+  register_value: uint16;
+};
+
+type WriteMultipleCoils = record {
+  starting_address: uint16;
+  num_outputs: uint16;
+  byte_count: ByteCount;
+  output_values: uint8[byte_count];
+};
+
+type WriteMultipleRegisters = record {
+  starting_address: uint16;
+  num_registers: uint16;
+  byte_count: ByteCount;
+  register_values: uint16[byte_count/2];
+};
+
+type ReportSlaveID = record {
+  slave_id: Address;
+  run_indicator_status: uint8;
+  additional_info: uint8[0..17];
+};
+
+type ReadFileRecord = record {
+  ref_type: ReferenceType;
+  file_number: uint16;
+  record_number: uint16;
+  record_length: uint16;
+  record_data: uint8[record_length];
+};
+
+type WriteFileRecord = record {
+  ref_type: ReferenceType;
+  file_number: uint16;
+  record_number: uint16;
+  record_length: uint16;
+  record_data: uint8[record_length];
+};
+
+type MaskWriteRegister = record {
+  reference_address: uint16;
+  and_mask: uint16;
+  or_mask: uint16;
+};
+
+type ReadWriteMultipleRegisters = record {
+  read_starting_address: uint16;
+  num_registers_to_read: uint16;
+  write_starting_address: uint16;
+  num_registers_to_write: uint16;
+  byte_count: ByteCount;
+  register_values: uint16[byte_count/2];
+};
+
+type ReadFIFOQueue = record {
+  fifo_pointer_address: uint16;
+  num_fifo_values: uint16;
+  fifo_values: uint16[num_fifo_values];
+};
+
+type EncapsulatedInterfaceTransport = record {
+  mei_type: uint16;
+  mei_data: uint8[0..252];
+};
+
+let modbus_parser = ModbusMessage(
+  address = address,
+  function_code = function_code,
+  data = case function_code of
+    0x01 => ReadCoilStatus(
+      byte_count = byte_count,
+      coil_status = coil_status,
+    );
+    0x02 => ReadInputStatus(
+      byte_count = byte_count,
+      input_status = input_status,
+    );
+    0x03 => ReadHoldingRegisters(
+      byte_count = byte_count,
+      register_values = register_values,
+    );
+    0x04 => ReadInputRegisters(
+      byte_count = byte_count,
+      register_values = register_values,
+    );
+    0x05 => WriteSingleCoil(
+      output_address = output_address,
+      output_value = output_value,
+    );
+    0x06 => WriteSingleRegister(
+      register_address = register_address,
+      register_value = register_value,
+    );
+    0x0F => WriteMultipleCoils(
+      starting_address = starting_address,
+      num_outputs = num_outputs,
+      byte_count = byte_count,
+      output_values = output_values,
+    );
+    0x10 => WriteMultipleRegisters(
+      starting_address = starting_address,
+      num_registers = num_registers,
+      byte_count = byte_count,
+      register_values = register_values,
+    );
+    0x11 => ReportSlaveID(
+      slave_id = slave_id,
+      run_indicator_status = run_indicator_status,
+      additional_info = additional_info,
+    );
+    0x14 => ReadFileRecord(
+      ref_type = ref_type,
+      file_number = file_number,
+      record_number = record_number,
+      record_length = record_length,
+      record_data = record_data,
+    );
+    0x15 => WriteFileRecord(
+      ref_type = ref_type,
+      file_number = file_number,
+      record_number = record_number,
+      record_length = record_length,
+      record_data = record_data,
+    );
+    0x16 => MaskWriteRegister(
+      reference_address = reference_address,
+      and_mask = and_mask,
+      or_mask = or_mask,
+    );
+    0x17 => ReadWriteMultipleRegisters(
+      read_starting_address = read_starting_address,
+      num_registers_to_read = num_registers_to_read,
+      write_starting_address = write_starting_address,
+      num_registers_to_write = num_registers_to_write,
+      byte_count = byte_count,
+      register_values = register_values,
+    );
+    0x18 => ReadFIFOQueue(
+      fifo_pointer_address = fifo_pointer_address,
+      num_fifo_values = num_fifo_values,
+      fifo_values = fifo_values,
+    );
+    0x2B => EncapsulatedInterfaceTransport(
+      mei_type = mei_type,
+      mei_data = mei_data,
+    );
+  ;
+  crc = crc,
+);

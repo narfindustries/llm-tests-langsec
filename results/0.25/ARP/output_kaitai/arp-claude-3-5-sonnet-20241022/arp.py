@@ -10,27 +10,18 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Arp(KaitaiStruct):
 
-    class HardwareTypes(Enum):
-        ethernet = 1
+    class HardwareTypeEnum(Enum):
+        ethernet_10mb = 1
         ieee_802 = 6
         arcnet = 7
         frame_relay = 15
         atm = 16
-        hdlc = 17
-        fibre_channel = 18
-        atm2 = 19
-        serial_line = 20
+        hdlc = 18
+        fibre_channel = 19
 
-    class Opcodes(Enum):
+    class OperationEnum(Enum):
         request = 1
         reply = 2
-        rarp_request = 3
-        rarp_reply = 4
-        drarp_request = 5
-        drarp_reply = 6
-        drarp_error = 7
-        inarp_request = 8
-        inarp_reply = 9
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -38,14 +29,30 @@ class Arp(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.hardware_type = KaitaiStream.resolve_enum(Arp.HardwareTypes, self._io.read_u2be())
+        self.hardware_type = KaitaiStream.resolve_enum(Arp.HardwareTypeEnum, self._io.read_u2be())
         self.protocol_type = self._io.read_u2be()
-        self.hardware_size = self._io.read_u1()
-        self.protocol_size = self._io.read_u1()
-        self.opcode = KaitaiStream.resolve_enum(Arp.Opcodes, self._io.read_u2be())
-        self.sender_mac = self._io.read_bytes(self.hardware_size)
-        self.sender_ip = self._io.read_bytes(self.protocol_size)
-        self.target_mac = self._io.read_bytes(self.hardware_size)
-        self.target_ip = self._io.read_bytes(self.protocol_size)
+        self.hardware_addr_len = self._io.read_u1()
+        self.protocol_addr_len = self._io.read_u1()
+        self.operation = KaitaiStream.resolve_enum(Arp.OperationEnum, self._io.read_u2be())
+        self.sender_hardware_addr = self._io.read_bytes(self.hardware_addr_len)
+        self.sender_protocol_addr = self._io.read_bytes(self.protocol_addr_len)
+        self.target_hardware_addr = self._io.read_bytes(self.hardware_addr_len)
+        self.target_protocol_addr = self._io.read_bytes(self.protocol_addr_len)
+
+    @property
+    def is_ethernet(self):
+        if hasattr(self, '_m_is_ethernet'):
+            return self._m_is_ethernet
+
+        self._m_is_ethernet = self.hardware_type == Arp.HardwareTypeEnum.ethernet_10mb
+        return getattr(self, '_m_is_ethernet', None)
+
+    @property
+    def is_ipv4(self):
+        if hasattr(self, '_m_is_ipv4'):
+            return self._m_is_ipv4
+
+        self._m_is_ipv4 = self.protocol_type == 2048
+        return getattr(self, '_m_is_ipv4', None)
 
 

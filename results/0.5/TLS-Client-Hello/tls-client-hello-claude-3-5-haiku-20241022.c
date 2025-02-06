@@ -1,94 +1,100 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define TLS Client Hello message structure
 typedef struct {
-    uint8_t record_type;
-    uint16_t protocol_version;
-    uint16_t length;
     uint8_t handshake_type;
-    uint16_t handshake_length;
-    uint16_t client_version;
+    uint32_t length;
+    uint16_t legacy_version;
     uint8_t random[32];
-    uint8_t session_id_length;
-    uint8_t* session_id;
-    uint16_t cipher_suites_length;
-    uint16_t* cipher_suites;
-    uint8_t compression_methods_length;
-    uint8_t* compression_methods;
+    HParser* legacy_session_id;
+    HParser* cipher_suites;
+    uint8_t compression_method;
+    HParser* extensions;
 } TLSClientHello;
 
-// Hammer parser for TLS Client Hello
-static HParsedToken* parse_tls_client_hello(void* p) {
-    HParser* record_type = h_uint8();
-    HParser* protocol_version = h_uint16();
-    HParser* length = h_uint16();
-    HParser* handshake_type = h_uint8();
-    HParser* handshake_length = h_uint16();
-    HParser* client_version = h_uint16();
-    HParser* random = h_repeat_n(h_uint8(), 32);
-    HParser* session_id_length = h_uint8();
-    HParser* session_id = h_repeat_n(h_uint8(), h_get_token_value(session_id_length));
-    HParser* cipher_suites_length = h_uint16();
-    HParser* cipher_suites = h_repeat_n(h_uint16(), h_get_token_value(cipher_suites_length) / 2);
-    HParser* compression_methods_length = h_uint8();
-    HParser* compression_methods = h_repeat_n(h_uint8(), h_get_token_value(compression_methods_length));
-
-    HParser* parser = h_sequence(
-        record_type,
-        protocol_version,
-        length,
-        handshake_type,
-        handshake_length,
-        client_version,
-        random,
-        session_id_length,
-        session_id,
-        cipher_suites_length,
-        cipher_suites,
-        compression_methods_length,
-        compression_methods,
-        NULL
-    );
-
-    return h_parse(parser, NULL, 0);
+HParser* parse_random() {
+    return h_repeat_n(h_uint8(), 32);
 }
 
-int main() {
-    // Initialize Hammer
-    h_init();
+HParser* parse_legacy_session_id() {
+    return h_length_value(h_uint8(), h_repeat_n(h_uint8(), 32));
+}
 
-    // Example TLS Client Hello message
-    uint8_t tls_client_hello[] = {
-        0x16,       // Record Type: Handshake
-        0x03, 0x03, // Protocol Version: TLS 1.2
-        0x00, 0x4E, // Length
-        0x01,       // Handshake Type: Client Hello
-        0x00, 0x4A, // Handshake Length
-        0x03, 0x03, // Client Version: TLS 1.2
-        // Random (32 bytes)
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
-        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-        0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20,
-        0x00,       // Session ID Length
-        0x00, 0x02, // Cipher Suites Length
-        0x13, 0x01, // TLS_AES_128_GCM_SHA256
-        0x01,       // Compression Methods Length
-        0x00        // No compression
-    };
+HParser* parse_cipher_suites() {
+    return h_length_value(h_uint16(), h_repeat_n(h_uint16(), 65535));
+}
 
-    // Parse TLS Client Hello
-    HParsedToken* result = parse_tls_client_hello(tls_client_hello);
+HParser* parse_extensions() {
+    return h_length_value(h_uint16(), 
+        h_repeat_n(
+            h_sequence(
+                h_uint16(),  // extension type
+                h_length_value(h_uint16(), h_repeat_n(h_uint8(), 65535)) // extension data
+            ),
+            65535
+        )
+    );
+}
 
-    if (result) {
-        printf("TLS Client Hello parsed successfully\n");
-        // Additional processing or validation can be added here
-    } else {
-        printf("Failed to parse TLS Client Hello\n");
+HParser* parse_tls_client_hello() {
+    return h_sequence(
+        h_uint8(),           // handshake type
+        h_bits(24, false),   // length (24-bit unsigned)
+        h_uint16(),          // legacy version
+        parse_random(),      // random
+        parse_legacy_session_id(), // legacy session id
+        parse_cipher_suites(), // cipher suites
+        h_uint8(),           // compression method
+        parse_extensions()   // extensions
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    size_t read_size = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (read_size != file_size) {
+        perror("File read error");
+        free(buffer);
+        return 1;
+    }
+
+    HParser* parser = parse_tls_client_hello();
+    HParseResult* result = h_parse(parser, buffer, read_size);
+
+    if (result && result->ast) {
+        printf("Successfully parsed TLS Client Hello\n");
+    } else {
+        printf("Parsing failed\n");
+    }
+
+    h_parse_result_free(result);
+    free(buffer);
 
     return 0;
 }

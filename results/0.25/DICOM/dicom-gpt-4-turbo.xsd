@@ -1,34 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dicom"
-           xmlns:tns="http://example.com/dicom">
+           targetNamespace="http://medical.nema.org/dicom"
+           xmlns:dicom="http://medical.nema.org/dicom"
+           elementFormDefault="qualified">
 
-  <xs:include schemaLocation="DFDLGeneralFormat.xsd"/>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian"
+                         bitOrder="mostSignificantBitFirst"
+                         encoding="ASCII"
+                         alignmentUnits="bytes"
+                         alignment="1"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <xs:element name="DICOMFile" type="tns:DICOMFileType"/>
+    <xs:element name="DICOMFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
+                <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
+                <xs:element name="DataSet" type="dicom:DataSetType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:complexType name="DICOMFileType">
-    <xs:sequence>
-      <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
-      <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-      <xs:element name="dataElements" type="tns:DataElementsType"/>
-    </xs:sequence>
-  </xs:complexType>
+    <xs:complexType name="DataSetType">
+        <xs:sequence>
+            <xs:element name="DataElement" minOccurs="0" maxOccurs="unbounded" type="dicom:DataElementType"/>
+        </xs:sequence>
+    </xs:complexType>
 
-  <xs:complexType name="DataElementsType">
-    <xs:sequence dfdl:occursCountKind="parsed">
-      <xs:element name="dataElement" type="tns:DataElementType" minOccurs="0" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
+    <xs:complexType name="DataElementType">
+        <xs:sequence>
+            <xs:element name="Tag" type="dicom:TagType"/>
+            <xs:element name="VR" type="dicom:VRType"/>
+            <xs:element name="Length" type="xs:int" dfdl:length="4"/>
+            <xs:element name="Value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../Length}"/>
+        </xs:sequence>
+    </xs:complexType>
 
-  <xs:complexType name="DataElementType">
-    <xs:sequence>
-      <xs:element name="tag" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-      <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="length" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../tns:length }"/>
-    </xs:sequence>
-  </xs:complexType>
+    <xs:complexType name="TagType">
+        <xs:sequence>
+            <xs:element name="GroupNumber" type="xs:hexBinary" dfdl:length="2"/>
+            <xs:element name="ElementNumber" type="xs:hexBinary" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:simpleType name="VRType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="AE"/>
+            <xs:enumeration value="AS"/>
+            <xs:enumeration value="CS"/>
+            <xs:enumeration value="DA"/>
+            <xs:enumeration value="DS"/>
+            <xs:enumeration value="DT"/>
+            <xs:enumeration value="IS"/>
+            <xs:enumeration value="LO"/>
+            <xs:enumeration value="LT"/>
+            <xs:enumeration value="OB"/>
+            <xs:enumeration value="OW"/>
+            <xs:enumeration value="PN"/>
+            <xs:enumeration value="SH"/>
+            <xs:enumeration value="SL"/>
+            <xs:enumeration value="SQ"/>
+            <xs:enumeration value="SS"/>
+            <xs:enumeration value="ST"/>
+            <xs:enumeration value="TM"/>
+            <xs:enumeration value="UI"/>
+            <xs:enumeration value="UL"/>
+            <xs:enumeration value="US"/>
+            <xs:enumeration value="UT"/>
+        </xs:restriction>
+    </xs:simpleType>
 
 </xs:schema>

@@ -1,87 +1,155 @@
-#include <stdint.h>
-#include <stdbool.h>
+#include <hammer/hammer.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent the ZIP file
+#define LOCAL_FILE_HEADER_SIGNATURE 0x04034b50
+#define CENTRAL_DIRECTORY_HEADER_SIGNATURE 0x02014b50
+#define END_OF_CENTRAL_DIRECTORY_SIGNATURE 0x06054b50
+
 typedef struct {
-    uint32_t local_file_header_signature;
+    uint32_t signature;
     uint16_t version_needed_to_extract;
     uint16_t general_purpose_bit_flag;
     uint16_t compression_method;
-    uint16_t last_modification_time;
-    uint16_t last_modification_date;
+    uint16_t last_modified_time;
+    uint16_t last_modified_date;
     uint32_t crc_32;
     uint32_t compressed_size;
     uint32_t uncompressed_size;
     uint16_t file_name_length;
     uint16_t extra_field_length;
-    char* file_name;
-    char* extra_field;
-} zip_local_file_header_t;
+} local_file_header_t;
 
-// Structure to represent the ZIP file descriptor
 typedef struct {
     uint32_t signature;
+    uint16_t version_made_by;
+    uint16_t version_needed_to_extract;
+    uint16_t general_purpose_bit_flag;
+    uint16_t compression_method;
+    uint16_t last_modified_time;
+    uint16_t last_modified_date;
     uint32_t crc_32;
     uint32_t compressed_size;
     uint32_t uncompressed_size;
-} zip_file_descriptor_t;
+    uint16_t file_name_length;
+    uint16_t extra_field_length;
+    uint16_t file_comment_length;
+    uint16_t disk_number_start;
+    uint16_t internal_file_attributes;
+    uint32_t external_file_attributes;
+} central_directory_header_t;
 
-// Function to parse the ZIP file header
-bool parse_zip_file_header(const uint8_t* data, size_t size) {
-    if (size < 30) {
-        return false;
-    }
+typedef struct {
+    uint32_t signature;
+    uint16_t number_of_this_disk;
+    uint16_t number_of_disk_where_central_directory_starts;
+    uint16_t number_of_entries_in_central_directory_on_this_disk;
+    uint16_t total_number_of_entries_in_central_directory;
+    uint32_t size_of_central_directory;
+    uint32_t offset_of_central_directory;
+    uint16_t comment_length;
+} end_of_central_directory_t;
 
-    const zip_local_file_header_t* header = (const zip_local_file_header_t*)data;
-
-    if (header->local_file_header_signature != 0x04034b50) {
-        return false;
-    }
-
-    // Check the compression method
-    if (header->compression_method != 0 && header->compression_method != 8) {
-        return false;
-    }
-
-    return true;
+void* local_file_header(void) {
+    void* def = hammer_new();
+    def = hammer_bind_uint32_le(def, LOCAL_FILE_HEADER_SIGNATURE);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    return def;
 }
 
-// Function to parse the ZIP file descriptor
-bool parse_zip_file_descriptor(const uint8_t* data, size_t size) {
-    if (size < 16) {
-        return false;
-    }
-
-    const zip_file_descriptor_t* descriptor = (const zip_file_descriptor_t*)data;
-
-    if (descriptor->signature != 0x08074b50) {
-        return false;
-    }
-
-    return true;
+void* central_directory_header(void) {
+    void* def = hammer_new();
+    def = hammer_bind_uint32_le(def, CENTRAL_DIRECTORY_HEADER_SIGNATURE);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint32_le(def);
+    return def;
 }
 
-int main() {
-    const uint8_t zip_data[] = {
-        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x08, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    };
+void* end_of_central_directory(void) {
+    void* def = hammer_new();
+    def = hammer_bind_uint32_le(def, END_OF_CENTRAL_DIRECTORY_SIGNATURE);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint16_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint32_le(def);
+    def = hammer_bind_uint16_le(def);
+    return def;
+}
 
-    if (parse_zip_file_header(zip_data, sizeof(zip_data))) {
-        // Process the ZIP file header
+void* zip_file(void) {
+    void* def = hammer_new();
+    def = hammer_repeat(def, local_file_header());
+    def = hammer_bind(def, central_directory_header());
+    def = hammer_bind_bytes_le(def, hammer_bind_uint16_le(hammer_new()));
+    def = hammer_bind_bytes_le(def, hammer_bind_uint16_le(hammer_new()));
+    def = hammer_bind_bytes_le(def, hammer_bind_uint16_le(hammer_new()));
+    def = hammer_bind(def, end_of_central_directory());
+    def = hammer_bind_bytes_le(def, hammer_bind_uint16_le(hammer_new()));
+    return def;
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: %s <zip_file>\n", argv[0]);
+        return 1;
     }
 
-    const uint8_t descriptor_data[] = {
-        0x50, 0x4b, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    };
-
-    if (parse_zip_file_descriptor(descriptor_data, sizeof(descriptor_data))) {
-        // Process the ZIP file descriptor
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file %s\n", argv[1]);
+        return 1;
     }
 
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *data = malloc(file_size);
+    if (!data) {
+        printf("Error allocating memory\n");
+        return 1;
+    }
+
+    if (fread(data, 1, file_size, file) != file_size) {
+        printf("Error reading file\n");
+        return 1;
+    }
+
+    fclose(file);
+
+    void* parser = hammer_init(zip_file(), data, file_size);
+    if (!hammer_parse(&parser)) {
+        printf("Error parsing ZIP file\n");
+        return 1;
+    }
+
+    free(data);
     return 0;
 }

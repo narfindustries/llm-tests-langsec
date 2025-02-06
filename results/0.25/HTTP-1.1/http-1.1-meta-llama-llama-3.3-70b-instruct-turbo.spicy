@@ -1,56 +1,527 @@
-# HTTP-1.1 parser for Zeek Spicy
+module HTTP;
 
-# Import required modules
-import Spicy
+type http_method = enum {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE
+};
 
-# Define HTTP-1.1 parser
-module HTTP_1_1 {
-    # Define parser metadata
-    metadata {
-        name = "HTTP-1.1"
-        version = "1.1"
-        description = "Parser for HTTP-1.1 protocol"
-    }
+type http_version = enum {
+    HTTP_1_1
+};
 
-    # Define HTTP request and response structures
-    type Request = struct {
-        method: bytestring &length=4 &transcode=ascii,
-        uri: bytestring &length=(1..1024) &transcode=ascii,
-        http_version: bytestring &length=8 &transcode=ascii,
-        headers: array[Header] &length=(0..100),
-        body: bytestring &length=(0..1048576)
-    }
+type http_status_code = enum {
+    CONTINUE = 100,
+    SWITCHING_PROTOCOLS = 101,
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NON_AUTHORITATIVE_INFORMATION = 203,
+    NO_CONTENT = 204,
+    RESET_CONTENT = 205,
+    PARTIAL_CONTENT = 206,
+    MULTIPLE_CHOICES = 300,
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+    SEE_OTHER = 303,
+    NOT_MODIFIED = 304,
+    USE_PROXY = 305,
+    TEMPORARY_REDIRECT = 307,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    PAYMENT_REQUIRED = 402,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    METHOD_NOT_ALLOWED = 405,
+    NOT_ACCEPTABLE = 406,
+    PROXY_AUTHENTICATION_REQUIRED = 407,
+    REQUEST_TIME_OUT = 408,
+    CONFLICT = 409,
+    GONE = 410,
+    LENGTH_REQUIRED = 411,
+    PRECONDITION_FAILED = 412,
+    REQUEST_ENTITY_TOO_LARGE = 413,
+    REQUEST_URI_TOO_LARGE = 414,
+    UNSUPPORTED_MEDIA_TYPE = 415,
+    REQUESTED_RANGE_NOT_SATISFIABLE = 416,
+    EXPECTATION_FAILED = 417,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    SERVICE_UNAVAILABLE = 503,
+    GATEWAY_TIME_OUT = 504,
+    HTTP_VERSION_NOT_SUPPORTED = 505
+};
 
-    type Response = struct {
-        http_version: bytestring &length=8 &transcode=ascii,
-        status_code: uint16,
-        reason_phrase: bytestring &length=(1..1024) &transcode=ascii,
-        headers: array[Header] &length=(0..100),
-        body: bytestring &length=(0..1048576)
-    }
+type http_header = record {
+    name: bytestring;
+    value: bytestring;
+};
 
-    type Header = struct {
-        name: bytestring &length=(1..50) &transcode=ascii,
-        value: bytestring &length=(1..1024) &transcode=ascii
-    }
+type http_request = record {
+    method: http_method;
+    request_uri: bytestring;
+    http_version: http_version;
+    headers: vector of http_header;
+    body: bytestring;
+};
 
-    # Define parser for HTTP messages
-    parser parse_http_message() {
-        # Try to parse an HTTP request
-        try {
-            request: Request;
-            parse Request;
-            return request;
-        } catch(e) {
-            # If parsing a request fails, try to parse an HTTP response
-            try {
-                response: Response;
-                parse Response;
-                return response;
-            } catch(e) {
-                # If parsing a response fails, raise an error
-                throw e;
-            }
-        }
-    }
-}
+type http_response = record {
+    http_version: http_version;
+    status_code: http_status_code;
+    reason_phrase: bytestring;
+    headers: vector of http_header;
+    body: bytestring;
+};
+
+type http_message = record {
+    is_request: bool;
+    request: http_request;
+    response: http_response;
+};
+
+type http_connection = record {
+    requests: vector of http_request;
+    responses: vector of http_response;
+};
+
+type http_entity = record {
+    content_type: bytestring;
+    content_encoding: bytestring;
+    content_length: uint64;
+    last_modified: bytestring;
+    expires: bytestring;
+    etag: bytestring;
+    body: bytestring;
+};
+
+type http_accept = record {
+    media_type: bytestring;
+    quality: float;
+};
+
+type http_accept_charset = record {
+    charset: bytestring;
+    quality: float;
+};
+
+type http_accept_encoding = record {
+    encoding: bytestring;
+    quality: float;
+};
+
+type http_accept_language = record {
+    language: bytestring;
+    quality: float;
+};
+
+type http_authorization = record {
+    scheme: bytestring;
+    credentials: bytestring;
+};
+
+type http_cache_control = record {
+    directives: vector of bytestring;
+};
+
+type http_connection_header = record {
+    tokens: vector of bytestring;
+};
+
+type http_content_encoding = record {
+    encoding: bytestring;
+};
+
+type http_content_language = record {
+    languages: vector of bytestring;
+};
+
+type http_content_length = record {
+    length: uint64;
+};
+
+type http_content_type = record {
+    media_type: bytestring;
+    parameters: vector of bytestring;
+};
+
+type http_date = record {
+    date: bytestring;
+};
+
+type http_expect = record {
+    expectation: bytestring;
+};
+
+type http_from = record {
+    email: bytestring;
+};
+
+type http_host = record {
+    hostname: bytestring;
+    port: uint16;
+};
+
+type http_if_match = record {
+    etag: bytestring;
+};
+
+type http_if_modified_since = record {
+    date: bytestring;
+};
+
+type http_if_none_match = record {
+    etag: bytestring;
+};
+
+type http_if_range = record {
+    etag: bytestring;
+    date: bytestring;
+};
+
+type http_if_unmodified_since = record {
+    date: bytestring;
+};
+
+type http_last_modified = record {
+    date: bytestring;
+};
+
+type http_location = record {
+    uri: bytestring;
+};
+
+type http_max_forwards = record {
+    max_forwards: uint32;
+};
+
+type http_proxy_authorization = record {
+    scheme: bytestring;
+    credentials: bytestring;
+};
+
+type http_range = record {
+    unit: bytestring;
+    ranges: vector of bytestring;
+};
+
+type http_referer = record {
+    uri: bytestring;
+};
+
+type http_retry_after = record {
+    delay: uint32;
+    date: bytestring;
+};
+
+type http_server = record {
+    products: vector of bytestring;
+};
+
+type http_te = record {
+    extensions: vector of bytestring;
+};
+
+type http_trailer = record {
+    headers: vector of http_header;
+};
+
+type http_transfer_encoding = record {
+    encoding: bytestring;
+};
+
+type http_upgrade = record {
+    protocols: vector of bytestring;
+};
+
+type http_user_agent = record {
+    products: vector of bytestring;
+};
+
+type http_vary = record {
+    fields: vector of bytestring;
+};
+
+type http_via = record {
+    protocols: vector of bytestring;
+    received_by: vector of bytestring;
+    comment: bytestring;
+};
+
+type http_warning = record {
+    code: uint32;
+    agent: bytestring;
+    text: bytestring;
+};
+
+type http_www_authenticate = record {
+    schemes: vector of bytestring;
+    realm: bytestring;
+    domain: bytestring;
+    nonce: bytestring;
+    stale: bool;
+    algorithm: bytestring;
+    qop: bytestring;
+    nc: bytestring;
+    opaque: bytestring;
+};
+
+let http_parser: Parser(http_message) = parser "http" {
+    let message = parse http_message;
+    return message;
+};
+
+let http_message_parser: Parser(http_message) = parser "http_message" {
+    let is_request = parse bool;
+    let request = parse http_request;
+    let response = parse http_response;
+    return http_message(is_request = $is_request, request = $request, response = $response);
+};
+
+let http_request_parser: Parser(http_request) = parser "http_request" {
+    let method = parse http_method;
+    let request_uri = parse bytestring;
+    let http_version = parse http_version;
+    let headers = parse vector of http_header;
+    let body = parse bytestring;
+    return http_request(method = $method, request_uri = $request_uri, http_version = $http_version, headers = $headers, body = $body);
+};
+
+let http_response_parser: Parser(http_response) = parser "http_response" {
+    let http_version = parse http_version;
+    let status_code = parse http_status_code;
+    let reason_phrase = parse bytestring;
+    let headers = parse vector of http_header;
+    let body = parse bytestring;
+    return http_response(http_version = $http_version, status_code = $status_code, reason_phrase = $reason_phrase, headers = $headers, body = $body);
+};
+
+let http_header_parser: Parser(http_header) = parser "http_header" {
+    let name = parse bytestring;
+    let value = parse bytestring;
+    return http_header(name = $name, value = $value);
+};
+
+let http_entity_parser: Parser(http_entity) = parser "http_entity" {
+    let content_type = parse bytestring;
+    let content_encoding = parse bytestring;
+    let content_length = parse uint64;
+    let last_modified = parse bytestring;
+    let expires = parse bytestring;
+    let etag = parse bytestring;
+    let body = parse bytestring;
+    return http_entity(content_type = $content_type, content_encoding = $content_encoding, content_length = $content_length, last_modified = $last_modified, expires = $expires, etag = $etag, body = $body);
+};
+
+let http_accept_parser: Parser(http_accept) = parser "http_accept" {
+    let media_type = parse bytestring;
+    let quality = parse float;
+    return http_accept(media_type = $media_type, quality = $quality);
+};
+
+let http_accept_charset_parser: Parser(http_accept_charset) = parser "http_accept_charset" {
+    let charset = parse bytestring;
+    let quality = parse float;
+    return http_accept_charset(charset = $charset, quality = $quality);
+};
+
+let http_accept_encoding_parser: Parser(http_accept_encoding) = parser "http_accept_encoding" {
+    let encoding = parse bytestring;
+    let quality = parse float;
+    return http_accept_encoding(encoding = $encoding, quality = $quality);
+};
+
+let http_accept_language_parser: Parser(http_accept_language) = parser "http_accept_language" {
+    let language = parse bytestring;
+    let quality = parse float;
+    return http_accept_language(language = $language, quality = $quality);
+};
+
+let http_authorization_parser: Parser(http_authorization) = parser "http_authorization" {
+    let scheme = parse bytestring;
+    let credentials = parse bytestring;
+    return http_authorization(scheme = $scheme, credentials = $credentials);
+};
+
+let http_cache_control_parser: Parser(http_cache_control) = parser "http_cache_control" {
+    let directives = parse vector of bytestring;
+    return http_cache_control(directives = $directives);
+};
+
+let http_connection_header_parser: Parser(http_connection_header) = parser "http_connection_header" {
+    let tokens = parse vector of bytestring;
+    return http_connection_header(tokens = $tokens);
+};
+
+let http_content_encoding_parser: Parser(http_content_encoding) = parser "http_content_encoding" {
+    let encoding = parse bytestring;
+    return http_content_encoding(encoding = $encoding);
+};
+
+let http_content_language_parser: Parser(http_content_language) = parser "http_content_language" {
+    let languages = parse vector of bytestring;
+    return http_content_language(languages = $languages);
+};
+
+let http_content_length_parser: Parser(http_content_length) = parser "http_content_length" {
+    let length = parse uint64;
+    return http_content_length(length = $length);
+};
+
+let http_content_type_parser: Parser(http_content_type) = parser "http_content_type" {
+    let media_type = parse bytestring;
+    let parameters = parse vector of bytestring;
+    return http_content_type(media_type = $media_type, parameters = $parameters);
+};
+
+let http_date_parser: Parser(http_date) = parser "http_date" {
+    let date = parse bytestring;
+    return http_date(date = $date);
+};
+
+let http_expect_parser: Parser(http_expect) = parser "http_expect" {
+    let expectation = parse bytestring;
+    return http_expect(expectation = $expectation);
+};
+
+let http_from_parser: Parser(http_from) = parser "http_from" {
+    let email = parse bytestring;
+    return http_from(email = $email);
+};
+
+let http_host_parser: Parser(http_host) = parser "http_host" {
+    let hostname = parse bytestring;
+    let port = parse uint16;
+    return http_host(hostname = $hostname, port = $port);
+};
+
+let http_if_match_parser: Parser(http_if_match) = parser "http_if_match" {
+    let etag = parse bytestring;
+    return http_if_match(etag = $etag);
+};
+
+let http_if_modified_since_parser: Parser(http_if_modified_since) = parser "http_if_modified_since" {
+    let date = parse bytestring;
+    return http_if_modified_since(date = $date);
+};
+
+let http_if_none_match_parser: Parser(http_if_none_match) = parser "http_if_none_match" {
+    let etag = parse bytestring;
+    return http_if_none_match(etag = $etag);
+};
+
+let http_if_range_parser: Parser(http_if_range) = parser "http_if_range" {
+    let etag = parse bytestring;
+    let date = parse bytestring;
+    return http_if_range(etag = $etag, date = $date);
+};
+
+let http_if_unmodified_since_parser: Parser(http_if_unmodified_since) = parser "http_if_unmodified_since" {
+    let date = parse bytestring;
+    return http_if_unmodified_since(date = $date);
+};
+
+let http_last_modified_parser: Parser(http_last_modified) = parser "http_last_modified" {
+    let date = parse bytestring;
+    return http_last_modified(date = $date);
+};
+
+let http_location_parser: Parser(http_location) = parser "http_location" {
+    let uri = parse bytestring;
+    return http_location(uri = $uri);
+};
+
+let http_max_forwards_parser: Parser(http_max_forwards) = parser "http_max_forwards" {
+    let max_forwards = parse uint32;
+    return http_max_forwards(max_forwards = $max_forwards);
+};
+
+let http_proxy_authorization_parser: Parser(http_proxy_authorization) = parser "http_proxy_authorization" {
+    let scheme = parse bytestring;
+    let credentials = parse bytestring;
+    return http_proxy_authorization(scheme = $scheme, credentials = $credentials);
+};
+
+let http_range_parser: Parser(http_range) = parser "http_range" {
+    let unit = parse bytestring;
+    let ranges = parse vector of bytestring;
+    return http_range(unit = $unit, ranges = $ranges);
+};
+
+let http_referer_parser: Parser(http_referer) = parser "http_referer" {
+    let uri = parse bytestring;
+    return http_referer(uri = $uri);
+};
+
+let http_retry_after_parser: Parser(http_retry_after) = parser "http_retry_after" {
+    let delay = parse uint32;
+    let date = parse bytestring;
+    return http_retry_after(delay = $delay, date = $date);
+};
+
+let http_server_parser: Parser(http_server) = parser "http_server" {
+    let products = parse vector of bytestring;
+    return http_server(products = $products);
+};
+
+let http_te_parser: Parser(http_te) = parser "http_te" {
+    let extensions = parse vector of bytestring;
+    return http_te(extensions = $extensions);
+};
+
+let http_trailer_parser: Parser(http_trailer) = parser "http_trailer" {
+    let headers = parse vector of http_header;
+    return http_trailer(headers = $headers);
+};
+
+let http_transfer_encoding_parser: Parser(http_transfer_encoding) = parser "http_transfer_encoding" {
+    let encoding = parse bytestring;
+    return http_transfer_encoding(encoding = $encoding);
+};
+
+let http_upgrade_parser: Parser(http_upgrade) = parser "http_upgrade" {
+    let protocols = parse vector of bytestring;
+    return http_upgrade(protocols = $protocols);
+};
+
+let http_user_agent_parser: Parser(http_user_agent) = parser "http_user_agent" {
+    let products = parse vector of bytestring;
+    return http_user_agent(products = $products);
+};
+
+let http_vary_parser: Parser(http_vary) = parser "http_vary" {
+    let fields = parse vector of bytestring;
+    return http_vary(fields = $fields);
+};
+
+let http_via_parser: Parser(http_via) = parser "http_via" {
+    let protocols = parse vector of bytestring;
+    let received_by = parse vector of bytestring;
+    let comment = parse bytestring;
+    return http_via(protocols = $protocols, received_by = $received_by, comment = $comment);
+};
+
+let http_warning_parser: Parser(http_warning) = parser "http_warning" {
+    let code = parse uint32;
+    let agent = parse bytestring;
+    let text = parse bytestring;
+    return http_warning(code = $code, agent = $agent, text = $text);
+};
+
+let http_www_authenticate_parser: Parser(http_www_authenticate) = parser "http_www_authenticate" {
+    let schemes = parse vector of bytestring;
+    let realm = parse bytestring;
+    let domain = parse bytestring;
+    let nonce = parse bytestring;
+    let stale = parse bool;
+    let algorithm = parse bytestring;
+    let qop = parse bytestring;
+    let nc = parse bytestring;
+    let opaque = parse bytestring;
+    return http_www_authenticate(schemes = $schemes, realm = $realm, domain = $domain, nonce = $nonce, stale = $stale, algorithm = $algorithm, qop = $qop, nc = $nc, opaque = $opaque);
+};

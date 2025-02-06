@@ -1,34 +1,184 @@
-# Zeek Spicy Specification for DICOM Meta Data
+module DICOM;
 
-type DicomMeta = record {
-    # Group 0002: File Meta Information
-    file_meta: FileMeta,
+type FileMetaInformationGroup = uint16;
+const FileMetaInformationGroup_default = 2;
+type FileMetaInformationVersion = uint16;
+const FileMetaInformationVersion_default = 1;
 
-    # Group 0008: Identifying Information
-    identifying_info: IdentifyingInfo,
+type MediaStorageSOPInstanceUID = string;
+type MediaStorageSOPClassUID = string;
+type ImplementationClassUID = string;
+type TransferSyntaxUID = string;
+
+type PatientName = string;
+type PatientID = string;
+type PatientBirthDate = string;
+type PatientSex = string;
+const PatientSex_values = ["M", "F", "O"];
+type PatientAge = string;
+
+type StudyInstanceUID = string;
+type StudyDate = string;
+type StudyTime = string;
+type StudyDescription = string;
+type StudyID = string;
+
+type SeriesInstanceUID = string;
+type SeriesNumber = uint16;
+type SeriesDescription = string;
+type SeriesDate = string;
+type SeriesTime = string;
+
+type SOPInstanceUID = string;
+type SOPClassUID = string;
+type InstanceNumber = uint16;
+type ImageType = string;
+const ImageType_values = ["ORIGINAL", "DERIVED"];
+type ImageOrientationPatient = string;
+
+type PixelData = bytes;
+
+const FileMetaInformation = {
+  FileMetaInformationGroup: FileMetaInformationGroup_default,
+  FileMetaInformationVersion: FileMetaInformationVersion_default,
+  MediaStorageSOPInstanceUID: MediaStorageSOPInstanceUID,
+  MediaStorageSOPClassUID: MediaStorageSOPClassUID,
+  ImplementationClassUID: ImplementationClassUID,
+  TransferSyntaxUID: TransferSyntaxUID,
 };
 
-type FileMeta = record {
-    transfer_syntax_uid: string(64),
-    media_storage_sop_instance_uid: string(64),
-    implementation_class_uid: string(64),
-    transfer_syntax_version: uint16,
+const Patient = {
+  PatientName: PatientName,
+  PatientID: PatientID,
+  PatientBirthDate: PatientBirthDate,
+  PatientSex: PatientSex,
+  PatientAge: PatientAge,
 };
 
-type IdentifyingInfo = record {
-    media_storage_sop_instance_uid: string(64),
-    transfer_syntax_uid: string(64),
-    implementation_class_uid: string(64),
-    specific_character_set: string(32),
-    image_type: string(64),
-    recognition_code: string(16),
-    instance_creation_date: string(8),
-    instance_creation_time: string(6),
-    instance_creator_uid: string(64),
+const Study = {
+  StudyInstanceUID: StudyInstanceUID,
+  StudyDate: StudyDate,
+  StudyTime: StudyTime,
+  StudyDescription: StudyDescription,
+  StudyID: StudyID,
 };
 
-event zeek:: hdc startPoint(DicomMeta &meta) {
-    print("Found DICOM meta data:");
-    print("File Meta:", meta.file_meta);
-    print("Identifying Info:", meta.identifying_info);
-}
+const Series = {
+  SeriesInstanceUID: SeriesInstanceUID,
+  SeriesNumber: SeriesNumber,
+  SeriesDescription: SeriesDescription,
+  SeriesDate: SeriesDate,
+  SeriesTime: SeriesTime,
+};
+
+const Image = {
+  SOPInstanceUID: SOPInstanceUID,
+  SOPClassUID: SOPClassUID,
+  InstanceNumber: InstanceNumber,
+  ImageType: ImageType,
+  ImageOrientationPatient: ImageOrientationPatient,
+};
+
+const DICOM = {
+  FileMetaInformation: FileMetaInformation,
+  Patient: Patient,
+  Study: Study,
+  Series: Series,
+  Image: Image,
+  PixelData: PixelData,
+};
+
+const DICOMFile = {
+  preamble = 0x49494949, 
+  prefix = 0x4d524347, 
+  dicom: DICOM,
+};
+
+const Attribute = {
+  tag: uint16,
+  vr: string,
+  value: bytes,
+};
+
+const DataSet = {
+  attributes: Attribute[],
+};
+
+const Element = {
+  tag: uint16,
+  vr: string,
+  length: uint32,
+  value: bytes,
+};
+
+const Sequence = {
+  items: Element[],
+};
+
+const DICOMData = {
+  data_set: DataSet,
+  pixel_data: PixelData,
+};
+
+type AE = string;
+type AS = string;
+type AT = uint16;
+type CS = string;
+type DA = string;
+type DS = string;
+type DT = string;
+type FL = float32;
+type FD = float64;
+type IS = int32;
+type LO = string;
+type LT = string;
+type OB = bytes;
+type OD = float64;
+type OF = float32;
+type OL = int32;
+type OW = bytes;
+type PN = string;
+type SH = string;
+type SL = int32;
+type SQ = Sequence;
+type SS = int16;
+type ST = string;
+type TM = string;
+type UI = string;
+type UL = uint32;
+type US = uint16;
+type UR = string;
+
+const AttributeValue = {
+  ae: AE,
+  as: AS,
+  at: AT,
+  cs: CS,
+  da: DA,
+  ds: DS,
+  dt: DT,
+  fl: FL,
+  fd: FD,
+  is: IS,
+  lo: LO,
+  lt: LT,
+  ob: OB,
+  od: OD,
+  of: OF,
+  ol: OL,
+  ow: OW,
+  pn: PN,
+  sh: SH,
+  sl: SL,
+  sq: SQ,
+  ss: SS,
+  st: ST,
+  tm: TM,
+  ui: UI,
+  ul: UL,
+  us: US,
+  ur: UR,
+};
+
+let dicom_file = DICOMFile;
+let dicom_data = DICOMData;

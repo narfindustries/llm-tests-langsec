@@ -1,90 +1,94 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a GIF image
-typedef struct {
-    unsigned char *data;
-    int width;
-    int height;
-} GIFImage;
+// Helper function to read a specific number of bytes
+static HParseResult read_bytes(const HParser *parser, size_t count, void *buffer) {
+    return h_map(h_take(count), (HMapFunc)memcpy)(parser, buffer);
+}
 
-
-// Function to load a GIF image (replace with actual GIF loading logic)
-GIFImage *loadGIF(const char *filename) {
-    GIFImage *image = (GIFImage *)malloc(sizeof(GIFImage));
-    if (image == NULL) return NULL;
-
-    // Placeholder: Replace with actual GIF loading code.  This would typically involve
-    // a library like libgif.  For this example, we'll simulate loading.
-    image->width = 100;
-    image->height = 100;
-    image->data = (unsigned char *)malloc(image->width * image->height * 3); //Simulate RGB data
-    if (image->data == NULL) {
-        free(image);
-        return NULL;
+// Helper function to read an unsigned 16-bit integer in little-endian format
+static HParseResult read_uint16_le(const HParser *parser, uint16_t *value) {
+    uint8_t bytes[2];
+    HParseResult result = read_bytes(parser, 2, bytes);
+    if (result.status == H_SUCCESS) {
+        *value = (uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8);
     }
-    memset(image->data, 0, image->width * image->height * 3); //Black image
-
-    return image;
+    return result;
 }
 
-
-// Function to "process" the GIF image using Hammer (replace with actual Hammer logic)
-int hammerProcess(GIFImage *image) {
-    if (image == NULL || image->data == NULL) return 1; //Error handling
-
-    // Placeholder: Replace with actual Hammer processing code.  This is a placeholder.
-    for (int i = 0; i < image->width * image->height * 3; i++) {
-        image->data[i] = (image->data[i] + 10) % 256; // Example modification
-    }
-    return 0;
+// Helper function to read an unsigned 8-bit integer
+static HParseResult read_uint8(const HParser *parser, uint8_t *value) {
+    return read_bytes(parser, 1, value);
 }
 
+// Parser for the GIF header
+static const HParser *gif_header = h_string("GIF89a");
 
-// Function to save a GIF image (replace with actual GIF saving logic)
-int saveGIF(const char *filename, GIFImage *image) {
-    if (image == NULL || image->data == NULL) return 1; //Error handling
+// Parser for the logical screen descriptor
+static const HParser *logical_screen_descriptor = h_seq(
+    read_uint16_le,
+    read_uint16_le,
+    read_uint8,
+    read_uint8,
+    read_uint8
+);
 
-    // Placeholder: Replace with actual GIF saving code. This would typically involve
-    // a library like libgif. For this example, we'll simulate saving.
-    printf("Simulated saving of GIF to %s\n", filename);
-    return 0;
-}
+// Placeholder parsers for extension blocks and image data (needs significant expansion)
+static const HParser *gif_extension = h_seq(
+    h_char('!'),
+    h_many(h_any) // Placeholder:  Needs proper handling of extension types and data
+);
 
+static const HParser *gif_image_data = h_many(h_any); // Placeholder: Needs LZW decompression
+
+
+// Top-level GIF parser (incomplete - needs extension and image data handling)
+static const HParser *gif_parser = h_seq(
+    gif_header,
+    logical_screen_descriptor,
+    h_many(gif_extension),
+    gif_image_data
+);
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s input.gif output.gif\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gif_file>\n", argv[0]);
         return 1;
     }
 
-    const char *inputFilename = argv[1];
-    const char *outputFilename = argv[2];
-
-    GIFImage *image = loadGIF(inputFilename);
-    if (image == NULL) {
-        fprintf(stderr, "Error loading GIF image: %s\n", inputFilename);
+    FILE *file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    int result = hammerProcess(image);
-    if (result != 0) {
-        fprintf(stderr, "Error processing GIF image using Hammer.\n");
-        free(image->data);
-        free(image);
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = (uint8_t *)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(file);
         return 1;
     }
 
-    result = saveGIF(outputFilename, image);
-    if (result != 0) {
-        fprintf(stderr, "Error saving GIF image: %s\n", outputFilename);
-        free(image->data);
-        free(image);
-        return 1;
+    fread(buffer, 1, fileSize, file);
+    fclose(file);
+
+    HParseResult result = h_parse(gif_parser, buffer, fileSize);
+
+    if (result.status == H_SUCCESS) {
+        printf("GIF file parsed successfully!\n");
+        // Process parsed data here (currently not implemented due to incomplete parser)
+    } else {
+        fprintf(stderr, "Error parsing GIF file: %s\n", result.error);
     }
 
-    free(image->data);
-    free(image);
+    free(buffer);
     return 0;
 }
+

@@ -1,32 +1,46 @@
-Here's a complete, fixed Zeek Spicy specification for Bitcoin transactions:
-
 module Bitcoin;
 
-import spicy;
+protocol analyzer Bitcoin {
+    function parse_varint() : uint64 {
+        local first_byte = stream.read<uint8>();
+        if ( first_byte < 0xfd ) {
+            return first_byte;
+        }
+        else if ( first_byte == 0xfd ) {
+            return stream.read<uint16>();
+        }
+        else if ( first_byte == 0xfe ) {
+            return stream.read<uint32>();
+        }
+        else {
+            return stream.read<uint64>();
+        }
+    }
 
-public type Transaction = unit {
-    version: uint32;
-    input_count: varint;
-    inputs: Input[input_count.value];
-    output_count: varint;
-    outputs: Output[output_count.value];
-    locktime: uint32;
-
-    type Input = unit {
-        previous_tx_hash: bytes(32);
-        previous_output_index: uint32;
-        script_length: varint;
-        script_sig: bytes(script_length.value);
+    type TransactionInput = unit {
+        prev_tx_hash: bytes &size=32;
+        prev_output_index: uint32;
+        script_sig_length: uint64 = parse_varint();
+        script_sig: bytes &size=script_sig_length;
         sequence_number: uint32;
-    };
+    }
 
-    type Output = unit {
-        value: uint64;
-        script_length: varint;
-        script_pubkey: bytes(script_length.value);
-    };
-};
+    type TransactionOutput = unit {
+        amount: int64;
+        script_pubkey_length: uint64 = parse_varint();
+        script_pubkey: bytes &size=script_pubkey_length;
+    }
 
-public type BitcoinTransactionFile = unit {
-    transactions: Transaction[] &until($input.end);
-};
+    type Transaction = unit {
+        version: uint32;
+        input_count: uint64 = parse_varint();
+        inputs: TransactionInput[] &count=input_count;
+        output_count: uint64 = parse_varint();
+        outputs: TransactionOutput[] &count=output_count;
+        locktime: uint32;
+    }
+
+    public type BitcoinTransaction = unit {
+        transaction: Transaction;
+    }
+}

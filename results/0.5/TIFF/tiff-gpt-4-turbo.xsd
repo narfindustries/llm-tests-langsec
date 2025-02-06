@@ -1,45 +1,53 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/tiff"
-           xmlns:tns="http://example.com/dfdl/tiff">
+           targetNamespace="http://example.com/tiff"
+           xmlns:tns="http://example.com/tiff">
 
-    <xs:include schemaLocation="DFDLGeneralFormat.xsd" />
-
-    <xs:complexType name="TIFFHeader">
-        <xs:sequence>
-            <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:discriminator test="{ . = 'II' or . = 'MM' }"/>
-                        <dfdl:choiceBranchKey='{ . }'/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="magicNumber" type="xs:unsignedShort" dfdl:length="2">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:binaryNumberRep dfdl:byteOrder="{ ../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-                        <dfdl:assert test="{ . = 42 }"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="offsetFirstIFD" type="xs:unsignedInt" dfdl:length="4">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:binaryNumberRep dfdl:byteOrder="{ ../byteOrder = 'II' }? 'littleEndian' : 'bigEndian'"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-        </xs:sequence>
+  <xs:element name="TIFFFile" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:TIFFHeader"/>
+        <xs:element name="IFDs" type="tns:IFDsType" dfdl:occursCountKind="parsed" dfdl:occursStopValue="-1"/>
+      </xs:sequence>
     </xs:complexType>
+  </xs:element>
 
-    <xs:element name="TIFFFile" type="tns:TIFFHeader">
+  <xs:complexType name="TIFFHeader">
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:encoding="US-ASCII"
+                  dfdl:textStringJustification="left">
         <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-                <dfdl:format ref="tns:GeneralFormat"/>
-            </xs:appinfo>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:discriminator>{ . = 'II' or . = 'MM' }</dfdl:discriminator>
+          </xs:appinfo>
         </xs:annotation>
-    </xs:element>
+      </xs:element>
+      <xs:element name="FortyTwo" type="xs:short" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="{ if (../ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+      <xs:element name="IFDOffset" type="xs:long" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="{ if (../ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IFDsType">
+    <xs:sequence dfdl:separatorSuppressionPolicy="never">
+      <xs:element name="IFD" type="tns:IFDType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="EntryCount" type="xs:short" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="{ if (../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+      <xs:element name="Entries" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="implicit"/>
+      <xs:element name="NextIFDOffset" type="xs:long" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="{ if (../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EntryType">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:short" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="{ if (../../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+      <xs:element name="Type" type="xs:short" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:byteOrder="{ if (../../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+      <xs:element name="Length" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="{ if (../../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+      <xs:element name="ValueOffset" type="xs:long" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:byteOrder="{ if (../../../Header/ByteOrder = 'II') 'littleEndian' else 'bigEndian' }"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

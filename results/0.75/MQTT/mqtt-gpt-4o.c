@@ -1,54 +1,66 @@
-#include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <hammer/hammer.h>
 
-HParser *create_mqtt_parser() {
-    // Define the basic components of the MQTT protocol
-    HParser *byte = h_uint8();
-    HParser *remaining_length = h_int8();  // Simplified for demo purposes
+typedef struct {
+    uint8_t packet_type_flags;
+    uint8_t remaining_length;
+    // Additional fields depending on packet type
+} mqtt_packet_t;
 
-    // MQTT Control Packet format
-    // Fixed Header: 2 bytes (Control Packet Type and Flags, Remaining Length)
-    HParser *control_packet_type_and_flags = byte;
-    HParser *fixed_header = h_sequence(control_packet_type_and_flags, remaining_length, NULL);
+HParser *mqtt_fixed_header_parser() {
+    HParser *packet_type_flags = h_bits(8, false);
+    HParser *remaining_length = h_bits(8, false); // Simplified remaining length parsing
 
-    // MQTT Connect Packet - Variable Header
-    HParser *protocol_name = h_string("MQTT", 4);
-    HParser *protocol_level = byte;
-    HParser *connect_flags = byte;
-    HParser *keep_alive = h_uint16();
-    HParser *variable_header = h_sequence(protocol_name, protocol_level, connect_flags, keep_alive, NULL);
-
-    // MQTT Connect Packet - Payload
-    // For simplicity, assume payload is a single string
-    HParser *client_id = h_string_length_prefixed(h_uint16(), byte);
-    HParser *payload = client_id;
-
-    // Complete MQTT Connect Packet
-    HParser *mqtt_connect_packet = h_sequence(fixed_header, variable_header, payload, NULL);
-
-    return mqtt_connect_packet;
+    return h_sequence(packet_type_flags, remaining_length, NULL);
 }
 
-int main() {
-    HParser *mqtt_parser = create_mqtt_parser();
-    if (!mqtt_parser) {
-        fprintf(stderr, "Error creating MQTT parser\n");
-        return 1;
+HParser *mqtt_packet_parser() {
+    return mqtt_fixed_header_parser();
+}
+
+void parse_mqtt_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
     }
 
-    // Example buffer (assuming a valid MQTT packet for testing)
-    uint8_t buffer[] = {0x10, 0x0F, 'M', 'Q', 'T', 'T', 0x04, 0x02, 0x00, 0x3C, 0x00, 0x04, 't', 'e', 's', 't'};
-    size_t buffer_len = sizeof(buffer);
+    fseek(file, 0, SEEK_END);
+    size_t filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    const uint8_t *cur = buffer;
-    HParseResult *result = h_parse(mqtt_parser, buffer, buffer_len);
-    if (result) {
-        printf("Parsed MQTT packet successfully\n");
-        h_parse_result_free(result);
+    uint8_t *data = (uint8_t *)malloc(filesize);
+    if (!data) {
+        perror("Error allocating memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    fread(data, 1, filesize, file);
+    fclose(file);
+
+    HParser *parser = mqtt_packet_parser();
+    HParseResult *result = h_parse(parser, data, filesize);
+
+    if (result->ast) {
+        printf("MQTT packet parsed successfully.\n");
+        // Further processing of the parsed packet
     } else {
-        fprintf(stderr, "Failed to parse MQTT packet\n");
+        printf("Failed to parse MQTT packet.\n");
     }
 
-    h_parser_free(mqtt_parser);
-    return 0;
+    h_parse_result_free(result);
+    free(data);
+    h_parser_dec_ref(parser); // Corrected function to decrement parser reference count
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <mqtt-binary-file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_mqtt_file(argv[1]);
+    return EXIT_SUCCESS;
 }

@@ -1,58 +1,125 @@
 module GIF;
 
-import spicy;
-
-public type GIF = unit {
-    magic: bytes &length=6 &check=$$ == "\x47\x49\x46\x38\x39\x61";
-
-    logical_screen_descriptor: {
-        width: uint16;
-        height: uint16;
-        packed_fields: uint8;
-        background_color_index: uint8;
-        pixel_aspect_ratio: uint8;
-    };
-
-    global_color_table: [*] = {
-        if ( logical_screen_descriptor.packed_fields & 0x80 ) {
-            [logical_screen_descriptor.packed_fields & 0x07 + 1] of color_table_entry
-        }
-    };
-
-    frames: [*] = frame until ( $$ == "\x3B" );
-
-    terminator: bytes &length=1 &check=$$ == "\x3B";
+type GIFHeader = unit {
+    signature: bytes &size=3 &check=($$ == "GIF");
+    version: bytes &size=3 &check=($$ == "87a" || $$ == "89a");
 };
 
-type color_table_entry = bytes &length=3;
-
-type frame = unit {
-    separator: uint8 &check=$$ == 0x2C;
-    image_descriptor: {
-        left_position: uint16;
-        top_position: uint16;
-        width: uint16;
-        height: uint16;
-        packed_fields: uint8;
+type LogicalScreenDescriptor = unit {
+    logical_screen_width: uint16;
+    logical_screen_height: uint16;
+    packed_fields: bitfield[uint8] {
+        global_color_table_flag: bool,
+        color_resolution: uint8 &bits=3,
+        sort_flag: bool,
+        size_of_global_color_table: uint8 &bits=3
     };
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
 
-    local_color_table: [*] = {
-        if ( image_descriptor.packed_fields & 0x80 ) {
-            [image_descriptor.packed_fields & 0x07 + 1] of color_table_entry
-        }
+type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+type GlobalColorTable = unit {
+    entries: array<ColorTableEntry> &size=2**(logical_screen_descriptor.packed_fields.size_of_global_color_table + 1);
+};
+
+type ImageDescriptor = unit {
+    image_separator: uint8 &check=($$ == 0x2C);
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: bitfield[uint8] {
+        local_color_table_flag: bool,
+        interlace_flag: bool,
+        sort_flag: bool,
+        reserved: uint8 &bits=2,
+        size_of_local_color_table: uint8 &bits=3
     };
+};
 
+type LocalColorTable = unit {
+    entries: array<ColorTableEntry> &size=2**(image_descriptor.packed_fields.size_of_local_color_table + 1);
+};
+
+type DataBlock = unit {
+    block_size: uint8;
+    data: bytes &size=block_size;
+};
+
+type ImageData = unit {
     lzw_minimum_code_size: uint8;
-    image_data: [*] = subblock;
+    data_blocks: array<DataBlock> &until($$[-1].block_size == 0);
 };
 
-type subblock = unit {
-    size: uint8;
-    data: bytes &length=size;
-} until ( size == 0 );
+type GraphicControlExtension = unit {
+    extension_introducer: uint8 &check=($$ == 0x21);
+    graphic_control_label: uint8 &check=($$ == 0xF9);
+    block_size: uint8 &check=($$ == 4);
+    packed_fields: bitfield[uint8] {
+        reserved: uint8 &bits=3,
+        disposal_method: uint8 &bits=3,
+        user_input_flag: bool,
+        transparent_color_flag: bool
+    };
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8 &check=($$ == 0);
+};
 
-public export { 
-    parse-gif: function(input: bytes) -> GIF {
-        return GIF(input);
-    }
-}
+type CommentExtension = unit {
+    extension_introducer: uint8 &check=($$ == 0x21);
+    comment_label: uint8 &check=($$ == 0xFE);
+    comment_data: array<DataBlock> &until($$[-1].block_size == 0);
+};
+
+type PlainTextExtension = unit {
+    extension_introducer: uint8 &check=($$ == 0x21);
+    plain_text_label: uint8 &check=($$ == 0x01);
+    block_size: uint8 &check=($$ == 12);
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    character_cell_width: uint8;
+    character_cell_height: uint8;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    plain_text_data: array<DataBlock> &until($$[-1].block_size == 0);
+};
+
+type ApplicationExtension = unit {
+    extension_introducer: uint8 &check=($$ == 0x21);
+    application_label: uint8 &check=($$ == 0xFF);
+    block_size: uint8 &check=($$ == 11);
+    application_identifier: bytes &size=8;
+    application_authentication_code: bytes &size=3;
+    application_data: array<DataBlock> &until($$[-1].block_size == 0);
+};
+
+type Trailer = unit {
+    trailer: uint8 &check=($$ == 0x3B);
+};
+
+type Block = unit {
+    image_descriptor: optional<ImageDescriptor> &if($$[0] == 0x2C);
+    local_color_table: optional<LocalColorTable> &if(image_descriptor.packed_fields.local_color_table_flag);
+    image_data: optional<ImageData> &if(image_descriptor);
+    graphic_control_extension: optional<GraphicControlExtension> &if($$[0] == 0x21 && $$[1] == 0xF9);
+    comment_extension: optional<CommentExtension> &if($$[0] == 0x21 && $$[1] == 0xFE);
+    plain_text_extension: optional<PlainTextExtension> &if($$[0] == 0x21 && $$[1] == 0x01);
+    application_extension: optional<ApplicationExtension> &if($$[0] == 0x21 && $$[1] == 0xFF);
+    trailer: optional<Trailer> &if($$[0] == 0x3B);
+};
+
+type GIF = unit {
+    header: GIFHeader;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional<GlobalColorTable> &if(logical_screen_descriptor.packed_fields.global_color_table_flag);
+    blocks: array<Block> &until($$[-1].trailer);
+};

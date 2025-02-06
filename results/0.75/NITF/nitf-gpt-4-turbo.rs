@@ -1,89 +1,81 @@
 use nom::{
     bytes::complete::{take, take_while_m_n},
-    combinator::{map_res, opt},
-    multi::count,
-    number::complete::{be_u16, be_u32},
+    combinator::{map_res},
     sequence::tuple,
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
+use std::{fs::File, io::Read, env, str};
 
-/// Parse a fixed-length ASCII field
-fn parse_fixed_length_ascii(input: &[u8], length: usize) -> IResult<&[u8], String> {
-    map_res(take(length), |bytes: &[u8]| {
-        std::str::from_utf8(bytes).map(|s| s.trim_end().to_string())
-    })(input)
-}
-
-/// Parse a NITF header
-fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NITFHeader> {
-    let (input, (fhdr, fver, clevel, stype, osta_id, ftitle, fsclas)) = tuple((
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-        parse_fixed_length_ascii,
-    ))(input)?;
-
-    Ok((
-        input,
-        NITFHeader {
-            fhdr,
-            fver,
-            clevel,
-            stype,
-            osta_id,
-            ftitle,
-            fsclas,
-        },
-    ))
-}
-
-/// Definition of the NITF header structure
 #[derive(Debug)]
-struct NITFHeader {
+struct FileHeader {
     fhdr: String,
     fver: String,
-    clevel: String,
+    clevel: u16,
     stype: String,
     osta_id: String,
+    fdt: String,
     ftitle: String,
     fsclas: String,
+    fscop: u32,
+    fscpys: u32,
+    encryp: String,
 }
 
-/// Main function to parse NITF files
+fn parse_u32(input: &[u8]) -> Result<u32, std::num::ParseIntError> {
+    str::from_utf8(input).unwrap().trim().parse::<u32>()
+}
+
+fn parse_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
+    map_res(
+        tuple((
+            take(9usize),
+            take(2usize),
+            take_while_m_n(2, 2, |c: u8| c.is_ascii_digit()),
+            take(4usize),
+            take(10usize),
+            take(14usize),
+            take(80usize),
+            take(1usize),
+            take(5usize),
+            take(5usize),
+            take(1usize),
+        )),
+        |(fhdr, fver, clevel, stype, osta_id, fdt, ftitle, fsclas, fscop, fscpys, encryp)| {
+            Ok(FileHeader {
+                fhdr: str::from_utf8(fhdr)?.to_string(),
+                fver: str::from_utf8(fver)?.to_string(),
+                clevel: str::from_utf8(clevel)?.parse::<u16>()?,
+                stype: str::from_utf8(stype)?.to_string(),
+                osta_id: str::from_utf8(osta_id)?.to_string(),
+                fdt: str::from_utf8(fdt)?.to_string(),
+                ftitle: str::from_utf8(ftitle)?.to_string(),
+                fsclas: str::from_utf8(fsclas)?.to_string(),
+                fscop: parse_u32(fscop)?,
+                fscpys: parse_u32(fscpys)?,
+                encryp: str::from_utf8(encryp)?.to_string(),
+            })
+        },
+    )(input)
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-
-    if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <path_to_nitf_file>", args[0]);
         return;
     }
 
-    let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(error) => {
-            eprintln!("Failed to open file {}: {}", filename, error);
-            return;
-        },
-    };
-
+    let mut file = File::open(&args[1]).expect("Failed to open file");
     let mut buffer = Vec::new();
-    if let Err(error) = file.read_to_end(&mut buffer) {
-        eprintln!("Failed to read file {}: {}", filename, error);
-        return;
-    }
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_nitf_header(&buffer) {
-        Ok((_, header)) => {
-            println!("Parsed NITF Header: {:?}", header);
-        },
-        Err(error) => {
-            eprintln!("Failed to parse NITF header: {:?}", error);
-        },
+    match parse_header(&buffer) {
+        Ok((_remaining, header)) => {
+            println!("Parsed Header: {:?}", header);
+            // Further parsing would continue here with `_remaining`
+        }
+        Err(e) => {
+            eprintln!("Failed to parse NITF file: {:?}", e);
+        }
     }
 }

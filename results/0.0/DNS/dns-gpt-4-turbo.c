@@ -1,130 +1,134 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations for recursive structures
-static HParsedToken *act_DNSQuestion(const HParseResult *p, void *user_data);
-static HParsedToken *act_DNSRecord(const HParseResult *p, void *user_data);
+// Define DNS message sections
+#define QR_QUERY 0
+#define QR_RESPONSE 1
 
-// Basic DNS types
-static HParser *dns_name;
-static HParser *dns_type;
-static HParser *dns_class;
-static HParser *dns_ttl;
-static HParser *dns_rdlength;
-static HParser *dns_rdata;
+// Opcode values
+#define OPCODE_QUERY 0
+#define OPCODE_IQUERY 1
+#define OPCODE_STATUS 2
 
-// DNS message sections
-static HParser *dns_question;
-static HParser *dns_record;
-static HParser *dns_questions;
-static HParser *dns_answers;
-static HParser *dns_authorities;
-static HParser *dns_additionals;
+// RCODE values
+#define RCODE_NO_ERROR 0
+#define RCODE_FORMAT_ERROR 1
+#define RCODE_SERVER_FAILURE 2
+#define RCODE_NAME_ERROR 3
+#define RCODE_NOT_IMPLEMENTED 4
+#define RCODE_REFUSED 5
 
-// DNS header fields
-static HParser *dns_id;
-static HParser *dns_flags;
-static HParser *dns_qdcount;
-static HParser *dns_ancount;
-static HParser *dns_nscount;
-static HParser *dns_arcount;
+// DNS record types
+#define TYPE_A 1
+#define TYPE_NS 2
+#define TYPE_CNAME 5
+#define TYPE_SOA 6
+#define TYPE_PTR 12
+#define TYPE_MX 15
+#define TYPE_TXT 16
 
-// Complete DNS message
-static HParser *dns_message;
+// DNS record class
+#define CLASS_IN 1
 
-// Helper parsers
-static HParser *uint16;
-static HParser *uint32;
-
-// Actions to convert parsed data into a more usable form
-static HParsedToken *act_DNSName(const HParseResult *p, void *user_data) {
-    return H_MAKE_STR(strndup(p->bit_offset, p->bit_length));
+// Parsing functions
+HParser *parse_uint16() {
+    return h_uint16();
 }
 
-static void init_parsers() {
-    uint16 = h_uint16();
-    uint32 = h_uint32();
+HParser *parse_uint32() {
+    return h_uint32();
+}
 
-    dns_name = h_action(h_repeat_n(h_choice(h_ch_range(0x01, 0x2f), NULL), h_uint8(), NULL), act_DNSName, NULL);
-    dns_type = uint16;
-    dns_class = uint16;
-    dns_ttl = uint32;
-    dns_rdlength = uint16;
-    dns_rdata = h_length_value(dns_rdlength, h_arbitrary_bytes());
+HParser *parse_label() {
+    return h_length_value(h_uint8(), h_uint8());
+}
 
-    dns_question = h_sequence(dns_name, dns_type, dns_class, NULL);
-    dns_record = h_sequence(dns_name, dns_type, dns_class, dns_ttl, dns_rdlength, dns_rdata, NULL);
+HParser *parse_domain_name() {
+    return h_many1(parse_label());
+}
 
-    dns_questions = h_repeat_n(dns_question, dns_qdcount);
-    dns_answers = h_repeat_n(dns_record, dns_ancount);
-    dns_authorities = h_repeat_n(dns_record, dns_nscount);
-    dns_additionals = h_repeat_n(dns_record, dns_arcount);
+HParser *parse_header() {
+    return h_sequence(
+        parse_uint16(), // ID
+        h_bits(1, false), // QR
+        h_bits(4, false), // Opcode
+        h_bits(1, false), // AA
+        h_bits(1, false), // TC
+        h_bits(1, false), // RD
+        h_bits(1, false), // RA
+        h_bits(3, false), // Z
+        h_bits(4, false), // RCODE
+        parse_uint16(), // QDCOUNT
+        parse_uint16(), // ANCOUNT
+        parse_uint16(), // NSCOUNT
+        parse_uint16(), // ARCOUNT
+        NULL
+    );
+}
 
-    dns_id = uint16;
-    dns_flags = uint16;
-    dns_qdcount = uint16;
-    dns_ancount = uint16;
-    dns_nscount = uint16;
-    dns_arcount = uint16;
+HParser *parse_question() {
+    return h_sequence(
+        parse_domain_name(),
+        parse_uint16(), // QTYPE
+        parse_uint16(), // QCLASS
+        NULL
+    );
+}
 
-    dns_message = h_sequence(
-        dns_id, dns_flags, dns_qdcount, dns_ancount, dns_nscount, dns_arcount,
-        dns_questions, dns_answers, dns_authorities, dns_additionals,
+HParser *parse_rr() {
+    return h_sequence(
+        parse_domain_name(),
+        parse_uint16(), // TYPE
+        parse_uint16(), // CLASS
+        parse_uint32(), // TTL
+        h_length_value(parse_uint16(), h_indirect()), // RDLENGTH and RDATA
+        NULL
+    );
+}
+
+HParser *parse_message() {
+    return h_sequence(
+        parse_header(),
+        h_many(parse_question()), // Questions
+        h_many(parse_rr()), // Answer RRs
+        h_many(parse_rr()), // Authority RRs
+        h_many(parse_rr()), // Additional RRs
         NULL
     );
 }
 
 int main(int argc, char **argv) {
-    HParser *parser;
-    init_parsers();
-    parser = dns_message;
-
-    // Assuming input is provided as a binary file for simplicity
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <binary_dns_data_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <dns_message_file>\n", argv[0]);
         return 1;
     }
 
-    // Read the binary file
-    FILE *f = fopen(argv[1], "rb");
-    if (!f) {
-        perror("Failed to open file");
-        return 1;
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
     }
 
-    fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    uint8_t *data = malloc(size);
-    if (!data) {
-        perror("Failed to allocate memory");
-        fclose(f);
-        return 1;
+    uint8_t *buffer = malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    HParser *dns_parser = parse_message();
+    HParseResult *result = h_parse(dns_parser, buffer, fsize);
+    if (result) {
+        printf("DNS message parsed successfully.\n");
+    } else {
+        printf("Failed to parse DNS message.\n");
     }
 
-    if (fread(data, 1, size, f) != size) {
-        perror("Failed to read file");
-        free(data);
-        fclose(f);
-        return 1;
-    }
-
-    fclose(f);
-
-    // Parse the DNS data
-    HParseResult *result = h_parse(parser, data, size * 8);
-    if (!result) {
-        fprintf(stderr, "Parsing failed.\n");
-        free(data);
-        return 1;
-    }
-
-    // Output or process the parse result
-    h_pprint(stdout, result->ast, 0, 0);
-
-    // Cleanup
     h_parse_result_free(result);
-    free(data);
+    h_free_parser(dns_parser);
+    free(buffer);
+
     return 0;
 }

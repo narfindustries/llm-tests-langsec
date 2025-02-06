@@ -1,0 +1,1 @@
+for<'a> fn(&'a [u8], FunctionCode) -> Result<(&'a [u8], u16), nom::Err<nom::error::Error<&'a [u8]>>> {parse_register_count}

@@ -1,21 +1,20 @@
 meta:
   id: dicom
-  title: DICOM
+  title: DICOM File Format
   file-extension: dcm
   endian: le
-  encoding: utf-8
 
 seq:
   - id: preamble
     size: 128
-  - id: prefix
+  - id: magic
     contents: "DICM"
   - id: elements
-    type: element
+    type: data_element
     repeat: eos
 
 types:
-  element:
+  data_element:
     seq:
       - id: tag_group
         type: u2
@@ -24,22 +23,24 @@ types:
       - id: vr
         type: str
         size: 2
+        encoding: ASCII
       - id: reserved
-        size: 2
-        if: _parent.is_explicit_vr
+        type: u2
+        if: vr in ['OB', 'OW', 'OF', 'SQ', 'UT', 'UN']
       - id: value_length
         type: u4
-        if: _parent.is_explicit_vr
-      - id: value_length_implicit
+        if: vr in ['OB', 'OW', 'OF', 'SQ', 'UT', 'UN']
+      - id: value_length_short
         type: u2
-        if: not _parent.is_explicit_vr
+        if: vr not in ['OB', 'OW', 'OF', 'SQ', 'UT', 'UN']
       - id: value
-        size: value_length
-        if: _parent.is_explicit_vr
-      - id: value_implicit
-        size: value_length_implicit
-        if: not _parent.is_explicit_vr
-
-instances:
-  is_explicit_vr:
-    value: preamble[128] == 0x44 and preamble[129] == 0x49 and preamble[130] == 0x43 and preamble[131] == 0x4d
+        size: 
+          switch-on: vr
+          cases:
+            'OB': value_length
+            'OW': value_length
+            'OF': value_length
+            'SQ': value_length
+            'UT': value_length
+            'UN': value_length
+            _: value_length_short

@@ -2,25 +2,46 @@ module ARP;
 
 import spicy;
 
-public type Packet = unit {
-    hardware_type: uint16 be;
-    protocol_type: uint16 be;
-    hardware_size: uint8;
-    protocol_size: uint8;
-    opcode: uint16 be;
-    sender_mac: bytes(6);
-    sender_ip: bytes(4);
-    target_mac: bytes(6);
-    target_ip: bytes(4);
+public type EthernetHeader = unit {
+    dst_mac: bytes &length=6;
+    src_mac: bytes &length=6;
+    ether_type: uint16;
+};
 
-    var is_request: bool = (opcode == 1);
-    var is_reply: bool = (opcode == 2);
+public type ARPPacket = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_addr_len: uint8;
+    protocol_addr_len: uint8;
+    operation: uint16;
+    sender_hardware_addr: bytes &length=(self.hardware_addr_len);
+    sender_protocol_addr: bytes &length=(self.protocol_addr_len);
+    target_hardware_addr: bytes &length=(self.hardware_addr_len);
+    target_protocol_addr: bytes &length=(self.protocol_addr_len);
 
-    on %done {
-        print self;
+    on %init {
+        self.validate();
+    }
+
+    function validate() {
+        if ( self.hardware_type != 1 )
+            throw spicy::ParseError("Unsupported hardware type");
+        
+        if ( self.protocol_type != 0x0800 )
+            throw spicy::ParseError("Unsupported protocol type");
+        
+        if ( self.hardware_addr_len != 6 )
+            throw spicy::ParseError("Invalid hardware address length");
+        
+        if ( self.protocol_addr_len != 4 )
+            throw spicy::ParseError("Invalid protocol address length");
+        
+        if ( self.operation != 1 && self.operation != 2 )
+            throw spicy::ParseError("Invalid ARP operation");
     }
 };
 
-public type Parser = unit {
-    packet: Packet;
+public type ARPFrame = unit {
+    ethernet_header: EthernetHeader where $$.ether_type == 0x0806;
+    arp_packet: ARPPacket;
 };

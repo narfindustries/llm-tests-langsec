@@ -1,146 +1,578 @@
-# Define theHL7v2Message type
-type HL7v2Message = record {
-  msg_type: bytestring[3],
-  trigger_event: bytestring[3],
-  message_control_id: bytestring[20],
-  processing_id: bytestring[4],
-  version_id: bytestring[12],
-  sequence_number: uint32,
-  continuation_pointer: bytestring[180],
-  accepting_application: bytestring[20],
-  accepting_facility: bytestring[20],
-  date: bytestring[8],
-  time: bytestring[6],
-  security: bytestring[40],
-  message_profile_id: bytestring[80],
-  accepting_application_facility: bytestring[20],
+module HL7_v2;
+
+type MSH = record {
+  field_separator = '|',
+  encoding_chars = "^~\\&",
+  sending_facility = string,
+  sending_facility_namespace_id = string,
+  receiving_facility = string,
+  receiving_facility_namespace_id = string,
+  date_time_of_message = string,
+  security = string,
+  message_type = string,
+  message_control_id = string,
+  processing_id = string,
+  version_id = string,
+  sequence_number = string,
+  continuation_pointer = string,
+  accept_acknowledgment_type = string,
+  application_acknowledgment_type = string,
+  country_code = string,
+  character_set = string,
+  principal_language_of_message = string
 };
 
-# Define the Segment type
-type Segment = record {
-  segment_id: bytestring[3],
-  fields: bytestring[*],
+type EVN = record {
+  event_type_code = string,
+  date_time_of_event = string,
+  event_facility = string,
+  event_staff = string,
+  event_type_reason = string,
+  operator_id = string
 };
 
-# Define the Field type
-type Field = record {
-  field_id: bytestring[4],
-  components: bytestring[*],
+type PID = record {
+  set_id = string,
+  patient_id = string,
+  patient_id_external = string,
+  patient_name = string,
+  mother_s_maiden_name = string,
+  date_of_birth = string,
+  sex = string,
+  patient_class = string,
+  race = string,
+  patient_account_number = string,
+  ssn = string,
+  driver_s_license_number = string,
+  mothers_identifier = string,
+  ethnic_group = string,
+  birth_place = string,
+  multiple_birth_indicator = string,
+  birth_order = string,
+  citizenship = string,
+  veterans_military_status = string,
+  nationality = string,
+  patient_death_date = string,
+  patient_death_time = string,
+  death_cause_code = string,
+  death_cause_text = string
 };
 
-# Define the Component type
-type Component = record {
-  component_id: bytestring[4],
-  subcomponents: bytestring[*],
+type PV1 = record {
+  visit_number = string,
+  patient_class = string,
+  visit_number_external = string,
+  visit_type = string,
+  admitting_doctor = string,
+  admitting_doctor_external = string,
+  visit_description = string,
+  admit_reason = string,
+  visit_mode = string,
+  discharge_disposition = string,
+  discharge_disposition_external = string,
+  discharge_to_location = string,
+  discharge_to_location_external = string,
+  diet_type = string,
+  diet_type_external = string,
+  servicing_facility = string,
+  servicing_facility_external = string,
+  bed_status = string,
+  bed_status_external = string,
+  visit_priority_code = string,
+  pre_admit_number = string,
+  prior_patient_location = string,
+  prior_patient_location_external = string,
+  admit_date_time = string,
+  admit_source = string,
+  admit_source_external = string,
+  ambulatory_status = string,
+  ambulatory_status_external = string,
+  vip_indicator = string,
+  admitting_doctor_name = string,
+  visit_number_internal = string
 };
 
-# Define the Subcomponent type
-type Subcomponent = record {
-  subcomponent_id: bytestring[4],
-  value: bytestring,
+type PV2 = record {
+  prior_pending_location = string,
+  prior_pending_location_external = string,
+  accommodations_code = string,
+  accommodations_code_external = string,
+  admit_reason_code = string,
+  admit_reason_code_external = string,
+  expected_admit_date = string,
+  expected_discharge_date = string,
+  estimated_duration = string,
+  estimated_duration_unit = string,
+  expected_discharge_disposition = string,
+  expected_discharge_disposition_external = string,
+  visit_user_code = string,
+  visit_user_code_external = string,
+  visit_number_external_2 = string,
+  visit_description_2 = string
 };
 
-# Define the parser for HL7v2 messages
-parser HL7v2Message = let
-  # Split the input into segments
-  segments: vector[Segment] = split(input, "\r");
+type ORC = record {
+  order_control = string,
+  order_number = string,
+  order_type = string,
+  order_type_external = string,
+  order_status = string,
+  response_flag = string,
+  quantity_timing = string,
+  parent_order = string,
+  entered_by = string,
+  verified_by = string,
+  parent_order_external = string,
+  entered_by_external = string,
+  verified_by_external = string,
+  order_effective_date_time = string,
+  order_control_code_reason = string,
+  order_status_reason = string,
+  to_address = string,
+  business_group_id = string,
+  requested_date_time = string,
+  date_time_of_entry = string,
+  enterer_authorization_mode = string,
+  parent_order_number_external = string
+};
 
-  # Parse the MSH segment
-  msh_segment: Segment = parse_segment(segments[0]);
+type OBR = record {
+  set_id = string,
+  placer_order_number = string,
+  filler_order_number = string,
+  universal_service_identifier = string,
+  universal_service_identifier_external = string,
+  priority = string,
+  requested_date_time = string,
+  observation_date_time = string,
+  observation_end_date_time = string,
+  collection_volume = string,
+  collector_identifier = string,
+  specimen_action_code = string,
+  danger_code = string,
+  relevant_clinical_information = string,
+  specimen_received_date_time = string,
+  specimen_received_date_time_external = string,
+  specimen_source = string,
+  specimen_source_external = string,
+  ordering_facility_name = string,
+  ordering_facility_name_external = string,
+  ordering_facility_address = string,
+  ordering_facility_address_external = string,
+  ordering_facility_phone_number = string,
+  ordering_facility_phone_number_external = string,
+  ordering_facility_contact_person = string,
+  ordering_facility_contact_person_external = string,
+  placer_field_1 = string,
+  placer_field_2 = string,
+  filler_field_1 = string,
+  filler_field_2 = string,
+  order_callback_phone_number = string,
+  order_callback_phone_number_external = string,
+  placer_field_3 = string,
+  filler_field_3 = string,
+  order_effective_date_time = string,
+  order_control_code_reason = string,
+  order_status_reason = string,
+  to_address = string,
+  business_group_id = string,
+  requested_date_time_external = string,
+  date_time_of_entry_external = string,
+  enterer_authorization_mode_external = string,
+  parent_order_number_external = string,
+  parent_order_number_external_2 = string
+};
 
-  # Extract message metadata from the MSH segment
-  msg_type: bytestring = msh_segment.fields[0];
-  trigger_event: bytestring = msh_segment.fields[1];
-  message_control_id: bytestring = msh_segment.fields[2];
-  processing_id: bytestring = msh_segment.fields[3];
-  version_id: bytestring = msh_segment.fields[4];
-  sequence_number: uint32 = uint32(msh_segment.fields[5]);
-  continuation_pointer: bytestring = msh_segment.fields[6];
-  accepting_application: bytestring = msh_segment.fields[7];
-  accepting_facility: bytestring = msh_segment.fields[8];
-  date: bytestring = msh_segment.fields[9];
-  time: bytestring = msh_segment.fields[10];
-  security: bytestring = msh_segment.fields[11];
-  message_profile_id: bytestring = msh_segment.fields[12];
-  accepting_application_facility: bytestring = msh_segment.fields[13];
+type OBX = record {
+  set_id = string,
+  value_type = string,
+  observation_identifier = string,
+  observation_identifier_external = string,
+  observation_sub_id = string,
+  observation_value = string,
+  units = string,
+  units_external = string,
+  references_range = string,
+  abnormal_flags = string,
+  probability = string,
+  nature_of_abnormal_test = string,
+  observation_result_status = string,
+  observation_result_status_external = string,
+  date_last_observation_normal_value = string,
+  user_defined_access_checks = string,
+  date_time_of_observation = string,
+  producer_id = string,
+  responsible_observer = string,
+  observation_method = string,
+  equipment_instance_identifier = string,
+  observation_result_presentation_restriction = string
+};
 
-  result: HL7v2Message = {
-    msg_type = msg_type,
-    trigger_event = trigger_event,
-    message_control_id = message_control_id,
-    processing_id = processing_id,
-    version_id = version_id,
-    sequence_number = sequence_number,
-    continuation_pointer = continuation_pointer,
-    accepting_application = accepting_application,
-    accepting_facility = accepting_facility,
-    date = date,
-    time = time,
-    security = security,
-    message_profile_id = message_profile_id,
-    accepting_application_facility = accepting_application_facility,
-  };
-in result;
+type AL1 = record {
+  set_id = string,
+  allergy_type = string,
+  allergy_type_external = string,
+  allergy_code = string,
+  allergy_code_external = string,
+  allergy_severity = string,
+  allergy_severity_external = string,
+  allergy_reaction = string,
+  allergy_identifier = string
+};
 
-# Define the parser for segments
-parser Segment = let
-  # Split the input into fields
-  fields: vector[bytestring] = split(input, "|");
+type DG1 = record {
+  set_id = string,
+  diagnosis_code = string,
+  diagnosis_code_external = string,
+  diagnosis_description = string,
+  diagnosis_type = string,
+  diagnosis_type_external = string,
+  major_diagnostic_category = string,
+  major_diagnostic_category_external = string,
+  diagnosis_priority = string,
+  admitting_diagnosis = string,
+  admitting_diagnosis_external = string,
+  diagnosis_date = string,
+  diagnosis_date_external = string,
+  diagnosis_datetime = string,
+  diagnosis_datetime_external = string,
+  diagnosis_identifier = string
+};
 
-  # Extract the segment ID
-  segment_id: bytestring = fields[0];
+type DRG = record {
+  drg_code = string,
+  drg_code_external = string,
+  drg_description = string,
+  drg_grouper_review_code = string,
+  drg_grouper_review_code_external = string,
+  outpatient_management = string,
+  outpatient_management_external = string,
+  drg_assigned_date = string,
+  drg_assigned_date_external = string,
+  drg_assigned_datetime = string,
+  drg_assigned_datetime_external = string,
+  drg_identifier = string
+};
 
-  # Extract the remaining fields
-  remaining_fields: vector[bytestring] = fields[1:]
+type GT1 = record {
+  set_id = string,
+  guarantor_number = string,
+  guarantor_name = string,
+  guarantor_spouse_name = string,
+  guarantor_address = string,
+  guarantor_phone_home = string,
+  guarantor_phone_business = string,
+  guarantor_date_of_birth = string,
+  guarantor_sex = string,
+  guarantor_type = string,
+  guarantor_relationship = string,
+  guarantor_identifier = string,
+  guarantor_organization = string,
+  guarantor_billing_address = string,
+  guarantor_phone_contact = string,
+  guarantor_contact_person = string,
+  guarantor_contact_person_title = string,
+  guarantor_contact_person_phone = string,
+  guarantor_contact_person_phone_ext = string
+};
 
-  result: Segment = {
-    segment_id = segment_id,
-    fields = remaining_fields,
-  };
-in result;
+type IN1 = record {
+  set_id = string,
+  insurance_plan_id = string,
+  insurance_company_id = string,
+  insurance_company_name = string,
+  insurance_company_address = string,
+  insurance_company_phone = string,
+  group_number = string,
+  group_name = string,
+  insurance_type = string,
+  insurance_type_external = string,
+  effective_date = string,
+  expiration_date = string,
+  policy_number = string,
+  policy_deductible = string,
+  policy_limit_amount = string,
+  policy_limit_days = string,
+  room_rate_semi_private = string,
+  room_rate_private = string,
+  lifetime_limit = string,
+  stop_loss_limit = string,
+  insurance_amount = string,
+  insurance_percentage = string,
+  policy_type = string,
+  policy_type_external = string,
+  insurance_identifier = string
+};
 
-# Define the parser for fields
-parser Field = let
-  # Split the input into components
-  components: vector[bytestring] = split(input, "^");
+type IN2 = record {
+  insurance_plan_id = string,
+  insurance_company_id = string,
+  insurance_company_name = string,
+  insurance_company_address = string,
+  insurance_company_phone = string,
+  group_number = string,
+  group_name = string,
+  insurance_type = string,
+  insurance_type_external = string,
+  effective_date = string,
+  expiration_date = string,
+  policy_number = string,
+  policy_deductible = string,
+  policy_limit_amount = string,
+  policy_limit_days = string,
+  room_rate_semi_private = string,
+  room_rate_private = string,
+  lifetime_limit = string,
+  stop_loss_limit = string,
+  insurance_amount = string,
+  insurance_percentage = string,
+  policy_type = string,
+  policy_type_external = string,
+  insurance_identifier = string
+};
 
-  # Extract the field ID
-  field_id: bytestring = components[0];
+type NK1 = record {
+  set_id = string,
+  name = string,
+  relationship = string,
+  relationship_external = string,
+  address = string,
+  phone_number = string,
+  business_phone_number = string,
+  contact_person = string,
+  contact_person_title = string,
+  contact_person_phone = string,
+  contact_person_phone_ext = string,
+  next_of_kin_identifier = string,
+  next_of_kin_address = string,
+  next_of_kin_phone = string,
+  next_of_kin_relationship = string,
+  next_of_kin_relationship_external = string
+};
 
-  # Extract the remaining components
-  remaining_components: vector[bytestring] = components[1:]
+type ORG = record {
+  organization_id = string,
+  organization_name = string,
+  organization_address = string,
+  organization_phone = string,
+  organization_contact_person = string,
+  organization_contact_person_title = string,
+  organization_contact_person_phone = string,
+  organization_contact_person_phone_ext = string,
+  organization_identifier = string
+};
 
-  result: Field = {
-    field_id = field_id,
-    components = remaining_components,
-  };
-in result;
+type PDA = record {
+  death_date = string,
+  death_time = string,
+  death_cause_code = string,
+  death_cause_code_external = string,
+  death_cause_text = string,
+  autopsy_status = string,
+  autopsy_status_external = string,
+  autopsy_date = string,
+  autopsy_time = string
+};
 
-# Define the parser for components
-parser Component = let
-  # Split the input into subcomponents
-  subcomponents: vector[bytestring] = split(input, "&");
+type PR1 = record {
+  set_id = string,
+  procedure_code = string,
+  procedure_code_external = string,
+  procedure_description = string,
+  procedure_date = string,
+  procedure_time = string,
+  procedure_type = string,
+  procedure_type_external = string,
+  procedure_priority = string,
+  procedure_status = string,
+  procedure_status_external = string,
+  procedure_identifier = string
+};
 
-  # Extract the component ID
-  component_id: bytestring = subcomponents[0];
+type RXA = record {
+  set_id = string,
+  administration_sub_id_counter = string,
+  administration_type = string,
+  administration_type_external = string,
+  administration_date = string,
+  administration_time = string,
+  administered_amount = string,
+  administered_amount_unit = string,
+  administered_amount_unit_external = string,
+  administration_method = string,
+  administration_method_external = string,
+  administration_site = string,
+  administration_site_external = string,
+  administration_route = string,
+  administration_route_external = string,
+  administration_site_modifier = string,
+  administration_site_modifier_external = string,
+  administration_device = string,
+  administration_device_external = string,
+  administration_amount = string,
+  administration_amount_unit = string,
+  administration_amount_unit_external = string,
+  administration_rate = string,
+  administration_rate_unit = string,
+  administration_rate_unit_external = string,
+  administration_duration = string,
+  administration_duration_unit = string,
+  administration_duration_unit_external = string,
+  administration_identifier = string
+};
 
-  # Extract the remaining subcomponents
-  remaining_subcomponents: vector[bytestring] = subcomponents[1:]
+type RXD = record {
+  set_id = string,
+  dispensation_number = string,
+  dispensation_date = string,
+  dispensation_time = string,
+  medication_code = string,
+  medication_code_external = string,
+  medication_description = string,
+  medication_amount = string,
+  medication_amount_unit = string,
+  medication_amount_unit_external = string,
+  dispensation_amount = string,
+  dispensation_amount_unit = string,
+  dispensation_amount_unit_external = string,
+  dispensation_unit = string,
+  dispensation_unit_external = string,
+  dispensation_type = string,
+  dispensation_type_external = string,
+  dispensation_route = string,
+  dispensation_route_external = string,
+  medication_identifier = string
+};
 
-  result: Component = {
-    component_id = component_id,
-    subcomponents = remaining_subcomponents,
-  };
-in result;
+type RXE = record {
+  set_id = string,
+  medication_ordered = string,
+  medication_ordered_external = string,
+  medication_description = string,
+  medication_amount = string,
+  medication_amount_unit = string,
+  medication_amount_unit_external = string,
+  medication_directions = string,
+  medication_directions_external = string,
+  medication_administration_instructions = string,
+  medication_administration_instructions_external = string,
+  medication_dispense_amount = string,
+  medication_dispense_amount_unit = string,
+  medication_dispense_amount_unit_external = string,
+  medication_dispense_unit = string,
+  medication_dispense_unit_external = string,
+  medication_start_date = string,
+  medication_start_time = string,
+  medication_end_date = string,
+  medication_end_time = string,
+  medication_type = string,
+  medication_type_external = string,
+  medication_route = string,
+  medication_route_external = string,
+  medication_site = string,
+  medication_site_external = string,
+  medication_identifier = string
+};
 
-# Define the parser for subcomponents
-parser Subcomponent = let
-  # Extract the subcomponent ID and value
-  subcomponent_id: bytestring = input[:4];
-  value: bytestring = input[4:];
+type RXG = record {
+  set_id = string,
+  give_sub_id_counter = string,
+  give_type = string,
+  give_type_external = string,
+  give_date = string,
+  give_time = string,
+  give_amount = string,
+  give_amount_unit = string,
+  give_amount_unit_external = string,
+  give_amount_unit_rate = string,
+  give_amount_unit_rate_unit = string,
+  give_amount_unit_rate_unit_external = string,
+  give_rate = string,
+  give_rate_unit = string,
+  give_rate_unit_external = string,
+  give_administration_method = string,
+  give_administration_method_external = string,
+  give_administration_site = string,
+  give_administration_site_external = string,
+  give_administration_route = string,
+  give_administration_route_external = string,
+  give_identifier = string
+};
 
-  result: Subcomponent = {
-    subcomponent_id = subcomponent_id,
-    value = value,
-  };
-in result;
+type RXO = record {
+  set_id = string,
+  requested_give_sub_id_counter = string,
+  requested_give_type = string,
+  requested_give_type_external = string,
+  requested_give_date = string,
+  requested_give_time = string,
+  requested_give_amount = string,
+  requested_give_amount_unit = string,
+  requested_give_amount_unit_external = string,
+  requested_give_amount_unit_rate = string,
+  requested_give_amount_unit_rate_unit = string,
+  requested_give_amount_unit_rate_unit_external = string,
+  requested_give_rate = string,
+  requested_give_rate_unit = string,
+  requested_give_rate_unit_external = string,
+  requested_administration_method = string,
+  requested_administration_method_external = string,
+  requested_administration_site = string,
+  requested_administration_site_external = string,
+  requested_administration_route = string,
+  requested_administration_route_external = string,
+  requested_identifier = string
+};
+
+type RXR = record {
+  set_id = string,
+  route = string,
+  route_external = string,
+  administration_site = string,
+  administration_site_external = string,
+  administration_device = string,
+  administration_device_external = string,
+  administration_method = string,
+  administration_method_external = string,
+  route_identifier = string
+};
+
+type STF = record {
+  set_id = string,
+  staff_id = string,
+  staff_type = string,
+  staff_type_external = string,
+  staff_name = string,
+  staff_address = string,
+  staff_phone = string,
+  staff_phone_ext = string,
+  staff_identifier = string
+};
+
+type HL7 = record {
+  msh = MSH;
+  evn = EVN;
+  pid = PID;
+  pv1 = PV1;
+  pv2 = PV2;
+  orc = ORC;
+  obr = OBR;
+  obx = OBX;
+  al1 = AL1;
+  dg1 = DG1;
+  drg = DRG;
+  gt1 = GT1;
+  in1 = IN1;
+  in2 = IN2;
+  nk1 = NK1;
+  org = ORG;
+  pda = PDA;
+  pr1 = PR1;
+  rxa = RXA;
+  rxd = RXD;
+  rxe = RXE;
+  rxg = RXG;
+  rxo = RXO;
+  rxr = RXR;
+  stf = STF
+};

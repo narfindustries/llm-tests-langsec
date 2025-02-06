@@ -1,170 +1,191 @@
-meta:
-  id: nitf
-  file-extension: nitf
-  endianness: be
-  byte-order-mark: 'NITF'
 seq:
-  - id: header
-    type: header
+  - id: file_header
+    type: file_header
+  - id: file_security
+    type: file_security
+  - id: file_header_extensions
+    type: file_header_extension
+    repeat: eos
   - id: image_segments
     type: image_segment
-    repeat: expr
-    repeat-expr: header.num_image_segments
-  - id: graphics_segments
-    type: graph_segment
-    repeat: expr
-    repeat-expr: header.num_graphic_segments
+    repeat: eos
+  - id: graphic_segments
+    type: graphic_segment
+    repeat: eos
   - id: text_segments
     type: text_segment
-    repeat: expr
-    repeat-expr: header.num_text_segments
-  - id: data_extension_segments
-    type: data_extension_segment
-    repeat: expr
-    repeat-expr: header.num_data_extension_segments
-  - id: reserved_extension_segments
-    type: reserved_extension_segment
-    repeat: expr
-    repeat-expr: header.num_reserved_extension_segments
+    repeat: eos
+  - id: file_trailer
+    type: file_trailer
 
 types:
-  header:
+  file_header:
     seq:
-      - id: file_header
-        content: 'NITF'
-      - id: file_version
+      - id: file_header_type
+        size: 4
+      - id: file_format_version
         size: 5
-      - id: type
-        size: 1
+      - id: system_name
+        size: 25
+      - id: file_name
+        size: 24
+      - id: file_time
+        size: 14
       - id: file_security_classification
         size: 1
-      - id: file_control_number
-        size: 25
-      - id: file_date
-        size: 14
+        enum: security_classification
       - id: file_title
         size: 80
-      - id: file_security_classification_o
-        size: 1
-      - id: file_downgrade
-        size: 1
-      - id: file_downgrade_date
-        size: 8
-      - id: file_downgrade_title
-        size: 43
-      - id: file_file_name
-        size: 24
-      - id: file_file_name_o
-        size: 5
-      - id: num_image_segments
-        type: u4
-      - id: num_graphic_segments
-        type: u4
-      - id: num_text_segments
-        type: u4
-      - id: num_data_extension_segments
-        type: u4
-      - id: num_reserved_extension_segments
-        type: u4
-      - id: originator_name
-        size: 25
-      - id: originator_phone
+      - id: file_security_classification_system
+        size: 11
+      - id: codewords
+        size: 15
+      - id: control_and_handling
+        size: 15
+      - id: releaseability
         size: 20
-      - id: file_length_bytes
-        type: u6
+      - id: file_description
+        size: 80
+      - id: file_extended_section_length
+        size: 5
+
+  file_security:
+    seq:
+      - id: security_classification
+        size: 1
+        enum: security_classification
+      - id: security_classification_system
+        size: 11
+      - id: codewords
+        size: 15
+      - id: control_and_handling
+        size: 15
+      - id: releaseability
+        size: 20
+      - id: file_description
+        size: 80
+
+  file_header_extension:
+    seq:
+      - id: extension_type
+        size: 3
+      - id: extension_version
+        size: 5
+      - id: extension_data
+        size: file_header.file_extended_section_length
+        process: x => x.trim(0)
 
   image_segment:
     seq:
-      - id: image_segment_header
-        content: 'IM'
+      - id: image_header
+        type: image_header
+      - id: image_data
+        type: image_data
+
+  image_header:
+    seq:
       - id: image_id
         size: 25
-      - id: image_date
+      - id: image_date_and_time
         size: 14
       - id: image_security_classification
         size: 1
-      - id: image_control_number
-        size: 20
-      - id: image_numericcapturedate
+        enum: security_classification
+      - id: image_representation
+        size: 4
+      - id: image_compression
+        size: 4
+      - id: image_data_type
+        size: 3
+      - id: image_data_format
+        size: 4
+      - id: image_dimensions
+        size: 12
+      - id: image_offset
         size: 8
-      - id: image_numpix
-        type: u4
-      - id: image_numlin
-        type: u4
-      - id: image_lut
-        type: image_lut
 
-  graph_segment:
+  image_data:
     seq:
-      - id: graph_segment_header
-        content: 'DE'
-      - id: graph_id
+      - id: image_data_field
+        size: image_header.image_dimensions
+        process: x => x.trim(0)
+
+  graphic_segment:
+    seq:
+      - id: graphic_header
+        type: graphic_header
+      - id: graphic_data
+        type: graphic_data
+
+  graphic_header:
+    seq:
+      - id: graphic_id
         size: 25
-      - id: graph_date
+      - id: graphic_date_and_time
         size: 14
-      - id: graph_security_classification
+      - id: graphic_security_classification
         size: 1
-      - id: graph_control_number
-        size: 20
-      - id: graph_numericcapturedate
+        enum: security_classification
+      - id: graphic_type
+        size: 6
+      - id: graphic_data_type
+        size: 3
+      - id: graphic_data_format
+        size: 4
+      - id: graphic_dimensions
+        size: 12
+      - id: graphic_offset
         size: 8
-      - id: graph_symbology_standard
-        size: 2
+
+  graphic_data:
+    seq:
+      - id: graphic_data_field
+        size: graphic_header.graphic_dimensions
+        process: x => x.trim(0)
 
   text_segment:
     seq:
-      - id: text_segment_header
-        content: 'TE'
+      - id: text_header
+        type: text_header
+      - id: text_data
+        type: text_data
+
+  text_header:
+    seq:
       - id: text_id
         size: 25
-      - id: text_date
+      - id: text_date_and_time
         size: 14
       - id: text_security_classification
         size: 1
-      - id: text_control_number
-        size: 20
-      - id: text_numericcapturedate
+        enum: security_classification
+      - id: text_type
+        size: 4
+      - id: text_data_type
+        size: 3
+      - id: text_data_format
+        size: 4
+      - id: text_dimensions
+        size: 12
+      - id: text_offset
         size: 8
-      - id: text_text_data
-        type: text_data
 
-  data_extension_segment:
+  text_data:
     seq:
-      - id: data_extension_segment_header
-        content: 'DE'
-      - id: data_extension_id
-        size: 25
-      - id: data_extension_date
-        size: 14
-      - id: data_extension_security_classification
-        size: 1
-      - id: data_extension_control_number
-        size: 20
-      - id: data_extension_numericcapturedate
-        size: 8
-      - id: data_extension_description
-        size: 25
+      - id: text_data_field
+        size: text_header.text_dimensions
+        process: x => x.trim(0)
 
-  reserved_extension_segment:
+  file_trailer:
     seq:
-      - id: reserved_extension_segment_header
-        content: 'RE'
-      - id: reserved_extension_id
-        size: 25
-      - id: reserved_extension_date
-        size: 14
-      - id: reserved_extension_security_classification
-        size: 1
-      - id: reserved_extension_control_number
-        size: 20
-      - id: reserved_extension_numericcapturedate
-        size: 8
-      - id: reserved_extension_description
-        size: 25
+      - id: file_trailer_type
+        size: 4
+      - id: file_format_version
+        size: 5
 
-  image_lut:
-    seq:
-      - id: lut
-        type: u1
-        repeat: expr
-        repeat-expr: 256
+enums:
+  security_classification:
+    - U: 85
+    - C: 67
+    - S: 83
+    - TS: 84

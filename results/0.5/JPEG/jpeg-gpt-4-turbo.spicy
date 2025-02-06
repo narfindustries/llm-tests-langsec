@@ -1,11 +1,89 @@
 module JPEG;
 
-public type Segment = unit {
-    marker: uint16;
-    len:    uint16 if (self.marker & 0xFF00) == 0xFF00 && self.marker != 0xFFD9;
-    data:   bytes &size=self.len-2 if self.len > 2;
+import spicy;
+
+type Marker = enum {
+    SOI = 0xD8,
+    EOI = 0xD9,
+    SOF0 = 0xC0,
+    SOF2 = 0xC2,
+    DHT = 0xC4,
+    DQT = 0xDB,
+    DRI = 0xDD,
+    SOS = 0xDA,
+    APP0 = 0xE0,
+    APP1 = 0xE1,
+    APP2 = 0xE2,
+    APP3 = 0xE3,
+    APP4 = 0xE4,
+    APP5 = 0xE5,
+    APP6 = 0xE6,
+    APP7 = 0xE7,
+    APP8 = 0xE8,
+    APP9 = 0xE9,
+    APP10 = 0xEA,
+    APP11 = 0xEB,
+    APP12 = 0xEC,
+    APP13 = 0xED,
+    APP14 = 0xEE,
+    APP15 = 0xEF,
+    COM = 0xFE
 };
 
-public type File = unit {
-    segments: Segment[] &until($$.marker == 0xFFD9);
+type FrameComponent = unit {
+    id: uint8;
+    samplingFactors: uint8;
+    quantTableID: uint8;
+};
+
+type StartOfFrame = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    numComponents: uint8;
+    components: FrameComponent[] &size=numComponents;
+};
+
+type QuantizationTable = unit {
+    precisionAndID: uint8;
+    values: uint8[64];
+};
+
+type HuffmanTable = unit {
+    classAndID: uint8;
+    lengths: uint8[16];
+    values: bytes &eod;
+};
+
+type StartOfScan = unit {
+    numComponents: uint8;
+    components: FrameComponent[] &size=numComponents;
+    spectralStart: uint8;
+    spectralEnd: uint8;
+    approximation: uint8;
+};
+
+type Segment = unit {
+    marker: uint16;
+    length: uint16;
+    data: bytes &size=(self.length - 2) &parse=parseSegmentData(self.marker);
+};
+
+public function parseSegmentData(marker: uint16) : spicy::Unit {
+    switch (marker) {
+        case Marker::SOF0, Marker::SOF2: return StartOfFrame;
+        case Marker::DQT: return QuantizationTable;
+        case Marker::DHT: return HuffmanTable;
+        case Marker::SOS: return StartOfScan;
+        case Marker::DRI: return uint16;
+        case Marker::COM, Marker::APP0, Marker::APP1, Marker::APP2, Marker::APP3,
+             Marker::APP4, Marker::APP5, Marker::APP6, Marker::APP7, Marker::APP8,
+             Marker::APP9, Marker::APP10, Marker::APP11, Marker::APP12, Marker::APP13,
+             Marker::APP14, Marker::APP15: return bytes;
+        default: return bytes;
+    }
+};
+
+type JPEGFile = unit {
+    segments: Segment[] &until($element.marker == Marker::EOI);
 };

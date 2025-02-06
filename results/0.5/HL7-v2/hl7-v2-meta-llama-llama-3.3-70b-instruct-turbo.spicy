@@ -1,172 +1,132 @@
-# Define the HL7 message structure
-type HL7_Message = record {
-  msg_type: bytestring(3);
-  encoding_chars: bytestring(4);
-  sending_facility: bytestring(3);
-  sending_app: bytestring(3);
-  receiving_facility: bytestring(3);
-  receiving_app: bytestring(3);
-  msg_date: bytestring(8);
-  msg_time: bytestring(6);
-  seq_num: bytestring(6);
-  continuity_ptr: bytestring;
-  segment: +Segment;
+module HL7_v2;
+
+type Byte = uint8;
+type UInt16 = uint16;
+type UInt32 = uint32;
+type UInt64 = uint64;
+type Int16 = int16;
+type Int32 = int32;
+type Int64 = int64;
+type String = bytestring;
+
+type MSH = record {
+  field_separator: Byte,
+  encoding_chars: String(4),
+  sending_app: String(20),
+  sending_fac: String(20),
+  receiving_app: String(20),
+  receiving_fac: String(20),
+  date_time: String(14),
+  security: String(40),
+  msg_type: String(10),
+  msg_ctrl_id: String(20),
+  proc_id: String(3),
+  version_id: String(10),
+  seq_num: UInt16,
+  cont_ptr: String(180),
+  accept_ack_type: String(2),
+  app_ack_type: String(2),
+  country_code: String(3),
+  char_set: String(30),
+  princ_lang: String(30)
 };
 
-# Define the Segment structure
-type Segment = record {
-  seg_id: bytestring(3);
-  fields: +Field;
+type PID = record {
+  set_id: UInt16,
+  patient_id: String(20),
+  patient_id_type: String(20),
+  alt_patient_id: String(20),
+  patient_name: String(250),
+  mother_maiden_name: String(50),
+  date_of_birth: String(8),
+  sex: String(1),
+  patient_alias: String(250),
+  race: String(30),
+  patient_addr: String(250),
+  county_code: String(30),
+  phone_num_home: String(20),
+  phone_num_business: String(20),
+  primary_lang: String(30),
+  marital_status: String(1),
+  religion: String(30),
+  patient_acct_num: String(20),
+  ssn_num: String(20),
+  dl_num: String(20),
+  mother_id: String(20),
+  ethnic_grp: String(30),
+  birth_place: String(50),
+  mult_birth_ind: String(1),
+  birth_order: UInt16,
+  citizenship: String(30),
+  vet_mil_status: String(30),
+  nationality: String(30),
+  patient_death_date: String(8),
+  death_ind: String(1)
 };
 
-# Define the Field structure
-type Field = record {
-  field_num: int;
-  repetition: int;
-  component: +Component;
+type PV1 = record {
+  set_id: UInt16,
+  visit_num: String(20),
+  patient_class: String(1),
+  visit_num_unique: String(20),
+  financial_class: String(30),
+  pre_admit_num: String(20),
+  prior_patient_loc: String(30),
+  admitting_doc: String(50),
+  referring_doc: String(50),
+  consulting_doc: String(50),
+  hospital_service: String(30),
+  specialty: String(30),
+  admitting_time: String(14),
+  discharge_disposition: String(2),
+  discharged_to_loc: String(30),
+  diet_type: String(30),
+  servicing_fac: String(30),
+  bed_status: String(30),
+  visit_priority_code: String(2),
+  prev_service_date: String(8),
+  expected_admit_date: String(8),
+  expected_discharge_date: String(8),
+  visit_num_other: String(20),
+  visit_priority_code_other: String(2),
+  prev_visit_num: String(20),
+  visit_indicator: String(1),
+  other_healthcare_prov: String(50),
+  visit_account_num: String(20),
+  admit_source: String(30),
+  ambulatory_status: String(30),
+  visit_type: String(30),
+  visit_stop_date_time: String(14),
+  visit_start_date_time: String(14),
+  visit_end_date_time: String(14),
+  discharge_date_time: String(14),
+  discharge_disposition_code: String(2),
+  discharged_to_loc_code: String(30),
+  diet_type_code: String(30),
+  servicing_fac_code: String(30),
+  bed_status_code: String(30),
+  visit_priority_code_other2: String(2),
+  prev_service_date_other: String(8),
+  expected_admit_date_other: String(8),
+  expected_discharge_date_other: String(8),
+  visit_num_other2: String(20),
+  visit_indicator_other: String(1),
+  other_healthcare_prov_other: String(50),
+  visit_account_num_other: String(20),
+  admit_source_other: String(30),
+  ambulatory_status_other: String(30)
 };
 
-# Define the Component structure
-type Component = record {
-  component_num: int;
-  subcomponent: +Subcomponent;
+type HL7 = record {
+  msh: MSH,
+  pid: PID,
+  pv1: PV1
 };
 
-# Define the Subcomponent structure
-type Subcomponent = record {
-  subcomponent_num: int;
-  data: bytestring;
-};
+@ek
+state hl7: HL7;
 
-# Define the encoding characters
-const encoding_chars: bytestring = "|^~\&";
-
-# Define the segment terminator
-const segment_terminator: bytestring = "\r";
-
-# Define the field separator
-const field_separator: bytestring = "|";
-
-# Define the component separator
-const component_separator: bytestring = "^";
-
-# Define the repetition separator
-const repetition_separator: bytestring = "~";
-
-# Define the escape character
-const escape_char: bytestring = "\&";
-
-# Define the HL7 message parser
-parser HL7_Parse(msg: bytestring): HL7_Message = {
-  # Parse the message type
-  msg_type := msg[0..2];
-
-  # Parse the encoding characters
-  encoding_chars := msg[3..6];
-
-  # Parse the sending facility
-  sending_facility := msg[7..9];
-
-  # Parse the sending application
-  sending_app := msg[10..12];
-
-  # Parse the receiving facility
-  receiving_facility := msg[13..15];
-
-  # Parse the receiving application
-  receiving_app := msg[16..18];
-
-  # Parse the message date
-  msg_date := msg[19..26];
-
-  # Parse the message time
-  msg_time := msg[27..32];
-
-  # Parse the sequence number
-  seq_num := msg[33..38];
-
-  # Parse the continuity pointer
-  continuity_ptr := msg[39..];
-
-  # Parse the segments
-  segment := +parse_segment(msg[40..]);
-
-  # Return the parsed HL7 message
-  return {
-    msg_type: msg_type,
-    encoding_chars: encoding_chars,
-    sending_facility: sending_facility,
-    sending_app: sending_app,
-    receiving_facility: receiving_facility,
-    receiving_app: receiving_app,
-    msg_date: msg_date,
-    msg_time: msg_time,
-    seq_num: seq_num,
-    continuity_ptr: continuity_ptr,
-    segment: segment,
-  };
-};
-
-# Define the segment parser
-parser parse_segment(seg: bytestring): Segment = {
-  # Parse the segment ID
-  seg_id := seg[0..2];
-
-  # Parse the fields
-  fields := +parse_field(seg[3..]);
-
-  # Return the parsed segment
-  return {
-    seg_id: seg_id,
-    fields: fields,
-  };
-};
-
-# Define the field parser
-parser parse_field(field: bytestring): Field = {
-  # Parse the field number
-  field_num := int(field[0]);
-
-  # Parse the repetition
-  repetition := int(field[1]);
-
-  # Parse the components
-  component := +parse_component(field[2..]);
-
-  # Return the parsed field
-  return {
-    field_num: field_num,
-    repetition: repetition,
-    component: component,
-  };
-};
-
-# Define the component parser
-parser parse_component(comp: bytestring): Component = {
-  # Parse the component number
-  component_num := int(comp[0]);
-
-  # Parse the subcomponents
-  subcomponent := +parse_subcomponent(comp[1..]);
-
-  # Return the parsed component
-  return {
-    component_num: component_num,
-    subcomponent: subcomponent,
-  };
-};
-
-# Define the subcomponent parser
-parser parse_subcomponent(subcomp: bytestring): Subcomponent = {
-  # Parse the subcomponent number
-  subcomponent_num := int(subcomp[0]);
-
-  # Parse the data
-  data := subcomp[1..];
-
-  # Return the parsed subcomponent
-  return {
-    subcomponent_num: subcomponent_num,
-    data: data,
-  };
-};
+event hl7_init()
+  {
+  hl7 = HL7($msh=MSH(), $pid=PID(), $pv1=PV1());
+  }

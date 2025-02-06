@@ -1,76 +1,65 @@
-module GIF.GifGemini1 where
-
-import Daedalus.Type.AST
-
-data GifImage = GifImage {
-  width :: Integer,
-  height :: Integer,
-  globalPalette :: Maybe (PaletteEntry Integer),
-  images :: [Image]
+data GIF = GIF {
+  signature :: String "GIF89a",
+  lsd :: LogicalScreenDescriptor,
+  gct :: Maybe (Array (ColorEntry)),
+  extensions :: [Extension],
+  images :: [ImageData],
+  trailer :: Byte 0x3B
 }
 
-data Image = Image {
-  left :: Integer,
-  top :: Integer,
-  width :: Integer,
-  height :: Integer,
-  localPalette :: Maybe (PaletteEntry Integer),
-  interlace :: Bool,
-  lzwMinCodeSize :: Integer,
-  imageData :: [Integer]
+data LogicalScreenDescriptor = LogicalScreenDescriptor {
+  width :: Word16,
+  height :: Word16,
+  packedFields :: PackedFields,
+  backgroundColorIndex :: Byte,
+  pixelAspectRatio :: Byte
 }
 
-data PaletteEntry a = PaletteEntry {
-  red :: a,
-  green :: a,
-  blue :: a
+data PackedFields = PackedFields {
+  globalColorTableFlag :: Bit,
+  colorResolution :: Bits 3,
+  sortFlag :: Bit,
+  sizeOfGlobalColorTable :: Bits 3
 }
 
-instance Semigroup (PaletteEntry a) where
-  (PaletteEntry r1 g1 b1) <> (PaletteEntry r2 g2 b2) = PaletteEntry (r1 <> r2) (g1 <> g2) (b1 <> b2)
+data ColorEntry = ColorEntry {
+  red :: Byte,
+  green :: Byte,
+  blue :: Byte
+}
 
-instance Monoid (PaletteEntry a) where
-  mempty = PaletteEntry 0 0 0
+data ImageData = ImageData {
+  imageSeparator :: Byte 0x2C,
+  imageDescriptor :: ImageDescriptor,
+  lct :: Maybe (Array (ColorEntry)),
+  imageData :: [Byte]
+}
 
--- Helper functions (add more as needed)
-readInteger :: forall a. (Monad m, Read a) => m a
-readInteger = read <$> getLine
+data ImageDescriptor = ImageDescriptor {
+  imageLeftPosition :: Word16,
+  imageTopPosition :: Word16,
+  imageWidth :: Word16,
+  imageHeight :: Word16,
+  packedFields :: ImagePackedFields
+}
 
-readPaletteEntry :: forall m a. (Monad m, Read a) => m (PaletteEntry a)
-readPaletteEntry = do
-  r <- readInteger
-  g <- readInteger
-  b <- readInteger
-  return $ PaletteEntry r g b
+data ImagePackedFields = ImagePackedFields {
+  localColorTableFlag :: Bit,
+  interlaceFlag :: Bit,
+  sortFlag :: Bit,
+  sizeOfLocalColorTable :: Bits 3
+}
 
-readGifImage :: forall m. Monad m => m GifImage
-readGifImage = do
-  width <- readInteger
-  height <- readInteger
-  globalPaletteMaybe <- (Just <$> readPaletteEntry) <|> pure Nothing
-  numImages <- readInteger
-  images <- replicateM numImages readImage
-  return $ GifImage width height globalPaletteMaybe images
+data Extension = Extension {
+  extensionLabel :: Byte,
+  extensionData :: [Byte]
+}
 
-readImage :: forall m. Monad m => m Image
-readImage = do
-  left <- readInteger
-  top <- readInteger
-  width <- readInteger
-  height <- readInteger
-  localPaletteMaybe <- (Just <$> readPaletteEntry) <|> pure Nothing
-  interlace <- readBool
-  lzwMinCodeSize <- readInteger
-  imageDataLen <- readInteger
-  imageData <- replicateM imageDataLen readInteger
-  return $ Image left top width height localPaletteMaybe interlace lzwMinCodeSize imageData
 
-readBool :: forall m. Monad m => m Bool
-readBool = do
-  i <- readInteger
-  return (i /= 0)
+type Byte = Word8
+type Bit = Word8
+type Bits n = Word8
+type Word16 = Word16
+type Word32 = Word32
+type Array a = [a]
 
-main :: forall m. Monad m => m ()
-main = do
-  gif <- readGifImage
-  putStrLn $ show gif

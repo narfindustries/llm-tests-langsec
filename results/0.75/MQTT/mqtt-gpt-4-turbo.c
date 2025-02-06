@@ -1,95 +1,114 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-static HParser *mqtt_control_packet;
-static HParser *mqtt_string;
-static HParser *mqtt_variable_byte_integer;
-static HParser *mqtt_payload;
-static HParser *mqtt_connect_packet;
-static HParser *mqtt_connack_packet;
-static HParser *mqtt_publish_packet;
-static HParser *mqtt_subscribe_packet;
-static HParser *mqtt_suback_packet;
-static HParser *mqtt_unsubscribe_packet;
-static HParser *mqtt_unsuback_packet;
-static HParser *mqtt_pingreq_packet;
-static HParser *mqtt_pingresp_packet;
-static HParser *mqtt_disconnect_packet;
-
-static void init_mqtt_parser() {
-    H_RULE(uint8, h_uint8());
-    H_RULE(uint16, h_uint16());
-
-    mqtt_string = h_length_value(h_bits(16, false), h_uint8());
-
-    mqtt_variable_byte_integer = h_length_value(h_bits(8, false), h_uint8());
-
-    // MQTT Control Packet Types
-    mqtt_connect_packet = h_sequence(
-        mqtt_string, // Protocol Name
-        h_uint8(),   // Protocol Level
-        h_uint8(),   // Connect Flags
-        h_uint16(),  // Keep Alive
-        mqtt_payload, // Client Identifier, Will Topic, Will Message, Username, Password
-        NULL);
-
-    mqtt_connack_packet = h_sequence(
-        h_uint8(), // Acknowledge Flags
-        h_uint8(), // Return Code
-        NULL);
-
-    mqtt_publish_packet = h_sequence(
-        mqtt_string, // Topic Name
-        h_optional(h_uint16()), // Packet Identifier
-        mqtt_payload, // Message
-        NULL);
-
-    mqtt_subscribe_packet = h_sequence(
-        h_uint16(), // Packet Identifier
-        h_many1(h_sequence(mqtt_string, h_uint8())), // Topic Filters and QoS
-        NULL);
-
-    mqtt_suback_packet = h_sequence(
-        h_uint16(), // Packet Identifier
-        h_many1(h_uint8()), // Return Codes
-        NULL);
-
-    mqtt_unsubscribe_packet = h_sequence(
-        h_uint16(), // Packet Identifier
-        h_many1(mqtt_string), // Topic Filters
-        NULL);
-
-    mqtt_unsuback_packet = h_sequence(
-        h_uint16(), // Packet Identifier
-        NULL);
-
-    mqtt_pingreq_packet = h_empty();   // PINGREQ has no variable header or payload
-    mqtt_pingresp_packet = h_empty();  // PINGRESP has no variable header or payload
-    mqtt_disconnect_packet = h_empty(); // DISCONNECT has no variable header or payload
-
-    mqtt_control_packet = h_choice(
-        h_sequence(h_int_range(h_uint8(), 0x10, 0x10), mqtt_connect_packet),
-        h_sequence(h_int_range(h_uint8(), 0x20, 0x20), mqtt_connack_packet),
-        h_sequence(h_int_range(h_uint8(), 0x30, 0x30), mqtt_publish_packet),
-        h_sequence(h_int_range(h_uint8(), 0x80, 0x80), mqtt_subscribe_packet),
-        h_sequence(h_int_range(h_uint8(), 0x90, 0x90), mqtt_suback_packet),
-        h_sequence(h_int_range(h_uint8(), 0xA0, 0xA0), mqtt_unsubscribe_packet),
-        h_sequence(h_int_range(h_uint8(), 0xB0, 0xB0), mqtt_unsuback_packet),
-        h_sequence(h_int_range(h_uint8(), 0xC0, 0xC0), mqtt_pingreq_packet),
-        h_sequence(h_int_range(h_uint8(), 0xD0, 0xD0), mqtt_pingresp_packet),
-        h_sequence(h_int_range(h_uint8(), 0xE0, 0xE0), mqtt_disconnect_packet),
-        NULL);
+// Parser for a single byte
+HParser* uint8() {
+    return h_uint8();
 }
 
-int main(int argc, char *argv[]) {
-    init_mqtt_parser();
-    HParseResult *result = h_parse(mqtt_control_packet, (const uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
-        return 0;
-    } else {
-        fprintf(stderr, "Failed to parse MQTT data.\n");
+// Parser for two bytes interpreted as uint16
+HParser* uint16() {
+    return h_bits(16, false);
+}
+
+// Parser for four bytes interpreted as uint32
+HParser* uint32() {
+    return h_bits(32, false);
+}
+
+// Parser for UTF-8 encoded strings prefixed with length
+HParser* mqtt_string() {
+    return h_length_value(uint16(), h_uint8());
+}
+
+// Parser for Variable Byte Integer (used in Remaining Length field)
+HParser* var_byte_int() {
+    return h_many1(h_uint8());
+}
+
+// Parser for MQTT Properties
+HParser* mqtt_properties() {
+    return h_length_value(var_byte_int(), h_uint8()); // Simplified for example
+}
+
+// MQTT Control Packet Types
+HParser* connect_packet() {
+    HParser* protocol_name = mqtt_string();
+    HParser* protocol_level = uint8();
+    HParser* connect_flags = uint8();
+    HParser* keep_alive = uint16();
+    HParser* properties = mqtt_properties();
+    HParser* client_id = mqtt_string();
+    HParser* will_properties = mqtt_properties();
+    HParser* will_topic = mqtt_string();
+    HParser* will_payload = mqtt_string();
+    HParser* username = mqtt_string();
+    HParser* password = mqtt_string();
+
+    return h_sequence(protocol_name, protocol_level, connect_flags, keep_alive, properties, client_id, will_properties, will_topic, will_payload, username, password, NULL);
+}
+
+HParser* connack_packet() {
+    HParser* ack_flags = uint8();
+    HParser* reason_code = uint8();
+    HParser* properties = mqtt_properties();
+
+    return h_sequence(ack_flags, reason_code, properties, NULL);
+}
+
+HParser* publish_packet() {
+    HParser* topic_name = mqtt_string();
+    HParser* packet_id = uint16();
+    HParser* properties = mqtt_properties();
+    HParser* payload = h_many(h_uint8());
+
+    return h_sequence(topic_name, packet_id, properties, payload, NULL);
+}
+
+// Main function to parse input file based on MQTT specification
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <mqtt_binary_file>\n", argv[0]);
         return 1;
     }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Seek to the end of the file to determine the size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    // Read the entire file into memory
+    unsigned char *data = malloc(file_size);
+    if (fread(data, 1, file_size, file) != (size_t)file_size) {
+        fprintf(stderr, "Failed to read the file\n");
+        fclose(file);
+        free(data);
+        return 1;
+    }
+    fclose(file);
+
+    // Choose the correct parser based on your application (assuming CONNECT for demonstration)
+    HParser* mqtt_parser = connect_packet();
+
+    HParseResult *result = h_parse(mqtt_parser, data, file_size);
+    if (result) {
+        printf("Parse successful!\n");
+        // Here you would ideally pretty-print or process the parse result
+    } else {
+        printf("Parse failed!\n");
+    }
+
+    // Cleanup
+    h_parse_result_free(result);
+    free(data);
+    h_free_parser(mqtt_parser);
+
+    return 0;
 }

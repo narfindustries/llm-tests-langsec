@@ -1,53 +1,49 @@
-meta:
-  id: gzip-gemini-1
-  endian: be
-
+type: seq
+endian: be
 seq:
-  - id: magic
-    type: u4
+  - id: id1
+    type: u1
     enum:
-      0x1f8b08: gzip
+      0x1f: id1
+  - id: id2
+    type: u1
+    enum:
+      0x8b: id2
   - id: cm
-    type: u2
+    type: u1
     enum:
-      8: deflate
+      0x08: deflate
   - id: flg
-    type: u2
+    type: u1
   - id: mtime
-    type: u4
+    type: u4le
   - id: xfl
     type: u1
   - id: os
     type: u1
+  - id: xlen
+    type: u2le
+    if: (flg & 0x04) != 0
   - id: extra
     type: bytes
-    repeat: expr
-    expr: (flg & 0x4) != 0 ? this.xlen : 0
-  - id: xlen:
-    type: u2
-    if: (flg & 0x4) != 0
+    size: xlen
+    if: (flg & 0x04) != 0
   - id: fname
     type: str
-    size: expr
-    expr: (flg & 0x8) != 0 ? this.fname_len : 0
-    encoding: utf-8
-  - id: fname_len:
-    type: u1
-    if: (flg & 0x8) != 0
+    encoding: UTF-8
+    term: 0
+    if: (flg & 0x08) != 0
   - id: fcomment
     type: str
-    size: expr
-    expr: (flg & 0x10) != 0 ? this.fcomment_len : 0
-    encoding: utf-8
-  - id: fcomment_len:
-    type: u1
+    encoding: UTF-8
+    term: 0
     if: (flg & 0x10) != 0
   - id: crc16
-    type: u2
-    if: (flg & 0x2) != 0
+    type: u2le
+    if: (flg & 0x02) != 0
   - id: compressed_data
     type: bytes
-    repeat: expr
-    expr: this.isize > 0 ? this.isize : 0
+  - id: crc32
+    type: u4le
   - id: isize
-    type: u4
+    type: u4le

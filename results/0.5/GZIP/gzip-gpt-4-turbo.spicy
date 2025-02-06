@@ -1,6 +1,6 @@
 module GZIP;
 
-public type GzipHeader = unit {
+public type GZIPHeader = unit {
     id1: uint8;
     id2: uint8;
     cm: uint8;
@@ -8,21 +8,20 @@ public type GzipHeader = unit {
     mtime: uint32;
     xfl: uint8;
     os: uint8;
-
-    on %init {
-        if ( self.id1 != 0x1f || self.id2 != 0x8b ) {
-            throw Error("Not a valid GZIP header");
-        }
-    }
+    extra: optional<Extras> &requires=((self.flg & 0x04) != 0);
+    fname: optional<bytes> &requires=((self.flg & 0x08) != 0) &until=($$ == 0);
+    fcomment: optional<bytes> &requires=((self.flg & 0x10) != 0) &until=($$ == 0);
+    fhcrc: optional<uint16> &requires=((self.flg & 0x02) != 0);
 };
 
-public type GzipFooter = unit {
+type Extras = unit {
+    xlen: uint16;
+    xdata: bytes &size=xlen;
+};
+
+public type GZIPFile = unit {
+    header: GZIPHeader;
+    compressed_data: bytes &eod;
     crc32: uint32;
-    input_size: uint32;
-};
-
-public type GzipFile = unit {
-    header: GzipHeader;
-    data: bytes &size=self.header.input_size;
-    footer: GzipFooter;
+    isize: uint32;
 };

@@ -1,56 +1,93 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/nitf"
-           xmlns:tns="http://example.com/nitf">
+           targetNamespace="http://www.example.org/nitf"
+           xmlns:tns="http://www.example.org/nitf">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:generalFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+  <!-- Define simple types for field restrictions -->
+  <xs:simpleType name="DateTime">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\d{14}"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="FileHeader">
-    <xs:sequence>
-      <xs:element name="fileProfileName" type="xs:string" dfdl:length="4"/>
-      <xs:element name="fileVersion" type="xs:string" dfdl:length="5"/>
-      <xs:element name="complexityLevel" type="xs:string" dfdl:length="2"/>
-      <xs:element name="standardType" type="xs:string" dfdl:length="4"/>
-      <xs:element name="originatingStationID" type="xs:string" dfdl:length="10"/>
-      <xs:element name="dateTime" type="xs:string" dfdl:length="14"/>
-      <xs:element name="fileTitle" type="xs:string" dfdl:length="80"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="SecurityClassification">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="S"/>
+      <xs:enumeration value="TS"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="ImageSegment">
-    <xs:sequence>
-      <xs:element name="imageID" type="xs:string" dfdl:length="10"/>
-      <xs:element name="dateTime" type="xs:string" dfdl:length="14"/>
-      <xs:element name="targetID" type="xs:string" dfdl:length="17"/>
-      <xs:element name="imageTitle" type="xs:string" dfdl:length="80"/>
-    </xs:sequence>
-  </xs:complexType>
-
+  <!-- NITF File Header -->
   <xs:element name="NITF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="fileHeader" type="tns:FileHeader"/>
-        <xs:element name="imageSegments" type="tns:ImageSegment" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="FHDR" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="9"/>
+        <xs:element name="CLEVEL" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="STYPE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="OSTAID" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+        <xs:element name="FDT" type="tns:DateTime" dfdl:lengthKind="explicit" dfdl:length="14"/>
+        <xs:element name="FTITLE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="80"/>
+        <xs:element name="FSCLAS" type="tns:SecurityClassification" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="FSCLSY" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSCODE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="11" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSCTLH" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSREL" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSDCTP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSDCDT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSDCXM" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSORGN" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="27" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSCAUT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="40" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSCTLN" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="15" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="FSCOP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="5"/>
+        <xs:element name="FSCPYS" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="5"/>
+        <xs:element name="ENCRYP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="FBKGC" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="3"/>
+        <xs:element name="ONAME" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="27"/>
+        <xs:element name="OPHONE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="18"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="generalFormat">
+  <!-- Image Segments -->
+  <xs:element name="ImageSegment">
     <xs:complexType>
-      <xs:attributeGroup>
-        <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
-        <xs:attribute name="textEncoding" type="xs:string" use="required" fixed="utf-8"/>
-        <xs:attribute name="textPadKind" type="xs:string" use="required" fixed="none"/>
-        <xs:attribute name="textTrimKind" type="xs:string" use="required" fixed="none"/>
-        <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
-        <xs:attribute name="representation" type="xs:string" use="required" fixed="text"/>
-      </xs:attributeGroup>
+      <xs:sequence>
+        <xs:element name="IID1" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
+        <xs:element name="IDATIM" type="tns:DateTime" dfdl:lengthKind="explicit" dfdl:length="14"/>
+        <xs:element name="TGTID" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="17"/>
+        <xs:element name="IID2" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="80"/>
+        <xs:element name="ISCLAS" type="tns:SecurityClassification" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="ISCLSY" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISCODE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="11" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISCTLH" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISREL" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISDCTP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISDCDT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISDCXM" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISORGN" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="27" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISCAUT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="40" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISCTLN" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="15" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISDWNG" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="6" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISDEVT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="40" dfdl:occursCountKind="fixed" dfdl:occursCount="{1}"/>
+        <xs:element name="ISORCE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="42"/>
+        <xs:element name="NROWS" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="NCOLS" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="PVTYPE" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="3"/>
+        <xs:element name="IREP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="ICAT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+        <xs:element name="ABPP" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="PJUST" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="ICORDS" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="IGEOLO" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="60"/>
+        <xs:element name="IC" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="COMRAT" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      </xs:sequence>
     </xs:complexType>
   </xs:element>
+
+  <!-- Graphics Segments, Text Segments, Data Extension Segments, and Reserved Extension Segments -->
+  <!-- Define similar structures for these segments as needed, following the pattern established above -->
 
 </xs:schema>

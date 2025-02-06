@@ -1,87 +1,114 @@
-module HL7v2;
+module HL7V2
 
-import Daedalus.Core;
-import Daedalus.Types;
+type Delimiters = {
+  field: char,
+  component: char,
+  repetition: char,
+  escape: char,
+  subcomponent: char
+}
 
-type Message = {
-  header: MessageHeader,
-  segments: List<Segment>
-};
+type CodedElement = {
+  identifier: string,
+  text: option string,
+  nameOfCodingSystem: option string
+}
+
+type PersonName = {
+  familyName: string,
+  givenName: string,
+  middleName: option string,
+  suffix: option string,
+  prefix: option string
+}
+
+type Address = {
+  streetAddress: option string,
+  otherDesignation: option string,
+  city: option string,
+  stateOrProvince: option string,
+  zipOrPostalCode: option string,
+  country: option string
+}
+
+type Patient = {
+  id: string,
+  name: PersonName,
+  dateOfBirth: option string,
+  administrativeSex: option ('M' | 'F' | 'O' | 'U'),
+  race: option CodedElement,
+  addresses: list Address
+}
 
 type MessageHeader = {
-  fieldSeparator: Text,
-  encodingCharacters: Text,
-  sendingApplication: Text,
-  sendingFacility: Text,
-  receivingApplication: Text,
-  receivingFacility: Text,
-  dateTimeOfMessage: DateTime,
-  security: optional Text
-};
+  sendingApplication: string,
+  sendingFacility: string,
+  receivingApplication: string,
+  receivingFacility: string,
+  dateTimeOfMessage: string,
+  securityCode: option string,
+  messageType: string,
+  processingId: string,
+  versionId: string
+}
 
-type Segment = {
-  name: Text,
-  fields: List<Field>
-};
+type PatientVisit = {
+  patientClass: 'I' | 'O' | 'E' | 'A',
+  assignedPatientLocation: option string,
+  admissionType: option string
+}
 
-type Field = {
-  value: Text,
-  repetitions: optional List<Text>,
-  components: optional List<Text>
-};
+type OrderRequest = {
+  placerOrderNumber: option string,
+  fillerOrderNumber: option string,
+  universalServiceIdentifier: CodedElement,
+  requestedDateTime: option string
+}
 
-rule validateMessage(msg: Message) = 
-  msg.header.fieldSeparator == "|" &&
-  msg.header.encodingCharacters.length == 4;
+type Observation = {
+  valueType: string,
+  observationIdentifier: CodedElement,
+  observationValue: option string,
+  units: option CodedElement,
+  referenceRange: option {
+    low: float,
+    high: float
+  }
+}
 
-parse Message from Text = 
-  match split(input, "\r") {
-    | (headerLine :: segmentLines) => 
-      Message {
-        header: parseHeader(headerLine),
-        segments: map(parseSegment, segmentLines)
-      }
-    | _ => fail("Invalid message format")
-  };
+type Segment = 
+  | MSH of MessageHeader
+  | PID of Patient
+  | PV1 of PatientVisit
+  | OBR of OrderRequest
+  | OBX of Observation
 
-func parseHeader(line: Text): MessageHeader = 
-  match split(line, "|") {
-    | [_, enc, sender, sendFac, recv, recvFac, dateTime, security] =>
-      MessageHeader {
-        fieldSeparator: "|",
-        encodingCharacters: enc,
-        sendingApplication: sender,
-        sendingFacility: sendFac,
-        receivingApplication: recv,
-        receivingFacility: recvFac,
-        dateTimeOfMessage: parseDateTime(dateTime),
-        security: optional(security)
-      }
-    | _ => fail("Invalid header format")
-  };
+type HL7Message = {
+  delimiters: Delimiters,
+  segments: list Segment
+}
 
-func parseSegment(line: Text): Segment = 
-  match split(line, "|") {
-    | (segName :: fieldValues) =>
-      Segment {
-        name: segName,
-        fields: map(parseField, fieldValues)
-      }
-    | _ => fail("Invalid segment format")
-  };
+val parseCodedElement: parser CodedElement
+val parsePersonName: parser PersonName
+val parseAddress: parser Address
+val parsePatient: parser Patient
+val parseMessageHeader: parser MessageHeader
+val parsePatientVisit: parser PatientVisit
+val parseOrderRequest: parser OrderRequest
+val parseObservation: parser Observation
+val parseSegment: parser Segment
 
-func parseField(value: Text): Field = 
-  Field {
-    value: value,
-    repetitions: optional(splitRepeats(value)),
-    components: optional(splitComponents(value))
-  };
+val parseDelimiters: parser Delimiters
+  = do
+    field <- anyChar
+    component <- anyChar
+    repetition <- anyChar
+    escape <- anyChar
+    subcomponent <- anyChar
+    return { field, component, repetition, escape, subcomponent }
 
-func splitRepeats(value: Text): List<Text> = 
-  split(value, "~");
-
-func splitComponents(value: Text): List<Text> = 
-  split(value, "^");
-
-func parseDateTime(dateTime: Text): DateTime = 
-  parseFormat(dateTime, "YYYYMMDDHHmmss");
+val parseHL7Message: parser HL7Message
+  = do
+    delimiters <- parseDelimiters
+    segments <- many1 parseSegment
+    return { delimiters, segments }

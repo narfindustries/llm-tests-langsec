@@ -1,1 +1,198 @@
-I understand you want the complete DFDL XML schema code. However, without seeing the previous context or specification, I cannot regenerate the exact code. Could you provide the previous DFDL schema or details about the specific schema requirements? That would help me generate an accurate and complete DFDL XML schema that resolves the compilation error.
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format separator="" initiator="" terminator="" 
+                  encoding="ASCII" 
+                  alignment="1" 
+                  alignmentUnits="bytes"
+                  fillByte="%NUL;"
+                  occursCountKind="parsed"
+                  representation="text"
+                  lengthKind="delimited"
+                  leadingSkip="0"
+                  sequenceKind="ordered"
+                  initiatedContent="no"
+                  textBidi="no"
+                  encodingErrorPolicy="replace"
+                  floating="no"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NITF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="FileHeader">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="FHDR" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="9"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                    <dfdl:assert testKind="pattern" testPattern="NITF02\.10"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="CLEVEL" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="2"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                    <dfdl:assert testKind="pattern" testPattern="(03|05|06|07)"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="STYPE" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="1"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                    <dfdl:assert testKind="pattern" testPattern="[RCST]"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="OSTAID" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="10"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="FL" type="xs:integer">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="10"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="FIDT" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="10"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="FileHeaderEncryption" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="explicit" length="1"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                    <dfdl:assert testKind="pattern" testPattern="[01]"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="Images" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="ImageSubheader">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="IM" type="xs:string">
+                      <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                          <dfdl:element lengthKind="explicit" length="2"
+                                        leadingSkip="0"
+                                        textBidi="no"
+                                        floating="no"/>
+                          <dfdl:assert testKind="pattern" testPattern="IM"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    
+                    <xs:element name="ISORCE" type="xs:string">
+                      <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                          <dfdl:element lengthKind="explicit" length="42"
+                                        leadingSkip="0"
+                                        textBidi="no"
+                                        floating="no"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    
+                    <xs:element name="NROWS" type="xs:integer">
+                      <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                          <dfdl:element lengthKind="explicit" length="8"
+                                        leadingSkip="0"
+                                        textBidi="no"
+                                        floating="no"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    
+                    <xs:element name="NCOLS" type="xs:integer">
+                      <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                          <dfdl:element lengthKind="explicit" length="8"
+                                        leadingSkip="0"
+                                        textBidi="no"
+                                        floating="no"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    
+                    <xs:element name="PVTYPE" type="xs:string">
+                      <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                          <dfdl:element lengthKind="explicit" length="3"
+                                        leadingSkip="0"
+                                        textBidi="no"
+                                        floating="no"/>
+                          <dfdl:assert testKind="pattern" testPattern="(INT|B|RGB)"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="ImageData" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:element lengthKind="implicit"
+                                  leadingSkip="0"
+                                  textBidi="no"
+                                  floating="no"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

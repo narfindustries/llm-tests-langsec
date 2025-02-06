@@ -1,51 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/arp"
-           xmlns="http://example.org/arp"
-           elementFormDefault="qualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/"
+           xmlns:tns="http://example.org/arp" targetNamespace="http://example.org/arp"
+           elementFormDefault="qualified"
+           xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" vc:minVersion="1.1">
 
-  <xs:element name="arp_gemini_1">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
-        <xs:element name="data" type="dataType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
-        <xs:element name="footer" type="footerType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
+  <xs:element name="arpPacket" type="tns:arpPacketType" dfdl:lengthKind="explicit" dfdl:length="28"/>
 
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="version" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left"/>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:representation="text" dfdl:textPattern="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"/>
-
+  <xs:complexType name="arpPacketType">
+    <xs:sequence dfdl:occursCountKind="fixed" dfdl:occursCount="1">
+      <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="protocolType" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="hardwareAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="protocolAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="opcode" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:lengthKind="expression" dfdl:length="string-length(../hardwareAddressLength)"/>
+      <xs:element name="senderProtocolAddress" type="xs:hexBinary" dfdl:lengthKind="expression" dfdl:length="string-length(../protocolAddressLength)"/>
+      <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:lengthKind="expression" dfdl:length="string-length(../hardwareAddressLength)"/>
+      <xs:element name="targetProtocolAddress" type="xs:hexBinary" dfdl:lengthKind="expression" dfdl:length="string-length(../protocolAddressLength)"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="dataType">
-      <xs:sequence>
-          <xs:element name="record" type="recordType" dfdl:occursCountKind="unbounded"/>
-      </xs:sequence>
-  </xs:complexType>
-
-    <xs:complexType name="recordType">
-        <xs:sequence>
-            <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-            <xs:element name="field2" type="xs:integer"/>
-            <xs:element name="field3" type="xs:decimal" dfdl:length="8" dfdl:fractionDigits="2"/>
-        </xs:sequence>
-    </xs:complexType>
-
-
-  <xs:complexType name="footerType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
-
-
-  <xs:element name="arp_gemini_1" dfdl:lengthKind="implicit" dfdl:byteOrder="bigEndian"/>
+  <dfdl:defineFormat name="arpFormat">
+    <dfdl:binaryExchange encoding="bigEndian"/>
+    <dfdl:textStandardLayout />
+  </dfdl:defineFormat>
 
 </xs:schema>
+
+The error message is the same as before.  The problem isn't with the DFDL namespace declaration on the root element (it's already present). The core issue is likely with the `dfdl:length="string-length(../hardwareAddressLength)"`  expressions.  DFDL's length expressions might have limitations or require a different approach when used with dynamically sized fields. You might need to use a different lengthKind or a more sophisticated approach to handle the variable-length fields within the DFDL schema.  Consider using  `dfdl:lengthKind="unbounded"` and another mechanism to determine field length during processing rather than relying solely on the expression within the schema itself.  Some DFDL processors might not support this expression directly.

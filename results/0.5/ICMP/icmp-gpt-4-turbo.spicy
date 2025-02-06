@@ -4,14 +4,94 @@ public type ICMPMessage = unit {
     type: uint8;
     code: uint8;
     checksum: uint16;
-    payload: bytes &size=($$ - 4);  # Payload size is total size minus the header size
+    content: switch (self.type) {
+        0 -> : EchoReply;
+        3 -> : DestinationUnreachable(self.code);
+        4 -> : SourceQuench;
+        5 -> : Redirect(self.code);
+        8 -> : EchoRequest;
+        11 -> : TimeExceeded(self.code);
+        12 -> : ParameterProblem;
+        13 -> : TimestampRequest;
+        14 -> : TimestampReply;
+        15 -> : InfoRequest;
+        16 -> : InfoReply;
+        17 -> : AddressMaskRequest;
+        18 -> : AddressMaskReply;
+        default -> : bytes &size=self.$context.unit.contentSize();
+    };
 
-    on %init {
-        print "ICMP Message Type: ", self.type;
-        print "ICMP Message Code: ", self.code;
+    function contentSize() : uint16 {
+        return uint16(self.$context.unit.length) - 4;
     }
 };
 
-public type Main = unit {
-    msg: ICMPMessage;
+type EchoReply = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+};
+
+type DestinationUnreachable = unit(code: uint8) {
+    unused: uint32;
+    data: bytes &size=icmp.contentSize() - 4;
+};
+
+type SourceQuench = unit {
+    unused: uint32;
+};
+
+type Redirect = unit(code: uint8) {
+    gatewayInternetAddress: addr;
+};
+
+type EchoRequest = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+};
+
+type TimeExceeded = unit(code: uint8) {
+    unused: uint32;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+};
+
+type TimestampRequest = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    originateTimestamp: uint32;
+    receiveTimestamp: uint32;
+    transmitTimestamp: uint32;
+};
+
+type TimestampReply = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    originateTimestamp: uint32;
+    receiveTimestamp: uint32;
+    transmitTimestamp: uint32;
+};
+
+type InfoRequest = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+};
+
+type InfoReply = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+};
+
+type AddressMaskRequest = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    addressMask: addr;
+};
+
+type AddressMaskReply = unit {
+    identifier: uint16;
+    sequenceNumber: uint16;
+    addressMask: addr;
 };

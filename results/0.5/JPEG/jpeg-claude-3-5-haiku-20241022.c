@@ -1,66 +1,94 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <hammer/harena.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
-// JPEG Header Parse Specification
-static HParser* jpeg_header;
-static HParser* jpeg_marker;
-static HParser* jpeg_segment;
+// JPEG Marker Definitions
+#define JPEG_SOI 0xFFD8
+#define JPEG_EOI 0xFFD9
+#define JPEG_APP0 0xFFE0
+#define JPEG_APP1 0xFFE1
+#define JPEG_DQT 0xFFDB
+#define JPEG_DHT 0xFFC4
+#define JPEG_SOF0 0xFFC0
+#define JPEG_SOF1 0xFFC1
+#define JPEG_SOF2 0xFFC2
+#define JPEG_SOF3 0xFFC3
+#define JPEG_SOS 0xFFDA
+#define JPEG_RST0 0xFFD0
+#define JPEG_RST7 0xFFD7
 
-// Define JPEG Markers
-static const uint8_t JPEG_SOI = 0xD8;   // Start of Image
-static const uint8_t JPEG_EOI = 0xD9;   // End of Image
-static const uint8_t JPEG_APP0 = 0xE0;  // Application-specific marker
-static const uint8_t JPEG_SOF0 = 0xC0;  // Start of Frame (Baseline DCT)
+typedef struct {
+    uint16_t marker;
+    uint16_t length;
+    uint8_t* data;
+} JpegSegment;
 
-// JPEG Marker Parser
-static HParser* parse_jpeg_marker() {
-    return h_choice(
-        h_literal_uint8(JPEG_SOI),
-        h_literal_uint8(JPEG_EOI),
-        h_literal_uint8(JPEG_APP0),
-        h_literal_uint8(JPEG_SOF0),
-        NULL
-    );
+typedef struct {
+    JpegSegment soi;
+    JpegSegment* app_markers;
+    JpegSegment* quantization_tables;
+    JpegSegment* huffman_tables;
+    JpegSegment frame_header;
+    JpegSegment scan_header;
+    JpegSegment* restart_markers;
+    JpegSegment eoi;
+} JpegFile;
+
+HParser* parse_marker() {
+    return h_uint16();
 }
 
-// JPEG Segment Parser
-static HParser* parse_jpeg_segment() {
-    return h_sequence(
-        h_literal_uint8(0xFF),  // Marker prefix
-        parse_jpeg_marker(),
-        h_end_p(),
-        NULL
-    );
+HParser* parse_segment_length() {
+    return h_uint16();
 }
 
-// JPEG Header Parser
-static HParser* parse_jpeg_header() {
-    return h_many(parse_jpeg_segment());
-}
-
-// Main JPEG Parsing Function
-int parse_jpeg(const uint8_t* data, size_t len) {
-    jpeg_marker = parse_jpeg_marker();
-    jpeg_segment = parse_jpeg_segment();
-    jpeg_header = parse_jpeg_header();
-
-    HParseResult* result = h_parse(jpeg_header, data, len);
+HParser* jpeg_parser() {
+    HParser* soi_parser = h_token((const uint8_t[]){0xFF, 0xD8}, 2);
+    HParser* eoi_parser = h_token((const uint8_t[]){0xFF, 0xD9}, 2);
     
-    if (result && result->ast) {
-        printf("Valid JPEG Header\n");
-        h_parse_result_free(result);
-        return 1;
-    } else {
-        printf("Invalid JPEG Header\n");
-        return 0;
-    }
+    HParser* app_marker_parser = h_choice(
+        h_token((const uint8_t[]){0xFF, 0xE0}, 2),
+        h_token((const uint8_t[]){0xFF, 0xE1}, 2),
+        NULL
+    );
+    
+    HParser* dqt_parser = h_token((const uint8_t[]){0xFF, 0xDB}, 2);
+    HParser* dht_parser = h_token((const uint8_t[]){0xFF, 0xC4}, 2);
+    
+    HParser* sof_parser = h_choice(
+        h_token((const uint8_t[]){0xFF, 0xC0}, 2),
+        h_token((const uint8_t[]){0xFF, 0xC1}, 2),
+        h_token((const uint8_t[]){0xFF, 0xC2}, 2),
+        h_token((const uint8_t[]){0xFF, 0xC3}, 2),
+        NULL
+    );
+    
+    HParser* sos_parser = h_token((const uint8_t[]){0xFF, 0xDA}, 2);
+    
+    HParser* restart_parser = h_choice(
+        h_token((const uint8_t[]){0xFF, 0xD0}, 2),
+        h_token((const uint8_t[]){0xFF, 0xD7}, 2),
+        NULL
+    );
+
+    return h_sequence(
+        soi_parser,
+        h_many(app_marker_parser),
+        h_many(dqt_parser),
+        h_many(dht_parser),
+        sof_parser,
+        sos_parser,
+        h_optional(h_many(restart_parser)),
+        eoi_parser,
+        NULL
+    );
 }
 
-int main(int argc, char** argv) {
-    if (argc < 2) {
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
         fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
         return 1;
     }
@@ -86,13 +114,23 @@ int main(int argc, char** argv) {
     fclose(file);
 
     if (read_size != file_size) {
-        fprintf(stderr, "Error reading file\n");
+        perror("File read error");
         free(buffer);
         return 1;
     }
 
-    int result = parse_jpeg(buffer, read_size);
-    free(buffer);
+    HArena* arena = h_arena_new();
+    HParser* parser = jpeg_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
 
-    return result ? 0 : 1;
+    if (result && result->ast) {
+        printf("Valid JPEG file parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Invalid JPEG file\n");
+    }
+
+    h_arena_free(arena);
+    free(buffer);
+    return 0;
 }

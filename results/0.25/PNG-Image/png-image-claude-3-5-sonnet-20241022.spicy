@@ -1,28 +1,120 @@
-module PNG-Image;
-
-import spicy;
+module PNG;
 
 public type PNG = unit {
     signature: bytes &size=8;
     chunks: Chunk[];
-} &requires=check_signature;
-
-type Chunk = unit {
-    length: uint32 &byte-order=BigEndian;
-    type: bytes &size=4;
-    data: bytes &size=self.length;
-    crc: uint32 &byte-order=BigEndian;
 };
 
-function check_signature(data: bytes): bool {
-    return data == b"\x89PNG\r\n\x1a\n";
-}
+type Chunk = unit {
+    length: uint32;
+    chunk_type: bytes &size=4;
+    data: ChunkData;
+    crc: uint32;
+};
 
-on PNG::PNG -> event PNG::file_ready($file);
+type ChunkData = unit {
+    : switch($parent.chunk_type) {
+        b"IHDR" -> ihdr: IHDR;
+        b"PLTE" -> plte: bytes &size=$parent.length;
+        b"IDAT" -> idat: bytes &size=$parent.length;
+        b"IEND" -> : void;
+        b"bKGD" -> bkgd: BackgroundColor;
+        b"cHRM" -> chrm: Chromaticities;
+        b"gAMA" -> gama: uint32;
+        b"hIST" -> hist: uint16[] &size=$parent.length/2;
+        b"iCCP" -> iccp: ICCProfile;
+        b"iTXt" -> itxt: InternationalText;
+        b"pHYs" -> phys: PhysicalDimensions;
+        b"sBIT" -> sbit: bytes &size=$parent.length;
+        b"sPLT" -> splt: SuggestedPalette;
+        b"sRGB" -> srgb: uint8;
+        b"tEXt" -> text: TextualData;
+        b"tIME" -> time: TimeStamp;
+        b"tRNS" -> trns: bytes &size=$parent.length;
+        b"zTXt" -> ztxt: CompressedText;
+        *      -> unknown: bytes &size=$parent.length;
+    };
+};
 
-public function process_png(data: bytes) {
-    local png = PNG(data);
-    return png;
-}
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
 
-@zeek-event PNG::file_ready[signature: bytes];
+type Chromaticities = unit {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+type PhysicalDimensions = unit {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
+
+type TimeStamp = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+type BackgroundColor = unit {
+    : switch($parent.parent.ihdr.color_type) {
+        0, 4 -> gray: uint16;
+        2, 6 -> rgb: RGB;
+        3 -> palette_index: uint8;
+        * -> : void;
+    };
+};
+
+type RGB = unit {
+    red: uint16;
+    green: uint16;
+    blue: uint16;
+};
+
+type ICCProfile = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &eod;
+};
+
+type InternationalText = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &eod;
+};
+
+type SuggestedPalette = unit {
+    palette_name: bytes &until=b"\x00";
+    sample_depth: uint8;
+    entries: bytes &eod;
+};
+
+type TextualData = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &eod;
+};
+
+type CompressedText = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &eod;
+};

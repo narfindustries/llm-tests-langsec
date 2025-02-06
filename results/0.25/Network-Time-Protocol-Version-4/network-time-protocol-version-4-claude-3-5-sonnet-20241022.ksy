@@ -1,22 +1,25 @@
 meta:
   id: ntp_packet
-  title: NTP v4 Packet
+  title: Network Time Protocol v4
   file-extension: ntp
   endian: be
+  license: CC0-1.0
+  ks-version: 0.9
 
 seq:
   - id: li_vn_mode
     type: u1
+    doc: First byte containing Leap Indicator, Version Number and Mode
   - id: stratum
     type: u1
   - id: poll
-    type: u1
+    type: s1
   - id: precision
     type: s1
   - id: root_delay
-    type: s4
+    type: fixed_point_16_16
   - id: root_dispersion
-    type: u4
+    type: fixed_point_16_16_unsigned
   - id: reference_id
     type: u4
   - id: reference_timestamp
@@ -30,9 +33,23 @@ seq:
   - id: extension_fields
     type: extension_field
     repeat: eos
-    if: _io.pos < _io.size
+    if: _io.size > 48
 
 types:
+  fixed_point_16_16:
+    seq:
+      - id: integer_part
+        type: s2
+      - id: fraction_part
+        type: u2
+
+  fixed_point_16_16_unsigned:
+    seq:
+      - id: integer_part
+        type: u2
+      - id: fraction_part
+        type: u2
+
   ntp_timestamp:
     seq:
       - id: seconds
@@ -42,39 +59,38 @@ types:
 
   extension_field:
     seq:
-      - id: type
+      - id: field_type
         type: u2
       - id: length
         type: u2
       - id: value
         size: length - 4
+      - id: padding
+        size: (4 - (_io.pos % 4)) % 4
 
 instances:
   leap_indicator:
     value: (li_vn_mode >> 6) & 0x3
+    enum: leap_indicator_enum
   version:
     value: (li_vn_mode >> 3) & 0x7
   mode:
     value: li_vn_mode & 0x7
+    enum: mode_enum
 
 enums:
-  leap_indicators:
+  leap_indicator_enum:
     0: no_warning
-    1: last_minute_61
-    2: last_minute_59
-    3: alarm
+    1: last_minute_61_sec
+    2: last_minute_59_sec
+    3: alarm_condition
 
-  modes:
+  mode_enum:
     0: reserved
     1: symmetric_active
     2: symmetric_passive
     3: client
     4: server
     5: broadcast
-    6: ntp_control
-    7: private
-
-  stratum_types:
-    0: unspecified_or_invalid
-    1: primary_reference
-    16: secondary_reference
+    6: control_message
+    7: private_use

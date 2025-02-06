@@ -1,24 +1,21 @@
-module NetworkTimeProtocolVersion4 where
-
--- The Network Time Protocol (NTP) message format according to RFC 5905
-
-struct NTPMessage {
-    leapIndicator: uint2;
-    versionNumber: uint3;
-    mode: uint3;
-    stratum: uint8;
-    poll: int8;
-    precision: int8;
-    rootDelay: fixed32;  -- 16 bits integer part, 16 bits fractional part
-    rootDispersion: fixed32;  -- 16 bits integer part, 16 bits fractional part
-    referenceId: uint32;
-    referenceTimestamp: Timestamp;
-    originateTimestamp: Timestamp;
-    receiveTimestamp: Timestamp;
-    transmitTimestamp: Timestamp;
+NetworkTimeProtocolV4 : struct {
+    li : u2,
+    vn : u3,
+    mode : u3,
+    stratum : u8,
+    poll_interval : s8,
+    precision : s8,
+    root_delay : s32,
+    root_dispersion : s32,
+    reference_id : u32,
+    reference_timestamp : u64,
+    originate_timestamp : u64,
+    receive_timestamp : u64,
+    transmit_timestamp : u64,
+    authenticator : Authenticator ?
 }
 
-struct Timestamp {
-    seconds: uint32;
-    fraction: uint32;
+Authenticator : struct {
+    key_identifier : u32,
+    message_digest : u128
 }

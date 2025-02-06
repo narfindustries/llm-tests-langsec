@@ -1,74 +1,233 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ELF"
-           xmlns:elf="http://example.com/ELF">
+           targetNamespace="http://example.com/elf"
+           xmlns:elf="http://example.com/elf">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
-        alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        separator=""
-        encoding="UTF-8"
-        representation="binary"
-        occursCountKind="parsed"
-        byteOrder="bigEndian"
-        nilKind="literalValue"
-        nilValue="0"
-        textNumberFormat="standard"
-        textNumberRounding="explicit"
-        escapeSchemeRef=""
-        initiator=""
-        terminator=""
-        separatorPosition="infix"
-        separatorSuppressionPolicy="anyEmpty"
-        documentFinalTerminatorCanBeMissing="yes"
-        emptyValueDelimiterPolicy="none"/>
+      <dfdl:format representation="binary" 
+                  lengthKind="explicit" 
+                  lengthUnits="bytes"
+                  byteOrder="bigEndian"
+                  encoding="UTF-8"
+                  alignmentUnits="bytes"
+                  alignment="1"
+                  leadingSkip="0"
+                  trailingSkip="0"
+                  initiatedContent="no"
+                  sequenceKind="ordered"
+                  initiator=""
+                  terminator=""
+                  separatorPosition="infix"
+                  separator=""
+                  separatorSuppressionPolicy="never"
+                  textBidi="no"
+                  floating="no"
+                  binaryNumberRep="binary"
+                  encodingErrorPolicy="replace"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ELFFile" dfdl:lengthKind="implicit">
+  <xs:element name="ElfHeader" dfdl:lengthKind="explicit" dfdl:length="64">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="ELFHeader" dfdl:lengthKind="implicit">
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="" dfdl:terminator="">
+        <xs:element name="e_ident" dfdl:lengthKind="explicit" dfdl:length="16">
           <xs:complexType>
-            <xs:sequence>
-              <xs:element name="Magic" type="xs:hexBinary" 
-                          dfdl:length="4" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Class" type="xs:byte" 
-                          dfdl:length="1" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="DataEncoding" type="xs:byte" 
-                          dfdl:length="1" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Version" type="xs:byte" 
-                          dfdl:length="1" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="OSABI" type="xs:byte" 
-                          dfdl:length="1" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="ABIVersion" type="xs:byte" 
-                          dfdl:length="1" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Padding" type="xs:hexBinary" 
-                          dfdl:length="7" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Type" type="xs:unsignedShort" 
-                          dfdl:length="2" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Machine" type="xs:unsignedShort" 
-                          dfdl:length="2" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Version2" type="xs:unsignedInt" 
-                          dfdl:length="4" 
-                          dfdl:lengthKind="explicit"/>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="" dfdl:terminator="">
+              <xs:element name="magic" type="xs:hexBinary" 
+                          dfdl:length="4"
+                          dfdl:encoding="UTF-8"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="class" type="xs:byte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"
+                          dfdl:encoding="UTF-8"
+                          dfdl:binaryNumberRep="binary"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="dataEncoding" type="xs:byte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"
+                          dfdl:encoding="UTF-8"
+                          dfdl:binaryNumberRep="binary"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="version" type="xs:byte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"
+                          dfdl:encoding="UTF-8"
+                          dfdl:binaryNumberRep="binary"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="osabi" type="xs:byte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"
+                          dfdl:encoding="UTF-8"
+                          dfdl:binaryNumberRep="binary"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="abiVersion" type="xs:byte" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="1"
+                          dfdl:encoding="UTF-8"
+                          dfdl:binaryNumberRep="binary"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
+              <xs:element name="padding" type="xs:hexBinary" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="8"
+                          dfdl:encoding="UTF-8"
+                          dfdl:initiator=""
+                          dfdl:leadingSkip="0"
+                          dfdl:trailingSkip="0"
+                          dfdl:encodingErrorPolicy="replace"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
+        
+        <xs:element name="e_type" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_machine" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_version" type="xs:unsignedInt" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="4"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_entry" type="xs:unsignedLong" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="8"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_phoff" type="xs:unsignedLong" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="8"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_shoff" type="xs:unsignedLong" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="8"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_flags" type="xs:unsignedInt" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="4"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_ehsize" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_phentsize" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_phnum" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_shentsize" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_shnum" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
+        
+        <xs:element name="e_shstrndx" type="xs:unsignedShort" 
+                    dfdl:lengthKind="explicit" 
+                    dfdl:length="2"
+                    dfdl:encoding="UTF-8"
+                    dfdl:binaryNumberRep="binary"
+                    dfdl:initiator=""
+                    dfdl:leadingSkip="0"
+                    dfdl:trailingSkip="0"
+                    dfdl:encodingErrorPolicy="replace"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>

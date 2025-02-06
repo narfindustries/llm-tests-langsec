@@ -10,7 +10,14 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Zip(KaitaiStruct):
 
-    class Compression(Enum):
+    class MagicType(Enum):
+        central_dir = 33639248
+        local_file = 67324752
+        end_of_central_dir = 101010256
+        zip64_end_of_central_dir = 101075792
+        zip64_end_of_central_dir_locator = 117853008
+
+    class CompressionMethod(Enum):
         none = 0
         shrunk = 1
         reduced_1 = 2
@@ -24,11 +31,9 @@ class Zip(KaitaiStruct):
         bzip2 = 12
         lzma = 14
         ibm_terse = 18
-        ibm_lz77_z = 19
-        jpeg = 96
+        ibm_lz77 = 19
         wavpack = 97
         ppmd = 98
-        aes_encrypted = 99
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -38,9 +43,42 @@ class Zip(KaitaiStruct):
     def _read(self):
         self.sections = []
         i = 0
-        while not self._io.is_eof():
-            self.sections.append(Zip.PkSection(self._io, self, self._root))
+        while True:
+            _ = Zip.PkSection(self._io, self, self._root)
+            self.sections.append(_)
+            if self._io.is_eof():
+                break
             i += 1
+
+    class CentralDir(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.version_made_by = self._io.read_u2le()
+            self.version_needed_to_extract = self._io.read_u2le()
+            self.flags = self._io.read_u2le()
+            self.compression_method = KaitaiStream.resolve_enum(Zip.CompressionMethod, self._io.read_u2le())
+            self.last_mod_file_time = self._io.read_u2le()
+            self.last_mod_file_date = self._io.read_u2le()
+            self.crc32 = self._io.read_u4le()
+            self.compressed_size = self._io.read_u4le()
+            self.uncompressed_size = self._io.read_u4le()
+            self.file_name_length = self._io.read_u2le()
+            self.extra_field_length = self._io.read_u2le()
+            self.file_comment_length = self._io.read_u2le()
+            self.disk_number_start = self._io.read_u2le()
+            self.internal_file_attributes = self._io.read_u2le()
+            self.external_file_attributes = self._io.read_u4le()
+            self.local_header_offset = self._io.read_u4le()
+            self.file_name = (self._io.read_bytes(self.file_name_length)).decode(u"UTF-8")
+            self._raw_extra_field = self._io.read_bytes(self.extra_field_length)
+            _io__raw_extra_field = KaitaiStream(BytesIO(self._raw_extra_field))
+            self.extra_field = Zip.ExtraField(_io__raw_extra_field, self, self._root)
+            self.file_comment = (self._io.read_bytes(self.file_comment_length)).decode(u"UTF-8")
 
 
     class LocalFile(KaitaiStruct):
@@ -51,19 +89,37 @@ class Zip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.version = self._io.read_u2le()
+            self.version_needed_to_extract = self._io.read_u2le()
             self.flags = self._io.read_u2le()
-            self.compression_method = KaitaiStream.resolve_enum(Zip.Compression, self._io.read_u2le())
-            self.file_mod_time = self._io.read_u2le()
-            self.file_mod_date = self._io.read_u2le()
+            self.compression_method = KaitaiStream.resolve_enum(Zip.CompressionMethod, self._io.read_u2le())
+            self.last_mod_file_time = self._io.read_u2le()
+            self.last_mod_file_date = self._io.read_u2le()
             self.crc32 = self._io.read_u4le()
             self.compressed_size = self._io.read_u4le()
             self.uncompressed_size = self._io.read_u4le()
-            self.file_name_len = self._io.read_u2le()
-            self.extra_len = self._io.read_u2le()
-            self.file_name = (self._io.read_bytes(self.file_name_len)).decode(u"UTF-8")
-            self.extra = self._io.read_bytes(self.extra_len)
+            self.file_name_length = self._io.read_u2le()
+            self.extra_field_length = self._io.read_u2le()
+            self.file_name = (self._io.read_bytes(self.file_name_length)).decode(u"UTF-8")
+            self._raw_extra_field = self._io.read_bytes(self.extra_field_length)
+            _io__raw_extra_field = KaitaiStream(BytesIO(self._raw_extra_field))
+            self.extra_field = Zip.ExtraField(_io__raw_extra_field, self, self._root)
             self.body = self._io.read_bytes(self.compressed_size)
+            if (self.flags & 8) != 0:
+                self.data_descriptor = Zip.DataDescriptor(self._io, self, self._root)
+
+
+
+    class DataDescriptor(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.crc32 = self._io.read_u4le()
+            self.compressed_size = self._io.read_u4le()
+            self.uncompressed_size = self._io.read_u4le()
 
 
     class Zip64EndOfCentralDir(KaitaiStruct):
@@ -74,19 +130,19 @@ class Zip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.size_of_record = self._io.read_u8le()
+            self.record_size = self._io.read_u8le()
             self.version_made_by = self._io.read_u2le()
-            self.version_needed = self._io.read_u2le()
+            self.version_needed_to_extract = self._io.read_u2le()
             self.disk_number = self._io.read_u4le()
-            self.disk_number_start = self._io.read_u4le()
-            self.qty_central_dir_entries_on_disk = self._io.read_u8le()
-            self.qty_central_dir_entries_total = self._io.read_u8le()
+            self.disk_start_central_dir = self._io.read_u4le()
+            self.num_entries_this_disk = self._io.read_u8le()
+            self.num_entries = self._io.read_u8le()
             self.central_dir_size = self._io.read_u8le()
             self.central_dir_offset = self._io.read_u8le()
-            self.extensible_data = self._io.read_bytes((self.size_of_record - 44))
+            self.zip64_extensible_data = self._io.read_bytes((self.record_size - 44))
 
 
-    class CentralDirEntry(KaitaiStruct):
+    class ExtraField(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -94,25 +150,12 @@ class Zip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.version_made_by = self._io.read_u2le()
-            self.version_needed = self._io.read_u2le()
-            self.flags = self._io.read_u2le()
-            self.compression_method = KaitaiStream.resolve_enum(Zip.Compression, self._io.read_u2le())
-            self.file_mod_time = self._io.read_u2le()
-            self.file_mod_date = self._io.read_u2le()
-            self.crc32 = self._io.read_u4le()
-            self.compressed_size = self._io.read_u4le()
-            self.uncompressed_size = self._io.read_u4le()
-            self.file_name_len = self._io.read_u2le()
-            self.extra_len = self._io.read_u2le()
-            self.comment_len = self._io.read_u2le()
-            self.disk_number_start = self._io.read_u2le()
-            self.internal_attrs = self._io.read_u2le()
-            self.external_attrs = self._io.read_u4le()
-            self.local_header_offset = self._io.read_u4le()
-            self.file_name = (self._io.read_bytes(self.file_name_len)).decode(u"UTF-8")
-            self.extra = self._io.read_bytes(self.extra_len)
-            self.comment = (self._io.read_bytes(self.comment_len)).decode(u"UTF-8")
+            self.entries = []
+            i = 0
+            while not self._io.is_eof():
+                self.entries.append(Zip.ExtraFieldEntry(self._io, self, self._root))
+                i += 1
+
 
 
     class PkSection(KaitaiStruct):
@@ -123,21 +166,31 @@ class Zip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.magic = self._io.read_bytes(2)
-            if not self.magic == b"\x50\x4B":
-                raise kaitaistruct.ValidationNotEqualError(b"\x50\x4B", self.magic, self._io, u"/types/pk_section/seq/0")
-            self.section_type = self._io.read_u2le()
-            _on = self.section_type
-            if _on == 1027:
-                self.body = Zip.CentralDirEntry(self._io, self, self._root)
-            elif _on == 513:
-                self.body = Zip.LocalFile(self._io, self, self._root)
-            elif _on == 1798:
+            self.magic = KaitaiStream.resolve_enum(Zip.MagicType, self._io.read_u4le())
+            _on = self.magic
+            if _on == Zip.MagicType.zip64_end_of_central_dir_locator:
                 self.body = Zip.Zip64EndOfCentralDirLocator(self._io, self, self._root)
-            elif _on == 1541:
-                self.body = Zip.EndOfCentralDir(self._io, self, self._root)
-            elif _on == 1542:
+            elif _on == Zip.MagicType.central_dir:
+                self.body = Zip.CentralDir(self._io, self, self._root)
+            elif _on == Zip.MagicType.zip64_end_of_central_dir:
                 self.body = Zip.Zip64EndOfCentralDir(self._io, self, self._root)
+            elif _on == Zip.MagicType.local_file:
+                self.body = Zip.LocalFile(self._io, self, self._root)
+            elif _on == Zip.MagicType.end_of_central_dir:
+                self.body = Zip.EndOfCentralDir(self._io, self, self._root)
+
+
+    class ExtraFieldEntry(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.header_id = self._io.read_u2le()
+            self.data_size = self._io.read_u2le()
+            self.data = self._io.read_bytes(self.data_size)
 
 
     class Zip64EndOfCentralDirLocator(KaitaiStruct):
@@ -148,9 +201,9 @@ class Zip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.disk_number_with_zip64_end_of_central_dir = self._io.read_u4le()
+            self.disk_number_with_zip64_end = self._io.read_u4le()
             self.end_of_central_dir_offset = self._io.read_u8le()
-            self.number_of_disks = self._io.read_u4le()
+            self.total_number_of_disks = self._io.read_u4le()
 
 
     class EndOfCentralDir(KaitaiStruct):
@@ -163,12 +216,12 @@ class Zip(KaitaiStruct):
         def _read(self):
             self.disk_number = self._io.read_u2le()
             self.disk_start = self._io.read_u2le()
-            self.qty_central_dir_entries_on_disk = self._io.read_u2le()
-            self.qty_central_dir_entries_total = self._io.read_u2le()
+            self.num_entries_this_disk = self._io.read_u2le()
+            self.num_entries = self._io.read_u2le()
             self.central_dir_size = self._io.read_u4le()
             self.central_dir_offset = self._io.read_u4le()
-            self.comment_len = self._io.read_u2le()
-            self.comment = (self._io.read_bytes(self.comment_len)).decode(u"UTF-8")
+            self.comment_length = self._io.read_u2le()
+            self.comment = (self._io.read_bytes(self.comment_length)).decode(u"UTF-8")
 
 
 

@@ -1,51 +1,69 @@
-# Zeek Spicy Specification for SQLite3 Database File
+module SQLite3DB;
 
-type SQLite3_Header = struct {
-  magic: bytestring(16);
-  page_size: uint16;
-  write_version: uint8;
-  read_version: uint8;
-  reserved_space: uint8;
-  max_embedded_payload_fraction: uint8;
-  min_embedded_payload_fraction: uint8;
-  leaf_payload_fraction: uint8;
-  file_change_counter: uint32;
-  database_size_in_pages: uint32;
-  first_freelist_trunk_page: uint32;
-  total_freelist_pages: uint32;
-  schema_cookie: uint32;
-  schema_format: uint32;
-  default_page_cache_size: uint32;
-  largest_file_size_in_pages: uint32;
-  text_encoding: uint32;
-  user_version: uint32;
-  incremental_vacuum_mode: uint32;
-  application_id: uint32;
-  reserved_for_expansion: bytestring(20);
+type DatabaseHeader = struct {
+  magic: by!tes(tring, 16) = "SQLite format 3\x00";
+  file_format_write_version: u!int8;
+  file_format_read_version: u!int8;
+  reserved_space_1: u!int16 = 0;
+  max_page_size: u!int16;
+  file_change_counter: u!int32;
+  database_size: u!int32;
+  reserved_space_2: by!tes(tring, 20) = "\x00" * 20;
+  version_valid_for_number: u!int32;
+  sqlite_version_number: u!int32;
+  version_valid_for: u!int32;
 };
 
-type SQLite3_Page = struct {
-  page_type: uint8;
-  first_freeblock: uint16;
-  cell_count: uint16;
-  cell_content_area: bytestring(this.page_size - 12);
-  fragment_area: bytestring(this.page_size - this.cell_content_area.length - 12);
-  page_header: SQLite3_Page_Header;
+type PageType = enum {
+  Pilde = 0;
+  RootPage = 1;
+  InternalPage = 2;
+  LeafPage = 3;
+  OverflowPage = 4;
+  FreePage = 5;
 };
 
-type SQLite3_Page_Header = struct {
-  page_type: uint8;
-  first_freeblock: uint16;
-  cell_count: uint16;
+type Page = struct {
+  page_type: PageType;
+  first_freeblock: u!int16;
+  primary_page_number: u!int32;
+  number_of_cells: u!int16;
+  start_of_content_area: u!int16;
+  fragmented_free_bytes: u!int8;
 };
 
-type SQLite3_Cell = struct {
-  payload_len: uint16;
-  payload: bytestring(this.payload_len);
-  rowid: uint32;
+type BtreePage = struct {
+  page_number: u!int32;
+  right_child_page_number: u!int32;
+  cell_offset_array: array[u!int16];
 };
 
-type SQLite3_File = struct {
-  header: SQLite3_Header;
-  pages: array[SQLite3_Page];
+type Cell = struct {
+  length_of_payload: u!int8;
+  number_of_columns: u!int8;
+  column_data: array[u!int8];
+  payload: by!tes(tring);
+};
+
+type OverflowPage = struct {
+  next_overflow_page_number: u!int32;
+  data_area: by!tes(tring);
+};
+
+type FreePage = struct {
+  next_free_page_number: u!int32;
+  number_of_cells: u!int16;
+};
+
+type SQLITE3Page = union {
+  page: Page;
+  btree_page: BtreePage;
+  cell: Cell;
+  overflow_page: OverflowPage;
+  free_page: FreePage;
+};
+
+type SQLITE3DB = struct {
+  header: DatabaseHeader;
+  pages: array[SQLITE3Page];
 };

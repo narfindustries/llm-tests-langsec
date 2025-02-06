@@ -2,34 +2,50 @@ module TIFF;
 
 import spicy;
 
-public type Header = unit {
-    magic: bytes(2) &requires($$=="II" || $$=="MM");
-    version: uint16 &requires($$==42);
-    ifd_offset: uint32;
+public type Header = struct {
+    byte_order: uint16,
+    magic_number: uint16,
+    ifd_offset: uint32
+} &byteorder=(self.byte_order == 0x4949 ? spicy::ByteOrder::Little : spicy::ByteOrder::Big);
+
+public type IFDEntry = struct {
+    tag: uint16,
+    type: uint16,
+    count: uint32,
+    value_or_offset: uint32
 };
 
-type IFDEntry = unit {
-    tag: uint16;
-    type_code: uint16;
-    count: uint32;
-    value_or_offset: uint32;
+public type IFD = struct {
+    num_entries: uint16,
+    entries: vector<IFDEntry>,
+    next_ifd_offset: uint32
+} &parse {
+    self.entries = [];
+    for ( auto i = 0; i < self.num_entries; ++i ) {
+        self.entries.push_back(IFDEntry());
+    }
+    return self;
 };
 
-type IFD = unit {
-    num_entries: uint16;
-    entries: IFDEntry[num_entries];
-    next_ifd_offset: uint32;
+public type Rational = struct {
+    numerator: uint32,
+    denominator: uint32
 };
 
-public type File = unit {
-    header: Header;
-    first_ifd: IFD;
+public type ImageFileHeader = struct {
+    header: Header,
+    primary_ifd: IFD
+} &byteorder=(self.header.byte_order == 0x4949 ? spicy::ByteOrder::Little : spicy::ByteOrder::Big);
+
+public type TIFF = struct {
+    file_header: ImageFileHeader,
+    data: bytes
+} &parse {
+    local strip_byte_count_entry = self.file_header.primary_ifd.entries[?tag == 0x0117];
+    self.data = bytes(strip_byte_count_entry ? strip_byte_count_entry.value_or_offset : 0);
+    return self;
 };
 
-public function __load__() {
-    spicy::register_file_analyzer(
-        "TIFF", 
-        $mime_types=["image/tiff"], 
-        $file_magic=b"II*\x00"
-    );
+public function parse(data: bytes) : TIFF {
+    return TIFF::parse(data);
 }

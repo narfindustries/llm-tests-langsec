@@ -1,6 +1,13 @@
 module PNG;
 
-public type IHDR = unit {
+public type PNGChunk = unit {
+    length: uint32;
+    type: bytes &size=4;
+    data: bytes &size=this.length;
+    crc: uint32;
+};
+
+public type IHDRChunk = unit {
     width: uint32;
     height: uint32;
     bitDepth: uint8;
@@ -10,25 +17,106 @@ public type IHDR = unit {
     interlaceMethod: uint8;
 };
 
-public type Chunk = unit {
-    length: uint32;
-    type: bytes &size=4;
+public type PLTEChunk = unit {
+    entries: unit {
+        red: uint8;
+        green: uint8;
+        blue: uint8;
+    }[] &eod;
+};
+
+public type IDATChunk = unit {
     data: bytes &size=this.length;
-    crc: uint32;
+};
+
+public type IENDChunk = unit {
+    // No fields
+};
+
+public type tEXtChunk = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &rest;
+};
+
+public type zTXtChunk = unit {
+    keyword: bytes &until=b"\x00";
+    compressionMethod: uint8;
+    compressedText: bytes &rest;
+};
+
+public type iTXtChunk = unit {
+    keyword: bytes &until=b"\x00";
+    compressionFlag: uint8;
+    compressionMethod: uint8;
+    languageTag: bytes &until=b"\x00";
+    translatedKeyword: bytes &until=b"\x00";
+    text: bytes &rest;
+};
+
+public type bKGDChunk = unit {
+    backgroundColor: bytes &size=this.length;
+};
+
+public type pHYsChunk = unit {
+    pixelsPerUnitX: uint32;
+    pixelsPerUnitY: uint32;
+    unitSpecifier: uint8;
+};
+
+public type sBITChunk = unit {
+    significantBits: bytes &size=this.length;
+};
+
+public type sRGBChunk = unit {
+    renderingIntent: uint8;
+};
+
+public type tIMEChunk = unit {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
+
+public type gAMAChunk = unit {
+    gamma: uint32;
+};
+
+public type cHRMChunk = unit {
+    whitePointX: uint32;
+    whitePointY: uint32;
+    redX: uint32;
+    redY: uint32;
+    greenX: uint32;
+    greenY: uint32;
+    blueX: uint32;
+    blueY: uint32;
+};
+
+public type iCCPChunk = unit {
+    profileName: bytes &until=b"\x00";
+    compressionMethod: uint8;
+    compressedProfile: bytes &rest;
+};
+
+public type sPLTChunk = unit {
+    paletteName: bytes &until=b"\x00";
+    sampleDepth: uint8;
+    entries: unit {
+        red: uint16;
+        green: uint16;
+        blue: uint16;
+        alpha: uint16;
+        frequency: uint16;
+    }[] &eod;
 };
 
 public type PNGFile = unit {
     signature: bytes &size=8;
-    chunks: Chunk[] &eod;
-    
+    chunks: PNGChunk[] &until($input.length() == 0);
     on %init {
-        if (self.signature != b"\x89PNG\r\n\x1a\n") {
-            throw Error("Invalid PNG signature");
-        }
+        assert self.signature == b"\x89PNG\r\n\x1a\n";
     }
 };
-
-event zeek_init() &priority=5
-{
-    print "Zeek module for parsing PNG files loaded.";
-}

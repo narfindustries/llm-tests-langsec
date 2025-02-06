@@ -1,24 +1,63 @@
-domain NetworkTimeProtocolVersion4 {
-  type NTPPacket {
-    uint32 leap: 2;
-    uint32 version: 3;
-    uint32 mode: 3;
-    uint32 poll: 4;
-    uint32 precision: 8;
-    uint32 delay: 32;
-    uint32 dispersion: 32;
-    uint32 identifier: 32;
-    uint32 referenceTimestamp: 64;
-    uint32 originateTimestamp: 64;
-    uint32 receiveTimestamp: 64;
-    uint32 transmitTimestamp: 64;
-  }
+seq ntpv4_packet = 
+  ntpv4_header: 
+    uint2 leapIndicator,
+    uint3 versionNumber,
+    uint3 mode,
+    uint8 poll,
+    uint8 precision,
+    int32 rootDelay,
+    uint32 rootDispersion,
+    bytes refId size 4,
+    uint64 referenceTimestamp,
+    uint64 originTimestamp,
+    uint64 receiveTimestamp,
+    uint64 transmitTimestamp
+  ;
+  ntpv4_extensions: 
+    array ntpv4_extension_field
+  ;
 
-  type NTPHeader {
-    NTPPacket packet;
-  }
+seq ntpv4_extension_field = 
+  uint16 type,
+  uint16 length,
+  bytes value size length
+  ;
 
-  grammar NTP {
-    entry NTPHeader;
+seq ntpv4_mac_extension_field = 
+  uint16 type value 0x0104,
+  uint16 length value 20,
+  bytes value size 20
+  ;
+
+seq ntpv4_aes_extension_field = 
+  uint16 type value 0x0204,
+  uint16 length value 20,
+  bytes value size 20
+  ;
+
+seq ntpv4_autokey_extension_field = 
+  uint16 type value 0x0304,
+  uint16 length,
+  bytes value size length
+  ;
+
+seq ntpv4_ntpv4_extension_field = 
+  uint16 type value 0x0404,
+  uint16 length,
+  bytes value size length
+  ;
+
+constraint ntpv4_packet {
+  for (extension in ntpv4_extensions) {
+    switch (extension.type) {
+      case 0x0104: 
+        extension as ntpv4_mac_extension_field
+      case 0x0204: 
+        extension as ntpv4_aes_extension_field
+      case 0x0304: 
+        extension as ntpv4_autokey_extension_field
+      case 0x0404: 
+        extension as ntpv4_ntpv4_extension_field
+    }
   }
 }

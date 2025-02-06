@@ -1,14 +1,11 @@
+use std::fs::File;
+use std::io::Read;
+use std::env;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
     number::complete::{le_u16, le_u32, le_u64, le_u8},
-    sequence::tuple,
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
-use std::env;
 
 #[derive(Debug)]
 struct ElfHeader {
@@ -29,68 +26,57 @@ struct ElfHeader {
 }
 
 fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
-    let (input, e_ident) = map(take(16usize), |bytes: &[u8]| {
-        let mut arr = [0u8; 16];
-        arr.copy_from_slice(bytes);
-        arr
-    })(input)?;
+    let (input, e_ident) = take(16usize)(input)?;
+    let (input, e_type) = le_u16(input)?;
+    let (input, e_machine) = le_u16(input)?;
+    let (input, e_version) = le_u32(input)?;
+    let (input, e_entry) = le_u64(input)?;
+    let (input, e_phoff) = le_u64(input)?;
+    let (input, e_shoff) = le_u64(input)?;
+    let (input, e_flags) = le_u32(input)?;
+    let (input, e_ehsize) = le_u16(input)?;
+    let (input, e_phentsize) = le_u16(input)?;
+    let (input, e_phnum) = le_u16(input)?;
+    let (input, e_shentsize) = le_u16(input)?;
+    let (input, e_shnum) = le_u16(input)?;
+    let (input, e_shstrndx) = le_u16(input)?;
 
-    let (input, (e_type, e_machine, e_version, e_entry, e_phoff, e_shoff, e_flags, e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum, e_shstrndx)) =
-        tuple((
-            le_u16, le_u16, le_u32, le_u64, le_u64, le_u64, le_u32, le_u16, le_u16, le_u16, le_u16, le_u16, le_u16,
-        ))(input)?;
-
-    Ok((
-        input,
-        ElfHeader {
-            e_ident,
-            e_type,
-            e_machine,
-            e_version,
-            e_entry,
-            e_phoff,
-            e_shoff,
-            e_flags,
-            e_ehsize,
-            e_phentsize,
-            e_phnum,
-            e_shentsize,
-            e_shnum,
-            e_shstrndx,
-        },
-    ))
-}
-
-fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
-    let mut file = File::open(path)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    Ok(buffer)
+    Ok((input, ElfHeader {
+        e_ident: e_ident.try_into().unwrap(),
+        e_type,
+        e_machine,
+        e_version,
+        e_entry,
+        e_phoff,
+        e_shoff,
+        e_flags,
+        e_ehsize,
+        e_phentsize,
+        e_phnum,
+        e_shentsize,
+        e_shnum,
+        e_shstrndx,
+    }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <elf-file>", args[0]);
-        std::process::exit(1);
+        return;
     }
 
-    let file_path = &args[1];
-    let buffer = match read_file(file_path) {
-        Ok(data) => data,
-        Err(err) => {
-            eprintln!("Error reading file {}: {}", file_path, err);
-            std::process::exit(1);
-        }
-    };
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_elf_header(&buffer) {
         Ok((_, elf_header)) => {
             println!("{:?}", elf_header);
         }
-        Err(err) => {
-            eprintln!("Failed to parse ELF header: {:?}", err);
-            std::process::exit(1);
+        Err(e) => {
+            eprintln!("Failed to parse ELF header: {:?}", e);
         }
     }
 }

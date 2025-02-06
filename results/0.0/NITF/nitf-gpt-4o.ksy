@@ -1,6 +1,6 @@
 meta:
   id: nitf
-  title: NITF
+  title: National Imagery Transmission Format (NITF)
   file-extension: nitf
   endian: be
 
@@ -11,84 +11,246 @@ seq:
 types:
   file_header:
     seq:
-      - id: file_type
-        size: 4
-        contents: 'NITF'
-      - id: version
-        size: 5
-      - id: complexity_level
+      - id: fhdr
+        type: str
+        size: 9
+        encoding: ASCII
+      - id: clevel
+        type: str
         size: 2
-      - id: st_type
+        encoding: ASCII
+      - id: stype
+        type: str
         size: 4
-      - id: ostanag_version
-        size: 4
-      - id: classification
-        size: 1
-      - id: security_classification_system
-        size: 2
-      - id: codewords
-        size: 11
-      - id: control_and_handling
-        size: 2
-      - id: release_instructions
-        size: 20
-      - id: declassification_type
-        size: 2
-      - id: declassification_date
-        size: 8
-      - id: declassification_exemption
-        size: 4
-      - id: downgrade
-        size: 1
-      - id: downgrade_date
-        size: 8
-      - id: classification_text
-        size: 43
-      - id: classification_authority_type
-        size: 1
-      - id: classification_authority
-        size: 40
-      - id: classification_reason
-        size: 1
-      - id: security_source_date
-        size: 8
-      - id: security_control_number
-        size: 15
-      - id: copy_number
-        size: 5
-      - id: number_of_copies
-        size: 5
-      - id: encryption
-        size: 1
-      - id: file_date_time
-        size: 14
-      - id: file_title
-        size: 80
-      - id: file_type_id
-        size: 35
-      - id: file_type_description
-        size: 35
-      - id: file_structure
-        size: 1
-      - id: file_header_length
-        size: 6
-      - id: file_data_length
+        encoding: ASCII
+      - id: ostaid
+        type: str
         size: 10
-      - id: number_of_image_segments
-        size: 3
-      - id: number_of_graphics_segments
-        size: 3
-      - id: number_of_text_files
-        size: 3
-      - id: number_of_data_extension_segments
-        size: 3
-      - id: number_of_reserved_extension_segments
-        size: 3
-      - id: user_defined_header_data_length
+        encoding: ASCII
+      - id: fdt
+        type: str
+        size: 14
+        encoding: ASCII
+      - id: ftitle
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: fsclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: fscode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fsctlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fsrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fsdctp
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: fsdcdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: fsdcxm
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: fscop
+        type: str
         size: 5
-      - id: user_defined_header_overflow
-        size: 3
-      - id: extended_header_data_length
+        encoding: ASCII
+      - id: fscpys
+        type: str
         size: 5
-      - id: extended_header_overflow
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: numi
+        type: u2
+      - id: numg
+        type: u2
+      - id: numt
+        type: u2
+      - id: numdes
+        type: u2
+      - id: numres
+        type: u2
+
+  image_segment:
+    seq:
+      - id: im
+        type: str
+        size: 10
+        encoding: ASCII
+      - id: iid1
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: idatim
+        type: str
+        size: 14
+        encoding: ASCII
+      - id: tgtid
+        type: str
+        size: 17
+        encoding: ASCII
+      - id: iid2
+        type: str
+        size: 80
+        encoding: ASCII
+      - id: isclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: iscode
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: isctlh
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: isrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: isdctp
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: isdcdt
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: isdcxm
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: isorce
+        type: str
+        size: 42
+        encoding: ASCII
+      - id: nrows
+        type: u4
+      - id: ncols
+        type: u4
+      - id: pvtype
+        type: str
         size: 3
+        encoding: ASCII
+      - id: irep
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: icat
+        type: str
+        size: 8
+        encoding: ASCII
+      - id: abpp
+        type: u2
+      - id: pjust
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: icords
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: igeolo
+        type: str
+        size: 60
+        encoding: ASCII
+
+  graphic_segment:
+    seq:
+      - id: sid
+        type: str
+        size: 10
+        encoding: ASCII
+      - id: sname
+        type: str
+        size: 20
+        encoding: ASCII
+      - id: ssclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: ssrel
+        type: str
+        size: 40
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+
+  text_segment:
+    seq:
+      - id: textid
+        type: str
+        size: 10
+        encoding: ASCII
+      - id: txtalvl
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: txtfmt
+        type: str
+        size: 3
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+
+  data_extension_segment:
+    seq:
+      - id: desid
+        type: str
+        size: 25
+        encoding: ASCII
+      - id: desver
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: declas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII
+
+  reserved_extension_segment:
+    seq:
+      - id: resid
+        type: str
+        size: 25
+        encoding: ASCII
+      - id: resver
+        type: str
+        size: 2
+        encoding: ASCII
+      - id: reclas
+        type: str
+        size: 1
+        encoding: ASCII
+      - id: encryp
+        type: str
+        size: 1
+        encoding: ASCII

@@ -2,47 +2,51 @@ module DNS;
 
 import spicy;
 
+public type Header = unit {
+    id: uint16;
+    flags: bitfield(16) {
+        qr: 1;
+        opcode: 4;
+        aa: 1;
+        tc: 1;
+        rd: 1;
+        ra: 1;
+        z: 3;
+        rcode: 4;
+    };
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+public type DNSName = unit {
+    name: list<bytes>;
+};
+
+public type Question = unit {
+    name: DNSName;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+public type ResourceRecord = unit {
+    name: DNSName;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes(self.rdlength);
+};
+
 public type Message = unit {
     header: Header;
-    questions: list<Question> &until($input.eof());
+    questions: Question[] &count=(self.header.qdcount);
+    answers: ResourceRecord[] &count=(self.header.ancount);
+    authorities: ResourceRecord[] &count=(self.header.nscount);
+    additional: ResourceRecord[] &count=(self.header.arcount);
+};
 
-    var num_questions = |this.questions|;
-
-    type Header = unit {
-        id: uint16;
-        flags: Flags;
-        qdcount: uint16;
-        ancount: uint16;
-        nscount: uint16;
-        arcount: uint16;
-    };
-
-    type Flags = unit {
-        data: uint16;
-
-        var qr: bool = data[15:1] == 1;
-        var opcode: uint8 = (data[14:4] >> 11) & 0xf;
-        var aa: bool = (data[10:1] == 1);
-        var tc: bool = (data[9:1] == 1);
-        var rd: bool = (data[8:1] == 1);
-        var ra: bool = (data[7:1] == 1);
-        var z: uint8 = (data[6:3] >> 4) & 0x7;
-        var rcode: uint8 = data[3:4] & 0xf;
-    };
-
-    type Question = unit {
-        name: Name;
-        qtype: uint16;
-        qclass: uint16;
-    };
-
-    type Name = unit {
-        labels: list<Label> &until($input.look(1) == 0x00);
-        end: uint8 &requires(end == 0);
-
-        type Label = unit {
-            len: uint8 &requires(len < 64);
-            label: bytes &size=(len);
-        };
-    };
+public function parse(data: bytes) : Message = {
+    return Message(data);
 };

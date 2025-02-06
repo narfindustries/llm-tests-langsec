@@ -2,8 +2,7 @@ meta:
   id: sqlite3_db
   title: SQLite3 Database File
   file-extension: sqlite3
-  endian: le
-  encoding: utf-8
+  endian: be
 
 seq:
   - id: header
@@ -12,29 +11,31 @@ seq:
 types:
   header:
     seq:
-      - id: magic
-        contents: "SQLite format 3\0"
+      - id: header_string
+        type: str
+        size: 16
+        encoding: ASCII
       - id: page_size
         type: u2
-      - id: write_version
+      - id: file_format_write_version
         type: u1
-      - id: read_version
+      - id: file_format_read_version
         type: u1
       - id: reserved_space
         type: u1
-      - id: max_payload_frac
+      - id: max_embedded_payload_frac
         type: u1
-      - id: min_payload_frac
+      - id: min_embedded_payload_frac
         type: u1
       - id: leaf_payload_frac
         type: u1
       - id: file_change_counter
         type: u4
-      - id: num_pages
+      - id: database_size_in_pages
         type: u4
       - id: first_freelist_trunk_page
         type: u4
-      - id: num_freelist_pages
+      - id: total_freelist_pages
         type: u4
       - id: schema_cookie
         type: u4
@@ -42,7 +43,7 @@ types:
         type: u4
       - id: default_page_cache_size
         type: u4
-      - id: largest_root_page
+      - id: largest_root_btree_page_number
         type: u4
       - id: text_encoding
         type: u4
@@ -52,9 +53,9 @@ types:
         type: u4
       - id: application_id
         type: u4
-      - id: reserved
+      - id: reserved_for_expansion
         size: 20
-      - id: version_valid_for
+      - id: version_valid_for_number
         type: u4
       - id: sqlite_version_number
         type: u4

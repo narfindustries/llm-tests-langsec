@@ -1,61 +1,46 @@
-module DICOM;
+module DICOM {
+  struct FileHeader {
+    magic: bytes(size = 128);
+    prefix: string(size = 4, encoding = "ASCII");
 
-import std::int;
-import std::array;
+    elements: seq[DataElement];
+  }
 
-type Preamble = array[u8, 128];
-
-type DICOMPrefix = struct {
-  magic: array[u8, 4] = "DICM";
-};
-
-type VR = enum[u16] {
-  OB = 0x4F42,
-  OW = 0x4F57,
-  SQ = 0x5351,
-  UI = 0x5549,
-  UL = 0x554C,
-  UN = 0x554E,
-  US = 0x5553,
-  UT = 0x5554
-};
-
-type Length = choice {
-  explicit: u32;
-  undefined: u32 = 0xFFFFFFFF;
-};
-
-type Element = struct {
-  tag_group: u16;
-  tag_element: u16;
-  vr: VR;
-  reserved: u16;
-  length: Length;
-  value: array[u8, self.length.explicit] if self.length.explicit != 0xFFFFFFFF;
-};
-
-type SequenceItem = struct {
-  item_tag_group: u16 = 0xFFFE;
-  item_tag_element: u16 = 0xE000;
-  item_length: Length;
-  item_content: array[Element, *] if self.item_length.explicit != 0xFFFFFFFF;
-};
-
-type Sequence = array[SequenceItem, *];
-
-type DataElement = struct {
-  tag_group: u16;
-  tag_element: u16;
-  vr: VR;
-  length: Length;
-  value: choice {
-    short_value: array[u8, self.length.explicit] if self.vr != VR::SQ;
-    sequence_value: Sequence if self.vr == VR::SQ;
-  };
-};
-
-type DICOMFile = struct {
-  preamble: Preamble;
-  prefix: DICOMPrefix;
-  elements: array[DataElement, *];
-};
+  struct DataElement {
+    tagGroup: u16;
+    tagElement: u16;
+    vr: string(size = 2, encoding = "ASCII");
+    length: u32;
+    value: switch (self.vr) {
+      case "AE": string(size = self.length, encoding = "ASCII");
+      case "AS": string(size = self.length, encoding = "ASCII");
+      case "AT": u16;
+      case "CS": string(size = self.length, encoding = "ASCII");
+      case "DA": string(size = self.length, encoding = "ASCII");
+      case "DS": string(size = self.length, encoding = "ASCII");
+      case "DT": string(size = self.length, encoding = "ASCII");
+      case "FL": f32;
+      case "FD": f64;
+      case "IS": string(size = self.length, encoding = "ASCII");
+      case "LO": string(size = self.length, encoding = "ASCII");
+      case "LT": string(size = self.length, encoding = "ASCII");
+      case "OB": bytes(size = self.length);
+      case "OD": bytes(size = self.length);
+      case "OF": bytes(size = self.length);
+      case "OW": bytes(size = self.length);
+      case "PN": string(size = self.length, encoding = "ASCII");
+      case "SH": string(size = self.length, encoding = "ASCII");
+      case "SL": i32;
+      case "SQ": seq[DataElement];
+      case "SS": i16;
+      case "ST": string(size = self.length, encoding = "ASCII");
+      case "TM": string(size = self.length, encoding = "ASCII");
+      case "UI": string(size = self.length, encoding = "ASCII");
+      case "UL": u32;
+      case "UN": bytes(size = self.length);
+      case "US": u16;
+      case "UT": string(size = self.length, encoding = "ASCII");
+      default: bytes(size = self.length);
+    };
+  }
+}

@@ -1,75 +1,114 @@
-domain dns {
-  import byteorder;
+type dns = struct {
+  header: header,
+  questions: array of question,
+  answers: array of answer,
+  authorities: array of authority,
+  additionals: array of additional
+}
 
-  type Message = struct {
-    header: Header,
-    questions: Question[],
-    answers: ResourceRecord[],
-    authorities: ResourceRecord[],
-    additionals: ResourceRecord[]
-  };
+type header = struct {
+  id: uint16,
+  flags: flags,
+  qdcount: uint16,
+  ancount: uint16,
+  nscount: uint16,
+  arcount: uint16
+}
 
-  type Header = struct {
-    id: uint16,
-    flags: Flags,
-    qdcount: uint16,
-    ancount: uint16,
-    nscount: uint16,
-    arcount: uint16
-  };
+type flags = struct {
+  qr: bool,
+  opcode: uint4,
+  aa: bool,
+  tc: bool,
+  rd: bool,
+  ra: bool,
+  z: uint3,
+  rcode: uint4
+}
 
-  type Flags = bitfield {
-    qr: 1,
-    opcode: 4,
-    aa: 1,
-    tc: 1,
-    rd: 1,
-    ra: 1,
-    z: 3,
-    rcode: 4
-  };
+type question = struct {
+  qname: domain_name,
+  qtype: uint16,
+  qclass: uint16
+}
 
-  type Question = struct {
-    name: DomainName,
-    type: uint16,
-    class: uint16
-  };
+type answer = struct {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes
+}
 
-  type DomainName = string {
-    encoding: dns_label,
-    separator: '.'
-  };
+type authority = struct {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes
+}
 
-  type ResourceRecord = struct {
-    name: DomainName,
-    type: uint16,
-    class: uint16,
-    ttl: uint32,
-    rdlength: uint16,
-    rdata: RData
-  };
+type additional = struct {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes
+}
 
-  type RData = choice {
-    A: uint32,
-    NS: DomainName,
-    CNAME: DomainName,
-    SOA: SOA,
-    PTR: DomainName,
-    MX: MX
-  };
+type domain_name = struct {
+  labels: array of label
+}
 
-  type SOA = struct {
-    mname: DomainName,
-    rname: DomainName,
-    serial: uint32,
-    refresh: uint32,
-    retry: uint32,
-    expire: uint32,
-    minimum: uint32
-  };
+type label = struct {
+  length: uint8,
+  data: bytes
+}
 
-  type MX = struct {
-    preference: uint16,
-    exchange: DomainName
-  };
+enum qtype = {
+  A = 1,
+  NS = 2,
+  MD = 3,
+  MF = 4,
+  CNAME = 5,
+  SOA = 6,
+  MB = 7,
+  MG = 8,
+  MR = 9,
+  NULL = 10,
+  WKS = 11,
+  PTR = 12,
+  HINFO = 13,
+  MINFO = 14,
+  MX = 15,
+  TXT = 16,
+  ANY = 255
+}
+
+enum qclass = {
+  IN = 1,
+  CS = 2,
+  CH = 3,
+  HS = 4,
+  ANY = 255
+}
+
+enum opcode = {
+  QUERY = 0,
+  IQUERY = 1,
+  STATUS = 2,
+  NOTIFY = 4,
+  UPDATE = 5
+}
+
+enum rcode = {
+  NOERROR = 0,
+  FORMERR = 1,
+  SERVFAIL = 2,
+  NXDOMAIN = 3,
+  NOTIMP = 4,
+  REFUSED = 5
 }

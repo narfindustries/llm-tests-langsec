@@ -1,136 +1,272 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/NITF"
-           xmlns:tns="http://example.com/NITF"
+           xmlns:nitf="http://www.example.com/NITF"
+           targetNamespace="http://www.example.com/NITF"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="NITF-Core.xsd"/>
-  <xs:include schemaLocation="NITF-Header.xsd"/>
-  <xs:include schemaLocation="NITF-TREs.xsd"/>
-
-  <xs:element name="NITF" type="tns:NITFType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format InfosetSeparators="&#10;" dfdl:sequenceKind="unordered"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="NITFType">
+  <xs:element name="nitf" type="nitf:File"/>
+  <xs:complexType name="File">
     <xs:sequence>
-      <xs:element ref="tns:NIHF" minOccurs="1" maxOccurs="1">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element ref="tns:NTREs" minOccurs="0" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element ref="tns:NDATA" minOccurs="0" maxOccurs="1">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="fileHeader" type="nitf:FileHeader"/>
+      <xs:element name="fileFormatVersion" type="nitf:FileFormatVersion"/>
+      <xs:element name="systemName" type="nitf:SystemName"/>
+      <xs:element name="fileDateAndTime" type="nitf:FileDateAndTime"/>
+      <xs:element name="fileTitle" type="nitf:FileTitle"/>
+      <xs:element name="securityClassification" type="nitf:SecurityClassification"/>
+      <xs:element name="documentType" type="nitf:DocumentType"/>
+      <xs:element name="documentFormat" type="nitf:DocumentFormat"/>
+      <xs:element name="documentStandard" type="nitf:DocumentStandard"/>
+      <xs:element name="originatorName" type="nitf:OriginatorName"/>
+      <xs:element name="originatorPhone" type="nitf:OriginatorPhone" minOccurs="0"/>
+      <xs:element name="releasingInstructions" type="nitf:ReleasingInstructions" minOccurs="0"/>
+      <xs:element name="imageSegment" type="nitf:ImageSegment" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="graphicsSegment" type="nitf:GraphicsSegment" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="textSegment" type="nitf:TextSegment" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="fileTrailer" type="nitf:FileTrailer"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="NIHF" type="tns:NIHFType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format InfosetSeparators="&#10;" dfdl:sequenceKind="unordered"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="NIHFType">
+  <xs:complexType name="FileHeader">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="NITF"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="FileFormatVersion">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="02.10"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="SystemName">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="24"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="FileDateAndTime">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="pattern" type="xs:string" use="required" fixed="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="FileTitle">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="80"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="SecurityClassification">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="U C S T"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="DocumentType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="IMAG GRPH TEXT"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="DocumentFormat">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="NITF"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="DocumentStandard">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="NITF"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="OriginatorName">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="24"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="OriginatorPhone">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="14"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ReleasingInstructions">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="80"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageSegment">
     <xs:sequence>
-      <xs:element name="NITFHeader" type="tns:NITFHeaderType">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="NITF" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="TREs" type="tns:TREsType" minOccurs="0" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="imageSubHeader" type="nitf:ImageSubHeader"/>
+      <xs:element name="imageId" type="nitf:ImageId"/>
+      <xs:element name="imageDateAndTime" type="nitf:ImageDateAndTime"/>
+      <xs:element name="imageTitle" type="nitf:ImageTitle"/>
+      <xs:element name="securityClassification" type="nitf:SecurityClassification"/>
+      <xs:element name="imageCompression" type="nitf:ImageCompression"/>
+      <xs:element name="imageType" type="nitf:ImageType"/>
+      <xs:element name="pixelType" type="nitf:PixelType"/>
+      <xs:element name="pixelSize" type="xs:integer"/>
+      <xs:element name="imageSize" type="xs:integer"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="NITFHeaderType">
+  <xs:complexType name="ImageSubHeader">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="ISHS"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageId">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="25"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageDateAndTime">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="pattern" type="xs:string" use="required" fixed="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageTitle">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="80"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageCompression">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="01 02 03"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="ImageType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="MONO COLR"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="PixelType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="INT8 INT16 REAL32"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GraphicsSegment">
     <xs:sequence>
-      <xs:element name="FileHeader" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:encoding="ASCII"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="graphicsSubHeader" type="nitf:GraphicsSubHeader"/>
+      <xs:element name="graphicsId" type="nitf:GraphicsId"/>
+      <xs:element name="graphicsDateAndTime" type="nitf:GraphicsDateAndTime"/>
+      <xs:element name="graphicsTitle" type="nitf:GraphicsTitle"/>
+      <xs:element name="securityClassification" type="nitf:SecurityClassification"/>
+      <xs:element name="graphicsType" type="nitf:GraphicsType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="TREsType">
+  <xs:complexType name="GraphicsSubHeader">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="GSHS"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GraphicsId">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="25"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GraphicsDateAndTime">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="pattern" type="xs:string" use="required" fixed="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GraphicsTitle">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="80"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="GraphicsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="VECT RAST"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TextSegment">
     <xs:sequence>
-      <xs:element name="TRE" type="tns:TREType" minOccurs="1" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="textSubHeader" type="nitf:TextSubHeader"/>
+      <xs:element name="textId" type="nitf:TextId"/>
+      <xs:element name="textDateAndTime" type="nitf:TextDateAndTime"/>
+      <xs:element name="textTitle" type="nitf:TextTitle"/>
+      <xs:element name="securityClassification" type="nitf:SecurityClassification"/>
+      <xs:element name="textType" type="nitf:TextType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="TREType">
-    <xs:sequence>
-      <xs:element name="TREHeader" type="tns:TREHeaderType">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:initiator="&#10;" dfdl:terminator="&#10;"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="TREData" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="*">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:encoding="ASCII"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
+  <xs:complexType name="TextSubHeader">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="TSHS"/>
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
-
-  <xs:complexType name="TREHeaderType">
-    <xs:sequence>
-      <xs:element name="TREName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25">
-        <xs:annotation>
-          <xs:appinfo>
-            <dfdl:format dfdl:encoding="ASCII"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
+  <xs:complexType name="TextId">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="25"/>
+      </xs:extension>
+    </xs:simpleContent>
   </xs:complexType>
-
-  <xs:element name="NDATA" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="*">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format dfdl:encoding="ASCII"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
+  <xs:complexType name="TextDateAndTime">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="pattern" type="xs:string" use="required" fixed="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TextTitle">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="length" type="xs:string" use="required" fixed="80"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="TextType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="enumeration" type="xs:string" use="required" fixed="PLAIN FORM"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="FileTrailer">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="fixed" type="xs:string" use="required" fixed="NIETF"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
 </xs:schema>

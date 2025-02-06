@@ -1,56 +1,33 @@
-#ifndef DNS_GEMINI_1_H
-#define DNS_GEMINI_1_H
+module DNS;
 
-#include <zeek/analyzer/protocol/dns.h>
+type DNS {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+    questions: array of question;
+    answers: array of resource_record;
+    authority: array of resource_record;
+    additional: array of resource_record;
+}
 
-namespace DNS::Gemini1 {
+type question {
+    qname: domain_name;
+    qtype: uint16;
+    qclass: uint16;
+}
 
-	enum class QueryType : uint8_t {
-		A = 1,
-		AAAA = 28,
-		CNAME = 5,
-		MX = 15,
-		NS = 2,
-		SOA = 6,
-		TXT = 16,
-		SRV = 33,
-		PTR = 12
-	};
+type resource_record {
+    name: domain_name;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes;
+}
 
-	struct Query {
-		string qname;
-		QueryType qtype;
-	};
-
-	struct Response {
-		string qname;
-		QueryType qtype;
-		vector<string> answers;
-	};
-
-	event zeek_dns_query(DNS::Query q)
-	{
-		Query query;
-		query.qname = q.qname;
-		query.qtype = (QueryType)q.qtype;
-
-		// Add your custom logic here to process the query
-		// ...
-	}
-
-	event zeek_dns_response(DNS::Response r)
-	{
-		Response response;
-		response.qname = r.qname;
-		response.qtype = (QueryType)r.qtype;
-		foreach (const auto& ans : r.answers) {
-			response.answers.append(ans);
-		}
-
-		// Add your custom logic here to process the response
-		// ...
-	}
-
-} // namespace DNS::Gemini1
-
-#endif // DNS_GEMINI_1_H
+type domain_name {
+    labels: array of string;
+}

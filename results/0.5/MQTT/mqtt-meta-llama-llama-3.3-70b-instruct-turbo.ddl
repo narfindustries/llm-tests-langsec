@@ -1,54 +1,148 @@
-domain MQTT {
-  types {
-    uint8  : 1 byte;
-    uint16 : 2 bytes;
-    uint32 : 4 bytes;
-    string : sequence of uint8;
-  }
+type FixedHeader = {
+  byte0: uint8,
+  byte1: uint8,
+}
 
-  grammar {
-    MQTTMessage : 
-      (FixedHeader, 
-       (Publish | PubAck | PubRec | PubRel | PubComp | Subscribe | SubAck | Unsubscribe | UnsubAck | PingReq | PingResp | Disconnect)
-      );
+type VariableHeader = {
+  packet_identifier: uint16,
+  properties: Properties,
+}
 
-    FixedHeader : 
-      (uint8:4, uint8, uint8:7, uint8);
+type Properties = {
+  payload_format_indicator: uint8,
+  message_expiry_interval: uint32,
+  content_type: string,
+  correlation_data: bytes,
+  subscription_identifier: uint32,
+  session_expiry_interval: uint32,
+  assigned_client_identifier: string,
+  server_keep_alive: uint16,
+  authentication_method: string,
+  authentication_data: bytes,
+  request_problem_information: uint8,
+  request_response_information: uint8,
+  response_topic: string,
+  user_property: string,
+}
 
-    Publish : 
-      (uint16, string, (string, string)?:optional);
+type ConnectPacket = {
+  fixed_header: FixedHeader,
+  protocol_name: string,
+  protocol_level: uint8,
+  connect_flags: uint8,
+  keep_alive: uint16,
+  properties: Properties,
+  username: string,
+  password: bytes,
+}
 
-    PubAck : 
-      (uint16);
+type ConnAckPacket = {
+  fixed_header: FixedHeader,
+  session_present: uint8,
+  return_code: uint8,
+  properties: Properties,
+}
 
-    PubRec : 
-      (uint16);
+type PublishPacket = {
+  fixed_header: FixedHeader,
+  topic_name: string,
+  packet_identifier: uint16,
+  properties: Properties,
+  payload: bytes,
+}
 
-    PubRel : 
-      (uint16);
+type PubAckPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_code: uint8,
+  properties: Properties,
+}
 
-    PubComp : 
-      (uint16);
+type PubRecPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_code: uint8,
+  properties: Properties,
+}
 
-    Subscribe : 
-      (uint16, (string, uint8)?:optional);
+type PubRelPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_code: uint8,
+  properties: Properties,
+}
 
-    SubAck : 
-      (uint16, (uint8)?:optional);
+type PubCompPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_code: uint8,
+  properties: Properties,
+}
 
-    Unsubscribe : 
-      (uint16, (string)?:optional);
+type SubscribePacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  properties: Properties,
+  subscriptions: [Subscription],
+}
 
-    UnsubAck : 
-      (uint16);
+type Subscription = {
+  topic_filter: string,
+  qos: uint8,
+  no_local: uint8,
+  retain_as_published: uint8,
+  retain_handling: uint8,
+}
 
-    PingReq : 
-      ();
+type SubAckPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_codes: [uint8],
+  properties: Properties,
+}
 
-    PingResp : 
-      ();
+type UnsubscribePacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  properties: Properties,
+  topic_filters: [string],
+}
 
-    Disconnect : 
-      ();
-  }
+type UnsubAckPacket = {
+  fixed_header: FixedHeader,
+  packet_identifier: uint16,
+  reason_codes: [uint8],
+  properties: Properties,
+}
+
+type DisconnectPacket = {
+  fixed_header: FixedHeader,
+  reason_code: uint8,
+  properties: Properties,
+}
+
+type AuthPacket = {
+  fixed_header: FixedHeader,
+  reason_code: uint8,
+  properties: Properties,
+}
+
+type MQTT = {
+  fixed_header: FixedHeader,
+  packet_type: uint8,
+  packet: (
+    connect: ConnectPacket,
+    connack: ConnAckPacket,
+    publish: PublishPacket,
+    puback: PubAckPacket,
+    pubrec: PubRecPacket,
+    pubrel: PubRelPacket,
+    pubcomp: PubCompPacket,
+    subscribe: SubscribePacket,
+    suback: SubAckPacket,
+    unsubscribe: UnsubscribePacket,
+    unsuback: UnsubAckPacket,
+    disconnect: DisconnectPacket,
+    auth: AuthPacket,
+  ),
 }

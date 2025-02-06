@@ -1,75 +1,87 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-HParser* init_elf_parser() {
-    // Basic components
-    HParser* whitespace = h_whitespace(h_ch(' '));
-    HParser* newline = h_ch('\n');
-    
-    // Header components
-    HParser* magic = h_token((uint8_t*)"\x7f""ELF", 4);
-    HParser* class_field = h_uint8();
-    HParser* data_field = h_uint8();
-    HParser* version_field = h_uint8();
-    HParser* osabi_field = h_uint8();
-    HParser* abiversion_field = h_uint8();
-    HParser* padding = h_repeat_n(h_uint8(), 7);
-    
-    // Type and machine
-    HParser* type_field = h_uint16();
-    HParser* machine_field = h_uint16();
-    
-    // Version and entry point
-    HParser* e_version = h_uint32();
-    HParser* entry_point = h_uint32();
-    
-    // Program and section header offsets
-    HParser* phoff = h_uint32();
-    HParser* shoff = h_uint32();
-    
-    // Flags and header sizes
-    HParser* flags = h_uint32();
-    HParser* ehsize = h_uint16();
-    HParser* phentsize = h_uint16();
-    HParser* phnum = h_uint16();
-    HParser* shentsize = h_uint16();
-    HParser* shnum = h_uint16();
-    HParser* shstrndx = h_uint16();
-    
-    // Combine all components
+static const uint8_t ELF_MAGIC[] = {0x7f, 'E', 'L', 'F'};
+
+HParser* elf_ident_parser() {
     return h_sequence(
-        magic,
-        class_field,
-        data_field,
-        version_field,
-        osabi_field,
-        abiversion_field,
-        padding,
-        type_field,
-        machine_field,
-        e_version,
-        entry_point,
-        phoff,
-        shoff,
-        flags,
-        ehsize,
-        phentsize,
-        phnum,
-        shentsize,
-        shnum,
-        shstrndx,
-        NULL
-    );
+        h_token((const uint8_t*)ELF_MAGIC, 4),
+        h_choice(h_int_range(h_uint8(), 0, 2), NULL),  // EI_CLASS
+        h_choice(h_int_range(h_uint8(), 0, 2), NULL),  // EI_DATA
+        h_int_range(h_uint8(), 0, 1),                  // EI_VERSION
+        h_int_range(h_uint8(), 0, 255),                // EI_OSABI
+        h_uint8(),                                     // EI_ABIVERSION
+        h_repeat_n(h_uint8(), 7),                      // EI_PAD
+        NULL);
 }
 
-HParsedToken* parse_elf(const uint8_t* input, size_t length) {
-    HParser* parser = init_elf_parser();
-    if (!parser) return NULL;
-    
-    HParseResult* result = h_parse(parser, input, length);
-    if (!result) return NULL;
-    
-    return result->ast;
+HParser* elf_header_parser() {
+    return h_sequence(
+        elf_ident_parser(),
+        h_int_range(h_uint16(), 0, 0xffff),           // e_type
+        h_int_range(h_uint16(), 0, 0xffff),           // e_machine
+        h_int_range(h_uint32(), 0, 1),                // e_version
+        h_uint64(),                                    // e_entry
+        h_uint64(),                                    // e_phoff
+        h_uint64(),                                    // e_shoff
+        h_uint32(),                                    // e_flags
+        h_uint16(),                                    // e_ehsize
+        h_uint16(),                                    // e_phentsize
+        h_uint16(),                                    // e_phnum
+        h_uint16(),                                    // e_shentsize
+        h_uint16(),                                    // e_shnum
+        h_uint16(),                                    // e_shstrndx
+        NULL);
+}
+
+HParser* program_header_parser() {
+    return h_sequence(
+        h_uint32(),                                    // p_type
+        h_uint32(),                                    // p_flags
+        h_uint64(),                                    // p_offset
+        h_uint64(),                                    // p_vaddr
+        h_uint64(),                                    // p_paddr
+        h_uint64(),                                    // p_filesz
+        h_uint64(),                                    // p_memsz
+        h_uint64(),                                    // p_align
+        NULL);
+}
+
+HParser* section_header_parser() {
+    return h_sequence(
+        h_uint32(),                                    // sh_name
+        h_uint32(),                                    // sh_type
+        h_uint64(),                                    // sh_flags
+        h_uint64(),                                    // sh_addr
+        h_uint64(),                                    // sh_offset
+        h_uint64(),                                    // sh_size
+        h_uint32(),                                    // sh_link
+        h_uint32(),                                    // sh_info
+        h_uint64(),                                    // sh_addralign
+        h_uint64(),                                    // sh_entsize
+        NULL);
+}
+
+HParser* symbol_table_entry_parser() {
+    return h_sequence(
+        h_uint32(),                                    // st_name
+        h_uint8(),                                     // st_info
+        h_uint8(),                                     // st_other
+        h_uint16(),                                    // st_shndx
+        h_uint64(),                                    // st_value
+        h_uint64(),                                    // st_size
+        NULL);
+}
+
+HParser* elf_parser() {
+    return h_sequence(
+        elf_header_parser(),
+        h_many(program_header_parser()),
+        h_many(section_header_parser()),
+        h_many(symbol_table_entry_parser()),
+        NULL);
 }
 
 int main(int argc, char** argv) {
@@ -77,40 +89,41 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
         return 1;
     }
-    
+
     FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Failed to open file");
         return 1;
     }
-    
+
     fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
+    size_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
-    uint8_t* buffer = malloc(file_size);
+
+    uint8_t* buffer = malloc(size);
     if (!buffer) {
+        perror("Failed to allocate memory");
         fclose(file);
-        fprintf(stderr, "Memory allocation failed\n");
         return 1;
     }
-    
-    if (fread(buffer, 1, file_size, file) != file_size) {
-        free(buffer);
-        fclose(file);
-        fprintf(stderr, "File read failed\n");
-        return 1;
-    }
-    
-    HParsedToken* result = parse_elf(buffer, file_size);
-    if (!result) {
-        fprintf(stderr, "Parsing failed\n");
+
+    if (fread(buffer, 1, size, file) != size) {
+        perror("Failed to read file");
         free(buffer);
         fclose(file);
         return 1;
     }
-    
-    // Clean up
+
+    HParser* parser = elf_parser();
+    HParseResult* result = h_parse(parser, buffer, size);
+
+    if (result) {
+        printf("Successfully parsed ELF file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse ELF file\n");
+    }
+
     free(buffer);
     fclose(file);
     return 0;

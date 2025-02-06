@@ -1,53 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tiff"
-           xmlns:tns="http://example.com/tiff"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns:tiff="http://ns.tiff" 
+           targetNamespace="http://ns.tiff" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
   <xs:element name="tiff">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format rdf:resource="http://www.ogf.org/dfdl/2008/dfdl-1.0#binary"/>
-        <dfdl:encoding rdf:resource="http://www.ogf.org/dfdl/2008/dfdl-1.0#iso-8859-1"/>
-      </xs:appinfo>
-    </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="tns:header" dfdl:occurs="1..1" dfdl:outputValueCalculator="@value + '0x'"/>
-        <xs:element ref="tns:ifd" dfdl:occurs="1..1"/>
+        <xs:element name="byteOrder" type="tiff:byteOrder" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="version" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ifdOffset" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ifd" type="tiff:IFD" minOccurs="1" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="value" type="xs:integer" dfdl:outputNewLine="true" dfdl:outputValueCalculator="@value"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ifd">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:tag" dfdl:occurs="2..256" dfdl:separator="0x00"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="tag">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="id" type="xs:unsignedShort" dfdl:alignment="bit" dfdl:alignmentOffset="0" dfdl:outputNewLine="false" dfdl:outputValueCalculator="@value"/>
-        <xs:element name="type" type="xs:unsignedShort" dfdl:alignment="bit" dfdl:alignmentOffset="0" dfdl:outputNewLine="false" dfdl:outputValueCalculator="@value"/>
-        <xs:element name="count" type="xs:unsignedLong" dfdl:alignment="bit" dfdl:alignmentOffset="0" dfdl:outputNewLine="false" dfdl:outputValueCalculator="@value"/>
-        <xs:element name="value" type="xs:unsignedLong" dfdl:alignment="bit" dfdl:alignmentOffset="0" dfdl:outputNewLine="true" dfdl:outputValueCalculator="@value"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:complexType name="IFD">
+    <xs:sequence>
+      <xs:element name="tag" type="tiff:tag" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="nextIFDOffset" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="tag">
+    <xs:sequence>
+      <xs:element name="tagNumber" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="dataType" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="count" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="valueOffset" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="byteOrder">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="2"/>
+      <xs:enumeration value="4949"/>
+      <xs:enumeration value="4d4d"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="imageWidth" type="xs:integer"/>
+  <xs:element name="imageLength" type="xs:integer"/>
+  <xs:element name="bitsPerSample" type="xs:integer"/>
+  <xs:element name="compression" type="xs:integer"/>
+  <xs:element name="photometricInterpretation" type="xs:integer"/>
+  <xs:element name="orientation" type="xs:integer"/>
+  <xs:element name="samplesPerPixel" type="xs:integer"/>
+  <xs:element name="planarConfiguration" type="xs:integer"/>
+  <xs:element name="yCbCrSubSampling" type="xs:integer"/>
+  <xs:element name="yCbCrPositioning" type="xs:integer"/>
+  <xs:element name="xResolution" type="xs:integer"/>
+  <xs:element name="yResolution" type="xs:integer"/>
+  <xs:element name="resolutionUnit" type="xs:integer"/>
+  <xs:element name="dateTime" type="xs:string"/>
+  <xs:element name="artist" type="xs:string"/>
+  <xs:element name="imageDescription" type="xs:string"/>
+  <xs:element name="make" type="xs:string"/>
+  <xs:element name="model" type="xs:string"/>
+  <xs:element name="software" type="xs:string"/>
+  <xs:element name="dateTimeOriginal" type="xs:string"/>
+  <xs:element name="dateTimeDigitized" type="xs:string"/>
+  <xs:element name="stripOffsets" type="xs:integer"/>
+  <xs:element name="stripByteCounts" type="xs:integer"/>
+  <xs:element name="tileWidth" type="xs:integer"/>
+  <xs:element name="tileLength" type="xs:integer"/>
+  <xs:element name="tileOffsets" type="xs:integer"/>
+  <xs:element name="tileByteCounts" type="xs:integer"/>
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:property name="representation" value="binary"/>
+        <dfdl:property name="encoding" value="bigEndian"/>
+        <dfdl:property name="byteOrder" value="mostSignificantByteFirst"/>
+        <dfdl:property name="textEncoding" value="UTF-8"/>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
 </xs:schema>

@@ -1,0 +1,22 @@
+module TLS;
+
+import spicy;
+
+public type ClientHello = unit {
+    legacy_version: uint16;
+    random: bytes &size=32;
+    legacy_session_id: bytes &size=uint8;
+    cipher_suites: bytes &size=uint16;
+    legacy_compression_methods: bytes &size=uint8;
+    extensions: bytes &size=uint16;
+
+    on %done {
+        print "ClientHello:";
+        print "  Legacy Version: %s" % self.legacy_version;
+        print "  Random: %s" % self.random;
+        print "  Legacy Session ID: %s" % self.legacy_session_id;
+        print "  Cipher Suites: %s" % self.cipher_suites;
+        print "  Legacy Compression Methods: %s" % self.legacy_compression_methods;
+        print "  Extensions: %s" % self.extensions;
+    }
+};

@@ -1,46 +1,28 @@
-specification BitcoinTransactions;
-
-type Amount = {
-    value: nat
+def Bitcoin = {
+  Version : u32 le,
+  TxInCount : VarInt,
+  TxIn : [TxInCount] {
+    PrevTxHash : [32] u8,
+    PrevOutIndex : u32 le,
+    ScriptLength : VarInt,
+    ScriptSig : [ScriptLength] u8,
+    Sequence : u32 le
+  },
+  TxOutCount : VarInt,
+  TxOut : [TxOutCount] {
+    Value : u64 le,
+    ScriptLength : VarInt,
+    ScriptPubKey : [ScriptLength] u8
+  },
+  LockTime : u32 le
 }
 
-type TransactionInput = {
-    prev_tx: hexstring,
-    index: nat,
-    sig_script: hexstring
+def VarInt = {
+  prefix : u8,
+  value : choose prefix {
+    0xFD => u16 le,
+    0xFE => u32 le,
+    0xFF => u64 le,
+    _    => prefix
+  }
 }
-
-type TransactionOutput = {
-    amount: Amount,
-    pk_script: hexstring
-}
-
-type Transaction = {
-    version: nat,
-    inputs: [TransactionInput*],
-    outputs: [TransactionOutput+],
-    lock_time: nat
-}
-
-type Block = {
-    version: nat,
-    prev_block: hexstring,
-    merkle_root: hexstring,
-    timestamp: nat,
-    bits: nat,
-    nonce: nat,
-    transactions: [Transaction+]
-}
-
-grammar BitcoinGrammar {
-    BitcoinBlocks = blocks: [Block*]
-}
-
-grammar HexGrammar {
-    HexDigit = '0'..'9' | 'a'..'f' | 'A'..'F'
-    HexString = HexDigit+
-}
-
-type hexstring = @HexGrammar::HexString
-
-start BitcoinGrammar::BitcoinBlocks

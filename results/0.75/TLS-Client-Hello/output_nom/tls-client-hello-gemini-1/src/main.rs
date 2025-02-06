@@ -1,70 +1,112 @@
 use nom::{
-    bytes::complete::{tag, take, take_until},
-    combinator::{map, map_res, opt, value},
-    multi::length_count,
-    number::complete::{be_u16, be_u24, be_u32, be_u8},
-    sequence::{preceded, tuple},
+    bytes::complete::{take, take_while_m_n},
+    combinator::{map, opt, all_consuming},
+    number::complete::{be_u16, be_u8},
+    sequence::tuple,
     IResult,
 };
-use std::fs::File;
-use std::io::Read;
-use std::env;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
 struct ClientHello {
-    client_version: (u8, u8),
-    random: [u8; 32],
-    session_id: Option<Vec<u8>>,
-    cipher_suites: Vec<(u8, u8)>,
+    protocol_version: (u8, u8),
+    random: Vec<u8>,
+    session_id: Vec<u8>,
+    cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
-    extensions: Option<Vec<u8>>,
+    extensions: Vec<Extension>,
+}
+
+#[derive(Debug)]
+struct Extension {
+    extension_type: u16,
+    extension_data: Vec<u8>,
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, client_version) = tuple((be_u8, be_u8))(input)?;
-    let (input, random) = take(32usize)(input)?;
-    let (input, session_id) = opt(preceded(be_u8, take_until(b"\x00")))(input)?;
-    let session_id = session_id.map(|s| s[..s.len()-1].to_vec());
+    let (rem, protocol_version) = tuple((be_u8, be_u8))(input)?;
+    let (rem, random) = take(32usize)(rem)?;
+    let (rem, session_id_len) = be_u8(rem)?;
+    let (rem, session_id) = take(session_id_len as usize)(rem)?;
+    let (rem, cipher_suites_len) = be_u16(rem)?;
+    let (rem, cipher_suites_bytes) = take(cipher_suites_len as usize)(rem)?;
+    let cipher_suites: Vec<u16> = cipher_suites_bytes
+        .chunks(2)
+        .map(|chunk| u16::from_be_bytes(chunk.try_into().unwrap()))
+        .collect();
 
-    let (input, cipher_suites) = length_count(be_u16, tuple((be_u8, be_u8)))(input)?;
-    let (input, compression_methods) = length_count(be_u8, be_u8)(input)?;
-    let (input, extensions) = opt(preceded(be_u16, take_until(b"\x00")))(input)?;
-    let extensions = extensions.map(|s| s[..s.len()-1].to_vec());
+    let (rem, compression_methods_len) = be_u8(rem)?;
+    let (rem, compression_methods) = take(compression_methods_len as usize)(rem)?;
+    let (rem, extensions_len) = opt(be_u16)(rem)?;
+    let extensions = match extensions_len {
+        Some(len) => {
+            let (rem, extensions_bytes) = take(len as usize)(rem)?;
+            let mut extensions = Vec::new();
+            let mut remaining_extensions = extensions_bytes;
+            while !remaining_extensions.is_empty() {
+                let (rem_ext, extension) = parse_extension(remaining_extensions)?;
+                extensions.push(extension);
+                remaining_extensions = rem_ext;
+            }
+            extensions
+        }
+        None => Vec::new(),
+    };
 
     Ok((
-        input,
+        rem,
         ClientHello {
-            client_version,
-            random: random.try_into().unwrap(),
-            session_id,
+            protocol_version,
+            random: random.to_vec(),
+            session_id: session_id.to_vec(),
             cipher_suites,
-            compression_methods,
+            compression_methods: compression_methods.to_vec(),
             extensions,
         },
     ))
 }
 
+fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+    let (rem, extension_type) = be_u16(input)?;
+    let (rem, extension_data_len) = be_u16(rem)?;
+    let (rem, extension_data) = take(extension_data_len as usize)(rem)?;
+    Ok((
+        rem,
+        Extension {
+            extension_type,
+            extension_data: extension_data.to_vec(),
+        },
+    ))
+}
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <input_file>", args[0]);
-        return Ok(());
+        eprintln!("Usage: {} <filename>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let mut file = File::open(filename)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let path = Path::new(&args[1]);
+    let input = match fs::read(path) {
+        Ok(input) => input,
+        Err(err) => {
+            eprintln!("Error reading file: {}", err);
+            std::process::exit(1);
+        }
+    };
 
-    match parse_client_hello(&buffer) {
-        Ok((_, client_hello)) => {
-            println!("{:#?}", client_hello);
+    let result = all_consuming(parse_client_hello)(&input);
+    match result {
+        Ok((rem, client_hello)) => {
+            println!("Parsed Client Hello:\n{:?}", client_hello);
+            if !rem.is_empty() {
+                println!("Remaining bytes: {:?}", rem);
+            }
         }
         Err(e) => {
-            println!("Error parsing Client Hello: {:?}", e);
+            eprintln!("Error parsing Client Hello: {:?}", e);
+            std::process::exit(1);
         }
-    }
-
-    Ok(())
+    };
 }

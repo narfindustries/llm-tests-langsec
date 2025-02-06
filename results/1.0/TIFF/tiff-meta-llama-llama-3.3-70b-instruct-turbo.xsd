@@ -1,42 +1,192 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tiff"
-           xmlns:tns="http://example.com/tiff"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="tiff">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" elementFormDefault="qualified">
+  <xs:element name="format">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="tns:header" minOccurs="1" maxOccurs="1" dfdl:occursCount="1"/>
-        <xs:element ref="tns:ifd" minOccurs="1" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ $header.imageLength }"/>
+        <xs:element name="element" type="dfdl:elementType"/>
+        <xs:element name="defineType" type="dfdl:defineTypeType" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="byteOrder" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
-        <xs:element name="magic" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
-        <xs:element name="ifdOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native"/>
-        <xs:element name="imageLength" type="xs:unsignedInt" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="native"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ifd">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="tag" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native" minOccurs="1" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ $..imageLength }"/>
-        <xs:element name="type" type="xs:string" dfdl:length="2" dfdl:encoding="utf-8" dfdl:byteOrder="native"/>
-        <xs:element name="components" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native"/>
-        <xs:element name="value" type="xs:string" dfdl:length="{ $components * 2 }" dfdl:encoding="utf-8" dfdl:byteOrder="native" minOccurs="0"/>
-        <xs:element name="offset" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="binary" dfdl:byteOrder="native" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="assert" type="dfdl:assertType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="occurs" type="xs:string" default="1"/>
+    <xs:attribute name="length" type="xs:string"/>
+  </xs:complexType>
+  <xs:complexType name="defineTypeType">
+    <xs:sequence>
+      <xs:element name="sequence" type="dfdl:sequenceType"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="sequenceType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="assertType">
+    <xs:attribute name="test" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:element name="TIFF" type="TIFFType"/>
+  <xs:complexType name="TIFFType">
+    <xs:sequence>
+      <xs:element name="byteOrder" type="xs:hexBinary"/>
+      <xs:element name="magicNumber" type="xs:hexBinary"/>
+      <xs:element name="offsetToIFD" type="xs:unsignedInt"/>
+      <xs:element name="IFD" type="IFDType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="numberOfEntries" type="xs:unsignedShort"/>
+      <xs:element name="tags" type="TagType" maxOccurs="unbounded"/>
+      <xs:element name="nextIFDOffset" type="xs:unsignedInt" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TagType">
+    <xs:sequence>
+      <xs:element name="tagID" type="xs:unsignedShort"/>
+      <xs:element name="tagType" type="xs:unsignedShort"/>
+      <xs:element name="count" type="xs:unsignedInt"/>
+      <xs:element name="offset" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ImageWidthType">
+    <xs:choice>
+      <xs:element name="value" type="xs:unsignedInt"/>
+      <xs:element name="value2" type="xs:unsignedInt"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="ImageLengthType">
+    <xs:choice>
+      <xs:element name="value" type="xs:unsignedInt"/>
+      <xs:element name="value2" type="xs:unsignedInt"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="BitsPerSampleType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="4"/>
+          <xs:enumeration value="8"/>
+          <xs:enumeration value="16"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CompressionType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="3"/>
+          <xs:enumeration value="4"/>
+          <xs:enumeration value="5"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PhotometricInterpretationType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="0"/>
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="3"/>
+          <xs:enumeration value="4"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OrientationType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="3"/>
+          <xs:enumeration value="4"/>
+          <xs:enumeration value="5"/>
+          <xs:enumeration value="6"/>
+          <xs:enumeration value="7"/>
+          <xs:enumeration value="8"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="SamplesPerPixelType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="3"/>
+          <xs:enumeration value="4"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="RowsPerStripType">
+    <xs:choice>
+      <xs:element name="value" type="xs:unsignedInt"/>
+      <xs:element name="value2" type="xs:unsignedInt"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="StripOffsetsType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedInt" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="StripByteCountsType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedInt" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="XResolutionType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:rational"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="YResolutionType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:rational"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ResolutionUnitType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedShort">
+        <xs:restriction base="xs:unsignedShort">
+          <xs:enumeration value="1"/>
+          <xs:enumeration value="2"/>
+          <xs:enumeration value="3"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DateTimeType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string">
+        <xs:restriction base="xs:string">
+          <xs:pattern value="[0-9]{4}:[0-9]{2}:[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ArtistType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ImageDescriptionType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

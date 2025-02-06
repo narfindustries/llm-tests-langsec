@@ -1,41 +1,80 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/sqlite3"
-           xmlns:tns="http://example.com/sqlite3">
+           targetNamespace="http://example.com/sqlite"
+           xmlns:tns="http://example.com/sqlite">
 
-  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+  <!-- Define a global element for the SQLite database file -->
+  <xs:element name="SQLiteDB" type="tns:SQLiteDBType"/>
 
-  <xs:element name="SQLite3Database" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Header" type="tns:HeaderType"/>
-        <xs:element name="Body" type="tns:BodyType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="HeaderType">
+  <!-- Define a complex type for the SQLite database file -->
+  <xs:complexType name="SQLiteDBType">
     <xs:sequence>
-      <xs:element name="MagicHeader" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII"/>
-      <xs:element name="PageSize" type="xs:int" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="WriteVersion" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="ReadVersion" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="ReservedSpace" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="MaxPayload" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="MinPayload" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="LeafPayload" type="xs:byte" dfdl:length="1"/>
-      <xs:element name="ChangeCounter" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="InHeaderDBSize" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="WriteVersionNumber" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="ReadVersionNumber" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="ReservedBytes" type="xs:int" dfdl:length="4" dfdl:byteOrder="bigEndian"/>
+      <!-- Database Header -->
+      <xs:element name="headerString" type="xs:string" dfdl:length="16" dfdl:encoding="US-ASCII" dfdl:lengthKind="explicit" />
+      <xs:element name="pageSize" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="writeVersion" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="readVersion" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="reservedSpace" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="maxEmbeddedPayloadFrac" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="minEmbeddedPayloadFrac" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="leafPayloadFrac" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="fileChangeCounter" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="databaseSizePages" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="firstFreelistPage" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="numFreelistPages" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="schemaCookie" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="schemaFormat" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="defaultPageCacheSize" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="largestRootBtreePage" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="databaseTextEncoding" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="userVersion" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="incrementalVacuumMode" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="applicationId" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="reservedExpansion" type="xs:hexBinary" dfdl:length="20" dfdl:lengthKind="explicit" />
+      <xs:element name="versionValidFor" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <xs:element name="sqliteVersionNumber" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+
+      <!-- Database Pages -->
+      <xs:element name="pages" type="tns:PageType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../databaseSizePages }" />
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="BodyType">
+  <!-- Define a complex type for a database page -->
+  <xs:complexType name="PageType">
     <xs:sequence>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+      <xs:element name="pageType" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:choice>
+        <xs:element name="btreePage" type="tns:BTreePageType" dfdl:choiceBranchKey="2 5 10 13"/>
+        <xs:element name="freelistPage" type="tns:FreelistPageType" dfdl:choiceBranchKey="0"/>
+        <!-- Add other page types as necessary -->
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define a complex type for a B-tree page -->
+  <xs:complexType name="BTreePageType">
+    <xs:sequence>
+      <xs:element name="firstFreeblock" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="numCells" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="cellContentAreaOffset" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" />
+      <xs:element name="numFragmentedFreeBytes" type="xs:byte" dfdl:length="1" dfdl:lengthKind="explicit" />
+      <xs:element name="cells" type="tns:CellType" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../numCells }" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define a complex type for a cell in a B-tree page -->
+  <xs:complexType name="CellType">
+    <xs:sequence>
+      <xs:element name="payload" type="xs:hexBinary" dfdl:lengthKind="delimited" />
+      <xs:element name="rowid" type="xs:long" dfdl:lengthKind="implicit" dfdl:representation="binary" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define a complex type for a freelist page -->
+  <xs:complexType name="FreelistPageType">
+    <xs:sequence>
+      <xs:element name="nextFreelistPage" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit" />
+      <!-- Additional fields for freelist pages can be defined here -->
     </xs:sequence>
   </xs:complexType>
 

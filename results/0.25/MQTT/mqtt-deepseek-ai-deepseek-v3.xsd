@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.com/mqtt"
+           xmlns:mqtt="http://www.example.com/mqtt"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit" encoding="UTF-8" occursCountKind="implicit" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="MQTTMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="FixedHeader" type="mqtt:FixedHeaderType" />
+        <xs:element name="VariableHeader" type="mqtt:VariableHeaderType" minOccurs="0" />
+        <xs:element name="Payload" type="mqtt:PayloadType" minOccurs="0" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="PacketType" type="mqtt:PacketTypeType" dfdl:encoding="UTF-8" />
+      <xs:element name="Flags" type="mqtt:FlagsType" dfdl:encoding="UTF-8" />
+      <xs:element name="RemainingLength" type="mqtt:RemainingLengthType" dfdl:encoding="UTF-8" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="PacketTypeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1" />
+      <xs:enumeration value="2" />
+      <xs:enumeration value="3" />
+      <xs:enumeration value="4" />
+      <xs:enumeration value="5" />
+      <xs:enumeration value="6" />
+      <xs:enumeration value="7" />
+      <xs:enumeration value="8" />
+      <xs:enumeration value="9" />
+      <xs:enumeration value="10" />
+      <xs:极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客极客时间极客极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客时间极客

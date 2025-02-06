@@ -1,52 +1,151 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/icmp"
-           xmlns:icmp="http://example.com/icmp">
+           xmlns:icmp="http://example.com/icmp"
+           targetNamespace="http://example.com/icmp">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
-        byteOrder="bigEndian"
-        representation="binary"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberCheckPolicy="strict"
-        textZonedSignStyle="asciiStandardSign"
-        escapeSchemeRef=""
-        alignment="1"
-        alignmentUnits="bytes"/>
+      <dfdl:format alignment="1" 
+                   alignmentUnits="bits" 
+                   byteOrder="bigEndian" 
+                   encoding="ASCII"
+                   lengthKind="explicit"
+                   lengthUnits="bits"
+                   occursCountKind="fixed"
+                   sequenceKind="ordered"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ICMPPacket">
-    <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="Type" type="xs:unsignedByte" 
-          dfdl:representation="binary"
-          dfdl:lengthKind="explicit"
-          dfdl:length="1"/>
-        
-        <xs:element name="Code" type="xs:unsignedByte" 
-          dfdl:representation="binary"
-          dfdl:lengthKind="explicit"
-          dfdl:length="1"/>
-        
-        <xs:element name="Checksum" type="xs:unsignedShort" 
-          dfdl:representation="binary"
-          dfdl:lengthKind="explicit"
-          dfdl:length="2"/>
-        
-        <xs:element name="RestOfHeader" type="xs:hexBinary" 
-          dfdl:representation="binary"
-          dfdl:lengthKind="explicit"
-          dfdl:length="4"/>
-      </xs:sequence>
-    </xs:complexType>
+  <xs:element name="ICMPPacket" type="icmp:ICMPPacketType">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+      </xs:appinfo>
+    </xs:annotation>
   </xs:element>
 
+  <xs:complexType name="ICMPPacketType">
+    <xs:sequence>
+      <xs:element name="Type" type="icmp:ICMPTypeType" 
+                  dfdl:length="8"
+                  dfdl:lengthKind="explicit"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Code" type="icmp:ICMPCodeType" 
+                  dfdl:length="8"
+                  dfdl:lengthKind="explicit"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Checksum" type="xs:hexBinary" 
+                  dfdl:length="16"
+                  dfdl:lengthKind="explicit"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="RestOfHeader" type="icmp:RestHeaderType" 
+                  dfdl:length="32"
+                  dfdl:lengthKind="explicit"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ICMPTypeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ICMPCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="RestHeaderType">
+    <xs:sequence>
+      <xs:element name="Identifier" type="xs:unsignedShort" 
+                  minOccurs="0"
+                  dfdl:occursCountKind="fixed"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="SequenceNumber" type="xs:unsignedShort" 
+                  minOccurs="0"
+                  dfdl:occursCountKind="fixed"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="Pointer" type="xs:unsignedByte" 
+                  minOccurs="0"
+                  dfdl:occursCountKind="fixed"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="OriginalDatagramInfo" type="xs:hexBinary" 
+                  minOccurs="0"
+                  dfdl:occursCountKind="fixed"
+                  dfdl:representation="binary">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:element floating="no" textBidi="no" encodingErrorPolicy="replace"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

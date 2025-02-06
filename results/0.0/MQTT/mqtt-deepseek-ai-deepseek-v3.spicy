@@ -1,0 +1,147 @@
+module MQTT;
+
+import spicy;
+
+public type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+};
+
+public type QoS = enum {
+    AT_MOST_ONCE = 0,
+    AT_LEAST_ONCE = 1,
+    EXACTLY_ONCE = 2
+};
+
+public type ConnectFlags = struct {
+    clean_start: uint8;
+    will_flag: uint8;
+    will_qos: uint8;
+    will_retain: uint8;
+    password_flag: uint8;
+    username_flag: uint8;
+};
+
+public type Connect = struct {
+    protocol_name: bytes;
+    protocol_level: uint8;
+    flags: ConnectFlags;
+    keep_alive: uint16;
+    client_id: bytes;
+    will_topic: optional<bytes>;
+    will_payload: optional<bytes>;
+    username: optional<bytes>;
+    password: optional<bytes>;
+};
+
+public type ConnAck = struct {
+    session_present: uint8;
+    reason_code: uint8;
+};
+
+public type Publish = struct {
+    topic_name: bytes;
+    packet_id: optional<uint16>;
+    payload: bytes;
+    properties: optional<Properties>;
+};
+
+public type Subscribe = struct {
+    packet_id: uint16;
+    topic_filters: vector<bytes>;
+    subscription_options: vector<uint8>;
+};
+
+public type SubAck = struct {
+    packet_id: uint16;
+    reason_codes: vector<uint8>;
+};
+
+public type Unsubscribe = struct {
+    packet_id: uint16;
+    topic_filters: vector<bytes>;
+};
+
+public type UnsubAck = struct {
+    packet_id: uint16;
+    reason_codes: vector<uint8>;
+};
+
+public type Disconnect = struct {
+    reason_code: uint8;
+    properties: optional<Properties>;
+};
+
+public type Auth = struct {
+    reason_code: uint8;
+    properties: optional<Properties>;
+};
+
+public type Properties = struct {
+    payload_format_indicator: optional<uint8>;
+    message_expiry_interval: optional<uint32>;
+    topic_alias: optional<uint16>;
+    response_topic: optional<bytes>;
+    correlation_data: optional<bytes>;
+    user_property: optional<vector<bytes>>;
+    subscription_id: optional<uint32>;
+    session_expiry_interval: optional<uint32>;
+    assigned_client_id: optional<bytes>;
+    server_keep_alive: optional<uint16>;
+    authentication_method: optional<bytes>;
+    authentication_data: optional<bytes>;
+    request_problem_info: optional<uint8>;
+    will_delay_interval: optional<uint32>;
+    request_response_info: optional<uint8>;
+    response_info: optional<bytes>;
+    server_reference: optional<bytes>;
+    reason_string: optional<bytes>;
+    receive_maximum: optional<uint16>;
+    topic_alias_maximum: optional<uint16>;
+    maximum_qos: optional<uint8>;
+    retain_available: optional<uint8>;
+    maximum_packet_size: optional<uint32>;
+    wildcard_subscription_available: optional<uint8>;
+    subscription_id_available: optional<uint8>;
+    shared_subscription_available: optional<uint8>;
+};
+
+public type MQTTPacket = struct {
+    packet_type: PacketType;
+    flags: uint8;
+    remaining_length: uint32;
+    payload: union {
+        CONNECT -> connect: Connect;
+        CONNACK -> connack: ConnAck;
+        PUBLISH -> publish: Publish;
+        PUBACK -> puback: uint16;
+        PUBREC -> pubrec: uint16;
+        PUBREL -> pubrel: uint16;
+        PUBCOMP -> pubcomp: uint16;
+        SUBSCRIBE -> subscribe: Subscribe;
+        SUBACK -> suback: SubAck;
+        UNSUBSCRIBE -> unsubscribe: Unsubscribe;
+        UNSUBACK -> unsuback: UnsubAck;
+        PINGREQ -> pingreq: uint8;
+        PINGRESP -> pingresp: uint8;
+        DISCONNECT -> disconnect: Disconnect;
+        AUTH -> auth: Auth;
+    };
+};
+
+public type MQTT = struct {
+    packets: vector<MQTTPacket>;
+};

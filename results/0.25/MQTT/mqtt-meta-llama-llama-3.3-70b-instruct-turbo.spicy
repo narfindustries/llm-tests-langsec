@@ -1,154 +1,253 @@
-# MQTT Protocol Specification in Zeek Spicy format
+module MQTT;
 
-%header{
-    import zeek.*;
-    import zeek/spicy/protocol/mqtt;
-}
+type mqtt_message_type = uint8;
+const mqtt_message_type_connect = 0x01;
+const mqtt_message_type_connack = 0x02;
+const mqtt_message_type_publish = 0x03;
+const mqtt_message_type_puback = 0x04;
+const mqtt_message_type_pubrec = 0x05;
+const mqtt_message_type_pubrel = 0x06;
+const mqtt_message_type_pubcomp = 0x07;
+const mqtt_message_type_subscribe = 0x08;
+const mqtt_message_type_suback = 0x09;
+const mqtt_message_type_unsubscribe = 0x0a;
+const mqtt_message_type_unsuback = 0x0b;
+const mqtt_message_type_pingreq = 0x0c;
+const mqtt_message_type_pingresp = 0x0d;
+const mqtt_message_type_disconnect = 0x0e;
+const mqtt_message_type_auth = 0x0f;
 
-%proto mqtt {
-    %include binpac::mqtt::MQTT_Packet;
+type mqtt_dup_flag = uint8;
+const mqtt_dup_flag_false = 0;
+const mqtt_dup_flag_true = 1;
 
-    %unit_size(1);
-    %big_endian();
+type mqtt_qos = uint8;
+const mqtt_qos_at_most_once = 0;
+const mqtt_qos_at_least_once = 1;
+const mqtt_qos_exactly_once = 2;
 
-    function get_packet(): MQTT_Packet
-        %{
-            return mqtt::get_mqtt_packet();
-        %}
+type mqtt_retain = uint8;
+const mqtt_retain_false = 0;
+const mqtt_retain_true = 1;
 
-    # MQTT Control Packet Type
-    type MQTT_Control_Packet_Type = enum {
-        RESERVED                = 0,
-        CONNECT                 = 1,
-        CONNACK                 = 2,
-        PUBLISH                 = 3,
-        PUBACK                  = 4,
-        PUBREC                  = 5,
-        PUBREL                  = 6,
-        PUBCOMP                 = 7,
-        SUBSCRIBE               = 8,
-        SUBACK                  = 9,
-        UNSUBSCRIBE             = 10,
-        UNSUBACK                = 11,
-        PINGREQ                 = 12,
-        PINGRESP                = 13,
-        DISCONNECT              = 14
-    };
+type mqtt_connect_flags = uint8;
+const mqtt_connect_flag_username = 0x80;
+const mqtt_connect_flag_password = 0x40;
+const mqtt_connect_flag_will_retain = 0x20;
+const mqtt_connect_flag_will_qos = 0x18;
+const mqtt_connect_flag_will_flag = 0x04;
+const mqtt_connect_flag_clean_start = 0x02;
 
-    # MQTT Connect Flags
-    type MQTT_Connect_Flags = struct {
-        username:              bool;
-        password:              bool;
-        will_retain:           bool;
-        will_qos:              uint3;
-        will_flag:             bool;
-        clean_session:         bool;
-    };
+type mqtt_connect_return_code = uint8;
+const mqtt_connect_return_code_connection_accepted = 0;
+const mqtt_connect_return_code_connection_refused_unacceptable_protocol_version = 1;
+const mqtt_connect_return_code_connection_refused_identifier_rejected = 2;
+const mqtt_connect_return_code_connection_refused_server_unavailable = 3;
+const mqtt_connect_return_code_connection_refused_bad_username_or_password = 4;
+const mqtt_connect_return_code_connection_refused_not_authorized = 5;
 
-    # MQTT Connect Packet
-    type MQTT_Connect = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint16;
-        protocol_name:         string(6);
-        protocol_version:      uint8;
-        connect_flags:         MQTT_Connect_Flags;
-        keep_alive:            uint16;
-        client_id:             string;
-        will_topic:            string;
-        will_message:          string;
-        username:              string;
-        password:              string;
-    };
+type mqtt_reason_code = uint8;
+const mqtt_reason_code_success = 0;
+const mqtt_reason_code_no_matching_subscribers = 16;
+const mqtt_reason_code_no_subscription_existed = 17;
+const mqtt_reason_code_unspecified_error = 18;
+const mqtt_reason_code_implementation_specific_error = 19;
 
-    # MQTT Connack Packet
-    type MQTT_Connack = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        connect_return_code:   uint8;
-        session_present:       bool;
-    };
+type mqtt_publish_packet_identifier = uint16;
 
-    # MQTT Publish Packet
-    type MQTT_Publish = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint16;
-        topic_name:            string;
-        packet_id:             uint16;
-        payload:               string;
-    };
+type mqtt_subscribe_packet_identifier = uint16;
 
-    # MQTT Puback Packet
-    type MQTT_Puback = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-    };
+type mqtt_suback_reason_code = uint8;
+const mqtt_suback_reason_code_success_max_qos_0 = 0;
+const mqtt_suback_reason_code_success_max_qos_1 = 1;
+const mqtt_suback_reason_code_success_max_qos_2 = 2;
+const mqtt_suback_reason_code_no_subscription_existed = 17;
+const mqtt_suback_reason_code_unspecified_error = 18;
+const mqtt_suback_reason_code_implementation_specific_error = 19;
 
-    # MQTT Pubrec Packet
-    type MQTT_Pubrec = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-    };
+type mqtt_unsubscribe_packet_identifier = uint16;
 
-    # MQTT Pubrel Packet
-    type MQTT_Pubrel = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-    };
+type mqtt_unsuback_reason_code = uint8;
+const mqtt_unsuback_reason_code_success = 0;
+const mqtt_unsuback_reason_code_no_subscription_existed = 17;
+const mqtt_unsuback_reason_code_unspecified_error = 18;
+const mqtt_unsuback_reason_code_implementation_specific_error = 19;
 
-    # MQTT Pubcomp Packet
-    type MQTT_Pubcomp = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-    };
+type mqtt_disconnect_reason_code = uint8;
+const mqtt_disconnect_reason_code_normal_disconnection = 0;
+const mqtt_disconnect_reason_code_server_shutting_down = 16;
+const mqtt_disconnect_reason_code_keep_alive_timeout = 17;
+const mqtt_disconnect_reason_code_session_taken_over = 18;
 
-    # MQTT Subscribe Packet
-    type MQTT_Subscribe = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint16;
-        packet_id:             uint16;
-        topic_filter:          string;
-        qos:                   uint8;
-    };
+type mqtt_auth_reason_code = uint8;
+const mqtt_auth_reason_code_continue_authentication = 0;
+const mqtt_auth_reason_code_re_authenticate = 16;
+const mqtt_auth_reason_code_unspecified_error = 17;
+const mqtt_auth_reason_code_implementation_specific_error = 18;
 
-    # MQTT Suback Packet
-    type MQTT_Suback = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-        return_code:           uint8;
-    };
+let mqtt_fixed_header = {
+  message_type: mqtt_message_type;
+  dup: mqtt_dup_flag;
+  qos: mqtt_qos;
+  retain: mqtt_retain;
+  remaining_length: uint32;
+};
 
-    # MQTT Unsubscribe Packet
-    type MQTT_Unsubscribe = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint16;
-        packet_id:             uint16;
-        topic_filter:          string;
-    };
+let mqtt_connect = {
+  protocol_name: string;
+  protocol_level: uint8;
+  connect_flags: mqtt_connect_flags;
+  keep_alive: uint16;
+  payload: {
+    username: optional(string);
+    password: optional(string);
+    will_topic: optional(string);
+    will_message: optional(string);
+  };
+};
 
-    # MQTT Unsuback Packet
-    type MQTT_Unsuback = struct {
-        header:                MQTT_Control_Packet_Type;
-        remaining_length:      uint8;
-        packet_id:             uint16;
-    };
+let mqtt_connack = {
+  session_present: bool;
+  connect_return_code: mqtt_connect_return_code;
+  reason_code: optional(mqtt_reason_code);
+  properties: optional({
+    session_expiry_interval: uint32;
+    receive_maximum: uint16;
+    maximum_qos: uint8;
+    retain_available: bool;
+    maximum_packet_size: uint32;
+    topic_alias_maximum: uint16;
+    reason_string: string;
+  });
+};
 
-    # MQTT Pingreq Packet
-    type MQTT_Pingreq = struct {
-        header:                MQTT_Control_Packet_Type;
-    };
+let mqtt_publish = {
+  packet_identifier: optional(mqtt_publish_packet_identifier);
+  topic_name: string;
+  payload: bytes;
+  properties: optional({
+    payload_format_indicator: bool;
+    message_expiry_interval: uint32;
+    topic_alias: uint16;
+    response_topic: string;
+    correlation_data: bytes;
+    user_property: string;
+    subscription_identifier: uint32;
+    content_type: string;
+  });
+};
 
-    # MQTT Pingresp Packet
-    type MQTT_Pingresp = struct {
-        header:                MQTT_Control_Packet_Type;
-    };
+let mqtt_puback = {
+  packet_identifier: mqtt_publish_packet_identifier;
+  reason_code: mqtt_reason_code;
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
 
-    # MQTT Disconnect Packet
-    type MQTT_Disconnect = struct {
-        header:                MQTT_Control_Packet_Type;
-    };
-}
+let mqtt_pubrec = {
+  packet_identifier: mqtt_publish_packet_identifier;
+  reason_code: mqtt_reason_code;
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_pubrel = {
+  packet_identifier: mqtt_publish_packet_identifier;
+  reason_code: mqtt_reason_code;
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_pubcomp = {
+  packet_identifier: mqtt_publish_packet_identifier;
+  reason_code: mqtt_reason_code;
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_subscribe = {
+  packet_identifier: mqtt_subscribe_packet_identifier;
+  subscriptions: array({
+    topic_filter: string;
+    qos: mqtt_qos;
+    no_local: bool;
+    retain_as_published: bool;
+    retain_handling: uint8;
+  });
+};
+
+let mqtt_suback = {
+  packet_identifier: mqtt_subscribe_packet_identifier;
+  reason_codes: array(mqtt_suback_reason_code);
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_unsubscribe = {
+  packet_identifier: mqtt_unsubscribe_packet_identifier;
+  topic_filters: array(string);
+};
+
+let mqtt_unsuback = {
+  packet_identifier: mqtt_unsubscribe_packet_identifier;
+  reason_codes: array(mqtt_unsuback_reason_code);
+  properties: optional({
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_pingreq = {};
+
+let mqtt_pingresp = {};
+
+let mqtt_disconnect = {
+  reason_code: mqtt_disconnect_reason_code;
+  properties: optional({
+    session_expiry_interval: uint32;
+    server_reference: string;
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_auth = {
+  reason_code: mqtt_auth_reason_code;
+  properties: optional({
+    authentication_method: string;
+    authentication_data: bytes;
+    reason_string: string;
+    user_property: string;
+  });
+};
+
+let mqtt_message = {
+  fixed_header: mqtt_fixed_header;
+  payload: switch(fixed_header.message_type) {
+    case mqtt_message_type_connect: mqtt_connect;
+    case mqtt_message_type_connack: mqtt_connack;
+    case mqtt_message_type_publish: mqtt_publish;
+    case mqtt_message_type_puback: mqtt_puback;
+    case mqtt_message_type_pubrec: mqtt_pubrec;
+    case mqtt_message_type_pubrel: mqtt_pubrel;
+    case mqtt_message_type_pubcomp: mqtt_pubcomp;
+    case mqtt_message_type_subscribe: mqtt_subscribe;
+    case mqtt_message_type_suback: mqtt_suback;
+    case mqtt_message_type_unsubscribe: mqtt_unsubscribe;
+    case mqtt_message_type_unsuback: mqtt_unsuback;
+    case mqtt_message_type_pingreq: mqtt_pingreq;
+    case mqtt_message_type_pingresp: mqtt_pingresp;
+    case mqtt_message_type_disconnect: mqtt_disconnect;
+    case mqtt_message_type_auth: mqtt_auth;
+  };
+};

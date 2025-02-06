@@ -1,21 +1,25 @@
-# This is a sample Kaitai Struct definition.  You'll need to replace this with your actual data.
-# The error message suggests a problem with the compilation command, not the .ksy file itself.
-#  The error likely stems from issues outside the scope of this .ksy file (e.g., missing dependencies, incorrect paths).
-
-#  This example demonstrates a simple structure.  Adapt it to your needs.
-
 type: struct
-endian: be
-
+endian: big
 fields:
-  - id: magic
-    type: u4
-  - id: version
+  - id: hardware_type
     type: u2
-  - id: data_length
+  - id: protocol_type
     type: u2
-  - id: data
-    type: seq
-    size: data_length
+  - id: hardware_addr_len
     type: u1
-
+  - id: protocol_addr_len
+    type: u1
+  - id: opcode
+    type: u2
+  - id: sender_hardware_addr
+    type: bytes
+    size: hardware_addr_len
+  - id: sender_protocol_addr
+    type: bytes
+    size: protocol_addr_len
+  - id: target_hardware_addr
+    type: bytes
+    size: hardware_addr_len
+  - id: target_protocol_addr
+    type: bytes
+    size: protocol_addr_len

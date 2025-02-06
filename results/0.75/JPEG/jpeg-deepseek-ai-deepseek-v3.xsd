@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define JPEG markers -->
+  <xs:simpleType name="JPEGMarker">
+    <xs:restriction base="xs:hexBinary">
+      <xs:enumeration value="FFD8" /> <!-- SOI -->
+      <xs:enumeration value="FFC0" /> <!-- SOF0 -->
+      <xs:enumeration value="FFC1" /> <!-- SOF1 -->
+      <xs:enumeration value="FFC2" /> <!-- SOF2 -->
+      <xs:enumeration value="FFC3" /> <!-- SOF3 -->
+      <xs:enumeration value="FFC4" /> <!-- DHT -->
+      <xs:enumeration value="FFDB" /> <!-- DQT -->
+      <xs:enumeration value="FFDA" /> <!-- SOS -->
+      <xs:enumeration value="FFD9" /> <!-- EOI -->
+      <xs:enumeration value="FFE0" /> <!-- APP0 -->
+      <xs:enumeration value="FFE1" /> <!-- APP1 -->
+      <xs:enumeration value="FFFE" /> <!-- COM -->
+      <xs:enumeration value="FFDD" /> <!-- DRI -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Define JPEG file structure -->
+  <xs:element name="JPEGFile">
+    <xs:complexType>
+      <xs:sequence dfdl:lengthKind="implicit">
+        <xs:element name="SOI" type="JPEGMarker" fixed="FFD8" />
+        <xs:element name="Segments" type="JPEGSegment" maxOccurs="unbounded" />
+        <xs:element name="EOI" type="JPEGMarker" fixed="FFD9" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define JPEG segment -->
+  <xs:complexType name="JPEGSegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Marker" type="JPEGMarker" />
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" />
+      <xs:choice>
+        <xs:element name="SOF0" type="SOF0Segment" />
+        <xs:element name="DHT" type="DHTSegment" />
+        <xs:element name="DQT" type="DQTSegment" />
+        <xs:element name="SOS" type="SOSSegment" />
+        <xs:element name="APP0" type="APP0Segment" />
+        <xs:element name="APP1" type="APP1Segment" />
+        <xs:element name="COM" type="COMSegment" />
+        <xs:element name="DRI" type="DRISegment" />
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define SOF0 segment -->
+  <xs:complexType name="SOF0Segment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Precision" type="xs:unsignedByte" />
+      <xs:element name="Height" type="xs:unsignedShort" />
+      <xs:element name="Width" type="xs:unsignedShort" />
+      <xs:element name="NumComponents" type="xs:unsignedByte" />
+      <xs:element name="Components" type="Component" maxOccurs="3" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define Component -->
+  <xs:complexType name="Component">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="ID" type="xs:unsignedByte" />
+      <xs:element name="SamplingFactors" type="xs:unsignedByte" />
+      <xs:element name="QuantTableSelector" type="xs:unsignedByte" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DHT segment -->
+  <xs:complexType name="DHTSegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="TableClass" type="xs:unsignedByte" />
+      <xs:element name="TableID" type="xs:unsignedByte" />
+      <xs:element name="CodeLengths" type="xs:hexBinary" dfdl:length="16" />
+      <xs:element name="Symbols" type="xs:hexBinary" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DQT segment -->
+  <xs:complexType name="DQTSegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="TablePrecision" type="xs:unsignedByte" />
+      <xs:element name="TableID" type="xs:unsignedByte" />
+      <xs:element name="QuantValues" type="xs:hexBinary" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define SOS segment -->
+  <xs:complexType name="SOSSegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="NumComponentsInScan" type="xs:unsignedByte" />
+      <xs:element name="ComponentSelectors" type="xs:unsignedByte" maxOccurs="3" />
+      <xs:element name="HuffmanTableSelectors" type="xs:unsignedByte" maxOccurs="3" />
+      <xs:element name="SpectralSelectionStart" type="xs:unsignedByte" />
+      <xs:element name="SpectralSelectionEnd" type="xs:unsignedByte" />
+      <xs:element name="SuccessiveApproximation" type="xs:unsignedByte" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define APP0 segment -->
+  <xs:complexType name="APP0Segment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Identifier" type="xs:string" dfdl:length="5" />
+      <xs:element name="Version" type="xs:unsignedShort" />
+      <xs:element name="DensityUnits" type="xs:unsignedByte" />
+      <xs:element name="XDensity" type="xs:unsignedShort" />
+      <xs:element name="YDensity" type="xs:unsignedShort" />
+      <xs:element name="ThumbnailWidth" type="xs:unsignedByte" />
+      <xs:element name="ThumbnailHeight" type="xs:unsignedByte" />
+      <xs:element name="ThumbnailData" type="xs:hexBinary" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define APP1 segment -->
+  <xs:complexType name="APP1Segment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Identifier" type="xs:string" dfdl:length="6" />
+      <xs:element name="ExifData" type="xs:hexBinary" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define COM segment -->
+  <xs:complexType name="COMSegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Comment" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DRI segment -->
+  <xs:complexType name="DRISegment">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="RestartInterval" type="xs:unsignedShort" />
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,70 +1,73 @@
-module JPEG {
-  import types {
-    type u8  = UInt : 8;
-    type u16 = UInt : 16;
-  }
+grammar JPEG;
 
-  type ImageFile = struct {
-    soi : Marker_SOI;
-    app  : Marker_APP?;
-    frames : Frame+;
-    eoi : Marker_EOI;
-  }
+import Basic;
 
-  type Marker_SOI = struct {
-    marker: 0xFFD8 : u16;
-  }
+type Marker = enum u16 {
+    SOI = 0xFFD8,
+    EOI = 0xFFD9,
+    SOF0 = 0xFFC0,
+    DHT = 0xFFC4,
+    DQT = 0xFFDB,
+    SOS = 0xFFDA,
+    APP0 = 0xFFE0,
+    COM = 0xFFFE,
+    // other markers can be defined similarly
+};
 
-  type Marker_APP = struct {
-     marker : 0xFFE0 : u16;
-     size : u16;
-     data : u8[size-2];
-  }
+type QuantTable = struct {
+    pq u8 : 4;
+    tq u8 : 4;
+    qk [u8] * 64;
+};
 
-  type Marker_EOI = struct {
-    marker : 0xFFD9 : u16;
-  }
+type FrameComponentSpec = struct {
+    componentId u8;
+    samplingFactors u8;
+    quantTableId u8;
+};
 
-  type Frame = struct {
-    frameHeader: FrameHeader;
-    scans: Scan+;
-  }
+type FrameHeader = struct {
+    precision u8;
+    height u16;
+    width u16;
+    numComponents u8;
+    componentSpec [FrameComponentSpec] * numComponents;
+};
 
-  type FrameHeader = struct {
-    marker : 0xFFC0 : u16;
-    length : u16;
-    precision : u8;
-    height : u16;
-    width : u16;
-    numComponents : u8;
-    components : Component[numComponents];
-  }
+type HuffmanTableSpec = struct {
+    tc u8 : 4;
+    th u8 : 4;
+    numSymbols [u8] * 16;
+    symbols [u8] *; // variable length, determined by numSymbols
+};
 
-  type Component = struct {
-    componentId : u8;
-    samplingFactors : u8;
-    quantizationTableId : u8;
-  }
+type ScanComponentSpec = struct {
+    cs u8;
+    tdTa u8;
+};
 
-  type Scan = struct {
-    scanHeader : ScanHeader;
-    huffmanData : u8[];
-  }
+type ScanHeader = struct {
+    numComponents u8;
+    components [ScanComponentSpec] * numComponents;
+    ss u8;
+    se u8;
+    ahAl u8;
+};
 
-  type ScanHeader = struct {
-    marker : 0xFFDA : u16;
-    length : u16;
-    numComponents : u8;
-    componentSelector : ScanComponent[numComponents];
-    spectralStart : u8;
-    spectralEnd : u8;
-    approxHigh : u8;
-    approxLow : u8;
-  }
+type Segment = union {
+    marker Marker;
+    qt [QuantTable] if marker == Marker.DQT;
+    frameHeader FrameHeader if marker == Marker.SOF0;
+    huffmanTableSpec HuffmanTableSpec if marker == Marker.DHT;
+    scanHeader ScanHeader if marker == Marker.SOS;
+    appData [u8] * if marker == Marker.APP0;
+    comment [u8] * if marker == Marker.COM;
+    // add other cases for different markers
+};
 
-  type ScanComponent = struct {
-    componentId : u8;
-    huffmanTableDC : u8;
-    huffmanTableAC : u8;
-  }
-}
+type JPEGFile = struct {
+    segments [struct {
+        marker Marker;
+        data Segment;
+    }] *;
+};

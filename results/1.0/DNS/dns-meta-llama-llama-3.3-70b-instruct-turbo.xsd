@@ -1,88 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           targetNamespace="http://example.com/DNS"
-           xmlns="http://example.com/DNS"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified"
-           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"
-           dfdl:sequenceKind="unordered"
-           dfdl:refMode="by-reference"
-           dfdl:whitespacePolicy="preserve">
-  <xs:element name="dns-message">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCount="1"/>
-        <xs:element name="question" type="questionType" dfdl:occursCount="1..*"/>
-        <xs:element name="answer" type="answerType" dfdl:occursCount="0..*"/>
-        <xs:element name="authority" type="authorityType" dfdl:occursCount="0..*"/>
-        <xs:element name="additional" type="additionalType" dfdl:occursCount="0..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:complexType name="headerType">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/DNS" 
+           xmlns="http://example.com/DNS" 
+           elementFormDefault="qualified">
+  <xs:element name="dnsMessage" type="dnsMessageType"/>
+  <xs:complexType name="dnsMessageType">
     <xs:sequence>
-      <xs:element name="id" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="flags" type="flagsType" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="qdcnt" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="ancnt" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="nscnt" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="arcnt" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="header" type="headerType"/>
+      <xs:element name="question" type="questionType" maxOccurs="unbounded"/>
+      <xs:element name="answer" type="answerType" maxOccurs="unbounded" minOccurs="0"/>
+      <xs:element name="authority" type="authorityType" maxOccurs="unbounded" minOccurs="0"/>
+      <xs:element name="additional" type="additionalType" maxOccurs="unbounded" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="flagsType">
+  <xs:complexType name="headerType">
     <xs:sequence>
-      <xs:element name="qr" type="xs:boolean" dfdl:bitLength="1" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="opcode" type="xs:unsignedByte" dfdl:bitLength="4" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="aa" type="xs:boolean" dfdl:bitLength="1" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="tc" type="xs:boolean" dfdl:bitLength="1" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="rd" type="xs:boolean" dfdl:bitLength="1" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="ra" type="xs:boolean" dfdl:bitLength="1" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="z" type="xs:unsignedByte" dfdl:bitLength="3" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="rcode" type="xs:unsignedByte" dfdl:bitLength="4" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="id" type="xs:unsignedShort"/>
+      <xs:element name="qr" type="xs:unsignedByte"/>
+      <xs:element name="opcode" type="xs:unsignedByte"/>
+      <xs:element name="aa" type="xs:unsignedByte"/>
+      <xs:element name="tc" type="xs:unsignedByte"/>
+      <xs:element name="rd" type="xs:unsignedByte"/>
+      <xs:element name="ra" type="xs:unsignedByte"/>
+      <xs:element name="z" type="xs:unsignedByte"/>
+      <xs:element name="rcode" type="xs:unsignedByte"/>
+      <xs:element name="qdcount" type="xs:unsignedShort"/>
+      <xs:element name="ancount" type="xs:unsignedShort"/>
+      <xs:element name="nscount" type="xs:unsignedShort"/>
+      <xs:element name="arcount" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="questionType">
     <xs:sequence>
-      <xs:element name="qname" type="domainNameType" dfdl:occursCount="1"/>
-      <xs:element name="qtype" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="qclass" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-    </xs:sequence>
-  </xs:complexType>
-  <xs:complexType name="domainNameType">
-    <xs:sequence>
-      <xs:element name="label" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
+      <xs:element name="qname" type="xs:string"/>
+      <xs:element name="qtype" type="xs:unsignedShort"/>
+      <xs:element name="qclass" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="answerType">
     <xs:sequence>
-      <xs:element name="name" type="domainNameType" dfdl:occursCount="1"/>
-      <xs:element name="type" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="class" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="ttl" type="xs:unsignedInt" dfdl:bitLength="32" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdlength" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdata" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1"/>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="authorityType">
     <xs:sequence>
-      <xs:element name="name" type="domainNameType" dfdl:occursCount="1"/>
-      <xs:element name="type" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="class" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="ttl" type="xs:unsignedInt" dfdl:bitLength="32" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdlength" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdata" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1"/>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="additionalType">
     <xs:sequence>
-      <xs:element name="name" type="domainNameType" dfdl:occursCount="1"/>
-      <xs:element name="type" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="class" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="ttl" type="xs:unsignedInt" dfdl:bitLength="32" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdlength" type="xs:unsignedShort" dfdl:bitLength="16" dfdl:byteOrder="bigEndian" dfdl:occursCount="1"/>
-      <xs:element name="rdata" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1"/>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

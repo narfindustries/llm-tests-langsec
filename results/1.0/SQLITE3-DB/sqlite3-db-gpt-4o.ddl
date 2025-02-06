@@ -1,57 +1,65 @@
-format sqlite3-db-gpt-4o {
-    // SQLite database file format version 3 specification
+enum uint8 PageType {
+    InteriorIndexBTree = 2;
+    LeafIndexBTree = 10;
+    InteriorTableBTree = 5;
+    LeafTableBTree = 13;
+}
 
-    const headerString = "SQLite format 3\0";
-    const pageSizeOffset = 16;
+enum uint32 be TextEncoding {
+    UTF8 = 1;
+    UTF16le = 2;
+    UTF16be = 3;
+}
 
-    enum PageType : uint8 {
-        Unknown = 0,
-        InteriorIndexBTree = 2,
-        InteriorTableBTree = 5,
-        LeafIndexBTree = 10,
-        LeafTableBTree = 13
-    }
+struct SQLite3Header {
+    header_string : string(16);
+    page_size : uint16 be;
+    write_version : uint8;
+    read_version : uint8;
+    reserved_space : uint8;
+    max_embedded_payload_frac : uint8;
+    min_embedded_payload_frac : uint8;
+    leaf_payload_frac : uint8;
+    file_change_counter : uint32 be;
+    database_size : uint32 be;
+    first_freelist_page : uint32 be;
+    freelist_page_count : uint32 be;
+    schema_cookie : uint32 be;
+    schema_format_number : uint32 be;
+    default_page_cache_size : uint32 be;
+    large_file_flag : uint32 be;
+    database_text_encoding : TextEncoding;
+    user_version : uint32 be;
+    incremental_vacuum_mode : uint32 be;
+    application_id : uint32 be;
+    reserved : bytes(20);
+    version_valid_for : uint32 be;
+    sqlite_version_number : uint32 be;
+}
 
-    struct DbHeader {
-        magic: bytes[16] : assert(magic == headerString);
-        pageSize: uint16le;
-        writeVersion: uint8;
-        readVersion: uint8;
-        reservedSpace: uint8;
-        maxPayloadFraction: uint8;
-        minPayloadFraction: uint8;
-        leafPayloadFraction: uint8;
-        fileChangeCounter: uint32le;
-        reservedBytes: uint32le[4];
-    }
+struct SQLite3DB {
+    header : SQLite3Header;
+    pages : Page[header.database_size];
+}
 
-    struct BTreePage {
-        pageType: PageType;
-        firstFreeBlock: uint16le;
-        cellCount: uint16le;
-        cellContentArea: uint16le;
-        fragmentedFreeBytes: uint8;
-        rightMostPointer: uint32le : pageType in [PageType.InteriorIndexBTree, PageType.InteriorTableBTree];
-        cells: CellArray(cellCount);
-    }
+struct Page {
+    page_type : PageType;
+    first_freeblock_offset : uint16 be;
+    cell_content_offset : uint16 be;
+    number_of_cells : uint16 be;
+    right_most_pointer : uint32 be?;
+}
 
-    struct CellArray(count: uint16) {
-        cells: Cell[count];
-    }
+struct BTreePage extends Page {
+    cells : BTreeCell[number_of_cells];
+}
 
-    struct Cell {
-        // Definition of cell based on cell types can be added here
-        // Placeholder for different cell contents
-        content: bytes[variableSize]; // For example purposes only
-    }
+struct BTreeCell {
+    left_child_page : uint32 be?;
+    data : bytes;
+}
 
-    main {
-        header: DbHeader;
-        pages: BTreePage[calculatePageCount()];
-    }
-
-    // Helper function to calculate the number of pages
-    fn calculatePageCount(): uint32 {
-        return (file.size - pageSizeOffset) / header.pageSize;
-    }
+struct FreeListPage extends Page {
+    next_freelist_trunk_page : uint32 be;
+    freelist_leaf_page_count : uint32 be;
 }

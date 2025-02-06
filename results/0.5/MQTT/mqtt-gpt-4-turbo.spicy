@@ -2,107 +2,120 @@ module MQTT;
 
 import spicy;
 
+type FixedHeader = unit {
+    packetType: uint4;
+    flags: uint4;
+    remainingLength: uint32;
+};
+
 type ConnectFlags = unit {
-    reserved:    bool &size=1;
-    clean_start: bool &size=1;
-    will_flag:   bool &size=1;
-    will_qos:    uint2;
-    will_retain: bool &size=1;
-    password_flag: bool &size=1;
-    username_flag: bool &size=1;
-} &size=8;
-
-type Connect = unit {
-    proto_name: bytes &size=4;
-    version:    uint8;
-    flags:      ConnectFlags;
-    keep_alive: uint16;
-    client_id:  bytes &eod;
-    
-    on %done {
-        print self;
-    }
+    reserved: bit;
+    cleanStart: bit;
+    willFlag: bit;
+    willQoS: uint2;
+    willRetain: bit;
+    passwordFlag: bit;
+    usernameFlag: bit;
 };
 
-type ConnAckFlags = unit {
-    session_present: bool &size=1;
-    reserved: uint7;
-} &size=8;
-
-type ConnAck = unit {
-    flags:   ConnAckFlags;
-    code:    uint8;
-    
-    on %done {
-        print self;
-    }
+type VariableByteInteger = unit {
+    value: uint32;
 };
 
-type Publish = unit {
-    dup_flag:   bool &size=1;
-    qos:        uint2;
-    retain:     bool &size=1;
-    topic_len:  uint16;
-    topic:      bytes &size=self.topic_len;
-    packet_id:  optional<uint16> &if=(self.qos > 0);
-    payload:    bytes &eod;
-    
-    on %done {
-        print self;
-    }
+type UTF8EncodedString = unit {
+    length: uint16;
+    value: bytes &size=length;
 };
 
-type Subscribe = unit {
-    packet_id: uint16;
-    payload:   bytes &eod;
-    
-    on %done {
-        print self;
-    }
+type Property = unit {
+    identifier: uint8;
+    value: bytes &eod;
 };
 
-type SubAck = unit {
-    packet_id: uint16;
-    payload:   bytes &eod;
-    
-    on %done {
-        print self;
-    }
+type Properties = unit {
+    properties: Property[];
 };
 
-type Unsubscribe = unit {
-    packet_id: uint16;
-    payload:   bytes &eod;
-    
-    on %done {
-        print self;
-    }
+type ConnectVariableHeader = unit {
+    protocolName: UTF8EncodedString;
+    protocolLevel: uint8;
+    connectFlags: ConnectFlags;
+    keepAlive: uint16;
+    properties: Properties;
 };
 
-type UnsubAck = unit {
-    packet_id: uint16;
-    
-    on %done {
-        print self;
-    }
+type ConnectPayload = unit {
+    clientIdentifier: UTF8EncodedString;
+    willProperties: Properties &requires=self.connectFlags.willFlag;
+    willTopic: UTF8EncodedString &requires=self.connectFlags.willFlag;
+    willPayload: bytes &size=self.willPayloadLength &requires=self.connectFlags.willFlag;
+    username: UTF8EncodedString &requires=self.connectFlags.usernameFlag;
+    password: UTF8EncodedString &requires=self.connectFlags.passwordFlag;
+    willPayloadLength: uint16 &requires=self.connectFlags.willFlag;
 };
 
-public type MQTTMessage = unit {
-    control_type: uint4;
-    flags:        uint4;
-    remaining_len: uint16;
-    message: switch (self.control_type) {
-        1 -> connect: Connect;
-        2 -> connack: ConnAck;
-        3 -> publish: Publish;
-        8 -> subscribe: Subscribe;
-        9 -> suback: SubAck;
-        10 -> unsubscribe: Unsubscribe;
-        11 -> unsuback: UnsubAck;
-        * -> unknown: bytes &size=self.remaining_len;
+type ConnectPacket = unit {
+    fixedHeader: FixedHeader;
+    variableHeader: ConnectVariableHeader;
+    payload: ConnectPayload;
+};
+
+type PublishVariableHeader = unit {
+    topicName: UTF8EncodedString;
+    packetIdentifier: uint16 &requires=(self.fixedHeader.flags & 0x06) != 0;
+    properties: Properties;
+};
+
+type PublishPacket = unit {
+    fixedHeader: FixedHeader;
+    variableHeader: PublishVariableHeader;
+    payload: bytes &size=self.fixedHeader.remainingLength - (|self.variableHeader| + |self.fixedHeader|);
+};
+
+type SubscribeTopic = unit {
+    topicFilter: UTF8EncodedString;
+    options: uint8;
+};
+
+type SubscribeVariableHeader = unit {
+    packetIdentifier: uint16;
+    properties: Properties;
+};
+
+type SubscribePacket = unit {
+    fixedHeader: FixedHeader;
+    variableHeader: SubscribeVariableHeader;
+    topics: SubscribeTopic[];
+};
+
+type SubAckPacket = unit {
+    fixedHeader: FixedHeader;
+    packetIdentifier: uint16;
+    properties: Properties;
+    returnCodes: uint8[];
+};
+
+type PingReqPacket = unit {
+    fixedHeader: FixedHeader;
+};
+
+type PingRespPacket = unit {
+    fixedHeader: FixedHeader;
+};
+
+type DisconnectPacket = unit {
+    fixedHeader: FixedHeader;
+    properties: Properties;
+};
+
+public type MQTT_Packet = unit {
+    packet: variant {
+        connect: ConnectPacket &requires=($$.fixedHeader.packetType == 1),
+        publish: PublishPacket &requires=($$.fixedHeader.packetType == 3),
+        subscribe: SubscribePacket &requires=($$.fixedHeader.packetType == 8),
+        subAck: SubAckPacket &requires=($$.fixedHeader.packetType == 9),
+        pingReq: PingReqPacket &requires=($$.fixedHeader.packetType == 12),
+        pingResp: PingRespPacket &requires=($$.fixedHeader.packetType == 13),
+        disconnect: DisconnectPacket &requires=($$.fixedHeader.packetType == 14),
     };
-    
-    on %done {
-        print self;
-    }
 };

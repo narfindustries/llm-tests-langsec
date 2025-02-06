@@ -1,1 +1,55 @@
-Gemini API Error: 429 Resource has been exhausted (e.g. check quota).
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tls_client_hello" elementFormDefault="qualified" >
+  <xs:import namespace="http://www.w3.org/2001/XMLSchema" />
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="ClientHello">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="client_version" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="session_id" type="optional_bytes" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="cipher_suites" type="cipher_suite_list" />
+        <xs:element name="compression_methods" type="compression_method_list" />
+        <xs:element name="extensions" type="extension_list" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="optional_bytes">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <xs:complexType name="cipher_suite_list">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="cipher_suite" type="xs:unsignedShort" dfdl:length="2" maxOccurs="unbounded" dfdl:occursCount="{../length div 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="compression_method_list">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="method" type="xs:unsignedByte" dfdl:length="1" maxOccurs="unbounded" dfdl:occursCount="{../length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="extension_list">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="extension" type="extension" maxOccurs="unbounded" dfdl:occursCount="{../length div 2}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="extension">
+    <xs:sequence>
+      <xs:element name="extension_type" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="extension_data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../length}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

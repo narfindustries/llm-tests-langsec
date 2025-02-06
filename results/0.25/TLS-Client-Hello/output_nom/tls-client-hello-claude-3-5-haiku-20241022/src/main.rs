@@ -1,76 +1,93 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, length_count, length_data},
-    number::complete::{be_u8, be_u16, be_u32},
-    sequence::{pair, preceded, tuple},
+    bytes::complete::{take, tag},
+    combinator::map,
+    multi::{length_count, length_data},
+    number::complete::{be_u8, be_u16, be_u24},
+    sequence::{tuple, preceded},
     IResult,
+    error::ErrorKind,
 };
 use std::env;
-use std::fs;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct TlsClientHello {
-    version: u16,
+    legacy_version: u16,
     random: [u8; 32],
     session_id: Vec<u8>,
     cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
-    extensions: Option<Vec<Extension>>,
+    extensions: Vec<TlsExtension>,
 }
 
 #[derive(Debug)]
-struct Extension {
-    ext_type: u16,
-    ext_data: Vec<u8>,
+struct TlsExtension {
+    extension_type: u16,
+    extension_data: Vec<u8>,
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], TlsClientHello> {
     map(
-        tuple((
-            tag(&[0x16]),  // Handshake type
-            tag(&[0x03, 0x01]),  // TLS version
-            be_u16,  // Length
-            tag(&[0x01]),  // Handshake type (ClientHello)
-            be_u16,  // Handshake length
-            be_u16,  // TLS version
-            take(32usize),  // Random
-            length_data(be_u8),  // Session ID
-            length_count(be_u16, be_u16),  // Cipher suites
-            length_count(be_u8, be_u8),  // Compression methods
-            opt(length_count(be_u16, parse_extension)),  // Extensions
-        )),
-        |(_, _, _, _, _, version, random, session_id, cipher_suites, compression_methods, extensions)| TlsClientHello {
-            version,
-            random: random.try_into().unwrap(),
-            session_id,
-            cipher_suites,
-            compression_methods,
-            extensions,
+        preceded(
+            tag(&[0x16, 0x03, 0x03]),
+            tuple((
+                be_u24,
+                be_u16,
+                take(32usize),
+                length_data(be_u8),
+                length_count(be_u16, be_u16),
+                length_count(be_u8, be_u8),
+                length_count(be_u16, parse_extension)
+            ))
+        ),
+        |(_, legacy_version, random, session_id, cipher_suites, compression_methods, extensions)| {
+            TlsClientHello {
+                legacy_version,
+                random: random.try_into().unwrap(),
+                session_id: session_id.to_vec(),
+                cipher_suites,
+                compression_methods,
+                extensions,
+            }
         }
     )(input)
 }
 
-fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+fn parse_extension(input: &[u8]) -> IResult<&[u8], TlsExtension> {
     map(
-        pair(be_u16, length_data(be_u16)),
-        |(ext_type, ext_data)| Extension {
-            ext_type,
-            ext_data: ext_data.to_vec(),
+        tuple((
+            be_u16::<&[u8], nom::error::Error<&[u8]>>,
+            length_data(be_u16::<&[u8], nom::error::Error<&[u8]>>)
+        )),
+        |(extension_type, extension_data)| {
+            TlsExtension {
+                extension_type,
+                extension_data: extension_data.to_vec(),
+            }
         }
     )(input)
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }
 
-    let input = fs::read(&args[1]).expect("Failed to read file");
-    match parse_client_hello(&input) {
-        Ok((_, client_hello)) => println!("{:#?}", client_hello),
-        Err(e) => eprintln!("Parsing error: {:?}", e),
+    let mut file = File::open(&args[1])?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+
+    match parse_client_hello(&buffer) {
+        Ok((_, client_hello)) => {
+            println!("Parsed TLS Client Hello: {:?}", client_hello);
+            Ok(())
+        },
+        Err(e) => {
+            eprintln!("Parsing error: {:?}", e);
+            std::process::exit(1)
+        }
     }
 }

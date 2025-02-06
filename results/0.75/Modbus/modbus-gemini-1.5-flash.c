@@ -2,106 +2,87 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define Modbus function codes
-#define MODBUS_FC_READ_COILS 1
-#define MODBUS_FC_READ_DISCRETE_INPUTS 2
-#define MODBUS_FC_READ_HOLDING_REGISTERS 3
-#define MODBUS_FC_READ_INPUT_REGISTERS 4
-#define MODBUS_FC_WRITE_SINGLE_COIL 5
-#define MODBUS_FC_WRITE_SINGLE_REGISTER 6
-#define MODBUS_FC_WRITE_MULTIPLE_COILS 15
-#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS 16
-
-
-// Modbus data structures (adjust as needed)
-typedef struct {
-    uint8_t address;
-    uint16_t value;
-} ModbusCoil;
-
+typedef enum {
+  READ_COILS = 0x01,
+  READ_DISCRETE_INPUTS = 0x02,
+  READ_HOLDING_REGISTERS = 0x03,
+  READ_INPUT_REGISTERS = 0x04,
+  WRITE_SINGLE_COIL = 0x05,
+  WRITE_SINGLE_REGISTER = 0x06,
+  WRITE_MULTIPLE_COILS = 0x0F,
+  WRITE_MULTIPLE_REGISTERS = 0x10,
+} ModbusFunctionCode;
 
 typedef struct {
-    uint8_t address;
-    uint16_t value;
-} ModbusRegister;
+  uint8_t function_code;
+  uint16_t starting_address;
+  uint16_t quantity;
+  uint8_t data[];
+} ModbusPDU;
 
+static HParser pdu_parser = NULL;
 
-// Function to calculate Modbus CRC16 (replace with a robust implementation)
-uint16_t calculateCRC16(uint8_t *data, size_t length) {
-    uint16_t crc = 0xFFFF;
-    for (size_t i = 0; i < length; i++) {
-        crc ^= (uint16_t)data[i] << 8;
-        for (int j = 0; j < 8; j++) {
-            if (crc & 0x8000) {
-                crc = (crc << 1) ^ 0xA001;
-            } else {
-                crc <<= 1;
-            }
-        }
-    }
-    return crc;
+static HParser uint8_parser = h_uint8();
+static HParser uint16_parser = h_uint16_be();
+
+static HParser modbus_pdu_parser() {
+    if (pdu_parser) return pdu_parser;
+    HParser data_parser = h_bytes(0); 
+
+    pdu_parser = h_seq(
+        h_field("function_code", uint8_parser),
+        h_field("starting_address", uint16_parser),
+        h_field("quantity", uint16_parser),
+        h_field("data", data_parser)
+    );
+    return pdu_parser;
 }
 
 
-// Function to handle Modbus requests (replace with your actual Modbus logic)
-uint8_t* handleModbusRequest(uint8_t *request, size_t requestLength, size_t *responseLength) {
-    // Basic error checking
-    if (requestLength < 8) {
-        *responseLength = 0; // Indicate error
-        return NULL;
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+    return 1;
+  }
+
+  FILE *fp = fopen(argv[1], "rb");
+  if (fp == NULL) {
+    perror("Error opening file");
+    return 1;
+  }
+
+  fseek(fp, 0, SEEK_END);
+  long fsize = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  uint8_t *buffer = (uint8_t *)malloc(fsize);
+  if (buffer == NULL) {
+    perror("Memory allocation failed");
+    fclose(fp);
+    return 1;
+  }
+  fread(buffer, 1, fsize, fp);
+  fclose(fp);
+
+  HParseResult result = h_parse(&modbus_pdu_parser(), buffer, fsize);
+
+  if (result.status == H_SUCCESS) {
+    ModbusPDU *pdu = (ModbusPDU *)result.value;
+    printf("Function Code: 0x%02X\n", pdu->function_code);
+    printf("Starting Address: 0x%04X\n", pdu->starting_address);
+    printf("Quantity: %u\n", pdu->quantity);
+    printf("Data: ");
+    for (size_t i = 0; i < result.length - 5; i++) {
+      printf("0x%02X ", pdu->data[i]);
     }
+    printf("\n");
+    free(pdu);
+  } else {
+    fprintf(stderr, "Parsing failed: %s\n", h_error(result.status));
+  }
 
-    //Extract relevant information from the request.  This is highly simplified.
-    uint8_t slaveAddress = request[0];
-    uint8_t functionCode = request[1];
-    uint16_t startAddress = (uint16_t)request[2] << 8 | request[3];
-    uint16_t quantity = (uint16_t)request[4] << 8 | request[5];
-
-    //Example response for reading holding registers (Function Code 3)
-    if (functionCode == MODBUS_FC_READ_HOLDING_REGISTERS) {
-        *responseLength = 5 + quantity * 2;
-        uint8_t *response = (uint8_t *)malloc(*responseLength);
-        response[0] = slaveAddress;
-        response[1] = functionCode;
-        response[2] = quantity * 2; // Number of bytes
-        for (int i = 0; i < quantity; i++) {
-            //Replace this with actual register reading logic
-            uint16_t value = 0xAAAA; // Example value
-            response[3 + i * 2] = (value >> 8) & 0xFF;
-            response[4 + i * 2] = value & 0xFF;
-        }
-        uint16_t crc = calculateCRC16(response, *responseLength - 2);
-        response[*responseLength - 2] = crc >> 8;
-        response[*responseLength - 1] = crc & 0xFF;
-
-        return response;
-    }
-    else {
-        *responseLength = 0;
-        return NULL;
-    }
-}
-
-
-
-int main() {
-    // Example usage:  Replace with your actual Modbus communication
-    uint8_t request[] = {1, 3, 0, 0, 0, 2, 0x00, 0x00}; // Read 2 holding registers starting at address 0 from slave 1.  CRC is omitted for simplicity here.
-    size_t requestLength = sizeof(request);
-    size_t responseLength;
-    uint8_t *response = handleModbusRequest(request, requestLength, &responseLength);
-
-    if (response != NULL) {
-        printf("Modbus Response:\n");
-        for (size_t i = 0; i < responseLength; i++) {
-            printf("%02X ", response[i]);
-        }
-        printf("\n");
-        free(response);
-    } else {
-        printf("Error handling Modbus request\n");
-    }
-
-    return 0;
+  free(buffer);
+  return 0;
 }

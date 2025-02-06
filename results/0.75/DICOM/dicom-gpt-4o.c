@@ -1,71 +1,74 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-// Define a helper function to parse a DICOM Preamble
-static HParser *preamble_parser(void) {
-    return h_repeat_n(h_uint8(), 128);
+// Function for parsing DICOM element value based on its length
+HParsedToken *dicom_value_parser_func(const HParseResult *p, void *env) {
+    uint32_t length = *(uint32_t *)p->ast->bytes;
+    return h_repeat_n(h_uint8(), length)->parse(p->input, p->input_length);
 }
 
-// Define a helper function to parse the DICOM Prefix
-static HParser *prefix_parser(void) {
-    return h_sequence(
-        h_ch('D'), h_ch('I'), h_ch('C'), h_ch('M'), NULL);
+// Initialize parsers inside a function rather than as global variables
+HParser *create_dicom_parsers() {
+    // Define parsers for common data types in DICOM
+    HParser *uint16_parser = h_uint16(); // Unsigned 16-bit integer
+    HParser *uint32_parser = h_uint32(); // Unsigned 32-bit integer
+
+    // Define a parser for DICOM tag (group, element)
+    HParser *dicom_tag_parser = h_sequence(uint16_parser, uint16_parser, NULL);
+
+    // Define a parser for DICOM Element Length
+    HParser *dicom_length_parser = uint32_parser;
+
+    // Define a parser for DICOM Element Value (variable length)
+    HParser *dicom_value_parser = h_bind(dicom_length_parser, dicom_value_parser_func, NULL);
+
+    // Define a parser for a complete DICOM Element
+    HParser *dicom_element_parser = h_sequence(dicom_tag_parser, dicom_length_parser, dicom_value_parser, NULL);
+
+    return dicom_element_parser;
 }
 
-// Define a helper function to parse DICOM Tag (group, element)
-static HParser *tag_parser(void) {
-    return h_sequence(h_uint16(), h_uint16(), NULL);
-}
-
-// Define a helper function to parse the VR (Value Representation)
-static HParser *vr_parser(void) {
-    return h_sequence(h_uint8(), h_uint8(), NULL);
-}
-
-// Define a helper function to parse the Value Length
-static HParser *value_length_parser(void) {
-    return h_choice(h_uint16(), h_uint32(), NULL);
-}
-
-// Define a helper function to parse the Value Field
-static HParser *value_field_parser(HParser *value_length) {
-    return h_length_value(value_length, h_uint8());
-}
-
-// Define the complete DICOM Data Element parser
-static HParser *data_element_parser(void) {
-    HParser *tag = tag_parser();
-    HParser *vr = vr_parser();
-    HParser *value_length = value_length_parser();
-    HParser *value_field = value_field_parser(value_length);
-
-    return h_sequence(tag, vr, value_length, value_field, NULL);
-}
-
-// Define a parser for the entire DICOM file
-HParser *dicom_file_parser(void) {
-    return h_sequence(
-        preamble_parser(),
-        prefix_parser(),
-        h_many(data_element_parser()),
-        NULL);
-}
-
-int main(int argc, char **argv) {
-    HParser *parser = dicom_file_parser();
-    HParseResult *result;
-    uint8_t *input_data;
-    size_t input_length;
-
-    // Here you would typically load input_data with the file content and set input_length
-
-    result = h_parse(parser, input_data, input_length);
-    if (result) {
-        // Successfully parsed the DICOM file
-        h_parse_result_free(result);
-    } else {
-        // Handle parse error
+// Main function to parse a DICOM file
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parser_free(parser);
-    return 0;
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Error allocating buffer");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    // Create the parser
+    HParser *dicom_element_parser = create_dicom_parsers();
+
+    // Parse the buffer
+    HParseResult *result = h_parse(dicom_element_parser, buffer, file_size);
+    if (result) {
+        printf("Parsed a DICOM element successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        fprintf(stderr, "Failed to parse DICOM element.\n");
+    }
+
+    free(buffer);
+    return EXIT_SUCCESS;
 }

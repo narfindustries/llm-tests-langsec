@@ -1,50 +1,83 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
-// Define Modbus function codes
-#define MODBUS_FC_READ_COILS 0x01
-#define MODBUS_FC_READ_DISCRETE_INPUTS 0x02
-#define MODBUS_FC_READ_HOLDING_REGISTERS 0x03
-#define MODBUS_FC_READ_INPUT_REGISTERS 0x04
-#define MODBUS_FC_WRITE_SINGLE_COIL 0x05
-#define MODBUS_FC_WRITE_SINGLE_REGISTER 0x06
-#define MODBUS_FC_WRITE_MULTIPLE_COILS 0x0F
-#define MODBUS_FC_WRITE_MULTIPLE_REGISTERS 0x10
+typedef uint16_t uint16;
+typedef uint8_t uint8;
 
-
-// Modbus function to read holding registers
-uint8_t* modbus_read_holding_registers(uint8_t slave_address, uint16_t start_address, uint16_t num_registers) {
-    // Simulate reading from holding registers (replace with actual hardware interaction)
-    uint8_t* data = (uint8_t*)malloc(num_registers * 2); // Each register is 2 bytes
-    if (data == NULL) {
-        return NULL;
-    }
-    for (int i = 0; i < num_registers * 2; i++) {
-        data[i] = (uint8_t)(start_address + i); //Example data
-    }
-    return data;
+hammer_parser_t* modbus_pdu_parser() {
+    hammer_parser_t* parser = hammer_seq(
+        hammer_uint16("transaction_id"),
+        hammer_uint16("protocol_id"),
+        hammer_uint16("length"),
+        hammer_uint8("unit_id"),
+        hammer_uint8("function_code"),
+        hammer_choice(
+            hammer_map(
+                hammer_seq(
+                    hammer_uint16("starting_address"),
+                    hammer_uint16("quantity")
+                ),
+                hammer_ignore
+            ),
+            hammer_map(
+                hammer_seq(
+                    hammer_uint16("starting_address"),
+                    hammer_uint16("quantity"),
+                    hammer_bytes("data", 0)
+                ),
+                hammer_ignore
+            ),
+            hammer_map(
+                hammer_seq(
+                    hammer_uint16("starting_address"),
+                    hammer_uint16("quantity"),
+                    hammer_uint16("value")
+                ),
+                hammer_ignore
+            ),
+            hammer_map(
+                hammer_uint8("exception_code"),
+                hammer_ignore
+            ),
+            hammer_fail("Invalid function code")
+        )
+    );
+    return parser;
 }
 
-
-int main() {
-    // Example usage: Read 5 holding registers starting from address 100 from slave 1
-    uint8_t slave_address = 1;
-    uint16_t start_address = 100;
-    uint16_t num_registers = 5;
-
-    uint8_t* data = modbus_read_holding_registers(slave_address, start_address, num_registers);
-
-    if (data != NULL) {
-        printf("Read data:\n");
-        for (int i = 0; i < num_registers * 2; i++) {
-            printf("%02X ", data[i]);
-        }
-        printf("\n");
-        free(data);
-    } else {
-        printf("Error reading data.\n");
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8* buffer = (uint8*)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser_t* parser = modbus_pdu_parser();
+    hammer_result_t result = hammer_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        printf("Modbus PDU parsed successfully!\n");
+    } else {
+        fprintf(stderr, "Error parsing Modbus PDU: %s\n", result.error);
+    }
+
+    hammer_free(parser);
+    free(buffer);
     return 0;
 }

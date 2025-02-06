@@ -1,25 +1,159 @@
-def Main = {
-  Sonnet;
-}
+def NITF = struct(
+    fhdr: string(4) where fhdr == "NITF",
+    fver: string(5) where fver == "02.10",
+    clevel: string(2) where int(clevel) >= 1 && int(clevel) <= 99,
+    stype: string(4) where stype == "BF  ",
+    ostaid: string(10),
+    fdt: string(14),
+    ftitle: string(80),
+    fsclas: string(1) where fsclas in ["T", "S", "C", "R", "U"],
+    fscop: string(5) where int(fscop) >= 0 && int(fscop) <= 99999,
+    fscpys: string(5) where int(fscpys) >= 0 && int(fscpys) <= 99999,
+    encryp: string(1) where encryp == "0",
+    fbkgc: uint8[3],
+    oname: string(24),
+    ophone: string(18),
+    fl: string(12),
+    hl: string(6),
+    numi: string(3),
+    lish: string(6)[int(numi)] if int(numi) > 0,
+    li: string(10)[int(numi)] if int(numi) > 0,
+    nums: string(3),
+    lssh: string(4)[int(nums)] if int(nums) > 0,
+    ls: string(6)[int(nums)] if int(nums) > 0,
+    numx: string(3),
+    lxsh: string(4)[int(numx)] if int(numx) > 0,
+    lx: string(3)[int(numx)] if int(numx) > 0,
+    numt: string(3),
+    ltsh: string(4)[int(numt)] if int(numt) > 0,
+    lt: string(5)[int(numt)] if int(numt) > 0,
+    numdes: string(3),
+    ldsh: string(4)[int(numdes)] if int(numdes) > 0,
+    ld: string(9)[int(numdes)] if int(numdes) > 0,
+    numres: string(3),
+    udhdl: string(5),
+    udhd: string(int(udhdl)) if int(udhdl) > 0,
+    xhdl: string(5),
+    xhd: string(int(xhdl)) if int(xhdl) > 0
+)
 
-def Sonnet = {
-  Title;
-  Author?;
-  Lines;
-}
+def ImageSegment = struct(
+    im: string(2) where im == "IM",
+    iid1: string(10),
+    idatim: string(14),
+    tgtid: string(17),
+    iid2: string(80),
+    isclas: string(1) where isclas in ["T", "S", "C", "R", "U"],
+    encryp: string(1) where encryp == "0",
+    isorce: string(42),
+    nrows: string(8),
+    ncols: string(8),
+    pvtype: string(3) where pvtype in ["INT", "B", "SI", "R", "C"],
+    irep: string(8),
+    icat: string(8),
+    abpp: string(2),
+    pjust: string(1) where pjust in ["L", "R"],
+    icords: string(1) where icords in ["", "G", "N", "S", "D"],
+    igeolo: string(60) if icords != "",
+    nicom: string(1),
+    icom: string(80)[int(nicom)] if int(nicom) > 0,
+    ic: string(2),
+    comrat: string(4),
+    nbands: string(1),
+    xbands: string(5),
+    actual_bands: uint32 = match(
+        int(nbands) > 0 -> int(nbands),
+        int(xbands) > 0 -> int(xbands),
+        _ -> 0
+    ),
+    irepband: string(2)[actual_bands] if actual_bands > 0,
+    isubcat: string(6)[actual_bands] if actual_bands > 0,
+    ifc: string(1)[actual_bands] if actual_bands > 0,
+    imflt: string(3)[actual_bands] if actual_bands > 0,
+    nluts: string(1)[actual_bands] if actual_bands > 0,
+    nelut: string(5)[actual_bands] if actual_bands > 0,
+    isync: string(1) where isync == "0",
+    imode: string(1) where imode in ["B", "P", "R", "S"],
+    nbpr: string(4),
+    nbpc: string(4),
+    nppbh: string(4),
+    nppbv: string(4),
+    nbpp: string(2),
+    idlvl: string(3),
+    ialvl: string(3),
+    iloc: string(10),
+    imag: string(4),
+    udidl: string(5),
+    udid: string(int(udidl)) if int(udidl) > 0,
+    ixshdl: string(5),
+    ixshd: string(int(ixshdl)) if int(ixshdl) > 0,
+    image_data: bytes(int(li[_]))
+)
 
-def Title = {
-  $line until $"\n";
-}
+def GraphicsSegment = struct(
+    sy: string(2) where sy == "SY",
+    sid: string(10),
+    sname: string(20),
+    ssclas: string(1) where ssclas in ["T", "S", "C", "R", "U"],
+    encryp: string(1) where encryp == "0",
+    sfmt: string(1) where sfmt in ["C", "S"],
+    sstruct: string(13),
+    sdlvl: string(3),
+    salvl: string(3),
+    sloc: string(10),
+    sbnd1: string(10),
+    scolor: string(1),
+    sbnd2: string(10),
+    sres2: string(20),
+    sxshdl: string(5),
+    sxshd: string(int(sxshdl)) if int(sxshdl) > 0,
+    graphics_data: bytes(int(ls[_]))
+)
 
-def Author = {
-  "By " $line until $"\n";
-}
+def TextSegment = struct(
+    te: string(2) where te == "TE",
+    textid: string(7),
+    txtalvl: string(3),
+    txtdt: string(14),
+    txtitl: string(80),
+    tsclas: string(1) where tsclas in ["T", "S", "C", "R", "U"],
+    encryp: string(1) where encryp == "0",
+    txtfmt: string(3) where txtfmt in ["MTF", "STA", "UT1", "U8S"],
+    txshdl: string(5),
+    txshd: string(int(txshdl)) if int(txshdl) > 0,
+    text_data: bytes(int(lt[_]))
+)
 
-def Lines = {
-  Line{14};
-}
+def DataExtensionSegment = struct(
+    de: string(2) where de == "DE",
+    desid: string(25),
+    desver: string(2),
+    desclas: string(1) where desclas in ["T", "S", "C", "R", "U"],
+    encryp: string(1) where encryp == "0",
+    desoflw: string(6),
+    desitem: string(3),
+    desshl: string(4),
+    desshf: string(int(desshl)) if int(desshl) > 0,
+    data: bytes(int(ld[_]))
+)
 
-def Line = {
-  $line until $"\n";
-}
+def ReservedExtensionSegment = struct(
+    re: string(2) where re == "RE",
+    resid: string(25),
+    resver: string(2),
+    resclas: string(1) where resclas in ["T", "S", "C", "R", "U"],
+    encryp: string(1) where encryp == "0",
+    restype: string(4),
+    resshl: string(4),
+    resshf: string(int(resshl)) if int(resshl) > 0,
+    data: bytes(int(numres))
+)
+
+def CompleteNITF = struct(
+    header: NITF,
+    images: ImageSegment[int(header.numi)] if int(header.numi) > 0,
+    graphics: GraphicsSegment[int(header.nums)] if int(header.nums) > 0,
+    texts: TextSegment[int(header.numt)] if int(header.numt) > 0,
+    des: DataExtensionSegment[int(header.numdes)] if int(header.numdes) > 0,
+    res: ReservedExtensionSegment[int(header.numres)] if int(header.numres) > 0
+)

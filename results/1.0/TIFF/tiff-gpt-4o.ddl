@@ -1,51 +1,93 @@
-module TiffFile
+endianness: "II" | "MM";
 
-import BasicTypes
+struct TIFF {
+    UInt16 magic_number; // Should be 42
+    UInt32 offset_of_first_IFD;
 
--- TIFF Header Structure
-struct TiffHeader {
-  endianness          : EndianTag;
-  magic_number        : u16;
-  ifd_offset          : u32;
+    IFD ifd;
 }
 
--- Possible TIFF field value types
-enum u16 EndianTag {
-  II = 0x4949  -- little-endian
-  MM = 0x4D4D  -- big-endian
+struct IFD {
+    UInt16 num_entries;
+    Entry entries[num_entries];
+    UInt32 next_ifd_offset; // 0 if no further IFDs
 }
 
-struct IfdEntry {
-  tag                 : u16;
-  type                : u16;
-  count               : u32;
-  value_offset        : u32;
+struct Entry {
+    UInt16 tag;
+    UInt16 type;
+    UInt32 count;
+    UInt32 value_offset;
+
+    switch (tag) {
+        case 256, 257: // ImageWidth, ImageLength
+            UInt32 dimension;
+
+        case 258: // BitsPerSample
+            UInt16 bits_per_sample[count];
+
+        case 259: // Compression
+            UInt16 compression;
+
+        case 262: // PhotometricInterpretation
+            UInt16 photometric_interpretation;
+
+        case 273: // StripOffsets
+            UInt32 strip_offsets[count];
+
+        case 277: // SamplesPerPixel
+            UInt16 samples_per_pixel;
+
+        case 278: // RowsPerStrip
+            UInt32 rows_per_strip;
+
+        case 279: // StripByteCounts
+            UInt32 strip_byte_counts[count];
+
+        case 282, 283: // XResolution, YResolution
+            Rational resolution;
+
+        case 284: // PlanarConfiguration
+            UInt16 planar_configuration;
+
+        case 296: // ResolutionUnit
+            UInt16 resolution_unit;
+
+        case 306: // DateTime
+            Char[20] date_time; // "YYYY:MM:DD HH:MM:SS"
+
+        case 315: // Artist
+            Char artist[count];
+
+        case 320: // ColorMap
+            UInt16 color_map[count];
+
+        case 322, 323: // TileWidth, TileLength
+            UInt32 tile_dimension;
+
+        case 324: // TileOffsets
+            UInt32 tile_offsets[count];
+
+        case 325: // TileByteCounts
+            UInt32 tile_byte_counts[count];
+
+        default:
+            Byte unknown_value[type_size(type, count)];
+    }
 }
 
-struct Ifd {
-  num_entries         : u16;
-  entries             : IfdEntry[num_entries];
-  next_ifd_offset     : u32;
+struct Rational {
+    UInt32 numerator;
+    UInt32 denominator;
 }
 
--- Basic types
-alias u8 = uint<8>
-alias u16 = uint<16>
-alias u32 = uint<32>
-
--- TIFF file format
-struct TiffFile {
-  header              : TiffHeader;
-  ifds                : Ifd[];
-
-  let offset = header.ifd_offset;
-  let rec ReadIfds(offset_: u32) =
-    if offset_ == 0 then
-      []
-    else 
-      ifd = Ifd.from_position(offset_);
-      ifd + ReadIfds(ifd.next_ifd_offset);
-  }
-  where 
-    ifds = ReadIfds(header.ifd_offset);
+function UInt32 type_size(UInt16 type, UInt32 count) {
+    switch (type) {
+        case 1: return 1 * count;  // BYTE
+        case 2: return 1 * count;  // ASCII
+        case 3: return 2 * count;  // SHORT
+        case 4: return 4 * count;  // LONG
+        case 5: return 8 * count;  // RATIONAL
+        default: return 0;
+    }
 }

@@ -1,63 +1,74 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a hammer
 typedef struct {
-    char *name;
-    float weight;
-    int length;
-} Hammer;
+    uint8_t type;
+    uint8_t flags;
+    uint16_t packet_id;
+    char* payload;
+    size_t payload_len;
+} mqtt_publish_packet;
 
+hammer_parser mqtt_publish_parser() {
+    hammer_parser payload_parser = hammer_map(hammer_take(hammer_uint32()), (void*(*)(size_t))malloc, free);
 
-// Function to create a hammer
-Hammer* createHammer(const char *name, float weight, int length) {
-    Hammer *hammer = (Hammer*)malloc(sizeof(Hammer));
-    if (hammer == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(1);
-    }
-    hammer->name = strdup(name);
-    if (hammer->name == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        free(hammer);
-        exit(1);
-    }
-    hammer->weight = weight;
-    hammer->length = length;
-    return hammer;
+    return hammer_seq(
+        hammer_uint8(),
+        hammer_uint8(),
+        hammer_uint16(),
+        payload_parser,
+        hammer_ignore(hammer_uint32())
+    );
 }
 
-// Function to print hammer information.
-void printHammer(const Hammer *hammer) {
-    if (hammer == NULL) {
-        printf("NULL hammer pointer\n");
-        return;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <mqtt_binary_file>\n", argv[0]);
+        return 1;
     }
-    printf("Hammer Name: %s\n", hammer->name);
-    printf("Hammer Weight: %.2f\n", hammer->weight);
-    printf("Hammer Length: %d\n", hammer->length);
-}
 
-
-// Function to free the dynamically allocated memory for a hammer.
-void freeHammer(Hammer *hammer) {
-    if (hammer != NULL) {
-        free(hammer->name);
-        free(hammer);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
-}
 
-int main() {
-    // Create a hammer
-    Hammer *myHammer = createHammer("My Hammer", 2.5, 12);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    // Print hammer information
-    printHammer(myHammer);
+    char *buffer = (char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
-    //Free the hammer
-    freeHammer(myHammer);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
+    hammer_parser parser = mqtt_publish_parser();
+    hammer_result result = hammer_parse(parser, buffer, fsize);
 
+    if (result.success) {
+        mqtt_publish_packet *packet = (mqtt_publish_packet *)result.value;
+        printf("MQTT Publish Packet:\n");
+        printf("Type: %u\n", packet->type);
+        printf("Flags: %u\n", packet->flags);
+        printf("Packet ID: %u\n", packet->packet_id);
+        printf("Payload Length: %zu\n", packet->payload_len);
+        if (packet->payload) {
+          printf("Payload: %.*s\n", (int)packet->payload_len, packet->payload);
+          free(packet->payload);
+        }
+        free(packet);
+    } else {
+        fprintf(stderr, "Parsing failed at position %zu: %s\n", result.position, result.error);
+    }
+
+    free(buffer);
     return 0;
 }

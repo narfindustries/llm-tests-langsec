@@ -1,49 +1,103 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/dns"
-           xmlns="http://example.org/dns"
-           elementFormDefault="qualified">
-
-  <xs:element name="dnsGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/dns" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0">
+  <xs:element name="DNSMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="records" type="recordsType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="question" type="questionType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="answer" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="authority" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="additional" type="resourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:length="1"/>
+      <xs:attribute ref="dfdl:lengthKind" use="required">
+          <xs:simpleType>
+              <xs:restriction base="xs:string">
+                  <xs:enumeration value="implicit"/>
+              </xs:restriction>
+          </xs:simpleType>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
-
   <xs:complexType name="headerType">
     <xs:sequence>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:length="20"/>
-      <xs:element name="source" type="xs:string" dfdl:length="10"/>
+      <xs:element name="id" type="unsignedShortType" dfdl:length="2"/>
+      <xs:element name="flags" type="flagsType" dfdl:length="2"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordsType">
+  <xs:complexType name="flagsType">
     <xs:sequence>
-      <xs:element name="record" type="recordType" maxOccurs="unbounded"/>
+      <xs:element name="qr" type="bitType" dfdl:length="1"/>
+      <xs:element name="opcode" type="unsignedIntType" dfdl:length="4"/>
+      <xs:element name="aa" type="bitType" dfdl:length="1"/>
+      <xs:element name="tc" type="bitType" dfdl:length="1"/>
+      <xs:element name="rd" type="bitType" dfdl:length="1"/>
+      <xs:element name="ra" type="bitType" dfdl:length="1"/>
+      <xs:element name="z" type="unsignedIntType" dfdl:length="3"/>
+      <xs:element name="rcode" type="unsignedIntType" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="recordType">
+  <xs:complexType name="questionType">
     <xs:sequence>
-      <xs:element name="name" type="xs:string" dfdl:length="255"/>
-      <xs:element name="type" type="xs:integer" dfdl:length="2"/>
-      <xs:element name="ttl" type="xs:integer" dfdl:length="4"/>
-      <xs:element name="data" type="xs:string" dfdl:lengthKind="variable" dfdl:length="unbounded"/>
+      <xs:element name="qname" type="domainNameType"/>
+      <xs:element name="qtype" type="unsignedShortType" dfdl:length="2"/>
+      <xs:element name="qclass" type="unsignedShortType" dfdl:length="2"/>
     </xs:sequence>
   </xs:complexType>
-
-  <dfdl:defineSchema>
-    <dfdl:textStandard>
-      <dfdl:representation>text</dfdl:representation>
-      <dfdl:encoding>UTF-8</dfdl:encoding>
-    </dfdl:textStandard>
-    <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
-    <dfdl:binaryNumberRep>binary</dfdl:binaryNumberRep>
-  </dfdl:defineSchema>
-
+  <xs:complexType name="resourceRecordType">
+    <xs:sequence>
+      <xs:element name="name" type="domainNameType"/>
+      <xs:element name="type" type="unsignedShortType" dfdl:length="2"/>
+      <xs:element name="class" type="unsignedShortType" dfdl:length="2"/>
+      <xs:element name="ttl" type="unsignedIntType" dfdl:length="4"/>
+      <xs:element name="rdlength" type="unsignedShortType" dfdl:length="2"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="domainNameType">
+    <xs:sequence>
+      <xs:element name="label" type="labelType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute ref="dfdl:lengthKind" use="required">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:enumeration value="lengthPrefixed"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute ref="dfdl:lengthUnits" use="required">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:enumeration value="bytes"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="labelType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute ref="dfdl:lengthKind" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="lengthPrefixed"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute ref="dfdl:lengthUnits" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="bytes"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="unsignedShortType">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+  <xs:simpleType name="unsignedIntType">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="bitType">
+    <xs:restriction base="xs:boolean"/>
+  </xs:simpleType>
 </xs:schema>

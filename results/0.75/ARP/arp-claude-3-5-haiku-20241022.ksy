@@ -1,65 +1,77 @@
 meta:
   id: arp
-  title: Address Resolution Protocol (ARP)
-  file-extension: arp
+  title: Address Resolution Protocol
   endian: be
 
 seq:
   - id: hardware_type
     type: u2
-    enum: hardware_types
+    enum: hardware_type_enum
+
   - id: protocol_type
     type: u2
-    enum: protocol_types
-  - id: hardware_address_length
+    enum: protocol_type_enum
+
+  - id: hardware_addr_length
     type: u1
-  - id: protocol_address_length
+
+  - id: protocol_addr_length
     type: u1
+
   - id: operation
     type: u2
-    enum: arp_operation
-  - id: sender_hardware_address
-    type: hardware_address
-    size: hardware_address_length
-  - id: sender_protocol_address
-    type: protocol_address
-    size: protocol_address_length
-  - id: target_hardware_address
-    type: hardware_address
-    size: hardware_address_length
-  - id: target_protocol_address
-    type: protocol_address
-    size: protocol_address_length
+    enum: operation_enum
+
+  - id: sender_hardware_addr
+    type: hardware_addr
+    size: hardware_addr_length
+
+  - id: sender_protocol_addr
+    type: protocol_addr
+    size: protocol_addr_length
+
+  - id: target_hardware_addr
+    type: hardware_addr
+    size: hardware_addr_length
+
+  - id: target_protocol_addr
+    type: protocol_addr
+    size: protocol_addr_length
 
 types:
-  hardware_address:
+  hardware_addr:
     seq:
-      - id: address
+      - id: addr
         type: u1
         repeat: expr
-        repeat-expr: _parent.hardware_address_length
+        repeat-expr: _parent.hardware_addr_length
 
-  protocol_address:
+  protocol_addr:
     seq:
-      - id: address
+      - id: addr
         type: u1
         repeat: expr
-        repeat-expr: _parent.protocol_address_length
+        repeat-expr: _parent.protocol_addr_length
 
 enums:
-  hardware_types:
+  hardware_type_enum:
     1: ethernet
     6: ieee_802
     15: frame_relay
-    16: atm
-    17: hdlc
-    18: fibre_channel
 
-  protocol_types:
+  protocol_type_enum:
     0x0800: ipv4
-    0x0806: arp
     0x86dd: ipv6
+    0x0806: arp
 
-  arp_operation:
+  operation_enum:
     1: request
     2: reply
+    3: reverse_request
+    4: reverse_reply
+    5: drarp_request
+    6: drarp_reply
+    7: drarp_error
+    8: inarp_request
+    9: inarp_reply
+    10: arp_nam

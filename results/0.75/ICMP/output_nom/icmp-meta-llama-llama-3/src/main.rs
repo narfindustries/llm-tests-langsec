@@ -1,18 +1,13 @@
 use nom::{
-    bytes::complete::{take, take_while_m_n},
-    combinator::{map, map_res, opt},
-    error::context,
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u32, be_u8},
+    bits::complete::{tag, take},
+    bytes::complete::{tag as byte_tag, take as byte_take},
+    combinator::{map, opt},
+    error::{Error, ErrorKind},
     IResult,
 };
-use std::{
-    fs::File,
-    io::{self, Read},
-    path::Path,
-};
+use std::{env, fs};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum IcmpType {
     EchoReply,
     DestinationUnreachable,
@@ -21,218 +16,241 @@ enum IcmpType {
     EchoRequest,
     TimeExceeded,
     ParameterProblem,
-    TimestampRequest,
-    TimestampReply,
-    InfoRequest,
-    InfoReply,
-    AddressRequest,
-    AddressReply,
+    Other(u8),
 }
 
-impl IcmpType {
-    fn from_u8(n: u8) -> Option<Self> {
-        match n {
-            0 => Some(IcmpType::EchoReply),
-            3 => Some(IcmpType::DestinationUnreachable),
-            4 => Some(IcmpType::SourceQuench),
-            5 => Some(IcmpType::Redirect),
-            8 => Some(IcmpType::EchoRequest),
-            11 => Some(IcmpType::TimeExceeded),
-            12 => Some(IcmpType::ParameterProblem),
-            13 => Some(IcmpType::TimestampRequest),
-            14 => Some(IcmpType::TimestampReply),
-            15 => Some(IcmpType::InfoRequest),
-            16 => Some(IcmpType::InfoReply),
-            17 => Some(IcmpType::AddressRequest),
-            18 => Some(IcmpType::AddressReply),
-            _ => None,
+impl From<u8> for IcmpType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => IcmpType::EchoReply,
+            3 => IcmpType::DestinationUnreachable,
+            4 => IcmpType::SourceQuench,
+            5 => IcmpType::Redirect,
+            8 => IcmpType::EchoRequest,
+            11 => IcmpType::TimeExceeded,
+            12 => IcmpType::ParameterProblem,
+            _ => IcmpType::Other(value),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+enum DestinationUnreachableCode {
+    NetworkUnreachable,
+    HostUnreachable,
+    ProtocolUnreachable,
+    PortUnreachable,
+    FragmentationNeeded,
+    SourceRouteFailed,
+    Other(u8),
+}
+
+impl From<u8> for DestinationUnreachableCode {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => DestinationUnreachableCode::NetworkUnreachable,
+            1 => DestinationUnreachableCode::HostUnreachable,
+            2 => DestinationUnreachableCode::ProtocolUnreachable,
+            3 => DestinationUnreachableCode::PortUnreachable,
+            4 => DestinationUnreachableCode::FragmentationNeeded,
+            5 => DestinationUnreachableCode::SourceRouteFailed,
+            _ => DestinationUnreachableCode::Other(value),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum RedirectCode {
+    RedirectDatagramsForNetwork,
+    RedirectDatagramsForHost,
+    RedirectDatagramsForTypeOfServiceAndNetwork,
+    RedirectDatagramsForTypeOfServiceAndHost,
+    Other(u8),
+}
+
+impl From<u8> for RedirectCode {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => RedirectCode::RedirectDatagramsForNetwork,
+            1 => RedirectCode::RedirectDatagramsForHost,
+            2 => RedirectCode::RedirectDatagramsForTypeOfServiceAndNetwork,
+            3 => RedirectCode::RedirectDatagramsForTypeOfServiceAndHost,
+            _ => RedirectCode::Other(value),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum TimeExceededCode {
+    TimeToLiveExceededInTransit,
+    FragmentReassemblyTimeExceeded,
+    Other(u8),
+}
+
+impl From<u8> for TimeExceededCode {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => TimeExceededCode::TimeToLiveExceededInTransit,
+            1 => TimeExceededCode::FragmentReassemblyTimeExceeded,
+            _ => TimeExceededCode::Other(value),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum ParameterProblemCode {
+    PointerIndicatesError,
+    MissingRequiredOption,
+    BadLength,
+    Other(u8),
+}
+
+impl From<u8> for ParameterProblemCode {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => ParameterProblemCode::PointerIndicatesError,
+            1 => ParameterProblemCode::MissingRequiredOption,
+            2 => ParameterProblemCode::BadLength,
+            _ => ParameterProblemCode::Other(value),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 struct IcmpHeader {
-    type_: IcmpType,
+    icmp_type: IcmpType,
     code: u8,
     checksum: u16,
     identifier: u16,
     sequence_number: u16,
 }
 
-impl IcmpHeader {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        context("icmp header", move |input| {
-            let (input, type_) = map_res(be_u8, IcmpType::from_u8)(input)?;
-            let (input, code) = be_u8(input)?;
-            let (input, checksum) = be_u16(input)?;
-            let (input, identifier) = be_u16(input)?;
-            let (input, sequence_number) = be_u16(input)?;
-            Ok((input, IcmpHeader {
-                type_,
-                code,
-                checksum,
-                identifier,
-                sequence_number,
-            }))
-        })(input)
-    }
+fn icmp_header(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
+    let (input, icmp_type) = byte_take(1usize)(input)?;
+    let (input, code) = byte_take(1usize)(input)?;
+    let (input, checksum) = byte_take(2usize)(input)?;
+    let (input, identifier) = byte_take(2usize)(input)?;
+    let (input, sequence_number) = byte_take(2usize)(input)?;
+
+    let icmp_type = IcmpType::from(icmp_type[0]);
+    let checksum = u16::from_be_bytes([checksum[0], checksum[1]]);
+    let identifier = u16::from_be_bytes([identifier[0], identifier[1]]);
+    let sequence_number = u16::from_be_bytes([sequence_number[0], sequence_number[1]]);
+
+    Ok((input, IcmpHeader {
+        icmp_type,
+        code: code[0],
+        checksum,
+        identifier,
+        sequence_number,
+    }))
 }
 
-#[derive(Debug)]
-enum IcmpMessage {
-    EchoRequest {
-        header: IcmpHeader,
-        timestamp: u32,
-    },
-    EchoReply {
-        header: IcmpHeader,
-        timestamp: u32,
-    },
-    DestinationUnreachable {
-        header: IcmpHeader,
-        unused: u32,
-        ip_header: [u8; 28],
-    },
-    Redirect {
-        header: IcmpHeader,
-        gateway_address: u32,
-        ip_header: [u8; 28],
-    },
-    TimeExceeded {
-        header: IcmpHeader,
-        unused: u32,
-        ip_header: [u8; 28],
-    },
-    ParameterProblem {
-        header: IcmpHeader,
-        pointer: u8,
-        unused: u32,
-        ip_header: [u8; 28],
-    },
-    TimestampRequest {
-        header: IcmpHeader,
-        originate_timestamp: u32,
-        receive_timestamp: u32,
-        transmit_timestamp: u32,
-    },
-    TimestampReply {
-        header: IcmpHeader,
-        originate_timestamp: u32,
-        receive_timestamp: u32,
-        transmit_timestamp: u32,
-    },
+#[derive(Debug, PartialEq)]
+struct DestinationUnreachable {
+    icmp_header: IcmpHeader,
+    unused: u32,
+    next_hop_mtu: u16,
 }
 
-impl IcmpMessage {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        context("icmp message", move |input| {
-            let (input, header) = IcmpHeader::parse(input)?;
-            match header.type_ {
-                IcmpType::EchoRequest => {
-                    let (input, timestamp) = be_u32(input)?;
-                    Ok((input, IcmpMessage::EchoRequest { header, timestamp }))
-                }
-                IcmpType::EchoReply => {
-                    let (input, timestamp) = be_u32(input)?;
-                    Ok((input, IcmpMessage::EchoReply { header, timestamp }))
-                }
-                IcmpType::DestinationUnreachable => {
-                    let (input, unused) = be_u32(input)?;
-                    let (input, ip_header) = take(28u8)(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::DestinationUnreachable {
-                            header,
-                            unused,
-                            ip_header: ip_header.try_into().unwrap(),
-                        },
-                    ))
-                }
-                IcmpType::Redirect => {
-                    let (input, gateway_address) = be_u32(input)?;
-                    let (input, ip_header) = take(28u8)(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::Redirect {
-                            header,
-                            gateway_address,
-                            ip_header: ip_header.try_into().unwrap(),
-                        },
-                    ))
-                }
-                IcmpType::TimeExceeded => {
-                    let (input, unused) = be_u32(input)?;
-                    let (input, ip_header) = take(28u8)(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::TimeExceeded {
-                            header,
-                            unused,
-                            ip_header: ip_header.try_into().unwrap(),
-                        },
-                    ))
-                }
-                IcmpType::ParameterProblem => {
-                    let (input, pointer) = be_u8(input)?;
-                    let (input, unused) = be_u32(input)?;
-                    let (input, ip_header) = take(28u8)(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::ParameterProblem {
-                            header,
-                            pointer,
-                            unused,
-                            ip_header: ip_header.try_into().unwrap(),
-                        },
-                    ))
-                }
-                IcmpType::TimestampRequest => {
-                    let (input, originate_timestamp) = be_u32(input)?;
-                    let (input, receive_timestamp) = be_u32(input)?;
-                    let (input, transmit_timestamp) = be_u32(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::TimestampRequest {
-                            header,
-                            originate_timestamp,
-                            receive_timestamp,
-                            transmit_timestamp,
-                        },
-                    ))
-                }
-                IcmpType::TimestampReply => {
-                    let (input, originate_timestamp) = be_u32(input)?;
-                    let (input, receive_timestamp) = be_u32(input)?;
-                    let (input, transmit_timestamp) = be_u32(input)?;
-                    Ok((
-                        input,
-                        IcmpMessage::TimestampReply {
-                            header,
-                            originate_timestamp,
-                            receive_timestamp,
-                            transmit_timestamp,
-                        },
-                    ))
-                }
-                _ => Err(nom::Err::Error(nom::error::Error::Missing)),
-            }
-        })(input)
-    }
+fn destination_unreachable(input: &[u8]) -> IResult<&[u8], DestinationUnreachable> {
+    let (input, icmp_header) = icmp_header(input)?;
+    let (input, unused) = byte_take(4usize)(input)?;
+    let (input, next_hop_mtu) = byte_take(2usize)(input)?;
+
+    let unused = u32::from_be_bytes([unused[0], unused[1], unused[2], unused[3]]);
+    let next_hop_mtu = u16::from_be_bytes([next_hop_mtu[0], next_hop_mtu[1]]);
+
+    Ok((input, DestinationUnreachable {
+        icmp_header,
+        unused,
+        next_hop_mtu,
+    }))
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+#[derive(Debug, PartialEq)]
+struct Redirect {
+    icmp_header: IcmpHeader,
+    gateway_address: u32,
+}
+
+fn redirect(input: &[u8]) -> IResult<&[u8], Redirect> {
+    let (input, icmp_header) = icmp_header(input)?;
+    let (input, gateway_address) = byte_take(4usize)(input)?;
+
+    let gateway_address = u32::from_be_bytes([gateway_address[0], gateway_address[1], gateway_address[2], gateway_address[3]]);
+
+    Ok((input, Redirect {
+        icmp_header,
+        gateway_address,
+    }))
+}
+
+#[derive(Debug, PartialEq)]
+struct TimeExceeded {
+    icmp_header: IcmpHeader,
+    unused: u32,
+}
+
+fn time_exceeded(input: &[u8]) -> IResult<&[u8], TimeExceeded> {
+    let (input, icmp_header) = icmp_header(input)?;
+    let (input, unused) = byte_take(4usize)(input)?;
+
+    let unused = u32::from_be_bytes([unused[0], unused[1], unused[2], unused[3]]);
+
+    Ok((input, TimeExceeded {
+        icmp_header,
+        unused,
+    }))
+}
+
+#[derive(Debug, PartialEq)]
+struct ParameterProblem {
+    icmp_header: IcmpHeader,
+    pointer: u8,
+}
+
+fn parameter_problem(input: &[u8]) -> IResult<&[u8], ParameterProblem> {
+    let (input, icmp_header) = icmp_header(input)?;
+    let (input, pointer) = byte_take(1usize)(input)?;
+
+    Ok((input, ParameterProblem {
+        icmp_header,
+        pointer: pointer[0],
+    }))
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         println!("Usage: {} <input_file>", args[0]);
-        return Ok(());
+        return;
     }
-    let path = Path::new(&args[1]);
-    let mut file = File::open(path)?;
-    let mut input = Vec::new();
-    file.read_to_end(&mut input)?;
-    match IcmpMessage::parse(&input) {
-        Ok((_, msg)) => println!("{:?}", msg),
-        Err(e) => println!("Error: {:?}", e),
+
+    let input_file = &args[1];
+    let input_data = fs::read(input_file).unwrap();
+
+    let (input, icmp_header) = icmp_header(&input_data).unwrap();
+
+    match icmp_header.icmp_type {
+        IcmpType::DestinationUnreachable => {
+            let (_, destination_unreachable) = destination_unreachable(&input_data).unwrap();
+            println!("{:?}", destination_unreachable);
+        }
+        IcmpType::Redirect => {
+            let (_, redirect) = redirect(&input_data).unwrap();
+            println!("{:?}", redirect);
+        }
+        IcmpType::TimeExceeded => {
+            let (_, time_exceeded) = time_exceeded(&input_data).unwrap();
+            println!("{:?}", time_exceeded);
+        }
+        IcmpType::ParameterProblem => {
+            let (_, parameter_problem) = parameter_problem(&input_data).unwrap();
+            println!("{:?}", parameter_problem);
+        }
+        _ => {
+            println!("{:?}", icmp_header);
+        }
     }
-    Ok(())
 }

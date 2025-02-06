@@ -1,0 +1,33 @@
+module DNS;
+
+public type Header = unit {
+    id: uint16;
+    flags: uint16;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+public type Question = unit {
+    qname: bytes &eod;
+    qtype: uint16;
+    qclass: uint16;
+};
+
+public type ResourceRecord = unit {
+    name: bytes &eod;
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &length=rdlength;
+};
+
+public type Message = unit {
+    header: Header;
+    questions: Question[header.qdcount];
+    answers: ResourceRecord[header.ancount];
+    authorities: ResourceRecord[header.nscount];
+    additional: ResourceRecord[header.arcount];
+};

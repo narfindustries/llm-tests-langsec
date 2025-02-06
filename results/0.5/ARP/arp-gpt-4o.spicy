@@ -1,23 +1,13 @@
 module ARP;
 
-import spicy;
-
-public type ARPMessage = unit {
-    htype: uint16;         # Hardware type
-    ptype: uint16;         # Protocol type
-    hlen: uint8;           # Hardware address length
-    plen: uint8;           # Protocol address length
-    oper: uint16;          # Operation (request or reply)
-    sha: bytes &length=hlen; # Sender hardware address
-    spa: bytes &length=plen; # Sender protocol address
-    tha: bytes &length=hlen; # Target hardware address
-    tpa: bytes &length=plen; # Target protocol address
-};
-
-public type ARPParser = unit {
-    message: ARPMessage;
-};
-
-public global parse_arp_message: function(input: bytes) : ARPMessage {
-    return parse(input, ARPParser);
-}
+public type ARP = unit {
+    htype: uint16;      // Hardware Type
+    ptype: uint16;      // Protocol Type
+    hlen: uint8;        // Hardware Address Length
+    plen: uint8;        // Protocol Address Length
+    oper: uint16;       // Operation
+    sha: bytes &size=hlen;  // Sender Hardware Address
+    spa: bytes &size=plen;  // Sender Protocol Address
+    tha: bytes &size=hlen;  // Target Hardware Address
+    tpa: bytes &size=plen;  // Target Protocol Address
+} &byte_order=bigendian;

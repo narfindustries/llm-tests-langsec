@@ -1,61 +1,126 @@
 module ELF;
 
-import spicy;
-
-type ElfHeader = unit {
+public type Elf_Ident = unit {
     magic: bytes &size=4;
-    class: uint8;
-    data: uint8;
-    version: uint8;
-    os_abi: uint8;
-    abi_version: uint8;
+    fileClass: uint8;
+    dataEncoding: uint8;
+    fileVersion: uint8;
+    osAbi: uint8;
+    abiVersion: uint8;
     pad: bytes &size=7;
-    type: uint16;
-    machine: uint16;
-    version2: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
 };
 
-type ProgramHeader = unit {
-    type: uint32;
-    flags: uint32;
-    offset: uint64;
-    vaddr: uint64;
-    paddr: uint64;
-    filesz: uint64;
-    memsz: uint64;
-    align: uint64;
+public type Elf32_Addr = uint32;
+public type Elf64_Addr = uint64;
+public type Elf32_Off = uint32;
+public type Elf64_Off = uint64;
+public type Elf32_Half = uint16;
+public type Elf64_Half = uint16;
+public type Elf32_Word = uint32;
+public type Elf64_Word = uint32;
+public type Elf32_Sword = int32;
+public type Elf64_Sword = int32;
+public type Elf64_Xword = uint64;
+public type Elf64_Sxword = int64;
+
+public type Elf32_Ehdr = unit {
+    ident: Elf_Ident;
+    type: Elf32_Half;
+    machine: Elf32_Half;
+    version: Elf32_Word;
+    entry: Elf32_Addr;
+    phoff: Elf32_Off;
+    shoff: Elf32_Off;
+    flags: Elf32_Word;
+    ehsize: Elf32_Half;
+    phentsize: Elf32_Half;
+    phnum: Elf32_Half;
+    shentsize: Elf32_Half;
+    shnum: Elf32_Half;
+    shstrndx: Elf32_Half;
 };
 
-type SectionHeader = unit {
-    name: uint32;
-    type: uint32;
-    flags: uint64;
-    addr: uint64;
-    offset: uint64;
-    size: uint64;
-    link: uint32;
-    info: uint32;
-    addralign: uint64;
-    entsize: uint64;
+public type Elf64_Ehdr = unit {
+    ident: Elf_Ident;
+    type: Elf64_Half;
+    machine: Elf64_Half;
+    version: Elf64_Word;
+    entry: Elf64_Addr;
+    phoff: Elf64_Off;
+    shoff: Elf64_Off;
+    flags: Elf64_Word;
+    ehsize: Elf64_Half;
+    phentsize: Elf64_Half;
+    phnum: Elf64_Half;
+    shentsize: Elf64_Half;
+    shnum: Elf64_Half;
+    shstrndx: Elf64_Half;
 };
 
-type ELFFile = unit {
-    header: ElfHeader;
-    program_headers: ProgramHeader[] &size=header.phnum;
-    section_headers: SectionHeader[] &size=header.shnum;
-    on %done {
-        print self;
-    }
+public type Elf32_Shdr = unit {
+    name: Elf32_Word;
+    type: Elf32_Word;
+    flags: Elf32_Word;
+    addr: Elf32_Addr;
+    offset: Elf32_Off;
+    size: Elf32_Word;
+    link: Elf32_Word;
+    info: Elf32_Word;
+    addralign: Elf32_Word;
+    entsize: Elf32_Word;
 };
 
-public type File = ELFFile;
+public type Elf64_Shdr = unit {
+    name: Elf64_Word;
+    type: Elf64_Word;
+    flags: Elf64_Xword;
+    addr: Elf64_Addr;
+    offset: Elf64_Off;
+    size: Elf64_Xword;
+    link: Elf64_Word;
+    info: Elf64_Word;
+    addralign: Elf64_Xword;
+    entsize: Elf64_Xword;
+};
+
+public type Elf32_Phdr = unit {
+    type: Elf32_Word;
+    offset: Elf32_Off;
+    vaddr: Elf32_Addr;
+    paddr: Elf32_Addr;
+    fileSize: Elf32_Word;
+    memSize: Elf32_Word;
+    flags: Elf32_Word;
+    align: Elf32_Word;
+};
+
+public type Elf64_Phdr = unit {
+    type: Elf64_Word;
+    flags: Elf64_Word;
+    offset: Elf64_Off;
+    vaddr: Elf64_Addr;
+    paddr: Elf64_Addr;
+    fileSize: Elf64_Xword;
+    memSize: Elf64_Xword;
+    align: Elf64_Xword;
+};
+
+public type Elf32 = unit {
+    header: Elf32_Ehdr;
+    programHeaders: vector<Elf32_Phdr> &size=header.phnum;
+    sectionHeaders: vector<Elf32_Shdr> &size=header.shnum;
+};
+
+public type Elf64 = unit {
+    header: Elf64_Ehdr;
+    programHeaders: vector<Elf64_Phdr> &size=header.phnum;
+    sectionHeaders: vector<Elf64_Shdr> &size=header.shnum;
+};
+
+public type File = unit {
+    data: switch (self.data.ident.fileClass) {
+        1 -> elf32: Elf32;
+        2 -> elf64: Elf64;
+        default -> : bytes &eod;
+    };
+};

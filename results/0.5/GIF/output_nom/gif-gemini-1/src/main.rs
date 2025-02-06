@@ -1,168 +1,173 @@
-use std::env;
-use std::fs;
-use std::error::Error;
 use nom::{
-    IResult,
-    bytes::complete::{take, tag},
-    number::complete::{be_u16, be_u32, le_u16},
+    bytes::complete::{tag, take},
+    combinator::{map_res, opt, rest},
     multi::count,
-    sequence::tuple,
-    combinator::{map, map_res, opt, all_consuming},
+    number::complete::{le_u16, le_u8},
+    sequence::{tuple},
+    IResult,
 };
+use std::fs::read;
+use std::path::Path;
 
 #[derive(Debug)]
 struct GifHeader {
     signature: [u8; 6],
-    version: [u8; 3],
+    logical_screen_descriptor: LogicalScreenDescriptor,
+    global_color_table: Option<Vec<[u8; 3]>>,
 }
 
 #[derive(Debug)]
-struct GifLogicalScreenDescriptor {
+struct LogicalScreenDescriptor {
     width: u16,
     height: u16,
-    flags: u8,
-    background_color_index: u8,
-    pixel_aspect_ratio: u8,
+    packed_fields: u8,
 }
 
 #[derive(Debug)]
-struct GifGlobalColorTable {
-    entries: Vec<[u8; 3]>,
+struct ImageDescriptor {
+    image_left_position: u16,
+    image_top_position: u16,
+    image_width: u16,
+    image_height: u16,
+    packed_fields: u8,
+    local_color_table: Option<Vec<[u8; 3]>>,
+    image_data: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct GifGraphicControlExtension {
-    block_size: u8,
-    flags: u8,
+struct GraphicControlExtension {
+    packed_fields: u8,
     delay_time: u16,
     transparent_color_index: u8,
-    terminator: u8,
-}
-
-
-#[derive(Debug)]
-struct GifImageDescriptor {
-    left: u16,
-    top: u16,
-    width: u16,
-    height: u16,
-    flags: u8,
-    local_color_table_flag: bool,
 }
 
 #[derive(Debug)]
-struct GifLocalColorTable {
-    entries: Vec<[u8; 3]>,
+struct CommentExtension {
+    comment: String,
 }
 
 #[derive(Debug)]
-struct GifImageData {
+struct ApplicationExtension {
+    identifier: String,
+    authentication_code: String,
     data: Vec<u8>,
 }
 
-#[derive(Debug)]
-struct GifTrailer {
-    terminator: u8,
-}
-
 fn gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
-    map(
-        tuple((tag(b"GIF87a"), tag(b"GIF89a"))),
-        |(signature, version)| GifHeader {
-            signature: [signature[0], signature[1], signature[2], signature[3], signature[4], signature[5]],
-            version: [version[0], version[1], version[2]]
-        }
-    )(input)
+    let (input, signature) = take(6usize)(input)?;
+    let (input, logical_screen_descriptor) = logical_screen_descriptor(input)?;
+    let (input, global_color_table) = opt(global_color_table)(input)?;
+    Ok((
+        input,
+        GifHeader {
+            signature: signature.try_into().unwrap(),
+            logical_screen_descriptor,
+            global_color_table,
+        },
+    ))
 }
 
-fn gif_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], GifLogicalScreenDescriptor> {
-    map(
-        tuple((be_u16, be_u16, u8, u8, u8)),
-        |(width, height, flags, background_color_index, pixel_aspect_ratio)| GifLogicalScreenDescriptor {
+fn logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
+    let (input, (width, height, packed_fields)) = tuple((le_u16, le_u16, le_u8))(input)?;
+    Ok((
+        input,
+        LogicalScreenDescriptor {
             width,
             height,
-            flags,
-            background_color_index,
-            pixel_aspect_ratio,
+            packed_fields,
         },
-    )(input)
+    ))
 }
 
-fn gif_global_color_table(input: &[u8], num_colors: usize) -> IResult<&[u8], GifGlobalColorTable> {
-    map(
-        count(take(3usize), num_colors),
-        |entries| GifGlobalColorTable { entries },
-    )(input)
+fn global_color_table(input: &[u8]) -> IResult<&[u8], Vec<[u8; 3]>> {
+    let (input, size) = le_u8(input)?;
+    let num_colors = 1 << (size + 1);
+    let (input, color_table) = count(take(3usize), num_colors as usize)(input)?;
+    Ok((input, color_table.iter().map(|&x| x.try_into().unwrap()).collect()))
 }
 
-fn gif_graphic_control_extension(input: &[u8]) -> IResult<&[u8], GifGraphicControlExtension> {
-    map(
-        tuple((u8, u8, le_u16, u8, u8)),
-        |(block_size, flags, delay_time, transparent_color_index, terminator)| GifGraphicControlExtension {
-            block_size,
-            flags,
+fn image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
+    let (input, _) = tag(b"\x2C")(input)?;
+    let (input, (image_left_position, image_top_position, image_width, image_height, packed_fields)) =
+        tuple((le_u16, le_u16, le_u16, le_u16, le_u8))(input)?;
+    let (input, local_color_table) = opt(global_color_table)(input)?;
+    let (input, image_data) = rest(input)?;
+    Ok((
+        input,
+        ImageDescriptor {
+            image_left_position,
+            image_top_position,
+            image_width,
+            image_height,
+            packed_fields,
+            local_color_table,
+            image_data: image_data.to_vec(),
+        },
+    ))
+}
+
+fn graphic_control_extension(input: &[u8]) -> IResult<&[u8], GraphicControlExtension> {
+    let (input, _) = tag(b"\x21\xF9\x04")(input)?;
+    let (input, packed_fields) = le_u8(input)?;
+    let (input, delay_time) = le_u16(input)?;
+    let (input, transparent_color_index) = le_u8(input)?;
+    Ok((
+        input,
+        GraphicControlExtension {
+            packed_fields,
             delay_time,
             transparent_color_index,
-            terminator,
         },
-    )(input)
+    ))
 }
 
-fn gif_image_descriptor(input: &[u8]) -> IResult<&[u8], GifImageDescriptor> {
-    map(
-        tuple((be_u16, be_u16, be_u16, be_u16, u8)),
-        |(left, top, width, height, flags)| GifImageDescriptor {
-            left,
-            top,
-            width,
-            height,
-            flags,
-            local_color_table_flag: (flags >> 0) & 1 != 0,
+fn comment_extension(input: &[u8]) -> IResult<&[u8], CommentExtension> {
+    let (input, _) = tag(b"\x21\xFE")(input)?;
+    let (input, comment_data) = rest(input)?;
+    let comment = String::from_utf8_lossy(comment_data).into_owned();
+    Ok((input, CommentExtension { comment }))
+}
+
+fn application_extension(input: &[u8]) -> IResult<&[u8], ApplicationExtension> {
+    let (input, _) = tag(b"\x21\xFF")(input)?;
+    let (input, identifier) = map_res(take(8usize), |bytes: &[u8]| {
+        String::from_utf8(bytes.to_vec())
+    })(input)?;
+    let (input, authentication_code) = map_res(take(3usize), |bytes: &[u8]| {
+        String::from_utf8(bytes.to_vec())
+    })(input)?;
+    let (input, data) = rest(input)?;
+    Ok((
+        input,
+        ApplicationExtension {
+            identifier,
+            authentication_code,
+            data: data.to_vec(),
         },
-    )(input)
+    ))
 }
 
-fn gif_local_color_table(input: &[u8], num_colors: usize) -> IResult<&[u8], GifLocalColorTable> {
-    map(
-        count(take(3usize), num_colors),
-        |entries| GifLocalColorTable { entries },
-    )(input)
-}
-
-fn gif_image_data(input: &[u8]) -> IResult<&[u8], GifImageData> {
-    map(
-        map_res(
-            take(1usize),
-            |bytes| {
-                let mut data = Vec::new();
-                data.extend_from_slice(bytes);
-                Ok(data)
-            },
-        ),
-        |data| GifImageData { data },
-    )(input)
-}
-
-fn gif_trailer(input: &[u8]) -> IResult<&[u8], GifTrailer> {
-    map(tag(b";"), |_| GifTrailer { terminator: b';' })(input)
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: gif_parser <filename>");
-        return Ok(());
+        eprintln!("Usage: {} <gif_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let data = fs::read(filename)?;
+    let path = Path::new(&args[1]);
+    let data = match read(path) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
+            std::process::exit(1);
+        }
+    };
 
-    let result = all_consuming(gif_header)(&data);
-
-    match result {
+    match gif_header(&data) {
         Ok((_, header)) => println!("GIF Header: {:?}", header),
-        Err(e) => eprintln!("Error parsing GIF header: {}", e),
+        Err(e) => {
+            eprintln!("Error parsing GIF header: {:?}", e);
+            std::process::exit(1);
+        }
     }
-
-    Ok(())
 }

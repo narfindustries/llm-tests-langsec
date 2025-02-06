@@ -1,54 +1,183 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gzip"
-           xmlns:tns="http://example.com/gzip"
-           elementFormDefault="qualified"
-           version="1.0">
+           targetNamespace="http://example.org/gzip"
+           xmlns="http://example.org/gzip"
+           elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat" />
-    </xs:appinfo>
-  </xs:annotation>
+    <xs:element name="gzip">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="ID1" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                            <dfdl:inputValueCalc>{ 31 }</dfdl:inputValueCalc>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ID2" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                            <dfdl:inputValueCalc>{ 139 }</dfdl:inputValueCalc>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="CM" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                            <dfdl:assert test="{ . eq 8 }" message="Only DEFLATE (8) is supported."/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="FLG" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="MTIME" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>32</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="XFL" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="OS" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>8</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                
+                <xs:element name="extraField" minOccurs="0" maxOccurs="1">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:occursCountKind>expression</dfdl:occursCountKind>
+                            <dfdl:occursCount>{ (FLG and 4) ne 0 }</dfdl:occursCount>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="subfield" minOccurs="0" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:sequence>
+                                        <xs:element name="SI1" type="xs:unsignedByte">
+                                            <xs:annotation>
+                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                                    <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                                                    <dfdl:length>8</dfdl:length>
+                                                </xs:appinfo>
+                                            </xs:annotation>
+                                        </xs:element>
+                                        <xs:element name="SI2" type="xs:unsignedByte">
+                                            <xs:annotation>
+                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                                    <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                                                    <dfdl:length>8</dfdl:length>
+                                                </xs:appinfo>
+                                            </xs:annotation>
+                                        </xs:element>
+                                        <xs:element name="LEN" type="xs:unsignedShort">
+                                            <xs:annotation>
+                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                                    <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                                                    <dfdl:length>16</dfdl:length>
+                                                </xs:appinfo>
+                                            </xs:annotation>
+                                        </xs:element>
+                                        <xs:element name="subfieldData" type="xs:hexBinary">
+                                            <xs:annotation>
+                                                <xs:appinfo source="http://www.ogf.org/dfdl/">
+                                                    <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                                                    <dfdl:length>{ ../LEN * 8 }</dfdl:length>
+                                                </xs:appinfo>
+                                            </xs:annotation>
+                                        </xs:element>
+                                    </xs:sequence>
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
 
-  <dfdl:format name="GeneralFormat"
-               byteOrder="bigEndian"
-               encoding="utf-8" />
+                <xs:element name="originalFileName" type="xs:string" minOccurs="0" maxOccurs="1">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>delimited</dfdl:lengthKind>
+                            <dfdl:terminator>%ES;%WSP*</dfdl:terminator>
+                            <dfdl:occursCountKind>expression</dfdl:occursCountKind>
+                            <dfdl:occursCount>{ (FLG and 8) ne 0 }</dfdl:occursCount>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
 
-  <xs:element name="gzipFile">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="tns:GzipHeader"/>
-        <xs:element name="compressedData" type="tns:CompressedData"/>
-        <xs:element name="footer" type="tns:GzipFooter"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+                <xs:element name="fileComment" type="xs:string" minOccurs="0" maxOccurs="1">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>delimited</dfdl:lengthKind>
+                            <dfdl:terminator>%ES;%WSP*</dfdl:terminator>
+                            <dfdl:occursCountKind>expression</dfdl:occursCountKind>
+                            <dfdl:occursCount>{ (FLG and 16) ne 0 }</dfdl:occursCount>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
 
-  <xs:complexType name="GzipHeader">
-    <xs:sequence>
-      <xs:element name="id1" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="id2" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="32" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="operatingSystem" type="xs:unsignedByte" dfdl:length="8" dfdl:binaryNumberRep="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+                <xs:element name="headerCRC16" type="xs:unsignedShort" minOccurs="0" maxOccurs="1">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>16</dfdl:length>
+                            <dfdl:occursCountKind>expression</dfdl:occursCountKind>
+                            <dfdl:occursCount>{ (FLG and 2) ne 0 }</dfdl:occursCount>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
 
-  <xs:complexType name="CompressedData">
-    <xs:sequence>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:length="*"/>
-    </xs:sequence>
-  </xs:complexType>
+                <xs:element name="compressedData" type="xs:hexBinary">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>endOfParent</dfdl:lengthKind>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
 
-  <xs:complexType name="GzipFooter">
-    <xs:sequence>
-      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="32" dfdl:binaryNumberRep="binary"/>
-      <xs:element name="inputSize" type="xs:unsignedInt" dfdl:length="32" dfdl:binaryNumberRep="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+                <xs:element name="CRC32" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>32</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ISIZE" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>32</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

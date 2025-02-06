@@ -1,55 +1,117 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:tiff="urn:example:tiff"
-    targetNamespace="urn:example:tiff">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="littleEndian"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthUnits="bytes"
-                lengthKind="implicit"
-                encoding="UTF-8"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tiff="http://example.com/tiff"
+           targetNamespace="http://example.com/tiff">
 
-    <xs:element name="tiffFile">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="header" type="tiff:HeaderType"/>
-                <xs:element name="ifd" type="tiff:IFDType" maxOccurs="unbounded"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" alignmentUnits="bytes"
+                   binaryNumberRep="binary"
+                   byteOrder="littleEndian"
+                   representation="binary"
+                   lengthUnits="bytes"
+                   lengthKind="implicit"
+                   encoding="UTF-8"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   sequenceKind="ordered"
+                   textBidi="no"
+                   floating="no"
+                   occursCountKind="implicit"
+                   initiator=""
+                   encodingErrorPolicy="replace"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFF" dfdl:initiator="">
+    <xs:complexType>
+      <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+        <!-- Image File Header -->
+        <xs:element name="ByteOrder" dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="value" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:trailingSkip="0"/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="Version" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+        <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+        
+        <!-- Image File Directory -->
+        <xs:element name="IFD" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="NumDirectoryEntries" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+              <xs:element name="DirectoryEntry" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="Tag" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+                    <xs:element name="Type" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+                    <xs:element name="Count" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
 
-    <xs:complexType name="HeaderType">
-        <xs:sequence>
-            <xs:element name="byteOrder" type="xs:hexBinary" dfdl:length="2"/>
-            <xs:element name="magic" type="xs:unsignedShort" dfdl:representation="binary"/>
-            <xs:element name="ifdOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
-        </xs:sequence>
+        <!-- Tag Values -->
+        <xs:element name="TagValues" dfdl:trailingSkip="0">
+          <xs:complexType>
+            <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <!-- Required Tags -->
+              <xs:element name="ImageWidth" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+              <xs:element name="ImageLength" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+              <xs:element name="BitsPerSample" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="Compression" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+              <xs:element name="PhotometricInterpretation" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+              <xs:element name="StripOffsets" type="xs:unsignedInt" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="SamplesPerPixel" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+              <xs:element name="RowsPerStrip" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+              <xs:element name="StripByteCounts" type="xs:unsignedInt" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="XResolution" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="Numerator" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="Denominator" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="YResolution" dfdl:trailingSkip="0">
+                <xs:complexType>
+                  <xs:sequence dfdl:initiatedContent="no" dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="Numerator" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                    <xs:element name="Denominator" type="xs:unsignedInt" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ResolutionUnit" type="xs:unsignedShort" dfdl:trailingSkip="0"/>
+              
+              <!-- Optional Tags -->
+              <xs:element name="ColorMap" type="xs:unsignedShort" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="Predictor" type="xs:unsignedShort" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="TileWidth" type="xs:unsignedInt" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="TileLength" type="xs:unsignedInt" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="TileOffsets" type="xs:unsignedInt" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="TileByteCounts" type="xs:unsignedInt" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="SubfileType" type="xs:unsignedInt" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="DateTime" type="xs:string" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="Artist" type="xs:string" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="Software" type="xs:string" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+              <xs:element name="Copyright" type="xs:string" minOccurs="0" dfdl:occursCountKind="implicit" dfdl:trailingSkip="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <!-- Image Data -->
+        <xs:element name="ImageData" type="xs:hexBinary" dfdl:trailingSkip="0"/>
+      </xs:sequence>
     </xs:complexType>
-
-    <xs:complexType name="IFDType">
-        <xs:sequence>
-            <xs:element name="numEntries" type="xs:unsignedShort" dfdl:representation="binary"/>
-            <xs:element name="entries" type="tiff:IFDEntryType" maxOccurs="unbounded"/>
-            <xs:element name="nextIFDOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="IFDEntryType">
-        <xs:sequence>
-            <xs:element name="tag" type="xs:unsignedShort" dfdl:representation="binary"/>
-            <xs:element name="type" type="xs:unsignedShort" dfdl:representation="binary"/>
-            <xs:element name="count" type="xs:unsignedInt" dfdl:representation="binary"/>
-            <xs:element name="valueOffset" type="xs:unsignedInt" dfdl:representation="binary"/>
-        </xs:sequence>
-    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

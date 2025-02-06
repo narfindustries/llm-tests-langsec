@@ -3,31 +3,85 @@
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.org/mqtt"
            xmlns="http://example.org/mqtt"
-           elementFormDefault="qualified">
+           elementFormDefault="qualified"
+           xmlns:tns="http://example.org/mqtt">
 
-  <xs:element name="mqtt_gemini_1">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="MQTTPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="payload" type="PayloadType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="FixedHeader" type="FixedHeaderType"/>
+        <xs:element name="VariableHeader" type="VariableHeaderType" minOccurs="0"/>
+        <xs:element name="Payload" type="xs:base64Binary" minOccurs="0"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="3"/>
+      <xs:attribute ref="dfdl:lengthKind" use="required"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="FixedHeaderType">
     <xs:sequence>
-      <xs:element name="message_id" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:lengthKind="implicit"/>
+      <xs:element name="MessageType" type="MessageTypeType"/>
+      <xs:element name="Flags" type="xs:unsignedByte"/>
+      <xs:element name="RemainingLength" type="xs:unsignedInt"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="PayloadType">
+  <xs:simpleType name="MessageTypeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="VariableHeaderType">
     <xs:sequence>
-      <xs:element name="topic" type="xs:string" dfdl:lengthKind="implicit"/>
-      <xs:element name="data" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort" minOccurs="0"/>
+      <xs:element name="TopicName" type="xs:string" minOccurs="0"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:sequence>
+      <xs:element name="Property" type="PropertyType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertyType">
+    <xs:sequence>
+      <xs:element name="PropertyId" type="xs:unsignedShort"/>
+      <xs:choice>
+        <xs:element name="BooleanValue" type="xs:boolean"/>
+        <xs:element name="ByteValue" type="xs:unsignedByte"/>
+        <xs:element name="IntValue" type="xs:integer"/>
+        <xs:element name="ShortValue" type="xs:unsignedShort"/>
+        <xs:element name="StringValue" type="xs:string"/>
+        <xs:element name="BinaryValue" type="xs:base64Binary"/>
+        <xs:element name="IntPairValue">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Int1" type="xs:integer"/>
+              <xs:element name="Int2" type="xs:integer"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
     </xs:sequence>
   </xs:complexType>
 
 </xs:schema>
-

@@ -1,25 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tiff" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://example.org/tiff"
+           targetNamespace="http://example.org/tiff"
+           elementFormDefault="qualified"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
 
-  <xs:element name="tiffGemini">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="8"/>
-        <xs:element name="imageWidth" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="imageLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="bitsPerSample" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="compression" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="imageData" type="xs:base64Binary" dfdl:lengthKind="expression" dfdl:length="string-length(./preceding-sibling::imageWidth) * string-length(./preceding-sibling::imageLength) * string-length(./preceding-sibling::bitsPerSample) div 8"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="TIFF" type="tns:TIFFType"/>
+
+  <xs:complexType name="TIFFType">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HeaderType"/>
+      <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 
   <xs:complexType name="HeaderType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="fixedValue" type="xs:string" dfdl:occurs="1" fixed="49492A00"/>
-      </xs:extension>
-    </xs:simpleContent>
+    <xs:sequence>
+      <xs:element name="ByteOrder" type="xs:string">
+        <dfdl:length lengthKind="explicit" value="2"/>
+        <dfdl:textStandard value="LittleEndian"/>
+      </xs:element>
+      <xs:element name="Version" type="xs:unsignedShort">
+        <dfdl:length lengthKind="explicit" value="2"/>
+      </xs:element>
+      <xs:element name="OffsetToFirstIFD" type="xs:unsignedInt">
+        <dfdl:length lengthKind="explicit" value="4"/>
+      </xs:element>
+    </xs:sequence>
   </xs:complexType>
+
+  <xs:complexType name="IFDType">
+    <xs:sequence>
+      <xs:element name="NumberOfTags" type="xs:unsignedShort">
+        <dfdl:length lengthKind="explicit" value="2"/>
+      </xs:element>
+      <xs:element name="TagEntry" type="tns:TagEntryType" maxOccurs="unbounded"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" minOccurs="0">
+        <dfdl:length lengthKind="explicit" value="4"/>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TagEntryType">
+    <xs:sequence>
+      <xs:element name="TagID" type="xs:unsignedShort">
+        <dfdl:length lengthKind="explicit" value="2"/>
+      </xs:element>
+      <xs:element name="DataType" type="xs:unsignedShort">
+        <dfdl:length lengthKind="explicit" value="2"/>
+      </xs:element>
+      <xs:element name="Count" type="xs:unsignedInt">
+        <dfdl:length lengthKind="explicit" value="4"/>
+      </xs:element>
+      <xs:element name="Value" type="xs:hexBinary">
+        <dfdl:length lengthKind="expression" value="4 * $tns:DataType * $tns:Count"/>
+        <dfdl:annotation>
+          <xs:documentation>Value depends on DataType and Count. This is a placeholder for various data types.</xs:documentation>
+        </dfdl:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <dfdl:format name="TIFFFormat">
+    <dfdl:textStandard value="UTF-8"/>
+    <dfdl:byteOrder value="bigEndian"/>
+    <dfdl:encoding value="UTF-8"/>
+    <dfdl:occursCountKind value="fixed"/>
+  </dfdl:format>
 
 </xs:schema>

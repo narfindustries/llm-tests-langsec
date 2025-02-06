@@ -2,43 +2,137 @@ module MQTT;
 
 import spicy;
 
-type ConnectFlags = unit {
-    reserved:   uint8 &size=1;
-    cleanStart: bool &size=1;
-    willFlag:   bool &size=1;
-    willQoS:    uint8 &size=2;
-    willRetain: bool &size=1;
-    password:   bool &size=1;
-    username:   bool &size=1;
+public type ControlType = enum {
+    RESERVED0 = 0,
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
 };
 
-type ConnectVariableHeader = unit {
-    protocolName:       bytes &eod;
-    protocolLevel:      uint8;
-    connectFlags:       ConnectFlags;
-    keepAlive:          uint16;
+type FixedHeader = unit {
+    controlType : ControlType;
+    flags : bitfield(8) {
+        retain : 1;
+        qos : 2;
+        dup : 1;
+        reserved : 4;
+    };
+    remainingLength : uint16;
+};
+
+type ConnectFlags = bitfield(8) {
+    usernameFlag : 1;
+    passwordFlag : 1;
+    willRetain : 1;
+    willQoS : 2;
+    willFlag : 1;
+    cleanStart : 1;
+    reserved : 1;
+};
+
+type Property = unit {
+    id: uint8;
+    value: bytes &eod;
+};
+
+type Properties = unit {
+    length: uint16;
+    properties: Property[] &size=length;
 };
 
 type ConnectPayload = unit {
-    clientID:           bytes &eod;
-    willTopic:          bytes &eod if(self.connectFlags.willFlag);
-    willMessage:        bytes &eod if(self.connectFlags.willFlag);
-    username:           bytes &eod if(self.connectFlags.username);
-    password:           bytes &eod if(self.connectFlags.password);
+    clientIdentifier: bytes &eod;
+    willProperties: Properties;
+    willTopic: bytes &eod;
+    willPayload: bytes &eod;
+    username: bytes &eod;
+    password: bytes &eod;
 };
 
-type ConnectPacket = unit {
-    variableHeader:     ConnectVariableHeader;
-    payload:            ConnectPayload;
+type Connect = unit {
+    protocolName: bytes &size=4;
+    protocolLevel: uint8;
+    connectFlags: ConnectFlags;
+    keepAlive: uint16;
+    properties: Properties;
+    payload: ConnectPayload;
 };
 
-type MQTTRecord = unit {
-    controlPacketType:  uint4;
-    flags:              uint4;
-    remainingLength:    uint16;
-    connectPacket:      ConnectPacket;
+type ConnAck = unit {
+    ackFlags: uint8;
+    reasonCode: uint8;
+    properties: Properties;
 };
 
-public type MQTTStream = unit {
-    records:            MQTTRecord[] &eod;
-} &byte_order=big;
+type Publish = unit {
+    topicName: bytes &eod;
+    packetIdentifier: optional<uint16> &requires=controlType == ControlType::PUBLISH;
+    properties: Properties;
+    payload: bytes &eod;
+};
+
+type Ack = unit {
+    packetIdentifier: uint16;
+    reasonCode: uint8;
+    properties: Properties;
+};
+
+type SubscribePayload = unit {
+    topicFilters: bytes &eod;
+};
+
+type Subscribe = unit {
+    packetIdentifier: uint16;
+    properties: Properties;
+    payload: SubscribePayload;
+};
+
+type SubAck = unit {
+    packetIdentifier: uint16;
+    properties: Properties;
+    reasonCodes: bytes &eod;
+};
+
+type Disconnect = unit {
+    reasonCode: uint8;
+    properties: Properties;
+};
+
+type Auth = unit {
+    reasonCode: uint8;
+    properties: Properties;
+};
+
+public type MQTTMessage = unit {
+    fixedHeader: FixedHeader;
+    body: switch (fixedHeader.controlType) {
+        ControlType::CONNECT -> connect: Connect;
+        ControlType::CONNACK -> connAck: ConnAck;
+        ControlType::PUBLISH -> publish: Publish;
+        ControlType::PUBACK -> ack: Ack;
+        ControlType::PUBREC -> ack: Ack;
+        ControlType::PUBREL -> ack: Ack;
+        ControlType::PUBCOMP -> ack: Ack;
+        ControlType::SUBSCRIBE -> subscribe: Subscribe;
+        ControlType::SUBACK -> subAck: SubAck;
+        ControlType::UNSUBSCRIBE -> subscribe: Subscribe;
+        ControlType::UNSUBACK -> ack: Ack;
+        ControlType::PINGREQ -> pingReq: void;
+        ControlType::PINGRESP -> pingResp: void;
+        ControlType::DISCONNECT -> disconnect: Disconnect;
+        ControlType::AUTH -> auth: Auth;
+        default -> : void;
+    };
+};

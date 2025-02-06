@@ -3,40 +3,52 @@
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/ntp"
            xmlns:ntp="http://example.com/ntp"
-           elementFormDefault="qualified"
-           dfdl:format="true"
-           dfdl:encoding="utf-8">
+           elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="ntp:ntpFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <dfdl:defineFormat name="ntpFormat">
-    <dfdl:format byteOrder="bigEndian" lengthKind="explicit" lengthUnits="bytes"/>
-  </dfdl:defineFormat>
+    <xs:element name="NTPPacket">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="LI_VN_Mode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:discriminator test="{LI ge 0 and LI le 3}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Stratum" type="xs:unsignedByte"/>
+                <xs:element name="Poll" type="xs:byte"/>
+                <xs:element name="Precision" type="xs:byte"/>
+                <xs:element name="RootDelay" type="xs:unsignedInt"/>
+                <xs:element name="RootDispersion" type="xs:unsignedInt"/>
+                <xs:element name="ReferenceIdentifier" type="xs:unsignedInt"/>
+                <xs:element name="ReferenceTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="OriginateTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="ReceiveTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="TransmitTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="Authenticator" minOccurs="0" maxOccurs="1">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="KeyIdentifier" type="xs:unsignedInt"/>
+                            <xs:element name="MessageDigest" type="xs:hexBinary" dfdl:length="16"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:element name="NetworkTimeProtocol">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="LeapIndicator" type="xs:unsignedByte" dfdl:length="2" dfdl:inputValueCalc="{ (../Flags & 0xC0) >> 6 }"/>
-        <xs:element name="VersionNumber" type="xs:unsignedByte" dfdl:length="3" dfdl:inputValueCalc="{ (../Flags & 0x38) >> 3 }"/>
-        <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3" dfdl:inputValueCalc="{ ../Flags & 0x07 }"/>
-        <xs:element name="Stratum" type="xs:unsignedByte" dfdl:length="1"/>
-        <xs:element name="Poll" type="xs:byte" dfdl:length="1"/>
-        <xs:element name="Precision" type="xs:byte" dfdl:length="1"/>
-        <xs:element name="RootDelay" type="xs:int" dfdl:length="4"/>
-        <xs:element name="RootDispersion" type="xs:int" dfdl:length="4"/>
-        <xs:element name="ReferenceIdentifier" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-        <xs:element name="ReferenceTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
-        <xs:element name="OriginateTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
-        <xs:element name="ReceiveTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
-        <xs:element name="TransmitTimestamp" type="xs:unsignedLong" dfdl:length="8"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="Flags" type="xs:unsignedByte" dfdl:length="1"/>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineVariable name="LI" type="xs:unsignedByte" external="false" defaultValue="0"/>
+            <dfdl:defineVariable name="VN" type="xs:unsignedByte" external="false" defaultValue="4"/>
+            <dfdl:defineVariable name="Mode" type="xs:unsignedByte" external="false" defaultValue="3"/>
+        </xs:appinfo>
+    </xs:annotation>
 
 </xs:schema>

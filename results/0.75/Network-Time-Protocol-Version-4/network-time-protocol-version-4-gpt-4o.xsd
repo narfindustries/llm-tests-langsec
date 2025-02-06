@@ -1,52 +1,134 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ntp"
-           xmlns:tns="http://example.com/ntp"
-           elementFormDefault="qualified"
-           dfdl:format="true"
-           xmlns:ntp="http://example.com/ntp"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ dfdl.xsd">
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        xmlns:dfdl="http://www.ogf.org/dfdl/"
+        targetNamespace="urn:example:ntp"
+        xmlns:ntp="urn:example:ntp"
+        elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:ntpFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format lengthKind="explicit"
+                         encoding="US-ASCII"
+                         bitOrder="mostSignificantBitFirst" />
+        </appinfo>
+    </annotation>
 
-  <xs:simpleType name="uint8_t">
-    <xs:restriction base="xs:unsignedByte"/>
-  </xs:simpleType>
+    <element name="NTPMessage">
+        <complexType>
+            <sequence>
 
-  <xs:simpleType name="uint32_t">
-    <xs:restriction base="xs:unsignedInt"/>
-  </xs:simpleType>
+                <element name="LI_VN_Mode" type="unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="8" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
 
-  <xs:element name="NetworkTimeProtocol">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="flags" type="ntp:uint8_t" dfdl:length="8" dfdl:lengthUnits="bits"/>
-        <xs:element name="stratum" type="ntp:uint8_t"/>
-        <xs:element name="poll" type="ntp:uint8_t"/>
-        <xs:element name="precision" type="ntp:uint8_t"/>
-        <xs:element name="rootDelay" type="ntp:uint32_t"/>
-        <xs:element name="rootDispersion" type="ntp:uint32_t"/>
-        <xs:element name="referenceId" type="ntp:uint32_t"/>
-        <xs:element name="referenceTimestamp" type="ntp:uint32_t"/>
-        <xs:element name="originateTimestamp" type="ntp:uint32_t"/>
-        <xs:element name="receiveTimestamp" type="ntp:uint32_t"/>
-        <xs:element name="transmitTimestamp" type="ntp:uint32_t"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+                <element name="Stratum" type="unsignedByte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="8" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
 
-  <dfdl:defineFormat name="ntpFormat">
-    <dfdl:format 
-      lengthKind="explicit" 
-      lengthUnits="bytes" 
-      byteOrder="bigEndian" 
-      encoding="ascii"/>
-  </dfdl:defineFormat>
+                <element name="Poll" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="8" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
 
-</xs:schema>
+                <element name="Precision" type="byte">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="8" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="RootDelay" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="32" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="RootDispersion" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="32" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="ReferenceIdentifier" type="unsignedInt">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="32" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="ReferenceTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="64" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="OriginTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="64" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="ReceiveTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="64" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="TransmitTimestamp" type="unsignedLong">
+                    <annotation>
+                        <appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="64" lengthUnits="bits"/>
+                        </appinfo>
+                    </annotation>
+                </element>
+
+                <element name="OptionalFields" minOccurs="0">
+                    <complexType>
+                        <sequence>
+                            <element name="KeyIdentifier" type="unsignedInt" minOccurs="0">
+                                <annotation>
+                                    <appinfo source="http://www.ogf.org/dfdl/">
+                                        <dfdl:element length="32" lengthUnits="bits"/>
+                                    </appinfo>
+                                </annotation>
+                            </element>
+
+                            <element name="MessageDigest" type="hexBinary" minOccurs="0">
+                                <annotation>
+                                    <appinfo source="http://www.ogf.org/dfdl/">
+                                        <dfdl:element length="128" lengthUnits="bits"/>
+                                    </appinfo>
+                                </annotation>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+
+            </sequence>
+        </complexType>
+    </element>
+
+</schema>

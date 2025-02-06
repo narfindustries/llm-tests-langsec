@@ -1,25 +1,66 @@
 module ICMP;
 
-import spicy;
+public type Header = unit {
+    type_: uint8 be;
+    code: uint8 be;
+    checksum: uint16 be;
 
-public type ICMP = unit {
-    header: Header;
-    payload: bytes &size=(self.header.total_length - 8);
+    var payload_length: uint32;
 
-    type Header = unit {
-        type: uint8;
-        code: uint8;
-        checksum: uint16;
-        rest_of_header: bytes &size=4;
+    switch ( self.type_ ) {
+        case 0 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            data: bytes &length=(self.payload_length - 4);
+        }
 
-        var total_length: uint16 = |self| + |payload|;
-    };
+        case 8 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            data: bytes &length=(self.payload_length - 4);
+        }
+
+        case 3 -> {
+            unused: uint16 be;
+            next_hop_mtu: uint16 be;
+            original_datagram: bytes &length=(self.payload_length - 4);
+        }
+
+        case 11 -> {
+            unused: uint32 be;
+            original_datagram: bytes &length=(self.payload_length - 4);
+        }
+
+        case 5 -> {
+            gateway_address: uint32 be;
+            original_datagram: bytes &length=(self.payload_length - 4);
+        }
+
+        case 9 -> {
+            number_addresses: uint8;
+            address_entry_size: uint8;
+            lifetime: uint16 be;
+            router_addresses: bytes &length=(self.number_addresses * 4);
+        }
+
+        case 13 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            originate_timestamp: uint32 be;
+            receive_timestamp: uint32 be;
+            transmit_timestamp: uint32 be;
+        }
+
+        case 14 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            originate_timestamp: uint32 be;
+            receive_timestamp: uint32 be;
+            transmit_timestamp: uint32 be;
+        }
+
+        * -> {
+            payload: bytes &length=self.payload_length;
+        }
+    }
 };
-
-public function __load__() {
-    spicy::register_protocol_analyzer(
-        name = "icmp",
-        unit = ICMP,
-        ports = {}
-    );
-}

@@ -1,71 +1,72 @@
 meta:
   id: gzip
-  title: GZIP Archive
+  title: Gzip File Format
   file-extension: gz
   endian: le
-  license: CC0-1.0
-  ks-version: 0.9
-
-doc: |
-  GZIP is a file format for file compression and decompression.
-  GZIP format is a Lempel-Ziv coding (LZ77) with a 32-bit CRC.
-
 seq:
-  - id: header
-    type: header
-  - id: body
+  - id: magic
+    contents: [0x1f, 0x8b]
+  - id: compression_method
+    type: u1
+    enum: compression_methods
+  - id: flags
+    type: b8
+  - id: mtime
+    type: u4
+  - id: extra_flags
+    type: u1
+    enum: extra_flags
+  - id: os
+    type: u1
+    enum: os
+  - id: extras
+    type: extras
+    if: flags & 0b00000100 != 0
+  - id: filename
+    type: strz
+    encoding: ASCII
+    if: flags & 0b00001000 != 0
+  - id: comment
+    type: strz
+    encoding: ASCII
+    if: flags & 0b00010000 != 0
+  - id: hcrc
+    type: u2
+    if: flags & 0b00000010 != 0
+  - id: compressed_data
     size-eos: true
+  - id: crc32
+    type: u4
   - id: isize
     type: u4
 
 types:
-  header:
+  extras:
     seq:
-      - id: magic
-        contents: [0x1f, 0x8b]
-      - id: compression_method
-        type: u1
-        valid: 8  # Deflate
-      - id: flags
-        type: flags
-      - id: mtime
-        type: u4
-      - id: extra_flags
-        type: u1
-      - id: os
-        type: u1
-      - id: extras
-        type: extras
-        if: flags.has_extra
-      - id: name
-        type: strz
-        encoding: UTF-8
-        if: flags.has_name
-      - id: comment
-        type: strz
-        encoding: UTF-8
-        if: flags.has_comment
-      - id: hcrc
+      - id: len_extra
         type: u2
-        if: flags.has_crc
+      - id: extra_fields
+        size: len_extra
 
-    types:
-      flags:
-        seq:
-          - id: has_extra
-            type: b1
-          - id: has_name
-            type: b1
-          - id: has_comment
-            type: b1
-          - id: has_crc
-            type: b1
-          - id: reserved
-            type: b4
-
-      extras:
-        seq:
-          - id: len
-            type: u2
-          - id: data
-            size: len
+enums:
+  compression_methods:
+    8: deflate
+  extra_flags:
+    2: max_compression
+    4: fastest_algorithm
+  os:
+    0: fat
+    1: amiga
+    2: vms
+    3: unix
+    4: vm_cms
+    5: atari_tos
+    6: hpfs
+    7: macintosh
+    8: z_system
+    9: cp_m
+    10: tops_20
+    11: ntfs
+    12: qdos
+    13: acorn_riscos
+    255: unknown

@@ -1,57 +1,94 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <hammer/hammer.h>
 
-HParser *modbus_parser(void) {
-    // Define basic types
-    HParser *uint8 = h_uint8();
-    HParser *uint16 = h_uint16();
-    
-    // Modbus header
-    HParser *transaction_id = uint16;
-    HParser *protocol_id = uint16;
-    HParser *length = uint16;
-    HParser *unit_id = uint8;
-    
-    // Modbus PDU
-    HParser *function_code = uint8;
-    HParser *data = h_repeat(h_uint8(), h_data_size_field(length, sizeof(uint16_t)));
-    
-    // Complete Modbus packet
-    HParser *modbus_packet = h_sequence(
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-        data,
-        NULL
-    );
-    
-    return modbus_packet;
+HParser *create_modbus_parser() {
+    // Transaction Identifier (2 bytes)
+    HParser *transaction_id = h_uint16();
+
+    // Protocol Identifier (2 bytes, must be 0x0000 for Modbus)
+    HParser *protocol_id = h_uint16();
+
+    // Length (2 bytes)
+    HParser *length = h_uint16();
+
+    // Unit Identifier (1 byte)
+    HParser *unit_id = h_uint8();
+
+    // Function Code (1 byte)
+    HParser *function_code = h_uint8();
+
+    // Data length calculation (length field minus 2 bytes)
+    HParser *fixed_minus_two = h_choice(h_value(h_uint16(), 2), NULL);
+    HParser *data_length = h_calc_length(length, fixed_minus_two);
+
+    // Data (variable length based on data_length)
+    HParser *data = h_repeat_n(h_uint8(), data_length);
+
+    // Modbus TCP frame parser (no CRC or LRC as they're not included in Modbus TCP)
+    HParser *modbus_tcp_frame = h_sequence(
+        transaction_id, protocol_id, length, unit_id, function_code, data, NULL);
+
+    return modbus_tcp_frame;
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = modbus_parser();
-    
-    // Example of usage with binary data
-    const uint8_t example_data[] = {
-        0x00, 0x01, // Transaction ID
-        0x00, 0x00, // Protocol ID
-        0x00, 0x06, // Length
-        0x11,       // Unit ID
-        0x03,       // Function code
-        0x00, 0x01, 0x00, 0x01  // Data
-    };
-    size_t len = sizeof(example_data);
-
-    HParseResult *result = h_parse(parser, example_data, len);
-    if (result) {
-        printf("Parsing succeeded.\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Parsing failed.\n");
+void print_parse_tree(const HParseResult *result) {
+    if (!result) {
+        printf("Failed to parse!\n");
+        return;
     }
 
-    h_parser_free(parser);
+    const HParsedToken *root = result->ast;
     
-    return 0;
+    printf("Transaction ID: %u\n", (unsigned int)root->seq->elements[0]->uint);
+    printf("Protocol ID: %u\n", (unsigned int)root->seq->elements[1]->uint);
+    printf("Length: %u\n", (unsigned int)root->seq->elements[2]->uint);
+    printf("Unit ID: %u\n", (unsigned int)root->seq->elements[3]->uint);
+    printf("Function Code: %u\n", (unsigned int)root->seq->elements[4]->uint);
+
+    // Data bytes
+    const HParsedToken *data = root->seq->elements[5];
+    printf("Data: ");
+    for (size_t i = 0; i < data->seq->used; i++) {
+        printf("%02x ", data->seq->elements[i]->uint);
+    }
+    printf("\n");
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = (uint8_t *)malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *parser = create_modbus_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
+
+    print_parse_tree(result);
+
+    h_parse_result_free(result);
+    free(buffer);
+
+    return EXIT_SUCCESS;
 }

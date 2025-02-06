@@ -1,21 +1,370 @@
-# SPDX-FileCopyrightText: 2023 Meta Platforms, Inc.
-# SPDX-FileContributor: Your Name
-# SPDX-License-Identifier: Apache-2.0
+module ICMP;
 
-%header {
-    import icmp Grades
-}
+type ICMP_Type = enum {
+  Echo_Reply = 0,
+  Unassigned = 1,
+  Unassigned_2 = 2,
+  Destination_Unreachable = 3,
+  Source_Quench = 4,
+  Redirect = 5,
+  Alternate_Host_Address = 6,
+  Unassigned_7 = 7,
+  Echo_Request = 8,
+  Router_Advertisement = 9,
+  Router_Solicitation = 10,
+  Time_Exceeded = 11,
+  Parameter_Problem = 12,
+  Timestamp_Request = 13,
+  Timestamp_Reply = 14,
+  Information_Request = 15,
+  Information_Reply = 16,
+  Unassigned_17 = 17,
+  Unassigned_18 = 18,
+  Unassigned_19 = 19,
+  Unassigned_20 = 20,
+  Unassigned_21 = 21,
+  Unassigned_22 = 22,
+  Unassigned_23 = 23,
+  Reserved_24 = 24,
+  Reserved_25 = 25,
+  Reserved_26 = 26,
+  Reserved_27 = 27,
+  Reserved_28 = 28,
+  Reserved_29 = 29,
+  Traceroute = 30,
+  Datagram_Conversion_Error = 31,
+  Unassigned_32 = 32,
+  Unassigned_33 = 33,
+  Unassigned_34 = 34,
+  Unassigned_35 = 35,
+  Reserved_36 = 36,
+  Reserved_37 = 37,
+  Reserved_38 = 38,
+  Reserved_39 = 39,
+  Photuris = 40,
+  ICMP_Messages_Utilized_By_Experimental_Mobility_Protocols = 41,
+  Unassigned_42 = 42,
+  Unassigned_43 = 43,
+  Unassigned_44 = 44,
+  Unassigned_45 = 45,
+  Unassigned_46 = 46,
+  Unassigned_47 = 47,
+  Unassigned_48 = 48,
+  Unassigned_49 = 49,
+  Unassigned_50 = 50,
+  Unassigned_51 = 51,
+  Unassigned_52 = 52,
+  Unassigned_53 = 53,
+  Unassigned_54 = 54,
+  Unassigned_55 = 55,
+  Unassigned_56 = 56,
+  Unassigned_57 = 57,
+  Unassigned_58 = 58,
+  Unassigned_59 = 59,
+  Unassigned_60 = 60,
+  Unassigned_61 = 61,
+  Unassigned_62 = 62,
+  Unassigned_63 = 63,
+  Unassigned_64 = 64,
+  Unassigned_65 = 65,
+  Unassigned_66 = 66,
+  Unassigned_67 = 67,
+  Unassigned_68 = 68,
+  Unassigned_69 = 69,
+  Unassigned_70 = 70,
+  Unassigned_71 = 71,
+  Unassigned_72 = 72,
+  Unassigned_73 = 73,
+  Unassigned_74 = 74,
+  Unassigned_75 = 75,
+  Unassigned_76 = 76,
+  Unassigned_77 = 77,
+  Unassigned_78 = 78,
+  Unassigned_79 = 79,
+  Unassigned_80 = 80,
+  Unassigned_81 = 81,
+  Unassigned_82 = 82,
+  Unassigned_83 = 83,
+  Unassigned_84 = 84,
+  Unassigned_85 = 85,
+  Unassigned_86 = 86,
+  Unassigned_87 = 87,
+  Unassigned_88 = 88,
+  Unassigned_89 = 89,
+  Unassigned_90 = 90,
+  Unassigned_91 = 91,
+  Unassigned_92 = 92,
+  Unassigned_93 = 93,
+  Unassigned_94 = 94,
+  Unassigned_95 = 95,
+  Unassigned_96 = 96,
+  Unassigned_97 = 97,
+  Unassigned_98 = 98,
+  Unassigned_99 = 99,
+  Unassigned_100 = 100,
+  Unassigned_101 = 101,
+  Unassigned_102 = 102,
+  Unassigned_103 = 103,
+  Unassigned_104 = 104,
+  Unassigned_105 = 105,
+  Unassigned_106 = 106,
+  Unassigned_107 = 107,
+  Unassigned_108 = 108,
+  Unassigned_109 = 109,
+  Unassigned_110 = 110,
+  Unassigned_111 = 111,
+  Unassigned_112 = 112,
+  Unassigned_113 = 113,
+  Unassigned_114 = 114,
+  Unassigned_115 = 115,
+  Unassigned_116 = 116,
+  Unassigned_117 = 117,
+  Unassigned_118 = 118,
+  Unassigned_119 = 119,
+  Unassigned_120 = 120,
+  Unassigned_121 = 121,
+  Unassigned_122 = 122,
+  Unassigned_123 = 123,
+  Unassigned_124 = 124,
+  Unassigned_125 = 125,
+  Unassigned_126 = 126,
+  Unassigned_127 = 127,
+  Unassigned_128 = 128,
+  Unassigned_129 = 129,
+  Unassigned_130 = 130,
+  Unassigned_131 = 131,
+  Unassigned_132 = 132,
+  Unassigned_133 = 133,
+  Unassigned_134 = 134,
+  Unassigned_135 = 135,
+  Unassigned_136 = 136,
+  Unassigned_137 = 137,
+  Unassigned_138 = 138,
+  Unassigned_139 = 139,
+  Unassigned_140 = 140,
+  Unassigned_141 = 141,
+  Unassigned_142 = 142,
+  Unassigned_143 = 143,
+  Unassigned_144 = 144,
+  Unassigned_145 = 145,
+  Unassigned_146 = 146,
+  Unassigned_147 = 147,
+  Unassigned_148 = 148,
+  Unassigned_149 = 149,
+  Unassigned_150 = 150,
+  Unassigned_151 = 151,
+  Unassigned_152 = 152,
+  Unassigned_153 = 153,
+  Unassigned_154 = 154,
+  Unassigned_155 = 155,
+  Unassigned_156 = 156,
+  Unassigned_157 = 157,
+  Unassigned_158 = 158,
+  Unassigned_159 = 159,
+  Unassigned_160 = 160,
+  Unassigned_161 = 161,
+  Unassigned_162 = 162,
+  Unassigned_163 = 163,
+  Unassigned_164 = 164,
+  Unassigned_165 = 165,
+  Unassigned_166 = 166,
+  Unassigned_167 = 167,
+  Unassigned_168 = 168,
+  Unassigned_169 = 169,
+  Unassigned_170 = 170,
+  Unassigned_171 = 171,
+  Unassigned_172 = 172,
+  Unassigned_173 = 173,
+  Unassigned_174 = 174,
+  Unassigned_175 = 175,
+  Unassigned_176 = 176,
+  Unassigned_177 = 177,
+  Unassigned_178 = 178,
+  Unassigned_179 = 179,
+  Unassigned_180 = 180,
+  Unassigned_181 = 181,
+  Unassigned_182 = 182,
+  Unassigned_183 = 183,
+  Unassigned_184 = 184,
+  Unassigned_185 = 185,
+  Unassigned_186 = 186,
+  Unassigned_187 = 187,
+  Unassigned_188 = 188,
+  Unassigned_189 = 189,
+  Unassigned_190 = 190,
+  Unassigned_191 = 191,
+  Unassigned_192 = 192,
+  Unassigned_193 = 193,
+  Unassigned_194 = 194,
+  Unassigned_195 = 195,
+  Unassigned_196 = 196,
+  Unassigned_197 = 197,
+  Unassigned_198 = 198,
+  Unassigned_199 = 199,
+  Unassigned_200 = 200,
+  Unassigned_201 = 201,
+  Unassigned_202 = 202,
+  Unassigned_203 = 203,
+  Unassigned_204 = 204,
+  Unassigned_205 = 205,
+  Unassigned_206 = 206,
+  Unassigned_207 = 207,
+  Unassigned_208 = 208,
+  Unassigned_209 = 209,
+  Unassigned_210 = 210,
+  Unassigned_211 = 211,
+  Unassigned_212 = 212,
+  Unassigned_213 = 213,
+  Unassigned_214 = 214,
+  Unassigned_215 = 215,
+  Unassigned_216 = 216,
+  Unassigned_217 = 217,
+  Unassigned_218 = 218,
+  Unassigned_219 = 219,
+  Unassigned_220 = 220,
+  Unassigned_221 = 221,
+  Unassigned_222 = 222,
+  Unassigned_223 = 223,
+  Unassigned_224 = 224,
+  Unassigned_225 = 225,
+  Unassigned_226 = 226,
+  Unassigned_227 = 227,
+  Unassigned_228 = 228,
+  Unassigned_229 = 229,
+  Unassigned_230 = 230,
+  Unassigned_231 = 231,
+  Unassigned_232 = 232,
+  Unassigned_233 = 233,
+  Unassigned_234 = 234,
+  Unassigned_235 = 235,
+  Unassigned_236 = 236,
+  Unassigned_237 = 237,
+  Unassigned_238 = 238,
+  Unassigned_239 = 239,
+  Unassigned_240 = 240,
+  Unassigned_241 = 241,
+  Unassigned_242 = 242,
+  Unassigned_243 = 243,
+  Unassigned_244 = 244,
+  Unassigned_245 = 245,
+  Unassigned_246 = 246,
+  Unassigned_247 = 247,
+  Unassigned_248 = 248,
+  Unassigned_249 = 249,
+  Unassigned_250 = 250,
+  Unassigned_251 = 251,
+  Unassigned_252 = 252,
+  Reserved_253 = 253,
+  Reserved_254 = 254,
+  Reserved_255 = 255
+};
 
-%impl {
+type ICMP_Code = enum {
+  Network_Unreachable = 0,
+  Host_Unreachable = 1,
+  Protocol_Unreachable = 2,
+  Port_Unreachable = 3,
+  Fragmentation_Needed_And_Dont_Fragment_Was_Set = 4,
+  Source_Route_Failed = 5,
+  Destination_Network_Unknown = 6,
+  Destination_Host_Unknown = 7,
+  Source_Host_Isolated = 8,
+  Communication_With_Destination_Network_Is_Administratively_Prohibited = 9,
+  Communication_With_Destination_Host_Is_Administratively_Prohibited = 10,
+  Destination_Network_Unreachable_For_Type_Of_Service = 11,
+  Destination_Host_Unreachable_For_Type_Of_Service = 12,
+  Communication_Administratively_Prohibited = 13,
+  Host_Precedence_Violation = 14,
+  Precedence_Cutoff_In_Effect = 15,
+  Redirect_Datagram = 0,
+  Redirect_For_The_Type_Of_Service_And_Network = 1,
+  Redirect_For_The_Type_Of_Service_And_Host = 2,
+  Redirect_For_The_Type_Of_Service_And_Network_And_Type_Of_Service = 3,
+  Time_To_Live_Exceeded_In_Transit = 0,
+  Fragment_Reassembly_Time_Exceeded = 1,
+  Pointer_Indicates_The_Error = 0,
+  Missing_A_Required_Option = 1,
+  Bad_Length = 2
+};
 
-    function meta_grades_ICMP.llama_3_final_opts(u: uint16): icmp Grades::meta_grades_ICMP {
-        var ret_val: icmp Grades::meta_grades_ICMP;
+type ICMP_Header = struct {
+  type: ICMP_Type;
+  code: ICMP_Code;
+  checksum: uint16;
+  identifier: uint16;
+  sequence_number: uint16;
+};
 
-        # Machine generated, do not edit.
-        return ret_val;
-    }
-}
+type ICMP_Echo = struct {
+  header: ICMP_Header;
+  data: bytes;
+};
 
-%init {
+type ICMP_Destination_Unreachable = struct {
+  header: ICMP_Header;
+  unused: uint32;
+  internet_header: bytes;
+};
 
-}
+type ICMP_Source_Quench = struct {
+  header: ICMP_Header;
+  unused: uint32;
+  internet_header: bytes;
+};
+
+type ICMP_Redirect = struct {
+  header: ICMP_Header;
+  gateway_address: uint32;
+  internet_header: bytes;
+};
+
+type ICMP_Time_Exceeded = struct {
+  header: ICMP_Header;
+  unused: uint32;
+  internet_header: bytes;
+};
+
+type ICMP_Parameter_Problem = struct {
+  header: ICMP_Header;
+  pointer: uint8;
+  internet_header: bytes;
+};
+
+type ICMP_Timestamp = struct {
+  header: ICMP_Header;
+  originate_timestamp: uint32;
+  receive_timestamp: uint32;
+  transmit_timestamp: uint32;
+};
+
+type ICMP_Information = struct {
+  header: ICMP_Header;
+  unused: uint16;
+  address: uint32;
+};
+
+type ICMP_Address_Mask = struct {
+  header: ICMP_Header;
+  address: uint32;
+};
+
+type ICMP_Traceroute = struct {
+  header: ICMP_Header;
+  unused: uint16;
+  address: uint32;
+};
+
+type ICMP_Message = switch type {
+  case Echo_Reply, Echo_Request: ICMP_Echo;
+  case Destination_Unreachable: ICMP_Destination_Unreachable;
+  case Source_Quench: ICMP_Source_Quench;
+  case Redirect: ICMP_Redirect;
+  case Time_Exceeded: ICMP_Time_Exceeded;
+  case Parameter_Problem: ICMP_Parameter_Problem;
+  case Timestamp_Request, Timestamp_Reply: ICMP_Timestamp;
+  case Information_Request, Information_Reply: ICMP_Information;
+  case Address_Mask_Request, Address_Mask_Reply: ICMP_Address_Mask;
+  case Traceroute: ICMP_Traceroute;
+};
+
+let icmp_message: ICMP_Message;

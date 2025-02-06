@@ -1,96 +1,130 @@
-#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
 
-HParser *create_dns_parser() {
-    // Define basic parsers
-    HParser *label_length = h_uint8();
-    HParser *label = h_repeat_n(h_uint8(), label_length);
-    HParser *domain_name = h_many1(h_sequence(label, h_ch('.'), NULL));
+typedef struct {
+    uint16_t id;
+    uint16_t flags;
+    uint16_t qdcount;
+    uint16_t ancount;
+    uint16_t nscount;
+    uint16_t arcount;
+} dns_header_t;
 
-    // Define DNS header fields
-    HParser *dns_id = h_uint16();
-    HParser *dns_flags = h_uint16();
-    HParser *dns_qdcount = h_uint16();
-    HParser *dns_ancount = h_uint16();
-    HParser *dns_nscount = h_uint16();
-    HParser *dns_arcount = h_uint16();
+typedef struct {
+    char *qname;
+    uint16_t qtype;
+    uint16_t qclass;
+} dns_question_t;
 
-    // Define DNS question fields
-    HParser *dns_qname = domain_name;
-    HParser *dns_qtype = h_uint16();
-    HParser *dns_qclass = h_uint16();
+typedef struct {
+    char *name;
+    uint16_t type;
+    uint16_t class;
+    uint32_t ttl;
+    uint16_t rdlength;
+    uint8_t *rdata;
+} dns_rr_t;
 
-    // Define DNS question section
-    HParser *dns_question = h_sequence(dns_qname, dns_qtype, dns_qclass, NULL);
+HParser *dns_header_parser;
+HParser *dns_question_parser;
+HParser *dns_rr_parser;
+HParser *dns_message_parser;
 
-    // Define DNS record fields
-    HParser *dns_rname = domain_name;
-    HParser *dns_rtype = h_uint16();
-    HParser *dns_rclass = h_uint16();
-    HParser *dns_rttl = h_uint32();
-    HParser *dns_rdlength = h_uint16();
-    HParser *dns_rdata = h_repeat_n(h_uint8(), dns_rdlength);
-
-    // Define DNS record section
-    HParser *dns_record = h_sequence(dns_rname, dns_rtype, dns_rclass, dns_rttl, dns_rdlength, dns_rdata, NULL);
-
-    // Define complete DNS message parser
-    HParser *dns_parser = h_sequence(
-        dns_id,
-        dns_flags,
-        dns_qdcount,
-        dns_ancount,
-        dns_nscount,
-        dns_arcount,
-        h_repeat_n(dns_question, dns_qdcount),
-        h_repeat_n(dns_record, dns_ancount),
-        h_repeat_n(dns_record, dns_nscount),
-        h_repeat_n(dns_record, dns_arcount),
+HParser *create_dns_header_parser() {
+    return h_sequence(
+        h_uint16(), // ID
+        h_uint16(), // Flags
+        h_uint16(), // QDCOUNT
+        h_uint16(), // ANCOUNT
+        h_uint16(), // NSCOUNT
+        h_uint16(), // ARCOUNT
         NULL
     );
-
-    return dns_parser;
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <dns_packet_file>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
+HParser *create_dns_question_parser() {
+    HParser *label = h_length_value(h_uint8(), h_repeat_n(h_uint8(), 0));
+    HParser *qname = h_many1(label);
+    return h_sequence(
+        qname,      // QNAME
+        h_uint16(), // QTYPE
+        h_uint16(), // QCLASS
+        NULL
+    );
+}
 
-    FILE *file = fopen(argv[1], "rb");
+HParser *create_dns_rr_parser() {
+    HParser *label = h_length_value(h_uint8(), h_repeat_n(h_uint8(), 0));
+    HParser *name = h_many1(label);
+    return h_sequence(
+        name,       // NAME
+        h_uint16(), // TYPE
+        h_uint16(), // CLASS
+        h_uint32(), // TTL
+        h_length_value(h_uint16(), h_repeat_n(h_uint8(), 0)), // RDLENGTH + RDATA
+        NULL
+    );
+}
+
+HParser *create_dns_message_parser() {
+    HParser *questions = h_many(create_dns_question_parser());
+    HParser *answers = h_many(create_dns_rr_parser());
+    HParser *authorities = h_many(create_dns_rr_parser());
+    HParser *additionals = h_many(create_dns_rr_parser());
+
+    return h_sequence(
+        create_dns_header_parser(),
+        questions, // QDCOUNT
+        answers,   // ANCOUNT
+        authorities, // NSCOUNT
+        additionals, // ARCOUNT
+        NULL
+    );
+}
+
+void parse_dns_message(const char *filename) {
+    FILE *file = fopen(filename, "rb");
     if (!file) {
         perror("Failed to open file");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
+    long length = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    unsigned char *buffer = (unsigned char *)malloc(file_size);
+    uint8_t *buffer = malloc(length);
     if (!buffer) {
         perror("Failed to allocate memory");
         fclose(file);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
-    fread(buffer, 1, file_size, file);
+    fread(buffer, 1, length, file);
     fclose(file);
 
-    HParser *dns_parser = create_dns_parser();
-    HParseResult *result = h_parse(dns_parser, buffer, file_size);
-
+    HParseResult *result = h_parse(dns_message_parser, buffer, length);
     if (result) {
-        printf("DNS packet parsed successfully.\n");
+        printf("DNS message parsed successfully.\n");
         h_parse_result_free(result);
     } else {
-        printf("Failed to parse DNS packet.\n");
+        printf("Failed to parse DNS message.\n");
     }
 
     free(buffer);
-    h_parser_free(dns_parser);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_message_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    dns_message_parser = create_dns_message_parser();
+    parse_dns_message(argv[1]);
+    h_parser_free(dns_message_parser);
 
     return EXIT_SUCCESS;
 }

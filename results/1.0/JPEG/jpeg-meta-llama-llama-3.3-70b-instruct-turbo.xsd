@@ -1,94 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:df="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/jpeg"
-           xmlns="http://example.com/jpeg"
+           xmlns:jpeg="http://example.com/jpeg"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 oidLibrary.xsd"/>
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 formatLibrary.xsd"/>
-
-  <xs:element name="jpeg" type="JpegType" dfdl:format="binary" dfdl:encoding="iso-8859-1"/>
-  <xs:complexType name="JpegType">
-    <xs:sequence>
-      <xs:element name="soi" type="xs:hexBinary" fixed="FFD8" dfdl:representation="binary"/>
-      <xs:element name="app0" type="App0Type"/>
-      <xs:element name="dqt" type="DqtType" minOccurs="0" maxOccurs="4"/>
-      <xs:element name="sof0" type="Sof0Type"/>
-      <xs:element name="dht" type="DhtType" minOccurs="0" maxOccurs="4"/>
-      <xs:element name="dri" type="DriType" minOccurs="0"/>
-      <xs:element name="sos" type="SosType"/>
-      <xs:element name="imageData" type="xs:hexBinary" dfdl:representation="binary"/>
-      <xs:element name="eoi" type="xs:hexBinary" fixed="FFD9" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="App0Type">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFE0" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="identifier" type="xs:string" fixed="JFIF" dfdl:representation="text"/>
-      <xs:element name="majorVersion" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="minorVersion" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="densityUnits" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="xDensity" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="yDensity" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="thumbnailWidth" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="thumbnailHeight" type="xs:unsignedByte" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DqtType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFDB" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="tableId" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="table" type="xs:hexBinary" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Sof0Type">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFC0" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="height" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="width" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="componentId" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="samplingFactors" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="quantizationTableId" type="xs:unsignedByte" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DhtType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFC4" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="tableClass" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="tableId" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="table" type="xs:hexBinary" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DriType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFDD" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="restartInterval" type="xs:unsignedShort" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="SosType">
-    <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" fixed="FFDA" dfdl:representation="binary"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="componentId" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="dcHuffmanTableId" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="acHuffmanTableId" type="xs:unsignedByte" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="jpeg">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="soiMarker" type="xs:hexBinary" fixed="FFD8"/>
+        <xs:element name="app0" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="app0Marker" type="xs:hexBinary" fixed="FFE0"/>
+              <xs:element name="app0Length" type="xs:unsignedShort"/>
+              <xs:element name="app0Identifier" type="xs:hexBinary" fixed="4A464946"/>
+              <xs:element name="app0Version" type="xs:unsignedShort" fixed="1"/>
+              <xs:element name="app0Units" type="xs:byte" fixed="1"/>
+              <xs:element name="app0Density" type="xs:unsignedShort"/>
+              <xs:element name="app0ThumbnailHeight" type="xs:unsignedShort"/>
+              <xs:element name="app0ThumbnailWidth" type="xs:unsignedShort"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="dqt" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="dqtMarker" type="xs:hexBinary" fixed="FFDB"/>
+              <xs:element name="dqtLength" type="xs:unsignedShort"/>
+              <xs:element name="dqtPrecision" type="xs:byte" fixed="0"/>
+              <xs:element name="dqtDestinationIdentifier" type="xs:byte"/>
+              <xs:element name="dqtQuantizationTable" type="xs:unsignedShort" maxOccurs="64"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="dht" minOccurs="0" maxOccurs="4">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="dhtMarker" type="xs:hexBinary" fixed="FFC4"/>
+              <xs:element name="dhtLength" type="xs:unsignedShort"/>
+              <xs:element name="dhtTableClass" type="xs:byte"/>
+              <xs:element name="dhtDestinationIdentifier" type="xs:byte"/>
+              <xs:element name="dhtNumberOfCodes" type="xs:unsignedByte" maxOccurs="16"/>
+              <xs:element name="dhtHuffmanCodes" type="xs:unsignedByte" minOccurs="1" maxOccurs="255"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="sof0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="sof0Marker" type="xs:hexBinary" fixed="FFC0"/>
+              <xs:element name="sof0Length" type="xs:unsignedShort"/>
+              <xs:element name="sof0Precision" type="xs:byte" fixed="8"/>
+              <xs:element name="sof0ImageHeight" type="xs:unsignedShort"/>
+              <xs:element name="sof0ImageWidth" type="xs:unsignedShort"/>
+              <xs:element name="sof0NumberOfComponents" type="xs:byte"/>
+              <xs:element name="sof0Component" minOccurs="1" maxOccurs="3">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="sof0ComponentIdentifier" type="xs:byte"/>
+                    <xs:element name="sof0ComponentSamplingFactors" type="xs:byte"/>
+                    <xs:element name="sof0ComponentQuantizationTableSelector" type="xs:byte"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="sos">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="sosMarker" type="xs:hexBinary" fixed="FFDA"/>
+              <xs:element name="sosLength" type="xs:unsignedShort"/>
+              <xs:element name="sosNumberOfComponents" type="xs:byte"/>
+              <xs:element name="sosComponent" minOccurs="1" maxOccurs="3">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="sosComponentIdentifier" type="xs:byte"/>
+                    <xs:element name="sosComponentDCEntropyCodingTableSelector" type="xs:byte"/>
+                    <xs:element name="sosComponentACEntropyCodingTableSelector" type="xs:byte"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="sosData" type="xs:hexBinary" minOccurs="1" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="eoi">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="eoiMarker" type="xs:hexBinary" fixed="FFD9"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

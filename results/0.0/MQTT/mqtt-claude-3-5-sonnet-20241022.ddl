@@ -1,57 +1,196 @@
 def Main = MQTT_Packet
 
 def MQTT_Packet = {
-  fixed_header = Fixed_Header;
-  remaining_length = Remaining_Length;
-  variable_header_payload = @takeUntil $$ == remaining_length
+    fixed_header: Fixed_Header
+    variable_header: Variable_Header
+    payload: Payload
 }
 
 def Fixed_Header = {
-  packet_type = $uint8;
-  Assert packet_type >= 0 && packet_type <= 15
+    control_field: uint8
+    remaining_length: uint32
 }
 
-def Remaining_Length = {
-  value = 0;
-  multiplier = 1;
-  do {
-    encodedByte = $uint8;
-    value = value + ((encodedByte & 127) * multiplier);
-    multiplier = multiplier * 128;
-    if (multiplier > 128*128*128) {
-      fail "malformed remaining length"
-    }
-  } until ((encodedByte & 128) == 0);
-  value
+def Control_Field = {
+    packet_type: uint4
+    flags: uint4
 }
 
-def Connect = {
-  protocol_name_length = $uint16;
-  protocol_name = $takeN protocol_name_length;
-  protocol_level = $uint8;
-  connect_flags = $uint8;
-  keep_alive = $uint16
+def Variable_Header = {
+    connect: Connect_Header
+    connack: Connack_Header
+    publish: Publish_Header
+    puback: Puback_Header
+    pubrec: Pubrec_Header
+    pubrel: Pubrel_Header
+    pubcomp: Pubcomp_Header
+    subscribe: Subscribe_Header
+    suback: Suback_Header
+    unsubscribe: Unsubscribe_Header
+    unsuback: Unsuback_Header
+    disconnect: Disconnect_Header
+    auth: Auth_Header
 }
 
-def Publish = {
-  topic_length = $uint16;
-  topic_name = $takeN topic_length;
-  message_id = if packet_type >= 2 then $uint16 else 0;
-  payload = $takeAll
+def Connect_Header = {
+    protocol_name: UTF8_String
+    protocol_version: uint8
+    connect_flags: Connect_Flags
+    keep_alive: uint16
+    properties_length: uint32
+    properties: Properties
 }
 
-def Subscribe = {
-  message_id = $uint16;
-  payload = $takeAll
+def Connect_Flags = {
+    username_flag: uint1
+    password_flag: uint1
+    will_retain: uint1
+    will_qos: uint2
+    will_flag: uint1
+    clean_start: uint1
+    reserved: uint1
 }
 
-def Unsubscribe = {
-  message_id = $uint16;
-  payload = $takeAll
+def Connack_Header = {
+    acknowledge_flags: uint8
+    return_code: uint8
+    properties_length: uint32
+    properties: Properties
 }
 
-def PingReq = null
+def Publish_Header = {
+    topic_name: UTF8_String
+    packet_identifier: uint16
+    properties_length: uint32
+    properties: Properties
+}
 
-def PingResp = null
+def Puback_Header = {
+    packet_identifier: uint16
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
 
-def Disconnect = null
+def Pubrec_Header = {
+    packet_identifier: uint16
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
+
+def Pubrel_Header = {
+    packet_identifier: uint16
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
+
+def Pubcomp_Header = {
+    packet_identifier: uint16
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
+
+def Subscribe_Header = {
+    packet_identifier: uint16
+    properties_length: uint32
+    properties: Properties
+}
+
+def Suback_Header = {
+    packet_identifier: uint16
+    properties_length: uint32
+    properties: Properties
+}
+
+def Unsubscribe_Header = {
+    packet_identifier: uint16
+    properties_length: uint32
+    properties: Properties
+}
+
+def Unsuback_Header = {
+    packet_identifier: uint16
+    properties_length: uint32
+    properties: Properties
+}
+
+def Disconnect_Header = {
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
+
+def Auth_Header = {
+    reason_code: uint8
+    properties_length: uint32
+    properties: Properties
+}
+
+def Properties = {
+    property_list: Property[]
+}
+
+def Property = {
+    identifier: uint8
+    value: Property_Value
+}
+
+def Property_Value = {
+    byte_value: uint8
+    two_byte_int: uint16
+    four_byte_int: uint32
+    utf8_string: UTF8_String
+    binary_data: Binary_Data
+    string_pair: String_Pair
+}
+
+def UTF8_String = {
+    length: uint16
+    data: bytes(length)
+}
+
+def Binary_Data = {
+    length: uint16
+    data: bytes(length)
+}
+
+def String_Pair = {
+    key: UTF8_String
+    value: UTF8_String
+}
+
+def Payload = {
+    connect: Connect_Payload
+    publish: Publish_Payload
+    subscribe: Subscribe_Payload
+    unsubscribe: Unsubscribe_Payload
+}
+
+def Connect_Payload = {
+    client_id: UTF8_String
+    will_properties: Properties
+    will_topic: UTF8_String
+    will_payload: Binary_Data
+    username: UTF8_String
+    password: Binary_Data
+}
+
+def Publish_Payload = {
+    data: bytes
+}
+
+def Subscribe_Payload = {
+    subscriptions: Subscription[]
+}
+
+def Subscription = {
+    topic_filter: UTF8_String
+    options: uint8
+}
+
+def Unsubscribe_Payload = {
+    topic_filters: UTF8_String[]
+}

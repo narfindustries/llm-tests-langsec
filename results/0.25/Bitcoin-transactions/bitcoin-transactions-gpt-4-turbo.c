@@ -1,108 +1,97 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <hammer/hammer.h>
 
-// Basic parsers for Bitcoin transaction components
-static HParser *u8 = h_uint8();
-static HParser *u32 = h_uint32();
-static HParser *u64 = h_uint64();
-static HParser *var_int;
-static HParser *var_str;
-static HParser *tx_in;
-static HParser *tx_out;
-static HParser *tx;
+// Define Bitcoin transaction structures
+typedef struct {
+    uint8_t hash[32];
+    uint32_t index;
+} tx_in_outpoint;
 
-// Parser for variable-length integers
-static HParsedToken *act_parse_var_int(const HParseResult *p, void *user_data) {
-    uint64_t value = 0;
-    size_t len = p->ast->seq->used;
-    for (size_t i = 0; i < len; i++) {
-        uint8_t byte = H_CAST_UINT(p->ast->seq->elements[i]);
-        value |= (uint64_t)byte << (i * 8);
-    }
-    return H_MAKE_UINT(value);
+typedef struct {
+    tx_in_outpoint outpoint;
+    HBytes *scriptSig;
+    uint32_t sequence;
+} tx_input;
+
+typedef struct {
+    uint64_t value;
+    HBytes *scriptPubKey;
+} tx_output;
+
+typedef struct {
+    uint32_t version;
+    uint64_t input_count;
+    tx_input *inputs;
+    uint64_t output_count;
+    tx_output *outputs;
+    uint32_t locktime;
+} bitcoin_transaction;
+
+// Hammer parsers for Bitcoin transaction components
+HParser *parse_uint32() {
+    return h_uint32();
 }
 
-static HParser *build_var_int() {
-    HParser *var_int_16 = h_sequence(h_bits(8, false), h_bits(8, false), NULL);
-    HParser *var_int_32 = h_sequence(h_bits(8, false), h_bits(8, false), h_bits(8, false), h_bits(8, false), NULL);
-    HParser *var_int_64 = h_sequence(h_bits(8, false), h_bits(8, false), h_bits(8, false), h_bits(8, false),
-                                     h_bits(8, false), h_bits(8, false), h_bits(8, false), h_bits(8, false), NULL);
-
-    return h_choice(h_bits(8, false),
-                    h_sequence(h_ch(0xFD), var_int_16, NULL),
-                    h_sequence(h_ch(0xFE), var_int_32, NULL),
-                    h_sequence(h_ch(0xFF), var_int_64, NULL),
-                    NULL);
+HParser *parse_uint64() {
+    return h_uint64();
 }
 
-// Parser for variable-length strings
-static HParsedToken *act_parse_var_str(const HParseResult *p, void *user_data) {
-    const HCountedArray *arr = p->ast->seq->elements[1]->seq;
-    return H_MAKE_BYTES(arr->bytes, arr->used);
+HParser *parse_outpoint() {
+    return h_sequence(h_bits(256, false), parse_uint32(), NULL);
 }
 
-static HParser *build_var_str() {
-    return h_action(h_sequence(var_int, h_bytes(0), NULL), act_parse_var_str, NULL);
+HParser *parse_input() {
+    return h_sequence(parse_outpoint(), h_length_value(h_uint64(), h_bits(0, false)), parse_uint32(), NULL);
 }
 
-// Parser for a transaction input
-static HParsedToken *act_parse_tx_in(const HParseResult *p, void *user_data) {
-    // Custom action can be added here
-    return NULL;
+HParser *parse_output() {
+    return h_sequence(parse_uint64(), h_length_value(h_uint64(), h_bits(0, false)), NULL);
 }
 
-static HParser *build_tx_in() {
-    return h_action(h_sequence(h_bytes(32), u32, var_str, u32, NULL), act_parse_tx_in, NULL);
+HParser *parse_transaction() {
+    return h_sequence(
+        parse_uint32(),
+        h_length_value(h_uint64(), parse_input()),
+        h_length_value(h_uint64(), parse_output()),
+        parse_uint32(),
+        NULL
+    );
 }
 
-// Parser for a transaction output
-static HParsedToken *act_parse_tx_out(const HParseResult *p, void *user_data) {
-    // Custom action can be added here
-    return NULL;
-}
-
-static HParser *build_tx_out() {
-    return h_action(h_sequence(u64, var_str, NULL), act_parse_tx_out, NULL);
-}
-
-// Parser for a Bitcoin transaction
-static HParsedToken *act_parse_tx(const HParseResult *p, void *user_data) {
-    // Custom action can be added here
-    return NULL;
-}
-
-static HParser *build_tx() {
-    return h_action(h_sequence(u32, h_many(tx_in), h_many(tx_out), u32, NULL), act_parse_tx, NULL);
-}
-
+// Main function to parse a Bitcoin transaction from a binary file
 int main(int argc, char **argv) {
-    // Initialize parsers
-    var_int = build_var_int();
-    var_str = build_var_str();
-    tx_in = build_tx_in();
-    tx_out = build_tx_out();
-    tx = build_tx();
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary transaction file>\n", argv[0]);
+        return 1;
+    }
 
-    // Example usage: parse a binary stream of a Bitcoin transaction
-    uint8_t data[] = { /* Example binary data of a Bitcoin transaction */ };
-    size_t length = sizeof(data);
-    HParseResult *result = h_parse(tx, data, length);
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buf = malloc(fsize);
+    fread(buf, 1, fsize, fp);
+    fclose(fp);
+
+    HParser *transaction_parser = parse_transaction();
+    HParseResult *result = h_parse(transaction_parser, buf, fsize);
     if (result) {
-        printf("Parse successful!\n");
+        printf("Transaction parsed successfully.\n");
         h_pprint(stdout, result->ast, 0, 0);
     } else {
-        printf("Parse failed!\n");
+        printf("Failed to parse transaction.\n");
     }
 
-    // Clean up
     h_parse_result_free(result);
-    h_parser_free(tx);
-    h_parser_free(tx_out);
-    h_parser_free(tx_in);
-    h_parser_free(var_str);
-    h_parser_free(var_int);
+    free(transaction_parser);
+    free(buf);
 
     return 0;
 }

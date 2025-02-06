@@ -1,88 +1,125 @@
 use nom::{
-    bits::complete::tag,
-    bytes::complete::{is_not, take_till, take_while_m_n},
-    character::complete::{char, digit1, newline, space0, space1},
-    combinator::{map, map_res, opt, recognize},
-    multi::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, preceded, separated_pair, tuple},
+    bytes::complete::{tag, take_while_m_n},
+    character::complete::{char},
+    combinator::{opt, recognize},
+    error::{Error, ErrorKind, ParseError},
+    multi::{many1},
+    sequence::{tuple},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
-use std::convert::TryFrom;
+use std::env;
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::Path;
 
-#[derive(Debug)]
-enum Hl7SegmentId {
+// Define the HL7 v2 segment types
+#[derive(Debug, PartialEq)]
+enum SegmentType {
     MSH,
-    EVN,
     PID,
     PV1,
-    OBR,
     OBX,
-    Other(String),
+    RXO,
+    // Add more segment types as needed
 }
 
-impl TryFrom<&str> for Hl7SegmentId {
-    type Error = String;
+// Define the HL7 v2 field types
+#[derive(Debug, PartialEq)]
+enum FieldType {
+    String,
+    Date,
+    Time,
+    Numeric,
+    // Add more field types as needed
+}
 
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        match s.to_uppercase().as_str() {
-            "MSH" => Ok(Hl7SegmentId::MSH),
-            "EVN" => Ok(Hl7SegmentId::EVN),
-            "PID" => Ok(Hl7SegmentId::PID),
-            "PV1" => Ok(Hl7SegmentId::PV1),
-            "OBR" => Ok(Hl7SegmentId::OBR),
-            "OBX" => Ok(Hl7SegmentId::OBX),
-            _ => Ok(Hl7SegmentId::Other(s.to_string())),
-        }
+// Define the HL7 v2 message structure
+#[derive(Debug, PartialEq)]
+struct Message {
+    segments: Vec<Segment>,
+}
+
+// Define the HL7 v2 segment structure
+#[derive(Debug, PartialEq)]
+struct Segment {
+    segment_type: SegmentType,
+    fields: Vec<Field>,
+}
+
+// Define the HL7 v2 field structure
+#[derive(Debug, PartialEq)]
+struct Field {
+    field_type: FieldType,
+    value: String,
+}
+
+// Define the HL7 v2 parser
+fn parse_hl7(input: &str) -> IResult<&str, Message> {
+    let (input, _) = tag("|")(input)?;
+    let (input, segments) = many1(parse_segment)(input)?;
+    Ok((input, Message { segments }))
+}
+
+// Define the HL7 v2 segment parser
+fn parse_segment(input: &str) -> IResult<&str, Segment> {
+    let (input, segment_type) = parse_segment_type(input)?;
+    let (input, fields) = many1(parse_field)(input)?;
+    Ok((input, Segment { segment_type, fields }))
+}
+
+// Define the HL7 v2 segment type parser
+fn parse_segment_type(input: &str) -> IResult<&str, SegmentType> {
+    let (input, segment_type) = recognize(tuple((tag("MSH"), opt(char('|')))))(input)?;
+    match segment_type {
+        "MSH" => Ok((input, SegmentType::MSH)),
+        "PID" => Ok((input, SegmentType::PID)),
+        "PV1" => Ok((input, SegmentType::PV1)),
+        "OBX" => Ok((input, SegmentType::OBX)),
+        "RXO" => Ok((input, SegmentType::RXO)),
+        _ => Err(nom::Err::Error(Error::from_error_kind(input, ErrorKind::AlphaNumeric))),
     }
 }
 
-#[derive(Debug)]
-struct Hl7Segment {
-    id: Hl7SegmentId,
-    fields: Vec<String>,
+// Define the HL7 v2 field parser
+fn parse_field(input: &str) -> IResult<&str, Field> {
+    let (input, field_type) = parse_field_type(input)?;
+    let (input, value) = parse_field_value(input)?;
+    Ok((input, Field { field_type, value }))
 }
 
-fn hl7_segment_id(input: &str) -> IResult<&str, Hl7SegmentId> {
-    map_res(recognize(is_not("|")), |s: &str| s.try_from(s))(
-        input,
-    )
+// Define the HL7 v2 field type parser
+fn parse_field_type(input: &str) -> IResult<&str, FieldType> {
+    let (input, field_type) = recognize(tuple((tag("ST"), opt(char('|')))))(input)?;
+    match field_type {
+        "ST" => Ok((input, FieldType::String)),
+        "DT" => Ok((input, FieldType::Date)),
+        "TM" => Ok((input, FieldType::Time)),
+        "NM" => Ok((input, FieldType::Numeric)),
+        _ => Err(nom::Err::Error(Error::from_error_kind(input, ErrorKind::AlphaNumeric))),
+    }
 }
 
-fn hl7_field(input: &str) -> IResult<&str, String> {
-    recognize(take_till(|c| c == '|' || c == '\r' || c == '\n'))(input)
-}
-
-fn hl7_segment(input: &str) -> IResult<&str, Hl7Segment> {
-    let (input, id) = hl7_segment_id(input)?;
-    let (input, _) = char('|')(input)?;
-    let (input, fields) = many1(hl7_field)(input)?;
-    let fields = fields
-        .into_iter()
-        .filter(|f| f != "")
-        .collect::<Vec<_>>();
-    Ok((input, Hl7Segment { id, fields }))
-}
-
-fn hl7_message(input: &str) -> IResult<&str, Vec<Hl7Segment>> {
-    many1(hl7_segment)(input)
+// Define the HL7 v2 field value parser
+fn parse_field_value(input: &str) -> IResult<&str, String> {
+    let (input, value) = take_while_m_n(1, 255, |c| c != '|')(input)?;
+    Ok((input, value.to_string()))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let filename = &args[1];
-    let file = File::open(filename).expect("Unable to open file!");
-    let reader = BufReader::new(file);
-    let mut content = String::new();
-    for line in reader.lines() {
-        content.push_str(&line.unwrap());
-        content.push('\n');
+    if args.len() != 2 {
+        println!("Usage: {} <input_file>", args[0]);
+        return;
     }
-    let (_remaining, message) = hl7_message(&content).unwrap();
-    println!("{:?}", message);
+    let input_file = &args[1];
+    let path = Path::new(input_file);
+    let file = File::open(path).unwrap();
+    let mut reader = BufReader::new(file);
+    let mut input = String::new();
+    reader.read_to_string(&mut input).unwrap();
+    let result = parse_hl7(&input);
+    match result {
+        Ok((_, message)) => println!("{:?}", message),
+        Err(err) => println!("Error parsing HL7 message: {:?}", err),
+    }
 }

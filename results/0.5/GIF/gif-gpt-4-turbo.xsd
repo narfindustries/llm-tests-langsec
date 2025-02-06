@@ -1,79 +1,83 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/gif"
-           xmlns:tns="http://example.com/gif">
+           xmlns:ex="http://example.com/gif">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:gifFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:simpleType name="byte">
-    <xs:restriction base="xs:byte"/>
+  <!-- Define a simple type for the RGB color structure -->
+  <xs:simpleType name="RGBType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="3"/>
+    </xs:restriction>
   </xs:simpleType>
 
-  <xs:complexType name="Header">
+  <!-- GIF File Format -->
+  <xs:element name="GIF" type="ex:GIFType"/>
+
+  <xs:complexType name="GIFType">
     <xs:sequence>
-      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
-      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
+      <!-- Header -->
+      <xs:element name="Header" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
+      <xs:element name="Version" type="xs:string" dfdl:length="3" dfdl:encoding="US-ASCII"/>
+
+      <!-- Logical Screen Descriptor -->
+      <xs:element name="LogicalScreenWidth" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="LogicalScreenHeight" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="PackedFields" type="xs:byte"/>
+      <xs:element name="BackgroundColorIndex" type="xs:byte"/>
+      <xs:element name="PixelAspectRatio" type="xs:byte"/>
+
+      <!-- Global Color Table -->
+      <xs:element name="GlobalColorTable" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Color" type="ex:RGBType" dfdl:occursCountKind="expression" dfdl:occursCount="{ xs:unsignedInt(2) ** (fn:substring(../PackedFields, 7, 1) + 1) }"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- Blocks -->
+      <xs:element name="Blocks" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:choice>
+            <!-- Image Block -->
+            <xs:element name="ImageBlock">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="ImageSeparator" type="xs:byte" dfdl:initiator="0x2C"/>
+                  <xs:element name="ImageLeftPosition" type="xs:unsignedShort" dfdl:length="2"/>
+                  <xs:element name="ImageTopPosition" type="xs:unsignedShort" dfdl:length="2"/>
+                  <xs:element name="ImageWidth" type="xs:unsignedShort" dfdl:length="2"/>
+                  <xs:element name="ImageHeight" type="xs:unsignedShort" dfdl:length="2"/>
+                  <xs:element name="PackedFields" type="xs:byte"/>
+                  <xs:element name="LocalColorTable" minOccurs="0" maxOccurs="1">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element name="Color" type="ex:RGBType" dfdl:occursCountKind="expression" dfdl:occursCount="{ xs:unsignedInt(2) ** (fn:substring(../PackedFields, 7, 1) + 1) }"/>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                  <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+
+            <!-- Extension Block -->
+            <xs:element name="ExtensionBlock">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="ExtensionIntroducer" type="xs:byte" dfdl:initiator="0x21"/>
+                  <xs:element name="ExtensionLabel" type="xs:byte"/>
+                  <xs:element name="BlockSize" type="xs:byte"/>
+                  <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+
+      <!-- Trailer -->
+      <xs:element name="Trailer" type="xs:byte" dfdl:initiator="0x3B"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="LogicalScreenDescriptor">
-    <xs:sequence>
-      <xs:element name="screenWidth" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="screenHeight" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="packedFields" type="xs:byte"/>
-      <xs:element name="backgroundColorIndex" type="xs:byte"/>
-      <xs:element name="pixelAspectRatio" type="xs:byte"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="ColorTable">
-    <xs:sequence>
-      <xs:element name="colors" type="tns:Color" minOccurs="0" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="Color">
-    <xs:sequence>
-      <xs:element name="red" type="xs:byte"/>
-      <xs:element name="green" type="xs:byte"/>
-      <xs:element name="blue" type="xs:byte"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="GIF">
-    <xs:sequence>
-      <xs:element name="header" type="tns:Header"/>
-      <xs:element name="logicalScreenDescriptor" type="tns:LogicalScreenDescriptor"/>
-      <xs:element name="globalColorTable" type="tns:ColorTable" minOccurs="0"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="gif" type="tns:GIF"/>
-
-  <xs:element name="gifFormat">
-    <xs:complexType>
-      <xs:attributeGroup>
-        <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
-        <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
-        <xs:attribute name="textBidi" type="xs:string" use="required" fixed="none"/>
-        <xs:attribute name="textPadKind" type="xs:string" use="required" fixed="none"/>
-        <xs:attribute name="textTrimKind" type="xs:string" use="required" fixed="none"/>
-        <xs:attribute name="textStringJustification" type="xs:string" use="required" fixed="left"/>
-        <xs:attribute name="binaryNumberRep" type="xs:string" use="required" fixed="binary"/>
-        <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
-        <xs:attribute name="encoding" type="xs:string" use="required" fixed="US-ASCII"/>
-        <xs:attribute name="escapeScheme" type="xs:string" use="optional"/>
-        <xs:attribute name="escapeBlockStart" type="xs:string" use="optional"/>
-        <xs:attribute name="escapeBlockEnd" type="xs:string" use="optional"/>
-        <xs:attribute name="initiator" type="xs:string" use="optional"/>
-        <xs:attribute name="terminator" type="xs:string" use="optional"/>
-      </xs:attributeGroup>
-    </xs:complexType>
-  </xs:element>
-
 </xs:schema>

@@ -1,77 +1,75 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
+data PNG = PNG {
+  signature :: [UInt8],
+  chunks :: [Chunk]
+}
 
-module PNGImage where
-
-import Daedalus.Type.AST
-import Daedalus.PP
-import Daedalus.Interp
-
-import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
-
-data PNGHeader = PNGHeader {
-  signature :: [Byte],
-  ihdr :: IHDR
-} deriving (Show, Generic, ToJSON, FromJSON)
+data Chunk = Chunk {
+  length :: UInt32,
+  type :: [UInt8],
+  data :: [UInt8],
+  crc :: UInt32
+}
 
 data IHDR = IHDR {
-  width :: Integer,
-  height :: Integer,
-  bitDepth :: Integer,
-  colorType :: Integer,
-  compressionMethod :: Integer,
-  filterMethod :: Integer,
-  interlaceMethod :: Integer
-} deriving (Show, Generic, ToJSON, FromJSON)
+  width :: UInt32,
+  height :: UInt32,
+  bitDepth :: UInt8,
+  colorType :: UInt8,
+  compressionMethod :: UInt8,
+  filterMethod :: UInt8,
+  interlaceMethod :: UInt8
+}
 
+data PLTE = PLTE {
+  palette :: [RGB]
+}
 
-pngHeader :: Daedalus a PNGHeader
-pngHeader = do
-  signature' <- bytes 8
-  when (signature' /= [0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A]) $ fail "Invalid PNG signature"
-  ihdr' <- ihdr
-  return $ PNGHeader signature' ihdr'
+data RGB = RGB {
+  red :: UInt8,
+  green :: UInt8,
+  blue :: UInt8
+}
 
-ihdr :: Daedalus a IHDR
-ihdr = do
-  width' <- uint32
-  height' <- uint32
-  bitDepth' <- uint8
-  colorType' <- uint8
-  compressionMethod' <- uint8
-  filterMethod' <- uint8
-  interlaceMethod' <- uint8
-  return $ IHDR width' height' bitDepth' colorType' compressionMethod' filterMethod' interlaceMethod'
+data IDAT = IDAT {
+  data :: [UInt8]
+}
 
+data IEND = IEND {}
 
-uint32 :: Daedalus a Integer
-uint32 = do
-  x <- bytes 4
-  return $ (fromIntegral (x!!0) * 2^24) + (fromIntegral (x!!1) * 2^16) + (fromIntegral (x!!2) * 2^8) + fromIntegral (x!!3)
+data tRNS = tRNS {
+  transparencyData :: Maybe TransparencyData
+}
 
-uint8 :: Daedalus a Integer
-uint8 = fromIntegral <$> byte
+data TransparencyData =
+  | GrayscaleTransparency of UInt16
+  | TruecolorTransparency of RGB
+  | IndexedTransparency of [UInt8]
 
-byte :: Daedalus a Integer
-byte = fromIntegral <$> get
+data gAMA = gAMA { gamma :: Float }
+data cHRM = cHRM { whitePoint :: [Float], primaryChromaticities :: [[Float]] }
+data sBIT = sBIT { significantBits :: [UInt8] }
+data sRGB = sRGB { renderingIntent :: UInt8 }
+data iCCP = iCCP { profileName :: String, compressedProfile :: [UInt8], compressionMethod :: UInt8 }
+data iTXt = iTXt { keyword :: String, compressionFlag :: UInt8, languageTag :: String, translatedKeyword :: String, text :: String }
+data tEXt = tEXt { keyword :: String, text :: String }
+data zTXt = zTXt { keyword :: String, compressedText :: [UInt8] }
+data bKGD = bKGD { backgroundColor :: Maybe BackgroundColor }
 
+data BackgroundColor =
+  | GrayscaleBackground of UInt16
+  | TruecolorBackground of RGB
+  | IndexedBackground of UInt8
 
-type Byte = Word8
+data Time = Time { year :: Int16, month :: UInt8, day :: UInt8, hour :: UInt8, minute :: UInt8, second :: UInt8 }
 
-main :: IO ()
-main = do
-  let p = compile $ choice [pngHeader]
-  print (pp p)
+data pHYs = pHYs { pixelsPerUnitX :: UInt32, pixelsPerUnitY :: UInt32, unitSpecifier :: UInt8 }
 
-  --Example usage (requires a PNG file)
-  --let result = runParser p "path/to/your/image.png"
-  --print result
+data oFFs = oFFs { xOffset :: Int32, yOffset :: Int32, unitSpecifier :: UInt8 }
+
+data hIST = hIST { histogram :: [UInt32] }
+
+data textChunk = textChunk { keyword :: String, text :: String}
+
+data physChunk = physChunk { x :: UInt32, y :: UInt32, unit :: UInt8 }
+
+data offsChunk = offsChunk { x :: Int32, y :: Int32, unit :: UInt8 }

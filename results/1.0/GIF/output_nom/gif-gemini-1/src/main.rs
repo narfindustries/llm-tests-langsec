@@ -1,234 +1,166 @@
-use std::env;
-use std::fs;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, recognize},
-    error::ErrorKind,
-    multi::count,
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{tuple, preceded},
+    combinator::map,
+    number::complete::le_u16,
+    sequence::tuple,
     IResult,
 };
-
-#[derive(Debug)]
-enum GifColorTable {
-    Global(Vec<[u8; 3]>),
-    Local(Vec<[u8; 3]>),
-}
-
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct GifHeader {
     signature: [u8; 6],
-    version: [u8; 3],
     logical_screen_descriptor: LogicalScreenDescriptor,
-    global_color_table: Option<GifColorTable>,
-    blocks: Vec<GifBlock>,
+    global_color_table: Option<Vec<[u8; 3]>>,
 }
 
 #[derive(Debug)]
 struct LogicalScreenDescriptor {
     width: u16,
     height: u16,
-    flags: u8,
+    packed_fields: u8,
     background_color_index: u8,
     pixel_aspect_ratio: u8,
 }
 
 #[derive(Debug)]
-enum GifBlock {
-    ImageDescriptor(GifImageDescriptor),
-    Extension(GifExtension),
-    Trailer(u8),
-
-}
-
-#[derive(Debug)]
-struct GifImageDescriptor {
-    image_left_position: u16,
-    image_top_position: u16,
+struct ImageDescriptor {
+    image_separator: u8,
+    image_left: u16,
+    image_top: u16,
     image_width: u16,
     image_height: u16,
-    flags: u8,
-    local_color_table: Option<GifColorTable>,
+    packed_fields: u8,
+    local_color_table: Option<Vec<[u8; 3]>>,
     image_data: Vec<u8>,
 }
 
-#[derive(Debug)]
-struct GifExtension {
-    extension_type: u8,
-    data: Vec<u8>,
-}
-
-fn parse_color_table(count: usize) -> impl Fn(&[u8]) -> IResult<&[u8], Vec<[u8; 3]>> {
-    move |i| {
-        let (i, entries) = count(take(3usize), count)(i)?;
-        Ok((i, entries))
-    }
-}
-
-
-fn gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
-    let (input, signature) = tag(b"GIF87a")(input)?;
-    let (input, version) = take(3usize)(input)?;
-    let (input, logical_screen_descriptor) = logical_screen_descriptor(input)?;
-
-    let (input, global_color_table) = opt(preceded(
-            tag(b"!"),
-            map(|i| {
-              let (i, count) = be_u8(i)?;
-              let count = (count as usize) * 3;
-              let (i, colors) = parse_color_table(count)(i)?;
-              Ok((i, GifColorTable::Global(colors)))
-            }
-            )(input)
-    ))(input)?;
-
-    let (input, blocks) = many0(gif_block)(input)?;
-
-
+fn parse_gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
+    let (input, signature) = tag("GIF89a")(input)?;
+    let (input, logical_screen_descriptor) = parse_logical_screen_descriptor(input)?;
+    let (input, global_color_table) = parse_global_color_table(input, logical_screen_descriptor.packed_fields)?;
     Ok((
         input,
         GifHeader {
-            signature: *signature.try_into().unwrap(),
-            version: *version.try_into().unwrap(),
+            signature: signature.try_into().unwrap(),
             logical_screen_descriptor,
             global_color_table,
-            blocks,
         },
     ))
 }
 
-fn logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
-    let (input, (width, height, flags, background_color_index, pixel_aspect_ratio)) = tuple((
-        be_u16,
-        be_u16,
-        be_u8,
-        be_u8,
-        be_u8,
+fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
+    let (input, (width, height, packed_fields, background_color_index, pixel_aspect_ratio)) = tuple((
+        le_u16,
+        le_u16,
+        take(1u8),
+        take(1u8),
+        take(1u8),
     ))(input)?;
     Ok((
         input,
         LogicalScreenDescriptor {
             width,
             height,
-            flags,
-            background_color_index,
-            pixel_aspect_ratio,
+            packed_fields: packed_fields[0],
+            background_color_index: background_color_index[0],
+            pixel_aspect_ratio: pixel_aspect_ratio[0],
         },
     ))
 }
 
-fn gif_block(input: &[u8]) -> IResult<&[u8], GifBlock> {
-    let (input, block_type) = be_u8(input)?;
-
-    match block_type {
-        0x2C => {
-          let (input, image_descriptor) = gif_image_descriptor(input)?;
-          Ok((input, GifBlock::ImageDescriptor(image_descriptor)))
-        },
-        0x21 => {
-            let (input, extension) = gif_extension(input)?;
-            Ok((input, GifBlock::Extension(extension)))
-        },
-        0x3B => Ok((input, GifBlock::Trailer(block_type))),
-        _ => Err(nom::Err::Error((input, ErrorKind::Tag)))
+fn parse_global_color_table(input: &[u8], packed_fields: u8) -> IResult<&[u8], Option<Vec<[u8; 3]>>> {
+    let global_color_table_flag = (packed_fields >> 7) & 1;
+    if global_color_table_flag == 1 {
+        let color_table_size = ((packed_fields >> 4) & 7) as usize;
+        let table_size = (1usize << (color_table_size + 1)) * 3;
+        let (input, color_table) = take(table_size)(input)?;
+        let mut color_table_vec = Vec::new();
+        for i in 0..(1usize << (color_table_size + 1)) {
+            let color = [color_table[i * 3], color_table[i * 3 + 1], color_table[i * 3 + 2]];
+            color_table_vec.push(color);
+        }
+        Ok((input, Some(color_table_vec)))
+    } else {
+        Ok((input, None))
     }
 }
 
-
-fn gif_image_descriptor(input: &[u8]) -> IResult<&[u8], GifImageDescriptor> {
-    let (input, (image_left_position, image_top_position, image_width, image_height, flags)) = tuple((
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u8,
+fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
+    let (input, image_separator) = tag(&[0x2C])(input)?;
+    let (input, (image_left, image_top, image_width, image_height, packed_fields)) = tuple((
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        take(1u8),
     ))(input)?;
-    let (input, local_color_table) = opt(map(|i| {
-        let (i, count) = be_u8(i)?;
-        let count = (count as usize) * 3;
-        let (i, colors) = parse_color_table(count)(i)?;
-        Ok((i, GifColorTable::Local(colors)))
-    })(input))?;
-
-    let (input, image_data) = gif_data_blocks(input)?;
+    let (input, local_color_table) = parse_local_color_table(input, packed_fields[0])?;
+    let (input, image_data) = parse_image_data(input)?;
     Ok((
         input,
-        GifImageDescriptor {
-            image_left_position,
-            image_top_position,
+        ImageDescriptor {
+            image_separator: image_separator[0],
+            image_left,
+            image_top,
             image_width,
             image_height,
-            flags,
+            packed_fields: packed_fields[0],
             local_color_table,
             image_data,
         },
     ))
 }
 
-
-fn gif_extension(input: &[u8]) -> IResult<&[u8], GifExtension> {
-    let (input, extension_type) = be_u8(input)?;
-    let (input, data) = gif_data_blocks(input)?;
-    Ok((
-        input,
-        GifExtension {
-            extension_type,
-            data,
-        },
-    ))
+fn parse_local_color_table(input: &[u8], packed_fields: u8) -> IResult<&[u8], Option<Vec<[u8; 3]>>> {
+    let local_color_table_flag = (packed_fields >> 7) & 1;
+    if local_color_table_flag == 1 {
+        let color_table_size = ((packed_fields >> 4) & 7) as usize;
+        let table_size = (1usize << (color_table_size + 1)) * 3;
+        let (input, color_table) = take(table_size)(input)?;
+        let mut color_table_vec = Vec::new();
+        for i in 0..(1usize << (color_table_size + 1)) {
+            let color = [color_table[i * 3], color_table[i * 3 + 1], color_table[i * 3 + 2]];
+            color_table_vec.push(color);
+        }
+        Ok((input, Some(color_table_vec)))
+    } else {
+        Ok((input, None))
+    }
 }
 
-
-fn gif_data_blocks(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_image_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let mut data = Vec::new();
-    let mut input = input;
+    let mut i = 0;
     loop {
-        let (i, block_size) = be_u8(input)?;
+        let block_size = input[i];
         if block_size == 0 {
             break;
         }
-        let (i, block_data) = take(block_size as usize)(i)?;
-        data.extend_from_slice(block_data);
-        input = i;
+        data.extend_from_slice(&input[i + 1..i + 1 + block_size as usize]);
+        i += 1 + block_size as usize;
     }
-    Ok((input, data))
+    Ok((&input[i + 1..], data))
 }
 
-fn many0<I, O, E, F>(f: F) -> impl Fn(I) -> IResult<I, Vec<O>, E>
-where
-    I: Clone + nom::InputTakeAtPosition,
-    F: Fn(I) -> IResult<I, O, E>,
-    E: nom::error::ParseError<I>,
-{
-    move |i| {
-        let mut acc = Vec::new();
-        let mut input = i;
-        loop {
-            match f(input.clone()) {
-                Ok((i, o)) => {
-                    acc.push(o);
-                    input = i;
-                }
-                Err(nom::Err::Error(e)) => {
-                    return Err(nom::Err::Error(e));
-                }
-                Err(nom::Err::Incomplete(_)) => {
-                    return Err(nom::Err::Incomplete(_));
-                }
-                Err(nom::Err::Failure(e)) => {
-                    return Err(nom::Err::Failure(e));
-                }
+fn parse_gif(input: &[u8]) -> IResult<&[u8], (GifHeader, Vec<ImageDescriptor>)> {
+    let (input, header) = parse_gif_header(input)?;
+    let mut images = Vec::new();
+    let mut remaining_input = input;
+    loop {
+        match parse_image_descriptor(remaining_input) {
+            Ok((rest, image)) => {
+                images.push(image);
+                remaining_input = rest;
             }
-            if input.is_empty() {
-                break;
-            }
+            Err(_) => break,
         }
-        Ok((input, acc))
     }
+    let (input, _) = tag(&[0x3B])(remaining_input)?;
+    Ok((input, (header, images)))
 }
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -238,16 +170,35 @@ fn main() {
     }
 
     let filename = &args[1];
-    let data = match fs::read(filename) {
-        Ok(data) => data,
-        Err(e) => {
-            println!("Error reading file: {}", e);
+    let mut file = match File::open(filename) {
+        Ok(file) => file,
+        Err(err) => {
+            println!("Error opening file: {}", err);
             return;
         }
     };
 
-    match gif_header(&data) {
-        Ok((_, header)) => println!("GIF Header: {:?}", header),
-        Err(e) => println!("Error parsing GIF: {:?}", e),
+    let mut buffer = Vec::new();
+    match file.read_to_end(&mut buffer) {
+        Ok(_) => (),
+        Err(err) => {
+            println!("Error reading file: {}", err);
+            return;
+        }
+    };
+
+    match parse_gif(&buffer) {
+        Ok((_, (header, images))) => {
+            println!("GIF Header: {:?}", header);
+            for image in images {
+                println!("Image Descriptor: {:?}", image);
+            }
+        }
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => {
+            println!("Error parsing GIF: {:?}", e);
+        }
+        Err(nom::Err::Incomplete(_)) => {
+            println!("Incomplete GIF data");
+        }
     }
 }

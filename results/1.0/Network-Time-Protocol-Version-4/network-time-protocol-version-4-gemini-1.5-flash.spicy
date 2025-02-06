@@ -1,54 +1,18 @@
-#ifndef NETWORK_TIME_PROTOCOL_VERSION_4_H
-#define NETWORK_TIME_PROTOCOL_VERSION_4_H
+module Network_Time_Protocol_Version_4;
 
-#include <stdint.h>
-
-typedef struct {
-  uint8_t leap;
-  uint8_t mode;
-  uint8_t stratum;
-  int8_t poll;
-  int8_t precision;
-  uint32_t rootdelay;
-  uint32_t rootdispersion;
-  uint32_t refid;
-  uint64_t reftime;
-  uint64_t origtime;
-  uint64_t rxtime;
-  uint64_t txtime;
-} ntp4_packet;
-
-
-global ntp4_packet ntp4;
-
-event zeek_init() {
-    // Placeholder for initialization - Add any necessary initialization logic here.
+type ntp_packet {
+    li: uint2 = 0;
+    vn: uint3 = 4;
+    mode: uint3 = 0;
+    stratum: uint8 = 0;
+    poll: uint8 = 0;
+    precision: uint8 = 0;
+    root_delay: uint32 = 0;
+    root_dispersion: uint32 = 0;
+    ref_id: uint32 = 0;
+    ref_timestamp: uint64 = 0;
+    orig_timestamp: uint64 = 0;
+    recv_timestamp: uint64 = 0;
+    xmit_timestamp: uint64 = 0;
+    ext_fields: bytes = ""; 
 }
-
-
-event ntp4_packet_received(connection c, record pkt) {
-  // Add logic here to parse the NTP packet from the input 'pkt'
-  // and populate the ntp4_packet structure accordingly.
-  // This will require understanding the NTP packet format.
-  // This example assumes 'pkt' is in a format that allows direct access to fields.
-  
-  // Example - replace with your actual parsing logic:
-  ntp4.leap = pkt[0];
-  ntp4.mode = pkt[1];
-  ntp4.stratum = pkt[2];
-  ntp4.poll = pkt[3];
-  ntp4.precision = pkt[4];
-  ntp4.rootdelay = pkt[5];
-  ntp4.rootdispersion = pkt[6];
-  ntp4.refid = pkt[7];
-  ntp4.reftime = pkt[8];
-  ntp4.origtime = pkt[9];
-  ntp4.rxtime = pkt[10];
-  ntp4.txtime = pkt[11];
-
-  // Log or process the parsed NTP packet information.
-  print("Leap:", ntp4.leap, ", Mode:", ntp4.mode);
-}
-
-
-#endif // NETWORK_TIME_PROTOCOL_VERSION_4_H

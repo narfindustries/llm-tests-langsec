@@ -1,42 +1,121 @@
--- Daedalus specification for a simple PNG file format.
+module PNG;
 
-module PNGImage where
+type PNGSignature = struct {
+  signature : uint64be const : 0x89504E470D0A1A0A;
+};
 
-import DAEDALUS.Core
+type ChunkHeader = struct {
+  length : uint32be;
+  type : string(4);
+};
 
--- Define the PNG file signature.
-pngSignature : Bitstream = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+type IHDR = struct {
+  width : uint32be;
+  height : uint32be;
+  bitDepth : uint8;
+  colorType : uint8;
+  compressionMethod : uint8;
+  filterMethod : uint8;
+  interlaceMethod : uint8;
+};
 
--- Define the chunk structure.
-data Chunk = Chunk {
-  length  : UInt32,
-  typ     : UInt32,
-  data    : Vector (UInt 8) (value length),
-  crc     : UInt32
-}
+type PLTE = array[struct {
+  red : uint8;
+  green : uint8;
+  blue : uint8;
+}] depends on context['PLTE size'];
 
--- Parse a single chunk.
-chunk : Parser Chunk = 
-  do len    <- uint32be
-     typ    <- uint32be
-     dat    <- vec (uint8) (fromIntegral len)
-     crcVal <- uint32be
-     return Chunk { length = len, typ = typ, data = dat, crc = crcVal }
+type IDAT = struct {
+  data : bytes;
+};
 
--- Parse multiple chunks until IEND.
-chunks : Parser (Vector Chunk) = manyTill chunk (lookAhead (bytes (uint32be == 0x49454E44)))
+type IEND = struct {
+};
 
--- Define the PNG data structure.
-data PNGFile = PNGFile {
-  header  : Bitstream,
-  chunks  : Vector Chunk
-}
+type tEXt = struct {
+  keyword : zstring;
+  text : zstring;
+};
 
--- Parse the PNG file structure.
-pngFile : Parser PNGFile =
-  do hdr    <- bytes (pngSignature)
-     chks   <- chunks
-     return PNGFile { header = hdr, chunks = chks }
+type zTXt = struct {
+  keyword : zstring;
+  compressionMethod : uint8;
+  compressedText : bytes;
+};
 
--- Main function to parse a PNG file.
-main : Parser PNGFile = pngFile
+type iTXt = struct {
+  keyword : zstring;
+  compressionFlag : uint8;
+  compressionMethod : uint8;
+  languageTag : zstring;
+  translatedKeyword : zstring;
+  text : zstring;
+};
+
+type bKGD = switch (context['ColorType']) {
+  case 0, 4 => struct { gray : uint16be; };
+  case 2, 6 => struct { red : uint16be; green : uint16be; blue : uint16be; };
+  case 3 => struct { paletteIndex : uint8; };
+};
+
+type pHYs = struct {
+  pixelsPerUnitX : uint32be;
+  pixelsPerUnitY : uint32be;
+  unitSpecifier : uint8;
+};
+
+type sBIT = switch (context['ColorType']) {
+  case 0 => struct { gray : uint8; };
+  case 2, 3 => struct { red : uint8; green : uint8; blue : uint8; };
+  case 4 => struct { gray : uint8; alpha : uint8; };
+  case 6 => struct { red : uint8; green : uint8; blue : uint8; alpha : uint8; };
+};
+
+type sRGB = struct {
+  renderingIntent : uint8;
+};
+
+type tIME = struct {
+  year : uint16be;
+  month : uint8;
+  day : uint8;
+  hour : uint8;
+  minute : uint8;
+  second : uint8;
+};
+
+type gAMA = struct {
+  gamma : uint32be;
+};
+
+type UnknownChunk = struct {
+  data : bytes depends on context['length'];
+};
+
+type PNGChunk = struct {
+  header : ChunkHeader;
+  body : choice depends on header.type {
+    case "IHDR" => IHDR;
+    case "PLTE" => PLTE;
+    case "IDAT" => IDAT;
+    case "IEND" => IEND;
+    case "tEXt" => tEXt;
+    case "zTXt" => zTXt;
+    case "iTXt" => iTXt;
+    case "bKGD" => bKGD;
+    case "pHYs" => pHYs;
+    case "sBIT" => sBIT;
+    case "sRGB" => sRGB;
+    case "tIME" => tIME;
+    case "gAMA" => gAMA;
+    default => UnknownChunk;
+  };
+  crc : uint32be;
+};
+
+type PNGFile = struct {
+  signature : PNGSignature;
+  chunks : array[PNGChunk];
+};
+
+main : PNGFile;

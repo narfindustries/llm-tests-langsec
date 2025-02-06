@@ -1,16 +1,21 @@
 use nom::{
-    bytes::complete::{take, tag},
+    bytes::complete::tag,
+    combinator::map_res,
+    multi::count,
     number::complete::{le_u16, le_u32},
     sequence::tuple,
     IResult,
+    error::VerboseError,
 };
-use std::{env, fs::File, io::Read, path::Path};
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
 
 #[derive(Debug)]
 struct TiffHeader {
     byte_order: String,
     magic_number: u16,
-    offset: u32,
+    ifd_offset: u32,
 }
 
 #[derive(Debug)]
@@ -22,58 +27,73 @@ struct IFDEntry {
 }
 
 #[derive(Debug)]
-struct TIFF {
-    header: TiffHeader,
-    ifd_entries: Vec<IFDEntry>,
+struct IFD {
+    entries: Vec<IFDEntry>,
 }
 
-fn parse_tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader> {
-    let (input, (byte_order, magic_number, offset)) = tuple((tag(b"II"), le_u16, le_u32))(input)?;
-    let byte_order = if byte_order == b"II" { "Little Endian" } else { "Big Endian" };
-    Ok((input, TiffHeader { byte_order: byte_order.to_string(), magic_number, offset }))
+fn parse_tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader, VerboseError<&[u8]>> {
+    let (input, (byte_order, magic_number, ifd_offset)) = tuple((
+        map_res(tag(b"II\x2a\x00"), |s: &[u8]| -> Result<_, io::Error> {
+            Ok(String::from_utf8_lossy(s).to_string())
+        }),
+        le_u16,
+        le_u32,
+    ))(input)?;
+
+    Ok((
+        input,
+        TiffHeader {
+            byte_order,
+            magic_number,
+            ifd_offset,
+        },
+    ))
 }
 
-fn parse_ifd_entry(input: &[u8]) -> IResult<&[u8], IFDEntry> {
-    let (input, (tag, field_type, count, value_offset)) = tuple((le_u16, le_u16, le_u32, le_u32))(input)?;
-    Ok((input, IFDEntry { tag, field_type, count, value_offset }))
+fn parse_ifd_entry(input: &[u8]) -> IResult<&[u8], IFDEntry, VerboseError<&[u8]>> {
+    let (input, (tag, field_type, count, value_offset)) =
+        tuple((le_u16, le_u16, le_u32, le_u32))(input)?;
+
+    Ok((
+        input,
+        IFDEntry {
+            tag,
+            field_type,
+            count,
+            value_offset,
+        },
+    ))
 }
 
-fn parse_ifd_entries(input: &[u8], num_entries: usize) -> IResult<&[u8], Vec<IFDEntry>> {
-    let mut entries = Vec::new();
-    let mut remaining = input;
-    for _ in 0..num_entries {
-        let (input_next, entry) = parse_ifd_entry(remaining)?;
-        entries.push(entry);
-        remaining = input_next;
-    }
-    Ok((remaining, entries))
+fn parse_ifd(input: &[u8], number_of_entries: usize) -> IResult<&[u8], IFD, VerboseError<&[u8]>> {
+    let (input, entries) = count(parse_ifd_entry, number_of_entries)(input)?;
+
+    Ok((input, IFD { entries }))
 }
 
-fn parse_tiff(input: &[u8]) -> IResult<&[u8], TIFF> {
-    let (input, header) = parse_tiff_header(input)?;
-    let num_ifd_entries = (input.len() - header.offset as usize) / 12; // Each IFD entry is 12 bytes
-    let ifd_entries_input = &input[(header.offset as usize)..];
-    let (_, ifd_entries) = parse_ifd_entries(ifd_entries_input, num_ifd_entries)?;
-
-    Ok((input, TIFF { header, ifd_entries }))
-}
-
-fn main() -> std::io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <TIFF_FILE_PATH>", args[0]);
-        std::process::exit(1);
-    }
-
-    let path = Path::new(&args[1]);
-    let mut file = File::open(path)?;
+fn read_file_to_buffer(filename: &str) -> Result<Vec<u8>, io::Error> {
+    let mut file = File::open(filename)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
+    Ok(buffer)
+}
 
-    match parse_tiff(&buffer) {
-        Ok((_, tiff)) => println!("{:#?}", tiff),
-        Err(e) => eprintln!("Failed to parse TIFF: {:?}", e),
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        return Err("Usage: tiff_parser <FILE>".into());
     }
+
+    let filename = &args[1];
+    let buffer = read_file_to_buffer(filename)?;
+
+    let (_, header) = parse_tiff_header(&buffer)?;
+    println!("Parsed TIFF Header: {:?}", header);
+    let ifd_start = header.ifd_offset as usize;
+
+    let (_, num_entries) = le_u16::<_, VerboseError<_>>(&buffer[ifd_start..])?;
+    let (_, ifd) = parse_ifd(&buffer[ifd_start + 2..], num_entries as usize)?;
+    println!("Parsed IFD: {:?}", ifd);
 
     Ok(())
 }

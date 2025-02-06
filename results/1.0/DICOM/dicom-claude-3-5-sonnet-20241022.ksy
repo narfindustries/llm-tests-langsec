@@ -6,15 +6,20 @@ meta:
 seq:
   - id: preamble
     size: 128
-  - id: prefix
-    type: str
-    size: 4
-    encoding: ASCII
-  - id: dataset
+  - id: dicom_prefix
+    contents: 'DICM'
+  - id: meta_information
+    type: meta_information_group
+  - id: elements
     type: data_element
     repeat: eos
 
 types:
+  meta_information_group:
+    seq:
+      - id: transfer_syntax
+        type: data_element
+
   data_element:
     seq:
       - id: tag_group
@@ -25,60 +30,85 @@ types:
         type: str
         size: 2
         encoding: ASCII
-      - id: value_length
-        type: length_field
+        if: not is_implicit_vr
+      - id: length
+        type:
+          switch-on: vr
+          cases:
+            '"OB"': u4
+            '"OW"': u4
+            '"OF"': u4
+            '"SQ"': u4
+            '"UN"': u4
+            '"UT"': u4
+            _: u2
+        if: not is_implicit_vr
+      - id: length_implicit
+        type: u4
+        if: is_implicit_vr
       - id: value
-        size: value_length.length
+        size: length_value
         type:
           switch-on: vr
           cases:
             '"AE"': str_value
             '"AS"': str_value
+            '"AT"': tag_value
             '"CS"': str_value
             '"DA"': str_value
             '"DS"': str_value
             '"DT"': str_value
+            '"FL"': f4
+            '"FD"': f8
             '"IS"': str_value
             '"LO"': str_value
             '"LT"': str_value
+            '"OB"': raw_bytes
+            '"OD"': raw_bytes
+            '"OF"': raw_bytes
+            '"OW"': raw_bytes
             '"PN"': str_value
             '"SH"': str_value
+            '"SL"': s4
+            '"SQ"': sequence
+            '"SS"': s2
             '"ST"': str_value
             '"TM"': str_value
             '"UI"': str_value
+            '"UL"': u4
+            '"UN"': raw_bytes
+            '"US"': u2
             '"UT"': str_value
-            '"UN"': raw_value
-            '"SQ"': sequence_value
-            _: raw_value
+            _: raw_bytes
 
-  length_field:
-    seq:
-      - id: reserved
-        type: u2
-        if: is_explicit_vr
-      - id: length
-        type:
-          switch-on: is_explicit_vr
-          cases:
-            true: u4
-            false: u2
     instances:
-      is_explicit_vr:
-        value: _parent.vr != 'OB' and _parent.vr != 'OW' and _parent.vr != 'OF' and _parent.vr != 'SQ' and _parent.vr != 'UN' and _parent.vr != 'UT'
+      tag:
+        value: (tag_group << 16) | tag_element
+      is_implicit_vr:
+        value: '_root.meta_information.transfer_syntax.value.as<str_value>.value == "1.2.840.10008.1.2"'
+      length_value:
+        value: 'is_implicit_vr ? length_implicit : length'
 
   str_value:
     seq:
-      - id: content
+      - id: value
         type: str
         size-eos: true
         encoding: ASCII
 
-  raw_value:
+  raw_bytes:
     seq:
-      - id: content
+      - id: value
         size-eos: true
 
-  sequence_value:
+  tag_value:
+    seq:
+      - id: group
+        type: u2
+      - id: element
+        type: u2
+
+  sequence:
     seq:
       - id: items
         type: sequence_item
@@ -91,7 +121,7 @@ types:
         contents: [0xfe, 0xff, 0x00, 0xe0]
       - id: item_length
         type: u4
-      - id: item_data
+      - id: elements
         type: data_element
         repeat: expr
-        repeat-expr: item_length
+        repeat-expr: item_length / 8

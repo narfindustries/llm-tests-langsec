@@ -1,104 +1,72 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent a HTTP header
-typedef struct {
-    char *name;
-    char *value;
-} HTTPHeader;
+// Define parsers for HTTP header fields (simplified for brevity)
+//  Full implementation would require significantly more code to handle all variations and edge cases.
 
-// Structure to represent a HTTP request
-typedef struct {
-    char *method;
-    char *path;
-    char *version;
-    HTTPHeader *headers;
-    int numHeaders;
-    char *body;
-} HTTPRequest;
+static hm_parser_t* parse_header_field(void) {
+    return hm_string(hm_any_char(), hm_until(hm_char(':')));
+}
 
+static hm_parser_t* parse_header_value(void) {
+    return hm_string(hm_any_char(), hm_until(hm_char('\r')));
+}
 
-// Function to parse a HTTP request (simplified for demonstration)
-HTTPRequest* parseHTTPRequest(const char *request) {
-    HTTPRequest *req = (HTTPRequest*)malloc(sizeof(HTTPRequest));
-    if (req == NULL) return NULL;
+static hm_parser_t* parse_header(void) {
+    return hm_seq(parse_header_field(), hm_char(':'), hm_char(' '), parse_header_value(), hm_char('\r'), hm_char('\n'), NULL);
+}
 
-    // Basic parsing (replace with a robust parser for production)
-    char *line = strtok((char*)request, "\r\n");
-    char *token;
+static hm_parser_t* parse_headers(void) {
+    return hm_many(parse_header());
+}
 
-    token = strtok(line, " ");
-    req->method = strdup(token);
-    token = strtok(NULL, " ");
-    req->path = strdup(token);
-    token = strtok(NULL, " ");
-    req->version = strdup(token);
-
-    req->headers = NULL;
-    req->numHeaders = 0;
-    req->body = NULL;
-
-
-    line = strtok(NULL, "\r\n\r\n");
-    while (line != NULL && strcmp(line, "") != 0) {
-        req->numHeaders++;
-        req->headers = (HTTPHeader*)realloc(req->headers, req->numHeaders * sizeof(HTTPHeader));
-        if (req->headers == NULL) {
-            free(req);
-            return NULL;
-        }
-        token = strtok(line, ":");
-        req->headers[req->numHeaders -1].name = strdup(token);
-        token = strtok(NULL, "\r\n");
-        req->headers[req->numHeaders - 1].value = strdup(token);
-        line = strtok(NULL, "\r\n\r\n");
-    }
-
-    //Body handling (simplified)
-    if (line != NULL) {
-        req->body = strdup(line);
-    }
-
-    return req;
+static hm_parser_t* parse_http_message(void) {
+    return hm_seq(hm_string(hm_any_char(), hm_until(hm_char('\r'))), hm_char('\r'), hm_char('\n'), parse_headers(), hm_any(), NULL); //Simplified body parsing
 }
 
 
-// Function to free the allocated memory for a HTTP request
-void freeHTTPRequest(HTTPRequest *req) {
-    if (req == NULL) return;
-    free(req->method);
-    free(req->path);
-    free(req->version);
-    for (int i = 0; i < req->numHeaders; i++) {
-        free(req->headers[i].name);
-        free(req->headers[i].value);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
-    free(req->headers);
-    free(req->body);
-    free(req);
-}
 
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-int main() {
-    char request[] = "GET /index.html HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n";
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    HTTPRequest *httpRequest = parseHTTPRequest(request);
+    char *buffer = (char *)malloc(fsize + 1);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
-    if (httpRequest != NULL) {
-        printf("Method: %s\n", httpRequest->method);
-        printf("Path: %s\n", httpRequest->path);
-        printf("Version: %s\n", httpRequest->version);
-        for (int i = 0; i < httpRequest->numHeaders; i++) {
-            printf("Header %d: %s: %s\n", i + 1, httpRequest->headers[i].name, httpRequest->headers[i].value);
-        }
-        if (httpRequest->body != NULL) {
-            printf("Body: %s\n", httpRequest->body);
-        }
-        freeHTTPRequest(httpRequest);
+    fread(buffer, 1, fsize, fp);
+    buffer[fsize] = '\0'; // Null-terminate for safety
+
+    fclose(fp);
+
+    hm_parser_t* parser = parse_http_message();
+    hm_result_t result = hm_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        printf("HTTP message parsed successfully!\n");
+        // Process the parsed result (result.value) here.  This would involve significant additional code to handle the structure of the parsed HTTP message.
     } else {
-        fprintf(stderr, "Error parsing HTTP request.\n");
+        fprintf(stderr, "HTTP message parsing failed at position %zu: %s\n", result.position, result.error);
     }
+
+    hm_free(parser);
+    free(buffer);
 
     return 0;
 }

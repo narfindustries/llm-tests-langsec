@@ -1,61 +1,94 @@
-def Main = (
-  P_IPv4  -- IPv4 header
-  ICMP    -- ICMP message
-)
+def Main = ICMPMessage
 
-def P_IPv4 = {
-  version : uint 4 where version == 4;
-  ihl : uint 4;
-  service : uint 8;
-  total_length : uint 16;
-  id : uint 16;
-  flags : uint 3;
-  frag_offset : uint 13;
-  ttl : uint 8;
-  protocol : uint 8 where protocol == 1; -- ICMP protocol number
-  header_checksum : uint 16;
-  src_addr : uint 32;
-  dst_addr : uint 32
+def ICMPMessage = {
+    type: uint8
+    code: uint8
+    checksum: uint16
+    rest_header: select(type) {
+        case 0, 8, 13, 14, 15, 16: EchoRestHeader
+        case 3, 4: UnusedRestHeader
+        case 5: RedirectRestHeader
+        case 12: ProblemRestHeader
+        default: EmptyRestHeader
+    }
+    message_data: select(type) {
+        case 3, 4, 5, 11, 12: ErrorMessageData
+        case 13, 14: TimestampData
+        case 0, 8: EchoData
+        default: EmptyData
+    }
 }
 
-def ICMP = {
-  type : uint 8;
-  code : uint 8;
-  checksum : uint 16;
-  
-  rest : case type of {
-    0 -> Echo_Reply
-    8 -> Echo_Request
-    3 -> Destination_Unreachable
-    11 -> Time_Exceeded
-    _ -> Unknown_ICMP
-  }
+def EchoRestHeader = {
+    identifier: uint16
+    sequence: uint16
 }
 
-def Echo_Reply = {
-  identifier : uint 16;
-  sequence : uint 16;
-  data : bytes
+def UnusedRestHeader = {
+    unused: uint32
 }
 
-def Echo_Request = {
-  identifier : uint 16;
-  sequence : uint 16;
-  data : bytes
+def RedirectRestHeader = {
+    gateway_addr: uint32
 }
 
-def Destination_Unreachable = {
-  unused : uint 32;
-  ip_header : P_IPv4;
-  original_datagram : bytes
+def ProblemRestHeader = {
+    pointer: uint8
+    unused: bytes(3)
 }
 
-def Time_Exceeded = {
-  unused : uint 32;
-  ip_header : P_IPv4;
-  original_datagram : bytes
+def EmptyRestHeader = {
 }
 
-def Unknown_ICMP = {
-  remaining_data : bytes
+def ErrorMessageData = {
+    ip_header: bytes
+    original_data: bytes(8)
+}
+
+def TimestampData = {
+    orig_timestamp: uint32
+    recv_timestamp: uint32
+    trans_timestamp: uint32
+}
+
+def EchoData = {
+    echo_data: bytes
+}
+
+def EmptyData = {
+}
+
+def ICMPTypes = {
+    ECHO_REPLY = 0
+    DEST_UNREACHABLE = 3
+    SOURCE_QUENCH = 4
+    REDIRECT = 5
+    ECHO_REQUEST = 8
+    TIME_EXCEEDED = 11
+    PARAM_PROBLEM = 12
+    TIMESTAMP = 13
+    TIMESTAMP_REPLY = 14
+    INFO_REQUEST = 15
+    INFO_REPLY = 16
+}
+
+def DestUnreachableCodes = {
+    NET_UNREACHABLE = 0
+    HOST_UNREACHABLE = 1
+    PROTOCOL_UNREACHABLE = 2
+    PORT_UNREACHABLE = 3
+    FRAG_NEEDED = 4
+    SOURCE_ROUTE_FAILED = 5
+}
+
+def RedirectCodes = {
+    NETWORK = 0
+    HOST = 1
+    TOS_NETWORK = 2
+    TOS_HOST = 3
+}
+
+def TimeExceededCodes = {
+    TTL_EXCEEDED = 0
+    REASSEMBLY_EXCEEDED = 1
 }

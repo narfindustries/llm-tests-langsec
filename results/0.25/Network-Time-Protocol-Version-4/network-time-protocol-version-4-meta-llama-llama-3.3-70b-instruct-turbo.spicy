@@ -1,22 +1,41 @@
-unit network_time_protocol_version_4 "Network Time Protocol Version 4" "0.25";
+module Network_Time_Protocol_Version_4;
 
-type NTPHeader = record {
-  leap: uint8[2];
-  version: uint8[3];
-  mode: uint8[3];
-  poll: uint8;
-  precision: uint8;
+type Leap_Indicator = uint8;
+type Version_Number = uint8;
+type Mode = uint8;
+type Poll = uint8;
+type Precision = int8;
+type Root_Delay = uint32;
+type Root_Dispersion = uint32;
+type Reference_Clock_Identifier = uint32;
+type Timestamp = uint64;
+
+type NTPv4_Header = struct {
+  leap: uint8;
+  version: uint8;
+  mode: uint8;
+  poll: Poll;
+  precision: Precision;
+  root_delay: Root_Delay;
+  root_dispersion: Root_Dispersion;
+  reference_clock_identifier: Reference_Clock_Identifier;
+  reference_timestamp: Timestamp;
+  origin_timestamp: Timestamp;
+  receive_timestamp: Timestamp;
+  transmit_timestamp: Timestamp;
 };
 
-type NTPPacket = record {
-  header: NTPHeader;
-  delay: uint32;
-  dispersion: uint32;
-  identifier: uint32;
-  reference_timestamp: uint64;
-  originate_timestamp: uint64;
-  receive_timestamp: uint64;
-  transmit_timestamp: uint64;
+type Extension_Field_Type = uint16;
+type Extension_Field_Length = uint16;
+type Extension_Field_Value = bytes;
+
+type Extension_Field = struct {
+  type: Extension_Field_Type;
+  length: Extension_Field_Length;
+  value: bytes;
 };
 
-pattern ntp_packet = NTPPacket;
+type NTPv4_Packet = struct {
+  header: NTPv4_Header;
+  extensions: Extension_Field[0..];
+};

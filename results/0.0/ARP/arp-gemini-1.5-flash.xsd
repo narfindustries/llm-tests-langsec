@@ -1,34 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/arp" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
-
-  <xs:element name="arp_gemini_1">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/arp" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+  <xs:element name="arpPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:lengthKind="explicit" dfdl:length="12"/>
-        <xs:element name="data" type="dataType" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="protocolType" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="hardwareAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="protocolAddressLength" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="opcode" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:length="{hardwareAddressLength}"/>
+        <xs:element name="senderProtocolAddress" type="xs:hexBinary" dfdl:length="{protocolAddressLength}"/>
+        <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:length="{hardwareAddressLength}"/>
+        <xs:element name="targetProtocolAddress" type="xs:hexBinary" dfdl:length="{protocolAddressLength}"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="field2" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="field3" type="xs:unsignedInt" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="dataType">
-    <xs:sequence>
-      <xs:element name="record" type="recordType" dfdl:occursCountKind="unbounded" dfdl:separator=","/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="field4" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field5" type="xs:decimal" dfdl:length="5" dfdl:fractionDigits="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

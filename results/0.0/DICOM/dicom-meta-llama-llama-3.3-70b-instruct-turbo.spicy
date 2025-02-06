@@ -1,51 +1,312 @@
-# Zeek Spicy specification for DICOM metadata parsing
+module DICOM;
 
-%header {
-    # Import necessary modules
-    @load base/protocols/dicom
-}
+type PatientName = text;
+type PatientID = text;
+type PatientBirthDate = date;
+type PatientSex = enum { M, F, O };
+type PatientAge = text;
+type StudyInstanceUID = uuid;
+type StudyDate = date;
+type StudyTime = time;
+type StudyDescription = text;
+type StudyID = text;
+type SeriesInstanceUID = uuid;
+type SeriesDate = date;
+type SeriesTime = time;
+type SeriesDescription = text;
+type SeriesNumber = int;
+type SOPInstanceUID = uuid;
+type ImageType = text;
+type ImageOrientation = text;
+type ImagePosition = text;
+type PixelData = bytes;
+type Modality = enum { CT, MR, US };
+type ModalityType = text;
+type Rows = uint;
+type Columns = uint;
+type PixelSpacing = double;
+type PixelRepresentation = uint;
+type BitsAllocated = uint;
+type BitsStored = uint;
+type HighBit = uint;
+type TransferSyntaxUID = uuid;
+type TransferSyntaxName = text;
+type MediaStorageSOPInstanceUID = uuid;
+type MediaStorageSOPClassUID = uuid;
 
-%config {
-    # Configure the parser to handle DICOM metadata
-    dicom_metadata = true
-}
+type DICOM = struct {
+  patient_name: PatientName;
+  patient_id: PatientID;
+  patient_birth_date: PatientBirthDate;
+  patient_sex: PatientSex;
+  patient_age: PatientAge;
+  study_instance_uid: StudyInstanceUID;
+  study_date: StudyDate;
+  study_time: StudyTime;
+  study_description: StudyDescription;
+  study_id: StudyID;
+  series_instance_uid: SeriesInstanceUID;
+  series_date: SeriesDate;
+  series_time: SeriesTime;
+  series_description: SeriesDescription;
+  series_number: SeriesNumber;
+  sop_instance_uid: SOPInstanceUID;
+  image_type: ImageType;
+  image_orientation: ImageOrientation;
+  image_position: ImagePosition;
+  pixel_data: PixelData;
+  modality: Modality;
+  modality_type: ModalityType;
+  rows: Rows;
+  columns: Columns;
+  pixel_spacing: PixelSpacing;
+  pixel_representation: PixelRepresentation;
+  bits_allocated: BitsAllocated;
+  bits_stored: BitsStored;
+  high_bit: HighBit;
+  transfer_syntax_uid: TransferSyntaxUID;
+  transfer_syntax_name: TransferSyntaxName;
+  media_storage_sop_instance_uid: MediaStorageSOPInstanceUID;
+  media_storage_sop_class_uid: MediaStorageSOPClassUID
+};
 
-%include {
-    # Include the DICOM metadata structure
-    struct DICOM_Metadata {
-        uint16(16) group_number
-        uint16(16) element_number
-        uint16(16) value_representation
-        uint32(32) value_length
-        bytes(value_length) value
-    }
-}
+type DICOMFile = struct {
+  preamble: bytes(128);
+  prefix: bytes(4);
+  dicom_data: DICOM
+};
 
-%parser {
-    # Define the parser for DICOM metadata
-    meta_dcm = (
-        group_number: uint16(16)
-        element_number: uint16(16)
-        value_representation: uint16(16)
-        value_length: uint32(32)
-        value: bytes(value_length)
-    ) : DICOM_Metadata
-}
+type DICOMDirectory = struct {
+  offset: uint;
+  length: uint;
+  tag: uint;
+  vr: text;
+  value: bytes
+};
 
-%lexer {
-    # Define the lexer for DICOM metadata
-    meta_dcm_lexer = (
-        group_number: uint16(16)
-        element_number: uint16(16)
-        value_representation: uint16(16)
-        value_length: uint32(32)
-        value: bytes(value_length)
-    ) : DICOM_Metadata
-}
+type DICOMFileDirectory = struct {
+  directory: array of DICOMDirectory
+};
 
-%main {
-    # Define the main parsing function
-    parse_dcm_meta = (
-        meta_dcm: meta_dcm_lexer
-    ) : DICOM_Metadata
-}
+type DICOMFileMetaInformation = struct {
+  transfer_syntax_uid: TransferSyntaxUID;
+  media_storage_sop_instance_uid: MediaStorageSOPInstanceUID;
+  media_storage_sop_class_uid: MediaStorageSOPClassUID;
+  implementation_class_uid: uuid;
+  implementation_version_name: text
+};
+
+type DICOMFileHeader = struct {
+  preamble: bytes(128);
+  prefix: bytes(4);
+  meta_information: DICOMFileMetaInformation
+};
+
+type DICOMDataSet = struct {
+  data_set: array of struct {
+    tag: uint;
+    vr: text;
+    value: bytes
+  }
+};
+
+type DICOMSequence = struct {
+  sequence: array of DICOMDataSet
+};
+
+type DICOMItem = struct {
+  item: DICOMDataSet
+};
+
+type DICOMDataElement = struct {
+  tag: uint;
+  vr: text;
+  value: bytes
+};
+
+type DICOMDataElementWithSequence = struct {
+  data_element: DICOMDataElement;
+  sequence: DICOMSequence
+};
+
+type DICOMDataElementWithItem = struct {
+  data_element: DICOMDataElement;
+  item: DICOMItem
+};
+
+type DICOMDataElementWithValue = struct {
+  data_element: DICOMDataElement;
+  value: bytes
+};
+
+type DICOMDataElementWithUR = struct {
+  data_element: DICOMDataElement;
+  ur: text
+};
+
+type DICOMDataElementWithUI = struct {
+  data_element: DICOMDataElement;
+  ui: uuid
+};
+
+type DICOMDataElementWithUL = struct {
+  data_element: DICOMDataElement;
+  ul: uint
+};
+
+type DICOMDataElementWithUS = struct {
+  data_element: DICOMDataElement;
+  us: uint
+};
+
+type DICOMDataElementWithSL = struct {
+  data_element: DICOMDataElement;
+  sl: int
+};
+
+type DICOMDataElementWithSS = struct {
+  data_element: DICOMDataElement;
+  ss: int
+};
+
+type DICOMDataElementWithFL = struct {
+  data_element: DICOMDataElement;
+  fl: float
+};
+
+type DICOMDataElementWithFD = struct {
+  data_element: DICOMDataElement;
+  fd: double
+};
+
+type DICOMDataElementWithOB = struct {
+  data_element: DICOMDataElement;
+  ob: bytes
+};
+
+type DICOMDataElementWithOD = struct {
+  data_element: DICOMDataElement;
+  od: bytes
+};
+
+type DICOMDataElementWithOF = struct {
+  data_element: DICOMDataElement;
+  of: bytes
+};
+
+type DICOMDataElementWithOL = struct {
+  data_element: DICOMDataElement;
+  ol: bytes
+};
+
+type DICOMDataElementWithOW = struct {
+  data_element: DICOMDataElement;
+  ow: bytes
+};
+
+type DICOMDataElementWithPN = struct {
+  data_element: DICOMDataElement;
+  pn: text
+};
+
+type DICOMDataElementWithSH = struct {
+  data_element: DICOMDataElement;
+  sh: text
+};
+
+type DICOMDataElementWithLO = struct {
+  data_element: DICOMDataElement;
+  lo: text
+};
+
+type DICOMDataElementWithLT = struct {
+  data_element: DICOMDataElement;
+  lt: text
+};
+
+type DICOMDataElementWithST = struct {
+  data_element: DICOMDataElement;
+  st: text
+};
+
+type DICOMDataElementWithUC = struct {
+  data_element: DICOMDataElement;
+  uc: text
+};
+
+type DICOMDataElementWithUR = struct {
+  data_element: DICOMDataElement;
+  ur: text
+};
+
+type DICOMDataElementWithUT = struct {
+  data_element: DICOMDataElement;
+  ut: text
+};
+
+type DICOMDataElementWithUN = struct {
+  data_element: DICOMDataElement;
+  un: bytes
+};
+
+type DICOMDataElementWithAT = struct {
+  data_element: DICOMDataElement;
+  at: uint
+};
+
+type DICOMDataElementWithAS = struct {
+  data_element: DICOMDataElement;
+  as: text
+};
+
+type DICOMDataElementWithDA = struct {
+  data_element: DICOMDataElement;
+  da: date
+};
+
+type DICOMDataElementWithDT = struct {
+  data_element: DICOMDataElement;
+  dt: datetime
+};
+
+type DICOMDataElementWithTM = struct {
+  data_element: DICOMDataElement;
+  tm: time
+};
+
+type DICOMDataElementWithUI = struct {
+  data_element: DICOMDataElement;
+  ui: uuid
+};
+
+type DICOMDataElementWithCS = struct {
+  data_element: DICOMDataElement;
+  cs: text
+};
+
+type DICOMDataElementWithIS = struct {
+  data_element: DICOMDataElement;
+  is: int
+};
+
+type DICOMDataElementWithDS = struct {
+  data_element: DICOMDataElement;
+  ds: double
+};
+
+type DICOMDataElementWithAE = struct {
+  data_element: DICOMDataElement;
+  ae: text
+};
+
+type DICOMDataElementWithSQ = struct {
+  data_element: DICOMDataElement;
+  sq: array of DICOMDataElement
+};
+
+type DICOMDataElementWithUN = struct {
+  data_element: DICOMDataElement;
+  un: bytes
+};
+
+let main = DICOMFile;

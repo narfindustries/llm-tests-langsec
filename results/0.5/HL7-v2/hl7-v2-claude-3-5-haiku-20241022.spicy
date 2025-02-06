@@ -1,36 +1,135 @@
-module HL7;
+module HL7v2;
 
 import spicy;
 
 public type Message = unit {
-    : bytes &size=3 == b"MSH";
-    separators: Separators;
-    sending_app: field;
-    sending_facility: field;
-    receiving_app: field;
-    receiving_facility: field;
-    timestamp: field;
-    security: field;
-    message_type: field;
-    message_control_id: field;
-    processing_id: field;
-    version: field;
+    msh: MSH;
+    segments: list<Segment>;
+    msa: MSA;
 
-    segments: list<Segment> &until($$.type != b"");
-
-    type Separators = unit {
-        field_separator: bytes &size=1;
-        encoding_chars: bytes &size=4;
+    parse_segments = method() {
+        while ( True ) {
+            local segment = Segment();
+            if ( !segment.parse() )
+                break;
+            self.segments.append(segment);
+        }
+        return true;
     }
-
-    type Segment = unit {
-        type: bytes &size=3;
-        fields: list<field> &separator=separators.field_separator;
-    }
-
-    type field = bytes;
 };
 
-public function parse(data: bytes) : Message {
-    return Message(data);
-}
+type MSH = unit {
+    field_separator: bytes(size=1);
+    encoding_characters: bytes(size=4);
+    sending_application: string;
+    sending_facility: string;
+    receiving_application: string;
+    receiving_facility: string;
+    timestamp: string;
+    security: optional string;
+    message_type: string;
+    message_control_id: string;
+    processing_id: string;
+    version: string;
+    sequence_number: optional uint64;
+    continuation_pointer: optional string;
+    accepting_acknowledgment_type: optional string;
+    application_acknowledgment_type: optional string;
+    country_code: optional string;
+    character_set: optional string;
+    principal_language: optional string;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type Segment = unit {
+    segment_type: bytes(size=3);
+    fields: list<Field>;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type Field = unit {
+    components: list<Component>;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type Component = unit {
+    value: string;
+    subcomponents: optional list<SubComponent>;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type SubComponent = unit {
+    value: string;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type MSA = unit {
+    acknowledgment_code: string;
+    message_control_id: string;
+    text_message: optional string;
+    expected_sequence_number: optional uint64;
+    delayed_acknowledgment_type: optional string;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type PID = unit {
+    set_id: optional uint64;
+    patient_id: string;
+    patient_name: string;
+    date_of_birth: optional string;
+    gender: optional string;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type ADT = unit {
+    pid: PID;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type ORM = unit {
+    pid: PID;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+type ORU = unit {
+    pid: PID;
+
+    parse = method() -> bool {
+        return true;
+    }
+};
+
+public type Parser = unit {
+    message: Message;
+
+    parse = method() -> bool {
+        return self.message.parse_segments();
+    }
+};

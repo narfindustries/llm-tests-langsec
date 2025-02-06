@@ -1,62 +1,67 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
-#include <arpa/inet.h>
+#include <stdint.h>
+#include <string.h> //Added for memcpy
 
-#define PACKET_SIZE 64
-#define DEST_IP "127.0.0.1" //Change to target IP
 
-unsigned short checksum(unsigned short *buf, int len) {
-    unsigned long sum = 0;
-    for (int i = 0; i < len; i++)
-        sum += buf[i];
-    sum = (sum >> 16) + (sum & 0xFFFF);
-    sum += (sum >> 16);
-    return ~sum;
+typedef struct {
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint8_t data[];
+} icmp_header;
+
+hammer_parser icmp_parser() {
+    return seq(h_uint8(), h_uint8(), h_uint16(), h_bytes(0));
 }
 
-int main() {
-    int sockfd;
-    struct sockaddr_in dest;
-    char packet[PACKET_SIZE];
-    struct icmphdr *icmp = (struct icmphdr *)packet;
-    struct timeval tv;
-
-    sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    if (sockfd < 0) {
-        perror("socket");
-        exit(1);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <icmp_binary_file>\n", argv[0]);
+        return 1;
     }
 
-    memset(&dest, 0, sizeof(dest));
-    dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = inet_addr(DEST_IP);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    icmp->type = ICMP_ECHO;
-    icmp->code = 0;
-    icmp->checksum = 0;
-    icmp->un.echo.id = getpid();
-    icmp->un.echo.sequence = 0;
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    //Data payload
-    memset(packet + sizeof(struct icmphdr), 'A', PACKET_SIZE - sizeof(struct icmphdr));
+    uint8_t *buffer = (uint8_t *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
-    icmp->checksum = checksum((unsigned short *)packet, PACKET_SIZE);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
-    while (1) {
-        if (sendto(sockfd, packet, PACKET_SIZE, 0, (struct sockaddr *)&dest, sizeof(dest)) < 0) {
-            perror("sendto");
-            exit(1);
+    hammer_result result = hammer_parse(icmp_parser(), buffer, fsize);
+
+    if (result.success) {
+        icmp_header *icmp = (icmp_header *)malloc(result.length); // Allocate memory for the entire ICMP packet
+        if (icmp == NULL) {
+            perror("Memory allocation failed");
+            free(buffer);
+            return 1;
         }
-        //Added a small delay to avoid overwhelming the target
-        usleep(10000); // 10ms delay
+        memcpy(icmp, result.value, result.length); //Copy the parsed data to the allocated memory.
+
+        printf("ICMP Type: %u\n", icmp->type);
+        printf("ICMP Code: %u\n", icmp->code);
+        printf("ICMP Checksum: %u\n", icmp->checksum);
+        printf("Data Length: %zu\n", result.length - sizeof(icmp_header));
+        free(icmp);
+    } else {
+        fprintf(stderr, "Parsing failed at offset %zu: %s\n", result.offset, result.error);
     }
 
-    close(sockfd);
+    free(buffer);
     return 0;
 }

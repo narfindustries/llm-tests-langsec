@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/bitcoin"
+           xmlns:btc="http://www.example.org/bitcoin"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format encoding="UTF-8" byteOrder="littleEndian" lengthKind="explicit" representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="BitcoinTransaction" type="btc:TransactionType"/>
+
+  <xs:complexType name="TransactionType">
+    <xs:sequence>
+      <xs:element name="Version" type="xs:int" dfdl:length="4"/>
+      <xs:element name="InputCount" type="btc:VarIntType"/>
+      <xs:element name="Inputs" type="btc:InputListType" dfdl:occursCount="{../InputCount}" dfdl:occursCountKind="expression"/>
+      <xs:element name="OutputCount" type="btc:VarIntType"/>
+      <xs:element name="Outputs" type="btc:OutputListType" dfdl:occursCount="{../OutputCount}" dfdl:occursCountKind="expression"/>
+      <xs:element name="LockTime" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="SegWitMarker" type="xs:byte" dfdl:length="1" minOccurs="0"/>
+      <xs:element name="SegWitFlag" type="xs:byte" dfdl:length="1" minOccurs="0"/>
+      <xs:element name="WitnessData" type="btc:WitnessListType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="InputListType">
+    <xs:sequence>
+      <xs:element name="Input" type="btc:InputType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="InputType">
+    <xs:sequence>
+      <xs:element name="PreviousTxHash" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="PreviousTxOutputIndex" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="ScriptSigLength" type="btc:VarIntType"/>
+      <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:length="{../ScriptSigLength}"/>
+      <xs:element name="Sequence" type

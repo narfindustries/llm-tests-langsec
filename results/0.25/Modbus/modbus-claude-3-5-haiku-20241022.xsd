@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/modbus"
-           xmlns:modbus="http://example.com/modbus">
+           xmlns:tns="http://example.com/modbus">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
@@ -11,49 +11,221 @@
         alignment="1"
         leadingSkip="0"
         trailingSkip="0"
+        initiator=""
+        terminator=""
         separator=""
-        separatorPosition="infix"
         separatorPolicy="suppressed"
-        representation="binary"
+        separatorPosition="infix"
         encoding="UTF-8"
         byteOrder="bigEndian"
-        bitOrder="mostSignificantBitFirst"
-        fillByte="%#x00"
-        escapeSchemeRef=""
-        occursCountKind="parsed"
-        textNumberRep="standard"
-        textNumberCheckPolicy="strict"
-        textZeroRep="0"
-        initiatedContent="no"/>
+        representation="binary"
+        lengthKind="explicit"
+        lengthUnits="bytes"
+        binaryNumberRep="binary"
+        truncateSpecifiedLengthString="no"
+        encodingErrorPolicy="replace"
+        textBidi="no"
+        floating="no"
+        sequenceKind="ordered"
+        initiatedContent="no"
+        ignoreCase="no"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ModbusFrame" dfdl:lengthKind="implicit">
+  <xs:element name="ModbusFrame">
     <xs:complexType>
       <xs:sequence>
         <xs:element name="SlaveAddress" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
+          dfdl:representation="binary"
+          dfdl:byteOrder="bigEndian"
+          dfdl:length="1"
+          dfdl:lengthKind="explicit"/>
         
-        <xs:element name="FunctionCode" type="xs:unsignedByte" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="1"/>
-        
-        <xs:element name="Data" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="DataBytes" type="xs:hexBinary" 
-                dfdl:lengthKind="delimited" 
-                dfdl:terminator="%x00"/>
-            </xs:sequence>
-          </xs:complexType>
+        <xs:element name="FunctionCode">
+          <xs:simpleType>
+            <xs:restriction base="xs:unsignedByte">
+              <xs:enumeration value="1"/>
+              <xs:enumeration value="2"/>
+              <xs:enumeration value="3"/>
+              <xs:enumeration value="4"/>
+              <xs:enumeration value="5"/>
+              <xs:enumeration value="6"/>
+              <xs:enumeration value="15"/>
+              <xs:enumeration value="16"/>
+            </xs:restriction>
+          </xs:simpleType>
         </xs:element>
+
+        <xs:element name="RequestData" type="tns:RequestDataType"
+          dfdl:lengthKind="implicit"/>
         
-        <xs:element name="CRC" type="xs:unsignedShort" 
-          dfdl:lengthKind="explicit" 
-          dfdl:length="2"/>
+        <xs:element name="CRC" type="xs:unsignedShort"
+          dfdl:representation="binary"
+          dfdl:byteOrder="littleEndian"
+          dfdl:length="2"
+          dfdl:lengthKind="explicit"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
+  <xs:complexType name="RequestDataType">
+    <xs:choice>
+      <xs:element name="ReadCoilsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfCoils" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="ReadDiscreteInputsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfInputs" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="ReadHoldingRegistersRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="ReadInputRegistersRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="WriteSingleCoilRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="OutputAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="OutputValue">
+              <xs:simpleType>
+                <xs:restriction base="xs:unsignedShort">
+                  <xs:enumeration value="0"/>
+                  <xs:enumeration value="65280"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="WriteSingleRegisterRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="RegisterAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="RegisterValue" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="WriteMultipleCoilsRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfCoils" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="ByteCount" type="xs:unsignedByte"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="1"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="CoilValues" type="xs:hexBinary"
+              dfdl:representation="binary"
+              dfdl:length="{ ../ByteCount }"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="WriteMultipleRegistersRequest">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StartingAddress" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="2"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="ByteCount" type="xs:unsignedByte"
+              dfdl:representation="binary"
+              dfdl:byteOrder="bigEndian"
+              dfdl:length="1"
+              dfdl:lengthKind="explicit"/>
+            <xs:element name="RegisterValues" type="xs:hexBinary"
+              dfdl:representation="binary"
+              dfdl:length="{ ../ByteCount }"
+              dfdl:lengthKind="explicit"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:choice>
+  </xs:complexType>
 </xs:schema>

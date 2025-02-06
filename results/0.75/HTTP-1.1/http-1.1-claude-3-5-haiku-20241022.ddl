@@ -1,53 +1,51 @@
-HTTP-1.1-spec = {
-    // Header parsing helpers
-    is_token_char = (
-        | is_alpha
-        | is_digit
-        | is_in("!#$%&'*+-.^_`|~")
-    );
+grammar HTTP {
+    version = struct {
+        major: u8;
+        minor: u8;
+    }
 
-    token = +is_token_char;
+    method = enum {
+        GET,
+        POST,
+        PUT,
+        DELETE,
+        HEAD,
+        OPTIONS,
+        TRACE,
+        CONNECT,
+        PATCH
+    }
 
-    // Basic character classes
-    is_whitespace = is_in(" \t");
-    is_line_end = is_in("\r\n");
-    optional_whitespace = *is_whitespace;
+    header = struct {
+        name: string;
+        value: string;
+        is_optional: bool;
+    }
 
-    // HTTP version parsing
-    http_version = (
-        "HTTP/" 
-        digit+ "." digit+
-    );
+    request = struct {
+        method: method;
+        uri: string;
+        version: version;
+        headers: list<header>;
+        body: option<bytes>;
+    }
 
-    // Status line
-    status_line = (
-        http_version 
-        is_whitespace+ 
-        digit{3} 
-        is_whitespace+ 
-        *(~is_line_end)
-        is_line_end
-    );
+    response = struct {
+        version: version;
+        status_code: u16;
+        status_text: string;
+        headers: list<header>;
+        body: option<bytes>;
+    }
 
-    // Header parsing
-    header_name = token;
-    header_value = *(~is_line_end);
-    header = (
-        header_name 
-        ":" 
-        optional_whitespace 
-        header_value 
-        is_line_end
-    );
+    message = variant {
+        request_msg(request);
+        response_msg(response);
+    }
 
-    // Headers collection
-    headers = *(header);
-    end_headers = is_line_end;
-
-    // Full HTTP response
-    http_response = (
-        status_line 
-        headers 
-        end_headers
-    );
-};
+    parser http_parser {
+        parse_request(input: bytes) -> request;
+        parse_response(input: bytes) -> response;
+        parse_message(input: bytes) -> message;
+    }
+}

@@ -1,25 +1,95 @@
-# TLS Client Hello Message
-type TLS_Client_Hello = record {
-  /* Record Layer */
-  content_type: uint8 = 0x14, # Handshake Message
-  version: uint16 = 0x0303, # TLS Version 1.2
-  length: uint16 = 0x000d, # Message Length (includes handshake headers)
-  
-  /* Handshake Layer */
-  handshake_type: uint8 = 0x01, # Client Hello
-  handshake_length: uint24 = 0x00000d, # Handshake Length (includes handshake headers)
-  handshake_version: uint16 = 0x0303, # TLS Version 1.2
-  
-  /* Client Hello */
-  random: bytes = "abcdefabcdefab", # Client Random
-  session_id_length: uint8 = 0x00, # Session ID Length (empty)
-  session_id: bytes = "", # Session ID (empty)
-  cipher_suites_length: uint16 = 0x0002, # Cipher Suites Length
-  cipher_suites: array[uint16] = [0x0005], # Cipher Suites (TLS_RSA_WITH_RC4_128_SHA)
-  compression_methods_length: uint8 = 0x01, # Compression Methods Length
-  compression_methods: array[uint8] = [0x00] # Compression Methods (Null)
-};
+module TLS_Client_Hello;
 
-# Main Spicy Definition
-module main;
-type main = TLS_Client_Hello;
+type ProtocolVersion = record {
+  major = uint8;
+  minor = uint8;
+}
+
+type Random = record {
+  gmt_unix_time = uint32;
+  random_bytes = byte[28];
+}
+
+type CipherSuite = enum {
+  TLS_AES_128_GCM_SHA256 = 0x1301,
+  TLS_AES_256_GCM_SHA384 = 0x1302,
+  TLS_CHACHA20_POLY1305_SHA256 = 0x1303,
+  TLS_AES_128_CCM_SHA256 = 0x1304,
+  TLS_AES_128_CCM_8_SHA256 = 0x1305,
+}
+
+type CompressionMethod = enum {
+  null = 0,
+}
+
+type ExtensionType = enum {
+  server_name = 0,
+  max_fragment_length = 1,
+  client_certificate_url = 2,
+  trusted_ca_keys = 3,
+  truncated_hmac = 4,
+  status_request = 5,
+  user_mapping = 6,
+  client_authz = 7,
+  server_authz = 8,
+  cert_type = 9,
+  supported_groups = 10,
+  ec_point_formats = 11,
+  srp = 12,
+  signature_algorithms = 13,
+  use_srtp = 14,
+  heartbeat = 15,
+  application_layer_protocol_negotiation = 16,
+  status_request_v2 = 17,
+  signed_certificate_timestamp = 18,
+  client_certificate_type = 19,
+  server_certificate_type = 20,
+  padding = 21,
+  encrypt_then_mac = 22,
+  extended_master_secret = 23,
+  session_ticket = 35,
+  pre_shared_key = 41,
+  early_data = 42,
+  supported_versions = 43,
+  cookie = 44,
+  psk_key_exchange_modes = 45,
+  ticket_early_data_info = 46,
+  pre_shared_key_identities = 47,
+  post_handshake_auth = 49,
+  signature_algorithms_cert = 50,
+  key_share = 51,
+  transcript_hash = 53,
+  record_size_limit = 54,
+  record_size_limit_size = 55,
+}
+
+type Extension = record {
+  extension_type = ExtensionType;
+  extension_data = byte[*];
+}
+
+type ClientHello = record {
+  legacy_version = ProtocolVersion;
+  random = Random;
+  legacy_session_id = byte[0..32];
+  legacy_compression_methods = CompressionMethod[1..255];
+  version = ProtocolVersion;
+  cipher_suites = CipherSuite[2..65535];
+  compression_methods = CompressionMethod[1..255];
+  extensions = Extension[0..65535];
+}
+
+type Handshake = record {
+  legacy_version = ProtocolVersion;
+  random = Random;
+  legacy_session_id = byte[0..32];
+  legacy_compression_methods = CompressionMethod[1..255];
+  version = ProtocolVersion;
+  length = uint16;
+  client_hello = ClientHello;
+}
+
+refine connection TCP_Conn += {
+  role = TLS_Client;
+  meta = Handshake;
+}

@@ -1,41 +1,41 @@
-%include zeek/protocol
-
 module DNS;
+
+import spicy;
 
 public type Message = unit {
     header: Header;
-    queries: Query[];
-    answers: ResourceRecord[];
-    authorities: ResourceRecord[];
-    additionals: ResourceRecord[];
-
-    on %done { print self; }
+    questions: Question[self.header.qdcount];
+    answers: ResourceRecord[self.header.ancount];
+    authorities: ResourceRecord[self.header.nscount];
+    additionals: ResourceRecord[self.header.arcount];
 };
 
 type Header = unit {
     id: uint16;
-    qr: uint1;
-    opcode: uint4;
-    aa: uint1;
-    tc: uint1;
-    rd: uint1;
-    ra: uint1;
-    z: uint3;
-    rcode: uint4;
+    flags: uint16;
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
 };
 
-type Query = unit {
-    name: Name;
+type Label = unit {
+    length: uint8 &requires = $$ <= 63;
+    name: bytes &size=self.length if (self.length > 0);
+} &until(self.length == 0);
+
+type DomainName = unit {
+    labels: Label[];
+};
+
+type Question = unit {
+    name: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
 type ResourceRecord = unit {
-    name: Name;
+    name: DomainName;
     type_: uint16;
     class: uint16;
     ttl: uint32;
@@ -43,29 +43,6 @@ type ResourceRecord = unit {
     rdata: bytes &size=self.rdlength;
 };
 
-type Name = unit {
-    labels: Label[];
+public type DNS_Packet = unit {
+    msg: Message;
 };
-
-type Label = unit {
-    var compressed: bool = False;
-    var offset: uint16;
-    
-    : uint8 &parse(parse_label_length);
-
-    switch {
-        self.compressed -> : b"" { self.offset = $$ & 0x3fff; }
-        * -> label: bytes &size=$$;
-    };
-};
-
-function parse_label_length(data: bytes): uint8 {
-    local len = data[0];
-    if ((len & 0xc0) == 0xc0)
-        return 0;
-    return len;
-}
-
-on DNS::Message -> event dns_message($conn, self.header.id, self.header.qr, self.header.opcode,
-    self.header.aa, self.header.tc, self.header.rd, self.header.ra, self.header.rcode,
-    self.queries, self.answers, self.authorities, self.additionals);

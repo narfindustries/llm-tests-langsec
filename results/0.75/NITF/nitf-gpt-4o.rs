@@ -1,78 +1,146 @@
+extern crate nom;
+
 use nom::{
-    bytes::complete::{take, take_until},
+    bytes::complete::take,
     combinator::map_res,
-    number::complete::{be_u16, be_u32},
+    sequence::{preceded, tuple},
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
-use std::env;
 
 #[derive(Debug)]
-struct NITFHeader {
+struct NITFFileHeader {
     fhdr: String,
-    fver: String,
     clevel: String,
     stype: String,
-    odate: String,
+    ostaid: String,
+    fdt: String,
     ftitle: String,
     fsclas: String,
-    fscop: String,
+    fscode: String,
+    fsctlh: String,
+    fsrel: String,
+    fsdctp: String,
+    fsdcdt: String,
+    fsdcdtx: String,
+    fsdcxm: String,
+    fscatp: String,
+    fscaut: String,
+    fscrsn: String,
+    fssrdt: String,
+    encryp: String,
+    fbkgc: String,
+    oname: String,
+    ophone: String,
+    fl: u32,
+    hl: u32,
+    numi: u32,
+    numg: u32,
+    numt: u32,
+    numdes: u32,
+    numres: u32,
+    udhdl: String,
+    xhdl: String,
 }
 
-fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NITFHeader> {
-    let (input, fhdr) = map_res(take(9u8), std::str::from_utf8)(input)?;
-    let (input, fver) = map_res(take(5u8), std::str::from_utf8)(input)?;
-    let (input, clevel) = map_res(take(2u8), std::str::from_utf8)(input)?;
-    let (input, stype) = map_res(take(4u8), std::str::from_utf8)(input)?;
-    let (input, odate) = map_res(take(14u8), std::str::from_utf8)(input)?;
-    let (input, ftitle) = map_res(take(80u8), std::str::from_utf8)(input)?;
-    let (input, fsclas) = map_res(take(1u8), std::str::from_utf8)(input)?;
-    let (input, fscop) = map_res(take(40u8), std::str::from_utf8)(input)?;
+fn parse_string<'a>(length: usize) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], String> {
+    move |input: &[u8]| map_res(take(length), |s: &[u8]| String::from_utf8(s.to_vec()))(input)
+}
 
-    Ok((
-        input,
-        NITFHeader {
-            fhdr: fhdr.to_string(),
-            fver: fver.to_string(),
-            clevel: clevel.to_string(),
-            stype: stype.to_string(),
-            odate: odate.to_string(),
-            ftitle: ftitle.trim_end().to_string(),
-            fsclas: fsclas.to_string(),
-            fscop: fscop.trim_end().to_string(),
-        },
-    ))
+fn parse_u32<'a>(length: usize) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], u32> {
+    move |input: &[u8]| map_res(map_res(take(length), |s: &[u8]| String::from_utf8(s.to_vec())), |s| {
+        s.trim().parse::<u32>()
+    })(input)
+}
+
+fn parse_file_header(input: &[u8]) -> IResult<&[u8], NITFFileHeader> {
+    let (input, (
+        fhdr, clevel, stype, ostaid, fdt, ftitle, fsclas, fscode, fsctlh, fsrel, fsdctp, fsdcdt, fsdcdtx, fsdcxm, fscatp, fscaut, fscrsn, fssrdt, encryp, fbkgc, oname, ophone, fl, hl, numi, numg, numt, numdes, numres, udhdl, xhdl
+    )) = tuple((
+        parse_string(9),  // FHDR
+        parse_string(2),  // CLEVEL
+        parse_string(4),  // STYPE
+        parse_string(10), // OSTAID
+        parse_string(14), // FDT
+        parse_string(80), // FTITLE
+        parse_string(1),  // FSCLAS
+        parse_string(40), // FSCODE
+        parse_string(40), // FSCTLH
+        parse_string(40), // FSREL
+        parse_string(2),  // FSDCTP
+        parse_string(8),  // FSDCDT
+        parse_string(4),  // FSDCDTX
+        parse_string(1),  // FSDCXM
+        parse_string(1),  // FSCATP
+        parse_string(20), // FSCAUT
+        parse_string(20), // FSCRSN
+        parse_string(8),  // FSSRDT
+        parse_string(1),  // ENCRYP
+        parse_string(3),  // FBKGC
+        parse_string(27), // ONAME
+        parse_string(18), // OPHONE
+        parse_u32(12),    // FL
+        parse_u32(6),     // HL
+        parse_u32(3),     // NUMI
+        parse_u32(3),     // NUMG
+        parse_u32(3),     // NUMT
+        parse_u32(3),     // NUMDES
+        parse_u32(3),     // NUMRES
+        parse_string(5),  // UDHDL
+        parse_string(3),  // XHDL
+    ))(input)?;
+
+    Ok((input, NITFFileHeader {
+        fhdr,
+        clevel,
+        stype,
+        ostaid,
+        fdt,
+        ftitle,
+        fsclas,
+        fscode,
+        fsctlh,
+        fsrel,
+        fsdctp,
+        fsdcdt,
+        fsdcdtx,
+        fsdcxm,
+        fscatp,
+        fscaut,
+        fscrsn,
+        fssrdt,
+        encryp,
+        fbkgc,
+        oname,
+        ophone,
+        fl,
+        hl,
+        numi,
+        numg,
+        numt,
+        numdes,
+        numres,
+        udhdl,
+        xhdl,
+    }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
+    if args.len() != 2 {
         eprintln!("Usage: {} <file>", args[0]);
-        return;
+        std::process::exit(1);
     }
-    let file_path = PathBuf::from(&args[1]);
-    let mut file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("Error opening file: {}", e);
-            return;
-        }
-    };
 
+    let file_path = &args[1];
+    let mut file = File::open(file_path).expect("Unable to open file");
     let mut buffer = Vec::new();
-    if let Err(e) = file.read_to_end(&mut buffer) {
-        eprintln!("Error reading file: {}", e);
-        return;
-    }
+    file.read_to_end(&mut buffer).expect("Unable to read file");
 
-    match parse_nitf_header(&buffer) {
-        Ok((_, header)) => {
-            println!("Parsed NITF Header: {:?}", header);
-        }
-        Err(e) => {
-            eprintln!("Error parsing NITF: {:?}", e);
-        }
+    match parse_file_header(&buffer) {
+        Ok((_, header)) => println!("{:?}", header),
+        Err(e) => eprintln!("Failed to parse NITF file: {:?}", e),
     }
 }

@@ -1,0 +1,2 @@
+impl FnMut(&[u8]) -> Result<(&[u8], (ExtensionType, &[u8])), nom::Err<nom::error::Error<&[u8]>>>
+impl FnMut(&[u8]) -> Result<(&[u8], (ExtensionType, &[u8])), nom::internal::Err<nom::error::Error<&[u8]>>>

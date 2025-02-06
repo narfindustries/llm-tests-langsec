@@ -9,23 +9,44 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class Elf(KaitaiStruct):
-    """The Executable and Linkable Format (ELF) is a common standard file format for
-    executables, object code, shared libraries, and core dumps. First published
-    in the specification for the application binary interface (ABI) of the Unix
-    operating system version named System V Release 4 (SVR4), and later in the
-    Tool Interface Standard, it was quickly accepted among different vendors of
-    Unix systems. In years since, it has become one of the most used formats for
-    binary executables in Unix and Unix-like systems on many hardware platforms.
+    """The ELF file format is used for executables, shared libraries, and core dumps. This spec covers the ELF 64-bit structures.
     """
 
+    class EndianType(Enum):
+        le = 1
+        be = 2
+
+    class BitsType(Enum):
+        b32 = 1
+        b64 = 2
+
+    class OsAbi(Enum):
+        system_v = 0
+        hpux = 1
+        netbsd = 2
+        linux = 3
+        solaris = 6
+        aix = 7
+        irix = 8
+        freebsd = 9
+        tru64 = 10
+        modesto = 11
+        openbsd = 12
+        arm_aeabi = 64
+        arm = 97
+        standalone = 255
+
     class MachineType(Enum):
-        sparc = 2
+        none = 0
         x86 = 3
-        mips = 8
-        powerpc = 20
-        arm = 40
         x86_64 = 62
-        aarch64 = 183
+
+    class ObjType(Enum):
+        none = 0
+        rel = 1
+        exec = 2
+        dyn = 3
+        core = 4
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -36,62 +57,26 @@ class Elf(KaitaiStruct):
         self.magic = self._io.read_bytes(4)
         if not self.magic == b"\x7F\x45\x4C\x46":
             raise kaitaistruct.ValidationNotEqualError(b"\x7F\x45\x4C\x46", self.magic, self._io, u"/seq/0")
-        self.bits = self._io.read_u1()
-        self.endian = self._io.read_u1()
-        self.ei_version = self._io.read_u1()
-        self.abi = self._io.read_u1()
+        self.bits = KaitaiStream.resolve_enum(Elf.BitsType, self._io.read_u1())
+        self.endian = KaitaiStream.resolve_enum(Elf.EndianType, self._io.read_u1())
+        self.header_version = self._io.read_bytes(1)
+        if not self.header_version == b"\x01":
+            raise kaitaistruct.ValidationNotEqualError(b"\x01", self.header_version, self._io, u"/seq/3")
+        self.os_abi = KaitaiStream.resolve_enum(Elf.OsAbi, self._io.read_u1())
         self.abi_version = self._io.read_u1()
         self.pad = self._io.read_bytes(7)
-        _on = self.bits
-        if _on == 1:
-            self.header = Elf.Header32(self._io, self, self._root)
-        elif _on == 2:
-            self.header = Elf.Header64(self._io, self, self._root)
-
-    class Header32(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.type = self._io.read_u2le()
-            self.machine = self._io.read_u2le()
-            self.version = self._io.read_u4le()
-            self.entry_point = self._io.read_u4le()
-            self.ph_off = self._io.read_u4le()
-            self.sh_off = self._io.read_u4le()
-            self.flags = self._io.read_u4le()
-            self.eh_size = self._io.read_u2le()
-            self.ph_entry_size = self._io.read_u2le()
-            self.ph_num = self._io.read_u2le()
-            self.sh_entry_size = self._io.read_u2le()
-            self.sh_num = self._io.read_u2le()
-            self.sh_str_idx = self._io.read_u2le()
-
-
-    class Header64(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.type = self._io.read_u2le()
-            self.machine = self._io.read_u2le()
-            self.version = self._io.read_u8le()
-            self.entry_point = self._io.read_u8le()
-            self.ph_off = self._io.read_u8le()
-            self.sh_off = self._io.read_u8le()
-            self.flags = self._io.read_u4le()
-            self.eh_size = self._io.read_u2le()
-            self.ph_entry_size = self._io.read_u2le()
-            self.ph_num = self._io.read_u2le()
-            self.sh_entry_size = self._io.read_u2le()
-            self.sh_num = self._io.read_u2le()
-            self.sh_str_idx = self._io.read_u2le()
-
+        self.type = KaitaiStream.resolve_enum(Elf.ObjType, self._io.read_u2le())
+        self.machine = KaitaiStream.resolve_enum(Elf.MachineType, self._io.read_u2le())
+        self.version = self._io.read_u4le()
+        self.entry_point = self._io.read_u8le()
+        self.ph_off = self._io.read_u8le()
+        self.sh_off = self._io.read_u8le()
+        self.flags = self._io.read_u4le()
+        self.eh_size = self._io.read_u2le()
+        self.ph_ent_size = self._io.read_u2le()
+        self.ph_num = self._io.read_u2le()
+        self.sh_ent_size = self._io.read_u2le()
+        self.sh_num = self._io.read_u2le()
+        self.sh_str_idx = self._io.read_u2le()
 
 

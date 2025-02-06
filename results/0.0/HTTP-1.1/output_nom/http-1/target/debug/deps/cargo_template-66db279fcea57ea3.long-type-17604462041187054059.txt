@@ -1,0 +1,2 @@
+impl FnMut(&str) -> Result<(&str, (StatusCode, ReasonPhrase)), nom::Err<nom::error::Error<&str>>>
+impl FnMut(&str) -> Result<(&str, (StatusCode, ReasonPhrase)), nom::internal::Err<nom::error::Error<&str>>>

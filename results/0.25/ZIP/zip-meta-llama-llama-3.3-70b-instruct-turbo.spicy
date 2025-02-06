@@ -1,96 +1,126 @@
-# ZIP file format specification in Zeek Spicy
+module ZIP;
 
-type ZipLocalFileHeader = record {
-    local_file_header_signature: uint16 = 0x04034b50;
-    version_needed_to_extract: uint16;
-    general_purpose_bit_flag: uint16;
-    compression_method: uint16;
-    last_modification_time: uint16;
-    last_modification_date: uint16;
-    crc32: uint32;
-    compressed_size: uint32;
-    uncompressed_size: uint32;
-    file_name_length: uint16;
-    extra_field_length: uint16;
+type LocalHeader = struct {
+  local_header_signature: uint32;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_mod_time: uint16;
+  last_mod_date: uint16;
+  crc_32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
 };
 
-type ZipCentralDirectoryEntry = record {
-    central_directory_signature: uint32 = 0x02014b50;
-    version_made_by: uint16;
-    version_needed_to_extract: uint16;
-    general_purpose_bit_flag: uint16;
-    compression_method: uint16;
-    last_modification_time: uint16;
-    last_modification_date: uint16;
-    crc32: uint32;
-    compressed_size: uint32;
-    uncompressed_size: uint32;
-    file_name_length: uint16;
-    extra_field_length: uint16;
-    file_comment_length: uint16;
-    disk_number_start: uint16;
-    internal_file_attributes: uint16;
-    external_file_attributes: uint32;
-    relative_offset_local_header: uint32;
+type CentralDirectoryHeader = struct {
+  central_header_signature: uint32;
+  version_made_by: uint16;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_mod_time: uint16;
+  last_mod_date: uint16;
+  crc_32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
+  file_comment_length: uint16;
+  disk_number_start: uint16;
+  int_attributes: uint16;
+  ext_attributes: uint32;
 };
 
-type ZipEndOfCentralDirectory = record {
-    end_of_central_directory_signature: uint32 = 0x06054b50;
-    number_of_this_disk: uint16;
-    number_of_the_disk_where_the_central_directory_starts: uint16;
-    total_number_of_entries_in_the_central_directory_on_this_disk: uint16;
-    total_number_of_entries_in_the_central_directory: uint16;
-    size_of_the_central_directory: uint32;
-    offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number: uint32;
-    zip_file_comment_length: uint16;
+type EndOfCentralDirectoryRecord = struct {
+  end_of_central_dir_signature: uint32;
+  number_of_this_disk: uint16;
+  number_of_the_disk_where_the_central_directory_starts: uint16;
+  total_number_of_entries_in_the_central_directory_on_this_disk: uint16;
+  total_number_of_entries_in_the_central_directory: uint16;
+  size_of_the_central_directory: uint32;
+  offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number: uint32;
+  zip_file_comment_length: uint16;
 };
 
-type ZipArchive = sequence of record {
-    local_file_header: ZipLocalFileHeader;
-    file_name: bytestring(local_file_header.file_name_length);
-    extra_field: bytestring(local_file_header.extra_field_length);
-    file_data: bytestring(local_file_header.compressed_size);
+type GeneralPurposeBitFlag = struct {
+  encrypted_file: bool;
+  compression_option: bool;
+  descriptor: bool;
+  enhanced_deflate: bool;
+  compressed_patched_data: bool;
+  strong_encryption: bool;
 };
 
-type ZipCentralDirectory = sequence of record {
-    central_directory_entry: ZipCentralDirectoryEntry;
-    file_name: bytestring(central_directory_entry.file_name_length);
-    extra_field: bytestring(central_directory_entry.extra_field_length);
-    file_comment: bytestring(central_directory_entry.file_comment_length);
+type InternalFileAttributes = struct {
+  text_file: bool;
 };
 
-type ZipFile = record {
-    zip_archive: ZipArchive;
-    central_directory: ZipCentralDirectory;
-    end_of_central_directory: ZipEndOfCentralDirectory;
+type ExternalFileAttributes = struct {
+  file_type: uint16;
+  file_permissions: uint16;
 };
 
-event zeek::-spicy::file_sniff(f: fa_file, meta: fa_metadata) {
-    # Skip non-ZIP files
-    if (metaฑype != "application/zip") {
-        return;
-    }
+type CompressionMethod = enum {
+  STORED,
+  SHRUNK,
+  IMPLoded,
+  TOKENIZED,
+  DEFLATED,
+  IMPLoded_DICTIONARY,
+  RESERVED_6,
+  RESERVED_7,
+  DEFLATED64,
+  IMPLoded_DICTIONARY_COMPRESSED_DATA_DESCRIPTOR,
+};
 
-    # Extract file contents
-    local contents = f$contents;
+let zip_file: struct {
+  local_headers: array[LocalHeader];
+  central_directory_headers: array[CentralDirectoryHeader];
+  end_of_central_directory_record: EndOfCentralDirectoryRecord;
+};
 
-    # Parse ZIP file structure
-    local zip_file: ZipFile;
-    try {
-        zip_file = contents;
-    } catch (e) {
-        # Handle parsing errors
-        print("Error parsing ZIP file:", e);
-        return;
-    }
+let local_header: struct {
+  local_header_signature: uint32;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_mod_time: uint16;
+  last_mod_date: uint16;
+  crc_32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
+};
 
-    # Process each file in the ZIP archive
-    for (local_file_header in zip_file.zip_archive) {
-        # Extract file name and data
-        local file_name = local_file_header.file_name;
-        local file_data = local_file_header.file_data;
+let central_directory_header: struct {
+  central_header_signature: uint32;
+  version_made_by: uint16;
+  version_needed_to_extract: uint16;
+  general_purpose_bit_flag: uint16;
+  compression_method: uint16;
+  last_mod_time: uint16;
+  last_mod_date: uint16;
+  crc_32: uint32;
+  compressed_size: uint32;
+  uncompressed_size: uint32;
+  filename_length: uint16;
+  extra_field_length: uint16;
+  file_comment_length: uint16;
+  disk_number_start: uint16;
+  int_attributes: uint16;
+  ext_attributes: uint32;
+};
 
-        # Process file data
-        # ... (add custom processing logic here)
-    }
-}
+let end_of_central_directory_record: struct {
+  end_of_central_dir_signature: uint32;
+  number_of_this_disk: uint16;
+  number_of_the_disk_where_the_central_directory_starts: uint16;
+  total_number_of_entries_in_the_central_directory_on_this_disk: uint16;
+  total_number_of_entries_in_the_central_directory: uint16;
+  size_of_the_central_directory: uint32;
+  offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number: uint32;
+  zip_file_comment_length: uint16;
+};

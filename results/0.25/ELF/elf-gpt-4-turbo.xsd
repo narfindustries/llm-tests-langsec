@@ -1,42 +1,93 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/elf"
            xmlns:ex="http://example.com/elf">
 
-  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+  <!-- Define the basic ELF types -->
+  <xs:simpleType name="byte">
+    <xs:restriction base="xs:byte"/>
+  </xs:simpleType>
 
+  <xs:simpleType name="half">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="word">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="xword">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="addr">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="offset">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+
+  <!-- ELF Header -->
   <xs:complexType name="ElfHeader">
     <xs:sequence>
-      <xs:element name="e_ident" type="ex:EIdent" dfdl:length="16" />
-      <xs:element name="e_type" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_machine" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_version" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_entry" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_phoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_shoff" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
-      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:byteOrder="littleEndian" />
+      <xs:element name="e_ident" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="16"/>
+      <xs:element name="e_type" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_machine" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_version" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_entry" type="ex:addr" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_phoff" type="ex:offset" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_shoff" type="ex:offset" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_flags" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_ehsize" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_phentsize" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_phnum" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_shentsize" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_shnum" type="ex:half" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="e_shstrndx" type="ex:half" dfdl:byteOrder="littleEndian"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="EIdent">
+  <!-- Program Header -->
+  <xs:complexType name="ProgramHeader">
     <xs:sequence>
-      <xs:element name="ei_mag" type="xs:byte" dfdl:length="4" dfdl:initiatedContent="true"/>
-      <xs:element name="ei_class" type="xs:byte" dfdl:representation="binary"/>
-      <xs:element name="ei_data" type="xs:byte" dfdl:representation="binary"/>
-      <xs:element name="ei_version" type="xs:byte" dfdl:representation="binary"/>
-      <xs:element name="ei_osabi" type="xs:byte" dfdl:representation="binary"/>
-      <xs:element name="ei_abiversion" type="xs:byte" dfdl:representation="binary"/>
-      <xs:element name="ei_pad" type="xs:byte" dfdl:length="7" dfdl:initiatedContent="true"/>
+      <xs:element name="p_type" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_flags" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_offset" type="ex:offset" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_vaddr" type="ex:addr" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_paddr" type="ex:addr" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_filesz" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_memsz" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="p_align" type="ex:xword" dfdl:byteOrder="littleEndian"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="ElfFile" type="ex:ElfHeader" dfdl:byteOrder="littleEndian"/>
+  <!-- Section Header -->
+  <xs:complexType name="SectionHeader">
+    <xs:sequence>
+      <xs:element name="sh_name" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_type" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_flags" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_addr" type="ex:addr" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_offset" type="ex:offset" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_size" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_link" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_info" type="ex:word" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_addralign" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="sh_entsize" type="ex:xword" dfdl:byteOrder="littleEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ELF File -->
+  <xs:complexType name="ElfFile">
+    <xs:sequence>
+      <xs:element name="header" type="ex:ElfHeader"/>
+      <xs:element name="programHeaders" type="ex:ProgramHeader" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../header/e_phnum }"/>
+      <xs:element name="sectionHeaders" type="ex:SectionHeader" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="expression" dfdl:occursCount="{ ../header/e_shnum }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Root element -->
+  <xs:element name="elf" type="ex:ElfFile"/>
 
 </xs:schema>

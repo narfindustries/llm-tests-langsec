@@ -1,90 +1,125 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-HParser* init_gzip_parser() {
-    // Constants and flags
-    HParser* id1 = h_ch(0x1f);
-    HParser* id2 = h_ch(0x8b);
-    HParser* cm = h_ch(0x08);  // Compression method (DEFLATE)
+static HParser *gzip_header;
+static HParser *gzip_optional_fields;
+static HParser *gzip_footer;
+static HParser *gzip_parser;
+
+static HParsedToken *act_make_gzip(const HParseResult *p, void *user_data) {
+    return (HParsedToken *)p->ast;
+}
+
+void init_parser(void) {
+    // Fixed ID fields
+    HParser *id1 = h_ch('\x1f');
+    HParser *id2 = h_ch('\x8b');
     
-    // Flags byte parser
-    HParser* flags = h_bits(8, false);
+    // Compression Method
+    HParser *cm = h_ch('\x08');  // Only deflate is supported
+    
+    // Flags
+    HParser *flags = h_uint8();
+    
+    // Basic header
+    HParser *basic_header = h_sequence(id1, id2, cm, flags, NULL);
     
     // MTIME (4 bytes)
-    HParser* mtime = h_uint32();
+    HParser *mtime = h_uint32();
     
-    // Extra flags and OS
-    HParser* xfl = h_uint8();
-    HParser* os = h_uint8();
+    // XFL (1 byte)
+    HParser *xfl = h_uint8();
+    
+    // OS (1 byte)
+    HParser *os = h_uint8();
     
     // Optional fields based on flags
-    HParser* extra_length = h_uint16();
-    HParser* extra_field = h_length_value(extra_length);
-    HParser* filename = h_many_till(h_not_in("\0", 1), h_ch(0x00));
-    HParser* comment = h_many_till(h_not_in("\0", 1), h_ch(0x00));
-    HParser* crc16 = h_uint16();
+    // FEXTRA
+    HParser *xlen = h_uint16();
+    HParser *extra_field = h_length_value(xlen, h_uint8());
+    HParser *fextra = h_optional(h_sequence(xlen, extra_field, NULL));
     
-    // Compressed data and footer
-    HParser* compressed_data = h_many(h_uint8());
-    HParser* crc32 = h_uint32();
-    HParser* isize = h_uint32();
+    // FNAME
+    HParser *not_null = h_not_in("\0", 1);
+    HParser *fname = h_optional(h_sequence(h_many(not_null), h_ch('\0'), NULL));
     
-    // Sequence to check flags and include optional fields
-    HParser* optional_fields = h_sequence(
-        h_action(flags, act_get_flags),
-        h_optional(extra_field),
-        h_optional(filename),
-        h_optional(comment),
-        h_optional(crc16),
-        NULL
-    );
+    // FCOMMENT
+    HParser *fcomment = h_optional(h_sequence(h_many(not_null), h_ch('\0'), NULL));
     
-    // Complete GZIP format
-    return h_sequence(
-        id1,
-        id2,
-        cm,
-        optional_fields,
-        mtime,
-        xfl,
-        os,
-        compressed_data,
-        crc32,
-        isize,
-        NULL
-    );
+    // FHCRC
+    HParser *hcrc = h_optional(h_uint16());
+    
+    // Compressed data (variable length)
+    HParser *compressed_data = h_many1(h_uint8());
+    
+    // Footer
+    HParser *crc32 = h_uint32();
+    HParser *isize = h_uint32();
+    gzip_footer = h_sequence(crc32, isize, NULL);
+    
+    // Combine all parts
+    gzip_parser = h_sequence(basic_header,
+                           mtime,
+                           xfl,
+                           os,
+                           fextra,
+                           fname,
+                           fcomment,
+                           hcrc,
+                           compressed_data,
+                           gzip_footer,
+                           NULL);
 }
 
-typedef struct {
-    uint8_t ftext : 1;
-    uint8_t fhcrc : 1;
-    uint8_t fextra : 1;
-    uint8_t fname : 1;
-    uint8_t fcomment : 1;
-    uint8_t reserved : 3;
-} GzipFlags;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gzip_file>\n", argv[0]);
+        return 1;
+    }
 
-HParsedToken* act_get_flags(const HParseResult* p) {
-    uint8_t flags = H_CAST_UINT(p->ast);
-    GzipFlags* gflags = H_ALLOC(GzipFlags);
-    
-    gflags->ftext = (flags >> 0) & 1;
-    gflags->fhcrc = (flags >> 1) & 1;
-    gflags->fextra = (flags >> 2) & 1;
-    gflags->fname = (flags >> 3) & 1;
-    gflags->fcomment = (flags >> 4) & 1;
-    gflags->reserved = (flags >> 5) & 7;
-    
-    return H_MAKE_UINT(flags);
-}
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
 
-int main() {
-    HParser* parser = init_gzip_parser();
-    
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+    // Get file size
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Read entire file
+    uint8_t *input = malloc(size);
+    if (!input) {
+        perror("Failed to allocate memory");
+        fclose(f);
         return 1;
     }
     
+    if (fread(input, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(input);
+        fclose(f);
+        return 1;
+    }
+    fclose(f);
+
+    // Initialize parser
+    init_parser();
+
+    // Parse input
+    HParseResult *result = h_parse(gzip_parser, input, size);
+    if (!result) {
+        fprintf(stderr, "Failed to parse GZIP file\n");
+        free(input);
+        return 1;
+    }
+
+    // Result is available in result->ast
+    // Add processing code here if needed
+
+    h_parse_result_free(result);
+    free(input);
     return 0;
 }

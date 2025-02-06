@@ -1,42 +1,117 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
 
-// Define parser for Claude Haiku poem structure
-static HParser* claude_haiku_parser() {
-    // First line: 5 syllables
-    HParser* first_line = h_repeat_n(h_choice(
-        h_ch('a'), h_ch('e'), h_ch('i'), h_ch('o'), h_ch('u'),
-        h_ch('b'), h_ch('c'), h_ch('d'), h_ch('f'), h_ch('g'), 
-        h_ch('h'), h_ch('j'), h_ch('k'), h_ch('l'), h_ch('m'), 
-        h_ch('n'), h_ch('p'), h_ch('q'), h_ch('r'), h_ch('s'), 
-        h_ch('t'), h_ch('v'), h_ch('w'), h_ch('x'), h_ch('y'), h_ch('z')
-    ), 5);
+typedef struct {
+    uint8_t magic[4];
+    uint8_t class;
+    uint8_t data_encoding;
+    uint8_t version;
+    uint8_t os_abi;
+    uint8_t abi_version;
+    uint8_t padding[7];
+    uint16_t type;
+    uint16_t machine;
+    uint32_t elf_version;
+    uint64_t entry_point;
+    uint64_t program_header_offset;
+    uint64_t section_header_offset;
+    uint32_t flags;
+    uint16_t header_size;
+    uint16_t program_header_entry_size;
+    uint16_t program_header_entry_count;
+    uint16_t section_header_entry_size;
+    uint16_t section_header_entry_count;
+    uint16_t section_header_string_table_index;
+} ElfHeader;
 
-    // Second line: 7 syllables 
-    HParser* second_line = h_repeat_n(h_choice(
-        h_ch('a'), h_ch('e'), h_ch('i'), h_ch('o'), h_ch('u'),
-        h_ch('b'), h_ch('c'), h_ch('d'), h_ch('f'), h_ch('g'), 
-        h_ch('h'), h_ch('j'), h_ch('k'), h_ch('l'), h_ch('m'), 
-        h_ch('n'), h_ch('p'), h_ch('q'), h_ch('r'), h_ch('s'), 
-        h_ch('t'), h_ch('v'), h_ch('w'), h_ch('x'), h_ch('y'), h_ch('z')
-    ), 7);
-
-    // Third line: 5 syllables
-    HParser* third_line = h_repeat_n(h_choice(
-        h_ch('a'), h_ch('e'), h_ch('i'), h_ch('o'), h_ch('u'),
-        h_ch('b'), h_ch('c'), h_ch('d'), h_ch('f'), h_ch('g'), 
-        h_ch('h'), h_ch('j'), h_ch('k'), h_ch('l'), h_ch('m'), 
-        h_ch('n'), h_ch('p'), h_ch('q'), h_ch('r'), h_ch('s'), 
-        h_ch('t'), h_ch('v'), h_ch('w'), h_ch('x'), h_ch('y'), h_ch('z')
-    ), 5);
-
-    // Combine lines with newline separators
-    return h_sequence(first_line, h_ch('\n'), second_line, h_ch('\n'), third_line, NULL);
+HParser* parse_elf_header(void) {
+    return h_sequence(
+        h_token("\x7F""ELF", 4),
+        h_choice(
+            h_int_range(0, 2, sizeof(uint8_t)),
+            h_epsilon()
+        ),
+        h_choice(
+            h_int_range(0, 2, sizeof(uint8_t)),
+            h_epsilon()
+        ),
+        h_choice(
+            h_int_range(0, 1, sizeof(uint8_t)),
+            h_epsilon()
+        ),
+        h_choice(
+            h_int_range(0, 20, sizeof(uint8_t)),
+            h_epsilon()
+        ),
+        h_int_range(0, 255, sizeof(uint8_t)),
+        h_repeat_n(h_int_range(0, 255, sizeof(uint8_t)), 7),
+        h_choice(
+            h_int_range(0, 4, sizeof(uint16_t)),
+            h_epsilon()
+        ),
+        h_choice(
+            h_int_range(0, 255, sizeof(uint16_t)),
+            h_epsilon()
+        ),
+        h_int_range(0, 1, sizeof(uint32_t)),
+        h_uint64(),
+        h_uint64(),
+        h_uint64(),
+        h_uint32(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16()
+    );
 }
 
-int main() {
-    HParser* parser = claude_haiku_parser();
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <elf_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+
+    HParser* parser = parse_elf_header();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+
+    if (result && result->ast) {
+        printf("ELF file parsed successfully\n");
+    } else {
+        printf("ELF file parsing failed\n");
+    }
+
+    h_parse_result_free(result);
+    h_destroy_parser(parser);
+    free(buffer);
+
     return 0;
 }

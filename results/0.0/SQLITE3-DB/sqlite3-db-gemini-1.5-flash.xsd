@@ -1,47 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/sqlite3db" elementFormDefault="qualified" version="1.0">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/sqlite3"
+           xmlns="http://example.org/sqlite3"
+           elementFormDefault="qualified"
+           xmlns:tns="http://example.org/sqlite3">
 
-  <xs:annotation>
-    <xs:documentation>DFDL Schema for SQLite3 Gemini 1.5 Flash Data</xs:documentation>
-  </xs:annotation>
-
-  <xs:element name="sqlite3_db_gemini_1_5_flash">
+  <xs:element name="sqlite3Database">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="16"/>
-        <xs:element name="data_records" type="DataRecordsType" dfdl:occursCountKind="implicit"/>
+        <xs:element ref="tns:header"/>
+        <xs:element name="pages" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element ref="tns:page"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
     </xs:complexType>
-    <xs:unique name="unique_record_id">
-      <xs:selector xpath="data_records/data_record"/>
-      <xs:field xpath="@record_id"/>
-    </xs:unique>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:element name="header" type="headerType">
+    <xs:complexType name="headerType">
+      <xs:sequence>
+        <xs:element name="magic" type="xs:string" dfdl:length="16" dfdl:fixedValue="SQLite format 3&#x00"/>
+        <xs:element name="pageSize" type="xs:unsignedShort"/>
+        <xs:element name="writeVersion" type="xs:unsignedShort"/>
+        <xs:element name="readVersion" type="xs:unsignedShort"/>
+        <xs:element name="reservedByte" type="xs:unsignedByte"/>
+        <xs:element name="maxPageCount" type="xs:unsignedInt"/>
+        <xs:element name="textEncoding" type="xs:unsignedInt"/>
+        <xs:element name="userVersion" type="xs:unsignedInt"/>
+        <xs:element name="incrementalVacuumMode" type="xs:unsignedInt"/>
+        <xs:element name="applicationId" type="xs:unsignedLong"/>
+        <xs:element name="versionValidForAllPages" type="xs:unsignedInt"/>
+        <xs:element name="pageCount" type="xs:unsignedInt"/>
+        <xs:element name="checksumFlag" type="xs:unsignedInt"/>
+        <xs:element name="freePageCount" type="xs:unsignedInt"/>
+        <xs:element name="schemaVersion" type="xs:unsignedInt"/>
+        <xs:element name="schemaFormat" type="xs:unsignedInt"/>
+        <xs:element name="defaultPageCacheSize" type="xs:unsignedInt"/>
+        <xs:element name="largeFileSupport" type="xs:unsignedInt"/>
+        <xs:element name="pageSizeExtension" type="xs:unsignedInt"/>
+        <xs:element name="reservedBytes" type="xs:hexBinary" dfdl:length="20"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <xs:element name="page" type="pageType">
+    <xs:complexType name="pageType">
+      <xs:sequence>
+        <xs:element name="pageHeader" type="pageHeaderType"/>
+        <xs:element name="pageContent" type="xs:hexBinary" dfdl:length="{pageHeader/@pageSize - 100}"/>
+      </xs:sequence>
+      <xs:attribute name="pageSize" type="xs:unsignedShort" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="pageHeaderType">
     <xs:sequence>
-      <xs:element name="record_count" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:lengthKind="explicit" dfdl:length="12"/>
+      <xs:element name="pageNumber" type="xs:unsignedInt"/>
+      <xs:element name="pageType" type="xs:unsignedInt"/>
+      <xs:element name="freeBlockCount" type="xs:unsignedInt"/>
+      <xs:element name="unused1" type="xs:unsignedInt"/>
+      <xs:element name="unused2" type="xs:unsignedInt"/>
+      <xs:element name="checksum" type="xs:unsignedInt"/>
+      <xs:element name="pageSize" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DataRecordsType">
-    <xs:sequence>
-      <xs:element name="data_record" type="DataRecordType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DataRecordType">
-    <xs:sequence>
-      <xs:element name="record_id" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
-      <xs:element name="field1" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:decimal" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:fractionDigits="2"/>
-      <xs:element name="field3" type="xs:boolean" dfdl:lengthKind="explicit" dfdl:length="1"/>
-      <!-- Add more fields as needed -->
-    </xs:sequence>
-    <xs:attribute name="record_id" type="xs:integer" use="required"/>
-  </xs:complexType>
-
 
 </xs:schema>

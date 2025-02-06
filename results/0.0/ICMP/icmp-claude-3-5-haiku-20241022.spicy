@@ -2,38 +2,74 @@ module ICMP;
 
 import spicy;
 
-public type ICMP = unit {
-    type_code: bitfield(8) {
-        type:     0..7;
-        code:     8..15;
-    };
+public type Header = unit {
+    type_: uint8 be;
+    code: uint8 be;
+    checksum: uint16 be;
 
-    header: record {
-        type:       uint8;
-        code:       uint8;
-        checksum:   uint16;
-    };
+    var payload_length: uint32;
 
-    echo_request: record {
-        identifier: uint16;
-        sequence:   uint16;
-    };
+    switch ( self.type_ ) {
+        8 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            payload: bytes &length=(payload_length - 4);
+        }
 
-    echo_reply: record {
-        identifier: uint16;
-        sequence:   uint16;
-    };
+        0 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            payload: bytes &length=(payload_length - 4);
+        }
 
-    on %init {
-        self.type_code.type = self.header.type;
-        self.type_code.code = self.header.code;
+        3 -> {
+            unused: uint32 be;
+            original_datagram: bytes &length=(payload_length - 4);
+        }
+
+        11 -> {
+            unused: uint32 be;
+            original_datagram: bytes &length=(payload_length - 4);
+        }
+
+        5 -> {
+            gateway_address: uint32 be;
+            original_datagram: bytes &length=(payload_length - 4);
+        }
+
+        9 -> {
+            number_of_addresses: uint8;
+            address_entry_size: uint8;
+            lifetime: uint16 be;
+            addresses: bytes &length=(number_of_addresses * 4);
+        }
+
+        10 -> {
+            reserved: uint32 be;
+        }
+
+        13 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            originate_timestamp: uint32 be;
+            receive_timestamp: uint32 be;
+            transmit_timestamp: uint32 be;
+        }
+
+        14 -> {
+            identifier: uint16 be;
+            sequence_number: uint16 be;
+            originate_timestamp: uint32 be;
+            receive_timestamp: uint32 be;
+            transmit_timestamp: uint32 be;
+        }
+
+        * -> {
+            payload: bytes &length=(payload_length);
+        }
     }
 
-    parse_type: hook void() {
-        switch ( self.header.type ) {
-            8 -> self.echo_request = parse echo_request;
-            0 -> self.echo_reply = parse echo_reply;
-            default -> {};
-        }
+    %init {
+        self.payload_length = |self| - 4;
     }
 };

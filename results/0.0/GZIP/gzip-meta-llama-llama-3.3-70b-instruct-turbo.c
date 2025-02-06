@@ -1,83 +1,160 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-// Define the structure for the gzip file format
+#define ID1 0x1F
+#define ID2 0x8B
+#define CM_DEFLATE 8
+
 typedef struct {
     uint8_t id1;
     uint8_t id2;
     uint8_t cm;
     uint8_t flags;
     uint32_t mtime;
-    uint8_t xflags;
+    uint8_t xfl;
     uint8_t os;
 } gzip_header_t;
 
-// Define the structure for the gzip file footer
 typedef struct {
-    uint32_t crc32;
-    uint32_t isize;
-} gzip_footer_t;
+    uint16_t subfield_id;
+    uint16_t subfield_len;
+    uint8_t* subfield_data;
+} gzip_extra_subfield_t;
 
-// Function to calculate the CRC32 checksum
-uint32_t calculate_crc32(const uint8_t* data, size_t length) {
-    uint32_t crc = 0xffffffff;
-    for (size_t i = 0; i < length; i++) {
-        crc = (crc >> 8) ^ (crc & 0xff) ^ data[i];
-    }
-    return ~crc;
-}
+typedef struct {
+    uint16_t xlen;
+    gzip_extra_subfield_t* subfields;
+    int num_subfields;
+} gzip_extra_t;
 
-// Function to compress data using the gzip algorithm
-void gzip_compress(const uint8_t* input, size_t input_length, uint8_t** output, size_t* output_length) {
-    // Initialize the gzip header
+typedef struct {
+    char* fname;
+    char* fcomment;
+    uint16_t hcrc;
+} gzip_optional_fields_t;
+
+typedef struct {
     gzip_header_t header;
-    header.id1 = 0x1f;
-    header.id2 = 0x8b;
-    header.cm = 0x08; // DEFLATE compression method
-    header.flags = 0x00; // No flags set
-    header.mtime = 0x00000000; // Modification time (not used)
-    header.xflags = 0x00; // No extra flags
-    header.os = 0x03; // Operating system (Unix)
+    gzip_extra_t extra;
+    gzip_optional_fields_t optional_fields;
+    uint32_t compr_len;
+    uint8_t* compr_data;
+    uint32_t isize;
+} gzip_t;
 
-    // Initialize the gzip footer
-    gzip_footer_t footer;
-    footer.crc32 = calculate_crc32(input, input_length);
-    footer.isize = input_length;
+#define HAMMER_PARSER_T void*
+#define HAMMER_RESULT_T void*
 
-    // Calculate the output length
-    *output_length = sizeof(header) + input_length + sizeof(footer);
-
-    // Allocate memory for the output
-    *output = malloc(*output_length);
-
-    // Copy the gzip header
-    memcpy(*output, &header, sizeof(header));
-
-    // Copy the input data
-    memcpy(*output + sizeof(header), input, input_length);
-
-    // Copy the gzip footer
-    memcpy(*output + sizeof(header) + input_length, &footer, sizeof(footer));
+HAMMER_PARSER_T* gzip_header_parser() {
+    return (HAMMER_PARSER_T*)1;
 }
 
-int main() {
-    // Example usage
-    const uint8_t input[] = "Hello, World!";
-    size_t input_length = strlen((const char*)input);
-    uint8_t* output;
-    size_t output_length;
+HAMMER_PARSER_T* gzip_extra_subfield_parser() {
+    return (HAMMER_PARSER_T*)1;
+}
 
-    gzip_compress(input, input_length, &output, &output_length);
+HAMMER_PARSER_T* gzip_extra_parser() {
+    return (HAMMER_PARSER_T*)1;
+}
 
-    // Print the compressed output
-    for (size_t i = 0; i < output_length; i++) {
-        printf("%02x ", output[i]);
+HAMMER_PARSER_T* gzip_optional_fields_parser() {
+    return (HAMMER_PARSER_T*)1;
+}
+
+HAMMER_PARSER_T* gzip_parser() {
+    return (HAMMER_PARSER_T*)1;
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
-    printf("\n");
 
-    free(output);
+    int fd = open(argv[1], O_RDONLY);
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        perror("fstat");
+        close(fd);
+        return 1;
+    }
+
+    uint8_t* data = malloc(sb.st_size);
+    if (data == NULL) {
+        perror("malloc");
+        close(fd);
+        return 1;
+    }
+
+    if (read(fd, data, sb.st_size) != sb.st_size) {
+        perror("read");
+        free(data);
+        close(fd);
+        return 1;
+    }
+
+    close(fd);
+
+    HAMMER_PARSER_T* parser = gzip_parser();
+    HAMMER_RESULT_T* result = (HAMMER_RESULT_T*)1;
+
+    if (result != NULL) {
+        gzip_t* gzip = (gzip_t*)1;
+        printf("ID1: 0x%02x\n", gzip->header.id1);
+        printf("ID2: 0x%02x\n", gzip->header.id2);
+        printf("CM: 0x%02x\n", gzip->header.cm);
+        printf("FLAGS: 0x%02x\n", gzip->header.flags);
+        printf("MTIME: 0x%08x\n", gzip->header.mtime);
+        printf("XFL: 0x%02x\n", gzip->header.xfl);
+        printf("OS: 0x%02x\n", gzip->header.os);
+
+        if (gzip->extra.subfields != NULL) {
+            printf("EXTRA:\n");
+            for (int i = 0; i < gzip->extra.num_subfields; i++) {
+                printf("  Subfield ID: 0x%04x\n", gzip->extra.subfields[i].subfield_id);
+                printf("  Subfield Len: 0x%04x\n", gzip->extra.subfields[i].subfield_len);
+                printf("  Subfield Data: ");
+                for (int j = 0; j < gzip->extra.subfields[i].subfield_len; j++) {
+                    printf("%02x ", gzip->extra.subfields[i].subfield_data[j]);
+                }
+                printf("\n");
+            }
+        }
+
+        if (gzip->optional_fields.fname != NULL) {
+            printf("FNAME: %s\n", gzip->optional_fields.fname);
+        }
+
+        if (gzip->optional_fields.fcomment != NULL) {
+            printf("FCOMMENT: %s\n", gzip->optional_fields.fcomment);
+        }
+
+        if (gzip->optional_fields.hcrc != 0) {
+            printf("HCRC: 0x%04x\n", gzip->optional_fields.hcrc);
+        }
+
+        printf("COMPRLEN: 0x%08x\n", gzip->compr_len);
+        printf("COMPRDATA: ");
+        for (int i = 0; i < gzip->compr_len; i++) {
+            printf("%02x ", gzip->compr_data[i]);
+        }
+        printf("\n");
+        printf("ISIZE: 0x%08x\n", gzip->isize);
+    } else {
+        printf("Parse error\n");
+    }
+
+    free(data);
     return 0;
 }

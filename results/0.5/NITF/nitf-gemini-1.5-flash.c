@@ -1,71 +1,63 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hammer.h> // Assuming a hammer library exists
 
-// Structure to represent NITF data (replace with your actual structure)
-typedef struct {
-    char header[1024];
-    unsigned char data[1024*1024]; // Adjust size as needed
-} nitf_data_t;
+// Define parsers for NITF fields (simplified example)
+//  This is a highly simplified example and does not cover the full NITF specification.
+//  A complete implementation would be extremely extensive.
 
+// Helper function to parse a fixed-length string
+static HParser string_parser(size_t len) {
+    return h_string(len);
+}
 
-int main() {
-    // Input NITF file path
-    char input_nitf_path[] = "input.nitf"; 
+// Helper function to parse a 4-byte integer
+static HParser uint32_parser() {
+    return h_uint32_be();
+}
 
-    // Output file path
-    char output_path[] = "output.nitf";
-
-
-    // Load NITF data (replace with your actual loading function)
-    nitf_data_t nitf_data;
-    FILE *fp = fopen(input_nitf_path, "rb");
-    if (fp == NULL) {
-        perror("Error opening input NITF file");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <nitf_file>\n", argv[0]);
         return 1;
     }
-    size_t bytes_read = fread(nitf_data.header, 1, sizeof(nitf_data.header), fp);
-    if (bytes_read < sizeof(nitf_data.header)) {
-      perror("Error reading NITF header");
-      fclose(fp);
-      return 1;
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
-    bytes_read = fread(nitf_data.data, 1, sizeof(nitf_data.data), fp);
-    if (bytes_read < sizeof(nitf_data.data)) {
-      perror("Error reading NITF data");
-      fclose(fp);
-      return 1;
+
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *fileContent = (char *)malloc(fileSize);
+    if (fileContent == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
     }
+    fread(fileContent, 1, fileSize, fp);
     fclose(fp);
 
+    HParser fileHeaderParser = h_sequence(
+        string_parser(4), // "NITF"
+        uint32_parser(),   // Version
+        string_parser(2), // Header length
+        h_end()
+    );
 
-    // Process NITF data using Hammer library (replace with your actual processing)
-    hammer_context_t *hammer_ctx = hammer_create();
-    if (hammer_ctx == NULL) {
-        fprintf(stderr, "Error creating Hammer context\n");
-        return 1;
+    HParseResult result = h_parse( &fileHeaderParser, fileContent, fileSize);
+
+    if (result.status == H_PARSE_SUCCESS) {
+        printf("NITF file parsed successfully!\n");
+        // Access parsed data here... (result.value will contain the parsed structure)
+    } else {
+        fprintf(stderr, "Error parsing NITF file: %s\n", result.error_message);
     }
 
-    // Example Hammer operation (replace with your actual processing)
-    int result = hammer_process(hammer_ctx, nitf_data.data, sizeof(nitf_data.data));
-    if (result != 0) {
-        fprintf(stderr, "Hammer processing failed: %d\n", result);
-        hammer_destroy(hammer_ctx);
-        return 1;
-    }
-
-    hammer_destroy(hammer_ctx);
-
-    // Save processed NITF data (replace with your actual saving function)
-    fp = fopen(output_path, "wb");
-    if (fp == NULL) {
-        perror("Error opening output NITF file");
-        return 1;
-    }
-    fwrite(nitf_data.header, 1, sizeof(nitf_data.header), fp);
-    fwrite(nitf_data.data, 1, sizeof(nitf_data.data), fp);
-    fclose(fp);
-
+    free(fileContent);
     return 0;
 }

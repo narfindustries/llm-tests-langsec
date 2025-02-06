@@ -1,87 +1,136 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
-// DNS query type enumeration
-typedef enum {
-    DNS_TYPE_A = 1,
-    DNS_TYPE_AAAA = 28,
-    DNS_TYPE_CNAME = 5,
-    DNS_TYPE_MX = 15
-} DNSQueryType;
-
-// DNS header structure
 typedef struct {
-    uint16_t id;
-    uint8_t flags;
-    uint8_t rcode : 4;
-    uint8_t opcode : 4;
-    uint16_t qdcount;
-    uint16_t ancount;
-    uint16_t nscount;
-    uint16_t arcount;
+    uint16_t transaction_id;
+    struct {
+        uint8_t qr: 1;
+        uint8_t opcode: 4;
+        uint8_t aa: 1;
+        uint8_t tc: 1;
+        uint8_t rd: 1;
+        uint8_t ra: 1;
+        uint8_t z: 3;
+        uint8_t rcode: 4;
+    } flags;
+    uint16_t question_count;
+    uint16_t answer_count;
+    uint16_t authority_count;
+    uint16_t additional_count;
 } DNSHeader;
 
-// DNS label parsing
-static HParsedToken* parse_dns_label(void* p) {
-    HParseResult* label_result = h_parse(h_many1(h_ch_range('a', 'z')), p);
-    if (!label_result || !label_result->ast) return NULL;
-    
-    return label_result->ast;
+typedef struct {
+    char* name;
+    uint16_t type;
+    uint16_t class;
+} DNSQuestion;
+
+typedef struct {
+    char* name;
+    uint16_t type;
+    uint16_t class;
+    uint32_t ttl;
+    uint16_t rdlength;
+    uint8_t* rdata;
+} DNSResourceRecord;
+
+static HParsedToken* dns_header_action(const HParseResult* result, void* user_data) {
+    return result->ast;
 }
 
-// DNS query parser
-static HParsedToken* parse_dns_query(void* p) {
-    HParser* label_parser = h_action(h_many1(h_ch_range('a', 'z')), parse_dns_label, NULL);
-    HParser* domain_parser = h_sepBy1(label_parser, h_ch('.'));
-    HParser* type_parser = h_uint16();
-
-    HParser* query_parser = h_sequence(domain_parser, type_parser, NULL);
-    return h_parse(query_parser, p)->ast;
+static HParsedToken* dns_name_action(const HParseResult* result, void* user_data) {
+    return result->ast;
 }
 
-// DNS header parser
-static HParser* create_dns_header_parser() {
-    return h_sequence(
-        h_uint16(),  // Transaction ID
-        h_bits(16, false),  // Flags
-        h_uint16(),  // Questions
-        h_uint16(),  // Answer RRs
-        h_uint16(),  // Authority RRs
-        h_uint16(),  // Additional RRs
-        NULL
-    );
+static HParsedToken* dns_question_action(const HParseResult* result, void* user_data) {
+    return result->ast;
 }
 
-// DNS message parser
-static HParser* create_dns_parser() {
-    HParser* header_parser = create_dns_header_parser();
-    HParser* query_parser = h_action(h_many1(h_ch_range('a', 'z')), parse_dns_query, NULL);
-
-    return h_sequence(
-        header_parser,
-        query_parser,
-        NULL
-    );
+static HParsedToken* dns_resource_record_action(const HParseResult* result, void* user_data) {
+    return result->ast;
 }
 
-int main() {
-    // Initialize Hammer parser
-    HParser* dns_parser = create_dns_parser();
+HParser* make_dns_header_parser(void) {
+    HParser* transaction_id = h_uint16();
+    HParser* flags = h_bits(16, false);
+    HParser* counts = h_repeat_n(h_uint16(), 4);
 
-    // Test input
-    const char* test_input = "example.com\x00\x01";
-    
-    // Parse DNS message
-    HParseResult* result = h_parse(dns_parser, test_input, strlen(test_input));
+    HParser* dns_header = h_sequence(transaction_id, flags, counts, NULL);
+    return h_action(dns_header, dns_header_action, NULL);
+}
 
-    if (result && result->ast) {
-        printf("DNS message parsed successfully\n");
-    } else {
-        printf("DNS message parsing failed\n");
+HParser* make_dns_name_parser(void) {
+    HParser* label_length = h_uint8();
+    HParser* label = h_repeat_n(h_uint8(), 255);
+    HParser* name = h_many(label);
+
+    return h_action(name, dns_name_action, NULL);
+}
+
+HParser* make_dns_question_parser(void) {
+    HParser* name = make_dns_name_parser();
+    HParser* type = h_uint16();
+    HParser* class = h_uint16();
+
+    HParser* dns_question = h_sequence(name, type, class, NULL);
+    return h_action(dns_question, dns_question_action, NULL);
+}
+
+HParser* make_dns_resource_record_parser(void) {
+    HParser* name = make_dns_name_parser();
+    HParser* type = h_uint16();
+    HParser* class = h_uint16();
+    HParser* ttl = h_uint32();
+    HParser* rdlength = h_uint16();
+    HParser* rdata = h_repeat_n(h_uint8(), 65535);
+
+    HParser* resource_record = h_sequence(name, type, class, ttl, rdlength, rdata, NULL);
+    return h_action(resource_record, dns_resource_record_action, NULL);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <dns_file>\n", argv[0]);
+        return 1;
     }
 
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (bytes_read != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        return 1;
+    }
+
+    HParser* header_parser = make_dns_header_parser();
+    HParseResult* header = h_parse(header_parser, buffer, file_size);
+    
+    if (header && header->ast) {
+        printf("DNS Header parsed successfully\n");
+        h_parse_result_free(header);
+    }
+
+    free(buffer);
     return 0;
 }

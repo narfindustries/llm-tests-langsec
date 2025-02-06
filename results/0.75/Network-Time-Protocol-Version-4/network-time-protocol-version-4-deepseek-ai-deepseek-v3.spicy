@@ -1,0 +1,78 @@
+module NTP;
+
+import zeek;
+
+public type NTP_Packet = unit {
+    leap_indicator: uint8;
+    version: uint8;
+    mode: uint8;
+    stratum: uint8;
+    poll: uint8;
+    precision: int8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: uint32;
+    reference_timestamp: uint64;
+    origin_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
+    extensions: bytes &size=0;
+
+    on %done {
+        if (self.leap_indicator > 3)
+            zeek::reporter::error("Invalid leap indicator value: %d", self.leap_indicator);
+
+        if (self.version != 4)
+            zeek::reporter::error("Invalid NTP version: %d", self.version);
+
+        if (self.mode > 7)
+            zeek::reporter::error("Invalid mode value: %d", self.mode);
+
+        if (self.stratum > 15 && self.stratum != 0)
+            zeek::reporter::error("Invalid stratum value: %d", self.stratum);
+    }
+};
+
+public type NTP_Control_Packet = unit {
+    leap_indicator: uint8;
+    version: uint8;
+    mode: uint8;
+    opcode: uint8;
+    sequence: uint16;
+    status: uint16;
+    association_id: uint16;
+    offset: uint16;
+    count: uint16;
+    data: bytes &size=0;
+
+    on %done {
+        if (self.leap_indicator > 3)
+            zeek::reporter::error("Invalid leap indicator value: %d", self.leap_indicator);
+
+        if (self.version != 4)
+            zeek::reporter::error("Invalid NTP version: %d", self.version);
+
+        if (self.mode != 6)
+            zeek::reporter::error("Invalid mode value: %d", self.mode);
+
+        if (self.opcode > 31)
+            zeek::reporter::error("Invalid opcode value: %d", self.opcode);
+    }
+};
+
+public type NTP_Extension = unit {
+    type: uint16;
+    length: uint16;
+    value: bytes &size=self.length;
+};
+
+public type NTP_Authenticator = unit {
+    key_id: uint32;
+    digest: bytes &size=16;
+};
+
+public type NTP_Packet_With_Extensions = unit {
+    packet: NTP_Packet;
+    extensions: NTP_Extension[] &until=$$.extensions.length() >= 48;
+    authenticator: NTP_Authenticator &if=self.extensions.length > 0;
+};

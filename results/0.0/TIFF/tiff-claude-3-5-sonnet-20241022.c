@@ -1,45 +1,130 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-// TIFF Parser using Hammer
+// Forward declarations
+static HParser* tiff_parser(void);
+static HParser* ifd_entry_parser(void);
+static HParser* header_parser(void);
 
-// Helper parsers for common structures
-HParser* byte_order_parser() {
-    return h_choice(h_token((uint8_t*)"II", 2),  // little-endian
-                    h_token((uint8_t*)"MM", 2),   // big-endian
+// Type parsers
+static HParser* byte_order_parser(void) {
+    return h_choice(h_token((uint8_t*)"II", 2), 
+                    h_token((uint8_t*)"MM", 2), 
                     NULL);
 }
 
-HParser* version_parser() {
-    return h_int_range(h_uint16(), 42, 43);  // 42 for regular TIFF, 43 for BigTIFF
+static HParser* version_parser(void) {
+    return h_int_range(h_uint16(), 42, 42);
 }
 
-HParser* ifd_entry_parser() {
+static HParser* offset_parser(void) {
+    return h_uint32();
+}
+
+// Field type parsers
+static HParser* byte_parser(void) {
+    return h_uint8();
+}
+
+static HParser* ascii_parser(void) {
+    return h_many1(h_not_in((uint8_t*)"\0", 1));
+}
+
+static HParser* short_parser(void) {
+    return h_uint16();
+}
+
+static HParser* long_parser(void) {
+    return h_uint32();
+}
+
+static HParser* rational_parser(void) {
+    return h_sequence(long_parser(), long_parser(), NULL);
+}
+
+static HParser* sbyte_parser(void) {
+    return h_int8();
+}
+
+static HParser* undefined_parser(void) {
+    return h_uint8();
+}
+
+static HParser* sshort_parser(void) {
+    return h_int16();
+}
+
+static HParser* slong_parser(void) {
+    return h_int32();
+}
+
+static HParser* srational_parser(void) {
+    return h_sequence(slong_parser(), slong_parser(), NULL);
+}
+
+static HParser* float_parser(void) {
+    return h_bits(32, false);  // Using h_bits for float32
+}
+
+static HParser* double_parser(void) {
+    return h_bits(64, false);  // Using h_bits for float64
+}
+
+// Tag value parsers
+static HParser* tag_parser(void) {
+    return h_uint16();
+}
+
+static HParser* type_parser(void) {
+    return h_uint16();
+}
+
+static HParser* count_parser(void) {
+    return h_uint32();
+}
+
+static HParser* value_offset_parser(void) {
+    return h_uint32();
+}
+
+// IFD Entry parser
+static HParser* ifd_entry_parser(void) {
     return h_sequence(
-        h_uint16(),  // Tag
-        h_uint16(),  // Type
-        h_uint32(),  // Count
-        h_uint32(),  // Value/Offset
+        tag_parser(),
+        type_parser(),
+        count_parser(),
+        value_offset_parser(),
         NULL
     );
 }
 
-HParser* ifd_parser() {
+// IFD parser
+static HParser* ifd_parser(void) {
     return h_sequence(
-        h_uint16(),              // Number of directory entries
-        h_many1(ifd_entry_parser()),  // Directory entries
-        h_uint32(),              // Offset to next IFD
+        h_uint16(), // Number of directory entries
+        h_many1(ifd_entry_parser()),
+        h_uint32(), // Offset to next IFD
         NULL
     );
 }
 
-HParser* tiff_parser() {
+// Header parser
+static HParser* header_parser(void) {
     return h_sequence(
-        byte_order_parser(),    // Byte order
-        version_parser(),       // Version
-        h_uint32(),            // Offset to first IFD
-        h_many1(ifd_parser()), // IFDs
+        byte_order_parser(),
+        version_parser(),
+        offset_parser(),
+        NULL
+    );
+}
+
+// Complete TIFF parser
+static HParser* tiff_parser(void) {
+    return h_sequence(
+        header_parser(),
+        h_many1(ifd_parser()),
         NULL
     );
 }
@@ -50,46 +135,43 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Read file
-    FILE *f = fopen(argv[1], "rb");
-    if (!f) {
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
         perror("Failed to open file");
         return 1;
     }
 
-    fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    // Get file size
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    uint8_t *data = malloc(size);
-    if (!data) {
+    // Read file into buffer
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
         perror("Failed to allocate memory");
-        fclose(f);
+        fclose(fp);
         return 1;
     }
 
-    if (fread(data, 1, size, f) != size) {
+    if (fread(buffer, 1, file_size, fp) != file_size) {
         perror("Failed to read file");
-        free(data);
-        fclose(f);
+        free(buffer);
+        fclose(fp);
         return 1;
     }
-    fclose(f);
 
     // Parse TIFF
-    HParser *parser = tiff_parser();
-    HParseResult *result = h_parse(parser, data, size);
-
-    if (!result) {
-        fprintf(stderr, "Failed to parse TIFF file\n");
-        free(data);
-        return 1;
+    HParseResult *result = h_parse(tiff_parser(), buffer, file_size);
+    
+    if (result) {
+        printf("Successfully parsed TIFF file\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse TIFF file\n");
     }
 
-    // Result is available in result->ast
-    // Add processing logic here as needed
-
-    h_parse_result_free(result);
-    free(data);
+    free(buffer);
+    fclose(fp);
     return 0;
 }

@@ -1,72 +1,121 @@
-module sqlite3-db-claude-3-5-sonnet-20241022
+let Main = Sqlite3Db
 
-import stdlib::*
-
-type SQLite3File = {
-    header : Header
-    body   : Body
+let Sqlite3Db = {
+    header: Header
+    pages: Page[]
 }
 
-type Header = {
-    magic     : Magic
-    pageSize  : uint16
-    writeVer  : uint8
-    readVer   : uint8
-    spaceRes  : uint8
-    maxFrac   : uint8
-    minFrac   : uint8
-    leafFrac  : uint8
-    fileChg   : uint32
-    dbSize    : uint32
-    freePage  : uint32
-    totalFree : uint32
-    schemaCookie : uint32
-    schemaFmt : uint32
-    defPageCache : uint32
-    largestRoot : uint32
-    textEnc   : uint32
-    userVer   : uint32
-    incVacuum : uint32
-    appId     : uint32
-    reserved  : Array uint8 20
-    verValid  : uint32
-    version   : uint32
+let Header = {
+    magic: "SQLite format 3\000"
+    pageSize: U16
+    fileFormatWriteVersion: U8
+    fileFormatReadVersion: U8
+    reservedSpace: U8
+    maxEmbeddedPayloadFraction: U8
+    minEmbeddedPayloadFraction: U8
+    leafPayloadFraction: U8
+    fileChangeCounter: U32
+    databaseSizePages: U32
+    firstFreelistTrunkPage: U32
+    totalFreelistPages: U32
+    schemaCookie: U32
+    schemaFormat: U32
+    defaultPageCacheSize: U32
+    largestRootBtreePage: U32
+    databaseTextEncoding: U32
+    userVersion: U32
+    incrementalVacuumMode: U32
+    applicationId: U32
+    reserved: U8[20]
+    versionValidFor: U32
+    sqliteVersionNumber: U32
 }
 
-type Magic = {
-    str : Array uint8 16
+let Page = {
+    pageType: U8
+    content: PageContent
 }
 
-type Body = {
-    pages : Array Page *
+let PageContent = {
+    | InteriorIndexBtree  { pageType == 0x02 }
+    | InteriorTableBtree  { pageType == 0x05 }
+    | LeafIndexBtree      { pageType == 0x0A }
+    | LeafTableBtree      { pageType == 0x0D }
+    | FreePage            { pageType == 0x00 }
+    | PointerMap          { pageType == 0x0F }
+    | LockByte            { pageType == 0x01 }
 }
 
-type Page = {
-    content : Array uint8 *
+let BtreePageHeader = {
+    firstFreeblock: U16
+    cellCount: U16
+    cellContentOffset: U16
+    fragmentedFreeBytes: U8
 }
 
-let Magic_Value = [ 0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, 0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00 ]
+let InteriorBtreePage = {
+    header: BtreePageHeader
+    rightChild: U32
+    cells: InteriorCell[header.cellCount]
+}
 
-let ValidPageSize = Choose [
-    512,
-    1024,
-    2048,
-    4096,
-    8192,
-    16384,
-    32768,
-    65536
-]
+let LeafBtreePage = {
+    header: BtreePageHeader
+    cells: LeafCell[header.cellCount]
+}
 
-let parse_sqlite3 = {
-    file : SQLite3File
-    file.header.magic.str == Magic_Value
-    file.header.pageSize in ValidPageSize
-    file.header.writeVer in 1..2
-    file.header.readVer in 1..2
-    file.header.spaceRes in 0..1
-    file.header.maxFrac in 0..255
-    file.header.minFrac in 0..255
-    file.header.leafFrac in 0..255
-    file.header.textEnc in [1, 2, 3]
+let InteriorCell = {
+    leftChild: U32
+    rowId: Varint
+}
+
+let LeafCell = {
+    payloadSize: Varint
+    rowId: Varint
+    payload: Record
+    overflowPage: U32?
+}
+
+let FreePage = {
+    nextFreePage: U32
+    unused: U8[]
+}
+
+let PointerMap = {
+    entries: PtrmapEntry[]
+}
+
+let PtrmapEntry = {
+    entryType: U8
+    pageNumber: U32
+}
+
+let LockByte = {
+    lockBytes: U8[]
+}
+
+let Record = {
+    headerLength: Varint
+    serialTypes: Varint[headerLength]
+    values: RecordValue[headerLength]
+}
+
+let RecordValue = {
+    | Null                { serialType == 0 }
+    | Int8(U8)           { serialType == 1 }
+    | Int16(U16)         { serialType == 2 }
+    | Int24(U24)         { serialType == 3 }
+    | Int32(U32)         { serialType == 4 }
+    | Int48(U48)         { serialType == 5 }
+    | Int64(U64)         { serialType == 6 }
+    | Float64(F64)       { serialType == 7 }
+    | Zero(U8)           { serialType == 8 }
+    | One(U8)            { serialType == 9 }
+    | Blob(U8[])         { serialType >= 12 && serialType % 2 == 0 }
+    | Text(Char[])       { serialType >= 13 && serialType % 2 == 1 }
+}
+
+let Varint = {
+    bytes: U8[]          { byte & 0x80 != 0 }
+    finalByte: U8
 }

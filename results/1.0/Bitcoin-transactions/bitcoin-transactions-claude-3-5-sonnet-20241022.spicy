@@ -1,87 +1,49 @@
 module Bitcoin;
 
-import spicy;
-
-public type Transaction = unit {
-    # Transaction version
-    version: int32;
-    
-    # Input count (VarInt)
-    input_count: VarInt;
-    
-    # Transaction inputs
-    inputs: Input[self.input_count.value];
-    
-    # Output count (VarInt)
-    output_count: VarInt;
-    
-    # Transaction outputs
-    outputs: Output[self.output_count.value];
-    
-    # Lock time
-    lock_time: uint32;
-};
-
-type Input = unit {
-    # Previous transaction hash
-    prev_tx_hash: bytes &size=32;
-    
-    # Previous output index
-    prev_output_index: uint32;
-    
-    # Script length (VarInt)
-    script_length: VarInt;
-    
-    # Script
-    script: bytes &size=self.script_length.value;
-    
-    # Sequence number
-    sequence: uint32;
-};
-
-type Output = unit {
-    # Value in satoshis
-    value: uint64;
-    
-    # Script length (VarInt)
-    script_length: VarInt;
-    
-    # Script
-    script: bytes &size=self.script_length.value;
-};
+public type Version = uint32;
 
 type VarInt = unit {
     prefix: uint8;
-    
-    switch(self.prefix) {
-        0xfd -> value: uint16;
-        0xfe -> value: uint32;
-        0xff -> value: uint64;
-        *    -> value: uint8 { self.value = self.prefix; }
+    switch ( self.prefix ) {
+        0xfd -> value16: uint16;
+        0xfe -> value32: uint32;
+        0xff -> value64: uint64;
+        *    -> : void;
     };
+
+    var value: uint64;
+
+    on %done {
+        if ( self.prefix < 0xfd )
+            self.value = self.prefix;
+        else if ( self.prefix == 0xfd )
+            self.value = self.value16;
+        else if ( self.prefix == 0xfe )
+            self.value = self.value32;
+        else
+            self.value = self.value64;
+    }
 };
 
-public function parse_transaction(data: bytes) : Transaction
-{
-    return Transaction(data);
-}
+type TransactionInput = unit {
+    prev_tx_hash: bytes &size=32;
+    prev_tx_index: uint32;
+    script_length: VarInt;
+    script_sig: bytes &size=self.script_length.value;
+    sequence: uint32;
+};
 
-on Transaction::version {
-    print "Transaction version:", self.version;
-}
+type TransactionOutput = unit {
+    value: uint64;
+    script_length: VarInt;
+    script_pubkey: bytes &size=self.script_length.value;
+};
 
-on Transaction::input_count {
-    print "Number of inputs:", self.input_count.value;
-}
-
-on Transaction::output_count {
-    print "Number of outputs:", self.output_count.value;
-}
-
-on Input::prev_tx_hash {
-    print "Previous transaction hash:", self.prev_tx_hash;
-}
-
-on Output::value {
-    print "Output value:", self.value;
-}
+public type Transaction = unit {
+    version: Version;
+    input_count: VarInt;
+    inputs: TransactionInput[self.input_count.value];
+    output_count: VarInt;
+    outputs: TransactionOutput[self.output_count.value];
+    locktime: uint32;
+};

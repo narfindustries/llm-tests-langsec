@@ -1,51 +1,50 @@
 meta:
   id: arp
-  title: Address Resolution Protocol (ARP)
+  title: Address Resolution Protocol
   file-extension: arp
-  endian: be
+  xref:
+    rfc: 826
   license: CC0-1.0
-  ks-version: 0.9
+  endian: be
 
 seq:
   - id: hardware_type
     type: u2
-    enum: hw_type
+    enum: hardware_types
   - id: protocol_type
     type: u2
-  - id: hardware_size
+    enum: protocol_types
+  - id: hardware_addr_len
     type: u1
-  - id: protocol_size
+  - id: protocol_addr_len
     type: u1
-  - id: opcode
+  - id: operation
     type: u2
-    enum: operation
+    enum: operations
   - id: sender_hardware_addr
-    size: hardware_size
+    size: hardware_addr_len
   - id: sender_protocol_addr
-    size: protocol_size
+    size: protocol_addr_len
   - id: target_hardware_addr
-    size: hardware_size
+    size: hardware_addr_len
   - id: target_protocol_addr
-    size: protocol_size
+    size: protocol_addr_len
 
 enums:
-  hw_type:
+  hardware_types:
     1: ethernet
     6: ieee_802
-    7: arcnet
-    15: frame_relay
-    16: atm
-    17: hdlc
-    18: fibre_channel
-    19: atm2
-    20: serial_line
-  operation:
+    16: frame_relay
+    17: atm
+
+  protocol_types:
+    0x0800: ipv4
+    0x0806: arp
+    0x8035: rarp
+    0x86dd: ipv6
+
+  operations:
     1: request
     2: reply
     3: rarp_request
     4: rarp_reply
-    5: drarp_request
-    6: drarp_reply
-    7: drarp_error
-    8: inarp_request
-    9: inarp_reply

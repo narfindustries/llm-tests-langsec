@@ -1,89 +1,143 @@
 module MQTT;
 
-import spicy;
-import zeek;
+type ProtocolName = bytes;
+type ProtocolLevel = uint8;
+type ConnectFlags = bitfield {
+    reserved: 1,
+    clean_start: 1,
+    will_flag: 1,
+    will_qos: 2,
+    will_retain: 1,
+    password_flag: 1,
+    username_flag: 1
+};
+type KeepAlive = uint16;
+type UTF8String = bytes &length_type=uint16;
+type BinaryData = bytes &length_type=uint16;
 
-public type MQTTMessage = unit {
-    fixed_header: FixedHeader;
-    variable_header: VariableHeader;
-    payload: Payload;
-
-    on %init {
-        print fmt("MQTT Message: %s", self);
-    }
+type Properties = unit {
+    length: uint32;
+    data: bytes &length=length;
 };
 
-type FixedHeader = unit {
-    byte1: uint8;
-    remaining_length: varint;
-
-    on %init {
-        print fmt("Fixed Header: byte1=%x, remaining_length=%d", byte1, remaining_length);
-    }
+type ConnectPacket = unit {
+    protocol_name: ProtocolName &size=4;
+    protocol_level: ProtocolLevel;
+    connect_flags: ConnectFlags;
+    keep_alive: KeepAlive;
+    properties: Properties;
+    client_identifier: UTF8String;
+    will_properties: optional<Properties> &if(connect_flags.will_flag == 1);
+    will_topic: optional<UTF8String> &if(connect_flags.will_flag == 1);
+    will_payload: optional<BinaryData> &if(connect_flags.will_flag == 1);
+    username: optional<UTF8String> &if(connect_flags.username_flag == 1);
+    password: optional<BinaryData> &if(connect_flags.password_flag == 1);
 };
 
-type VariableHeader = unit {
-    topic_name: string &length = topic_length;
+type ConnackPacket = unit {
+    session_present: uint8;
+    connect_reason_code: uint8;
+    properties: Properties;
+};
+
+type PublishPacket = unit {
+    dup: uint8;
+    qos: uint8;
+    retain: uint8;
+    topic_name: UTF8String;
+    packet_identifier: optional<uint16> &if(qos > 0);
+    properties: Properties;
+    payload: BinaryData;
+};
+
+type PubackPacket = unit {
     packet_identifier: uint16;
-
-    topic_length: uint16 {
-        return self.topic_name.length();
-    }
-
-    on %init {
-        print fmt("Variable Header: topic_name=%s, packet_identifier=%d", topic_name, packet_identifier);
-    }
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type Payload = unit {
-    message: string &restofdata;
-
-    on %init {
-        print fmt("Payload: message=%s", message);
-    }
+type PubrecPacket = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-type varint = unit {
-    value: uint32 {
-        let result = 0;
-        let multiplier = 1;
-        local byte: uint8;
-        repeat {
-            byte = parse_byte();
-            result += (byte & 127) * multiplier;
-            if (multiplier > 128 * 128 * 128) {
-                error("Malformed Remaining Length");
-            }
-            multiplier *= 128;
-        } until (byte & 128) == 0;
-        return result;
-    }
+type PubrelPacket = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
 };
 
-function parse_byte() : uint8 {
-    return %parse(uint8);
-}
+type PubcompPacket = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
 
-public module MQTTAnalyzer = global {
-    export {
-        type Info = record {
-            message: MQTTMessage;
+type SubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: vector of unit {
+        topic_filter: UTF8String;
+        options: bitfield {
+            qos: 2,
+            no_local: 1,
+            retain_as_published: 1,
+            retain_handling: 2,
+            reserved: 2
         };
-    }
+    };
+};
 
-    event zeek_init() {
-        print "MQTT Analyzer Initialized";
-    }
+type SubackPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector of uint8;
+};
 
-    hook zeek::Analyzer::register() {
-        zeek::Analyzer::register_for_protocol("mqtt", MQTTAnalyzer::Info);
-    }
+type UnsubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: vector of UTF8String;
+};
 
-    event zeek::Analyzer::new_connection(c: connection) {
-        print fmt("New MQTT connection: %s", c$id);
-    }
+type UnsubackPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: vector of uint8;
+};
 
-    event zeek::Analyzer::done(c: connection) {
-        print fmt("MQTT connection done: %s", c$id);
-    }
+type PingreqPacket = unit {};
+
+type PingrespPacket = unit {};
+
+type DisconnectPacket = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type AuthPacket = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type MQTTPacket = unit {
+    packet_type: uint8;
+    packet: case (packet_type & 0xF0) >> 4 of {
+        1  -> ConnectPacket;
+        2  -> ConnackPacket;
+        3  -> PublishPacket;
+        4  -> PubackPacket;
+        5  -> PubrecPacket;
+        6  -> PubrelPacket;
+        7  -> PubcompPacket;
+        8  -> SubscribePacket;
+        9  -> SubackPacket;
+        10 -> UnsubscribePacket;
+        11 -> UnsubackPacket;
+        12 -> PingreqPacket;
+        13 -> PingrespPacket;
+        14 -> DisconnectPacket;
+        15 -> AuthPacket;
+    };
 };

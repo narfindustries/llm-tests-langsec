@@ -1,37 +1,141 @@
-module HL7;
+module HL7V2;
 
-public type HL7Message = unit {
-    segments: list<HL7Segment> &until(eos);
+type MSH = unit {
+    field_separator: bytes &size=1;
+    encoding_characters: bytes &size=4;
+    sending_application: string;
+    sending_facility: string;
+    receiving_application: string;
+    receiving_facility: string;
+    datetime_of_message: string;
+    security: string &optional;
+    message_type: string;
+    message_control_id: string;
+    processing_id: string;
+    version_id: string;
+    sequence_number: string &optional;
+    continuation_pointer: string &optional;
+    accept_acknowledgment_type: string &optional;
+    application_acknowledgment_type: string &optional;
+    country_code: string &optional;
+    character_set: string &optional;
+    principal_language_of_message: string &optional;
+    alternate_character_set_handling_scheme: string &optional;
+    message_profile_identifier: string &optional;
 };
 
-public type HL7Segment = unit {
-    id: string &size=3;
-    fields: list<HL7Field> &until(eol);
+type PID = unit {
+    set_id: string &optional;
+    patient_id: string &optional;
+    patient_identifier_list: string;
+    alternate_patient_id: string &optional;
+    patient_name: string;
+    mother's_maiden_name: string &optional;
+    datetime_of_birth: string;
+    administrative_sex: string;
+    patient_alias: string &optional;
+    race: string &optional;
+    patient_address: string &optional;
+    county_code: string &optional;
+    phone_number_home: string &optional;
+    phone_number_business: string &optional;
+    primary_language: string &optional;
+    marital_status: string &optional;
+    religion: string &optional;
+    patient_account_number: string &optional;
+    ssn_number_patient: string &optional;
+    driver's_license_number_patient: string &optional;
+    mother's_identifier: string &optional;
+    ethnic_group: string &optional;
+    birth_place: string &optional;
+    multiple_birth_indicator: string &optional;
+    birth_order: string &optional;
+    citizenship: string &optional;
+    veterans_military_status: string &optional;
+    nationality: string &optional;
+    patient_death_date_and_time: string &optional;
+    patient_death_indicator: string &optional;
 };
 
-public type HL7Field = unit {
-    value: string &until(any_of("|~\r\n"));
+type OBR = unit {
+    set_id: string &optional;
+    placer_order_number: string &optional;
+    filler_order_number: string &optional;
+    universal_service_identifier: string;
+    priority: string &optional;
+    requested_datetime: string &optional;
+    observation_datetime: string &optional;
+    observation_end_datetime: string &optional;
+    collection_volume: string &optional;
+    collector_identifier: string &optional;
+    specimen_action_code: string &optional;
+    danger_code: string &optional;
+    relevant_clinical_information: string &optional;
+    specimen_received_datetime: string &optional;
+    specimen_source: string &optional;
+    ordering_provider: string &optional;
+    order_callback_phone_number: string &optional;
+    placer_field_1: string &optional;
+    placer_field_2: string &optional;
+    filler_field_1: string &optional;
+    filler_field_2: string &optional;
+    results_report_status_change_datetime: string &optional;
+    charge_to_practice: string &optional;
+    diagnostic_service_section_id: string;
+    result_status: string &optional;
+    parent_result: string &optional;
+    quantity_timing: string &optional;
+    result_copies_to: string &optional;
+    parent: string &optional;
+    transportation_mode: string &optional;
+    reason_for_study: string &optional;
+    principal_result_interpreter: string &optional;
+    assistant_result_interpreter: string &optional;
+    technician: string &optional;
+    transcriptionist: string &optional;
+    scheduled_datetime: string &optional;
+    number_of_sample_containers: string &optional;
+    transport_logistics_of_collected_sample: string &optional;
+    collector_comment: string &optional;
+    transport_arrangement_responsibility: string &optional;
+    transport_arranged: string &optional;
+    escort_required: string &optional;
+    planned_patient_transport_comment: string &optional;
 };
 
-public function parse_hl7_message(data: bytes): HL7Message {
-    return HL7Message(data);
-}
+type OBX = unit {
+    set_id: string &optional;
+    value_type: string;
+    observation_identifier: string;
+    observation_sub_id: string &optional;
+    observation_value: string;
+    units: string &optional;
+    references_range: string &optional;
+    abnormal_flags: string &optional;
+    probability: string &optional;
+    nature_of_abnormal_test: string &optional;
+    observation_result_status: string;
+    effective_date_of_reference_range: string &optional;
+    user_defined_access_checks: string &optional;
+    datetime_of_the_observation: string &optional;
+    producer_id: string &optional;
+    responsible_observer: string &optional;
+    observation_method: string &optional;
+};
 
-public event hl7_message_parsed(msg: HL7Message);
+type AL1 = unit {
+    set_id: string &optional;
+    allergy_type: string &optional;
+    allergy_code_mnemonic_description: string;
+    allergy_severity_code: string &optional;
+    allergy_reaction: string &optional;
+    identification_date: string &optional;
+};
 
-public global hl7_analyzer: Analyzer = (
-    .init = function(c: connection) {
-        local analyzer = HL7::Analyzer(c);
-        c$add_protocol(analyzer);
-    }
-);
-
-public type Analyzer = unit {
-    on %init {
-        self.connection$start_event(hl7_message_parsed, self.parse_hl7_message);
-    }
-
-    on %done {
-        # Handle completion of analysis
-    }
+type HL7Message = unit {
+    msh: MSH;
+    pid: PID &optional;
+    obr: OBR &optional;
+    obx: OBX &optional;
+    al1: AL1 &optional;
 };

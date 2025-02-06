@@ -3,56 +3,99 @@
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/jpeg"
            xmlns:tns="http://example.com/jpeg"
-           elementFormDefault="qualified"
-           dfdl:format="byteOrder='bigEndian'">
+           elementFormDefault="qualified">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:JPEGFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="ascii" lengthKind="explicit" lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:element name="JPEGFile">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="SOI" type="tns:SOIType"/>
-                <xs:element name="Segments" type="tns:SegmentsType" maxOccurs="unbounded"/>
-                <xs:element name="EOI" type="tns:EOIType"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:simpleType name="SOIType">
-        <xs:restriction base="xs:hexBinary">
-            <xs:length value="2"/>
-            <xs:pattern value="FFD8"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="EOIType">
-        <xs:restriction base="xs:hexBinary">
-            <xs:length value="2"/>
-            <xs:pattern value="FFD9"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:complexType name="SegmentsType">
-        <xs:sequence>
-            <xs:element name="Marker" type="tns:MarkerType"/>
-            <xs:element name="Length" type="xs:unsignedShort"/>
-            <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../Length - 2}"/>
-        </xs:sequence>
+  <xs:element name="JPEG">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="SOI" type="tns:MarkerType"/>
+        <xs:element name="Segments" type="tns:Segments" maxOccurs="unbounded"/>
+        <xs:element name="EOI" type="tns:MarkerType"/>
+      </xs:sequence>
     </xs:complexType>
+  </xs:element>
 
-    <xs:simpleType name="MarkerType">
-        <xs:restriction base="xs:hexBinary">
-            <xs:length value="2"/>
-            <xs:pattern value="FF[A-F0-9]{2}"/>
-        </xs:restriction>
-    </xs:simpleType>
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <dfdl:defineFormat name="JPEGFormat">
-        <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ISO-8859-1"/>
-    </dfdl:defineFormat>
+  <xs:complexType name="Segments">
+    <xs:choice dfdl:choiceLengthKind="implicit">
+      <xs:element name="APPn" type="tns:APPnSegment"/>
+      <xs:element name="COM" type="tns:COMSegment"/>
+      <xs:element name="DQT" type="tns:DQTSegment"/>
+      <xs:element name="SOF" type="tns:SOFSegment"/>
+      <xs:element name="DHT" type="tns:DHTSegment"/>
+      <xs:element name="SOS" type="tns:SOSSegment"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="APPnSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="COMSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Comment" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="QuantizationTable" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOFSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponents" type="xs:unsignedByte"/>
+      <xs:element name="Components" type="tns:Components" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Components">
+    <xs:sequence>
+      <xs:element name="ComponentId" type="xs:unsignedByte"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableId" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="HuffmanTable" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSSegment">
+    <xs:sequence>
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="ScanData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

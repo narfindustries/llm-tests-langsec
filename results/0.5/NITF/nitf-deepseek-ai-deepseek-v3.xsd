@@ -1,0 +1,94 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.example.org/nitf" xmlns="http://www.example.org/nitf" elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NITFType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+      <xs:element name="ImageSegments" type="tns:ImageSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="GraphicSegments" type="tns:GraphicSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="TextSegments" type="tns:TextSegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="DataExtensions" type="tns:DataExtensionsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="ReservedExtensions" type="tns:ReservedExtensionsType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FILEID" type="xs:string" dfdl:length="10"/>
+      <xs:element name="CLEVEL" type="xs:string" dfdl:length="1"/>
+      <xs:element name="STYPE" type="xs:string" dfdl:length="4"/>
+      <xs:element name="OSTAID" type="xs:string" dfdl:length="10"/>
+      <xs:element name="FDT" type="xs:string" dfdl:length="14"/>
+      <xs:element name="FTITLE" type="xs:string" dfdl:length="80"/>
+      <xs:element name="FSCLAS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCODE" type="xs:string" dfdl:length="11"/>
+      <xs:element name="FSCTLH" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSREL" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSDCTP" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSDCDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSDCXM" type="xs:string" dfdl:length="4"/>
+      <xs:element name="FSDG" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSDGDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCLTX" type="xs:string" dfdl:length="43"/>
+      <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+      <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSSC" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSCLS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCS" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSCSS" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSCSTX" type="xs:string" dfdl:length="43"/>
+      <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+      <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSSC" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSCLS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCS" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSCSS" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSCSTX" type="xs:string" dfdl:length="43"/>
+      <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+      <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSSC" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSCLS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCS" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSCSS" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSCSTX" type="xs:string" dfdl:length="43"/>
+      <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+      <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSSC" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSCLS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCS" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSCSS" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSCSTX" type="xs:string" dfdl:length="43"/>
+      <xs:element name="FSCATP" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCRSN" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSRDT" type="xs:string" dfdl:length="8"/>
+      <xs:element name="FSCTLN" type="xs:string" dfdl:length="15"/>
+      <xs:element name="FSCOP" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSCPYS" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FSSC" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSSCLS" type="xs:string" dfdl:length="1"/>
+      <xs:element name="FSCS" type="xs:string" dfdl:length="2"/>
+      <xs:element name="FSCSS" type="xs:string" dfdl:length="20"/>
+      <xs:element name="FSCST

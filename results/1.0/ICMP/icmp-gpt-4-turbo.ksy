@@ -1,103 +1,88 @@
 meta:
   id: icmp_packet
-  title: ICMP (Internet Control Message Protocol) Packet
-  license: CC0-1.0
+  title: Internet Control Message Protocol (ICMP)
   endian: be
+  xref:
+    rfc: 792
 
 doc: |
   The Internet Control Message Protocol (ICMP) is used by network devices,
-  like routers, to send error messages and operational information indicating,
-  for example, that a requested service is not available or that a host or
-  router could not be reached.
-
-seq:
-  - id: type
-    type: u1
-    enum: icmp_type
-  - id: code
-    type: u1
-  - id: checksum
-    type: u2
-  - id: rest_of_header
-    size: 4
-    type:
-      switch-on: type
-      cases:
-        'icmp_type::echo_request': icmp_echo
-        'icmp_type::echo_reply': icmp_echo
-        'icmp_type::timestamp_request': icmp_timestamp
-        'icmp_type::timestamp_reply': icmp_timestamp
-        'icmp_type::info_request': icmp_info
-        'icmp_type::info_reply': icmp_info
-        'icmp_type::dest_unreachable': icmp_dest_unreachable
-        'icmp_type::source_quench': icmp_void
-        'icmp_type::redirect': icmp_redirect
-        'icmp_type::time_exceeded': icmp_void
-        'icmp_type::parameter_problem': icmp_parameter_problem
-        _: icmp_void
+  like routers, to send error messages and operational information indicating
+  issues such as communication failures and unreachable hosts. 
 
 types:
-  icmp_echo:
+  header:
+    seq:
+      - id: type
+        type: u1
+      - id: code
+        type: u1
+      - id: checksum
+        type: u2
+
+  echo:
     seq:
       - id: identifier
         type: u2
       - id: sequence_number
         type: u2
+      - id: data
+        size-eos: true
 
-  icmp_timestamp:
+  timestamp:
     seq:
       - id: identifier
         type: u2
       - id: sequence_number
         type: u2
       - id: originate_timestamp
-        type: u4
+        type: u8
       - id: receive_timestamp
-        type: u4
+        type: u8
       - id: transmit_timestamp
-        type: u4
+        type: u8
 
-  icmp_info:
-    seq:
-      - id: identifier
-        type: u2
-      - id: sequence_number
-        type: u2
-
-  icmp_dest_unreachable:
+  unreachable:
     seq:
       - id: unused
         type: u4
+      - id: next_hop_mtu
+        type: u2
+        if: _parent.header.code == 4
+      - id: internet_header_and_ip_payload
+        size-eos: true
 
-  icmp_void:
-    seq: []
-
-  icmp_redirect:
+  time_exceeded:
     seq:
-      - id: gateway_internet_address
+      - id: unused
         type: u4
-
-  icmp_parameter_problem:
+      - id: internet_header_and_ip_payload
+        size-eos: true
+  
+  parameter_problem:
     seq:
       - id: pointer
         type: u1
       - id: unused
-        size: 3
+        type: b24
+      - id: internet_header_and_ip_payload
+        size-eos: true
 
-enums:
-  icmp_type:
-    0: echo_reply
-    3: dest_unreachable
-    4: source_quench
-    5: redirect
-    8: echo_request
-    9: router_advertisement
-    10: router_solicitation
-    11: time_exceeded
-    12: parameter_problem
-    13: timestamp_request
-    14: timestamp_reply
-    15: info_request
-    16: info_reply
-    17: address_mask_request
-    18: address_mask_reply
+seq:
+  - id: header
+    type: header
+  - id: body
+    type:
+      switch-on: header.type
+      cases:
+        0: echo  # Echo Reply
+        3: unreachable  # Destination Unreachable
+        4: echo  # Source Quench, structure same as Echo
+        5: echo  # Redirect Message, assuming structure same as Echo
+        8: echo  # Echo Request
+        11: time_exceeded  # Time Exceeded
+        12: parameter_problem  # Parameter Problem
+        13: timestamp  # Timestamp
+        14: timestamp  # Timestamp Reply
+        15: echo  # Information Request (Deprecated)
+        16: echo  # Information Reply (Deprecated)

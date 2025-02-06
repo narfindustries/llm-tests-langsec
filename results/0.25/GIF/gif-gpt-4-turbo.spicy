@@ -1,66 +1,73 @@
 module GIF;
 
+public type RGB = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
+
 public type LogicalScreenDescriptor = unit {
-    canvasWidth: uint16;
-    canvasHeight: uint16;
-    packedFields: uint8;
+    screenWidth: uint16;
+    screenHeight: uint16;
+    packedFields: bitfield(8) {
+        globalColorTableFlag: 1;
+        colorResolution: 3;
+        sortFlag: 1;
+        sizeOfGlobalColorTable: 3;
+    };
     backgroundColorIndex: uint8;
     pixelAspectRatio: uint8;
 };
 
-public type GlobalColorTable = unit {
-    entries: vector<ColorTableEntry> &size=globalColorTableSize();
-};
-
-type ColorTableEntry = unit {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
+public type ColorTable = unit {
+    entries: RGB[] &size=computeColorTableSize(self);
 };
 
 public type ImageDescriptor = unit {
-    leftPosition: uint16;
-    topPosition: uint16;
-    width: uint16;
-    height: uint16;
-    packedFields: uint8;
+    imageSeparator: uint8;
+    imageLeftPosition: uint16;
+    imageTopPosition: uint16;
+    imageWidth: uint16;
+    imageHeight: uint16;
+    packedFields: bitfield(8) {
+        localColorTableFlag: 1;
+        interlaceFlag: 1;
+        sortFlag: 1;
+        reserved: 2;
+        sizeOfLocalColorTable: 3;
+    };
 };
 
-public type LocalColorTable = unit {
-    entries: vector<ColorTableEntry> &size=localColorTableSize();
-};
-
-public type TableBasedImageData = unit {
+public type ImageData = unit {
     lzwMinimumCodeSize: uint8;
-    dataBlocks: DataBlock+;
+    dataBlocks: bytes &eod;
 };
 
-public type DataBlock = unit {
+public type Extension = unit {
+    extensionIntroducer: uint8;
+    extensionLabel: uint8;
     blockSize: uint8;
-    blockData: bytes &size=this.blockSize;
+    data: bytes &size=blockSize;
+    subBlocks: bytes[] &eod;
 };
 
 public type GIFFile = unit {
-    header: bytes &size=6;
+    header: /[GIF8(7|9)a]/;
     logicalScreenDescriptor: LogicalScreenDescriptor;
-    globalColorTable: GlobalColorTable &if=hasGlobalColorTable();
-    imageDescriptor: ImageDescriptor;
-    localColorTable: LocalColorTable &if=hasLocalColorTable();
-    imageData: TableBasedImageData;
+    globalColorTable: ColorTable &requires=logicalScreenDescriptor.packedFields.globalColorTableFlag == 1;
+    content: (ImageBlock | Extension | Trailer)[] &eod;
 };
 
-function hasGlobalColorTable() : bool {
-    return (self.logicalScreenDescriptor.packedFields & 0x80) != 0;
-}
+public type ImageBlock = unit {
+    descriptor: ImageDescriptor;
+    localColorTable: ColorTable &requires=descriptor.packedFields.localColorTableFlag == 1;
+    imageData: ImageData;
+};
 
-function globalColorTableSize() : uint16 {
-    return (1 << ((self.logicalScreenDescriptor.packedFields & 0x07) + 1)) * 3;
-}
+public type Trailer = unit {
+    trailer: uint8;
+};
 
-function hasLocalColorTable() : bool {
-    return (self.imageDescriptor.packedFields & 0x80) != 0;
-}
-
-function localColorTableSize() : uint16 {
-    return (1 << ((self.imageDescriptor.packedFields & 0x07) + 1)) * 3;
+function computeColorTableSize(colorTable: any): uint16 {
+    return (2 ** (colorTable.packedFields.sizeOfGlobalColorTable + 1)) * 3;
 }

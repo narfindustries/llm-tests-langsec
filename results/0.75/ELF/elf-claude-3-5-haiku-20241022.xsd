@@ -1,73 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/spec/dfdl/schema/annotate"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/elf"
            xmlns:elf="http://example.com/elf">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/spec/dfdl/">
-      <dfdl:format 
-        alignmentUnits="bytes"
-        alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        initiator=""
-        terminator=""
-        separator=""
-        separatorPosition="infix"
-        separatorPolicy="suppressed"
-        representation="binary"
-        binaryNumberRep="binary"
-        byteOrder="bigEndian"
-        bitOrder="mostSignificantBitFirst"
-        escapeSchemeRef=""
-        textNumberRep="standard"
-        textPadding="none"
-        truncateSpecifiedLengthString="no"/>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="defaultFormat">
+        <dfdl:format separator="" separatorPosition="infix" initiator="" terminator=""
+                    leadingSkip="0" trailingSkip="0"
+                    byteOrder="bigEndian" representation="binary"
+                    lengthKind="explicit" lengthUnits="bytes"
+                    encoding="binary" 
+                    initiatedContent="no"
+                    sequenceKind="ordered"
+                    textBidi="no"
+                    floating="no"/>
+      </dfdl:defineFormat>
+      <dfdl:format ref="elf:defaultFormat"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ELFFile" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Header" dfdl:lengthKind="implicit">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="Magic" type="xs:hexBinary" 
-                          dfdl:length="4" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Class" type="xs:byte" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="DataEncoding" type="xs:byte" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="Version" type="xs:byte" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="OS_ABI" type="xs:byte" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="ABI_Version" type="xs:byte" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="Padding" type="xs:hexBinary" 
-                          dfdl:length="7" 
-                          dfdl:lengthKind="explicit"/>
-              <xs:element name="Type" type="xs:unsignedShort" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="2"/>
-              <xs:element name="Machine" type="xs:unsignedShort" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="2"/>
-              <xs:element name="Version" type="xs:unsignedInt" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="4"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="ELFHeader" type="elf:ELFHeaderType"/>
 
+  <xs:complexType name="ELFHeaderType">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="e_ident" dfdl:length="16">
+        <xs:complexType>
+          <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="magic" dfdl:length="4" type="xs:hexBinary"/>
+            <xs:element name="class" type="elf:ELFClassType" dfdl:length="1"/>
+            <xs:element name="dataEncoding" type="elf:ELFDataEncodingType" dfdl:length="1"/>
+            <xs:element name="version" type="elf:ELFVersionType" dfdl:length="1"/>
+            <xs:element name="osABI" type="elf:ELFOSABIType" dfdl:length="1"/>
+            <xs:element name="abiVersion" type="xs:unsignedByte" dfdl:length="1"/>
+            <xs:element name="padding" dfdl:length="8" type="xs:hexBinary"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="e_type" type="elf:ELFTypeType" dfdl:length="2"/>
+      <xs:element name="e_machine" type="elf:ELFMachineType" dfdl:length="2"/>
+      <xs:element name="e_version" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="e_entry" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="e_phoff" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="e_shoff" type="xs:unsignedLong" dfdl:length="8"/>
+      <xs:element name="e_flags" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="e_ehsize" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="e_phentsize" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="e_phnum" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="e_shentsize" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="e_shnum" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="e_shstrndx" type="xs:unsignedShort" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ELFClassType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/> <!-- ELFCLASSNONE -->
+      <xs:enumeration value="1"/> <!-- ELFCLASS32 -->
+      <xs:enumeration value="2"/> <!-- ELFCLASS64 -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ELFDataEncodingType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/> <!-- ELFDATANONE -->
+      <xs:enumeration value="1"/> <!-- ELFDATA2LSB -->
+      <xs:enumeration value="2"/> <!-- ELFDATA2MSB -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ELFVersionType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/> <!-- EV_NONE -->
+      <xs:enumeration value="1"/> <!-- EV_CURRENT -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ELFOSABIType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>   <!-- ELFOSABI_SYSV -->
+      <xs:enumeration value="1"/>   <!-- ELFOSABI_HPUX -->
+      <xs:enumeration value="2"/>   <!-- ELFOSABI_NETBSD -->
+      <xs:enumeration value="3"/>   <!-- ELFOSABI_LINUX -->
+      <xs:enumeration value="6"/>   <!-- ELFOSABI_SOLARIS -->
+      <xs:enumeration value="7"/>   <!-- ELFOSABI_AIX -->
+      <xs:enumeration value="8"/>   <!-- ELFOSABI_IRIX -->
+      <xs:enumeration value="9"/>   <!-- ELFOSABI_FREEBSD -->
+      <xs:enumeration value="10"/>  <!-- ELFOSABI_TRU64 -->
+      <xs:enumeration value="11"/>  <!-- ELFOSABI_MODESTO -->
+      <xs:enumeration value="12"/>  <!-- ELFOSABI_OPENBSD -->
+      <xs:enumeration value="64"/>  <!-- ELFOSABI_ARM -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ELFTypeType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="0"/> <!-- ET_NONE -->
+      <xs:enumeration value="1"/> <!-- ET_REL -->
+      <xs:enumeration value="2"/> <!-- ET_EXEC -->
+      <xs:enumeration value="3"/> <!-- ET_DYN -->
+      <xs:enumeration value="4"/> <!-- ET_CORE -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ELFMachineType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="0"/>   <!-- EM_NONE -->
+      <xs:enumeration value="1"/>   <!-- EM_M32 -->
+      <xs:enumeration value="2"/>   <!-- EM_SPARC -->
+      <xs:enumeration value="3"/>   <!-- EM_386 -->
+      <xs:enumeration value="4"/>   <!-- EM_68K -->
+      <xs:enumeration value="5"/>   <!-- EM_88K -->
+      <xs:enumeration value="7"/>   <!-- EM_860 -->
+      <xs:enumeration value="62"/>  <!-- EM_X86_64 -->
+      <xs:enumeration value="40"/>  <!-- EM_ARM -->
+      <xs:enumeration value="42"/>  <!-- EM_SH -->
+      <xs:enumeration value="50"/>  <!-- EM_MIPS -->
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

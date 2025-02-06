@@ -1,75 +1,234 @@
-# Zeek Spicy specification for Modbus protocol
+module Modbus;
 
-%header {
-    # Import necessary modules
-    @load base/protocols/modbus
-}
+type ModbusMessage = record {
+  address = uint8;
+  function_code = uint8;
+  data = case function_code of {
+    0x01 = read_coil_status: ReadCoilStatus;
+    0x02 = read_input_status: ReadInputStatus;
+    0x03 = read_holding_registers: ReadHoldingRegisters;
+    0x04 = read_input_registers: ReadInputRegisters;
+    0x05 = write_single_coil: WriteSingleCoil;
+    0x06 = write_single_holding_register: WriteSingleHoldingRegister;
+    0x07 = read_exception_status: ReadExceptionStatus;
+    0x0F = write_multiple_coils: WriteMultipleCoils;
+    0x10 = write_multiple_holding_registers: WriteMultipleHoldingRegisters;
+    0x11 = report_slave_id: ReportSlaveID;
+    0x14 = read_file_record: ReadFileRecord;
+    0x15 = write_file_record: WriteFileRecord;
+    0x16 = mask_write_register: MaskWriteRegister;
+    0x17 = read_write_multiple_registers: ReadWriteMultipleRegisters;
+    0x18 = read_fifo_queue: ReadFIFOQueue;
+    0x2B = encapsulated_interface_transport: EncapsulatedInterfaceTransport;
+  };
+};
 
-%config {
-    # Define the protocol and its properties
-    protocol = "modbus"
-    port = 1700/tcp
-}
+type ReadCoilStatus = record {
+  byte_count = uint8;
+  coil_status = uint8[byte_count];
+};
 
-%include {
-    # Include the Modbus protocol definition
-    base/protocols/modbus/modbus.pac
-}
+type ReadInputStatus = record {
+  byte_count = uint8;
+  input_status = uint8[byte_count];
+};
 
-%parser {
-    # Define the parser for the Modbus protocol
-    modbus_message = 
-        ( 
-            # Modbus message header
-            header: Modbus::Header, 
-            # Modbus message body
-            body: Modbus::Body 
-        );
-}
+type ReadHoldingRegisters = record {
+  byte_count = uint8;
+  holding_registers = uint16[byte_count / 2];
+};
 
-%lexer {
-    # Define the lexer for the Modbus protocol
-    modbus_token = 
-        ( 
-            # Modbus token
-            token: Modbus::Token 
-        );
-}
+type ReadInputRegisters = record {
+  byte_count = uint8;
+  input_registers = uint16[byte_count / 2];
+};
 
-%node {
-    # Define the node for the Modbus protocol
-    modbus_node = 
-        ( 
-            # Modbus node
-            node: Modbus::Node 
-        );
-}
+type WriteSingleCoil = record {
+  output_address = uint16;
+  output_value = uint16;
+};
 
-%event {
-    # Define the events for the Modbus protocol
-    modbus_event = 
-        ( 
-            # Modbus event
-            event: Modbus::Event 
-        );
-}
+type WriteSingleHoldingRegister = record {
+  register_address = uint16;
+  register_value = uint16;
+};
 
-%handler {
-    # Define the handler for the Modbus protocol
-    modbus_handler = 
-        ( 
-            # Modbus handler
-            handler: Modbus::Handler 
-        );
-}
+type ReadExceptionStatus = record {
+  status = uint8;
+};
 
-%main {
-    # Define the main function for the Modbus protocol
-    main = 
-        ( 
-            # Initialize the Modbus protocol
-            init: Modbus::Init, 
-            # Parse the Modbus message
-            parse: Modbus::Parse 
-        );
-}
+type WriteMultipleCoils = record {
+  start_address = uint16;
+  number_of_coils = uint16;
+  byte_count = uint8;
+  coil_values = uint8[byte_count];
+};
+
+type WriteMultipleHoldingRegisters = record {
+  start_address = uint16;
+  number_of_registers = uint16;
+  byte_count = uint8;
+  register_values = uint16[byte_count / 2];
+};
+
+type ReportSlaveID = record {
+  slave_id = uint8;
+  run_indicator_status = uint8;
+};
+
+type ReadFileRecord = record {
+  reference_type = uint8;
+  file_number = uint16;
+  record_number = uint16;
+  record_length = uint8;
+  data = uint8[record_length];
+};
+
+type WriteFileRecord = record {
+  reference_type = uint8;
+  file_number = uint16;
+  record_number = uint16;
+  record_length = uint8;
+  data = uint8[record_length];
+};
+
+type MaskWriteRegister = record {
+  reference_address = uint16;
+  and_mask = uint16;
+  or_mask = uint16;
+};
+
+type ReadWriteMultipleRegisters = record {
+  read_reference_address = uint16;
+  number_of_registers_to_read = uint16;
+  write_reference_address = uint16;
+  number_of_registers_to_write = uint16;
+  byte_count = uint8;
+  write_register_values = uint16[byte_count / 2];
+};
+
+type ReadFIFOQueue = record {
+  fifo_pointer_address = uint16;
+  number_of_registers_to_read = uint16;
+  data = uint16[number_of_registers_to_read];
+};
+
+type EncapsulatedInterfaceTransport = record {
+  interface_reference = uint8;
+  interface_data = uint8[*];
+};
+
+type ModbusResponse = record {
+  address = uint8;
+  function_code = uint8;
+  data = case function_code of {
+    0x01 = read_coil_status_response: ReadCoilStatusResponse;
+    0x02 = read_input_status_response: ReadInputStatusResponse;
+    0x03 = read_holding_registers_response: ReadHoldingRegistersResponse;
+    0x04 = read_input_registers_response: ReadInputRegistersResponse;
+    0x05 = write_single_coil_response: WriteSingleCoilResponse;
+    0x06 = write_single_holding_register_response: WriteSingleHoldingRegisterResponse;
+    0x07 = read_exception_status_response: ReadExceptionStatusResponse;
+    0x0F = write_multiple_coils_response: WriteMultipleCoilsResponse;
+    0x10 = write_multiple_holding_registers_response: WriteMultipleHoldingRegistersResponse;
+    0x11 = report_slave_id_response: ReportSlaveIDResponse;
+    0x14 = read_file_record_response: ReadFileRecordResponse;
+    0x15 = write_file_record_response: WriteFileRecordResponse;
+    0x16 = mask_write_register_response: MaskWriteRegisterResponse;
+    0x17 = read_write_multiple_registers_response: ReadWriteMultipleRegistersResponse;
+    0x18 = read_fifo_queue_response: ReadFIFOQueueResponse;
+    0x2B = encapsulated_interface_transport_response: EncapsulatedInterfaceTransportResponse;
+  };
+  error_code = uint8;
+};
+
+type ReadCoilStatusResponse = record {
+  byte_count = uint8;
+  coil_status = uint8[byte_count];
+};
+
+type ReadInputStatusResponse = record {
+  byte_count = uint8;
+  input_status = uint8[byte_count];
+};
+
+type ReadHoldingRegistersResponse = record {
+  byte_count = uint8;
+  holding_registers = uint16[byte_count / 2];
+};
+
+type ReadInputRegistersResponse = record {
+  byte_count = uint8;
+  input_registers = uint16[byte_count / 2];
+};
+
+type WriteSingleCoilResponse = record {
+  output_address = uint16;
+  output_value = uint16;
+};
+
+type WriteSingleHoldingRegisterResponse = record {
+  register_address = uint16;
+  register_value = uint16;
+};
+
+type ReadExceptionStatusResponse = record {
+  status = uint8;
+};
+
+type WriteMultipleCoilsResponse = record {
+  start_address = uint16;
+  number_of_coils = uint16;
+};
+
+type WriteMultipleHoldingRegistersResponse = record {
+  start_address = uint16;
+  number_of_registers = uint16;
+};
+
+type ReportSlaveIDResponse = record {
+  slave_id = uint8;
+  run_indicator_status = uint8;
+};
+
+type ReadFileRecordResponse = record {
+  reference_type = uint8;
+  file_number = uint16;
+  record_number = uint16;
+  record_length = uint8;
+  data = uint8[record_length];
+};
+
+type WriteFileRecordResponse = record {
+  reference_type = uint8;
+  file_number = uint16;
+  record_number = uint16;
+  record_length = uint8;
+  data = uint8[record_length];
+};
+
+type MaskWriteRegisterResponse = record {
+  reference_address = uint16;
+  and_mask = uint16;
+  or_mask = uint16;
+};
+
+type ReadWriteMultipleRegistersResponse = record {
+  read_reference_address = uint16;
+  number_of_registers_to_read = uint16;
+  write_reference_address = uint16;
+  number_of_registers_to_write = uint16;
+  byte_count = uint8;
+  write_register_values = uint16[byte_count / 2];
+};
+
+type ReadFIFOQueueResponse = record {
+  fifo_pointer_address = uint16;
+  number_of_registers_to_read = uint16;
+  data = uint16[number_of_registers_to_read];
+};
+
+type EncapsulatedInterfaceTransportResponse = record {
+  interface_reference = uint8;
+  interface_data = uint8[*];
+};

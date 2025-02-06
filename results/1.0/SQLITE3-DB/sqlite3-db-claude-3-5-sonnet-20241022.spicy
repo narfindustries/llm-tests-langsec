@@ -1,67 +1,102 @@
-module SQLITE3-DB;
+module SQLITE3;
 
-public type Header = unit {
+public type Database = unit {
+    header: Header;
+    pages: Page[] &size=self.header.db_size_pages;
+};
+
+type Header = unit {
     magic: bytes &size=16;
     page_size: uint16;
-    write_version: uint8;
-    read_version: uint8;
-    reserved_bytes: uint8;
+    file_format_write_version: uint8;
+    file_format_read_version: uint8;
+    reserved_space: uint8;
     max_payload_fraction: uint8;
     min_payload_fraction: uint8;
     leaf_payload_fraction: uint8;
     file_change_counter: uint32;
-    database_size: uint32;
-    first_freelist_trunk: uint32;
-    total_freelist_pages: uint32;
+    db_size_pages: uint32;
+    first_freelist_trunk_page: uint32;
+    freelist_pages: uint32;
     schema_cookie: uint32;
     schema_format: uint32;
     default_page_cache_size: uint32;
     largest_root_btree: uint32;
     text_encoding: uint32;
     user_version: uint32;
-    incremental_vacuum: uint32;
+    vacuum_status: uint32;
     application_id: uint32;
     reserved: bytes &size=20;
     version_valid: uint32;
-    version: uint32;
-
-    on %done {
-        if ( self.magic != b"SQLite format 3\x00" ) {
-            print "Invalid SQLite magic header";
-            return;
-        }
-    }
+    sqlite_version: uint32;
 };
 
-public type Record = unit {
-    type: uint8;
-    payload: bytes &eod;
+type BTPageHeader = unit {
+    page_type: uint8;
+    first_freeblock: uint16;
+    cell_count: uint16;
+    cell_content_offset: uint16;
+    fragmented_free_bytes: uint8;
+    right_child: uint32 if (self.page_type == 2 || self.page_type == 5);
 };
 
-public type Page = unit {
-    header: uint8;
-    cells: uint16;
-    content: bytes &eod;
+type Varint = unit {
+    value: bytes &until=$$ <= 0x80;
 };
 
-public type Database = unit {
-    header: Header;
-    pages: Page[];
+type TableInteriorCell = unit {
+    left_child: uint32;
+    key: Varint;
 };
 
-on Database::header -> event SQLITE3::header(
-    $magic: bytes,
-    $page_size: uint16,
-    $write_version: uint8,
-    $read_version: uint8
-);
+type TableLeafCell = unit {
+    payload_size: Varint;
+    row_id: Varint;
+    payload: bytes &size=self.payload_size;
+};
 
-on Page -> event SQLITE3::page(
-    $header: uint8,
-    $cells: uint16
-);
+type IndexInteriorCell = unit {
+    left_child: uint32;
+    payload_size: Varint;
+    payload: bytes &size=self.payload_size;
+};
 
-on Record -> event SQLITE3::record(
-    $type: uint8,
-    $payload: bytes
-);
+type IndexLeafCell = unit {
+    payload_size: Varint;
+    payload: bytes &size=self.payload_size;
+};
+
+type OverflowPage = unit {
+    next_page: uint32;
+    data: bytes &size=self.context.page_size - 4;
+};
+
+type FreelistTrunkPage = unit {
+    next_trunk_page: uint32;
+    leaf_count: uint32;
+    leaf_pages: uint32[self.leaf_count];
+};
+
+type PointerMapEntry = unit {
+    entry_type: uint8;
+};
+
+type Page = unit {
+    header: BTPageHeader;
+    cells: bytes &size=self.context.page_size - 8 - (self.header.page_type == 2 || self.header.page_type == 5 ? 4 : 0);
+};
+
+on Header::magic %done {
+    if ( self.magic != b"SQLite format 3\x00" )
+        print "Invalid SQLite magic";
+}
+
+on Header::page_size %done {
+    if ( self.page_size != 0 && (self.page_size < 512 || self.page_size > 32768 || (self.page_size & (self.page_size - 1)) != 0) )
+        print "Invalid page size";
+}
+
+on Header::text_encoding %done {
+    if ( self.text_encoding != 1 && self.text_encoding != 2 && self.text_encoding != 3 )
+        print "Invalid text encoding";
+}

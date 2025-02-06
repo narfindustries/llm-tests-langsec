@@ -1,53 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:tiff="http://example.com/tiff"
-    targetNamespace="http://example.com/tiff">
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="littleEndian"
-                representation="binary"
-                lengthUnits="bytes"
-                lengthKind="implicit"
-                encoding="UTF-8"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tiff="http://example.com/tiff"
+           targetNamespace="http://example.com/tiff">
 
-    <xs:element name="tiffFile">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="header" type="tiff:HeaderType"/>
-                <xs:element name="ifd" type="tiff:IFDType" maxOccurs="unbounded"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1" alignmentUnits="bytes"
+                   binaryNumberRep="binary"
+                   byteOrder="littleEndian"
+                   representation="binary"
+                   lengthUnits="bytes"
+                   lengthKind="implicit"
+                   encoding="UTF-8"
+                   initiatedContent="no"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   textTrimKind="none"
+                   textBidi="no"
+                   floating="no"
+                   initiator=""
+                   terminator=""
+                   separator=""
+                   encodingErrorPolicy="replace"
+                   sequenceKind="ordered"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+        <xs:element name="Header">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+              <xs:element name="ByteOrder">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+                    <xs:element name="Bytes" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:initiator=""/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Version" type="xs:unsignedShort" dfdl:initiator=""/>
+              <xs:element name="FirstIFDOffset" type="xs:unsignedInt" dfdl:initiator=""/>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="IFD" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+              <xs:element name="NumDirectoryEntries" type="xs:unsignedShort" dfdl:initiator=""/>
+              <xs:element name="DirectoryEntry" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+                    <xs:element name="Tag" type="xs:unsignedShort" dfdl:initiator=""/>
+                    <xs:element name="DataType" type="xs:unsignedShort" dfdl:initiator=""/>
+                    <xs:element name="DataCount" type="xs:unsignedInt" dfdl:initiator=""/>
+                    <xs:element name="DataOffset" type="xs:unsignedInt" dfdl:initiator=""/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:initiator=""/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
 
-    <xs:complexType name="HeaderType">
-        <xs:sequence>
-            <xs:element name="byteOrder" type="xs:hexBinary" dfdl:length="2" dfdl:outputValueCalc="{ xs:hexBinary('4949') }"/>
-            <xs:element name="magic" type="xs:unsignedShort" dfdl:length="2" dfdl:outputValueCalc="{ 42 }"/>
-            <xs:element name="firstIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
-        </xs:sequence>
+        <xs:element name="ImageData">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+              <xs:element name="StripData" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiator="">
+                    <xs:element name="Data" type="xs:hexBinary" 
+                              dfdl:lengthKind="explicit"
+                              dfdl:length="{ ../StripByteCounts }"
+                              dfdl:initiator=""/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
     </xs:complexType>
+  </xs:element>
 
-    <xs:complexType name="IFDType">
-        <xs:sequence>
-            <xs:element name="numEntries" type="xs:unsignedShort" dfdl:length="2"/>
-            <xs:element name="entries" type="tiff:IFDEntryType" maxOccurs="unbounded"/>
-            <xs:element name="nextIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xs:simpleType name="TagEnum">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="256"/>
+      <xs:enumeration value="257"/>
+      <xs:enumeration value="258"/>
+      <xs:enumeration value="259"/>
+      <xs:enumeration value="262"/>
+      <xs:enumeration value="273"/>
+      <xs:enumeration value="277"/>
+      <xs:enumeration value="278"/>
+      <xs:enumeration value="279"/>
+      <xs:enumeration value="282"/>
+      <xs:enumeration value="283"/>
+      <xs:enumeration value="284"/>
+      <xs:enumeration value="296"/>
+      <xs:enumeration value="305"/>
+      <xs:enumeration value="306"/>
+      <xs:enumeration value="315"/>
+      <xs:enumeration value="320"/>
+      <xs:enumeration value="33432"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-    <xs:complexType name="IFDEntryType">
-        <xs:sequence>
-            <xs:element name="tag" type="xs:unsignedShort" dfdl:length="2"/>
-            <xs:element name="dataType" type="xs:unsignedShort" dfdl:length="2"/>
-            <xs:element name="dataCount" type="xs:unsignedInt" dfdl:length="4"/>
-            <xs:element name="dataOffset" type="xs:unsignedInt" dfdl:length="4"/>
-        </xs:sequence>
-    </xs:complexType>
+  <xs:simpleType name="DataTypeEnum">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

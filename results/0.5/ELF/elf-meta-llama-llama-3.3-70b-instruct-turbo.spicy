@@ -1,114 +1,270 @@
-# zeek-spicy specification for ELF file format
-
-# Import necessary modules
-@load base/protocols/pcre
-@load base/protocols/binpac
-
-# Define the ELF file format
 module ELF;
 
-# Define the ELF header structure
-type elf_header: record {
-    e_ident: byte[16];
-    e_type: uint16;
-    e_machine: uint16;
-    e_version: uint32;
-    e_entry: uint64;
-    e_phoff: uint64;
-    e_shoff: uint64;
-    e_flags: uint32;
-    e_ehsize: uint16;
-    e_phentsize: uint16;
-    e_phnum: uint16;
-    e_shentsize: uint16;
-    e_shnum: uint16;
-    e_shstrndx: uint16;
-} &byteorder=littleendian;
+type ElfIdent = record {
+  ei_mag0: uint8 = 0x7F,
+  ei_mag1: string = "E",
+  ei_mag2: string = "L",
+  ei_mag3: string = "F",
+  ei_class: uint8,
+  ei_data: uint8,
+  ei_version: uint8,
+  ei_osabi: uint8,
+  ei_abiversion: uint8,
+  ei_pad: padding = 7
+};
 
-# Define the ELF program header structure
-type elf_phdr: record {
-    p_type: uint32;
-    p_flags: uint32;
-    p_offset: uint64;
-    p_vaddr: uint64;
-    p_paddr: uint64;
-    p_filesz: uint64;
-    p_memsz: uint64;
-    p_align: uint64;
-} &byteorder=littleendian;
+type ElfHeader32 = record {
+  e_ident: ElfIdent,
+  e_type: uint16,
+  e_machine: uint16,
+  e_version: uint32,
+  e_entry: uint32,
+  e_phoff: uint32,
+  e_shoff: uint32,
+  e_flags: uint32,
+  e_ehsize: uint16,
+  e_phentsize: uint16,
+  e_phnum: uint16,
+  e_shentsize: uint16,
+  e_shnum: uint16,
+  e_shstrndx: uint16
+};
 
-# Define the ELF section header structure
-type elf_shdr: record {
-    sh_name: uint32;
-    sh_type: uint32;
-    sh_flags: uint64;
-    sh_addr: uint64;
-    sh_offset: uint64;
-    sh_size: uint64;
-    sh_link: uint32;
-    sh_info: uint32;
-    sh_addralign: uint64;
-    sh_entsize: uint64;
-} &byteorder=littleendian;
+type ElfHeader64 = record {
+  e_ident: ElfIdent,
+  e_type: uint16,
+  e_machine: uint16,
+  e_version: uint32,
+  e_entry: uint64,
+  e_phoff: uint64,
+  e_shoff: uint64,
+  e_flags: uint32,
+  e_ehsize: uint16,
+  e_phentsize: uint16,
+  e_phnum: uint16,
+  e_shentsize: uint16,
+  e_shnum: uint16,
+  e_shstrndx: uint16
+};
 
-# Define the events
-event elf_file(header: elf_header);
-event elf_program_header(phdr: elf_phdr);
-event elf_section_header(shdr: elf_shdr);
+type ProgramHeader32 = record {
+  p_type: uint32,
+  p_offset: uint32,
+  p_vaddr: uint32,
+  p_paddr: uint32,
+  p_filesz: uint32,
+  p_memsz: uint32,
+  p_flags: uint32,
+  p_align: uint32
+};
 
-# Define the parser
-module ELF_Parser;
+type ProgramHeader64 = record {
+  p_type: uint32,
+  p_flags: uint32,
+  p_offset: uint64,
+  p_vaddr: uint64,
+  p_paddr: uint64,
+  p_filesz: uint64,
+  p_memsz: uint64,
+  p_align: uint64
+};
 
-# Define the parser for the ELF header
-function parse_elf_header(header: elf_header): bool
-    {
-    if ( header$e_ident[0] != 0x7F ||
-         header$e_ident[1] != 0x45 ||
-         header$e_ident[2] != 0x4c ||
-         header$e_ident[3] != 0x46 )
-        return false;
-    event elf_file(header);
-    return true;
-    }
+type SectionHeader32 = record {
+  sh_name: uint32,
+  sh_type: uint32,
+  sh_flags: uint32,
+  sh_addr: uint32,
+  sh_offset: uint32,
+  sh_size: uint32,
+  sh_link: uint32,
+  sh_info: uint32,
+  sh_addralign: uint32,
+  sh_entsize: uint32
+};
 
-# Define the parser for the ELF program headers
-function parse_elf_phdr(phdr: elf_phdr): bool
-    {
-    event elf_program_header(phdr);
-    return true;
-    }
+type SectionHeader64 = record {
+  sh_name: uint32,
+  sh_type: uint32,
+  sh_flags: uint64,
+  sh_addr: uint64,
+  sh_offset: uint64,
+  sh_size: uint64,
+  sh_link: uint32,
+  sh_info: uint32,
+  sh_addralign: uint64,
+  sh_entsize: uint64
+};
 
-# Define the parser for the ELF section headers
-function parse_elf_shdr(shdr: elf_shdr): bool
-    {
-    event elf_section_header(shdr);
-    return true;
-    }
+type SymbolTableEntry32 = record {
+  st_name: uint32,
+  st_value: uint32,
+  st_size: uint32,
+  st_info: uint8,
+  st_other: uint8,
+  st_shndx: uint16
+};
 
-# Define the main parser
-function parse(data: string): bool
-    {
-    if ( |data| < 16 )
-        return false;
-    local header: elf_header;
-    header = data[0..15];
-    if ( ! parse_elf_header(header) )
-        return false;
-    local phdr_offset = header$e_phoff;
-    local phdr_num = header$e_phnum;
-    for ( i in 1..phdr_num )
-        {
-        local phdr: elf_phdr = data[phdr_offset..phdr_offset+55];
-        parse_elf_phdr(phdr);
-        phdr_offset += 56;
-        }
-    local shdr_offset = header$e_shoff;
-    local shdr_num = header$e_shnum;
-    for ( i in 1..shdr_num )
-        {
-        local shdr: elf_shdr = data[shdr_offset..shdr_offset+67];
-        parse_elf_shdr(shdr);
-        shdr_offset += 68;
-        }
-    return true;
-    }
+type SymbolTableEntry64 = record {
+  st_name: uint32,
+  st_info: uint8,
+  st_other: uint8,
+  st_shndx: uint16,
+  st_value: uint64,
+  st_size: uint64
+};
+
+type Relocation32 = record {
+  r_offset: uint32,
+  r_info: uint32,
+  r_addend: uint32
+};
+
+type Relocation64 = record {
+  r_offset: uint64,
+  r_info: uint64,
+  r_addend: uint64
+};
+
+type DynamicEntry = record {
+  d_tag: uint32,
+  d_un: uint32
+};
+
+let elf_ident_ei_class = ElfIdent.ei_class == 1 ? "ELFCLASS32" : "ELFCLASS64";
+let elf_ident_ei_data = ElfIdent.ei_data == 1 ? "ELFDATA2LSB" : "ELFDATA2MSB";
+let elf_ident_ei_version = ElfIdent.ei_version == 1 ? "EV_CURRENT" : "";
+let elf_ident_ei_osabi = switch (ElfIdent.ei_osabi) {
+  case 0 => "SYSV",
+  case 1 => "HPUS",
+  case 2 => "NETBSD",
+  case 3 => "GNU",
+  case 4 => "BSD",
+  case 5 => "SOLARIS",
+  case 6 => "AIX",
+  case 7 => "IRIX",
+  case 8 => "FREEBSD",
+  case 9 => "TRU64",
+  case 10 => "MODESTO",
+  case 11 => "OPENBSD",
+  case 12 => "OPENVMS",
+  case 13 => "NSK",
+  case 14 => "AROS",
+  case 15 => "FENIXOS",
+  case 16 => "CLOUDABI",
+  case 17 => "OPENBSD_EABI",
+  case 18 => "ARM_EABI",
+  case 19 => "ARM_XScale_EABI"
+};
+
+let elf_header32_e_type = switch (ElfHeader32.e_type) {
+  case 1 => "ET_REL",
+  case 2 => "ET_EXEC",
+  case 3 => "ET_DYN",
+  case 4 => "ET_CORE"
+};
+
+let elf_header64_e_type = switch (ElfHeader64.e_type) {
+  case 1 => "ET_REL",
+  case 2 => "ET_EXEC",
+  case 3 => "ET_DYN",
+  case 4 => "ET_CORE"
+};
+
+let program_header32_p_type = switch (ProgramHeader32.p_type) {
+  case 0 => "PT_NULL",
+  case 1 => "PT_LOAD",
+  case 2 => "PT_DYNAMIC",
+  case 3 => "PT_INTERP",
+  case 4 => "PT_NOTE",
+  case 5 => "PT_SHLIB",
+  case 6 => "PT_PHDR"
+};
+
+let program_header64_p_type = switch (ProgramHeader64.p_type) {
+  case 0 => "PT_NULL",
+  case 1 => "PT_LOAD",
+  case 2 => "PT_DYNAMIC",
+  case 3 => "PT_INTERP",
+  case 4 => "PT_NOTE",
+  case 5 => "PT_SHLIB",
+  case 6 => "PT_PHDR"
+};
+
+let section_header32_sh_type = switch (SectionHeader32.sh_type) {
+  case 0 => "SHT_NULL",
+  case 1 => "SHT_PROGBITS",
+  case 2 => "SHT_SYMTAB",
+  case 3 => "SHT_STRTAB",
+  case 4 => "SHT_RELA",
+  case 5 => "SHT_HASH",
+  case 6 => "SHT_DYNAMIC",
+  case 7 => "SHT_NOTE",
+  case 8 => "SHT_NOBITS",
+  case 9 => "SHT_REL",
+  case 10 => "SHT_SHLIB",
+  case 11 => "SHT_DYNSYM"
+};
+
+let section_header64_sh_type = switch (SectionHeader64.sh_type) {
+  case 0 => "SHT_NULL",
+  case 1 => "SHT_PROGBITS",
+  case 2 => "SHT_SYMTAB",
+  case 3 => "SHT_STRTAB",
+  case 4 => "SHT_RELA",
+  case 5 => "SHT_HASH",
+  case 6 => "SHT_DYNAMIC",
+  case 7 => "SHT_NOTE",
+  case 8 => "SHT_NOBITS",
+  case 9 => "SHT_REL",
+  case 10 => "SHT_SHLIB",
+  case 11 => "SHT_DYNSYM"
+};
+
+let symbol_table_entry32_st_info = switch (SymbolTableEntry32.st_info) {
+  case 0 => "STB_LOCAL",
+  case 1 => "STB_GLOBAL",
+  case 2 => "STB_WEAK"
+};
+
+let symbol_table_entry64_st_info = switch (SymbolTableEntry64.st_info) {
+  case 0 => "STB_LOCAL",
+  case 1 => "STB_GLOBAL",
+  case 2 => "STB_WEAK"
+};
+
+let dynamic_entry_d_tag = switch (DynamicEntry.d_tag) {
+  case 0 => "DT_NULL",
+  case 1 => "DT_NEEDED",
+  case 2 => "DT_PLTRELSZ",
+  case 3 => "DT_PLTGOT",
+  case 4 => "DT_HASH",
+  case 5 => "DT_STRTAB",
+  case 6 => "DT_SYMTAB",
+  case 7 => "DT_RELA",
+  case 8 => "DT_RELASZ",
+  case 9 => "DT_RELAENT",
+  case 10 => "DT_STRSZ",
+  case 11 => "DT_SYMENT",
+  case 12 => "DT_INIT",
+  case 13 => "DT_FINI",
+  case 14 => "DT_SONAME",
+  case 15 => "DT_RPATH",
+  case 16 => "DT_SYMBOLIC",
+  case 17 => "DT_REL",
+  case 18 => "DT_RELSZ",
+  case 19 => "DT_RELENT",
+  case 20 => "DT_PLTREL",
+  case 21 => "DT_DEBUG",
+  case 22 => "DT_TEXTREL",
+  case 23 => "DT_JMPREL",
+  case 24 => "DT_BIND_NOW",
+  case 25 => "DT_INIT_ARRAY",
+  case 26 => "DT_FINI_ARRAY",
+  case 27 => "DT_INIT_ARRAYSZ",
+  case 28 => "DT_FINI_ARRAYSZ",
+  case 29 => "DT_RUNPATH",
+  case 30 => "DT_FLAGS",
+  case 31 => "DT_PREINIT_ARRAY",
+  case 32 => "DT_PREINIT_ARRAYSZ",
+  case 33 => "DT_MAXPOSTAGS"
+};

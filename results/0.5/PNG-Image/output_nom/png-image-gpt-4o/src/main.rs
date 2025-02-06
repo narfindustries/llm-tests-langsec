@@ -1,28 +1,21 @@
-// Cargo.toml
-// [dependencies]
-// nom = "7.1.1"
-// clap = { version = "4.0", features = ["derive"] }
-
-use clap::Parser;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::many_till,
+    combinator::map,
+    multi::many0,
     number::complete::{be_u32, be_u8},
-    sequence::{preceded, tuple},
+    sequence::tuple,
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
+use std::{env, fs::File, io::Read, path::Path};
 
-#[derive(Parser)]
-struct Cli {
-    input: String,
+#[derive(Debug)]
+struct PNG {
+    signature: [u8; 8],
+    chunks: Vec<Chunk>,
 }
 
 #[derive(Debug)]
-struct PngChunk {
+struct Chunk {
     length: u32,
     chunk_type: [u8; 4],
     data: Vec<u8>,
@@ -30,63 +23,91 @@ struct PngChunk {
 }
 
 #[derive(Debug)]
-struct PngFile {
-    signature: [u8; 8],
-    chunks: Vec<PngChunk>,
+struct IHDR {
+    width: u32,
+    height: u32,
+    bit_depth: u8,
+    color_type: u8,
+    compression_method: u8,
+    filter_method: u8,
+    interlace_method: u8,
 }
 
-fn parse_png_signature(input: &[u8]) -> IResult<&[u8], [u8; 8]> {
-    map(tag(&[137, 80, 78, 71, 13, 10, 26, 10]), |s| {
-        [s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]
+fn parse_png(input: &[u8]) -> IResult<&[u8], PNG> {
+    let (input, signature) = parse_signature(input)?;
+    let (input, chunks) = many0(parse_chunk)(input)?;
+    Ok((input, PNG { signature, chunks }))
+}
+
+fn parse_signature(input: &[u8]) -> IResult<&[u8], [u8; 8]> {
+    map(tag(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), |s: &[u8]| {
+        let mut sig = [0; 8];
+        sig.copy_from_slice(s);
+        sig
     })(input)
 }
 
-fn parse_chunk(input: &[u8]) -> IResult<&[u8], PngChunk> {
-    map(
-        tuple((
-            be_u32,
-            map_res(take(4usize), |s: &[u8]| Ok([s[0], s[1], s[2], s[3]])),
-            |i: &[u8]| {
-                let (i, length) = be_u32(i)?;
-                take(length as usize)(i)
-            },
-            be_u32,
-        )),
-        |(length, chunk_type, data, crc)| PngChunk {
+fn parse_chunk(input: &[u8]) -> IResult<&[u8], Chunk> {
+    let (input, length) = be_u32(input)?;
+    let (input, chunk_type) = map(take(4usize), |s: &[u8]| {
+        let mut ct = [0; 4];
+        ct.copy_from_slice(s);
+        ct
+    })(input)?;
+    let (input, data) = take(length as usize)(input)?;
+    let (input, crc) = be_u32(input)?;
+    Ok((
+        input,
+        Chunk {
             length,
             chunk_type,
             data: data.to_vec(),
             crc,
         },
-    )(input)
+    ))
 }
 
-fn parse_png_chunks(input: &[u8]) -> IResult<&[u8], Vec<PngChunk>> {
-    many_till(parse_chunk, tag("IEND"))(input).map(|(i, (chunks, _))| (i, chunks))
+fn parse_ihdr(input: &[u8]) -> IResult<&[u8], IHDR> {
+    let (input, (width, height, bit_depth, color_type, compression_method, filter_method, interlace_method)) =
+        tuple((be_u32, be_u32, be_u8, be_u8, be_u8, be_u8, be_u8))(input)?;
+    Ok((
+        input,
+        IHDR {
+            width,
+            height,
+            bit_depth,
+            color_type,
+            compression_method,
+            filter_method,
+            interlace_method,
+        },
+    ))
 }
 
-fn parse_png(input: &[u8]) -> IResult<&[u8], PngFile> {
-    map(
-        tuple((parse_png_signature, parse_png_chunks)),
-        |(signature, chunks)| PngFile { signature, chunks },
-    )(input)
-}
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file>", args[0]);
+        return;
+    }
 
-fn main() -> io::Result<()> {
-    let args = Cli::parse();
-    let path = Path::new(&args.input);
-    let mut file = File::open(&path)?;
+    let path = Path::new(&args[1]);
+    let mut file = File::open(&path).expect("Unable to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Unable to read file");
 
     match parse_png(&buffer) {
         Ok((_, png)) => {
-            println!("Parsed PNG: {:?}", png);
+            println!("{:?}", png);
+            for chunk in &png.chunks {
+                if &chunk.chunk_type == b"IHDR" {
+                    match parse_ihdr(&chunk.data) {
+                        Ok((_, ihdr)) => println!("{:?}", ihdr),
+                        Err(e) => eprintln!("Error parsing IHDR: {:?}", e),
+                    }
+                }
+            }
         }
-        Err(e) => {
-            eprintln!("Failed to parse PNG: {:?}", e);
-        }
+        Err(e) => eprintln!("Error parsing PNG: {:?}", e),
     }
-
-    Ok(())
 }

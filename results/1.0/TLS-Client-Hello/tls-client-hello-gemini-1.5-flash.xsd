@@ -1,38 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/tls-client-hello" targetNamespace="http://example.org/tls-client-hello" elementFormDefault="qualified">
-
-  <xs:element name="tlsClientHello">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tls_client_hello" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+  <xs:element name="ClientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="record" type="tns:RecordType" dfdl:occursCountKind="unbounded" dfdl:separator=",">
+        <xs:element name="client_version" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:representation="binary"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="32" dfdl:representation="binary"/>
+        <xs:element name="session_id">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="session_id_length" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="session_id_value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="session_id_length" minOccurs="0" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="cipher_suites">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="cipher_suites_length" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="cipher_suites_value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="cipher_suites_length" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="compression_methods">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="compression_methods_length" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="compression_methods_value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="compression_methods_length" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="extensions">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extensions_length" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="extensions_value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="extensions_length" minOccurs="0" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="next_protocol_negotiation">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="next_protocol_negotiation_length" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="next_protocol_negotiation_value" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="next_protocol_negotiation_length" minOccurs="0" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
-    <dfdl:format ref="tns:dfdlFormat"/>
   </xs:element>
-
-  <xs:complexType name="RecordType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
-      <xs:element name="field3" type="xs:decimal" dfdl:length="15" dfdl:totalDigits="15" dfdl:fractionDigits="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
-      <dfdl:format ref="tns:dfdlFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:element name="dfdlFormat">
-      <xs:complexType>
-          <xs:sequence/>
-          <xs:attribute name="textStandard" type="xs:string" fixed="US-ASCII"/>
-          <xs:attribute name="byteOrder" type="xs:string" fixed="bigEndian"/>
-          <xs:attribute name="encoding" type="xs:string" fixed="UTF-8"/>
-          <xs:attribute name="separator" type="xs:string" fixed=","/>
-      </xs:complexType>
-  </xs:element>
-
 </xs:schema>

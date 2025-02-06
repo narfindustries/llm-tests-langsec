@@ -1,57 +1,84 @@
 module TIFF;
 
-import zeek;
+type TIFF = unit {
+    endianness: uint16 &convert=endianness_switch;
+    magic: uint16 &assert=magic == 42;
+    ifd_offset: uint32;
 
-type TIFFHeader = unit {
-    endian: bytes &size=2;
-    magic_number: uint16;
-    if (endian == "\x49\x49") {
-        .byte_order = le;
-    } else {
-        .byte_order = be;
-    }
-    version: uint16;
-    offset: uint32;
+    ifds: vector<IFD> &restofdata;
 };
 
-type TIFFTag = unit {
-    tag_id: uint16;
-    data_type: uint16;
-    count: uint32;
-    value_offset: uint32;
-};
-
-type TIFFDirectory = unit {
+type IFD = unit {
     num_entries: uint16;
-    entries: array[num_entries] of TIFFTag;
+    entries: array[num_entries] of IFDEntry;
     next_ifd_offset: uint32;
 };
 
-type TIFFFile = unit {
-    header: TIFFHeader;
-    directories: array of TIFFDirectory {
-        next_ifd_offset != 0 => next_ifd_offset;
+type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_offset: uint32;
+
+    parsed_value: switch(tag) {
+        256 -> ImageWidth,
+        257 -> ImageLength,
+        258 -> BitsPerSample,
+        259 -> Compression,
+        262 -> PhotometricInterpretation,
+        273 -> StripOffsets,
+        277 -> SamplesPerPixel,
+        278 -> RowsPerStrip,
+        279 -> StripByteCounts,
+        282 -> XResolution,
+        283 -> YResolution,
+        284 -> PlanarConfiguration,
+        296 -> ResolutionUnit,
+        305 -> Software,
+        306 -> DateTime,
+        315 -> Artist,
+        316 -> HostComputer,
+        320 -> ColorMap,
+        322 -> TileWidth,
+        323 -> TileLength,
+        324 -> TileOffsets,
+        325 -> TileByteCounts,
+        338 -> ExtraSamples,
+        339 -> SampleFormat,
+        default -> bytes &length=4
     };
 };
 
-public type ParsedTIFF = TIFFFile;
+type ImageWidth = uint32;
+type ImageLength = uint32;
+type BitsPerSample = array of uint16 &size=1;
+type Compression = uint16;
+type PhotometricInterpretation = uint16;
+type StripOffsets = array of uint32 &size=1;
+type SamplesPerPixel = uint16;
+type RowsPerStrip = uint32;
+type StripByteCounts = array of uint32 &size=1;
+type XResolution = rational;
+type YResolution = rational;
+type PlanarConfiguration = uint16;
+type ResolutionUnit = uint16;
+type Software = string &size=4;
+type DateTime = string &size=4;
+type Artist = string &size=4;
+type HostComputer = string &size=4;
+type ColorMap = array of uint16 &size=1;
+type TileWidth = uint32;
+type TileLength = uint32;
+type TileOffsets = array of uint32 &size=1;
+type TileByteCounts = array of uint32 &size=1;
+type ExtraSamples = array of uint8 &size=1;
+type SampleFormat = array of uint16 &size=1;
 
-public event tiff_parsed(f: fa_file, tiff: ParsedTIFF);
-
-public hook zeek_init() {
-    Analyzer::register_for_mime_type(Analyzer::ANALYZER_TIFF, "image/tiff");
+function endianness_switch(e: uint16) : bool {
+    return e == 0x4949;
 }
 
-public type Analyzer = Analyzer::Base {
-    function done() : bool {
-        local tiff = parse_tiff();
-        if ( tiff ) {
-            event tiff_parsed(fa_file, tiff);
-        }
-        return true;
-    }
-
-    function parse_tiff() : ParsedTIFF {
-        return parse(ParsedTIFF, data);
-    }
+type rational = unit {
+    numerator: uint32;
+    denominator: uint32;
 };

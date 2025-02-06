@@ -1,52 +1,110 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:btc="http://example.com/bitcoin"
-    targetNamespace="http://example.com/bitcoin"
-    elementFormDefault="qualified">
-    
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:bt="http://bitcoin.transaction"
+           targetNamespace="http://bitcoin.transaction">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
-                alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="littleEndian"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthUnits="bytes"
-                encoding="UTF-8"/>
+                         alignmentUnits="bytes"
+                         lengthKind="implicit"
+                         representation="binary"
+                         byteOrder="littleEndian"
+                         binaryNumberRep="binary"
+                         occursCountKind="expression"
+                         encoding="UTF-8"
+                         encodingErrorPolicy="replace"
+                         initiatedContent="no"
+                         leadingSkip="0"
+                         trailingSkip="0"
+                         textBidi="no"
+                         floating="no"
+                         sequenceKind="ordered"
+                         lengthUnits="bytes"
+                         initiator=""
+                         terminator=""/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="Transaction">
+    <xs:element name="BitcoinTransaction">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Version" type="xs:int" dfdl:length="4"/>
-                <xs:element name="InputCount" type="xs:unsignedByte" dfdl:length="1"/>
-                <xs:element name="Inputs" minOccurs="0" maxOccurs="unbounded">
+            <xs:sequence dfdl:initiatedContent="no" dfdl:initiator="">
+                <!-- Version -->
+                <xs:element name="version" type="xs:int" dfdl:length="4" dfdl:initiator=""/>
+                
+                <!-- Input Counter -->
+                <xs:element name="inputCount" type="bt:VarInt"/>
+                
+                <!-- Transaction Inputs -->
+                <xs:element name="inputs" minOccurs="0" maxOccurs="unbounded"
+                          dfdl:occursCount="{ xs:int(../inputCount) }">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="PreviousTxHash" type="xs:hexBinary" dfdl:length="32"/>
-                            <xs:element name="PreviousTxIndex" type="xs:int" dfdl:length="4"/>
-                            <xs:element name="ScriptLength" type="xs:unsignedByte" dfdl:length="1"/>
-                            <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ScriptLength }"/>
-                            <xs:element name="Sequence" type="xs:int" dfdl:length="4"/>
+                        <xs:sequence dfdl:initiatedContent="no" dfdl:initiator="">
+                            <xs:element name="previousTransactionHash" type="xs:hexBinary" dfdl:length="32" dfdl:initiator=""/>
+                            <xs:element name="previousTransactionIndex" type="xs:int" dfdl:length="4" dfdl:initiator=""/>
+                            <xs:element name="scriptLength" type="bt:VarInt"/>
+                            <xs:element name="scriptSig" type="xs:hexBinary" 
+                                      dfdl:lengthKind="explicit"
+                                      dfdl:length="{ xs:int(../scriptLength) }"
+                                      dfdl:initiator=""/>
+                            <xs:element name="sequence" type="xs:int" dfdl:length="4" dfdl:initiator=""/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-                <xs:element name="OutputCount" type="xs:unsignedByte" dfdl:length="1"/>
-                <xs:element name="Outputs" minOccurs="0" maxOccurs="unbounded">
+                
+                <!-- Output Counter -->
+                <xs:element name="outputCount" type="bt:VarInt"/>
+                
+                <!-- Transaction Outputs -->
+                <xs:element name="outputs" minOccurs="0" maxOccurs="unbounded"
+                          dfdl:occursCount="{ xs:int(../outputCount) }">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="Value" type="xs:long" dfdl:length="8"/>
-                            <xs:element name="ScriptLength" type="xs:unsignedByte" dfdl:length="1"/>
-                            <xs:element name="ScriptPubKey" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ScriptLength }"/>
+                        <xs:sequence dfdl:initiatedContent="no" dfdl:initiator="">
+                            <xs:element name="value" type="xs:long" dfdl:length="8" dfdl:initiator=""/>
+                            <xs:element name="scriptLength" type="bt:VarInt"/>
+                            <xs:element name="scriptPubKey" type="xs:hexBinary"
+                                      dfdl:lengthKind="explicit"
+                                      dfdl:length="{ xs:int(../scriptLength) }"
+                                      dfdl:initiator=""/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
-                <xs:element name="LockTime" type="xs:int" dfdl:length="4"/>
+                
+                <!-- Lock Time -->
+                <xs:element name="lockTime" type="xs:int" dfdl:length="4" dfdl:initiator=""/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
+
+    <!-- Variable Integer Type Definition -->
+    <xs:complexType name="VarInt">
+        <xs:sequence dfdl:initiatedContent="no" dfdl:initiator="">
+            <xs:element name="prefix" type="xs:unsignedByte" dfdl:length="1" dfdl:initiator=""/>
+            <xs:choice dfdl:initiatedContent="no" dfdl:initiator="">
+                <xs:element name="value" type="xs:unsignedByte" 
+                          dfdl:lengthKind="explicit"
+                          dfdl:length="0"
+                          dfdl:outputValueCalc="{ ../prefix }"
+                          dfdl:occursCount="{ if(../prefix lt 253) then 1 else 0 }"
+                          dfdl:initiator=""/>
+                          
+                <xs:element name="uint16" type="xs:unsignedShort"
+                          dfdl:length="2"
+                          dfdl:occursCount="{ if(../prefix eq 253) then 1 else 0 }"
+                          dfdl:initiator=""/>
+                          
+                <xs:element name="uint32" type="xs:unsignedInt"
+                          dfdl:length="4"
+                          dfdl:occursCount="{ if(../prefix eq 254) then 1 else 0 }"
+                          dfdl:initiator=""/>
+                          
+                <xs:element name="uint64" type="xs:unsignedLong"
+                          dfdl:length="8"
+                          dfdl:occursCount="{ if(../prefix eq 255) then 1 else 0 }"
+                          dfdl:initiator=""/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+
 </xs:schema>

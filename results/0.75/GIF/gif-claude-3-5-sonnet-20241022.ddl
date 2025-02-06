@@ -1,119 +1,143 @@
-def Main = {
-  header;
-  frames
-}
+struct GIF {
+    Signature: string = "GIF";
+    Version: string in {"87a", "89a"};
 
-def header = {
-  signature;
-  screen_descriptor;
-  has_gct = $$ uint 1;
-  color_res = $$ uint 3;
-  sort_flag = $$ uint 1;
-  gct_size = $$ uint 3;
-  Match has_gct {
-    1 => global_color_table
-  }
-}
+    struct PackedScreenDescriptor {
+        GlobalColorTableFlag: bits(1);
+        ColorResolution: bits(3);
+        SortFlag: bits(1);
+        GlobalColorTableSize: bits(3);
+    }
 
-def signature = {
-  $$ FByte ('G');
-  $$ FByte ('I');
-  $$ FByte ('F');
-  $$ FByte ('8');
-  $$ FByte ('9');
-  $$ FByte ('a')
-}
+    struct LogicalScreenDescriptor {
+        Width: u16;
+        Height: u16;
+        PackedField: PackedScreenDescriptor;
+        BackgroundColorIndex: u8;
+        PixelAspectRatio: u8;
+    }
 
-def screen_descriptor = {
-  width = $$ uint 16;
-  height = $$ uint 16;
-  packed = $$ uint 8;
-  bg_color_index = $$ uint 8;
-  pixel_aspect_ratio = $$ uint 8
-}
+    struct ColorTableEntry {
+        R: u8;
+        G: u8;
+        B: u8;
+    }
 
-def global_color_table = {
-  colors = @Array(3 * (2 ^ (gct_size + 1))) {
-    r = $$ uint 8;
-    g = $$ uint 8;
-    b = $$ uint 8
-  }
-}
+    struct GlobalColorTable {
+        if (LogicalScreenDescriptor.PackedField.GlobalColorTableFlag == 1)
+            Entries: ColorTableEntry[3 * 2^(LogicalScreenDescriptor.PackedField.GlobalColorTableSize + 1)];
+    }
 
-def frames = @Until (Choose {
-  $$ uint 8 == 0x3B => trailer;
-  $$ uint 8 == 0x21 => extension;
-  $$ uint 8 == 0x2C => image_block
-})
+    struct PackedImageDescriptor {
+        LocalColorTableFlag: bits(1);
+        InterlaceFlag: bits(1);
+        SortFlag: bits(1);
+        Reserved: bits(2);
+        LocalColorTableSize: bits(3);
+    }
 
-def trailer = $$ null
+    struct ImageDescriptor {
+        Separator: u8 = 0x2C;
+        Left: u16;
+        Top: u16;
+        Width: u16;
+        Height: u16;
+        PackedField: PackedImageDescriptor;
+    }
 
-def extension = {
-  intro = $$ uint 8;
-  Match intro {
-    0xF9 => graphic_control_ext;
-    0xFE => comment_ext;
-    0xFF => application_ext;
-    0x01 => plain_text_ext
-  }
-}
+    struct LocalColorTable {
+        if (ImageDescriptor.PackedField.LocalColorTableFlag == 1)
+            Entries: ColorTableEntry[3 * 2^(ImageDescriptor.PackedField.LocalColorTableSize + 1)];
+    }
 
-def graphic_control_ext = {
-  block_size = $$ uint 8;
-  packed = $$ uint 8;
-  delay_time = $$ uint 16;
-  transparent_color_index = $$ uint 8;
-  terminator = $$ uint 8
-}
+    struct DataSubBlock {
+        Size: u8;
+        if (Size > 0)
+            Data: u8[Size];
+    }
 
-def comment_ext = data_blocks
+    struct ImageData {
+        LZWMinimumCodeSize: u8;
+        Blocks: DataSubBlock[];
+        while (peek(u8) != 0x00)
+            Block: DataSubBlock;
+        BlockTerminator: u8;
+    }
 
-def application_ext = {
-  block_size = $$ uint 8;
-  app_id = $$ Bytes 8;
-  auth_code = $$ Bytes 3;
-  data = data_blocks
-}
+    struct GraphicsControlExtension {
+        BlockSize: u8;
+        struct PackedField {
+            Reserved: bits(3);
+            DisposalMethod: bits(3);
+            UserInputFlag: bits(1);
+            TransparentColorFlag: bits(1);
+        }
+        Packed: PackedField;
+        DelayTime: u16;
+        TransparentColorIndex: u8;
+        Terminator: u8 = 0x00;
+    }
 
-def plain_text_ext = {
-  block_size = $$ uint 8;
-  text_grid_params = $$ Bytes 12;
-  data = data_blocks
-}
+    struct CommentExtension {
+        Blocks: DataSubBlock[];
+        while (peek(u8) != 0x00)
+            Block: DataSubBlock;
+        Terminator: u8 = 0x00;
+    }
 
-def image_block = {
-  left = $$ uint 16;
-  top = $$ uint 16;
-  width = $$ uint 16;
-  height = $$ uint 16;
-  packed = $$ uint 8;
-  has_lct = $$ uint 1;
-  interlace = $$ uint 1;
-  sort = $$ uint 1;
-  reserved = $$ uint 2;
-  lct_size = $$ uint 3;
-  Match has_lct {
-    1 => local_color_table
-  };
-  image_data
-}
+    struct PlainTextExtension {
+        BlockSize: u8;
+        TextGridLeft: u16;
+        TextGridTop: u16;
+        TextGridWidth: u16;
+        TextGridHeight: u16;
+        CellWidth: u8;
+        CellHeight: u8;
+        ForegroundColorIndex: u8;
+        BackgroundColorIndex: u8;
+        Blocks: DataSubBlock[];
+        while (peek(u8) != 0x00)
+            Block: DataSubBlock;
+        Terminator: u8 = 0x00;
+    }
 
-def local_color_table = {
-  colors = @Array(3 * (2 ^ (lct_size + 1))) {
-    r = $$ uint 8;
-    g = $$ uint 8;
-    b = $$ uint 8
-  }
-}
+    struct ApplicationExtension {
+        BlockSize: u8;
+        ApplicationIdentifier: u8[8];
+        AuthenticationCode: u8[3];
+        Blocks: DataSubBlock[];
+        while (peek(u8) != 0x00)
+            Block: DataSubBlock;
+        Terminator: u8 = 0x00;
+    }
 
-def image_data = {
-  lzw_min_code_size = $$ uint 8;
-  data = data_blocks
-}
+    struct Extension {
+        Introducer: u8 = 0x21;
+        Label: u8;
+        switch (Label) {
+            case 0xF9: GraphicsControl: GraphicsControlExtension;
+            case 0xFE: Comment: CommentExtension;
+            case 0x01: PlainText: PlainTextExtension;
+            case 0xFF: Application: ApplicationExtension;
+        }
+    }
 
-def data_blocks = @Until (
-  $$ uint 8 == 0x00
-) {
-  block_size = $$ uint 8;
-  data = $$ Bytes block_size
+    struct Block {
+        if (peek(u8) == 0x21)
+            Extension: Extension;
+        else if (peek(u8) == 0x2C) {
+            ImageDesc: ImageDescriptor;
+            LocalColors: LocalColorTable;
+            Data: ImageData;
+        }
+    }
+
+    Header: Signature;
+    Ver: Version;
+    LogicalScreen: LogicalScreenDescriptor;
+    GlobalColors: GlobalColorTable;
+    Blocks: Block[];
+    while (peek(u8) != 0x3B)
+        Block: Block;
+    Trailer: u8 = 0x3B;
 }

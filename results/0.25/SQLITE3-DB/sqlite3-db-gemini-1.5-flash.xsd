@@ -1,47 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/sqlite3db"
-           xmlns="http://example.org/sqlite3db"
-           elementFormDefault="qualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/sqlite3" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:tns="http://example.org/sqlite3">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+  <xs:annotation>
+    <xs:documentation>DFDL schema for SQLite 3 database file</xs:documentation>
+  </xs:annotation>
 
-  <xs:element name="sqlite3_db_gemini_1">
+  <xs:element name="sqlite3Database">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="data" type="DataType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="footer" type="FooterType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="header" type="tns:headerType"/>
+        <xs:element name="pages" type="tns:pagesType" minOccurs="1" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="explicit" dfdl:length="4"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="headerType">
     <xs:sequence>
-      <xs:element name="creationDate" type="xs:date" dfdl:lengthKind="explicit" dfdl:length="10"/>
-      <xs:element name="databaseName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="50"/>
+      <xs:element name="magic" type="xs:string" dfdl:length="16">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:textString>SQLite format 3</dfdl:textString>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="pageSize" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="writeCount" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="textEncoding" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="defaultPageCacheSize" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="largeFileSupport" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="versionNumber" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="applicationId" type="dfdl:bytes" dfdl:length="8"/>
+      <xs:element name="reserved" type="dfdl:bytes" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DataType">
+  <xs:complexType name="pagesType">
     <xs:sequence>
-      <xs:element name="record" type="RecordType" dfdl:occursCountKind="unbounded"/>
+      <xs:element name="pageHeader" type="tns:pageHeaderType"/>
+      <xs:element name="cellPointers" type="tns:cellPointersType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="cells" type="tns:cellsType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-
-  <xs:complexType name="RecordType">
+  <xs:complexType name="pageHeaderType">
     <xs:sequence>
-      <xs:element name="id" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="10"/>
-      <xs:element name="name" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="255"/>
-      <xs:element name="value" type="xs:decimal" dfdl:lengthKind="explicit" dfdl:length="15" dfdl:totalDigits="15" dfdl:fractionDigits="2"/>
+      <xs:element name="pageNumber" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="pageType" type="xs:unsignedByte" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="freeblockOffset" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="numberOfCells" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="reserved2" type="dfdl:bytes" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="FooterType">
+  <xs:complexType name="cellPointersType">
     <xs:sequence>
-      <xs:element name="recordCount" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="10"/>
-      <xs:element name="checksum" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="32"/>
+      <xs:element name="cellPointer" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="cellsType">
+    <xs:sequence>
+      <xs:element name="cellHeader" type="tns:cellHeaderType"/>
+      <xs:element name="cellData" type="dfdl:bytes" dfdl:length="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="cellHeaderType">
+    <xs:sequence>
+      <xs:element name="headerSize" type="xs:unsignedByte" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="dataType" type="xs:unsignedByte" dfdl:byteOrder="littleEndian"/>
     </xs:sequence>
   </xs:complexType>
 

@@ -1,44 +1,65 @@
-# TLS Client Hello Spice
+module TLS;
 
-@header {
-  name: "TLS-Client-Hello"
-  namespace: "meta::llama::llama"
-  major_version: 3
-  minor_version: 70
-}
-
-type TLS_Client_Hello(isn: uint32) = record {
-  handshake_type: uint8 = 1,
-  length: uint24,
-  version: uint16,
-  random: bytestring[32],
-  session_id_length: uint8,
-  session_id: bytestring[session_id_length],
-  cipher_suites_length: uint16,
-  cipher_suites: array[cipher_suites_length/2] of uint16,
-  compression_methods_length: uint8,
-  compression_methods: array[compression_methods_length] of uint8,
-  extensions_length: uint16,
-  extensions: array[extensions_length] of TLS_Extension,
-} &byteorder=big-endian;
-
-type TLS_Extension = record {
-  extension_type: uint16,
-  length: uint16,
-  data: bytestring[length],
-} &byteorder=big-endian;
-
-type TLS_Extensions = record {
-  server_name: TLS_Extension,
-  supported_versions: TLS_Extension,
-  # Add other extensions as needed
-} &byteorder=big-endian;
-
-type TLS_Client_Hello_Variant(isn: uint32) = variant {
-  type: TLS_Client_Hello,
-  extensions: array[TLS_Extensions],
+type TLS_ClientHello : Record {
+  legacy_version: uint16;
+  random: bytestring &length=32;
+  legacy_session_id: bytestring &length=1..32;
+  cipher_suites: vector of uint16;
+  legacy_compression_methods: vector of uint8;
+  extensions: vector of TLS_Extension;
 };
 
-event tls_client_hello(c: connection, msg: TLS_Client_Hello_Variant) {
-  # Implement event handling logic here
-}
+type TLS_Extension : Record {
+  extension_type: uint16;
+  extension_length: uint16;
+  extension_value: bytestring &length=extension_length-4;
+} &switch (extension_type) {
+  case 43: Supported_Versions_Extension;
+  case 10: Supported_Groups_Extension;
+  case 51: Key_Share_Extension;
+  case 41: Pre_Shared_Key_Extension;
+  case 40: Early_Data_Extension;
+  case 44: Cookie_Extension;
+  case 45: PSK_Key_Exchange_Modes_Extension;
+};
+
+type Supported_Versions_Extension : Record {
+  supported_version_list: vector of uint16;
+} &length=extension_length-4;
+
+type Supported_Groups_Extension : Record {
+  supported_group_list: vector of uint16;
+} &length=extension_length-4;
+
+type Key_Share_Extension : Record {
+  key_share_entry_list: vector of Key_Share_Entry;
+} &length=extension_length-4;
+
+type Key_Share_Entry : Record {
+  group: uint16;
+  key_exchange: bytestring;
+};
+
+type Pre_Shared_Key_Extension : Record {
+  psk_identity_list: vector of PSK_Identity;
+} &length=extension_length-4;
+
+type PSK_Identity : Record {
+  psk_identity: bytestring;
+  obfuscated_ticket_age: uint32;
+};
+
+type Early_Data_Extension : Record {
+};
+
+type Cookie_Extension : Record {
+  cookie: bytestring;
+} &length=extension_length-4;
+
+type PSK_Key_Exchange_Modes_Extension : Record {
+  ke_mode_list: vector of uint16;
+} &length=extension_length-4;
+
+type TLS_Message : Record {
+  content: TLS_ClientHello;
+} &byteorder=bigendian;

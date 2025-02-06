@@ -1,45 +1,87 @@
-def Main = {
-  header;
-  IFDs
-}
+let IFH = {
+    ByteOrder: uint16,
+    Version: uint16,
+    FirstIFDOffset: uint32
+};
 
-def header = {
-  $$ = "II";
-  magic: uint16 = 42;
-  offset: uint32
-}
+let TagType = {
+    BYTE: 1,
+    ASCII: 2,
+    SHORT: 3,
+    LONG: 4,
+    RATIONAL: 5,
+    SBYTE: 6,
+    UNDEFINED: 7,
+    SSHORT: 8,
+    SLONG: 9,
+    SRATIONAL: 10,
+    FLOAT: 11,
+    DOUBLE: 12
+};
 
-def IFDs = {
-  repeat1 {
-    count: uint16;
-    entries: ImageFileEntry[count];
-    nextIFD: uint32
-  } until nextIFD == 0
-}
+let Tag = {
+    NewSubfileType: 254,
+    SubfileType: 255,
+    ImageWidth: 256,
+    ImageLength: 257,
+    BitsPerSample: 258,
+    Compression: 259,
+    PhotometricInterpretation: 262,
+    Threshholding: 263,
+    CellWidth: 264,
+    CellLength: 265,
+    FillOrder: 266,
+    ImageDescription: 270,
+    Make: 271,
+    Model: 272,
+    StripOffsets: 273,
+    Orientation: 274,
+    SamplesPerPixel: 277,
+    RowsPerStrip: 278,
+    StripByteCounts: 279,
+    MinSampleValue: 280,
+    MaxSampleValue: 281,
+    XResolution: 282,
+    YResolution: 283,
+    PlanarConfiguration: 284,
+    FreeOffsets: 288,
+    FreeByteCounts: 289,
+    GrayResponseUnit: 290,
+    GrayResponseCurve: 291,
+    ResolutionUnit: 296,
+    Software: 305,
+    DateTime: 306,
+    Artist: 315,
+    HostComputer: 316,
+    ColorMap: 320,
+    ExtraSamples: 338,
+    Copyright: 33432
+};
 
-def ImageFileEntry = {
-  tag: uint16;
-  type: uint16;
-  count: uint32;
-  valueOrOffset: uint32;
-  
-  -- Validate known tags and types
-  @assert tag >= 254 && tag <= 34665;
-  @assert type >= 1 && type <= 12;
-  
-  -- Validate count based on type
-  switch type {
-    case 1: @assert count <= 4294967295  -- BYTE 
-    case 2: @assert count <= 4294967295  -- ASCII
-    case 3: @assert count <= 2147483647  -- SHORT
-    case 4: @assert count <= 1073741823  -- LONG
-    case 5: @assert count <= 858993459   -- RATIONAL
-    case 6: @assert count <= 4294967295  -- SBYTE
-    case 7: @assert count <= 4294967295  -- UNDEFINED
-    case 8: @assert count <= 2147483647  -- SSHORT
-    case 9: @assert count <= 1073741823  -- SLONG
-    case 10: @assert count <= 858993459  -- SRATIONAL
-    case 11: @assert count <= 1073741823 -- FLOAT
-    case 12: @assert count <= 536870911  -- DOUBLE
-  }
-}
+let Rational = {
+    Numerator: uint32,
+    Denominator: uint32
+};
+
+let SRational = {
+    Numerator: int32,
+    Denominator: int32
+};
+
+let IFDEntry = {
+    TagId: uint16,
+    DataType: uint16,
+    DataCount: uint32,
+    DataOffset: uint32
+};
+
+let IFD = {
+    EntryCount: uint16,
+    Entries: IFDEntry[EntryCount],
+    NextIFDOffset: uint32
+};
+
+let TIFF = {
+    Header: IFH,
+    FirstIFD: IFD @ Header.FirstIFDOffset
+};

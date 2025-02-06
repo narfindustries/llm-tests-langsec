@@ -1,132 +1,116 @@
-use nom::{
-    bits::complete::take,
-    combinator::map,
-    number::complete::{be_f32, be_i32, be_u16, be_u32, be_u8},
-    sequence::tuple,
-    IResult,
-};
+use nom::bits::complete::take as take_bits;
+use nom::error::Error;
+use nom::IResult;
+use nom::sequence::tuple;
+use nom::combinator::map;
+use nom::number::complete::{be_i32, be_u32, be_u8, i8 as be_i8};
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct NTPTimestamp {
-    seconds: u32,
-    fraction: u32,
-}
-
-#[derive(Debug)]
-struct ReferenceIdentifier {
-    id: [u8; 4],
-}
-
-#[derive(Debug)]
-struct NTPPacket {
-    li_vn_mode: u8,
+pub struct NtpPacket {
+    li: u8,
+    vn: u8,
+    mode: u8,
     stratum: u8,
-    poll: i8,
+    poll: u8,
     precision: i8,
-    root_delay: f32,
-    root_dispersion: f32,
-    reference_id: ReferenceIdentifier,
-    reference_timestamp: NTPTimestamp,
-    origin_timestamp: NTPTimestamp,
-    receive_timestamp: NTPTimestamp,
-    transmit_timestamp: NTPTimestamp,
-    key_id: Option<u32>,
-    message_digest: Option<[u8; 16]>,
+    root_delay: i32,
+    root_dispersion: u32,
+    reference_id: u32,
+    reference_timestamp: u64,
+    origin_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    key_identifier: Option<u32>,
+    message_digest: Option<Vec<u8>>
 }
 
-fn parse_timestamp(input: &[u8]) -> IResult<&[u8], NTPTimestamp> {
-    let (input, (seconds, fraction)) = tuple((be_u32, be_u32))(input)?;
-    Ok((
-        input,
-        NTPTimestamp {
-            seconds,
-            fraction,
-        },
-    ))
+fn parse_first_byte(input: (&[u8], usize)) -> IResult<(&[u8], usize), (u8, u8, u8)> {
+    tuple((
+        take_bits(2u8),  // LI
+        take_bits(3u8),  // VN
+        take_bits(3u8)   // Mode
+    ))(input)
 }
 
-fn parse_reference_id(input: &[u8]) -> IResult<&[u8], ReferenceIdentifier> {
-    let (input, id) = map(take(4usize), |bytes: &[u8]| {
-        let mut array = [0u8; 4];
-        array.copy_from_slice(bytes);
-        array
-    })(input)?;
-    Ok((input, ReferenceIdentifier { id }))
+fn parse_timestamps(input: &[u8]) -> IResult<&[u8], u64> {
+    map(tuple((
+        be_u32,
+        be_u32
+    )), |(seconds, fraction)| {
+        ((seconds as u64) << 32) | (fraction as u64)
+    })(input)
 }
 
-fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NTPPacket> {
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
+    let (input, (li, vn, mode)) = nom::bits::bits::<_, _, Error<(&[u8], usize)>, _, _>(
+        parse_first_byte
+    )(input)?;
+
     let (input, (
-        li_vn_mode,
         stratum,
         poll,
         precision,
         root_delay,
         root_dispersion,
         reference_id,
-        reference_timestamp,
-        origin_timestamp,
-        receive_timestamp,
-        transmit_timestamp,
+        reference_ts,
+        origin_ts,
+        receive_ts,
+        transmit_ts
     )) = tuple((
         be_u8,
         be_u8,
+        be_i8,
         be_i32,
-        be_i32,
-        be_f32,
-        be_f32,
-        parse_reference_id,
-        parse_timestamp,
-        parse_timestamp,
-        parse_timestamp,
-        parse_timestamp,
+        be_u32,
+        be_u32,
+        parse_timestamps,
+        parse_timestamps,
+        parse_timestamps,
+        parse_timestamps
     ))(input)?;
 
+    // Optional authentication fields
     let (input, key_id) = if input.len() >= 4 {
-        let (input, key_id) = be_u32(input)?;
-        (input, Some(key_id))
+        let (i, kid) = be_u32(input)?;
+        (i, Some(kid))
     } else {
         (input, None)
     };
 
-    let (input, message_digest) = if input.len() >= 16 {
-        let (input, digest) = map(take(16usize), |bytes: &[u8]| {
-            let mut array = [0u8; 16];
-            array.copy_from_slice(bytes);
-            array
-        })(input)?;
-        (input, Some(digest))
+    let message_digest = if input.len() >= 16 {
+        Some(input[..16].to_vec())
     } else {
-        (input, None)
+        None
     };
 
-    Ok((
-        input,
-        NTPPacket {
-            li_vn_mode,
-            stratum,
-            poll: poll as i8,
-            precision: precision as i8,
-            root_delay,
-            root_dispersion,
-            reference_id,
-            reference_timestamp,
-            origin_timestamp,
-            receive_timestamp,
-            transmit_timestamp,
-            key_id,
-            message_digest,
-        },
-    ))
+    Ok((input, NtpPacket {
+        li,
+        vn,
+        mode,
+        stratum,
+        poll,
+        precision,
+        root_delay,
+        root_dispersion,
+        reference_id,
+        reference_timestamp: reference_ts,
+        origin_timestamp: origin_ts,
+        receive_timestamp: receive_ts,
+        transmit_timestamp: transmit_ts,
+        key_identifier: key_id,
+        message_digest
+    }))
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <ntp_binary_file>", args[0]);
-        std::process::exit(1);
+        println!("Usage: {} <ntp_packet_file>", args[0]);
+        return Ok(());
     }
 
     let mut file = File::open(&args[1])?;
@@ -134,8 +118,13 @@ fn main() -> std::io::Result<()> {
     file.read_to_end(&mut buffer)?;
 
     match parse_ntp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:#?}", packet),
-        Err(e) => eprintln!("Failed to parse NTP packet: {:?}", e),
+        Ok((remaining, packet)) => {
+            println!("Parsed NTP packet: {:#?}", packet);
+            if !remaining.is_empty() {
+                println!("Warning: {} bytes remaining", remaining.len());
+            }
+        },
+        Err(e) => println!("Error parsing NTP packet: {:?}", e),
     }
 
     Ok(())

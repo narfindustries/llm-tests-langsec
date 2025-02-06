@@ -1,99 +1,113 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/TLS-Client-Hello"
-           xmlns="http://example.com/TLS-Client-Hello"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/tls" 
+           xmlns="http://example.com/tls" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.xsd"/>
-
-  <xs:element name="TLS-Client-Hello">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="binary"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
+  <xs:element name="ClientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="handshake-type" type="xs:unsignedByte" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="legacy_version" type="xs:unsignedShort"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="legacy_session_id" type="xs:hexBinary" dfdl:length="32"/>
+        <xs:element name="cipher_suites">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="cipher_suite" type="xs:unsignedShort" maxOccurs="unbounded" minOccurs="2"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
-        <xs:element name="length" type="xs:unsignedShort" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="legacy_compression_methods">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="compression_method" type="xs:unsignedByte" maxOccurs="255" minOccurs="1"/>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
-        <xs:element name="version" type="xs:unsignedShort" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="random" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="32">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="session-id" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="32">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="cipher-suites-length" type="xs:unsignedShort" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="cipher-suites" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="cipher-suites-length * 2">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="compression-methods-length" type="xs:unsignedByte" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="compression-methods" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="compression-methods-length">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="extensions-length" type="xs:unsignedShort" dfdl:representation="binary">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="extensions" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="extensions-length">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:byteOrder ref="bigEndian"/>
-            </xs:appinfo>
-          </xs:annotation>
+        <xs:element name="extensions">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extension" maxOccurs="unbounded" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extension_type" type="xs:unsignedShort"/>
+                    <xs:element name="extension_length" type="xs:unsignedShort"/>
+                    <xs:element name="extension_data" type="xs:hexBinary" dfdl:length="65535"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
+  <xs:element name="extension_supported_versions">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:unsignedShort" maxOccurs="255" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_supported_groups">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="group" type="xs:unsignedShort" maxOccurs="255" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_key_share">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="key_share_entry" maxOccurs="255" minOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="group" type="xs:unsignedShort"/>
+              <xs:element name="key_exchange" type="xs:hexBinary" dfdl:length="65535"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_pre_shared_key">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="pre_shared_key_entry" maxOccurs="255" minOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="identity" type="xs:unsignedShort"/>
+              <xs:element name="key" type="xs:hexBinary" dfdl:length="65535"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_early_data" type="xs:unsignedByte"/>
+  <xs:element name="extension_cookie" type="xs:hexBinary" dfdl:length="65535"/>
+  <xs:element name="extension_psk_key_exchange_modes">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="mode" type="xs:unsignedByte" maxOccurs="255" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_ticket_early_data_info" type="xs:hexBinary" dfdl:length="65535"/>
+  <xs:element name="extension_signature_algorithms">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="algorithm" type="xs:unsignedShort" maxOccurs="255" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="extension_signature_algorithms_cert">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="algorithm" type="xs:unsignedShort" maxOccurs="255" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

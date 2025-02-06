@@ -1,84 +1,68 @@
-module SQLITE3_DB {
-  import DAEDALUS_CORE;
+module SQLite3;
 
-  type SQLite3File = struct {
-    header     : SQLite3Header,
-    body       : repeat Page until end_of_file
-  };
+import std.base;
 
-  type SQLite3Header = struct {
-    magic       : array[16] of uint8, // "SQLite format 3\000"
-    page_size   : uint16_be,
-    write_ver   : uint8,
-    read_ver    : uint8,
-    reserved_space : uint8,
-    max_payload : uint8,
-    min_payload : uint8,
-    leaf_payload : uint8,
-    change_counter : uint32_be,
-    in_header_db_size : uint32_be,
-    first_freelist_trunk : uint32_be,
-    freelist_count : uint32_be,
-    schema_cookie : uint32_be,
-    schema_format : uint32_be,
-    default_cache_size : uint32_be,
-    largest_root_btree_page : uint32_be,
-    text_encoding : uint32_be,
-    user_version : uint32_be,
-    incremental_vacuum_mode : uint32_be,
-    application_id : uint32_be,
-    reserved : array[20] of uint8,
-    version_valid_for : uint32_be,
-    sqlite_version_number : uint32_be
-  };
-
-  type Page = union(page_type) {
-    case 0x0D : LeafTablePage,
-    case 0x05 : InteriorTablePage,
-    case 0x0A : LeafIndexPage,
-    case 0x02 : InteriorIndexPage
-  };
-
-  type LeafTablePage = struct {
-    header : PageHeader,
-    cells  : repeat Cell until end_of_struct
-  };
-
-  type InteriorTablePage = struct {
-    header : PageHeader,
-    right_most_ptr : uint32_be,
-    cells  : repeat Cell until end_of_struct
-  };
-
-  type LeafIndexPage = struct {
-    header : PageHeader,
-    cells  : repeat Cell until end_of_struct
-  };
-
-  type InteriorIndexPage = struct {
-    header : PageHeader,
-    right_most_ptr : uint32_be,
-    cells  : repeat Cell until end_of_struct
-  };
-
-  type PageHeader = struct {
-    page_type : uint8,
-    first_freeblock : uint16_be,
-    num_cells : uint16_be,
-    cell_content_area : uint16_be,
-    fragmented_free_bytes : uint8
-  };
-
-  type Cell = struct {
-    left_child_page : when($parent.page_type == 0x05 || $parent.page_type == 0x02) uint32_be,
-    payload_size : VarInt,
-    row_id : when($parent.page_type == 0x0D || $parent.page_type == 0x0A) VarInt,
-    payload : array[payload_size] of uint8
-  };
-
-  type VarInt = struct {
-    value : uint64_be // Variable-length integer encoding to be implemented
-  };
-
-  // Placeholder for actual VarInt implementation
+struct Header {
+    u8[16] magic = "SQLite format 3\0";
+    u16 page_size;
+    u8 write_version;
+    u8 read_version;
+    u8 reserved_space;
+    u8 max_payload_frac;
+    u8 min_payload_frac;
+    u8 leaf_payload_frac;
+    u32 file_change_counter;
+    u32 database_size;
+    u32 first_freelist_page;
+    u32 num_freelist_pages;
+    u32 schema_cookie;
+    u32 schema_format;
+    u32 default_cache_size;
+    u32 largest_root_page;
+    u32 text_encoding;
+    u32 user_version;
+    u32 incremental_vacuum;
+    u32 application_id;
+    u8[20] reserved;
+    u32 version_valid_for;
+    u32 sqlite_version;
 }
+
+struct BTreePageHeader {
+    u8 page_type;
+    u16 first_freeblock;
+    u16 num_cells;
+    u16 cell_content_offset;
+    u8 num_fragmented_free_bytes;
+    u32 right_most_pointer when (page_type == 2 || page_type == 5);
+}
+
+struct CellPointer {
+    u16 pointer;
+}
+
+struct BTreeCell {
+    varint payload_size;
+    varint rowid when (parent(BTreePage).header.page_type == 13 || parent(BTreePage).header.page_type == 5);
+    u32 left_child_page when (parent(BTreePage).header.page_type == 2 || parent(BTreePage).header.page_type == 5);
+    u8[payload_size] payload;
+}
+
+struct OverflowPage {
+    u32 next_overflow_page;
+    std.base.bytes payload_data;
+}
+
+struct BTreePage {
+    BTreePageHeader header;
+    CellPointer[cell_pointers] cell_pointers;
+    BTreeCell[cells] cells;
+    OverflowPage[] overflow_pages;
+}
+
+struct DatabaseFile {
+    Header header;
+    BTreePage[pages] pages;
+}
+
+root DatabaseFile sqlite3_db;

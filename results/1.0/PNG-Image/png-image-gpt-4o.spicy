@@ -1,29 +1,180 @@
-module PNG_Image;
-
-import zeek;
+module PNG;
 
 public type PNG = unit {
-    magic: bytes &length=8 &check=magic == "\x89PNG\r\n\x1A\n",
-    ihdr_length: uint32,
-    ihdr_type: string &length=4 &check=ihdr_type == "IHDR",
+    signature: bytes &size=8 &check=$$ == "\x89PNG\r\n\x1a\n",
+    chunks: Chunk[] &until(.type == "IEND")
+};
+
+type Chunk = unit {
+    length: uint32,
+    type: string &size=4,
+    data: bytes &size=length,
+    crc: uint32,
+
+    on %done {
+        if (crc32(type + data) != crc)
+            warn(fmt("CRC mismatch for chunk %s", type));
+    },
+
+    parser = switch (type) {
+        case "IHDR": ChunkIHDR,
+        case "PLTE": ChunkPLTE,
+        case "IDAT": ChunkIDAT,
+        case "IEND": ChunkIEND,
+        case "tEXt": ChunkTextual,
+        case "zTXt": ChunkCompressedText,
+        case "iTXt": ChunkInternationalText,
+        case "bKGD": ChunkBackgroundColor,
+        case "cHRM": ChunkChromaticity,
+        case "gAMA": ChunkGamma,
+        case "hIST": ChunkHistogram,
+        case "pHYs": ChunkPhysicalPixelDimensions,
+        case "sBIT": ChunkSignificantBits,
+        case "sPLT": ChunkSuggestedPalette,
+        case "sRGB": ChunkStandardRGBColorSpace,
+        case "tIME": ChunkModificationTime,
+        case _: ChunkUnknown
+    }
+};
+
+type ChunkIHDR = unit {
     width: uint32,
     height: uint32,
     bit_depth: uint8,
     color_type: uint8,
-    compression_method: uint8 &check=compression_method == 0,
-    filter_method: uint8 &check=filter_method == 0,
-    interlace_method: uint8 &check=(interlace_method == 0 || interlace_method == 1),
-    crc: uint32,
-    chunks: list of Chunk
+    compression_method: uint8,
+    filter_method: uint8,
+    interlace_method: uint8,
+
+    on %done {
+        if (compression_method != 0 || filter_method != 0)
+            warn("Invalid compression/filter method");
+    }
+};
+
+type ChunkPLTE = unit {
+    colors: array of RGB &size=(length / 3)
 } &byteorder=be;
 
-public type Chunk = unit {
-    length: uint32,
-    type: string &length=4,
-    data: bytes &length=length,
-    crc: uint32,
-} &byteorder=be;
+type RGB = unit {
+    r: uint8,
+    g: uint8,
+    b: uint8
+};
 
-event zeek_init() {
-    print("PNG_Image analyzer loaded.");
-}
+type ChunkIDAT = unit {
+    data: bytes
+};
+
+type ChunkIEND = unit {
+};
+
+type ChunkTextual = unit {
+    keyword: bytes &until="\x00",
+    text: bytes &restofdata
+};
+
+type ChunkCompressedText = unit {
+    keyword: bytes &until="\x00",
+    compression_method: uint8,
+    compressed_text: bytes &restofdata
+};
+
+type ChunkInternationalText = unit {
+    keyword: bytes &until="\x00",
+    compression_flag: uint8,
+    compression_method: uint8,
+    language_tag: bytes &until="\x00",
+    translated_keyword: bytes &until="\x00",
+    text: bytes &restofdata
+};
+
+type ChunkBackgroundColor = unit {
+    background: switch (parent.color_type) {
+        case 0, 4: uint16,
+        case 2, 6: RGB16,
+        case 3: uint8
+    }
+};
+
+type ChunkChromaticity = unit {
+    white_point_x: uint32,
+    white_point_y: uint32,
+    red_x: uint32,
+    red_y: uint32,
+    green_x: uint32,
+    green_y: uint32,
+    blue_x: uint32,
+    blue_y: uint32
+};
+
+type ChunkGamma = unit {
+    gamma: uint32
+};
+
+type ChunkHistogram = unit {
+    frequencies: uint16[] &size=(length / 2)
+};
+
+type ChunkPhysicalPixelDimensions = unit {
+    pixels_per_unit_x: uint32,
+    pixels_per_unit_y: uint32,
+    unit_specifier: uint8
+};
+
+type ChunkSignificantBits = unit {
+    bits: switch (parent.color_type) {
+        case 0: uint8,
+        case 2, 6: RGB8,
+        case 3: uint8,
+        case 4: GrayscaleAlpha,
+    }
+};
+
+type RGB8 = unit {
+    r: uint8,
+    g: uint8,
+    b: uint8
+};
+
+type GrayscaleAlpha = unit {
+    grayscale: uint8,
+    alpha: uint8
+};
+
+type RGB16 = unit {
+    r: uint16,
+    g: uint16,
+    b: uint16
+};
+
+type ChunkSuggestedPalette = unit {
+    name: bytes &until="\x00",
+    sample_depth: uint8,
+    entries: array of SuggestedPaletteEntry &size=((length - (name.size + 1)) / 10)
+};
+
+type SuggestedPaletteEntry = unit {
+    r: uint8,
+    g: uint8,
+    b: uint8,
+    a: uint8,
+    frequency: uint16
+};
+
+type ChunkStandardRGBColorSpace = unit {
+    rendering_intent: uint8
+};
+
+type ChunkModificationTime = unit {
+    year: uint16,
+    month: uint8,
+    day: uint8,
+    hour: uint8,
+    minute: uint8,
+    second: uint8
+};
+
+type ChunkUnknown = unit {
+    data: bytes
+};

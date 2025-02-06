@@ -5,24 +5,112 @@
            xmlns="http://example.org/gif"
            elementFormDefault="qualified">
 
-  <xs:element name="gif_gemini_1">
+  <xs:element name="GIF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="image_data" type="xs:base64Binary" dfdl:length="1024" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="Header" dfdl:length="6">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:pattern value="GIF89a"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="LogicalScreenDescriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Width" type="xs:unsignedShort"/>
+              <xs:element name="Height" type="xs:unsignedShort"/>
+              <xs:element name="PackedFields" type="PackedFieldsType"/>
+              <xs:element name="BackgroundColorIndex" type="xs:unsignedByte"/>
+              <xs:element name="PixelAspectRatio" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="AspectRatio" type="xs:unsignedShort"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="GlobalColorTable" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ColorEntry" maxOccurs="unbounded" type="ColorEntryType"/>
+            </xs:sequence>
+            <xs:attribute name="size" type="xs:unsignedByte" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageDescriptor" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ImageSeparator" dfdl:length="1">
+                <xs:simpleType>
+                  <xs:restriction base="xs:unsignedByte">
+                    <xs:pattern value="2C"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="ImageLeftPosition" type="xs:unsignedShort"/>
+              <xs:element name="ImageTopPosition" type="xs:unsignedShort"/>
+              <xs:element name="ImageWidth" type="xs:unsignedShort"/>
+              <xs:element name="ImageHeight" type="xs:unsignedShort"/>
+              <xs:element name="PackedFields" type="PackedFieldsType"/>
+              <xs:element name="LocalColorTable" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ColorEntry" maxOccurs="unbounded" type="ColorEntryType"/>
+                  </xs:sequence>
+                  <xs:attribute name="size" type="xs:unsignedByte" use="required"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:base64Binary"/>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ExtensionBlock" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ExtensionIntroducer" dfdl:length="1">
+                <xs:simpleType>
+                  <xs:restriction base="xs:unsignedByte">
+                    <xs:pattern value="21"/>
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+              <xs:element name="ExtensionLabel" type="xs:unsignedByte"/>
+              <xs:element name="ExtensionData" type="xs:base64Binary" dfdl:lengthKind="implicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Trailer" dfdl:length="1">
+          <xs:simpleType>
+            <xs:restriction base="xs:unsignedByte">
+              <xs:pattern value="3B"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="exactlyOne"/>
     </xs:complexType>
-    <dfdl:element dfdl:lengthKind="implicit"/>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="PackedFieldsType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedByte"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ColorEntryType">
     <xs:sequence>
-      <xs:element name="width" type="xs:unsignedInt" dfdl:length="2" dfdl:representation="binary"/>
-      <xs:element name="height" type="xs:unsignedInt" dfdl:length="2" dfdl:representation="binary"/>
-      <xs:element name="palette" type="xs:hexBinary" dfdl:length="768" dfdl:representation="binary"/>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
     </xs:sequence>
-    <dfdl:complexType dfdl:lengthKind="implicit"/>
   </xs:complexType>
 
 </xs:schema>

@@ -1,63 +1,58 @@
-module ZIP {
+module ZIP;
 
-  import DAEDALUS::BitStream;
+struct LocalFileHeader {
+  u32 signature = 0x04034b50;
+  u16 versionNeeded;
+  u16 generalPurposeBitFlag;
+  u16 compressionMethod;
+  u16 lastModFileTime;
+  u16 lastModFileDate;
+  u32 crc32;
+  u32 compressedSize;
+  u32 uncompressedSize;
+  u16 fileNameLength;
+  u16 extraFieldLength;
+  array[u8] fileName[fileNameLength];
+  array[u8] extraField[extraFieldLength];
+}
 
-  struct LocalFileHeader {
-    signature          : U32LE = 0x04034b50;
-    versionNeeded      : U16LE;
-    generalFlag        : U16LE;
-    compressionMethod  : U16LE;
-    lastModTime        : U16LE;
-    lastModDate        : U16LE;
-    crc32              : U32LE;
-    compressedSize     : U32LE;
-    uncompressedSize   : U32LE;
-    fileNameLength     : U16LE;
-    extraFieldLength   : U16LE;
-    fileName           : U8[fileNameLength];
-    extraField         : U8[extraFieldLength];
-  }
+struct CentralDirectoryFileHeader {
+  u32 signature = 0x02014b50;
+  u16 versionMadeBy;
+  u16 versionNeededToExtract;
+  u16 generalPurposeBitFlag;
+  u16 compressionMethod;
+  u16 lastModFileTime;
+  u16 lastModFileDate;
+  u32 crc32;
+  u32 compressedSize;
+  u32 uncompressedSize;
+  u16 fileNameLength;
+  u16 extraFieldLength;
+  u16 fileCommentLength;
+  u16 diskNumberStart;
+  u16 internalFileAttributes;
+  u32 externalFileAttributes;
+  u32 relativeOffsetOfLocalHeader;
+  array[u8] fileName[fileNameLength];
+  array[u8] extraField[extraFieldLength];
+  array[u8] fileComment[fileCommentLength];
+}
 
-  struct CentralDirectoryFileHeader {
-    signature          : U32LE = 0x02014b50;
-    versionMadeBy      : U16LE;
-    versionNeeded      : U16LE;
-    generalFlag        : U16LE;
-    compressionMethod  : U16LE;
-    lastModTime        : U16LE;
-    lastModDate        : U16LE;
-    crc32              : U32LE;
-    compressedSize     : U32LE;
-    uncompressedSize   : U32LE;
-    fileNameLength     : U16LE;
-    extraFieldLength   : U16LE;
-    fileCommentLength  : U16LE;
-    diskNumberStart    : U16LE;
-    internalFileAttrs  : U16LE;
-    externalFileAttrs  : U32LE;
-    localHeaderOffset  : U32LE;
-    fileName           : U8[fileNameLength];
-    extraField         : U8[extraFieldLength];
-    fileComment        : U8[fileCommentLength];
-  }
+struct EndOfCentralDirectoryRecord {
+  u32 signature = 0x06054b50;
+  u16 numberOfThisDisk;
+  u16 diskWhereCentralDirectoryStarts;
+  u16 numberOfCentralDirectoryRecordsOnThisDisk;
+  u16 totalNumberOfCentralDirectoryRecords;
+  u32 sizeOfCentralDirectory;
+  u32 offsetOfStartOfCentralDirectory;
+  u16 zipFileCommentLength;
+  array[u8] zipFileComment[zipFileCommentLength];
+}
 
-  struct EndOfCentralDirectoryRecord {
-    signature          : U32LE = 0x06054b50;
-    diskNumber         : U16LE;
-    diskStart          : U16LE;
-    numEntriesThisDisk : U16LE;
-    numEntries         : U16LE;
-    centralDirectorySize : U32LE;
-    centralDirectoryOffset : U32LE;
-    commentLength      : U16LE;
-    comment            : U8[commentLength];
-  }
-
-  struct ZIPFile {
-    localFiles         : LocalFileHeader[*];
-    centralDirectory   : CentralDirectoryFileHeader[*];
-    endOfCentralDir    : EndOfCentralDirectoryRecord;
-  }
-
-  let zipParser = parse ZIPFile from BitStream;
+struct ZIPFile {
+  array[LocalFileHeader] localFileHeaders;
+  array[CentralDirectoryFileHeader] centralDirectoryFileHeaders;
+  EndOfCentralDirectoryRecord endOfCentralDirectoryRecord;
 }

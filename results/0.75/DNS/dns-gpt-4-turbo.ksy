@@ -1,139 +1,142 @@
 meta:
   id: dns_packet
-  title: DNS (Domain Name System) Protocol
-  file-extension: dns
+  title: DNS Packet
   endian: be
-  license: CC0-1.0
-  ks-version: 0.9
-
 doc: |
-  DNS is a protocol used for converting human-readable domain names
-  into machine-readable IP addresses.
-
+  DNS (Domain Name System) is a hierarchical decentralized naming system for computers,
+  services, or other resources connected to the Internet or a private network. It associates
+  various information with domain names assigned to each of the participating entities.
+  Most prominently, it translates more readily memorized domain names to the numerical
+  IP addresses needed for locating and identifying computer services and devices with
+  the underlying network protocols. By providing a worldwide keyword-based redirection
+  service, the Domain Name System is an essential component of the functionality
+  of the Internet. This Kaitai Struct specification describes the structure of DNS packets.
 seq:
-  - id: transaction_id
-    type: u2
-    doc: Unique identifier for this query/response pair.
-
-  - id: flags
-    type: u2
-    doc: |
-      Flags control the behavior of the DNS query and response.
-      This field is further broken down into various flags.
-
-  - id: qdcount
-    type: u2
-    doc: Number of questions in the Question section.
-
-  - id: ancount
-    type: u2
-    doc: Number of resource records in the Answer section.
-
-  - id: nscount
-    type: u2
-    doc: Number of name server resource records in the Authority records section.
-
-  - id: arcount
-    type: u2
-    doc: Number of resource records in the Additional records section.
-
-  - id: questions
+  - id: header
+    type: header
+  - id: queries
     type: query
     repeat: expr
-    repeat-expr: qdcount
-    doc: List of questions.
-
+    repeat-expr: header.qdcount
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
-    doc: List of answers.
-
+    repeat-expr: header.ancount
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
-    doc: List of authority records.
-
+    repeat-expr: header.nscount
   - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
-    doc: List of additional records.
-
+    repeat-expr: header.arcount
 types:
+  header:
+    seq:
+      - id: transaction_id
+        type: u2
+      - id: flags
+        type: u2
+      - id: qdcount
+        type: u2
+      - id: ancount
+        type: u2
+      - id: nscount
+        type: u2
+      - id: arcount
+        type: u2
+    instances:
+      qr:
+        value: flags >> 15
+        enum: qr_type
+      opcode:
+        value: (flags >> 11) & 0b1111
+        enum: opcode_type
+      aa:
+        value: (flags >> 10) & 1
+      tc:
+        value: (flags >> 9) & 1
+      rd:
+        value: (flags >> 8) & 1
+      ra:
+        value: (flags >> 7) & 1
+      z:
+        value: (flags >> 4) & 0b111
+      rcode:
+        value: flags & 0b1111
+        enum: rcode_type
   query:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: query_type
-      - id: query_class
+        enum: type_type
+      - id: class
         type: u2
         enum: class_type
-
   resource_record:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: query_type
-      - id: rr_class
+        enum: type_type
+      - id: class
         type: u2
         enum: class_type
       - id: ttl
         type: u4
-        doc: Time to live in seconds.
       - id: rdlength
         type: u2
-        doc: Length of the RDATA field.
       - id: rdata
         size: rdlength
-
   domain_name:
     seq:
       - id: parts
         type: label
         repeat: eos
-
-    types:
-      label:
-        seq:
-          - id: length
-            type: u1
-          - id: body
-            type: str
-            size: length
-            encoding: ASCII
-
+  label:
+    seq:
+      - id: len
+        type: u1
+        valid:
+          min: 1
+      - id: name
+        type: str
+        size: len
+        encoding: ASCII
 enums:
-  query_type:
+  qr_type:
+    0: query
+    1: response
+  opcode_type:
+    0: query
+    1: iquery
+    2: status
+    3: reserved
+    4: notify
+    5: update
+  rcode_type:
+    0: no_error
+    1: format_error
+    2: server_failure
+    3: name_error
+    4: not_implemented
+    5: refused
+  type_type:
     1: a
     2: ns
-    3: md
-    4: mf
     5: cname
     6: soa
-    7: mb
-    8: mg
-    9: mr
-    10: null
-    11: wks
     12: ptr
-    13: hinfo
-    14: minfo
     15: mx
     16: txt
     28: aaaa
     33: srv
     255: any
-
   class_type:
-    1: inet
-    2: cs
+    1: in
     3: ch
     4: hs
-    254: none
     255: any

@@ -1,78 +1,103 @@
-module SQLITE3_DB {
-  import DAEDALUS::Core;
+module SQLite3;
 
-  type SQLiteFile = struct {
-    header: SQLiteHeader,
-    body:   array Page { length = header.page_count }
-  };
+import std::array;
+import std::u8;
+import std::u16;
+import std::u32;
+import std::u64;
+import std::i64;
+import std::bytes;
 
-  type SQLiteHeader = struct {
-    magic:         bytes { length = 16 },
-    page_size:     uint16,
-    file_format_write_version: uint8,
-    file_format_read_version: uint8,
-    reserved_space: uint8,
-    max_payload_frac: uint8,
-    min_payload_frac: uint8,
-    leaf_payload_frac: uint8,
-    file_change_counter: uint32,
-    database_size_pages: uint32,
-    first_freelist_trunk_page: uint32,
-    total_freelist_pages: uint32,
-    schema_cookie: uint32,
-    schema_format: uint32,
-    default_cache_size: uint32,
-    largest_root_btree_page: uint32,
-    text_encoding: uint32,
-    user_version: uint32,
-    incremental_vacuum_mode: uint32,
-    application_id: uint32,
-    reserved: bytes { length = 20 },
-    version_valid_for: uint32,
-    sqlite_version_number: uint32,
-    page_count: uint32 computed { database_size_pages }
-  };
+struct Header {
+    magic: array[u8, 16],
+    pageSize: u16,
+    writeVersion: u8,
+    readVersion: u8,
+    reservedSpace: u8,
+    maxPayloadFrac: u8,
+    minPayloadFrac: u8,
+    leafPayloadFrac: u8,
+    fileChangeCounter: u32,
+    databaseSize: u32,
+    firstFreelistTrunkPage: u32,
+    totalFreelistPages: u32,
+    schemaCookie: u32,
+    schemaFormat: u32,
+    defaultCacheSize: u32,
+    largestRootPage: u32,
+    textEncoding: u32,
+    userVersion: u32,
+    incrementalVacuumMode: u32,
+    applicationId: u32,
+    reserved: array[u8, 20],
+    versionValidFor: u32,
+    sqliteVersion: u32
+};
 
-  type Page = union {
-    case header.page_type == 0x02 => IndexInteriorPage,
-    case header.page_type == 0x05 => TableInteriorPage,
-    case header.page_type == 0x0A => IndexLeafPage,
-    case header.page_type == 0x0D => TableLeafPage
-  } switch (uint8 page_type);
+struct CellPointer {
+    pointer: u16
+};
 
-  type IndexInteriorPage = struct {
-    header: PageHeader,
-    cells: array Cell { length = header.num_cells }
-  };
+struct BTreePage {
+    pageType: u8,
+    firstFreeblock: u16,
+    numCells: u16,
+    cellContentOffset: u16,
+    numFragFreeBytes: u8,
+    cellPointers: array[CellPointer],
+    cells: array[Cell] @offset(cellContentOffset)
+};
 
-  type TableInteriorPage = struct {
-    header: PageHeader,
-    cells: array Cell { length = header.num_cells }
-  };
+struct Cell {
+    leftChildPage: u32,
+    payloadSize: u32,
+    rowId: i64,
+    payload: Payload
+};
 
-  type IndexLeafPage = struct {
-    header: PageHeader,
-    cells: array Cell { length = header.num_cells }
-  };
+struct Payload {
+    data: bytes @length(payloadSize)
+};
 
-  type TableLeafPage = struct {
-    header: PageHeader,
-    cells: array Cell { length = header.num_cells }
-  };
+struct OverflowPage {
+    nextPage: u32,
+    content: bytes
+};
 
-  type PageHeader = struct {
-    page_type: uint8,
-    first_freeblock: uint16,
-    num_cells: uint16,
-    cell_content_area: uint16,
-    fragmented_free_bytes: uint8,
-    right_most_pointer: uint32 optional { page_type == 0x02 || page_type == 0x05 }
-  };
+struct FreelistPage {
+    nextPage: u32,
+    cells: bytes
+};
 
-  type Cell = struct {
-    left_child_pointer: uint32 optional { page_type == 0x02 || page_type == 0x05 },
-    payload_size: uint16,
-    rowid: uint64 optional { page_type == 0x0A || page_type == 0x0D },
-    payload: bytes { length = payload_size }
-  };
-}
+struct PointerMapPage {
+    entries: array[PointerMapEntry]
+};
+
+struct PointerMapEntry {
+    type: u8,
+    parentPageNumber: u32
+};
+
+struct DatabaseFile {
+    header: Header,
+    pages: array[Page]
+};
+
+union Page {
+    case 0x02: InteriorIndexBTreePage,
+    case 0x05: InteriorTableBTreePage,
+    case 0x0A: LeafIndexBTreePage,
+    case 0x0D: LeafTableBTreePage,
+    case 0x0F: FreelistPage,
+    case 0x10: OverflowPage,
+    case 0x11: PointerMapPage
+};
+
+struct InteriorIndexBTreePage extends BTreePage;
+struct InteriorTableBTreePage extends BTreePage;
+struct LeafIndexBTreePage extends BTreePage;
+struct LeafTableBTreePage extends BTreePage;
+
+struct SQLiteDB {
+    file: DatabaseFile
+};

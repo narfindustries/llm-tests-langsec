@@ -2,28 +2,53 @@ module DICOM;
 
 import spicy;
 
-public type Header = unit {
-    preamble: bytes(128);
-    magic: bytes(4) &requires(self == b"DICM");
-
-    : void {
-        self.preamble.length() == 128;
-        self.magic == b"DICM";
-    }
+type DicomHeader = unit {
+    preamble: bytes &size=128;
+    magic: bytes &size=4 &validate(|$$ == b"DICM"|);
 };
 
-public type DataElement = unit {
-    tag: bytes(4);
-    vr: bytes(2);
-    length: uint32;
-    value: bytes(self.length);
+type Patient = unit {
+    patient_name: bytes &eod;
+    patient_id: bytes &eod;
+    patient_birth_date: bytes &eod;
+    patient_sex: bytes &eod;
+    patient_age: bytes &eod;
 };
 
-public type File = unit {
-    header: Header;
-    elements: DataElement[] &until($input.is_eof());
+type Study = unit {
+    study_instance_uid: bytes &eod;
+    study_date: bytes &eod;
+    study_time: bytes &eod;
+    accession_number: bytes &eod;
+    referring_physician: bytes &eod;
+    study_description: bytes &eod;
 };
 
-public function parse(f: File) : bool {
-    return true;
-}
+type Series = unit {
+    modality: bytes &eod;
+    series_number: uint32;
+    series_description: bytes &eod;
+    series_instance_uid: bytes &eod;
+    manufacturer: bytes &eod;
+};
+
+type Image = unit {
+    sop_instance_uid: bytes &eod;
+    instance_number: uint32;
+    image_position: bytes &eod;
+    pixel_data: bytes &eod;
+    rows: uint16;
+    columns: uint16;
+    bits_allocated: uint16;
+    bits_stored: uint16;
+    pixel_representation: bytes &eod;
+    photometric_interpretation: bytes &eod;
+};
+
+public type DICOM = unit {
+    header: DicomHeader;
+    patient: Patient;
+    study: Study;
+    series: Series;
+    image: Image;
+};

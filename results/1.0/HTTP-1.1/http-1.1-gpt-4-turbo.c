@@ -1,106 +1,90 @@
-Based on the error you provided, it appears there was an issue during the compilation process involving a Hammer specification transformed into C code. Here is a revised, complete Hammer specification in C format. This assumes the use of a Hypertext Transfer Protocol (HTTP) 1.1 parser example, as your error message seems related to an HTTP/1.1 specification:
-
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Forward declarations
-static HParser *http_version;
-static HParser *uri;
-static HParser *request_line;
-static HParser *header;
-static HParser *message_body;
-static HParser *http_request;
+// Utility to read input from a file
+static char *read_file(const char *filename, size_t *length) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Error opening file");
+        return NULL;
+    }
+    fseek(f, 0, SEEK_END);
+    *length = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-// Parser definitions
-static void init_parsers() {
-    // HTTP version "HTTP/" followed by one or two digits, a dot, and one digit
-    http_version = h_sequence(h_chs("HTTP/"), h_int_range(h_uint8(), '1', '1'), h_ch_exact('.'), h_int_range(h_uint8(), '0', '1'), NULL);
+    char *data = (char *)malloc(*length);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(f);
+        return NULL;
+    }
 
-    // URI (simplified)
-    uri = h_plus(h_visible());
+    if (fread(data, 1, *length, f) != *length) {
+        perror("Error reading file");
+        fclose(f);
+        free(data);
+        return NULL;
+    }
 
-    // Request line
-    request_line = h_sequence(
-        h_choice(h_chs("GET"), h_chs("HEAD"), h_chs("POST"), h_chs("PUT"), 
-                 h_chs("DELETE"), h_chs("CONNECT"), h_chs("OPTIONS"), h_chs("TRACE"), NULL),
-        h_ch(' '), uri, h_ch(' '), http_version, h_end_p(), NULL);
+    fclose(f);
+    return data;
+}
 
-    // Header (simplified: field-name: field-value)
-    header = h_sequence(
-        h_plus(h_visible()),
-        h_ch(':'),
-        h_plus(h_visible()),
-        h_end_p(),
-        NULL);
+// Define HTTP 1.1 grammar using Hammer
+static HParser *http_grammar() {
+    HParser *token = h_token(" ", 1);
+    HParser *crlf = h_token("\r\n", 2);
+    HParser *colon_space = h_token(": ", 2);
 
-    // Message body (simplified, allows any visible characters plus SP and HT)
-    message_body = h_many(h_visible());
+    // Request line: Method SP Request-URI SP HTTP-Version CRLF
+    HParser *method = h_choice(h_token("GET", 3), h_token("POST", 4), h_token("HEAD", 4), NULL);
+    HParser *request_uri = h_many1(h_not_in(" \r\n", 3));
+    HParser *http_version = h_token("HTTP/1.1", 8);
+    HParser *request_line = h_sequence(method, token, request_uri, token, http_version, crlf, NULL);
 
-    // Full HTTP request parser
-    http_request = h_sequence(
-        request_line,
-        h_many(header),
-        h_optional(message_body),
-        NULL
-    );
+    // Status line: HTTP-Version SP Status-Code SP Reason-Phrase CRLF
+    HParser *status_code = h_int_range(h_uint8(), 100, 599);
+    HParser *reason_phrase = h_many1(h_not_in("\r\n", 2));
+    HParser *status_line = h_sequence(http_version, token, status_code, token, reason_phrase, crlf, NULL);
+
+    // Headers: field-name ":" [ field-value ] CRLF
+    HParser *field_name = h_many1(h_not_in(":\r\n", 3));
+    HParser *field_value = h_many1(h_not_in("\r\n", 2));
+    HParser *header = h_sequence(field_name, colon_space, field_value, crlf, NULL);
+    HParser *headers = h_many(header);
+
+    // Message body (arbitrary bytes)
+    HParser *message_body = h_greedy1(h_any(), 0);
+
+    // Complete HTTP request and response parsers
+    HParser *http_request = h_sequence(request_line, headers, h_optional(message_body), h_end_p(), NULL);
+    HParser *http_response = h_sequence(status_line, headers, h_optional(message_body), h_end_p(), NULL);
+
+    return h_choice(http_request, http_response, NULL);
 }
 
 int main(int argc, char **argv) {
-    HParser *parser;
-    HParseResult *result;
-    size_t input_size;
-    uint8_t *input_buffer;
-
-    init_parsers();
-    parser = http_request;
-
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
-        return EXIT_FAILURE;
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return 1;
     }
 
-    FILE *input_file = fopen(argv[1], "rb");
-    if (!input_file) {
-        perror("Error opening file");
-        return EXIT_FAILURE;
-    }
+    size_t len;
+    char *data = read_file(argv[1], &len);
+    if (!data) return 1;
 
-    // Determine file size
-    fseek(input_file, 0, SEEK_END);
-    input_size = ftell(input_file);
-    rewind(input_file);
-
-    // Allocate buffer and read file
-    input_buffer = malloc(input_size);
-    if (input_buffer == NULL) {
-        fclose(input_file);
-        fprintf(stderr, "Memory allocation failed\n");
-        return EXIT_FAILURE;
-    }
-    if (fread(input_buffer, 1, input_size, input_file) != input_size) {
-        free(input_buffer);
-        fclose(input_file);
-        fprintf(stderr, "Error reading file\n");
-        return EXIT_FAILURE;
-    }
-
-    // Parse input
-    result = h_parse(parser, input_buffer, input_size);
+    HParser *parser = http_grammar();
+    HParseResult *result = h_parse(parser, (const uint8_t *)data, len);
     if (result) {
-        printf("Parse succeeded!\n");
+        printf("Parse successful!\n");
         h_pprint(stdout, result->ast, 0, 0);
     } else {
-        printf("Parse failed!\n");
+        printf("Parse failed.\n");
     }
 
-    // Clean up
-    free(input_buffer);
-    fclose(input_file);
     h_parse_result_free(result);
+    free(data);
 
-    return result ? EXIT_SUCCESS : EXIT_FAILURE;
+    return 0;
 }
-
-This version simplifies parsing for headers and the message body but maintains the necessary parsing for a basic request line and a sequence of optional headers followed by an optional body. Note that adequate error handling and parsing rules based on the actual specifications of HTTP/1.1 are needed for robust implementation.

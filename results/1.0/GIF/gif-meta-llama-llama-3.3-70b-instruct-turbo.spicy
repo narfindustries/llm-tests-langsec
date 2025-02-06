@@ -1,54 +1,93 @@
-# Zeek Spicy specification for GIF file format
+module GIF;
 
-%header {
-    magic: uint32 = 0x47494638;
-}
+type gif_signature = uint8[3] = {0x47, 0x49, 0x46};
+type gif_version = uint8[3] = {0x38, 0x39, 0x61};
 
-%type GIF: uint8[] = {
-    header: Header,
-    logical_screen_descriptor: LogicalScreenDescriptor,
-    *data: Data
+type gif_logical_screen_descriptor = struct {
+  logical_screen_width: uint16le,
+  logical_screen_height: uint16le,
+  packed_fields: uint8,
+  background_color_index: uint8,
+  pixel_aspect_ratio: uint8,
 };
 
-%type Header: uint8[] = {
-    signature: bytestring(3) = "GIF",
-    version: bytestring(3)
+type color_table_entry = struct {
+  red: uint8,
+  green: uint8,
+  blue: uint8,
 };
 
-%type LogicalScreenDescriptor: uint8[] = {
-    width: uint16,
-    height: uint16,
-    flags: uint8,
-    background_color_index: uint8,
-    pixel_aspect_ratio: uint8
+type global_color_table = struct {
+  count: uint8,
+  entries: color_table_entry[count],
 };
 
-%type Data: uint8[] = {
-    label: uint8,
-    data: uint8[]
+type image_descriptor = struct {
+  image_separator: uint8 = 0x2c,
+  image_left_position: uint16le,
+  image_top_position: uint16le,
+  image_width: uint16le,
+  image_height: uint16le,
+  packed_fields: uint8,
 };
 
-%type GraphicControlExtension: uint8[] = {
-    size: uint8,
-    flags: uint8,
-    delay_time: uint16,
-    transparent_color_index: uint8,
-    terminator: uint8 = 0
+type local_color_table = struct {
+  count: uint8,
+  entries: color_table_entry[count],
 };
 
-%type ImageDescriptor: uint8[] = {
-    left: uint16,
-    top: uint16,
-    width: uint16,
-    height: uint16,
-    flags: uint8
+type graphic_control_extension = struct {
+  extension_introducer: uint8 = 0x21,
+  extension_label: uint8 = 0xf9,
+  block_size: uint8,
+  packed_fields: uint8,
+  delay_time: uint16le,
+  transparent_color_index: uint8,
 };
 
-%type LocalColorTable: uint8[] = {
-    *colors: uint8[3]
+type comment_extension = struct {
+  extension_introducer: uint8 = 0x21,
+  extension_label: uint8 = 0xfe,
+  block_size: uint8,
+  comment_data: uint8[block_size],
 };
 
-%type PixelData: uint8[] = {
-    min_code_size: uint8,
-    *codes: uint8[]
+type plain_text_extension = struct {
+  extension_introducer: uint8 = 0x21,
+  extension_label: uint8 = 0x01,
+  block_size: uint8,
+  text_grid_left_position: uint8,
+  text_grid_top_position: uint8,
+  text_grid_width: uint8,
+  text_grid_height: uint8,
+  character_cell_width: uint8,
+  character_cell_height: uint8,
+  text_data: uint8[block_size - 7],
+};
+
+type application_extension = struct {
+  extension_introducer: uint8 = 0x21,
+  extension_label: uint8 = 0xff,
+  block_size: uint8,
+  application_identifier: uint8[block_size],
+};
+
+type lzw_data = struct {
+  min_code_size: uint8,
+  data: uint8[4096],
+};
+
+type gif = struct {
+  signature: gif_signature,
+  version: gif_version,
+  logical_screen_descriptor: gif_logical_screen_descriptor,
+  global_color_table: global_color_table,
+  image_descriptors: seq(image_descriptor),
+  local_color_tables: seq(local_color_table),
+  graphic_control_extensions: seq(graphic_control_extension),
+  comment_extensions: seq(comment_extension),
+  plain_text_extensions: seq(plain_text_extension),
+  application_extensions: seq(application_extension),
+  lzw_datas: seq(lzw_data),
+  trailer: uint8 = 0x3b,
 };

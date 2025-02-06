@@ -1,77 +1,200 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
-// Structure to represent a Modbus message
+#define MODBUS_MAX_PDU_LENGTH 256
+
+typedef enum {
+    READ_COIL_STATUS = 1,
+    READ_INPUT_STATUS = 2,
+    READ_HOLDING_REGISTERS = 3,
+    READ_INPUT_REGISTERS = 4,
+    WRITE_SINGLE_COIL = 5,
+    WRITE_SINGLE_REGISTER = 6,
+    READ_WRITE_MULTIPLE_COILS = 7,
+    READ_WRITE_MULTIPLE_REGISTERS = 8,
+    REPORT_SLAVE_ID = 11,
+    PROGRAM_CONTROLLER = 12,
+    MASK_WRITE_REGISTER = 16,
+    READ_WRITE_MULTIPLE_REGISTERS_EXTENDED = 17,
+    READ_FILE_RECORD = 20,
+    WRITE_FILE_RECORD = 21,
+    MASK_WRITE_REGISTER_EXTENDED = 22,
+    READ_WRITE_MULTIPLE_REGISTERS_EXTENDED_WITH_SUB_FUNCTION_CODE = 23,
+    READ_FIFO_QUEUE = 24
+} modbus_function_code_t;
+
+typedef enum {
+    ILLEGAL_FUNCTION = 1,
+    ILLEGAL_DATA_ADDRESS = 2,
+    ILLEGAL_DATA_VALUE = 3,
+    SLAVE_DEVICE_FAILURE = 4,
+    ACKNOWLEDGE = 5,
+    SLAVE_DEVICE_BUSY = 6,
+    NEGATIVE_ACKNOWLEDGE = 7,
+    MEMORY_PARITY_ERROR = 8,
+    GATEWAY_PATH_UNAVAILABLE = 10,
+    GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND = 11
+} modbus_exception_code_t;
+
 typedef struct {
-    uint8_t transaction_id[2];
-    uint8_t protocol_id[2];
-    uint8_t length[2];
-    uint8_t unit_id;
+    uint8_t address;
     uint8_t function_code;
-    uint8_t start_address[2];
-    uint8_t quantity[2];
+    uint8_t* data;
+    size_t data_length;
+    uint16_t crc;
 } modbus_message_t;
 
-// Structure to represent a Modbus response
 typedef struct {
-    uint8_t transaction_id[2];
-    uint8_t protocol_id[2];
-    uint8_t length[2];
-    uint8_t unit_id;
+    uint8_t address;
     uint8_t function_code;
-    uint8_t byte_count;
-    uint8_t data[];
-} modbus_response_t;
+    uint8_t exception_code;
+    uint16_t crc;
+} modbus_exception_response_t;
 
-// Function to parse a Modbus message
-modbus_message_t* parse_modbus_message(uint8_t* buffer, int length) {
-    modbus_message_t* message = (modbus_message_t*) malloc(sizeof(modbus_message_t));
-    message->transaction_id[0] = buffer[0];
-    message->transaction_id[1] = buffer[1];
-    message->protocol_id[0] = buffer[2];
-    message->protocol_id[1] = buffer[3];
-    message->length[0] = buffer[4];
-    message->length[1] = buffer[5];
-    message->unit_id = buffer[6];
-    message->function_code = buffer[7];
-    message->start_address[0] = buffer[8];
-    message->start_address[1] = buffer[9];
-    message->quantity[0] = buffer[10];
-    message->quantity[1] = buffer[11];
-    return message;
+typedef struct {
+    uint8_t address;
+    uint8_t function_code;
+    uint16_t starting_address;
+    uint16_t quantity;
+    uint16_t* data;
+    size_t data_length;
+    uint16_t crc;
+} modbus_read_holding_registers_response_t;
+
+typedef struct {
+    uint8_t address;
+    uint8_t function_code;
+    uint16_t starting_address;
+    uint16_t quantity;
+    uint8_t* data;
+    size_t data_length;
+    uint16_t crc;
+} modbus_read_coils_response_t;
+
+typedef struct {
+    uint8_t address;
+    uint8_t function_code;
+    uint16_t register_address;
+    uint16_t register_value;
+    uint16_t crc;
+} modbus_write_single_register_response_t;
+
+typedef struct {
+    uint8_t address;
+    uint8_t function_code;
+    uint16_t coil_address;
+    uint8_t coil_value;
+    uint16_t crc;
+} modbus_write_single_coil_response_t;
+
+#define H_BYTE H_uint8
+#define H_WORD_BE H_uint16_be
+#define H_BYTES H_array
+#define H_OK 0
+
+void* H_SEQUENCE(void* a, void* b) {
+    return a;
 }
 
-// Function to generate a Modbus response
-modbus_response_t* generate_modbus_response(modbus_message_t* message) {
-    modbus_response_t* response = (modbus_response_t*) malloc(sizeof(modbus_response_t) + 10);
-    response->transaction_id[0] = message->transaction_id[0];
-    response->transaction_id[1] = message->transaction_id[1];
-    response->protocol_id[0] = message->protocol_id[0];
-    response->protocol_id[1] = message->protocol_id[1];
-    response->length[0] = 0x03;
-    response->length[1] = 0x00;
-    response->unit_id = message->unit_id;
-    response->function_code = message->function_code;
-    response->byte_count = 0x02;
-    response->data[0] = 0x01;
-    response->data[1] = 0x02;
-    return response;
+void* H_BIND(void* a, void* b) {
+    return a;
 }
 
-int main() {
-    uint8_t buffer[] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x06};
-    modbus_message_t* message = parse_modbus_message(buffer, sizeof(buffer));
-    modbus_response_t* response = generate_modbus_response(message);
-    printf("Transaction ID: %02x %02x\n", response->transaction_id[0], response->transaction_id[1]);
-    printf("Protocol ID: %02x %02x\n", response->protocol_id[0], response->protocol_id[1]);
-    printf("Length: %02x %02x\n", response->length[0], response->length[1]);
-    printf("Unit ID: %02x\n", response->unit_id);
-    printf("Function Code: %02x\n", response->function_code);
-    printf("Byte Count: %02x\n", response->byte_count);
-    printf("Data: %02x %02x\n", response->data[0], response->data[1]);
-    free(message);
-    free(response);
+void* H_CHOICE(void* a, void* b) {
+    return a;
+}
+
+int H_PARSE(void* parser, uint8_t* buffer, size_t length, void* data) {
+    return H_OK;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
+
+    uint8_t buffer[MODBUS_MAX_PDU_LENGTH];
+    size_t length = fread(buffer, 1, MODBUS_MAX_PDU_LENGTH, file);
+    fclose(file);
+
+    modbus_message_t message;
+    if (H_PARSE(NULL, buffer, length, &message) == H_OK) {
+        printf("Address: %u\n", message.address);
+        printf("Function Code: %u\n", message.function_code);
+        if (message.data) {
+            printf("Data: ");
+            for (size_t i = 0; i < message.data_length; i++) {
+                printf("%02x ", message.data[i]);
+            }
+            printf("\n");
+        }
+        printf("CRC: %04x\n", message.crc);
+    } else {
+        printf("Error parsing message\n");
+    }
+
+    modbus_read_holding_registers_response_t read_holding_registers_response;
+    if (H_PARSE(NULL, buffer, length, &read_holding_registers_response) == H_OK) {
+        printf("Address: %u\n", read_holding_registers_response.address);
+        printf("Function Code: %u\n", read_holding_registers_response.function_code);
+        printf("Starting Address: %u\n", read_holding_registers_response.starting_address);
+        printf("Quantity: %u\n", read_holding_registers_response.quantity);
+        printf("Data: ");
+        for (size_t i = 0; i < read_holding_registers_response.data_length; i++) {
+            printf("%04x ", read_holding_registers_response.data[i]);
+        }
+        printf("\n");
+        printf("CRC: %04x\n", read_holding_registers_response.crc);
+    } else {
+        printf("Error parsing read holding registers response\n");
+    }
+
+    modbus_read_coils_response_t read_coils_response;
+    if (H_PARSE(NULL, buffer, length, &read_coils_response) == H_OK) {
+        printf("Address: %u\n", read_coils_response.address);
+        printf("Function Code: %u\n", read_coils_response.function_code);
+        printf("Starting Address: %u\n", read_coils_response.starting_address);
+        printf("Quantity: %u\n", read_coils_response.quantity);
+        printf("Data: ");
+        for (size_t i = 0; i < read_coils_response.data_length; i++) {
+            printf("%02x ", read_coils_response.data[i]);
+        }
+        printf("\n");
+        printf("CRC: %04x\n", read_coils_response.crc);
+    } else {
+        printf("Error parsing read coils response\n");
+    }
+
+    modbus_write_single_register_response_t write_single_register_response;
+    if (H_PARSE(NULL, buffer, length, &write_single_register_response) == H_OK) {
+        printf("Address: %u\n", write_single_register_response.address);
+        printf("Function Code: %u\n", write_single_register_response.function_code);
+        printf("Register Address: %u\n", write_single_register_response.register_address);
+        printf("Register Value: %u\n", write_single_register_response.register_value);
+        printf("CRC: %04x\n", write_single_register_response.crc);
+    } else {
+        printf("Error parsing write single register response\n");
+    }
+
+    modbus_write_single_coil_response_t write_single_coil_response;
+    if (H_PARSE(NULL, buffer, length, &write_single_coil_response) == H_OK) {
+        printf("Address: %u\n", write_single_coil_response.address);
+        printf("Function Code: %u\n", write_single_coil_response.function_code);
+        printf("Coil Address: %u\n", write_single_coil_response.coil_address);
+        printf("Coil Value: %u\n", write_single_coil_response.coil_value);
+        printf("CRC: %04x\n", write_single_coil_response.crc);
+    } else {
+        printf("Error parsing write single coil response\n");
+    }
+
     return 0;
 }

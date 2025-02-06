@@ -1,45 +1,136 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static const HParser* init_dns_parser(void) {
-    // Basic components
-    H_RULE(label_char, h_not_in(".\0"));
-    H_RULE(label, h_sequence(h_many1(label_char), h_ch('.')));
-    H_RULE(domain_name, h_sequence(h_many1(label), h_end_p()));
+// Forward declarations
+static HParser* dns_header();
+static HParser* dns_question();
+static HParser* dns_resource_record();
+static HParser* dns_message();
+static HParser* domain_name();
 
-    // Question section components
-    H_RULE(qtype, h_int_range(uint16_t, 1, 65535));
-    H_RULE(qclass, h_int_range(uint16_t, 1, 65535));
-    H_RULE(question_section, h_sequence(domain_name, qtype, qclass, NULL));
-
-    // Header components
-    H_RULE(id, h_uint16());
-    H_RULE(flags, h_uint16());
-    H_RULE(qdcount, h_uint16());
-    H_RULE(ancount, h_uint16());
-    H_RULE(nscount, h_uint16());
-    H_RULE(arcount, h_uint16());
-    H_RULE(header, h_sequence(id, flags, qdcount, ancount, nscount, arcount, NULL));
-
-    // Full DNS message
-    H_RULE(dns_message, h_sequence(header, question_section, NULL));
-
-    return dns_message;
+// DNS Header fields
+static HParser* dns_id() {
+    return h_uint16();
 }
 
-// Main parser definition
-HParser* dns_parser = NULL;
+static HParser* dns_flags() {
+    return h_bits(16, false);
+}
 
-H_INSTALL_PARSER(dns_message, init_dns_parser);
+static HParser* dns_counts() {
+    return h_repeat_n(h_uint16(), 4);
+}
 
-int main(int argc, char** argv) {
-    // Initialize the parser
-    dns_parser = init_dns_parser();
-    if (!dns_parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+// Domain name parsing
+static HParser* label() {
+    return h_sequence(h_uint8(), h_length_value(h_uint8(), h_uint8()), NULL);
+}
+
+static HParser* domain_name() {
+    return h_many(label());
+}
+
+// Question section
+static HParser* dns_qtype() {
+    return h_uint16();
+}
+
+static HParser* dns_qclass() {
+    return h_uint16();
+}
+
+static HParser* dns_question() {
+    return h_sequence(domain_name(), dns_qtype(), dns_qclass(), NULL);
+}
+
+// Resource Record fields
+static HParser* dns_ttl() {
+    return h_uint32();
+}
+
+static HParser* dns_rdlength() {
+    return h_uint16();
+}
+
+static HParser* dns_rdata() {
+    return h_length_value(dns_rdlength(), h_uint8());
+}
+
+static HParser* dns_resource_record() {
+    return h_sequence(domain_name(), dns_qtype(), dns_qclass(), dns_ttl(), dns_rdata(), NULL);
+}
+
+// Main DNS message parser
+static HParser* dns_message() {
+    return h_sequence(
+        dns_header(),
+        h_many(dns_question()),
+        h_many(dns_resource_record()),     // Answer section
+        h_many(dns_resource_record()),     // Authority section
+        h_many(dns_resource_record()),     // Additional section
+        NULL
+    );
+}
+
+static HParser* dns_header() {
+    return h_sequence(
+        dns_id(),
+        dns_flags(),
+        dns_counts(),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dns_binary_file>\n", argv[0]);
         return 1;
     }
 
-    // Parse input would go here
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read file contents
+    uint8_t* input = malloc(file_size);
+    if (!input) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(input, 1, file_size, file);
+    fclose(file);
+
+    if (bytes_read != file_size) {
+        fprintf(stderr, "Failed to read entire file\n");
+        free(input);
+        return 1;
+    }
+
+    // Initialize parser
+    HParser* dns_parser = dns_message();
+    
+    // Parse input
+    HParseResult* result = h_parse(dns_parser, input, file_size);
+    
+    if (!result) {
+        fprintf(stderr, "Failed to parse DNS message\n");
+        free(input);
+        return 1;
+    }
+
+    // TODO: Process parse result as needed
+    h_parse_result_free(result);
+    free(input);
     return 0;
 }

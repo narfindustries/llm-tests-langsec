@@ -1,14 +1,12 @@
 use nom::{
     bytes::complete::{tag, take},
-    number::complete::{le_u16, le_u32, le_u8},
+    number::complete::{le_u16, le_u32, le_u64},
     sequence::tuple,
     IResult,
 };
-use std::{
-    fs::File,
-    io::Read,
-    path::Path,
-};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct TiffHeader {
@@ -32,7 +30,7 @@ struct Ifd {
 }
 
 #[derive(Debug)]
-struct Tiff {
+struct TiffFile {
     header: TiffHeader,
     ifds: Vec<Ifd>,
 }
@@ -76,7 +74,7 @@ fn parse_ifd(input: &[u8]) -> IResult<&[u8], Ifd> {
     ))
 }
 
-fn parse_tiff(input: &[u8]) -> IResult<&[u8], Tiff> {
+fn parse_tiff_file(input: &[u8]) -> IResult<&[u8], TiffFile> {
     let (input, header) = parse_tiff_header(input)?;
     let mut ifds = Vec::new();
     let mut next_ifd_offset = header.ifd_offset;
@@ -87,23 +85,26 @@ fn parse_tiff(input: &[u8]) -> IResult<&[u8], Tiff> {
         ifds.push(ifd);
     }
 
-    Ok((input, Tiff { header, ifds }))
+    Ok((input, TiffFile { header, ifds }))
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("Usage: {} <tiff_file>", args[0]);
-        std::process::exit(1);
+        return;
     }
 
-    let path = Path::new(&args[1]);
-    let mut file = File::open(path).expect("Failed to open file");
+    let mut file = File::open(&args[1]).expect("Failed to open file");
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_tiff(&buffer) {
-        Ok((_, tiff)) => println!("{:#?}", tiff),
-        Err(e) => eprintln!("Failed to parse TIFF: {:?}", e),
+    match parse_tiff_file(&buffer) {
+        Ok((_, tiff_file)) => {
+            println!("{:#?}", tiff_file);
+        }
+        Err(e) => {
+            eprintln!("Failed to parse TIFF file: {:?}", e);
+        }
     }
 }

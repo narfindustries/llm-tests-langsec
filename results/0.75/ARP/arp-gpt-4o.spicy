@@ -1,35 +1,13 @@
 module ARP;
 
-import spicy;
-import zeek;
-
-type ARP = unit {
-    htype: uint16;  # Hardware type
-    ptype: uint16;  # Protocol type
-    hlen:  uint8;   # Hardware address length
-    plen:  uint8;   # Protocol address length
-    oper:  uint16;  # Operation
-
-    sha: bytes &size=hlen;  # Sender hardware address
-    spa: bytes &size=plen;  # Sender protocol address
-    tha: bytes &size=hlen;  # Target hardware address
-    tpa: bytes &size=plen;  # Target protocol address
-
-    on %done {
-        if ( htype != 1 || ptype != 0x0800 ) {
-            spicy::print("Unsupported ARP type or protocol.");
-        }
-    }
+type ARPMessage = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_address_length: uint8;
+    protocol_address_length: uint8;
+    operation: uint16;
+    sender_hardware_address: bytes &size=self.hardware_address_length;
+    sender_protocol_address: bytes &size=self.protocol_address_length;
+    target_hardware_address: bytes &size=self.hardware_address_length;
+    target_protocol_address: bytes &size=self.protocol_address_length;
 };
-
-public type ARPMessage = unit {
-    arp: ARP;
-} &parsers = [ "parse_arp" ];
-
-public global parse_arp: function(input: bytes) -> ARPMessage {
-    return parse(input);
-}
-
-event zeek_init() {
-    Spicy::register_protocol_analyzer(ARPMessage, /arp/, "arp");
-}

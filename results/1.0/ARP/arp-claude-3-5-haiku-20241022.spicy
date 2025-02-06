@@ -1,28 +1,28 @@
-Here's the complete Spicy specification for ARP parsing:
-
-module ARP;
+module arp;
 
 import spicy;
 
-public type Packet = struct {
-    hard_type: uint16;
-    proto_type: uint16;
-    hard_size: uint8;
-    proto_size: uint8;
-    opcode: uint16;
-    sender_mac: bytes;
-    sender_ip: bytes;
-    target_mac: bytes;
-    target_ip: bytes;
-} &byte-order=network;
+public type ARPPacket = unit {
+    hardware_type: uint16;
+    protocol_type: uint16;
+    hardware_address_length: uint8;
+    protocol_address_length: uint8;
+    operation: uint16;
+    
+    sender_hardware_address: bytes;
+    sender_protocol_address: bytes;
+    
+    target_hardware_address: bytes;
+    target_protocol_address: bytes;
 
-public type Parser = unit {
-    packet: Packet;
-
-    on packet validate {
-        self.packet.hard_type == 1 &&   # Ethernet
-        self.packet.proto_type == 0x0800 &&  # IPv4
-        self.packet.hard_size == 6 &&   # MAC address size
-        self.packet.proto_size == 4;    # IP address size
+    validate {
+        self.hardware_type == 1;
+        self.protocol_type == 0x0800;
+        self.hardware_address_length == 6;
+        self.protocol_address_length == 4;
     }
-} &byte-order=network;
+};
+
+public type ARPAnalyzer = unit {
+    arp_packet: ARPPacket;
+};

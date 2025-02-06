@@ -1,36 +1,22 @@
-type BitcoinAddress = Bytes(20..21)
-type TransactionHash = Bytes(32)
-type ScriptSig = Bytes(0..255)
-type ScriptPubKey = Bytes(0..255)
-
-struct Input {
-    previousTxHash: TransactionHash,
-    previousOutputIndex: U32,
-    scriptSig: ScriptSig,
-    sequenceNumber: U32
+protocol BitcoinTransaction {
+    version: u32be;
+    input_count: varint;
+    inputs: [TransactionInput](input_count);
+    output_count: varint;
+    outputs: [TransactionOutput](output_count);
+    locktime: u32be;
 }
 
-struct Output {
-    value: U64,
-    scriptPubKey: ScriptPubKey
+protocol TransactionInput {
+    previous_tx_hash: bytes(32);
+    previous_output_index: u32be;
+    script_sig_length: varint;
+    script_sig: bytes(script_sig_length);
+    sequence_number: u32be;
 }
 
-struct Transaction {
-    version: U32,
-    inputs: List(Input),
-    outputs: List(Output),
-    lockTime: U32
-}
-
-fn validateTransaction(tx: Transaction) -> Bool {
-    // Basic transaction validation rules
-    tx.inputs.length() > 0 &&
-    tx.outputs.length() > 0 &&
-    tx.inputs.length() <= 100 &&
-    tx.outputs.length() <= 100
-}
-
-fn calculateTxHash(tx: Transaction) -> TransactionHash {
-    // Simplified transaction hash calculation
-    hash(serialize(tx))
+protocol TransactionOutput {
+    amount: u64be;
+    script_pubkey_length: varint;
+    script_pubkey: bytes(script_pubkey_length);
 }

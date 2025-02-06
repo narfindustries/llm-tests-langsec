@@ -1,39 +1,67 @@
 module ELF;
 
-import spicy;
-import zeek;
-
-public type ELF = unit {
-    magic: bytes &length=4 &check=$$ == b"\x7fELF";
-
-    class: uint8;
-    data: uint8;
-    version: uint8;
-    os_abi: uint8;
-    abi_version: uint8;
-    pad: bytes &length=7;
-
-    type: uint16;
-    machine: uint16;
-    version2: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
-
-    on %done {
-        if ( magic != b"\x7fELF" ) {
-            print("Error: Not a valid ELF file.");
-        }
-    }
+type ELFHeader = unit {
+    e_ident: EIdent;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
 };
 
-public hook zeek_init() {
-    Spicy::register_protocol_analyzer(ELF::ELF, "elf", /application\/x-elf/);
-}
+type EIdent = unit {
+    magic: bytes &size=4 &check_eq="\x7fELF";
+    ei_class: uint8;
+    ei_data: uint8;
+    ei_version: uint8;
+    ei_osabi: uint8;
+    ei_abiversion: uint8;
+    ei_pad: bytes &size=7;
+};
+
+type ProgramHeader = unit {
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
+
+type SectionHeader = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
+};
+
+type SymbolTableEntry = unit {
+    st_name: uint32;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: uint16;
+    st_value: uint64;
+    st_size: uint64;
+};
+
+type ELF = unit {
+    header: ELFHeader;
+    program_headers: array of ProgramHeader &length=header.e_phnum;
+    section_headers: array of SectionHeader &length=header.e_shnum;
+};

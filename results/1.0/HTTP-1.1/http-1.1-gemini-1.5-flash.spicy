@@ -1,84 +1,56 @@
-# This is a Spicy specification for HTTP/1.1 and Gemini
+module HTTP_1_1;
 
-# Define HTTP/1.1 events
-event http_request {
-    method: string;
-    path: string;
-    version: string;
-    headers: table[string] of string;
-}
-
-event http_response {
-    version: string;
-    status: int;
-    reason: string;
-    headers: table[string] of string;
+type HTTP_Message {
+    start_line: string;
+    headers: record {
+        Cache_Control: string;
+        Connection: string;
+        Date: string;
+        Expect: string;
+        From: string;
+        Host: string;
+        If_Match: string;
+        If_Modified_Since: string;
+        If_None_Match: string;
+        If_Range: string;
+        If_Unmodified_Since: string;
+        Max_Forwards: int;
+        Pragma: string;
+        Proxy_Authorization: string;
+        Range: string;
+        Referer: string;
+        TE: string;
+        Trailer: string;
+        Transfer_Encoding: string;
+        Upgrade: string;
+        User_Agent: string;
+        Via: string;
+        Warning: string;
+        Allow: string;
+        Accept_Ranges: string;
+        Age: int;
+        Content_Encoding: string;
+        Content_Length: int;
+        Content_Location: string;
+        Content_MD5: string;
+        Content_Range: string;
+        Content_Type: string;
+        Expires: string;
+        Last_Modified: string;
+        Location: string;
+        Proxy_Authenticate: string;
+        Retry_After: int;
+        Server: string;
+        WWW_Authenticate: string;
+        other_headers: table[string] of string;
+    };
     body: string;
-}
+};
 
+type HTTP_Request: HTTP_Message {
+    start_line: string;
+};
 
-# Define Gemini events
-event gemini_request {
-    url: string;
-}
-
-event gemini_response {
-    status: int;
-    headers: table[string] of string;
-    body: string;
-}
-
-
-# Define a combined event for both protocols
-event combined_event {
-    protocol: string;
-    request: string;
-    response: string;
-}
-
-
-# Define a function to create a combined event.
-function create_combined_event(proto:string, req:string, resp:string): combined_event
-{
-    return { protocol = proto, request = req, response = resp};
-}
-
-# Example of how to use the events and function
-event http_request_handler(http_request:http_request)
-{
-    combined_event = create_combined_event("HTTP/1.1",  string(http_request), "");
-
-    # Add more logic for HTTP here
-}
-
-event http_response_handler(http_response:http_response)
-{
-
-    combined_event = create_combined_event("HTTP/1.1", "", string(http_response));
-    # Add more logic for HTTP here
-
-}
-
-
-event gemini_request_handler(gemini_request:gemini_request)
-{
-    combined_event = create_combined_event("Gemini", string(gemini_request), "");
-    # Add more logic for Gemini here
-}
-
-event gemini_response_handler(gemini_response:gemini_response)
-{
-    combined_event = create_combined_event("Gemini", "", string(gemini_response));
-    # Add more logic for Gemini here
-}
-
-
-
-#Example of using the events
-# This would need to be populated with actual data from the network.
-
-#http_request_handler( { method = "GET", path = "/", version = "HTTP/1.1", headers = { "Host" = "example.com" } } )
-#http_response_handler( { version = "HTTP/1.1", status = 200, reason = "OK", headers = { "Content-Type" = "text/html" }, body = "<html><h1>Hello</h1></html>" } )
-#gemini_request_handler({ url = "gemini://example.com/"})
-#gemini_response_handler({status = 20, headers = {}, body = "Hello"})
-
+type HTTP_Response: HTTP_Message {
+    start_line: string;
+};

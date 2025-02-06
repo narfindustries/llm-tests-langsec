@@ -1,28 +1,33 @@
-module NetworkTimeProtocol;
+module NTP;
 
 public type NTPHeader = unit {
-    li: uint2;                 // Leap indicator
-    vn: uint2;                 // Version number
-    mode: uint2;               // Mode
-    stratum: uint8;            // Stratum
-    poll: int8;                // Poll interval
-    precision: int8;           // Precision
+    li: uint8 &size=2;            // Leap Indicator
+    vn: uint8 &size=3;            // Version Number
+    mode: uint8 &size=3;          // Mode
+    stratum: uint8;               // Stratum
+    poll: int8;                   // Poll Interval
+    precision: int8;              // Precision
+    rootDelay: interval;          // Root Delay
+    rootDispersion: interval;     // Root Dispersion
+    refID: bytes &size=4;         // Reference Identifier
+    refTm: NTPTimeStamp;          // Reference Timestamp
+    origTm: NTPTimeStamp;         // Originate Timestamp
+    rxTm: NTPTimeStamp;           // Receive Timestamp
+    txTm: NTPTimeStamp;           // Transmit Timestamp
+};
 
-    rootDelay: interval;       // Total round trip delay
-    rootDispersion: interval;  // Total dispersion
-
-    refID: uint32;             // Reference ID
-
-    refTimestamp: time;        // Reference Timestamp
-    origTimestamp: time;       // Originate Timestamp
-    recvTimestamp: time;       // Receive Timestamp
-    xmitTimestamp: time;       // Transmit Timestamp
-
-    on %done {
-        print self;
+public type NTPTimeStamp = unit {
+    seconds: uint32;
+    fraction: uint32;
+    on %init {
+        self.seconds = convertTime(self.seconds, self.fraction);
+    }
+    function convertTime(seconds: uint32, fraction: uint32): uint32 {
+        return seconds + cast<uint32>((double(fraction) / 4294967296.0));
     }
 };
 
 public type NTPMessage = unit {
     header: NTPHeader;
+    extensions: bytes &eod;  // Extension fields (variable length)
 };

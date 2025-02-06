@@ -5,54 +5,41 @@
            xmlns="http://example.org/modbus"
            elementFormDefault="qualified">
 
-  <xs:element name="ModbusGemini">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+
+  <xs:element name="ModbusPDU">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="HeaderType"/>
-        <xs:element name="Data" type="DataType" maxOccurs="unbounded"/>
-        <xs:element name="Footer" type="FooterType"/>
+        <xs:element name="TransactionIdentifier" type="dfdl:unsignedInt" dfdl:length="2"/>
+        <xs:element name="ProtocolIdentifier" type="dfdl:unsignedInt" dfdl:length="2" minOccurs="0"/>
+        <xs:element name="Length" type="dfdl:unsignedInt" dfdl:length="2"/>
+        <xs:element name="UnitIdentifier" type="dfdl:unsignedInt" dfdl:length="1"/>
+        <xs:element name="FunctionCode" type="dfdl:unsignedInt" dfdl:length="1"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="0"/>  <!--Corrected Data length-->
+        <xs:element name="ExceptionCode" type="dfdl:unsignedInt" dfdl:length="1" minOccurs="0"/>
       </xs:sequence>
-      <xs:attribute ref="dfdl:lengthKind" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
-      <xs:attribute ref="dfdl:length" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:length>1024</dfdl:length>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
     </xs:complexType>
   </xs:element>
 
-
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="ReadCoilsRequest">
     <xs:sequence>
-      <xs:element name="Version" type="xs:string">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:length>4</dfdl:length>
-              </xs:appinfo>
-          </xs:annotation>
+      <xs:element ref="ModbusPDU">
+        <xs:sequence>
+          <xs:element name="StartingAddress" type="dfdl:unsignedInt" dfdl:length="2"/>
+          <xs:element name="Quantity" type="dfdl:unsignedInt" dfdl:length="2"/>
+        </xs:sequence>
       </xs:element>
-      <xs:element name="Timestamp" type="xs:dateTime"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DataType">
+  <xs:complexType name="ReadCoilsResponse">
     <xs:sequence>
-      <xs:element name="SensorID" type="xs:int"/>
-      <xs:element name="Value" type="xs:float"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="FooterType">
-    <xs:sequence>
-      <xs:element name="Checksum" type="xs:int"/>
+      <xs:element ref="ModbusPDU">
+        <xs:sequence>
+          <xs:element name="ByteCount" type="dfdl:unsignedInt" dfdl:length="1"/>
+          <xs:element name="CoilData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="ByteCount"/>
+        </xs:sequence>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 

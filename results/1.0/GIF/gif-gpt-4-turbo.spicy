@@ -1,75 +1,76 @@
 module GIF;
 
-import spicy;
+public type RGB = unit {
+    r: uint8;
+    g: uint8;
+    b: uint8;
+};
 
 public type LogicalScreenDescriptor = unit {
-    width: uint16;
-    height: uint16;
+    screenWidth: uint16;
+    screenHeight: uint16;
     packedFields: uint8;
-    bgColorIndex: uint8;
+    backgroundColorIndex: uint8;
     pixelAspectRatio: uint8;
-};
-
-public type GlobalColorTable = unit {
-    entryCount: uint16;
-    colors: ColorEntry[] &size=entryCount;
-};
-
-public type ColorEntry = unit {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
+    hasGlobalColorTable: bool = (packedFields & 0x80) != 0;
+    sizeOfGlobalColorTable: uint = (packedFields & 0x07) + 1;
 };
 
 public type ImageDescriptor = unit {
-    leftPosition: uint16;
-    topPosition: uint16;
-    width: uint16;
-    height: uint16;
+    separator: uint8;
+    imageLeftPosition: uint16;
+    imageTopPosition: uint16;
+    imageWidth: uint16;
+    imageHeight: uint16;
+    packed: uint8;
+    localColorTable: optional<RGB[]> &size=((self.packed & 0x07) + 1) * 3 if (self.packed & 0x80);
+    imageData: bytes &size=0; // Placeholder since actual image data decoding (LZW) is complex
+};
+
+public type GraphicControlExtension = unit {
+    blockSize: uint8;
     packedFields: uint8;
+    delayTime: uint16;
+    transparentColorIndex: uint8;
+    terminator: uint8;
 };
 
-public type ImageData = unit {
-    lzwMinCodeSize: uint8;
-    dataBlocks: bytes &eod;
+public type ApplicationExtension = unit {
+    blockSize: uint8;
+    applicationIdentifier: bytes &size=8;
+    applicationAuthCode: bytes &size=3;
+    applicationData: bytes &rest;
 };
 
-public type GIFFile = unit {
-    header: bytes &size=6;
-    lsd: LogicalScreenDescriptor;
-    gct: GlobalColorTable &if=(self.lsd.packedFields & 0x80 != 0);
-    frames: Frame[] &eod;
-};
-
-public type Frame = unit {
-    imageDesc: ImageDescriptor;
-    localColorTable: GlobalColorTable &if=(self.imageDesc.packedFields & 0x80 != 0);
-    imageData: ImageData;
+public type CommentExtension = unit {
+    commentData: bytes &rest;
 };
 
 public type Extension = unit {
     introducer: uint8;
-    label: uint8;
+    extensionLabel: uint8;
     blockSize: uint8;
-    data: bytes &size=this.blockSize;
-};
-
-public type Trailer = unit {
-    marker: uint8;
-};
-
-public type ExtensionsAndFrame = unit {
-    extensions: Extension[];
-    terminator: uint8 &requires=($$ == 0x3B);
-    done: Hook @priority=1 @on-leave {
-        print "Parsing completed"; 
+    content: switch (self.extensionLabel) {
+        0xF9 -> graphicControl: GraphicControlExtension;
+        0xFF -> application: ApplicationExtension;
+        0xFE -> comment: CommentExtension;
+        default -> unknown: bytes &size=self.blockSize;       
     };
 };
 
-event zeek_init() {
-    print "GIF parser initialized.";
-}
+public type Block = unit {
+    blockIntroducer: optional<uint8>;
+    content: switch (self.blockIntroducer) {
+        0x2C -> imageDescriptor: ImageDescriptor;
+        0x21 -> extension: Extension;
+        default -> unknown: bytes &eod;
+    };
+};
 
-event spicy_file_done(f: GIFFile) {
-    print fmt("Parsed GIF: %dx%d", f.lsd.width, f.lsd.height);
-}
+public type GIFFile = unit {
+    header: bytes &size=6;
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable: optional<RGB[]> &size=self.logicalScreenDescriptor.sizeOfGlobalColorTable * 3 if self.logicalScreenDescriptor.hasGlobalColorTable;
+    blocks: Block[] &until($$ == 0x3B);
+    trailer: uint8; // The Trailer byte (0x3B)
+};

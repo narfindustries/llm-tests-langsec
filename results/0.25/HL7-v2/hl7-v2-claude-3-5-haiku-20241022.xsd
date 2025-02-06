@@ -1,61 +1,139 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://hl7.org/fhir/dfdl/hl7v2"
-           xmlns:hl7="http://hl7.org/fhir/dfdl/hl7v2">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
+           targetNamespace="http://hl7.org/v2"
+           elementFormDefault="qualified">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format separator="" initiator="" terminator="" 
-                  encoding="UTF-8" 
-                  representation="text"
-                  occursCountKind="parsed"
-                  separatorPosition="infix"
-                  separatorPolicy="suppressed"
-                  textNumberPattern="#0"
-                  textNumberRoundingMode="roundUp"
-                  escapeSchemeRef=""/>
+      <dfdl:format separator="|\r\n" initiator="" terminator="" 
+                   encoding="UTF-8" 
+                   representation="text" 
+                   occursCountKind="parsed" 
+                   separatorPosition="infix"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="HL7Message" dfdl:lengthKind="delimited">
+  <xs:element name="HL7Message" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence dfdl:separator="\r\n">
+      <xs:sequence>
         <xs:element name="MSH" minOccurs="1" maxOccurs="1">
           <xs:complexType>
-            <xs:sequence dfdl:separator="|">
-              <xs:element name="FieldSeparator" type="xs:string" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="1"/>
-              <xs:element name="EncodingCharacters" type="xs:string" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="4"/>
-              <xs:element name="SendingApplication" type="xs:string"/>
-              <xs:element name="SendingFacility" type="xs:string"/>
-              <xs:element name="ReceivingApplication" type="xs:string"/>
-              <xs:element name="ReceivingFacility" type="xs:string"/>
-              <xs:element name="DateTime" type="xs:dateTime"/>
-              <xs:element name="Security" type="xs:string" minOccurs="0"/>
-              <xs:element name="MessageType" type="xs:string"/>
+            <xs:sequence>
+              <xs:element name="FieldSeparator" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="EncodingCharacters" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="SendingApplication" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="SendingFacility" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="ReceivingApplication" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="ReceivingFacility" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="DateTimeOfMessage" type="xs:dateTime" dfdl:lengthKind="delimited"/>
+              <xs:element name="Security" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="MessageType" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="MessageControlID" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="ProcessingID" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="VersionID" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="SequenceNumber" type="xs:integer" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ContinuationPointer" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AcceptAcknowledgmentType" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ApplicationAcknowledgmentType" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="CountryCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
 
-        <xs:element name="Segments" minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="PID" minOccurs="1" maxOccurs="1">
           <xs:complexType>
-            <xs:sequence dfdl:separator="|">
-              <xs:element name="SegmentName" type="xs:string" 
-                          dfdl:lengthKind="explicit" 
-                          dfdl:length="3"/>
-              <xs:element name="Fields" type="xs:string" 
-                          minOccurs="0" 
-                          maxOccurs="unbounded" 
-                          dfdl:separator="^"/>
+            <xs:sequence>
+              <xs:element name="SetID" type="xs:integer" dfdl:lengthKind="delimited"/>
+              <xs:element name="PatientID" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="PatientIdentifierList" type="xs:string" dfdl:lengthKind="delimited" maxOccurs="unbounded"/>
+              <xs:element name="AlternatePatientID" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientName" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="MothersMaidenName" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DateOfBirth" type="xs:date" dfdl:lengthKind="delimited"/>
+              <xs:element name="AdministrativeSex" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="PatientAlias" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="Race" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientAddress" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="CountyCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PhoneNumberHome" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="PhoneNumberBusiness" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="PrimaryLanguage" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="MaritalStatus" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="Religion" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientAccountNumber" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="SSNNumber" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DriverLicenseNumber" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="MotherIdentifier" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="EthnicGroup" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BirthPlace" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="MultipleBirthIndicator" type="xs:boolean" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BirthOrder" type="xs:integer" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="Citizenship" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="VeteransMilitaryStatus" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="NationalityCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientDeathDateTime" type="xs:dateTime" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientDeathIndicator" type="xs:boolean" dfdl:lengthKind="delimited" minOccurs="0"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
 
-</xs:schema>
+        <xs:element name="PV1" minOccurs="1" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SetID" type="xs:integer" dfdl:lengthKind="delimited"/>
+              <xs:element name="PatientClass" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="AssignedLocation" type="xs:string" dfdl:lengthKind="delimited"/>
+              <xs:element name="AdmissionType" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PreAdmitNumber" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PriorPatientLocation" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AttendingDoctor" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ReferringDoctor" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ConsultingDoctor" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="HospitalService" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TemporaryLocation" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PreadmitTestIndicator" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ReadmissionIndicator" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AdmitSource" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AmbulatoryStatus" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="VIPIndicator" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AdmittingDoctor" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PatientType" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="VisitNumber" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="FinancialClass" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ChargePriceIndicator" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="CourtesyCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="CreditRating" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ContractCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="ContractEffectiveDate" type="xs:date" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="ContractAmount" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="ContractPeriod" type="xs:integer" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="InterestCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TransferToBadDebtCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TransferToBadDebtDate" type="xs:date" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BadDebtAgencyCode" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BadDebtTransferAmount" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BadDebtRecoveryAmount" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DeleteAccount" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DischargeDisposition" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DischargedToLocation" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DietType" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="ServicingFacility" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="BedStatus" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AccountStatus" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PendingLocation" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="PriorTemporaryLocation" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="AdmitDateTime" type="xs:dateTime" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="DischargeDateTime" type="xs:dateTime" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="CurrentPatientBalance" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TotalCharges" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TotalAdjustments" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+              <xs:element name="TotalPayments" type="xs:decimal" dfdl:lengthKind="delimited" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="OBR" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SetID" type="xs:integer" dfdl:lengthKind="delimited"/>

@@ -1,96 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dfdl:dfdlSchema xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                 xmlns:xs="http://www.w3.org/2001/XMLSchema" 
-                 targetNamespace="http://example.com/tiff" 
-                 xmlns="http://example.com/tiff" 
-                 xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ 
-                                     http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
-  <xs:include schemaLocation="tiff-types.xsd"/>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tiff="http://example.com/tiff"
+           targetNamespace="http://example.com/tiff"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
 
-  <dfdl:format ref="tns:BaseFormat"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+      <dfdl:format ref="dfdl:GeneralFormat" lengthKind="explicit" byteOrder="{tiff:byteOrder}" encoding="ascii"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-  <xs:element name="TIFF" type="tns:TIFFType">
-    <dfdl:annotation>
-      <dfdl:format byteOrder="bigEndian" alignmentUnits="bytes" lengthKind="explicit" length="{4}"/>
-    </dfdl:annotation>
-  </xs:element>
+  <xs:element name="TIFF" type="tiff:TIFFType"/>
 
   <xs:complexType name="TIFFType">
     <xs:sequence>
-      <xs:element name="Header" type="tns:TIFFHeaderType"/>
-      <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="Header" type="tiff:HeaderType"/>
+      <xs:element name="IFDs" type="tiff:IFDsType" minOccurs="1" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="TIFFHeaderType">
+  <xs:complexType name="HeaderType">
     <xs:sequence>
-      <xs:element name="ByteOrder" type="xs:string">
-        <dfdl:annotation>
-          <dfdl:format lengthKind="explicit" length="2" textStringPadCharacter="%SP;" textStringJustification="left"/>
-        </dfdl:annotation>
+      <xs:element name="ByteOrder" type="tiff:ByteOrderType" dfdl:length="2"/>
+      <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian">
+        <xs:annotation>
+          <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:assert test="{. eq 42}" message="Version must be 42"/>
+          </xs:appinfo>
+        </xs:annotation>
       </xs:element>
-      <xs:element name="Version" type="xs:unsignedShort">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="FirstIFDOffset" type="xs:unsignedInt">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
+      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ByteOrderType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="II"/>
+      <xs:enumeration value="MM"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IFDsType">
+    <xs:sequence>
+      <xs:element name="IFD" type="tiff:IFDType" minOccurs="1" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="IFDType">
     <xs:sequence>
-      <xs:element name="NumDirectoryEntries" type="xs:unsignedShort">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="DirectoryEntries" type="tns:DirectoryEntryType" minOccurs="1" maxOccurs="unbounded">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="NextIFDOffset" type="xs:unsignedInt">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
+      <xs:element name="NumEntries" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Entries" type="tiff:EntryType" dfdl:occursCount="{../NumEntries}"/>
+      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DirectoryEntryType">
+  <xs:complexType name="EntryType">
     <xs:sequence>
-      <xs:element name="Tag" type="xs:unsignedShort">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="Type" type="xs:unsignedShort">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="Count" type="xs:unsignedInt">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
-      <xs:element name="ValueOffset" type="xs:unsignedInt">
-        <dfdl:annotation>
-          <dfdl:format/>
-        </dfdl:annotation>
-      </xs:element>
+      <xs:element name="Tag" type="tiff:TagType" dfdl:length="2"/>
+      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4"/>
+      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <dfdl:format ref="tns:BaseFormat" byteOrder="bigEndian">
-    <dfdl:property name="textNumberRep">standard</dfdl:property>
-    <dfdl:property name="binaryNumberRep">standard</dfdl:property>
-  </dfdl:format>
+  <xs:simpleType name="TagType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="256"/> <!-- ImageWidth -->
+      <xs:enumeration value="257"/> <!-- ImageLength -->
+      <xs:enumeration value="258"/> <!-- BitsPerSample -->
+      <xs:enumeration value="259"/> <!-- Compression -->
+      <xs:enumeration value="262"/> <!-- PhotometricInterpretation -->
+      <xs:enumeration value="266"/> <!-- FillOrder -->
+      <xs:enumeration value="273"/> <!-- StripOffsets -->
+      <xs:enumeration value="274"/> <!-- Orientation -->
+      <xs:enumeration value="277"/> <!-- SamplesPerPixel -->
+      <xs:enumeration value="278"/> <!-- RowsPerStrip -->
+      <xs:enumeration value="279"/> <!-- StripByteCounts -->
+      <xs:enumeration value="282"/> <!-- XResolution -->
+      <xs:enumeration value="283"/> <!-- YResolution -->
+      <xs:enumeration value="284"/> <!-- PlanarConfiguration -->
+      <xs:enumeration value="296"/> <!-- ResolutionUnit -->
+      <xs:enumeration value="305"/> <!-- Software -->
+      <xs:enumeration value="306"/> <!-- DateTime -->
+      <xs:enumeration value="320"/> <!-- ColorMap -->
+      <xs:enumeration value="322"/> <!-- TileWidth -->
+      <xs:enumeration value="323"/> <!-- TileLength -->
+      <xs:enumeration value="324"/> <!-- TileOffsets -->
+      <xs:enumeration value="325"/> <!-- TileByteCounts -->
+      <xs:enumeration value="330"/> <!-- SubIFDs -->
+      <xs:enumeration value="254"/> <!-- NewSubfileType -->
+      <xs:enumeration value="271"/> <!-- Make -->
+      <xs:enumeration value="272"/> <!-- Model -->
+    </xs:restriction>
+  </xs:simpleType>
 
-</dfdl:dfdlSchema>
+</xs:schema>

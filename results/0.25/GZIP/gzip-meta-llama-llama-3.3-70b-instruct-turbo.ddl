@@ -1,28 +1,19 @@
-domain GZIP {
-  id: Uint32 be;
-  compression_method: Uint8;
-  flags: Uint8;
-  modification_time: Uint32 be;
-  extra_flags: Uint8;
-  operating_system: Uint8;
-
-  body: Byte[*];
-
-  extra_field: if (flags & 0x04) {
-    id: Uint8[*];
-    length: Uint16 be;
-    data: Byte[length];
-  }
-
-  file_name: if (flags & 0x08) {
-    Byte[*] until 0x00;
-  }
-
-  comment: if (flags & 0x10) {
-    Byte[*] until 0x00;
-  }
-
-  header_crc16: if (flags & 0x02) {
-    Uint16 be;
+format binary {
+  gzip_file {
+    id1: byte = 0x1F
+    id2: byte = 0x8B
+    cm: byte = 8
+    flags: byte
+    mtime: uint32
+    xfl: byte
+    os: byte
+    xlen: uint16 = if (flags & 0x04 != 0) then uint16 else 0
+    extra: bytes = if (flags & 0x04 != 0) then bytes(xlen) else bytes(0)
+    fname: string = if (flags & 0x08 != 0) then string(null_terminated) else ""
+    fcomment: string = if (flags & 0x10 != 0) then string(null_terminated) else ""
+    hcrc: uint16 = if (flags & 0x02 != 0) then uint16 else 0
+    compr_data: bytes
+    compr_len: uint32
+    isize: uint32
   }
 }

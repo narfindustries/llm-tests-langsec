@@ -1,45 +1,110 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/elf-gemini" elementFormDefault="qualified" dfdl:representation="text" dfdl:textStandard="US-ASCII">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/elf" targetNamespace="http://example.org/elf" elementFormDefault="qualified" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
 
-  <xs:element name="elf-gemini">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:length="1024" dfdl:occursCountKind="implicit" />
-        <xs:element name="data" type="DataType" dfdl:lengthKind="length" dfdl:lengthUnits="bytes" dfdl:length="{string-length(./header/length)}" dfdl:occursCountKind="implicit"/>
-        <xs:element name="footer" type="FooterType" dfdl:length="512" dfdl:occursCountKind="implicit" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xsd:simpleType name="ElfMagic">
+    <xsd:restriction base="xsd:hexBinary">
+      <xsd:length value="4"/>
+    </xsd:restriction>
+  </xsd:simpleType>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="length" type="xs:integer" dfdl:length="4" dfdl:textNumberPattern="9999" dfdl:alignment="right" dfdl:paddingCharacter="0" />
-      <xs:element name="version" type="xs:string" dfdl:length="10" dfdl:occursCountKind="implicit" />
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:format="yyyy-MM-dd HH:mm:ss" dfdl:occursCountKind="implicit" />
-      <xs:element name="id" type="xs:string" dfdl:length="32" dfdl:occursCountKind="implicit" />
-    </xs:sequence>
-  </xs:complexType>
+  <xsd:simpleType name="ElfHalf">
+    <xsd:restriction base="xsd:unsignedShort"/>
+  </xsd:simpleType>
 
+  <xsd:simpleType name="ElfWord">
+    <xsd:restriction base="xsd:unsignedInt"/>
+  </xsd:simpleType>
 
-  <xs:complexType name="DataType">
-    <xs:sequence>
-      <xs:element name="record" type="RecordType" maxOccurs="unbounded" dfdl:separator=",," dfdl:terminator="EOF"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xsd:simpleType name="ElfSword">
+    <xsd:restriction base="xsd:int"/>
+  </xsd:simpleType>
 
-  <xs:complexType name="RecordType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:integer" dfdl:length="5" dfdl:textNumberPattern="99999" dfdl:alignment="right" dfdl:paddingCharacter="0"/>
-      <xs:element name="field3" type="xs:decimal" dfdl:length="8" dfdl:textNumberPattern="999999.99" dfdl:decimalSeparator="." dfdl:occursCountKind="implicit" />
-    </xs:sequence>
-  </xs:complexType>
+  <xsd:simpleType name="ElfXword">
+    <xsd:restriction base="xsd:unsignedLong"/>
+  </xsd:simpleType>
 
-  <xs:complexType name="FooterType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer" dfdl:length="8" dfdl:occursCountKind="implicit" />
-      <xs:element name="status" type="xs:string" dfdl:length="16" dfdl:occursCountKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xsd:simpleType name="ElfSxword">
+    <xsd:restriction base="xsd:long"/>
+  </xsd:simpleType>
 
-</xs:schema>
+  <xsd:simpleType name="ElfAddr">
+    <xsd:restriction base="xsd:unsignedInt"/>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="ElfOff">
+    <xsd:restriction base="xsd:unsignedInt"/>
+  </xsd:simpleType>
+
+  <xsd:simpleType name="ElfSectionHeaderIndex">
+    <xsd:restriction base="xsd:unsignedShort"/>
+  </xsd:simpleType>
+
+  <xsd:complexType name="ElfHeader">
+    <xsd:sequence>
+      <xsd:element name="e_ident" type="tns:ElfMagic"/>
+      <xsd:element name="e_type" type="tns:ElfHalf"/>
+      <xsd:element name="e_machine" type="tns:ElfHalf"/>
+      <xsd:element name="e_version" type="tns:ElfWord"/>
+      <xsd:element name="e_entry" type="tns:ElfAddr"/>
+      <xsd:element name="e_phoff" type="tns:ElfOff"/>
+      <xsd:element name="e_shoff" type="tns:ElfOff"/>
+      <xsd:element name="e_flags" type="tns:ElfWord"/>
+      <xsd:element name="e_ehsize" type="tns:ElfHalf"/>
+      <xsd:element name="e_phentsize" type="tns:ElfHalf"/>
+      <xsd:element name="e_phnum" type="tns:ElfHalf"/>
+      <xsd:element name="e_shentsize" type="tns:ElfHalf"/>
+      <xsd:element name="e_shnum" type="tns:ElfHalf"/>
+      <xsd:element name="e_shstrndx" type="tns:ElfSectionHeaderIndex"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ProgramHeader">
+    <xsd:sequence>
+      <xsd:element name="p_type" type="tns:ElfWord"/>
+      <xsd:element name="p_flags" type="tns:ElfWord"/>
+      <xsd:element name="p_offset" type="tns:ElfOff"/>
+      <xsd:element name="p_vaddr" type="tns:ElfAddr"/>
+      <xsd:element name="p_paddr" type="tns:ElfAddr"/>
+      <xsd:element name="p_filesz" type="tns:ElfXword"/>
+      <xsd:element name="p_memsz" type="tns:ElfXword"/>
+      <xsd:element name="p_align" type="tns:ElfXword"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="SectionHeader">
+    <xsd:sequence>
+      <xsd:element name="sh_name" type="tns:ElfWord"/>
+      <xsd:element name="sh_type" type="tns:ElfWord"/>
+      <xsd:element name="sh_flags" type="tns:ElfXword"/>
+      <xsd:element name="sh_addr" type="tns:ElfAddr"/>
+      <xsd:element name="sh_offset" type="tns:ElfOff"/>
+      <xsd:element name="sh_size" type="tns:ElfXword"/>
+      <xsd:element name="sh_link" type="tns:ElfWord"/>
+      <xsd:element name="sh_info" type="tns:ElfWord"/>
+      <xsd:element name="sh_addralign" type="tns:ElfXword"/>
+      <xsd:element name="sh_entsize" type="tns:ElfXword"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ElfFile">
+    <xsd:sequence>
+      <xsd:element name="header" type="tns:ElfHeader"/>
+      <xsd:element name="programHeaders" type="tns:ProgramHeaderArray" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="sectionHeaders" type="tns:SectionHeaderArray" minOccurs="0" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="ProgramHeaderArray">
+    <xsd:sequence>
+      <xsd:element name="programHeader" type="tns:ProgramHeader" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="SectionHeaderArray">
+    <xsd:sequence>
+      <xsd:element name="sectionHeader" type="tns:SectionHeader" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:element name="ElfFile" type="tns:ElfFile"/>
+
+</xsd:schema>

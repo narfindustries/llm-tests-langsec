@@ -1,100 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ELF"
-           xmlns:elf="http://example.com/ELF"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="elf-types.xsd"/>
-  <xs:element name="elfFile" type="elf:elfFileType" dfdl:inputValueCalc ",";
-  <xs:complexType name="elfFileType">
-    <xs:sequence>
-      <xs:element name="header" type="elf:elfHeaderType"/>
-      <xs:element name="programHeaders" type="elf:programHeaderArrayType"/>
-      <xs:element name="sectionHeaders" type="elf:sectionHeaderArrayType"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="elfHeaderType">
-    <xs:sequence>
-      <xs:element name="e_ident" type="elf:e_identType"/>
-      <xs:element name="e_type" type="xs:unsignedShort"/>
-      <xs:element name="e_machine" type="xs:unsignedShort"/>
-      <xs:element name="e_version" type="xs:unsignedInt"/>
-      <xs:element name="e_entry" type="xs:unsignedLong"/>
-      <xs:element name="e_phoff" type="xs:unsignedLong"/>
-      <xs:element name="e_shoff" type="xs:unsignedLong"/>
-      <xs:element name="e_flags" type="xs:unsignedInt"/>
-      <xs:element name="e_ehsize" type="xs:unsignedShort"/>
-      <xs:element name="e_phentsize" type="xs:unsignedShort"/>
-      <xs:element name="e_phnum" type="xs:unsignedShort"/>
-      <xs:element name="e_shentsize" type="xs:unsignedShort"/>
-      <xs:element name="e_shnum" type="xs:unsignedShort"/>
-      <xs:element name="e_shstrndx" type="xs:unsignedShort"/>
-    </xs:sequence>
-  </xs:complexType>
-
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/ELF" 
+           xmlns="http://example.com/ELF" 
+           elementFormDefault="qualified" 
+           attributeFormDefault="unqualified">
+  <xs:element name="elf">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="e_ident" type="e_identType"/>
+        <xs:element name="e_type" type="xs:unsignedShort"/>
+        <xs:element name="e_machine" type="xs:unsignedShort"/>
+        <xs:element name="e_version" type="xs:unsignedInt"/>
+        <xs:element name="e_entry" type="xs:unsignedInt"/>
+        <xs:element name="e_phoff" type="xs:unsignedInt"/>
+        <xs:element name="e_shoff" type="xs:unsignedInt"/>
+        <xs:element name="e_flags" type="xs:unsignedInt"/>
+        <xs:element name="e_ehsize" type="xs:unsignedShort"/>
+        <xs:element name="e_phentsize" type="xs:unsignedShort"/>
+        <xs:element name="e_phnum" type="xs:unsignedShort"/>
+        <xs:element name="e_shentsize" type="xs:unsignedShort"/>
+        <xs:element name="e_shnum" type="xs:unsignedShort"/>
+        <xs:element name="e_shstrndx" type="xs:unsignedShort"/>
+        <xs:element name="programHeaderTable" type="programHeaderTableType"/>
+        <xs:element name="sectionHeaderTable" type="sectionHeaderTableType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
   <xs:complexType name="e_identType">
     <xs:sequence>
-      <xs:element name="ei_mag" type="elf:ei_magType"/>
-      <xs:element name="ei_class" type="xs:unsignedByte"/>
-      <xs:element name="ei_data" type="xs:unsignedByte"/>
-      <xs:element name="ei_version" type="xs:unsignedByte"/>
-      <xs:element name="ei_osabi" type="xs:unsignedByte"/>
-      <xs:element name="ei_abiversion" type="xs:unsignedByte"/>
-      <xs:element name="ei_pad" type="elf:ei_padType"/>
+      <xs:element name="EI_MAG0" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG1" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG2" type="xs:unsignedByte"/>
+      <xs:element name="EI_MAG3" type="xs:unsignedByte"/>
+      <xs:element name="EI_CLASS" type="xs:unsignedByte"/>
+      <xs:element name="EI_DATA" type="xs:unsignedByte"/>
+      <xs:element name="EI_VERSION" type="xs:unsignedByte"/>
+      <xs:element name="EI_OSABI" type="xs:unsignedByte"/>
+      <xs:element name="EI_ABIVERSION" type="xs:unsignedByte"/>
+      <xs:element name="EI_PAD" type="xs:unsignedByte" maxOccurs="7"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="ei_magType">
+  <xs:complexType name="programHeaderTableType">
     <xs:sequence>
-      <xs:element name="magic" type="xs:unsignedByte" dfdl:length="4" dfdl:encoding="utf-8" dfdl:terminator=""/>
+      <xs:element name="programHeader" type="programHeaderType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="ei_padType">
-    <xs:sequence>
-      <xs:element name="pad" type="xs:unsignedByte" dfdl:length="9" dfdl:encoding="utf-8" dfdl:terminator=""/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="programHeaderArrayType">
-    <xs:sequence>
-      <xs:element name="programHeader" type="elf:programHeaderType" maxOccurs="unbounded" dfdl:separator ",";
-    </xs:sequence>
-  </xs:complexType>
-
   <xs:complexType name="programHeaderType">
     <xs:sequence>
       <xs:element name="p_type" type="xs:unsignedInt"/>
-      <xs:element name="p_offset" type="xs:unsignedLong"/>
-      <xs:element name="p_vaddr" type="xs:unsignedLong"/>
-      <xs:element name="p_paddr" type="xs:unsignedLong"/>
-      <xs:element name="p_filesz" type="xs:unsignedLong"/>
-      <xs:element name="p_memsz" type="xs:unsignedLong"/>
+      <xs:element name="p_offset" type="xs:unsignedInt"/>
+      <xs:element name="p_vaddr" type="xs:unsignedInt"/>
+      <xs:element name="p_paddr" type="xs:unsignedInt"/>
+      <xs:element name="p_filesz" type="xs:unsignedInt"/>
+      <xs:element name="p_memsz" type="xs:unsignedInt"/>
       <xs:element name="p_flags" type="xs:unsignedInt"/>
-      <xs:element name="p_align" type="xs:unsignedLong"/>
+      <xs:element name="p_align" type="xs:unsignedInt"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="sectionHeaderArrayType">
+  <xs:complexType name="sectionHeaderTableType">
     <xs:sequence>
-      <xs:element name="sectionHeader" type="elf:sectionHeaderType" maxOccurs="unbounded" dfdl:separator ",";
+      <xs:element name="sectionHeader" type="sectionHeaderType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
   <xs:complexType name="sectionHeaderType">
     <xs:sequence>
       <xs:element name="sh_name" type="xs:unsignedInt"/>
       <xs:element name="sh_type" type="xs:unsignedInt"/>
-      <xs:element name="sh_flags" type="xs:unsignedLong"/>
-      <xs:element name="sh_addr" type="xs:unsignedLong"/>
-      <xs:element name="sh_offset" type="xs:unsignedLong"/>
-      <xs:element name="sh_size" type="xs:unsignedLong"/>
+      <xs:element name="sh_flags" type="xs:unsignedInt"/>
+      <xs:element name="sh_addr" type="xs:unsignedInt"/>
+      <xs:element name="sh_offset" type="xs:unsignedInt"/>
+      <xs:element name="sh_size" type="xs:unsignedInt"/>
       <xs:element name="sh_link" type="xs:unsignedInt"/>
       <xs:element name="sh_info" type="xs:unsignedInt"/>
-      <xs:element name="sh_addralign" type="xs:unsignedLong"/>
-      <xs:element name="sh_entsize" type="xs:unsignedLong"/>
+      <xs:element name="sh_addralign" type="xs:unsignedInt"/>
+      <xs:element name="sh_entsize" type="xs:unsignedInt"/>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

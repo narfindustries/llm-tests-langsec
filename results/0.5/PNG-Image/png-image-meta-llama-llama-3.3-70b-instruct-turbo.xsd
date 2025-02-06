@@ -1,75 +1,283 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/png"
-           xmlns:tns="http://example.com/png"
+           targetNamespace="http://example.com/PNG-Image"
+           xmlns="http://example.com/PNG-Image"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
-
-  <xs:element name="png">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:signature" dfdl:OccursCount="1"/>
-        <xs:element ref="tns:IHDR" dfdl:OccursCount="1"/>
-        <xs:element ref="tns:IDAT" dfdl:OccursCount="1" dfdl:OutputValueCalculator="outputIDAT"/>
-        <xs:element ref="tns:IEND" dfdl:OccursCount="1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="signature">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="dfdl:length" type="xs:integer" value="8"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="IHDR">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="width" type="xs:integer" dfdl:length="4" dfdl:byteOrder="big"/>
-        <xs:element name="height" type="xs:integer" dfdl:length="4" dfdl:byteOrder="big"/>
-        <xs:element name="bitDepth" type="xs:integer" dfdl:length="1"/>
-        <xs:element name="colorType" type="xs:integer" dfdl:length="1"/>
-        <xs:element name="compressionMethod" type="xs:integer" dfdl:length="1"/>
-        <xs:element name="filterMethod" type="xs:integer" dfdl:length="1"/>
-        <xs:element name="interlaceMethod" type="xs:integer" dfdl:length="1"/>
-      </xs:sequence>
-      <xs:attribute name="dfdl:length" type="xs:integer" value="25"/>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="IDAT">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="dfdl:lengthKind" type="xs:string" value="explicit"/>
-          <xs:attribute name="dfdl:outputValueCalculator" type="xs:string" value="outputIDAT"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="IEND">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:hexBinary">
-          <xs:attribute name="dfdl:length" type="xs:integer" value="4"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <dfdl:outputValueCalculator name="outputIDAT">
+  <xs:element name="pngImage" type="pngImageType"/>
+  <xs:complexType name="pngImageType">
     <xs:sequence>
-      <xs:element name="length" type="xs:integer" dfdl:length="4" dfdl:byteOrder="big"/>
-      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="byte" dfdl:delimiterValue="0x00 0x00 0x00 0x00"/>
-      <xs:element name="crc" type="xs:integer" dfdl:length="4" dfdl:byteOrder="big"/>
+      <xs:element name="signature" type="xs:hexBinary" fixed="89504E470D0A1A0A"/>
+      <xs:element name="chunks" type="chunksType" maxOccurs="unbounded"/>
     </xs:sequence>
-  </dfdl:outputValueCalculator>
-
+  </xs:complexType>
+  <xs:complexType name="chunksType">
+    <xs:choice maxOccurs="unbounded">
+      <xs:element name="ihdrChunk" type="ihdrChunkType"/>
+      <xs:element name="idatChunk" type="idatChunkType"/>
+      <xs:element name="iendChunk" type="iendChunkType"/>
+      <xs:element name="plteChunk" type="plteChunkType"/>
+      <xs:element name="trnsChunk" type="trnsChunkType"/>
+      <xs:element name="chrmChunk" type="chrmChunkType"/>
+      <xs:element name="gamaChunk" type="gamaChunkType"/>
+      <xs:element name="iccpChunk" type="iccpChunkType"/>
+      <xs:element name="sbitChunk" type="sbitChunkType"/>
+      <xs:element name="srgbChunk" type="srgbChunkType"/>
+      <xs:element name="texpChunk" type="texpChunkType"/>
+      <xs:element name="ztxdChunk" type="ztxdChunkType"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="ihdrChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="IHDR"/>
+      <xs:element name="width" type="xs:integer"/>
+      <xs:element name="height" type="xs:integer"/>
+      <xs:element name="bitDepth" type="bitDepthType"/>
+      <xs:element name="colorType" type="colorTypeType"/>
+      <xs:element name="compressionMethod" type="xs:integer" fixed="0"/>
+      <xs:element name="filterMethod" type="xs:integer" fixed="0"/>
+      <xs:element name="interlaceMethod" type="interlaceMethodType"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="bitDepthType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="colorTypeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="6"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="interlaceMethodType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="idatChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="IDAT"/>
+      <xs:element name="data" type="xs:hexBinary"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="iendChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer" fixed="0"/>
+      <xs:element name="type" type="xs:string" fixed="IEND"/>
+      <xs:element name="crc" type="xs:integer" fixed="3495249105"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="plteChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="PLTE"/>
+      <xs:element name="palette" type="paletteType"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="paletteType">
+    <xs:sequence>
+      <xs:element name="entries" type="paletteEntryType" maxOccurs="256"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="paletteEntryType">
+    <xs:sequence>
+      <xs:element name="red" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="green" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="blue" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="trnsChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="tRNS"/>
+      <xs:element name="data" type="trnsDataType"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="trnsDataType">
+    <xs:choice>
+      <xs:element name="gray" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="65535"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="rgb" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="4294967295"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="paletteAlpha" type="paletteAlphaType"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="paletteAlphaType">
+    <xs:sequence>
+      <xs:element name="alpha" type="xs:integer" maxOccurs="256">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="chrmChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="cHRM"/>
+      <xs:element name="whitePoint" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="65535"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="red" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="65535"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="green" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="65535"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="blue" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="65535"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="gamaChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="gAMA"/>
+      <xs:element name="gamma" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="2147483647"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="iccpChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="iCCP"/>
+      <xs:element name="profileName" type="xs:string"/>
+      <xs:element name="compressionMethod" type="xs:integer" fixed="0"/>
+      <xs:element name="compressedProfile" type="xs:hexBinary"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sbitChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="sBIT"/>
+      <xs:element name="data" type="sbitDataType"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sbitDataType">
+    <xs:choice>
+      <xs:element name="gray" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="rgb" type="rgbType"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="rgbType">
+    <xs:sequence>
+      <xs:element name="red" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="green" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+      <xs:element name="blue" type="xs:integer">
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0"/>
+          <xs:maxInclusive value="255"/>
+        </xs:restriction>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="srgbChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer" fixed="1"/>
+      <xs:element name="type" type="xs:string" fixed="sRGB"/>
+      <xs:element name="renderingIntent" type="renderingIntentType"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="renderingIntentType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="texpChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="tEXt"/>
+      <xs:element name="keyword" type="xs:string"/>
+      <xs:element name="text" type="xs:string"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ztxdChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:integer"/>
+      <xs:element name="type" type="xs:string" fixed="zTXt"/>
+      <xs:element name="keyword" type="xs:string"/>
+      <xs:element name="compressionMethod" type="xs:integer" fixed="0"/>
+      <xs:element name="compressedText" type="xs:hexBinary"/>
+      <xs:element name="crc" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

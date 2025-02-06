@@ -1,0 +1,53 @@
+module HTTP;
+
+public type Version = enum {
+    HTTP_1_0 = 0,
+    HTTP_1_1 = 1
+};
+
+public type Method = enum {
+    GET = 0,
+    POST = 1,
+    PUT = 2,
+    DELETE = 3,
+    HEAD = 4,
+    OPTIONS = 5,
+    TRACE = 6,
+    CONNECT = 7,
+    PATCH = 8
+};
+
+public type StatusCode = uint16;
+
+public type Header = unit {
+    name: bytes &eod;
+    value: bytes &eod;
+};
+
+public type Headers = vector<Header>;
+
+public type Request = unit {
+    method: Method;
+    uri: bytes &eod;
+    version: Version;
+    headers: Headers;
+    body: bytes &size=body_length;
+};
+
+public type Response = unit {
+    version: Version;
+    status_code: StatusCode;
+    reason_phrase: bytes &eod;
+    headers: Headers;
+    body: bytes &size=body_length;
+};
+
+public type Message = unit {
+    is_request: bool;
+    request: Request if $is_request;
+    response: Response if !$is_request;
+};
+
+public type HTTP = unit {
+    messages: vector<Message>;
+};

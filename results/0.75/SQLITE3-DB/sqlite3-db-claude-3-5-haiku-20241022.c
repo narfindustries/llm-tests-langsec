@@ -1,159 +1,113 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
-#include <sqlite3.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
-// Database configuration structure
 typedef struct {
-    sqlite3 *db;
-    char *dbPath;
-} DatabaseConfig;
+    char magic_header[16];
+    uint16_t page_size;
+    uint8_t write_version;
+    uint8_t read_version;
+    uint8_t reserved_space;
+    uint8_t max_embedded_payload;
+    uint8_t min_embedded_payload;
+    uint8_t leaf_payload_fraction;
+    uint32_t file_change_counter;
+    uint32_t database_size_pages;
+    uint32_t first_freelist_page;
+    uint32_t total_freelist_pages;
+    uint32_t schema_cookie;
+    uint32_t schema_format;
+    uint32_t default_encoding;
+    uint32_t user_version;
+    uint32_t incremental_vacuum_mode;
+    uint32_t application_id;
+} SQLiteHeader;
 
-// Parser for database configuration
-static HParser *database_config_parser() {
-    return h_sequence(
-        h_token_ci("DATABASE"),
-        h_whitespace(),
-        h_quoted_string(),
-        NULL
-    );
+HParseResult* parse_sqlite_header(void* input, size_t length) {
+    HParser* magic_header = h_token((uint8_t*)"SQLite format 3\0", 16);
+    HParser* page_size = h_int_range(h_uintrange(512, 65536), 512, 65536);
+    HParser* write_version = h_uint8();
+    HParser* read_version = h_uint8();
+    HParser* reserved_space = h_uint8();
+    HParser* max_embedded_payload = h_uint8();
+    HParser* min_embedded_payload = h_uint8();
+    HParser* leaf_payload_fraction = h_uint8();
+    HParser* file_change_counter = h_uint32();
+    HParser* database_size_pages = h_uint32();
+    HParser* first_freelist_page = h_uint32();
+    HParser* total_freelist_pages = h_uint32();
+    HParser* schema_cookie = h_uint32();
+    HParser* schema_format = h_uint32();
+    HParser* default_encoding = h_uint32();
+    HParser* user_version = h_uint32();
+    HParser* incremental_vacuum_mode = h_uint32();
+    HParser* application_id = h_uint32();
+
+    HParser* sqlite_header = h_sequence(
+        magic_header, page_size, 
+        write_version, read_version, 
+        reserved_space, 
+        max_embedded_payload, 
+        min_embedded_payload, 
+        leaf_payload_fraction,
+        file_change_counter,
+        database_size_pages,
+        first_freelist_page,
+        total_freelist_pages,
+        schema_cookie,
+        schema_format,
+        default_encoding,
+        user_version,
+        incremental_vacuum_mode,
+        application_id, 
+        NULL);
+
+    return h_parse(sqlite_header, input, length);
 }
 
-// Database initialization function
-static int initialize_database(DatabaseConfig *config) {
-    int rc = sqlite3_open(config->dbPath, &config->db);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(config->db));
-        return -1;
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_file>\n", argv[0]);
+        return 1;
     }
-    return 0;
-}
 
-// Query execution function
-static int execute_query(DatabaseConfig *config, const char *query) {
-    char *errMsg = 0;
-    int rc = sqlite3_exec(config->db, query, 0, 0, &errMsg);
-    
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return -1;
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
     }
-    return 0;
-}
 
-// Table creation function
-static int create_tables(DatabaseConfig *config) {
-    const char *create_users_table = 
-        "CREATE TABLE IF NOT EXISTS users ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "username TEXT NOT NULL UNIQUE, "
-        "email TEXT NOT NULL UNIQUE, "
-        "created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
-    
-    const char *create_logs_table = 
-        "CREATE TABLE IF NOT EXISTS logs ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-        "user_id INTEGER, "
-        "action TEXT, "
-        "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, "
-        "FOREIGN KEY(user_id) REFERENCES users(id))";
-    
-    if (execute_query(config, create_users_table) != 0) {
-        return -1;
-    }
-    
-    if (execute_query(config, create_logs_table) != 0) {
-        return -1;
-    }
-    
-    return 0;
-}
+    fseek(file, 0, SEEK_END);
+    long file_length = ftell(file);
+    rewind(file);
 
-// User insertion function
-static int insert_user(DatabaseConfig *config, const char *username, const char *email) {
-    sqlite3_stmt *stmt;
-    const char *query = "INSERT INTO users (username, email) VALUES (?, ?)";
-    
-    if (sqlite3_prepare_v2(config->db, query, -1, &stmt, 0) != SQLITE_OK) {
-        fprintf(stderr, "Failed to prepare statement\n");
-        return -1;
+    uint8_t* buffer = malloc(file_length);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
     }
-    
-    sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, email, -1, SQLITE_STATIC);
-    
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        fprintf(stderr, "Failed to insert user\n");
-        sqlite3_finalize(stmt);
-        return -1;
-    }
-    
-    sqlite3_finalize(stmt);
-    return 0;
-}
 
-// Log insertion function
-static int insert_log(DatabaseConfig *config, int user_id, const char *action) {
-    sqlite3_stmt *stmt;
-    const char *query = "INSERT INTO logs (user_id, action) VALUES (?, ?)";
-    
-    if (sqlite3_prepare_v2(config->db, query, -1, &stmt, 0) != SQLITE_OK) {
-        fprintf(stderr, "Failed to prepare statement\n");
-        return -1;
-    }
-    
-    sqlite3_bind_int(stmt, 1, user_id);
-    sqlite3_bind_text(stmt, 2, action, -1, SQLITE_STATIC);
-    
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        fprintf(stderr, "Failed to insert log\n");
-        sqlite3_finalize(stmt);
-        return -1;
-    }
-    
-    sqlite3_finalize(stmt);
-    return 0;
-}
+    size_t read_size = fread(buffer, 1, file_length, file);
+    fclose(file);
 
-// Database cleanup function
-static void cleanup_database(DatabaseConfig *config) {
-    if (config->db) {
-        sqlite3_close(config->db);
+    if (read_size != file_length) {
+        perror("File read error");
+        free(buffer);
+        return 1;
     }
-    free(config->dbPath);
-}
 
-// Main application logic
-int main() {
-    DatabaseConfig config = {0};
-    config.dbPath = strdup("example.db");
+    HParseResult* parsed_result = parse_sqlite_header(buffer, read_size);
     
-    if (initialize_database(&config) != 0) {
-        cleanup_database(&config);
-        return -1;
+    if (parsed_result) {
+        printf("SQLite file parsed successfully\n");
+        h_parse_result_free(parsed_result);
+    } else {
+        printf("Parsing failed\n");
     }
-    
-    if (create_tables(&config) != 0) {
-        cleanup_database(&config);
-        return -1;
-    }
-    
-    // Example user and log insertions
-    if (insert_user(&config, "johndoe", "john@example.com") != 0) {
-        cleanup_database(&config);
-        return -1;
-    }
-    
-    int user_id = sqlite3_last_insert_rowid(config.db);
-    
-    if (insert_log(&config, user_id, "user_registration") != 0) {
-        cleanup_database(&config);
-        return -1;
-    }
-    
-    cleanup_database(&config);
+
+    free(buffer);
     return 0;
 }

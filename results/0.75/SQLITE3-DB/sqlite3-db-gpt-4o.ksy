@@ -1,52 +1,50 @@
 meta:
   id: sqlite3_db
-  file-extension: sqlite
-  endian: le
-  application: SQLite
+  title: SQLite3 Database File
+  file-extension: sqlite3
+  endian: be
+  application: SQLite database engine
 
 seq:
   - id: header
-    type: file_header
-
-  - id: page
-    type: page
-    repeat: eos
+    type: header
 
 types:
-  file_header:
+  header:
     seq:
-      - id: signature
-        contents: "SQLite format 3\0"
+      - id: header_string
+        size: 16
+        type: str
+        encoding: UTF-8
       - id: page_size
         type: u2
-        if: page_size != 1
       - id: write_version
         type: u1
       - id: read_version
         type: u1
       - id: reserved_space
         type: u1
-      - id: max_payload_frac
+      - id: max_embedded_payload_fraction
         type: u1
-      - id: min_payload_frac
+      - id: min_embedded_payload_fraction
         type: u1
-      - id: leaf_payload_frac
+      - id: leaf_payload_fraction
         type: u1
-      - id: change_counter
+      - id: file_change_counter
         type: u4
-      - id: db_size
+      - id: database_size_in_pages
         type: u4
-      - id: freelist_first_trunk_page
+      - id: first_freelist_trunk_page
         type: u4
-      - id: freelist_page_count
+      - id: total_freelist_pages
         type: u4
       - id: schema_cookie
         type: u4
-      - id: schema_format
+      - id: schema_format_number
         type: u4
-      - id: page_cache_size
+      - id: default_page_cache_size
         type: u4
-      - id: largest_root_page_num
+      - id: largest_btree_page_number
         type: u4
       - id: text_encoding
         type: u4
@@ -56,24 +54,19 @@ types:
         type: u4
       - id: application_id
         type: u4
-      - id: reserved
+      - id: reserved_for_expansion
         size: 20
-      - id: version_valid_for
+      - id: version_valid_for_number
         type: u4
-      - id: sqlite_version_num
+      - id: sqlite_version_number
         type: u4
 
-  page:
-    seq:
-      - id: page_type
-        type: u1
-      - id: first_freeblock
-        type: u2
-      - id: cell_count
-        type: u2
-      - id: cell_content_area
-        type: u2
-      - id: fragmented_free_bytes
-        type: u1
-      - id: payload
-        size: _io.size - 8
+enums:
+  text_encoding:
+    1: utf_8
+    2: utf_16le
+    3: utf_16be
+
+instances:
+  is_valid_header:
+    value: 'header.header_string == "SQLite format 3\0"'

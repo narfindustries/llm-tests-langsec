@@ -5,26 +5,201 @@
            xmlns="http://example.org/mqtt"
            elementFormDefault="qualified">
 
-  <xs:element name="mqttGemini">
+  <xs:annotation>
+    <xs:documentation>DFDL schema for MQTT v5.0.  Note: This is a simplified representation and may not cover all edge cases or optional properties completely due to the complexity of the MQTT specification.</xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="MQTTPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="payload" type="payloadType"/>
+        <xs:element name="MessageType" type="xs:byte"/>
+        <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
+        <xs:choice>
+          <xs:element ref="Connect"/>
+          <xs:element ref="Connack"/>
+          <xs:element ref="Publish"/>
+          <xs:element ref="Puback"/>
+          <xs:element ref="Pubrec"/>
+          <xs:element ref="Pubrel"/>
+          <xs:element ref="Pubcomp"/>
+          <xs:element ref="Subscribe"/>
+          <xs:element ref="Suback"/>
+          <xs:element ref="Unsubscribe"/>
+          <xs:element ref="Unsuback"/>
+          <xs:element ref="Pingreq"/>
+          <xs:element ref="Pingresp"/>
+          <xs:element ref="Disconnect"/>
+        </xs:choice>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="messageId" type="xs:string" dfdl:length="4"/>
-      <xs:element name="timestamp" type="xs:dateTime"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="Connect">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ProtocolName" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="4"/>
+        <xs:element name="ProtocolVersion" type="xs:byte"/>
+        <xs:element name="ConnectFlags" type="xs:byte"/>
+        <xs:element name="KeepAliveTimer" type="xs:unsignedShort"/>
+        <xs:element name="ClientId" type="xs:string"/>
+        <xs:element minOccurs="0" name="WillTopic" type="xs:string"/>
+        <xs:element minOccurs="0" name="WillMessage" type="xs:string"/>
+        <xs:element minOccurs="0" name="WillQoS" type="xs:byte"/>
+        <xs:element minOccurs="0" name="WillRetain" type="xs:boolean"/>
+        <xs:element minOccurs="0" name="Password" type="xs:string"/>
+        <xs:element minOccurs="0" name="Username" type="xs:string"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="payloadType">
+  <xs:element name="Connack">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SessionPresent" type="xs:boolean"/>
+        <xs:element name="ConnectReturnCode" type="xs:byte"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Publish">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TopicName" type="xs:string"/>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort" minOccurs="0"/>
+        <xs:element name="QoS" type="xs:byte"/>
+        <xs:element name="Retain" type="xs:boolean"/>
+        <xs:element name="Payload" type="xs:base64Binary"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Puback">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Pubrec">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Pubrel">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Pubcomp">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Subscribe">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element maxOccurs="unbounded" name="Subscription">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="TopicFilter" type="xs:string"/>
+              <xs:element name="QoS" type="xs:byte"/>
+              <xs:element minOccurs="0" name="SubscriptionIdentifier" type="xs:unsignedInt"/>
+              <xs:element minOccurs="0" name="Properties" type="Properties"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Suback">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element maxOccurs="unbounded" name="ReturnCodes" type="xs:byte"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Unsubscribe">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element maxOccurs="unbounded" name="TopicFilter" type="xs:string"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Unsuback">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Pingreq">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Pingresp">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Disconnect">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Properties">
     <xs:sequence>
-      <xs:element name="topic" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=","/>
-      <xs:element name="data" type="xs:base64Binary"/>
+      <xs:element maxOccurs="unbounded" name="Property">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="PropertyId" type="xs:unsignedShort"/>
+            <xs:choice>
+              <xs:element name="PropertyValueByte" type="xs:byte"/>
+              <xs:element name="PropertyValueInt" type="xs:int"/>
+              <xs:element name="PropertyValueString" type="xs:string"/>
+              <xs:element name="PropertyValueBytes" type="xs:base64Binary"/>
+              <!-- Add other property value types as needed -->
+            </xs:choice>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 

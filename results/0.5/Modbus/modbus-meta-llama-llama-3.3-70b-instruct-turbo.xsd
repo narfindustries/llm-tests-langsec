@@ -1,52 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/modbus"
-           xmlns:tns="http://example.com/modbus"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="modbus">
+  <xs:element name="definition">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="tns:transaction"/>
+        <xs:element name="format" type="dfdl:formatType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="transaction">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="transactionId" type="xs:unsignedShort"/>
-        <xs:element name="protocolId" type="xs:unsignedShort"/>
-        <xs:element name="length" type="xs:unsignedShort"/>
-        <xs:element name="unitId" type="xs:unsignedByte"/>
-        <xs:element name="functionCode" type="xs:unsignedByte"/>
-        <xs:element name="data" type="tns:dataType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="dataType">
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="registerAddress" type="xs:unsignedShort"/>
-      <xs:element name="registerCount" type="xs:unsignedShort"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="validation" type="dfdl:validationType" minOccurs="0"/>
+      <xs:element name="choice" type="dfdl:choiceType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="occurs" type="xs:string" use="required"/>
+    <xs:attribute name="representationType" type="xs:string" use="optional"/>
+    <xs:attribute name="lengthKind" type="xs:string" use="optional"/>
+    <xs:attribute name="byteOrder" type="xs:string" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="validationType">
+    <xs:sequence>
+      <xs:element name="assert" type="dfdl:assertType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="data">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="byte" type="xs:unsignedByte" maxOccurs="unbounded" dfdl:occursCount="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <dfdl:format>
-    <dfdl:property name="representation" value="binary"/>
-    <dfdl:property name="byteOrder" value="bigEndian"/>
-    <dfdl:property name="encoding" value="ISO-8859-1"/>
-  </dfdl:format>
-
+  <xs:complexType name="assertType">
+    <xs:attribute name="assertion" type="xs:string" use="required"/>
+    <xs:attribute name="message" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="choiceType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Modbus" type="dfdl:formatType"/>
+  <xs:complexType name="ModbusType">
+    <xs:sequence>
+      <xs:element name="slaveID" type="dfdl:elementType"/>
+      <xs:element name="functionCode" type="dfdl:elementType"/>
+      <xs:element name="data" type="dfdl:elementType"/>
+      <xs:element name="crc" type="dfdl:elementType"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required" fixed="Modbus"/>
+    <xs:attribute name="type" type="xs:string" use="required" fixed="binary"/>
+    <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+  </xs:complexType>
+  <xs:element name="slaveID" type="dfdl:elementType"/>
+  <xs:element name="functionCode" type="dfdl:elementType"/>
+  <xs:element name="data" type="dfdl:elementType"/>
+  <xs:element name="crc" type="dfdl:elementType"/>
 </xs:schema>

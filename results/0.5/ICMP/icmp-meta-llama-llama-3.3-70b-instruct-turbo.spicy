@@ -1,88 +1,53 @@
-# Zeek Spicy specification for ICMP protocol
+module ICMP;
 
-%header {
-    # Import necessary modules
-    @load base/protocols/icmp
-}
+type ICMP_Type = enum {
+  echo_reply = 0,
+  reserved_1 = 1,
+  reserved_2 = 2,
+  destination_unreachable = 3,
+  source_quench = 4,
+  redirect = 5,
+  reserved_6 = 6,
+  reserved_7 = 7,
+  echo_request = 8,
+  reserved_9 = 9,
+  reserved_10 = 10,
+  time_exceeded = 11,
+  parameter_problem = 12,
+  reserved_13 = 13,
+  reserved_14 = 14,
+  reserved_15 = 15,
+  gateway_unreachable = 16,
+  host_unreachable = 17,
+  protocol_unreachable = 18,
+  port_unreachable = 19,
+  fragmentation_needed = 20,
+  source_route_failed = 21,
+  reserved_22 = 22,
+  reserved_23 = 23,
+  reserved_24 = 24,
+  reserved_25 = 25,
+  reserved_26 = 26,
+  reserved_27 = 27,
+  reserved_28 = 28,
+  reserved_29 = 29,
+  traceroute = 30,
+  datagram_conversion_error = 31,
+  photuris = 40
+};
 
-%protocol icmp {
-    # Define the ICMP protocol
-    %import base/protocols/icmp
+type ICMP_Code = uint8;
 
-    # Define the ICMP message types
-    type msg_type: uint8 = {
-        case 0 => echo_reply,
-        case 3 => destination_unreachable,
-        case 4 => source_quench,
-        case 5 => redirect,
-        case 8 => echo_request,
-        case 9 => router_advertisement,
-        case 10 => router_solicitation,
-        case 11 => time_exceeded,
-        case 12 => parameter_problem,
-        default => unknown
-    }
+type ICMP = struct {
+  type: ICMP_Type,
+  code: ICMP_Code,
+  checksum: uint16,
+  identifier: uint16,
+  sequence_number: uint16,
+  gateway_internet_address: uint32,
+  mtu: uint16,
+  unused: padding to 32 bits,
+  data: bytes
+} &byteorder=bigendian;
 
-    # Define the ICMP message type handlers
-    type echo_reply: record {
-        id: uint16,
-        seq: uint16,
-        timestamp: uint32,
-        data: bytestring &restofdata
-    }
-
-    type destination_unreachable: record {
-        unused: uint32,
-        next_hop_mtu: uint32,
-        data: bytestring &restofdata
-    }
-
-    type source_quench: record {
-        unused: uint32,
-        data: bytestring &restofdata
-    }
-
-    type redirect: record {
-        gateway_address: ip_addr,
-        data: bytestring &restofdata
-    }
-
-    type echo_request: record {
-        id: uint16,
-        seq: uint16,
-        timestamp: uint32,
-        data: bytestring &restofdata
-    }
-
-    type router_advertisement: record {
-        num_addresses: uint8,
-        address_entry_size: uint8,
-        lifetime: uint16,
-        addresses: vector[address_entry],
-        data: bytestring &restofdata
-    }
-
-    type router_solicitation: record {
-        reserved: uint32,
-        data: bytestring &restofdata
-    }
-
-    type time_exceeded: record {
-        unused: uint32,
-        data: bytestring &restofdata
-    }
-
-    type parameter_problem: record {
-        pointer: uint8,
-        data: bytestring &restofdata
-    }
-
-    type unknown: record {
-        data: bytestring &restofdata
-    }
-
-    type address_entry: record {
-        address: ip_addr,
-        preference_level: uint32
-    }
-}
+let icmp = ICMP;

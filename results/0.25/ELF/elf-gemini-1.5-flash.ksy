@@ -1,49 +1,89 @@
-# This is a sample Kaitai Struct definition.  Adjust as needed for your actual ELF file.
-# The error message suggests a problem with the ksy file or the kaitai-struct-compiler itself,
-# not necessarily the structure definition.  This example focuses on a basic ELF header.
+meta:
+  id: elf64
+  endian: le
+types:
+  Elf64_Ehdr:
+    seq:
+      - id: e_ident
+        type: u1
+        size: 16
+      - id: e_type
+        type: u2
+      - id: e_machine
+        type: u2
+      - id: e_version
+        type: u4
+      - id: e_entry
+        type: u8
+      - id: e_phoff
+        type: u8
+      - id: e_shoff
+        type: u8
+      - id: e_flags
+        type: u4
+      - id: e_ehsize
+        type: u2
+      - id: e_phentsize
+        type: u2
+      - id: e_phnum
+        type: u2
+      - id: e_shentsize
+        type: u2
+      - id: e_shnum
+        type: u2
+      - id: e_shstrndx
+        type: u2
+  Elf64_Phdr:
+    seq:
+      - id: p_type
+        type: u4
+      - id: p_flags
+        type: u4
+      - id: p_offset
+        type: u8
+      - id: p_vaddr
+        type: u8
+      - id: p_paddr
+        type: u8
+      - id: p_filesz
+        type: u8
+      - id: p_memsz
+        type: u8
+      - id: p_align
+        type: u8
+  Elf64_Shdr:
+    seq:
+      - id: sh_name
+        type: u4
+      - id: sh_type
+        type: u4
+      - id: sh_flags
+        type: u8
+      - id: sh_addr
+        type: u8
+      - id: sh_offset
+        type: u8
+      - id: sh_size
+        type: u8
+      - id: sh_link
+        type: u4
+      - id: sh_info
+        type: u4
+      - id: sh_addralign
+        type: u8
+      - id: sh_entsize
+        type: u8
 
-type: struct
-endian: be
-
-seq:
-  - id: magic
-    type: u4
-  - id: class
-    type: u2
-  - id: endianness
-    type: u2
-  - id: version
-    type: u1
-  - id: osabi
-    type: u1
-  - id: abiversion
-    type: u1
-  - id: pad
-    type: u1
-  - id: type
-    type: u2
-  - id: machine
-    type: u2
-  - id: version_elf
-    type: u4
-  - id: entry
-    type: u4
-  - id: phoff
-    type: u4
-  - id: shoff
-    type: u4
-  - id: flags
-    type: u4
-  - id: ehsize
-    type: u2
-  - id: phentsize
-    type: u2
-  - id: phnum
-    type: u2
-  - id: shentsize
-    type: u2
-  - id: shnum
-    type: u2
-  - id: shstrndx
-    type: u2
+root:
+  seq:
+    - id: header
+      type: Elf64_Ehdr
+    - id: program_headers
+      type: Elf64_Phdr
+      repeat: expr
+      repeat-expr: header.e_phnum
+    - id: section_headers
+      type: Elf64_Shdr
+      repeat: expr
+      repeat-expr: header.e_shnum
 

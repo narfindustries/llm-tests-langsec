@@ -1,73 +1,139 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DNS"
-           xmlns:tns="http://example.com/DNS"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dns-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
-
-  <xs:element name="DNSMessage">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/dns" xmlns="http://example.com/dns" elementFormDefault="qualified">
+  <xs:element name="dns">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="tns:DNSHeader" dfdl:OccursCount="1..1"/>
-        <xs:element name="Question" type="tns:DNSQuestion" dfdl:OccursCount="1..1" dfdl:sequenceKind="unordered"/>
-        <xs:element name="Answer" type="tns:DNSAnswer" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
-        <xs:element name="Authority" type="tns:DNSAuthority" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
-        <xs:element name="Additional" type="tns:DNSAdditional" dfdl:OccursCount="0..*" dfdl:sequenceKind="unordered"/>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="question" type="questionType" maxOccurs="unbounded"/>
+        <xs:element name="answer" type="answerType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="authority" type="authorityType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="additional" type="additionalType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="DNSHeader">
+  <xs:complexType name="headerType">
     <xs:sequence>
-      <xs:element name="ID" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="Flags" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="id" type="xs:unsignedShort"/>
+      <xs:element name="qr" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:0:1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="opcode" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:1:4"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="aa" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:5:1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="tc" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:6:1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="rd" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:7:1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ra" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:8:1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="z" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:9:3"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="rcode" type="xs:byte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:binaryRepresentation" type="xs:string" fixed="bits:12:4"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="qdcount" type="xs:unsignedShort"/>
+      <xs:element name="ancount" type="xs:unsignedShort"/>
+      <xs:element name="nscount" type="xs:unsignedShort"/>
+      <xs:element name="arcount" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DNSQuestion">
+  <xs:complexType name="questionType">
     <xs:sequence>
-      <xs:element name="QNAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
-      <xs:element name="QTYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="QCLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
+      <xs:element name="qname" type="domainNameType"/>
+      <xs:element name="qtype" type="xs:unsignedShort"/>
+      <xs:element name="qclass" type="xs:unsignedShort"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DNSAnswer">
+  <xs:complexType name="answerType">
     <xs:sequence>
-      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
-      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+      <xs:element name="name" type="domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:lengthValue" type="xs:string" fixed="rdlength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DNSAuthority">
+  <xs:complexType name="authorityType">
     <xs:sequence>
-      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
-      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+      <xs:element name="name" type="domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:lengthValue" type="xs:string" fixed="rdlength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DNSAdditional">
+  <xs:complexType name="additionalType">
     <xs:sequence>
-      <xs:element name="NAME" type="xs:string" dfdl:lengthKind="implicit" dfdl:encoding="UTF-8" dfdl:occursCount="1..*"/>
-      <xs:element name="TYPE" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="CLASS" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="TTL" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDLENGTH" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:representation="binary"/>
-      <xs:element name="RDATA" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:encoding="hex"/>
+      <xs:element name="name" type="domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <xs:attribute name="dfdl:lengthValue" type="xs:string" fixed="rdlength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="domainNameType">
+    <xs:sequence>
+      <xs:element name="label" type="xs:string" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

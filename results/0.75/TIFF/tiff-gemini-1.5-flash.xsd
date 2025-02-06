@@ -1,21 +1,93 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://example.org/tiff"
            targetNamespace="http://example.org/tiff"
-           xmlns="http://example.org/tiff"
-           elementFormDefault="qualified">
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
 
-  <xs:element name="tiff_gemini_1">
-    <xs:complexType>
-      <xs:sequence>
-        <!--  Add your DFDL elements here.  Example below.  Adapt to your actual TIFF structure -->
-        <xs:element name="ImageWidth" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="ImageHeight" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="BitsPerSample" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="Compression" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
-        <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <dfdl:format name="TIFFFormat">
+    <dfdl:textStandardEncoding>UTF-8</dfdl:textStandardEncoding>
+    <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
+    <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+  </dfdl:format>
+
+  <dfdl:element name="TIFF" type="tns:TIFFType">
+    <dfdl:annotation>Root element for TIFF structure</dfdl:annotation>
+  </dfdl:element>
+
+  <dfdl:complexType name="TIFFType">
+    <dfdl:sequence>
+      <dfdl:element name="Header" type="tns:HeaderType"/>
+      <dfdl:element name="IFD" type="tns:IFDType" maxOccurs="unbounded"/>
+    </dfdl:sequence>
+  </dfdl:complexType>
+
+  <dfdl:complexType name="HeaderType">
+    <dfdl:sequence>
+      <dfdl:element name="ByteOrder" type="xs:string" dfdl:length="2">
+        <dfdl:annotation>II (Intel, little-endian) or MM (Motorola, big-endian)</dfdl:annotation>
+      </dfdl:element>
+      <dfdl:element name="Version" type="xs:unsignedShort"/>
+    </dfdl:sequence>
+  </dfdl:complexType>
+
+  <dfdl:complexType name="IFDType">
+    <dfdl:sequence>
+      <dfdl:element name="NumberOfEntries" type="xs:unsignedShort"/>
+      <dfdl:element name="Entry" type="tns:EntryType" minOccurs="0" maxOccurs="unbounded"/>
+      <dfdl:element name="NextIFDOffset" type="xs:unsignedLong" dfdl:occurs="optional"/>
+    </dfdl:sequence>
+  </dfdl:complexType>
+
+  <dfdl:complexType name="EntryType">
+    <dfdl:sequence>
+      <dfdl:element name="TagID" type="xs:unsignedShort"/>
+      <dfdl:element name="DataType" type="tns:DataTypeType"/>
+      <dfdl:element name="Count" type="xs:unsignedLong"/>
+      <dfdl:element name="ValueOffset" type="xs:unsignedLong" dfdl:occurs="optional"/>
+      <dfdl:element name="Value" type="xs:hexBinary" dfdl:occurs="optional" dfdl:lengthKind="explicit" dfdl:length="{Count * $DataLength}"/>
+    </dfdl:sequence>
+  </dfdl:complexType>
+
+  <dfdl:simpleType name="DataTypeType">
+    <dfdl:restriction base="xs:unsignedShort">
+      <dfdl:enumeration value="1"/>
+      <dfdl:enumeration value="2"/>
+      <dfdl:enumeration value="3"/>
+      <dfdl:enumeration value="4"/>
+      <dfdl:enumeration value="5"/>
+      <dfdl:enumeration value="6"/>
+      <dfdl:enumeration value="7"/>
+      <dfdl:enumeration value="8"/>
+      <dfdl:enumeration value="9"/>
+      <dfdl:enumeration value="10"/>
+      <dfdl:enumeration value="11"/>
+      <dfdl:enumeration value="12"/>
+    </dfdl:restriction>
+  </dfdl:simpleType>
+
+  <dfdl:variable name="DataLength" type="xs:unsignedInt" dfdl:initialValue="{LookupDataLength($DataType)}"/>
+
+  <dfdl:function name="LookupDataLength">
+    <dfdl:parameter name="dataType" type="xs:unsignedShort"/>
+    <dfdl:expression>
+      <xs:choose>
+        <xs:when test="$dataType = 1">1</xs:when>
+        <xs:when test="$dataType = 2">1</xs:when>
+        <xs:when test="$dataType = 3">2</xs:when>
+        <xs:when test="$dataType = 4">4</xs:when>
+        <xs:when test="$dataType = 5">8</xs:when>
+        <xs:when test="$dataType = 6">1</xs:when>
+        <xs:when test="$dataType = 7">1</xs:when>
+        <xs:when test="$dataType = 8">2</xs:when>
+        <xs:when test="$dataType = 9">4</xs:when>
+        <xs:when test="$dataType = 10">8</xs:when>
+        <xs:when test="$dataType = 11">4</xs:when>
+        <xs:when test="$dataType = 12">8</xs:when>
+        <xs:otherwise>0</xs:otherwise>
+      </xs:choose>
+    </dfdl:expression>
+  </dfdl:function>
 
 </xs:schema>

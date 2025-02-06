@@ -2,45 +2,138 @@ module HTTP;
 
 import spicy;
 
-public type Message = unit {
+public type Request = unit {
     method: bytes;
+    sp1: bytes &size=1;
     uri: bytes;
+    sp2: bytes &size=1;
     version: bytes;
+    crlf: bytes &size=2;
     headers: Headers;
-    body: bytes &eod;
-
-    on %init {
-        self.method = b"";
-        self.uri = b"";
-        self.version = b"";
-    }
-
-    parse Header = unit {
-        name: bytes &until b":";
-        _ : bytes &until b"\r\n";
-        
-        on %done {
-            local normalized_name = to_lower(name);
-            if ( normalized_name == b"content-length" ) {
-                # Potential content length tracking
-            }
-        }
-    }
-
-    type Headers = vector<Header>;
-
-    parsing {
-        method = /[A-Z]+/ &convert str;
-        _ : b" ";
-        uri = /[^ ]+/ &convert str;
-        _ : b" ";
-        version = /HTTP\/[0-9.]+/ &convert str;
-        _ : b"\r\n";
-        headers = repeat Header until b"\r\n\r\n";
-        body = /.*/;
-    }
+    body: Body;
 };
 
-public function to_lower(b: bytes) : bytes {
-    return bytes(b.lower());
-}
+type Headers = unit {
+    headers: Header[];
+    end_of_headers: bytes &size=2;
+};
+
+type Header = unit {
+    name: bytes;
+    colon: bytes &size=1;
+    sp: bytes &size=1;
+    value: bytes;
+    crlf: bytes &size=2;
+};
+
+type Body = unit {
+    content_length: uint64;
+    body_data: bytes &size=content_length;
+};
+
+type Response = unit {
+    version: bytes;
+    sp1: bytes &size=1;
+    status_code: bytes;
+    sp2: bytes &size=1;
+    status_text: bytes;
+    crlf: bytes &size=2;
+    headers: Headers;
+    body: Body;
+};
+
+type Method = enum {
+    GET,
+    POST,
+    PUT,
+    DELETE,
+    HEAD,
+    OPTIONS,
+    TRACE,
+    CONNECT,
+    PATCH
+};
+
+type StatusCode = enum {
+    CONTINUE = 100,
+    SWITCHING_PROTOCOLS = 101,
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NO_CONTENT = 204,
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+    NOT_MODIFIED = 304,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    SERVICE_UNAVAILABLE = 503
+};
+
+type HeaderName = enum {
+    ACCEPT,
+    ACCEPT_CHARSET,
+    ACCEPT_ENCODING,
+    ACCEPT_LANGUAGE,
+    AUTHORIZATION,
+    CACHE_CONTROL,
+    CONNECTION,
+    CONTENT_LENGTH,
+    CONTENT_TYPE,
+    COOKIE,
+    DATE,
+    HOST,
+    IF_MODIFIED_SINCE,
+    IF_NONE_MATCH,
+    PRAGMA,
+    REFERER,
+    USER_AGENT,
+    AGE,
+    ALLOW,
+    CONTENT_ENCODING,
+    ETAG,
+    EXPIRES,
+    LAST_MODIFIED,
+    LOCATION,
+    SERVER,
+    SET_COOKIE,
+    TRANSFER_ENCODING
+};
+
+type MimeType = enum {
+    TEXT_HTML,
+    APPLICATION_JSON,
+    APPLICATION_XML,
+    APPLICATION_FORM_URLENCODED,
+    MULTIPART_FORM_DATA
+};
+
+type Encoding = enum {
+    GZIP,
+    COMPRESS,
+    DEFLATE,
+    IDENTITY
+};
+
+type ConnectionType = enum {
+    CLOSE,
+    KEEP_ALIVE
+};
+
+type CacheControl = enum {
+    NO_CACHE,
+    NO_STORE,
+    MAX_AGE,
+    MAX_STALE,
+    MIN_FRESH,
+    NO_TRANSFORM,
+    ONLY_IF_CACHED
+};
+
+public type HTTP = unit {
+    message: (Request | Response);
+};

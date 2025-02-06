@@ -10,21 +10,24 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class DnsPacket(KaitaiStruct):
 
-    class RecordType(Enum):
+    class TypeType(Enum):
         a = 1
         ns = 2
         cname = 5
         soa = 6
         ptr = 12
+        hinfo = 13
         mx = 15
-        txt = 16
         aaaa = 28
-        srv = 33
+        axfr = 252
+        any = 255
 
     class ClassType(Enum):
         in = 1
+        cs = 2
         ch = 3
         hs = 4
+        any = 255
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -32,40 +35,22 @@ class DnsPacket(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.transaction_id = self._io.read_u2be()
-        self.flags = DnsPacket.PacketFlags(self._io, self, self._root)
-        self.qdcount = self._io.read_u2be()
-        self.ancount = self._io.read_u2be()
-        self.nscount = self._io.read_u2be()
-        self.arcount = self._io.read_u2be()
-        self.questions = []
-        for i in range(self.qdcount):
-            self.questions.append(DnsPacket.Question(self._io, self, self._root))
+        self.header = DnsPacket.PacketHeader(self._io, self, self._root)
+        self.queries = []
+        for i in range(self.header.qdcount):
+            self.queries.append(DnsPacket.Query(self._io, self, self._root))
 
         self.answers = []
-        for i in range(self.ancount):
+        for i in range(self.header.ancount):
             self.answers.append(DnsPacket.ResourceRecord(self._io, self, self._root))
 
         self.authorities = []
-        for i in range(self.nscount):
+        for i in range(self.header.nscount):
             self.authorities.append(DnsPacket.ResourceRecord(self._io, self, self._root))
 
         self.additionals = []
-        for i in range(self.arcount):
+        for i in range(self.header.arcount):
             self.additionals.append(DnsPacket.ResourceRecord(self._io, self, self._root))
-
-
-    class Question(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.name = DnsPacket.DomainName(self._io, self, self._root)
-            self.type = KaitaiStream.resolve_enum(DnsPacket.RecordType, self._io.read_u2be())
-            self.class = KaitaiStream.resolve_enum(DnsPacket.ClassType, self._io.read_u2be())
 
 
     class ResourceRecord(KaitaiStruct):
@@ -77,47 +62,39 @@ class DnsPacket(KaitaiStruct):
 
         def _read(self):
             self.name = DnsPacket.DomainName(self._io, self, self._root)
-            self.type = KaitaiStream.resolve_enum(DnsPacket.RecordType, self._io.read_u2be())
+            self.type = KaitaiStream.resolve_enum(DnsPacket.TypeType, self._io.read_u2be())
             self.class = KaitaiStream.resolve_enum(DnsPacket.ClassType, self._io.read_u2be())
             self.ttl = self._io.read_u4be()
             self.rdlength = self._io.read_u2be()
             _on = self.type
-            if _on == DnsPacket.RecordType.ptr:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.DomainName(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.mx:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.RdataMx(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.soa:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.RdataSoa(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.srv:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.RdataSrv(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.aaaa:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.RdataAaaa(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.txt:
-                self._raw_rdata = self._io.read_bytes(self.rdlength)
-                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
-                self.rdata = DnsPacket.RdataTxt(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.a:
+            if _on == DnsPacket.TypeType.a:
                 self._raw_rdata = self._io.read_bytes(self.rdlength)
                 _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
                 self.rdata = DnsPacket.RdataA(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.cname:
+            elif _on == DnsPacket.TypeType.cname:
                 self._raw_rdata = self._io.read_bytes(self.rdlength)
                 _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
                 self.rdata = DnsPacket.DomainName(_io__raw_rdata, self, self._root)
-            elif _on == DnsPacket.RecordType.ns:
+            elif _on == DnsPacket.TypeType.ns:
                 self._raw_rdata = self._io.read_bytes(self.rdlength)
                 _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
                 self.rdata = DnsPacket.DomainName(_io__raw_rdata, self, self._root)
+            elif _on == DnsPacket.TypeType.soa:
+                self._raw_rdata = self._io.read_bytes(self.rdlength)
+                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
+                self.rdata = DnsPacket.RdataSoa(_io__raw_rdata, self, self._root)
+            elif _on == DnsPacket.TypeType.mx:
+                self._raw_rdata = self._io.read_bytes(self.rdlength)
+                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
+                self.rdata = DnsPacket.RdataMx(_io__raw_rdata, self, self._root)
+            elif _on == DnsPacket.TypeType.ptr:
+                self._raw_rdata = self._io.read_bytes(self.rdlength)
+                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
+                self.rdata = DnsPacket.DomainName(_io__raw_rdata, self, self._root)
+            elif _on == DnsPacket.TypeType.aaaa:
+                self._raw_rdata = self._io.read_bytes(self.rdlength)
+                _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
+                self.rdata = DnsPacket.RdataAaaa(_io__raw_rdata, self, self._root)
             else:
                 self._raw_rdata = self._io.read_bytes(self.rdlength)
                 _io__raw_rdata = KaitaiStream(BytesIO(self._raw_rdata))
@@ -132,7 +109,20 @@ class DnsPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.ip_addr = self._io.read_bytes(16)
+            self.ip = self._io.read_bytes(16)
+
+
+    class Query(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.name = DnsPacket.DomainName(self._io, self, self._root)
+            self.type = KaitaiStream.resolve_enum(DnsPacket.TypeType, self._io.read_u2be())
+            self.class = KaitaiStream.resolve_enum(DnsPacket.ClassType, self._io.read_u2be())
 
 
     class DomainName(KaitaiStruct):
@@ -143,12 +133,12 @@ class DnsPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.name = []
+            self.labels = []
             i = 0
             while True:
                 _ = DnsPacket.DomainName.Label(self._io, self, self._root)
-                self.name.append(_)
-                if _.length == 0:
+                self.labels.append(_)
+                if  ((_.length == 0) or (_.length >= 192)) :
                     break
                 i += 1
 
@@ -161,11 +151,11 @@ class DnsPacket(KaitaiStruct):
 
             def _read(self):
                 self.length = self._io.read_u1()
-                if self.length < 192:
-                    self.data = (self._io.read_bytes(self.length)).decode(u"ascii")
-
                 if self.length >= 192:
                     self.pointer = self._io.read_u1()
+
+                if  ((self.length > 0) and (self.length < 192)) :
+                    self.data = (self._io.read_bytes(self.length)).decode(u"ascii")
 
 
 
@@ -178,21 +168,7 @@ class DnsPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.ip_addr = self._io.read_bytes(4)
-
-
-    class RdataSrv(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.priority = self._io.read_u2be()
-            self.weight = self._io.read_u2be()
-            self.port = self._io.read_u2be()
-            self.target = DnsPacket.DomainName(self._io, self, self._root)
+            self.ip = self._io.read_bytes(4)
 
 
     class RdataSoa(KaitaiStruct):
@@ -212,7 +188,7 @@ class DnsPacket(KaitaiStruct):
             self.minimum = self._io.read_u4be()
 
 
-    class RdataTxt(KaitaiStruct):
+    class PacketHeader(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -220,44 +196,76 @@ class DnsPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.texts = []
-            i = 0
-            while not self._io.is_eof():
-                self.texts.append(DnsPacket.RdataTxt.TxtRecord(self._io, self, self._root))
-                i += 1
+            self.id = self._io.read_u2be()
+            self.flags = self._io.read_u2be()
+            self.qdcount = self._io.read_u2be()
+            self.ancount = self._io.read_u2be()
+            self.nscount = self._io.read_u2be()
+            self.arcount = self._io.read_u2be()
 
+        @property
+        def qr(self):
+            if hasattr(self, '_m_qr'):
+                return self._m_qr
 
-        class TxtRecord(KaitaiStruct):
-            def __init__(self, _io, _parent=None, _root=None):
-                self._io = _io
-                self._parent = _parent
-                self._root = _root if _root else self
-                self._read()
+            self._m_qr = ((self.flags >> 15) & 1)
+            return getattr(self, '_m_qr', None)
 
-            def _read(self):
-                self.len = self._io.read_u1()
-                self.text = (self._io.read_bytes(self.len)).decode(u"ascii")
+        @property
+        def ra(self):
+            if hasattr(self, '_m_ra'):
+                return self._m_ra
 
+            self._m_ra = ((self.flags >> 7) & 1)
+            return getattr(self, '_m_ra', None)
 
+        @property
+        def tc(self):
+            if hasattr(self, '_m_tc'):
+                return self._m_tc
 
-    class PacketFlags(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
+            self._m_tc = ((self.flags >> 9) & 1)
+            return getattr(self, '_m_tc', None)
 
-        def _read(self):
-            self.flag_response = self._io.read_bits_int_be(1) != 0
-            self.opcode = self._io.read_bits_int_be(4)
-            self.flag_authoritative = self._io.read_bits_int_be(1) != 0
-            self.flag_truncated = self._io.read_bits_int_be(1) != 0
-            self.flag_recursion_desired = self._io.read_bits_int_be(1) != 0
-            self.flag_recursion_available = self._io.read_bits_int_be(1) != 0
-            self.reserved = self._io.read_bits_int_be(3)
-            self.flag_authentic_data = self._io.read_bits_int_be(1) != 0
-            self.flag_checking_disabled = self._io.read_bits_int_be(1) != 0
-            self.response_code = self._io.read_bits_int_be(4)
+        @property
+        def rcode(self):
+            if hasattr(self, '_m_rcode'):
+                return self._m_rcode
+
+            self._m_rcode = (self.flags & 15)
+            return getattr(self, '_m_rcode', None)
+
+        @property
+        def opcode(self):
+            if hasattr(self, '_m_opcode'):
+                return self._m_opcode
+
+            self._m_opcode = ((self.flags >> 11) & 15)
+            return getattr(self, '_m_opcode', None)
+
+        @property
+        def aa(self):
+            if hasattr(self, '_m_aa'):
+                return self._m_aa
+
+            self._m_aa = ((self.flags >> 10) & 1)
+            return getattr(self, '_m_aa', None)
+
+        @property
+        def z(self):
+            if hasattr(self, '_m_z'):
+                return self._m_z
+
+            self._m_z = ((self.flags >> 4) & 7)
+            return getattr(self, '_m_z', None)
+
+        @property
+        def rd(self):
+            if hasattr(self, '_m_rd'):
+                return self._m_rd
+
+            self._m_rd = ((self.flags >> 8) & 1)
+            return getattr(self, '_m_rd', None)
 
 
     class RawRdata(KaitaiStruct):

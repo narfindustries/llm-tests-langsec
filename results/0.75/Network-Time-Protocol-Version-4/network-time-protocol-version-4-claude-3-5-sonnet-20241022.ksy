@@ -1,23 +1,25 @@
 meta:
-  id: ntp_packet_v4
-  title: Network Time Protocol Version 4
+  id: ntp_packet
+  title: Network Time Protocol v4
   file-extension: ntp
   endian: be
-  license: MIT
+  license: CC0-1.0
+  ks-version: 0.9
 
 seq:
   - id: li_vn_mode
     type: u1
+    doc: Combined field for Leap Indicator, Version Number and Mode
   - id: stratum
     type: u1
   - id: poll
-    type: u1
+    type: s1
   - id: precision
     type: s1
   - id: root_delay
-    type: u4
+    type: fixed_point_16_16
   - id: root_dispersion
-    type: u4
+    type: fixed_point_16_16_unsigned
   - id: reference_id
     type: u4
   - id: reference_timestamp
@@ -28,28 +30,60 @@ seq:
     type: ntp_timestamp
   - id: transmit_timestamp
     type: ntp_timestamp
+  - id: extension_fields
+    type: extension_field
+    repeat: eos
+    if: _io.size > 48
 
 types:
+  fixed_point_16_16:
+    seq:
+      - id: integer_part
+        type: s2
+      - id: fraction_part
+        type: u2
+    
+  fixed_point_16_16_unsigned:
+    seq:
+      - id: integer_part
+        type: u2
+      - id: fraction_part
+        type: u2
+
   ntp_timestamp:
     seq:
       - id: seconds
         type: u4
+        doc: Seconds since January 1, 1900
       - id: fraction
         type: u4
+        doc: Fraction of second
+
+  extension_field:
+    seq:
+      - id: type
+        type: u2
+      - id: length
+        type: u2
+      - id: value
+        size: length - 4
+        if: length >= 4
 
 instances:
   leap_indicator:
-    value: (li_vn_mode >> 6) & 0x3
+    value: (li_vn_mode >> 6) & 0b11
+    enum: leap_indicator_enum
   version:
-    value: (li_vn_mode >> 3) & 0x7
+    value: (li_vn_mode >> 3) & 0b111
   mode:
-    value: li_vn_mode & 0x7
+    value: li_vn_mode & 0b111
+    enum: mode_enum
 
 enums:
   leap_indicator_enum:
     0: no_warning
-    1: last_minute_has_61_seconds
-    2: last_minute_has_59_seconds
+    1: last_minute_61_seconds
+    2: last_minute_59_seconds
     3: alarm_condition
 
   mode_enum:
@@ -59,11 +93,5 @@ enums:
     3: client
     4: server
     5: broadcast
-    6: ntp_control_message
+    6: control
     7: private
-
-  stratum_enum:
-    0: unspecified_or_invalid
-    1: primary_reference
-    2: secondary_reference
-    16: unsynchronized

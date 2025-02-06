@@ -1,76 +1,125 @@
-def Main = Grammar {
-  main = HL7Message
-  
-  HL7Message = {
-    segments: @+SegmentDef
-  }
+grammar HL7v2;
 
-  SegmentDef = {
-    MSH |
-    EVN |
-    PID |
-    PV1 |
-    OBR |
-    OBX
-  }
+MSH = "MSH|" EncodingChars SendingApp SendingFacility ReceivingApp ReceivingFacility DateTime Security MsgType MsgControlId ProcessingId VersionId [SequenceNum] [ContinuationPtr] [AcceptAckType] [AppAckType] [CountryCode] [Charset];
 
-  MSH = @{
-    'MSH' ^'|' field_sep:@'|' encoding_chars:@'~\\&' sending_app:@Text '|'
-    sending_facility:@Text '|' receiving_app:@Text '|' receiving_facility:@Text '|'
-    datetime:@Datetime '|' security:@Text '|' message_type:@MessageType '|'
-    message_control_id:@Text '|' processing_id:@Text '|' version_id:@Text
-  }
+EncodingChars = /[^|]{4}/;
+SendingApp = /[^|]*/;
+SendingFacility = /[^|]*/;
+ReceivingApp = /[^|]*/;
+ReceivingFacility = /[^|]*/;
+DateTime = /\d{8}(\d{6})?/;
+Security = /[^|]*/;
+MsgType = /[^|]*/;
+MsgControlId = /[^|]*/;
+ProcessingId = /[^|]*/;
+VersionId = /[^|]*/;
+SequenceNum = /[^|]*/;
+ContinuationPtr = /[^|]*/;
+AcceptAckType = /[^|]*/;
+AppAckType = /[^|]*/;
+CountryCode = /[^|]*/;
+Charset = /[^|]*/;
 
-  EVN = @{
-    'EVN' '|' event_type:@Text '|' datetime:@Datetime '|' planned_datetime:@Datetime? '|'
-    event_reason:@Text? '|' operator_id:@Text? '|' event_occurred:@Datetime?
-  }
+PID = "PID|" SetId PatientId PatientIdList AlternateId PatientName MotherMaidenName DOB Sex PatientAlias Race Address County PhoneHome PhoneBusiness PrimaryLanguage MaritalStatus Religion PatientAcctNum SSN DriversLicense MothersId EthnicGroup BirthPlace MultipleBirth BirthOrder Citizenship VeteransStatus Nationality DeathDate DeathIndicator;
 
-  PID = @{
-    'PID' '|' set_id:@Number? '|' patient_id:@Text '|' patient_id_list:@Text? '|'
-    alt_patient_id:@Text? '|' patient_name:@PersonName '|' mother_maiden_name:@Text? '|'
-    birth_date:@Date? '|' sex:@('M'|'F'|'O'|'U') '|' patient_alias:@Text? '|'
-    race:@Text? '|' address:@Address? '|' county_code:@Text?
-  }
+SetId = /[^|]*/;
+PatientId = /[^|]*/;
+PatientIdList = /[^|]*/;
+AlternateId = /[^|]*/;
+PatientName = /[^|]*/;
+MotherMaidenName = /[^|]*/;
+DOB = /[^|]*/;
+Sex = /[^|]*/;
+PatientAlias = /[^|]*/;
+Race = /[^|]*/;
+Address = /[^|]*/;
+County = /[^|]*/;
+PhoneHome = /[^|]*/;
+PhoneBusiness = /[^|]*/;
+PrimaryLanguage = /[^|]*/;
+MaritalStatus = /[^|]*/;
+Religion = /[^|]*/;
+PatientAcctNum = /[^|]*/;
+SSN = /[^|]*/;
+DriversLicense = /[^|]*/;
+MothersId = /[^|]*/;
+EthnicGroup = /[^|]*/;
+BirthPlace = /[^|]*/;
+MultipleBirth = /[^|]*/;
+BirthOrder = /[^|]*/;
+Citizenship = /[^|]*/;
+VeteransStatus = /[^|]*/;
+Nationality = /[^|]*/;
+DeathDate = /[^|]*/;
+DeathIndicator = /[^|]*/;
 
-  PV1 = @{
-    'PV1' '|' set_id:@Number? '|' patient_class:@Text '|' assigned_location:@Text? '|'
-    admission_type:@Text? '|' preadmit_number:@Text? '|' prior_location:@Text? '|'
-    attending_doctor:@Text? '|' referring_doctor:@Text? '|' consulting_doctor:@Text? '|'
-    hospital_service:@Text?
-  }
+PV1 = "PV1|" SetId PatientClass AssignedLoc AdmissionType PreadmitNum PriorLoc AttendingDoc ReferringDoc ConsultingDoc HospitalService TempLoc PreadmitTestInd ReadmissionInd AdmitSource AmbulatoryStatus VipIndicator AdmittingDoc PatientType VisitNumber FinancialClass ChargePriceInd CourtesyCode CreditRating ContractCode ContractEffective ContractAmount ContractPeriod InterestCode;
 
-  OBR = @{
-    'OBR' '|' set_id:@Number? '|' placer_order_number:@Text? '|' 
-    filler_order_number:@Text? '|' universal_service_id:@Text '|'
-    priority:@Text? '|' requested_datetime:@Datetime? '|'
-    observation_datetime:@Datetime? '|' observation_end_datetime:@Datetime?
-  }
+PatientClass = /[^|]*/;
+AssignedLoc = /[^|]*/;
+AdmissionType = /[^|]*/;
+PreadmitNum = /[^|]*/;
+PriorLoc = /[^|]*/;
+AttendingDoc = /[^|]*/;
+ReferringDoc = /[^|]*/;
+ConsultingDoc = /[^|]*/;
+HospitalService = /[^|]*/;
+TempLoc = /[^|]*/;
+PreadmitTestInd = /[^|]*/;
+ReadmissionInd = /[^|]*/;
+AdmitSource = /[^|]*/;
+AmbulatoryStatus = /[^|]*/;
+VipIndicator = /[^|]*/;
+AdmittingDoc = /[^|]*/;
+PatientType = /[^|]*/;
+VisitNumber = /[^|]*/;
+FinancialClass = /[^|]*/;
+ChargePriceInd = /[^|]*/;
+CourtesyCode = /[^|]*/;
+CreditRating = /[^|]*/;
+ContractCode = /[^|]*/;
+ContractEffective = /[^|]*/;
+ContractAmount = /[^|]*/;
+ContractPeriod = /[^|]*/;
+InterestCode = /[^|]*/;
 
-  OBX = @{
-    'OBX' '|' set_id:@Number? '|' value_type:@Text '|' observation_id:@Text '|'
-    observation_sub_id:@Text? '|' observation_value:@Text '|' units:@Text? '|'
-    reference_range:@Text? '|' abnormal_flags:@Text? '|' probability:@Number? '|'
-    nature_of_abnormal_test:@Text?
-  }
+OBR = "OBR|" SetId PlacerOrderNum FillerOrderNum UniversalServiceId Priority RequestedDate ObservationDate ObservationEndDate CollectionVolume CollectorIdentifier SpecimenActionCode DangerCode RelevantClinicalInfo SpecimenReceivedDate SpecimenSource OrderingProvider OrderCallbackPhone;
 
-  MessageType = @{
-    message_code:@Text '^' trigger_event:@Text '^' message_structure:@Text
-  }
+PlacerOrderNum = /[^|]*/;
+FillerOrderNum = /[^|]*/;
+UniversalServiceId = /[^|]*/;
+Priority = /[^|]*/;
+RequestedDate = /[^|]*/;
+ObservationDate = /[^|]*/;
+ObservationEndDate = /[^|]*/;
+CollectionVolume = /[^|]*/;
+CollectorIdentifier = /[^|]*/;
+SpecimenActionCode = /[^|]*/;
+DangerCode = /[^|]*/;
+RelevantClinicalInfo = /[^|]*/;
+SpecimenReceivedDate = /[^|]*/;
+SpecimenSource = /[^|]*/;
+OrderingProvider = /[^|]*/;
+OrderCallbackPhone = /[^|]*/;
 
-  PersonName = @{
-    family_name:@Text '^' given_name:@Text ('^' middle_name:@Text)? 
-    ('^' suffix:@Text)? ('^' prefix:@Text)?
-  }
+OBX = "OBX|" SetId ValueType ObservationId SubId ObservationValue Units References AbnormalFlags Probability NatureOfAbnormal ObservationStatus EffectiveDate UserDefinedAccess DateTime ProducerId ResponsibleObserver ObservationMethod;
 
-  Address = @{
-    street:@Text '^' other_designation:@Text? '^' city:@Text '^' 
-    state:@Text '^' zip:@Text '^' country:@Text?
-  }
+ValueType = /[^|]*/;
+ObservationId = /[^|]*/;
+SubId = /[^|]*/;
+ObservationValue = /[^|]*/;
+Units = /[^|]*/;
+References = /[^|]*/;
+AbnormalFlags = /[^|]*/;
+Probability = /[^|]*/;
+NatureOfAbnormal = /[^|]*/;
+ObservationStatus = /[^|]*/;
+EffectiveDate = /[^|]*/;
+UserDefinedAccess = /[^|]*/;
+ProducerId = /[^|]*/;
+ResponsibleObserver = /[^|]*/;
+ObservationMethod = /[^|]*/;
 
-  Number = @/[0-9]+/
-  Text = @/[^|^~\\&\r\n]*/
-  Date = @/[0-9]{8}/
-  Time = @/[0-9]{6}/
-  Datetime = @{ @Date @Time }
-}
+Message = MSH PID? PV1? OBR* OBX*;
+
+start = Message;

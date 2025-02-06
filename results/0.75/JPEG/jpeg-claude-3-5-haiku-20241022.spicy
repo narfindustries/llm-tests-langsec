@@ -4,34 +4,117 @@ import spicy;
 
 public type File = unit {
     start_marker: StartMarker;
-    segments: Segment[] &eod;
+    segments: Segment[];
+    end_marker: EndMarker;
 };
 
 type StartMarker = unit {
-    marker: bytes = b"\xff\xd8";
+    marker: bytes &size=2 &requires(marker == b"\xff\xd8");
+};
+
+type EndMarker = unit {
+    marker: bytes &size=2 &requires(marker == b"\xff\xd9");
 };
 
 type Segment = unit {
-    marker: bytes = b"\xff" ~ marker_type;
-    length: uint16 be;
-    data: bytes &size=(length - 2);
-
-    var marker_type: bytes;
-
-    on marker_type {
-        switch ( marker_type ) {
-            b"\xc0" -> { type = "SOF0 (Baseline DCT)"; }
-            b"\xc1" -> { type = "SOF1 (Extended Sequential DCT)"; }
-            b"\xc2" -> { type = "SOF2 (Progressive DCT)"; }
-            b"\xc9" -> { type = "SOF9 (Extended Sequential DCT, Arithmetic)"; }
-            b"\xca" -> { type = "SOF10 (Progressive DCT, Arithmetic)"; }
-            b"\xdb" -> { type = "Define Quantization Table"; }
-            b"\xc4" -> { type = "Define Huffman Table"; }
-            b"\xda" -> { type = "Start of Scan"; }
-            b"\xd9" -> { type = "End of Image"; }
-            * -> { type = "Unknown Marker"; }
-        }
-    }
-
-    var type: string;
+    marker: bytes &size=2;
+    length: uint16;
+    data: SegmentData;
 };
+
+type SegmentData = unit {
+    switch ($$[-2]) {
+        b"\xff\xe0" -> app0: APP0Segment;
+        b"\xff\xe1" -> app1: APP1Segment;
+        b"\xff\xdb" -> dqt: DQTSegment;
+        b"\xff\xc4" -> dht: DHTSegment;
+        b"\xff\xc0" -> sof0: SOF0Segment;
+        b"\xff\xc2" -> sof2: SOF2Segment;
+        b"\xff\xda" -> sos: SOSSegment;
+        * -> unknown: UnknownSegment;
+    };
+};
+
+type APP0Segment = unit {
+    identifier: bytes &size=5 &requires(identifier == b"JFIF\x00");
+    version_major: uint8;
+    version_minor: uint8;
+    density_units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumbnail_x: uint8;
+    thumbnail_y: uint8;
+    thumbnail_data: bytes &optional &size=(thumbnail_x * thumbnail_y * 3);
+};
+
+type APP1Segment = unit {
+    identifier: bytes &size=6 &requires(identifier == b"Exif\x00\x00");
+    data: bytes;
+};
+
+type DQTSegment = unit {
+    tables: DQTTable[] &count=1;
+};
+
+type DQTTable = unit {
+    precision: uint8 &requires(precision == 0 || precision == 1);
+    table_id: uint8 &requires(table_id <= 3);
+    quantization_values: bytes &size=(precision == 0 ? 64 : 128);
+};
+
+type DHTSegment = unit {
+    tables: DHTTable[] &count=1;
+};
+
+type DHTTable = unit {
+    table_class: uint8 &requires(table_class <= 1);
+    table_destination: uint8 &requires(table_destination <= 3);
+    code_lengths: bytes &size=16;
+    huffman_values: bytes &size=(code_length_sum(code_lengths));
+};
+
+type SOF0Segment = unit {
+    precision: uint8 &requires(precision == 8);
+    height: uint16;
+    width: uint16;
+    components_count: uint8;
+    components: SOFComponent[] &size=components_count;
+};
+
+type SOF2Segment = unit {
+    precision: uint8 &requires(precision == 8);
+    height: uint16;
+    width: uint16;
+    components_count: uint8;
+    components: SOFComponent[] &size=components_count;
+};
+
+type SOFComponent = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    quantization_table_id: uint8;
+};
+
+type SOSSegment = unit {
+    component_count: uint8;
+    components: SOSComponent[] &size=component_count;
+    spectral_start: uint8;
+    spectral_end: uint8;
+    approximation: uint8;
+};
+
+type SOSComponent = unit {
+    id: uint8;
+    huffman_tables: uint8;
+};
+
+type UnknownSegment = unit {
+    data: bytes;
+};
+
+function code_length_sum(code_lengths: bytes): uint64 {
+    local total: uint64 = 0;
+    for ( local i in 0..15 )
+        total += code_lengths[i];
+    return total;
+}

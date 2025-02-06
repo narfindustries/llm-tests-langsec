@@ -1,58 +1,87 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-static HParser* init_hl7_parser(void) {
-    // Basic elements
-    HParser* field_sep = h_ch('|');
-    HParser* comp_sep = h_ch('^');
-    HParser* rep_sep = h_ch('~');
-    HParser* esc_char = h_ch('\\');
-    HParser* sub_sep = h_ch('&');
-    
-    // Character sets
-    HParser* printable = h_not_in("\r\n\f\v", 4);
-    HParser* text_char = h_choice(h_not_in("|^~\\&\r\n\f\v", 9), 
-                                 h_sequence(esc_char, h_choice(h_ch('F'), h_ch('S'), h_ch('R'), h_ch('E'), h_ch('T'), NULL), NULL), 
-                                 NULL);
-    
-    // Field content
-    HParser* field_content = h_many(text_char);
-    
-    // Component
-    HParser* component = h_many(text_char);
-    
-    // Subcomponent
-    HParser* subcomponent = h_many(text_char);
-    
-    // Repetition
-    HParser* repetition = h_sepBy(component, rep_sep);
-    
-    // Field with optional components
-    HParser* field = h_sepBy(h_sepBy(h_sepBy(subcomponent, sub_sep), comp_sep), rep_sep);
-    
-    // Segment ID
-    HParser* segment_id = h_repeat_n(h_in("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 36), 3);
-    
-    // Segment
-    HParser* segment = h_sequence(segment_id,
-                                field_sep,
-                                h_many(h_sequence(field, field_sep, NULL)),
-                                h_token("\r\n", 2),
-                                NULL);
-    
-    // Message
-    HParser* message = h_many1(segment);
-    
-    return message;
+typedef struct {
+    char* field_separator;
+    char* encoding_chars;
+    char* sending_app;
+    char* sending_facility;
+    char* receiving_app;
+    char* receiving_facility;
+    char* datetime;
+    char* message_type;
+    char* message_control_id;
+    char* processing_id;
+    char* version_id;
+} MSH_Segment;
+
+typedef struct {
+    char* id;
+    char* patient_id;
+    char* patient_name;
+    char* dob;
+    char* gender;
+    char* address;
+    char* phone;
+} PID_Segment;
+
+static HParser* make_field_parser() {
+    return h_many1(h_not_in("|", 1));
 }
 
-int main(int argc, char** argv) {
-    HParser* parser = init_hl7_parser();
-    
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+static HParser* make_segment_parser() {
+    HParser* field = make_field_parser();
+    HParser* separator = h_ch('|');
+    return h_sequence(field, separator, field, separator, field, NULL);
+}
+
+static HParser* make_hl7_parser() {
+    return h_many1(make_segment_parser());
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
         return 1;
     }
-    
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t* input = malloc(size);
+    if (!input) {
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(input, 1, size, file) != size) {
+        free(input);
+        fclose(file);
+        return 1;
+    }
+
+    HParser* parser = make_hl7_parser();
+    HParseResult* result = h_parse(parser, input, size);
+
+    if (!result) {
+        fprintf(stderr, "Parse failed\n");
+        free(input);
+        fclose(file);
+        return 1;
+    }
+
+    // TODO: Process parse result
+
+    h_parse_result_free(result);
+    free(input);
+    fclose(file);
     return 0;
 }

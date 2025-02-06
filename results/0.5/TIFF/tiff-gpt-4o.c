@@ -1,95 +1,89 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-// Define TIFF Header structure
-typedef struct {
-    uint16_t byte_order;
-    uint16_t magic_number;
-    uint32_t ifd_offset;
-} tiff_header_t;
-
-// Define TIFF IFD Entry structure
 typedef struct {
     uint16_t tag;
     uint16_t type;
     uint32_t count;
     uint32_t value_offset;
-} tiff_ifd_entry_t;
+} TiffField;
 
-// Define TIFF Data structure
 typedef struct {
-    tiff_header_t header;
-    uint16_t num_entries;
-    tiff_ifd_entry_t *entries;
-} tiff_data_t;
+    uint16_t byte_order;
+    uint16_t version;
+    uint32_t ifd_offset;
+} TiffHeader;
 
-// Helper function to create a tiff_header parser
-static HParser *create_tiff_header_parser(void) {
+HParser *tiff_header_parser() {
     return h_sequence(
-        h_uint16(), // Byte Order
-        h_uint16(), // Magic Number
-        h_uint32()  // IFD Offset
-    , NULL);
+        h_uint16(), // Byte order
+        h_uint16(), // Version
+        h_uint32()  // IFD offset
+    );
 }
 
-// Helper function to create a tiff_ifd_entry parser
-static HParser *create_tiff_ifd_entry_parser(void) {
+HParser *tiff_field_parser() {
     return h_sequence(
         h_uint16(), // Tag
         h_uint16(), // Type
         h_uint32(), // Count
-        h_uint32()  // Value Offset
-    , NULL);
+        h_uint32()  // Value/Offset
+    );
 }
 
-// Helper function to create a tiff_data parser
-static HParser *create_tiff_data_parser(void) {
-    HParser *header_parser = create_tiff_header_parser();
-    HParser *ifd_entry_parser = create_tiff_ifd_entry_parser();
+HParser *tiff_ifd_parser() {
+    return h_many(tiff_field_parser());
+}
 
-    HParser *num_entries_parser = h_uint16();
-    HParser *entries_parser = h_repeat(ifd_entry_parser, num_entries_parser);
-
+HParser *tiff_parser() {
     return h_sequence(
-        header_parser,
-        num_entries_parser,
-        entries_parser
-    , NULL);
+        tiff_header_parser(),
+        tiff_ifd_parser()
+    );
 }
 
-// Main function to parse TIFF data
-tiff_data_t *parse_tiff_data(const uint8_t *data, size_t length) {
-    HParser *tiff_parser = create_tiff_data_parser();
-    HParseResult *result = h_parse(tiff_parser, data, length);
-
-    if (!result) {
-        return NULL;
+void parse_tiff(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
     }
 
-    const HParsedToken *token = result->ast;
-    tiff_data_t *tiff_data = malloc(sizeof(tiff_data_t));
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
 
-    tiff_data->header.byte_order = token->seq->elements[0]->uint;
-    tiff_data->header.magic_number = token->seq->elements[1]->uint;
-    tiff_data->header.ifd_offset = token->seq->elements[2]->uint;
-    tiff_data->num_entries = token->seq->elements[3]->uint;
-
-    tiff_data->entries = malloc(tiff_data->num_entries * sizeof(tiff_ifd_entry_t));
-    for (uint16_t i = 0; i < tiff_data->num_entries; i++) {
-        const HParsedToken *entry_token = token->seq->elements[4]->seq->elements[i];
-        tiff_data->entries[i].tag = entry_token->seq->elements[0]->uint;
-        tiff_data->entries[i].type = entry_token->seq->elements[1]->uint;
-        tiff_data->entries[i].count = entry_token->seq->elements[2]->uint;
-        tiff_data->entries[i].value_offset = entry_token->seq->elements[3]->uint;
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
     }
 
-    h_parse_result_free(result);
-    return tiff_data;
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *parser = tiff_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
+
+    if (result) {
+        printf("TIFF parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse TIFF\n");
+    }
+
+    free(buffer);
+    h_arena_free(h_arena()); // Corrected to use h_arena_free
 }
 
-// Function to free TIFF data
-void free_tiff_data(tiff_data_t *tiff_data) {
-    if (tiff_data) {
-        free(tiff_data->entries);
-        free(tiff_data);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <tiff-file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
+
+    parse_tiff(argv[1]);
+    return EXIT_SUCCESS;
 }

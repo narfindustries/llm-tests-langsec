@@ -6,19 +6,14 @@ meta:
   endian: le
   license: CC0-1.0
 doc: |
-  SQLite is a C library that provides a lightweight disk-based database that doesn’t require
-  a separate server process and allows accessing the database using a nonstandard variant
-  of the SQL query language. Some applications can use SQLite for internal data storage.
-  It’s also possible to prototype an application using SQLite and then port the code to a
-  larger database such as PostgreSQL or Oracle.
-
+  SQLite is a C library that provides a lightweight disk-based database that doesn’t require a separate server process and allows accessing the database using a nonstandard variant of the SQL query language. Some applications can use SQLite for internal data storage. It’s also possible to prototype an application using SQLite and then port the code to a larger database such as PostgreSQL or Oracle.
 seq:
   - id: header
     type: file_header
-
   - id: pages
     type: page
-    repeat: eos
+    repeat: expr
+    repeat-expr: header.db_size_in_pages
 
 types:
   file_header:
@@ -41,11 +36,11 @@ types:
         type: u1
       - id: file_change_counter
         type: u4
-      - id: num_pages
+      - id: db_size_in_pages
         type: u4
       - id: first_freelist_trunk_page
         type: u4
-      - id: num_freelist_pages
+      - id: total_freelist_pages
         type: u4
       - id: schema_cookie
         type: u4
@@ -53,9 +48,9 @@ types:
         type: u4
       - id: default_cache_size
         type: u4
-      - id: largest_root_btree_page
+      - id: largest_root_page
         type: u4
-      - id: text_encoding
+      - id: db_text_encoding
         type: u4
       - id: user_version
         type: u4
@@ -78,22 +73,41 @@ types:
         type: u2
       - id: num_cells
         type: u2
-      - id: cell_content_area
+      - id: cell_content_offset
         type: u2
-      - id: fragmented_free_bytes
+      - id: num_frag_free_bytes
         type: u1
-      - id: right_most_pointer
-        type: u4
       - id: cells
         type: cell
         repeat: expr
         repeat-expr: num_cells
+      - id: right_most_pointer
+        type: u4
+        if: page_type == 2 or page_type == 5
 
   cell:
     seq:
       - id: left_child_page
         type: u4
-      - id: rowid
-        type: u4
+        if: _parent.page_type == 2 or _parent.page_type == 5
+      - id: payload_size
+        type: vlq
+      - id: row_id
+        type: vlq
+        if: _parent.page_type == 13
       - id: payload
-        size: 0 # Placeholder, actual implementation needed based on the database schema
+        size: payload_size.value
+      - id: overflow_page_number
+        type: u4
+        if: payload_size.value > _parent._root.header.page_size - 35
+
+  vlq:
+    seq:
+      - id: bytes
+        type: u1
+        repeat: until
+        repeat-until: _.bits(7, 7) == 0
+    instances:
+      value:
+        value: |
+          _.reduce((acc, val) => acc * 128 + (val & 0x7f), 0)

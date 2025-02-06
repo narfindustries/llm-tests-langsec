@@ -1,7 +1,6 @@
 meta:
   id: icmp
-  title: ICMP
-  endian: big
+  endian: be
 seq:
   - id: type
     type: u1
@@ -9,48 +8,95 @@ seq:
     type: u1
   - id: checksum
     type: u2
-  - id: body
+  - id: rest_of_header
+    type: seq
+    seq:
+      - id: identifier
+        type: u2
+      - id: sequence_number
+        type: u2
+    if: type != 0 and type != 8
+  - id: gateway_address
+    type: seq
+    seq:
+      - id: gateway_address_bytes
+        type: u4
+    if: type == 5
+  - id: mtu
+    type: seq
+    seq:
+      - id: mtu_bytes
+        type: u2
+    if: type == 3 and code == 4
+  - id: pointer
+    type: seq
+    seq:
+      - id: pointer_bytes
+        type: u1
+    if: type == 12
+  - id: unused
+    type: seq
+    seq:
+      - id: unused_bytes
+        type: u1
+    if: type == 11 and code == 1
+  - id: data
     type: switch-on type
     cases:
-      0: seq:
+      0:
+        type: seq
+        seq:
           - id: identifier
             type: u2
           - id: sequence_number
             type: u2
-      3: seq:
-          - id: unused
-            type: u2
-          - id: ip_header
-            type: seq
-            seq:
-              - id: src_ip_addr
-                type: u4
-              - id: dst_ip_addr
-                type: u4
-      5: seq:
-          - id: unused
-            type: u2
-          - id: ip_header
-            type: seq
-            seq:
-              - id: src_ip_addr
-                type: u4
-              - id: dst_ip_addr
-                type: u4
-      8: seq:
+      8:
+        type: seq
+        seq:
           - id: identifier
             type: u2
           - id: sequence_number
             type: u2
-      11: seq:
-          - id: unused
+      13:
+        type: seq
+        seq:
+          - id: identifier
             type: u2
-          - id: ip_header
-            type: seq
-            seq:
-              - id: src_ip_addr
-                type: u4
-              - id: dst_ip_addr
-                type: u4
-      else: type: u4
-    else: type: u4
+          - id: sequence_number
+            type: u2
+          - id: originate_timestamp
+            type: u4
+          - id: receive_timestamp
+            type: u4
+          - id: transmit_timestamp
+            type: u4
+      14:
+        type: seq
+        seq:
+          - id: identifier
+            type: u2
+          - id: sequence_number
+            type: u2
+          - id: originate_timestamp
+            type: u4
+          - id: receive_timestamp
+            type: u4
+          - id: transmit_timestamp
+            type: u4
+      15:
+        type: seq
+        seq:
+          - id: identifier
+            type: u2
+          - id: sequence_number
+            type: u2
+      16:
+        type: seq
+        seq:
+          - id: identifier
+            type: u2
+          - id: sequence_number
+            type: u2
+      else:
+        type: rest
+        size: eos

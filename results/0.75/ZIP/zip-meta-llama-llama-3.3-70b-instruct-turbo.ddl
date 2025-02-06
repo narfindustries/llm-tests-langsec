@@ -1,77 +1,102 @@
-domain zip {
-  type zip_file {
-    byte-order: little-endian
-    structure {
-      local-file-headers: list[local-file-header] count: num-entries
-      central-directory: central-directory-header
-      end-of-central-directory: end-of-central-directory-record
-    }
-  }
+type LocalFileHeader = struct {
+  signature: uint32 = 0x04034b50,
+  versionNeededToExtract: uint16,
+  generalPurposeBitFlag: uint16,
+    encryption: bool @ 0,
+    compression: bool @ 1,
+    dataDescriptor: bool @ 2,
+    enhancedDeflation: bool @ 3,
+    compressedPatchedData: bool @ 4,
+    strongEncryption: bool @ 5,
+  compressionMethod: uint16,
+    0: stored,
+    1: shrunk,
+    2: reduced,
+    3: imploded,
+    4: tokenized,
+    5: deflated,
+    6: deflated64,
+    7: imploded64,
+    8: enhancedDeflated,
+    9: pkwareDclImploded,
+  lastModifiedTime: uint16,
+    seconds: uint16 @ 0-4,
+    minutes: uint16 @ 5-10,
+    hours: uint16 @ 11-15,
+  lastModifiedDate: uint16,
+    day: uint16 @ 0-4,
+    month: uint16 @ 5-8,
+    year: uint16 @ 9-15,
+  crc32: uint32,
+  compressedSize: uint32,
+  uncompressedSize: uint32,
+  filenameLength: uint16,
+  extraFieldLength: uint16,
+}
 
-  type local-file-header {
-    byte-order: little-endian
-    structure {
-      signature: uint32
-      version: uint16
-      flags: uint16
-      compression-method: uint16
-      last-modified-time: uint16
-      last-modified-date: uint16
-      crc-32: uint32
-      compressed-size: uint32
-      uncompressed-size: uint32
-      file-name-length: uint16
-      extra-field-length: uint16
-      file-name: string(file-name-length)
-      extra-field: bytes(extra-field-length)
-    }
-  }
+type CentralDirectoryHeader = struct {
+  signature: uint32 = 0x02014b50,
+  versionMadeBy: uint16,
+  versionNeededToExtract: uint16,
+  generalPurposeBitFlag: uint16,
+    encryption: bool @ 0,
+    compression: bool @ 1,
+    dataDescriptor: bool @ 2,
+    enhancedDeflation: bool @ 3,
+    compressedPatchedData: bool @ 4,
+    strongEncryption: bool @ 5,
+  compressionMethod: uint16,
+    0: stored,
+    1: shrunk,
+    2: reduced,
+    3: imploded,
+    4: tokenized,
+    5: deflated,
+    6: deflated64,
+    7: imploded64,
+    8: enhancedDeflated,
+    9: pkwareDclImploded,
+  lastModifiedTime: uint16,
+    seconds: uint16 @ 0-4,
+    minutes: uint16 @ 5-10,
+    hours: uint16 @ 11-15,
+  lastModifiedDate: uint16,
+    day: uint16 @ 0-4,
+    month: uint16 @ 5-8,
+    year: uint16 @ 9-15,
+  crc32: uint32,
+  compressedSize: uint32,
+  uncompressedSize: uint32,
+  filenameLength: uint16,
+  extraFieldLength: uint16,
+  fileCommentLength: uint16,
+  diskNumberStart: uint16,
+  internalAttributes: uint16,
+    asciiOrBinary: bool @ 0,
+  externalAttributes: uint32,
+  localHeaderOffset: uint32,
+}
 
-  type central-directory-header {
-    byte-order: little-endian
-    structure {
-      signature: uint32
-      version: uint16
-      version-needed-to-extract: uint16
-      flags: uint16
-      compression-method: uint16
-      last-modified-time: uint16
-      last-modified-date: uint16
-      crc-32: uint32
-      compressed-size: uint32
-      uncompressed-size: uint32
-      file-name-length: uint16
-      extra-field-length: uint16
-      file-comment-length: uint16
-      disk-number: uint16
-      internal-attributes: uint16
-      external-attributes: uint32
-      header-offset: uint32
-      file-name: string(file-name-length)
-      extra-field: bytes(extra-field-length)
-      file-comment: bytes(file-comment-length)
-    }
-  }
+type EndOfCentralDirectory = struct {
+  signature: uint32 = 0x06054b50,
+  numberOfThisDisk: uint16,
+  numberOfTheDiskWhereTheCentralDirectoryStarts: uint16,
+  numberOfEntriesInTheCentralDirectoryOnThisDisk: uint16,
+  totalNumberOfEntriesInTheCentralDirectory: uint16,
+  sizeOfTheCentralDirectory: uint32,
+  offsetOfTheStartOfTheCentralDirectory: uint32,
+  commentLength: uint16,
+}
 
-  type end-of-central-directory-record {
-    byte-order: little-endian
-    structure {
-      signature: uint32
-      disk-number: uint16
-      central-directory-start-disk: uint16
-      num-entries-on-this-disk: uint16
-      total-num-entries: uint16
-      central-directory-size: uint32
-      central-directory-offset: uint32
-      comment-length: uint16
-      comment: bytes(comment-length)
-    }
-  }
-
-  type num-entries {
-    byte-order: little-endian
-    structure {
-      num-entries: uint16
-    }
-  }
+type ZipFile = struct {
+  localFileHeader: LocalFileHeader,
+  filename: bytes @length localFileHeader.filenameLength,
+  extraField: bytes @length localFileHeader.extraFieldLength,
+  fileData: bytes @length localFileHeader.compressedSize,
+  centralDirectoryHeader: CentralDirectoryHeader,
+  centralDirectoryFilename: bytes @length centralDirectoryHeader.filenameLength,
+  centralDirectoryExtraField: bytes @length centralDirectoryHeader.extraFieldLength,
+  centralDirectoryFileComment: bytes @length centralDirectoryHeader.fileCommentLength,
+  endOfCentralDirectory: EndOfCentralDirectory,
+  zipMetaComment: bytes @length endOfCentralDirectory.commentLength,
 }

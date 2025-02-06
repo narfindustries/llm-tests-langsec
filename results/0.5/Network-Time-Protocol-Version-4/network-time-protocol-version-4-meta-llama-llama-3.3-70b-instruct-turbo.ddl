@@ -1,40 +1,35 @@
-domain network_time_protocol_version_4 {
-  include "ieee754.ddl";
-  include "integer.ddl";
+seq NTPv4Packet {
+  leapIndicator: uint2;
+  versionNumber: uint3;
+  mode: uint3;
+  poll: uint8;
+  precision: int8;
+  rootDelay: uint32;
+  rootDispersion: uint32;
+  refId: uint32;
+  refTimestamp: uint64;
+  origTimestamp: uint64;
+  recvTimestamp: uint64;
+  xmitTimestamp: uint64;
+  extensions: seq ExtensionField;
+}
 
-  type uint32 is integer { size: 32, signed: false };
-  type uint16 is integer { size: 16, signed: false };
-  type uint8 is integer { size: 8, signed: false };
+seq ExtensionField {
+  fieldType: uint16;
+  length: uint16;
+  value: bytes length;
+}
 
-  type ntp_date is ieee754_float {
-    bias: -2208988800.0,
-    representation: uint32,
-  };
+seq KissODeath {
+  code: uint8;
+}
 
-  type ntp_timestamp is struct {
-    seconds: ntp_date { align: 4 },
-    fraction: uint32 { align: 4 },
-  };
+seq ReferenceClockIdentifier {
+  type: uint8;
+  identifier: bytes 3;
+}
 
-  type poll is uint8;
-  type precision is uint8;
-  type delay is uint16;
-  type dispersion is uint16;
-
-  type ntp_packet is struct {
-    leap: uint8 { bits: 2 },
-    version: uint8 { bits: 3 },
-    mode: uint8 { bits: 3 },
-    poll: poll,
-    precision: precision,
-    delay: delay,
-    dispersion: dispersion,
-    identifier: uint32,
-    reference_timestamp: ntp_timestamp,
-    originate_timestamp: ntp_timestamp,
-    receive_timestamp: ntp_timestamp,
-    transmit_timestamp: ntp_timestamp,
-  };
-
-  type network_time_protocol_version_4 is ntp_packet { align: 1 };
+seq Auth {
+  type: uint8;
+  data: bytes 20;
 }

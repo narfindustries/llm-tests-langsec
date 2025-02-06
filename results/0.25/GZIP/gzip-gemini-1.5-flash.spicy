@@ -1,41 +1,31 @@
-#ifndef _GZIP_GEMINI_H_
-#define _GZIP_GEMINI_H_
+module GZIP;
 
-#include <zeek/analyzer/protocol/http.zeek>
-
-global GzipGeminiCount : count;
-
-event zeek_init()
-{
-	GzipGeminiCount = 0;
+gzip_header:: record {
+	id1: uint8;
+	id2: uint8;
+	cm: uint8;
+	flg: uint8;
+	mtime: uint32;
+	xfl: uint8;
+	os: uint8;
+	header_crc: optional uint16;
+	extra_fields: optional extra_fields_block;
+	filename: optional string;
+	comment: optional string;
 }
 
-function is_gzip_gemini(data: string) : bool
-{
-	// Basic check for GZIP header (1f 8b) and Gemini header
-	return (len(data) >= 2 and data[0:2] == "\x1f\x8b") and (len(data) >= 6 and data[2:6] == "gemini");
+extra_fields_block:: record {
+	len: uint16;
+	data: bytes:len;
 }
 
-
-event http_request(http_request_t r)
-{
-	if (is_gzip_gemini(r.body)) {
-		GzipGeminiCount++;
-		print fmt("Detected GZIP-encoded Gemini request: %s", r.host);
-	}
+gzip_footer:: record {
+	crc32: uint32;
+	isize: uint32;
 }
 
-event http_response(http_response_t r)
-{
-	if (is_gzip_gemini(r.body)) {
-		GzipGeminiCount++;
-		print fmt("Detected GZIP-encoded Gemini response: %s", r.host);
-	}
+gzip:: record {
+	header: gzip_header;
+	compressed_data: bytes;
+	footer: gzip_footer;
 }
-
-event zeek_done()
-{
-	print fmt("Total GZIP-encoded Gemini requests/responses detected: %d", GzipGeminiCount);
-}
-
-#endif

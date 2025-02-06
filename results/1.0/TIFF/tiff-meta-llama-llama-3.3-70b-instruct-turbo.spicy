@@ -1,31 +1,159 @@
-# Define the TIFF file format
-file_format tiff {
-  magic "\x49\x49\x2a\x00" | "\x4d\x4d\x00\x2a";
+module TIFF;
 
-  # TIFF header
-  struct tiff_header {
-    uint16( little, 2 ) byte_order;
-    uint16( little, 2 ) tiff_version;
-    uint32( little, 4 ) ifd_offset;
-  }
-
-  # IFD (Image File Directory)
-  struct ifd {
-    uint16( little, 2 ) num_entries;
-    array ifd_entries of ifd_entry {
-      repeat num_entries;
-    }
-    uint32( little, 4 ) next_ifd_offset;
-  }
-
-  # IFD Entry
-  struct ifd_entry {
-    uint16( little, 2 ) tag;
-    uint16( little, 2 ) type;
-    uint32( little, 4 ) count;
-    uint32( little, 4 ) value_offset;
-  }
-
-  # Main parser
-  main == tiff_header -> ifd;
+type TIFF_Record: record {
+  byte_order: uint16 = 0x4949;
+  magic: uint16 = 0x002a;
+  ifd_offset: uint32;
 }
+
+type IFD_Record: record {
+  num_entries: uint16;
+  entries: array(num_entries) of IFD_Entry;
+}
+
+type IFD_Entry: record {
+  tag: uint16;
+  type: uint16;
+  count: uint32;
+  value: bytestring(count);
+}
+
+type ImageWidth_Record: record {
+  tag: uint16 = 0x0100;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint32;
+}
+
+type ImageLength_Record: record {
+  tag: uint16 = 0x0101;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint32;
+}
+
+type BitsPerSample_Record: record {
+  tag: uint16 = 0x0102;
+  type: uint16 = 0x0001;
+  count: uint32 = 1;
+  value: uint8;
+}
+
+type Compression_Record: record {
+  tag: uint16 = 0x0103;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type PhotometricInterpretation_Record: record {
+  tag: uint16 = 0x0106;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type Orientation_Record: record {
+  tag: uint16 = 0x010e;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type SamplesPerPixel_Record: record {
+  tag: uint16 = 0x010f;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type RowsPerStrip_Record: record {
+  tag: uint16 = 0x0116;
+  type: uint16 = 0x0004;
+  count: uint32 = 1;
+  value: uint32;
+}
+
+type StripOffsets_Record: record {
+  tag: uint16 = 0x0117;
+  type: uint16 = 0x0004;
+  count: uint32;
+  value: array(count) of uint32;
+}
+
+type StripByteCounts_Record: record {
+  tag: uint16 = 0x0118;
+  type: uint16 = 0x0004;
+  count: uint32;
+  value: array(count) of uint32;
+}
+
+type XResolution_Record: record {
+  tag: uint16 = 0x011a;
+  type: uint16 = 0x0005;
+  count: uint32 = 1;
+  value: Rational;
+}
+
+type YResolution_Record: record {
+  tag: uint16 = 0x011b;
+  type: uint16 = 0x0005;
+  count: uint32 = 1;
+  value: Rational;
+}
+
+type PlanarConfiguration_Record: record {
+  tag: uint16 = 0x011c;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type PageName_Record: record {
+  tag: uint16 = 0x012d;
+  type: uint16 = 0x0002;
+  count: uint32;
+  value: bytestring(count);
+}
+
+type XPosition_Record: record {
+  tag: uint16 = 0x012e;
+  type: uint16 = 0x0005;
+  count: uint32 = 1;
+  value: Rational;
+}
+
+type YPosition_Record: record {
+  tag: uint16 = 0x012f;
+  type: uint16 = 0x0005;
+  count: uint32 = 1;
+  value: Rational;
+}
+
+type ResolutionUnit_Record: record {
+  tag: uint16 = 0x0142;
+  type: uint16 = 0x0003;
+  count: uint32 = 1;
+  value: uint16;
+}
+
+type Software_Record: record {
+  tag: uint16 = 0x0131;
+  type: uint16 = 0x0002;
+  count: uint32;
+  value: bytestring(count);
+}
+
+type DateTime_Record: record {
+  tag: uint16 = 0x0132;
+  type: uint16 = 0x0002;
+  count: uint32;
+  value: bytestring(count);
+}
+
+type Rational: record {
+  numerator: uint32;
+  denominator: uint32;
+}
+
+let tiff: TIFF_Record;

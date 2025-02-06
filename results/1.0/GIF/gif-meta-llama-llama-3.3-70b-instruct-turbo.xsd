@@ -1,41 +1,127 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/GIF"
-           xmlns="http://example.com/GIF"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/GIF" 
+           xmlns="http://example.com/GIF" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
-
-  <xs:element name="GIF">
+  <xs:element name="gif">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="header" dfdl:occurs="1"/>
-        <xs:element ref="imageData" dfdl:occurs="1" dfdl:dependsOn="header"/>
+        <xs:element name="header" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert>starts_with($value, '47494689') or starts_with($value, '47494687')</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="logical_screen_descriptor">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="logical_screen_width" type="xs:unsignedInt"/>
+              <xs:element name="logical_screen_height" type="xs:unsignedInt"/>
+              <xs:element name="packed_fields" type="xs:unsignedByte">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:bit mask="0x80" name="global_color_table_flag"/>
+                    <dfdl:bit mask="0x70" name="color_resolution"/>
+                    <dfdl:bit mask="0x08" name="sort_flag"/>
+                    <dfdl:bit mask="0x07" name="size_of_global_color_table"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="background_color_index" type="xs:unsignedByte"/>
+              <xs:element name="pixel_aspect_ratio" type="xs:unsignedByte"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="global_color_table" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="color_table_entries" minOccurs="0" maxOccurs="256">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="red" type="xs:unsignedByte"/>
+                    <xs:element name="green" type="xs:unsignedByte"/>
+                    <xs:element name="blue" type="xs:unsignedByte"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="image_descriptors" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="image_separator" type="xs:hexBinary">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:assert>equals($value, '2C')</dfdl:assert>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="image_left" type="xs:unsignedInt"/>
+              <xs:element name="image_top" type="xs:unsignedInt"/>
+              <xs:element name="image_width" type="xs:unsignedInt"/>
+              <xs:element name="image_height" type="xs:unsignedInt"/>
+              <xs:element name="packed_fields" type="xs:unsignedByte">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:bit mask="0x80" name="local_color_table_flag"/>
+                    <dfdl:bit mask="0x40" name="interlace_flag"/>
+                    <dfdl:bit mask="0x20" name="sort_flag"/>
+                    <dfdl:bit mask="0x18" name="reserved"/>
+                    <dfdl:bit mask="0x07" name="size_of_local_color_table"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="local_color_table" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="color_table_entries" minOccurs="0" maxOccurs="256">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="red" type="xs:unsignedByte"/>
+                          <xs:element name="green" type="xs:unsignedByte"/>
+                          <xs:element name="blue" type="xs:unsignedByte"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="image_data" type="xs:hexBinary">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:format>binary</dfdl:format>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="extensions" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extension_label" type="xs:unsignedByte"/>
+              <xs:element name="extension_data" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="byte_subdivision" type="xs:unsignedByte"/>
+                    <xs:element name="extension_subdata" minOccurs="0" maxOccurs="unbounded" type="xs:unsignedByte"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="trailer" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert>equals($value, '3B')</dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="magicNumber" type="xs:hexBinary" dfdl:length="3" dfdl:encoding="utf-8"/>
-        <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:encoding="utf-8"/>
-        <xs:element name="width" type="xs:unsignedShort" dfdl:encoding="binary"/>
-        <xs:element name="height" type="xs:unsignedShort" dfdl:encoding="binary"/>
-        <xs:element name="flags" type="xs:unsignedByte" dfdl:encoding="binary"/>
-        <xs:element name="backgroundColor" type="xs:unsignedByte" dfdl:encoding="binary"/>
-        <xs:element name="aspectRatio" type="xs:unsignedByte" dfdl:encoding="binary"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="imageData">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="pixelData" type="xs:hexBinary" dfdl:length="*" dfdl:encoding="binary"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
 </xs:schema>

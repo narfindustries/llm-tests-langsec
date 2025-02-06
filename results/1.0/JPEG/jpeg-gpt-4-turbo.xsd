@@ -1,64 +1,88 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg"
-           xmlns:tns="http://example.com/jpeg">
-
-    <xs:include schemaLocation="DFDLGeneralAnnotations.xsd"/>
-
-    <xs:complexType name="SOFSegment">
-        <xs:sequence>
-            <xs:element name="P" type="xs:unsignedByte" dfdl:length="1"/>
-            <xs:element name="Y" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
-            <xs:element name="X" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
-            <xs:element name="NF" type="xs:unsignedByte" dfdl:length="1"/>
-            <xs:sequence dfdl:occursCountKind="fixed" dfdl:occursCount="{ ../tns:NF }">
-                <xs:element name="ComponentSpecification" type="tns:ComponentSpecificationType"/>
-            </xs:sequence>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="ComponentSpecificationType">
-        <xs:sequence>
-            <xs:element name="C" type="xs:unsignedByte" dfdl:length="1"/>
-            <xs:element name="H" type="xs:unsignedByte" dfdl:length="4" dfdl:outputValueCalc="{ ../tns:C div 16 }"/>
-            <xs:element name="V" type="xs:unsignedByte" dfdl:length="4" dfdl:outputValueCalc="{ ../tns:C mod 16 }"/>
-            <xs:element name="Tq" type="xs:unsignedByte" dfdl:length="1"/>
-        </xs:sequence>
-    </xs:complexType>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
 
     <xs:element name="JPEG">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="SOI" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:length="2">
-                    <xs:annotation>
-                        <xs:appinfo>
-                            <dfdl:terminator value="0xFFD8"/>
-                        </xs:appinfo>
-                    </xs:annotation>
+
+                <xs:element name="soi" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="binary">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:pattern value="FFD8"/>
+                        </xs:restriction>
+                    </xs:simpleType>
                 </xs:element>
-                <xs:sequence dfdl:occursCountKind="parsed">
-                    <xs:choice>
-                        <xs:element name="AppData" dfdl:lengthKind="delimited" dfdl:terminator="0xFF">
-                            <xs:simpleType>
-                                <xs:restriction base="xs:hexBinary"/>
-                            </xs:simpleType>
-                        </xs:element>
-                        <xs:element name="DQT" type="tns:DQTType"/>
-                        <xs:element name="SOF0" type="tns:SOFSegment"/>
-                        <xs:element name="DHT" type="tns:DHTType"/>
-                        <!-- More segment types can be added here -->
-                    </xs:choice>
-                </xs:sequence>
-                <xs:element name="EOI" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:length="2">
-                    <xs:annotation>
-                        <xs:appinfo>
-                            <dfdl:terminator value="0xFFD9"/>
-                        </xs:appinfo>
-                    </xs:annotation>
+
+                <xs:element name="segments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="marker" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="binary" type="xs:hexBinary"/>
+                            <xs:choice>
+                                <xs:element name="appn" type="AppnSegment"/>
+                                <xs:element name="dqt" type="DqtSegment"/>
+                                <xs:element name="sof" type="SofSegment"/>
+                                <xs:element name="dht" type="DhtSegment"/>
+                                <xs:element name="sos" type="SosSegment"/>
+                                <xs:element name="comment" type="CommentSegment"/>
+                                <xs:element name="miscellaneous" type="MiscellaneousSegment"/>
+                            </xs:choice>
+                        </xs:sequence>
+                    </xs:complexType>
                 </xs:element>
+
+                <xs:element name="eoi" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="binary">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary">
+                            <xs:pattern value="FFD9"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+
             </xs:sequence>
         </xs:complexType>
     </xs:element>
+
+    <xs:complexType name="AppnSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DqtSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SofSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DhtSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SosSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CommentSegment">
+        <xs:sequence>
+            <xs:element name="text" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="FFDA"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MiscellaneousSegment">
+        <xs:sequence>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
 
 </xs:schema>

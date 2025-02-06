@@ -1,33 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/http-1.1" targetNamespace="http://example.org/http-1.1" elementFormDefault="qualified" dfdl:version="1.0">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/http1.1"
+           xmlns="http://example.org/http1.1"
+           elementFormDefault="qualified">
 
-  <xs:element name="http-1.1">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="HTTPMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="tns:headerType" minOccurs="1" maxOccurs="unbounded"/>
-        <xs:element name="body" type="xs:string" minOccurs="0"/>
+        <xs:element ref="StartLine"/>
+        <xs:element ref="Headers" minOccurs="0"/>
+        <xs:element ref="Body" minOccurs="0"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
+      <xs:attribute name="dfdl:textDefault" type="xs:string" use="required"/>
     </xs:complexType>
-    <xs:unique name="header_unique">
-      <xs:selector xpath="header"/>
-      <xs:field xpath="@name"/>
-    </xs:unique>
   </xs:element>
 
-  <xs:complexType name="headerType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="value" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
+  <xs:element name="StartLine">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="dfdl:lengthKind" type="dfdl:lengthKindType" use="required"/>
+          <xs:attribute name="dfdl:length" type="xs:integer" use="required"/>
+          <xs:attribute name="dfdl:terminator" type="xs:string" use="required"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
 
-  <dfdl:defineSchema dfdl:initiator="true">
-    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="characters" representation="text" separator=""/>
-    <dfdl:textStandard dfdl:textStandard="unknown"/>
-    <dfdl:sequence groupDelimiter="" lengthKind="delimited"/>
-  </dfdl:defineSchema>
+  <xs:element name="Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Header" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="dfdl:separator" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="dfdl:lengthKind" type="dfdl:lengthKindType" use="required"/>
+          <xs:attribute name="dfdl:lengthUnits" type="dfdl:lengthUnitsType" use="required"/>
+          <xs:attribute name="dfdl:terminator" type="xs:string" use="required"/>
+          <xs:attribute name="dfdl:occurs" type="xs:integer" use="required"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Body">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute name="dfdl:textDefault" type="xs:string" use="required"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="lengthKindType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="delimited"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="lengthUnitsType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="characters"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

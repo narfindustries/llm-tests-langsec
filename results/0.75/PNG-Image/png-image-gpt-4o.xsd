@@ -1,49 +1,265 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            targetNamespace="http://example.com/png"
-           xmlns="http://example.com/png"
-           elementFormDefault="qualified"
-           xmlns:tns="http://example.com/png">
+           xmlns:tns="http://example.com/png"
+           elementFormDefault="qualified">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:PNGFormat"/>
+      <dfdl:format byteOrder="bigEndian" lengthKind="explicit" alignmentUnits="bytes" encoding="ASCII"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="PNG" type="tns:PNGType"/>
+  <xs:element name="PNG">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="tns:PNGSignature"/>
+        <xs:element name="Chunks" type="tns:PNGChunks" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="PNGType">
+  <xs:simpleType name="PNGSignature">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="8"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="PNGChunks">
     <xs:sequence>
-      <xs:element name="Signature" type="tns:SignatureType"/>
-      <xs:element name="Chunks" type="tns:ChunksType" maxOccurs="unbounded"/>
+      <xs:element name="Chunk" type="tns:Chunk" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="SignatureType">
+  <xs:complexType name="Chunk">
     <xs:sequence>
-      <xs:element name="MagicNumber" type="xs:hexBinary" dfdl:length="8" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Length" type="xs:unsignedInt"/>
+      <xs:element name="Type" type="tns:ChunkType"/>
+      <xs:element name="Data" type="tns:ChunkData" dfdl:length="{../Length}"/>
+      <xs:element name="CRC" type="xs:unsignedInt"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="ChunksType">
+  <xs:simpleType name="ChunkType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="IHDR"/>
+      <xs:enumeration value="PLTE"/>
+      <xs:enumeration value="IDAT"/>
+      <xs:enumeration value="IEND"/>
+      <xs:enumeration value="tEXt"/>
+      <xs:enumeration value="zTXt"/>
+      <xs:enumeration value="iTXt"/>
+      <xs:enumeration value="bKGD"/>
+      <xs:enumeration value="cHRM"/>
+      <xs:enumeration value="gAMA"/>
+      <xs:enumeration value="hIST"/>
+      <xs:enumeration value="pHYs"/>
+      <xs:enumeration value="sBIT"/>
+      <xs:enumeration value="sRGB"/>
+      <xs:enumeration value="tIME"/>
+      <xs:enumeration value="tRNS"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ChunkData">
+    <xs:choice>
+      <xs:element name="IHDR" type="tns:IHDRChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'IHDR'}"/>
+      <xs:element name="PLTE" type="tns:PLTEChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'PLTE'}"/>
+      <xs:element name="IDAT" type="xs:hexBinary" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'IDAT'}"/>
+      <xs:element name="IEND" type="xs:hexBinary" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'IEND'}"/>
+      <xs:element name="tEXt" type="tns:tEXtChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'tEXt'}"/>
+      <xs:element name="zTXt" type="tns:zTXtChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'zTXt'}"/>
+      <xs:element name="iTXt" type="tns:iTXtChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'iTXt'}"/>
+      <xs:element name="bKGD" type="tns:bKGDChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'bKGD'}"/>
+      <xs:element name="cHRM" type="tns:cHRMChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'cHRM'}"/>
+      <xs:element name="gAMA" type="tns:gAMAChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'gAMA'}"/>
+      <xs:element name="hIST" type="tns:hISTChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'hIST'}"/>
+      <xs:element name="pHYs" type="tns:pHYsChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'pHYs'}"/>
+      <xs:element name="sBIT" type="tns:sBITChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'sBIT'}"/>
+      <xs:element name="sRGB" type="tns:sRGBChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'sRGB'}"/>
+      <xs:element name="tIME" type="tns:tIMEChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'tIME'}"/>
+      <xs:element name="tRNS" type="tns:tRNSChunk" dfdl:occursCountKind="expression" dfdl:occursCount="{../Type eq 'tRNS'}"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="IHDRChunk">
     <xs:sequence>
-      <xs:element name="Length" type="xs:int" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:byteOrder="bigEndian"/>
-      <xs:element name="Type" type="xs:string" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}" dfdl:lengthUnits="bytes"/>
-      <xs:element name="CRC" type="xs:hexBinary" dfdl:length="4" dfdl:lengthUnits="bytes"/>
+      <xs:element name="Width" type="xs:unsignedInt"/>
+      <xs:element name="Height" type="xs:unsignedInt"/>
+      <xs:element name="BitDepth" type="xs:unsignedByte"/>
+      <xs:element name="ColorType" type="tns:ColorType"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+      <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
     </xs:sequence>
   </xs:complexType>
 
-  <dfdl:defineFormat name="PNGFormat">
-    <dfdl:format byteOrder="bigEndian"
-                 lengthKind="explicit"
-                 encoding="utf-8"
-                 binaryNumberRep="binary"
-                 alignmentUnits="bytes"
-                 occursCountKind="expression"
-                 occursCount="{ Length }"/>
-  </dfdl:defineFormat>
+  <xs:simpleType name="ColorType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="6"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="PLTEChunk">
+    <xs:sequence>
+      <xs:element name="PaletteEntry" type="tns:PaletteEntry" maxOccurs="256" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PaletteEntry">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tEXtChunk">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="Text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="zTXtChunk">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="CompressedText" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="iTXtChunk">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="CompressionFlag" type="xs:unsignedByte"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="LanguageTag" type="xs:string"/>
+      <xs:element name="TranslatedKeyword" type="xs:string"/>
+      <xs:element name="Text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="bKGDChunk">
+    <xs:choice>
+      <xs:element name="PaletteIndex" type="xs:unsignedByte"/>
+      <xs:element name="Gray" type="xs:unsignedShort"/>
+      <xs:element name="Red" type="xs:unsignedShort"/>
+      <xs:element name="Green" type="xs:unsignedShort"/>
+      <xs:element name="Blue" type="xs:unsignedShort"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="cHRMChunk">
+    <xs:sequence>
+      <xs:element name="WhitePointX" type="xs:unsignedInt"/>
+      <xs:element name="WhitePointY" type="xs:unsignedInt"/>
+      <xs:element name="RedX" type="xs:unsignedInt"/>
+      <xs:element name="RedY" type="xs:unsignedInt"/>
+      <xs:element name="GreenX" type="xs:unsignedInt"/>
+      <xs:element name="GreenY" type="xs:unsignedInt"/>
+      <xs:element name="BlueX" type="xs:unsignedInt"/>
+      <xs:element name="BlueY" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gAMAChunk">
+    <xs:sequence>
+      <xs:element name="Gamma" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="hISTChunk">
+    <xs:sequence>
+      <xs:element name="Frequency" type="xs:unsignedShort" maxOccurs="256" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="pHYsChunk">
+    <xs:sequence>
+      <xs:element name="PixelsPerUnitX" type="xs:unsignedInt"/>
+      <xs:element name="PixelsPerUnitY" type="xs:unsignedInt"/>
+      <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sBITChunk">
+    <xs:choice>
+      <xs:element name="Grayscale" type="xs:unsignedByte"/>
+      <xs:element name="RGB" type="tns:RGBSampleDepth"/>
+      <xs:element name="Palette" type="tns:RGBSampleDepth"/>
+      <xs:element name="GrayscaleAlpha" type="tns:GrayscaleAlphaSampleDepth"/>
+      <xs:element name="RGBA" type="tns:RGBASampleDepth"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="RGBSampleDepth">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GrayscaleAlphaSampleDepth">
+    <xs:sequence>
+      <xs:element name="Gray" type="xs:unsignedByte"/>
+      <xs:element name="Alpha" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RGBASampleDepth">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedByte"/>
+      <xs:element name="Green" type="xs:unsignedByte"/>
+      <xs:element name="Blue" type="xs:unsignedByte"/>
+      <xs:element name="Alpha" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sRGBChunk">
+    <xs:sequence>
+      <xs:element name="RenderingIntent" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tIMEChunk">
+    <xs:sequence>
+      <xs:element name="Year" type="xs:unsignedShort"/>
+      <xs:element name="Month" type="xs:unsignedByte"/>
+      <xs:element name="Day" type="xs:unsignedByte"/>
+      <xs:element name="Hour" type="xs:unsignedByte"/>
+      <xs:element name="Minute" type="xs:unsignedByte"/>
+      <xs:element name="Second" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tRNSChunk">
+    <xs:choice>
+      <xs:element name="Grayscale" type="xs:unsignedShort"/>
+      <xs:element name="RGB" type="tns:RGBColor"/>
+      <xs:element name="Palette" type="tns:PaletteTransparency"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="RGBColor">
+    <xs:sequence>
+      <xs:element name="Red" type="xs:unsignedShort"/>
+      <xs:element name="Green" type="xs:unsignedShort"/>
+      <xs:element name="Blue" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PaletteTransparency">
+    <xs:sequence>
+      <xs:element name="Alpha" type="xs:unsignedByte" maxOccurs="256" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

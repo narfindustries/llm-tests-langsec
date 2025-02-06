@@ -1,67 +1,146 @@
 module MQTT;
 
-export {
-    type ConnectFlags = bitfield {
-        user_name_flag     : 1;   # Set if a user name is present
-        password_flag      : 1;   # Set if a password is present
-        will_retain        : 1;   # Set if the will message needs to be retained
-        will_qos           : 2;   # Quality of Service level for the will message
-        will_flag          : 1;   # Set if a will message is present
-        clean_session      : 1;   # Set if the session needs to be cleaned up
-        reserved           : 1;
+public type MQTT_Protocol = unit {
+    varint: uint32 = {
+        local v: uint32 = 0;
+        local multiplier: uint32 = 1;
+        local digit: uint8;
+        repeat {
+            digit = _io.read<uint8>();
+            v += (digit & 0x7F) * multiplier;
+            if ( (digit & 0x80) == 0 )
+                break;
+            multiplier *= 128;
+        }
+        return v;
     };
 
-    type ConnectPacket = unit {
-        protocol_name_len  : uint16;
-        protocol_name      : bytes &length=protocol_name_len;
-        protocol_level     : uint8;
-        connect_flags      : ConnectFlags;
-        keep_alive         : uint16;
-        client_id_len      : uint16;
-        client_id          : bytes &length=client_id_len;
-        rest               : bytes &restofdata;
+    type PacketType = uint8 &convert=to_enum%{
+        switch (self) {
+            case 1: return PacketType::CONNECT;
+            case 2: return PacketType::CONNACK;
+            case 3: return PacketType::PUBLISH;
+            case 4: return PacketType::PUBACK;
+            case 5: return PacketType::PUBREC;
+            case 6: return PacketType::PUBREL;
+            case 7: return PacketType::PUBCOMP;
+            case 8: return PacketType::SUBSCRIBE;
+            case 9: return PacketType::SUBACK;
+            case 10: return PacketType::UNSUBSCRIBE;
+            case 11: return PacketType::UNSUBACK;
+            case 12: return PacketType::PINGREQ;
+            case 13: return PacketType::PINGRESP;
+            case 14: return PacketType::DISCONNECT;
+            case 15: return PacketType::AUTH;
+            default: return PacketType::UNKNOWN;
+        }
     };
 
-    type Packet = unit {
-        type_and_flags     : uint8;
-        remaining_length   : uint8;
-        connect            : optional<ConnectPacket> &if=(type_and_flags >> 4) == 1;
-    };
-}
+    byte0: uint8;
+    packet_type: PacketType = byte0 >> 4;
 
-module MQTT_Analyzer;
+    connect: optional<ConnectPacket> &check= (packet_type == PacketType::CONNECT);
+    connack: optional<ConnAckPacket> &check= (packet_type == PacketType::CONNACK);
+    publish: optional<PublishPacket> &check= (packet_type == PacketType::PUBLISH);
+    puback: optional<PubAckPacket> &check= (packet_type == PacketType::PUBACK);
+    subscribe: optional<SubscribePacket> &check= (packet_type == PacketType::SUBSCRIBE);
+    suback: optional<SubAckPacket> &check= (packet_type == PacketType::SUBACK);
+    unsubscribe: optional<UnsubscribePacket> &check= (packet_type == PacketType::UNSUBSCRIBE);
+    unsuback: optional<UnsubAckPacket> &check= (packet_type == PacketType::UNSUBACK);
+    disconnect: optional<DisconnectPacket> &check= (packet_type == PacketType::DISCONNECT);
+    pingreq: optional<PingReqPacket> &check= (packet_type == PacketType::PINGREQ);
+    pingresp: optional<PingRespPacket> &check= (packet_type == PacketType::PINGRESP);
+};
 
-import { MQTT }
+type ConnectPacket = unit {
+    remaining_length: uint32 &size=varint;
+    protocol_name: MQTT_String;
+    protocol_level: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
 
-declares {
-    event mqtt_connect(
-        protocol_name: string,
-        protocol_level: uint8,
-        client_id: string,
-        keep_alive: uint16,
-        flags: MQTT::ConnectFlags
-    );
-}
+    properties: Properties &length=remaining_length;
 
-const MAGIC_BYTE: uint8 = 0x10;
+    client_identifier: MQTT_String;
+    will_properties: optional<Properties> &check= ((connect_flags & 0x04) != 0);
+    will_topic: optional<MQTT_String> &check= ((connect_flags & 0x04) != 0);
+    will_payload: optional<bytes> &check= ((connect_flags & 0x04) != 0);
+    username: optional<MQTT_String> &check= ((connect_flags & 0x80) != 0);
+    password: optional<bytes> &check= ((connect_flags & 0x40) != 0);
+};
 
-function parse(stream: bytes): bool {
-    local pkt = parse_unit(MQTT::Packet, stream);
-    
-    if (pkt.connect? && pkt.type_and_flags == MAGIC_BYTE) {
-        local protocol_name = as_string(pkt.connect.protocol_name);
-        local client_id = as_string(pkt.connect.client_id);
-        
-        event mqtt_connect(
-            protocol_name,
-            pkt.connect.protocol_level,
-            client_id,
-            pkt.connect.keep_alive,
-            pkt.connect.connect_flags
-        );
-        
-        return true;
-    }
-    
-    return false;
-}
+type ConnAckPacket = unit {
+    remaining_length: uint32 &size=varint;
+    session_present: uint8 &bits=1;
+    reason_code: uint8;
+    properties: Properties &length=remaining_length;
+};
+
+type PublishPacket = unit {
+    flags: uint8;
+    remaining_length: uint32 &size=varint;
+    topic_name: MQTT_String;
+    packet_identifier: optional<uint16> &check= ((flags & 0x06) != 0);
+    properties: Properties &length=remaining_length;
+    payload: bytes &restofdata;
+};
+
+type PubAckPacket = unit {
+    remaining_length: uint32 &size=varint;
+    packet_identifier: uint16;
+    reason_code: optional<uint8> &check= (remaining_length > 2);
+    properties: optional<Properties> &check= (remaining_length > (reason_code ? 3 : 2));
+};
+
+type SubscribePacket = unit {
+    remaining_length: uint32 &size=varint;
+    packet_identifier: uint16;
+    properties: Properties &length=remaining_length;
+    subscriptions: vector<Subscription> &until(_io.eof());
+};
+
+type SubAckPacket = unit {
+    remaining_length: uint32 &size=varint;
+    packet_identifier: uint16;
+    properties: Properties &length=remaining_length;
+    reason_codes: vector<uint8> &until(_io.eof());
+};
+
+type UnsubscribePacket = unit {
+    remaining_length: uint32 &size=varint;
+    packet_identifier: uint16;
+    properties: Properties &length=remaining_length;
+    topic_filters: vector<MQTT_String> &until(_io.eof());
+};
+
+type UnsubAckPacket = unit {
+    remaining_length: uint32 &size=varint;
+    packet_identifier: uint16;
+    properties: Properties &length=remaining_length;
+    reason_codes: vector<uint8> &until(_io.eof());
+};
+
+type DisconnectPacket = unit {
+    remaining_length: uint32 &size=varint;
+    reason_code: optional<uint8> &check= (remaining_length > 0);
+    properties: optional<Properties> &check= (remaining_length > (reason_code ? 1 : 0));
+};
+
+type PingReqPacket = unit {
+    remaining_length: uint8; # Always zero
+};
+
+type PingRespPacket = unit {
+    remaining_length: uint8; # Always zero
+};
+
+type MQTT_String = bytes &length=(len: uint16) { len = _io.read_be<uint16>(); };
+
+type Properties = unit(length: uint32) {
+    properties_data: bytes &length=length; # Placeholder for actual property parsing
+};
+
+type Subscription = unit {
+    topic_filter: MQTT_String;
+    options: uint8;
+};

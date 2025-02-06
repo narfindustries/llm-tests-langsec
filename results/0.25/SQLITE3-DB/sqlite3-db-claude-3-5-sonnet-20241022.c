@@ -1,126 +1,164 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-// SQLite3 file format parser using Hammer
-
-// Forward declarations
-HParser* create_sqlite_parser(void);
-HParser* create_header_parser(void);
-HParser* create_record_parser(void);
-
-// Helper parsers
-static HParser* uint16_be() {
-    return h_uint16();
+// SQLite3 magic string parser
+static const uint8_t SQLITE_MAGIC[] = "SQLite format 3\000";
+static HParser* magic_parser(void) {
+    return h_token(SQLITE_MAGIC, 16);
 }
 
-static HParser* uint32_be() {
-    return h_uint32();
+// Varint parser implementation
+HParser* init_varint_parser(void) {
+    return h_many(h_bits(8, false));
 }
 
-static HParser* uint64_be() {
-    return h_uint64();
-}
-
-static HParser* varint_parser() {
-    return h_many(h_uint8());
-}
-
-// Main parser components
-HParser* create_header_parser() {
+// Database header parser
+HParser* init_header_parser(void) {
     return h_sequence(
-        h_token((const uint8_t*)"SQLite format 3\000", 16),
-        uint16_be(),  // Page size
-        h_uint8(),    // Write version
-        h_uint8(),    // Read version
-        h_uint8(),    // Reserved space
-        h_uint8(),    // Max fraction
-        h_uint8(),    // Min fraction
-        h_uint8(),    // Leaf fraction
-        uint32_be(),  // File change counter
-        uint32_be(),  // Database size
-        uint32_be(),  // First free page
-        uint32_be(),  // Free page count
-        uint32_be(),  // Schema cookie
-        uint32_be(),  // Schema format
-        uint32_be(),  // Page cache size
-        uint32_be(),  // Vacuum page
-        uint32_be(),  // Text encoding
-        uint32_be(),  // User version
-        uint32_be(),  // Incremental vacuum
-        uint32_be(),  // Application ID
-        h_repeat_n(h_uint8(), 20),  // Reserved
-        uint32_be(),  // Version valid for
-        uint32_be(),  // SQLite version number
-        NULL);
+        magic_parser(),
+        h_uint16(), // page size
+        h_uint8(),  // file format write version
+        h_uint8(),  // file format read version
+        h_uint8(),  // reserved space
+        h_uint8(),  // max embedded payload fraction
+        h_uint8(),  // min embedded payload fraction
+        h_uint8(),  // leaf payload fraction
+        h_uint32(), // file change counter
+        h_uint32(), // db size in pages
+        h_uint32(), // first freelist trunk page
+        h_uint32(), // number of freelist pages
+        h_uint32(), // schema cookie
+        h_uint32(), // schema format number
+        h_uint32(), // default page cache size
+        h_uint32(), // largest root btree page
+        h_uint32(), // text encoding
+        h_uint32(), // user version
+        h_uint32(), // incremental vacuum mode
+        h_uint32(), // application id
+        h_token((const uint8_t*)"", 20), // reserved space
+        h_uint32(), // version valid for number
+        h_uint32(), // sqlite version number
+        NULL
+    );
 }
 
-HParser* create_record_parser() {
+// B-tree page header parser
+HParser* init_btree_header_parser(void) {
     return h_sequence(
-        varint_parser(),  // Header size
-        h_many(h_choice(h_uint8(), varint_parser(), NULL)),  // Column types and values
-        NULL);
+        h_uint8(),  // page type
+        h_uint16(), // first freeblock offset
+        h_uint16(), // number of cells
+        h_uint16(), // cell content offset
+        h_uint8(),  // fragmented free bytes
+        h_optional(h_uint32()), // right child pointer (interior pages only)
+        NULL
+    );
 }
 
-HParser* create_btree_page_parser() {
-    return h_sequence(
-        h_uint8(),    // Page type
-        h_uint16(),   // First freeblock
-        h_uint16(),   // Cell count
-        h_uint16(),   // Cell content area
-        h_uint8(),    // Fragmented free bytes
-        h_many(h_uint16()),  // Cell pointers
-        NULL);
+// Cell format parser
+HParser* init_cell_parser(void) {
+    return h_choice(
+        h_sequence(init_varint_parser(), init_varint_parser(), NULL), // leaf table
+        h_sequence(h_uint32(), init_varint_parser(), NULL),           // interior table
+        h_sequence(init_varint_parser(), NULL),                       // leaf index
+        h_sequence(h_uint32(), init_varint_parser(), NULL),          // interior index
+        NULL
+    );
 }
 
-HParser* create_sqlite_parser() {
+// Record format parser
+HParser* init_record_parser(void) {
     return h_sequence(
-        create_header_parser(),
-        h_many(create_btree_page_parser()),
-        NULL);
+        init_varint_parser(), // header length
+        h_many(init_varint_parser()), // serial types
+        h_many(h_uint8()),   // data values
+        NULL
+    );
+}
+
+// Freelist parser
+HParser* init_freelist_parser(void) {
+    return h_sequence(
+        h_uint32(), // next trunk page
+        h_uint32(), // number of leaf pages
+        h_many(h_uint32()), // page numbers
+        NULL
+    );
+}
+
+// Pointer map entry parser
+HParser* init_ptrmap_parser(void) {
+    return h_sequence(
+        h_uint32(), // page number
+        h_uint8(),  // type
+        NULL
+    );
+}
+
+// Page parser
+HParser* init_page_parser(void) {
+    return h_choice(
+        h_sequence(init_btree_header_parser(), h_many(init_cell_parser()), NULL),
+        init_freelist_parser(),
+        init_ptrmap_parser(),
+        NULL
+    );
+}
+
+// Main SQLite3 parser
+HParser* init_sqlite3_parser(void) {
+    return h_sequence(
+        init_header_parser(),
+        h_many(init_page_parser()),
+        NULL
+    );
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <sqlite_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <sqlite3_file>\n", argv[0]);
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "rb");
-    if (!file) {
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
         perror("Failed to open file");
         return 1;
     }
 
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    uint8_t *buffer = malloc(file_size);
-    if (!buffer) {
+    uint8_t *input = malloc(size);
+    if (!input) {
         perror("Failed to allocate memory");
-        fclose(file);
+        fclose(f);
         return 1;
     }
 
-    if (fread(buffer, 1, file_size, file) != file_size) {
+    if (fread(input, 1, size, f) != size) {
         perror("Failed to read file");
-        free(buffer);
-        fclose(file);
+        free(input);
+        fclose(f);
+        return 1;
+    }
+    fclose(f);
+
+    HParser *parser = init_sqlite3_parser();
+    HParseResult *result = h_parse(parser, input, size);
+
+    if (!result) {
+        fprintf(stderr, "Parse failed\n");
+        free(input);
         return 1;
     }
 
-    HParser *sqlite_parser = create_sqlite_parser();
-    HParseResult *result = h_parse(sqlite_parser, buffer, file_size);
+    printf("Successfully parsed SQLite3 database\n");
 
-    if (result) {
-        printf("Successfully parsed SQLite3 database\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse SQLite3 database\n");
-    }
-
-    free(buffer);
-    fclose(file);
+    h_parse_result_free(result);
+    free(input);
     return 0;
 }

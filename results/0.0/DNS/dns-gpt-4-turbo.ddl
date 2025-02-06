@@ -1,56 +1,62 @@
-module DNS {
-  type U8 = UInt(8)
-  type U16 = UInt(16)
-  type U32 = UInt(32)
+module DNS;
 
-  type DomainName = {
-    labels: List(Label, Delim(0)),
-    term: U8
-  }
+import Binary;
 
-  type Label = {
-    len: U8,
-    name: Bytes(len)
-  }
+type uint1 = Bits:1;
+type uint3 = Bits:3;
+type uint4 = Bits:4;
+type uint8 = UInt:8;
+type uint16 = UInt:16;
+type uint32 = UInt:32;
 
-  type Header = {
-    id: U16,
-    qr: U1,
-    opcode: U4,
-    aa: U1,
-    tc: U1,
-    rd: U1,
-    ra: U1,
-    z: U3,
-    rcode: U4,
-    qdcount: U16,
-    ancount: U16,
-    nscount: U16,
-    arcount: U16
-  }
+type Header = struct {
+    id : uint16;
+    qr : uint1;
+    opcode : uint4;
+    aa : uint1;
+    tc : uint1;
+    rd : uint1;
+    ra : uint1;
+    z : uint3;
+    rcode : uint4;
+    qdcount : uint16;
+    ancount : uint16;
+    nscount : uint16;
+    arcount : uint16;
+};
 
-  type Question = {
-    qname: DomainName,
-    qtype: U16,
-    qclass: U16
-  }
+type Question = struct {
+    qname : DomainName;
+    qtype : uint16;
+    qclass : uint16;
+};
 
-  type ResourceRecord = {
-    name: DomainName,
-    type: U16,
-    class: U16,
-    ttl: U32,
-    rdlength: U16,
-    rdata: Bytes(rdlength)
-  }
+type RR = struct {
+    name : DomainName;
+    type : uint16;
+    class : uint16;
+    ttl : uint32;
+    rdlength : uint16;
+    rdata : bytes &size=rdlength;
+};
 
-  type Message = {
-    header: Header,
-    questions: List(Question, header.qdcount),
-    answers: List(ResourceRecord, header.ancount),
-    authorities: List(ResourceRecord, header.nscount),
-    additionals: List(ResourceRecord, header.arcount)
-  }
+type DomainName = struct {
+    labels : Label[];
+};
 
-  entrypoint parse_dns: Message
-}
+type Label = struct {
+    length : uint8;
+    data : bytes &size=length;
+};
+
+type Message = struct {
+    header : Header;
+    questions : Question[header.qdcount];
+    answers : RR[header.ancount];
+    authorities : RR[header.nscount];
+    additionals : RR[header.arcount];
+};
+
+type DNSPacket = struct {
+    message : Message;
+};

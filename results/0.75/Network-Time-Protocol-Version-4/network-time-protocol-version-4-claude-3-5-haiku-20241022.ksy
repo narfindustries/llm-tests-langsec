@@ -2,56 +2,80 @@ meta:
   id: ntp_v4
   title: Network Time Protocol Version 4
   endian: be
+
 seq:
-  - id: leap_indicator
-    type: b2
-    doc: Leap second indicator
-  - id: version
-    type: b3
-    doc: NTP version number
-  - id: mode
-    type: b3
-    doc: Association mode
-  - id: stratum
-    type: u1
-    doc: Stratum level of clock
-  - id: poll
-    type: s1
-    doc: Poll interval in log2 seconds
-  - id: precision
-    type: s1
-    doc: Clock precision in log2 seconds
-  - id: root_delay
-    type: u4
-    doc: Total round trip delay to primary source
-  - id: root_dispersion
-    type: u4
-    doc: Maximum error relative to primary source
-  - id: reference_id
-    type: u4
-    doc: Reference identifier
-  - id: reference_timestamp
-    type: u8
-    doc: Time when system clock was last updated
-  - id: originate_timestamp
-    type: u8
-    doc: Time when request was sent from client
-  - id: receive_timestamp
-    type: u8
-    doc: Time when request was received by server
-  - id: transmit_timestamp
-    type: u8
-    doc: Time when response was sent from server
-  - id: authenticator
-    type: authenticator
-    if: mode != 0
-    doc: Optional authentication data
+  - id: header
+    type: ntp_header
+
 types:
+  ntp_header:
+    seq:
+      - id: flags
+        type: flags
+      - id: stratum
+        type: u1
+      - id: poll_interval
+        type: s1
+      - id: precision
+        type: s1
+      - id: root_delay
+        type: u4
+      - id: root_dispersion
+        type: u4
+      - id: reference_identifier
+        type: reference_id
+      - id: reference_timestamp
+        type: timestamp
+      - id: origin_timestamp
+        type: timestamp
+      - id: receive_timestamp
+        type: timestamp
+      - id: transmit_timestamp
+        type: timestamp
+      - id: authenticator
+        type: authenticator
+        if: flags.mode >= 6
+
+  flags:
+    seq:
+      - id: leap_indicator
+        type: b2
+      - id: version
+        type: b3
+      - id: mode
+        type: b3
+
+  reference_id:
+    seq:
+      - id: data
+        type:
+          switch-on: _parent.stratum
+          cases:
+            0: str4
+            1: str4
+            2..255: u4
+
+  str4:
+    seq:
+      - id: value
+        type: str
+        size: 4
+        encoding: ascii
+
+  timestamp:
+    seq:
+      - id: seconds
+        type: u4
+      - id: fraction
+        type: u4
+
   authenticator:
     seq:
-      - id: key_id
+      - id: key_identifier
         type: u4
-        doc: Cryptographic key identifier
       - id: message_digest
-        size: 16
-        doc: Message authentication code
+        type: u4
+      - id: padding
+        type: u4
+        repeat: expr
+        repeat-expr: _parent.flags.mode

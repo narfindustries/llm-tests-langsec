@@ -1,9 +1,8 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, length_count, length_data},
-    number::complete::{be_u8, be_u16, be_u32},
-    sequence::{tuple, preceded},
+    combinator::map,
+    multi::{count, many_m_n},
+    number::complete::{be_u8, be_u16, be_u24},
     IResult,
 };
 use std::env;
@@ -11,63 +10,85 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct TlsClientHello {
-    version: u16,
-    random: [u8; 32],
-    session_id: Vec<u8>,
-    cipher_suites: Vec<u16>,
-    compression_methods: Vec<u8>,
-    extensions: Option<Vec<Extension>>,
-}
+struct CipherSuite(u16);
 
 #[derive(Debug)]
 struct Extension {
-    type_: u16,
+    extension_type: u16,
     data: Vec<u8>,
 }
 
-fn parse_client_hello(input: &[u8]) -> IResult<&[u8], TlsClientHello> {
-    map(
-        tuple((
-            tag(&[0x16]),  // Handshake type
-            tag(&[0x03, 0x01]),  // TLS version
-            be_u16,  // Length
-            tag(&[0x01]),  // ClientHello handshake type
-            be_u16,  // Length
-            be_u16,  // Client version
-            take(32usize),  // Random
-            length_data(be_u8),  // Session ID
-            length_count(be_u16, be_u16),  // Cipher suites
-            length_count(be_u8, be_u8),  // Compression methods
-            opt(length_count(be_u16, parse_extension))  // Extensions
-        )),
-        |(_, _, _, _, _, version, random, session_id, cipher_suites, compression_methods, extensions)| TlsClientHello {
-            version,
-            random: random.try_into().unwrap(),
-            session_id,
-            cipher_suites,
-            compression_methods,
-            extensions,
-        }
-    )(input)
+#[derive(Debug)]
+struct ClientHello {
+    legacy_version: u16,
+    random: [u8; 32],
+    legacy_session_id: Vec<u8>,
+    cipher_suites: Vec<CipherSuite>,
+    legacy_compression_methods: Vec<u8>,
+    extensions: Vec<Extension>,
+}
+
+fn parse_random(input: &[u8]) -> IResult<&[u8], [u8; 32]> {
+    let (input, random_bytes) = take(32usize)(input)?;
+    Ok((input, random_bytes.try_into().unwrap()))
+}
+
+fn parse_legacy_session_id(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, length) = be_u8(input)?;
+    let (input, session_id) = take(length as usize)(input)?;
+    Ok((input, session_id.to_vec()))
+}
+
+fn parse_cipher_suites(input: &[u8]) -> IResult<&[u8], Vec<CipherSuite>> {
+    let (input, length) = be_u16(input)?;
+    count(map(be_u16, CipherSuite), (length / 2) as usize)(input)
+}
+
+fn parse_compression_methods(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, length) = be_u8(input)?;
+    let (input, methods) = take(length as usize)(input)?;
+    Ok((input, methods.to_vec()))
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
-    map(
-        tuple((
-            be_u16,  // Extension type
-            length_data(be_u16)  // Extension data
-        )),
-        |(type_, data)| Extension {
-            type_,
-            data: data.to_vec(),
-        }
-    )(input)
+    let (input, extension_type) = be_u16(input)?;
+    let (input, length) = be_u16(input)?;
+    let (input, data) = take(length as usize)(input)?;
+    Ok((input, Extension {
+        extension_type,
+        data: data.to_vec(),
+    }))
+}
+
+fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
+    let (input, _length) = be_u16(input)?;
+    many_m_n(1, 10, parse_extension)(input)
+}
+
+fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
+    let (input, _handshake_type) = tag(&[0x01])(input)?;
+    let (input, _length) = be_u24(input)?;
+    
+    let (input, legacy_version) = be_u16(input)?;
+    let (input, random) = parse_random(input)?;
+    let (input, legacy_session_id) = parse_legacy_session_id(input)?;
+    let (input, cipher_suites) = parse_cipher_suites(input)?;
+    let (input, legacy_compression_methods) = parse_compression_methods(input)?;
+    let (input, extensions) = parse_extensions(input)?;
+
+    Ok((input, ClientHello {
+        legacy_version,
+        random,
+        legacy_session_id,
+        cipher_suites,
+        legacy_compression_methods,
+        extensions,
+    }))
 }
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
+    if args.len() != 2 {
         eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }

@@ -1,11 +1,40 @@
-# This is a placeholder.  The error message indicates a problem with the
-# spicyc compiler and/or the nitf-gemini-1.5-flash.spicy file itself.
-#  A correct Spicy specification cannot be provided without more information
-# about the intended functionality and the cause of the compilation error.
-#  The original nitf-gemini-1.5-flash.spicy file is needed for debugging.
+module NITF;
 
-# Please provide the nitf-gemini-1.5-flash.spicy file content and details
-# about the expected behavior for a more accurate and helpful response.
+type NITF_File {
+    file_header: NITF_File_Header;
+    segments: vector of NITF_Segment;
+}
 
-event zeek_spicy_error:
-    print "Zeek Spicy compilation failed. Please see error message for details."
+type NITF_File_Header {
+    FH_VERSION: string;
+    FH_SECURITY: string;
+    FH_UUID: string;
+    FH_CREATION_DATE_TIME: string;
+    FH_ORIGINATOR: string;
+    FH_USER_DEFINED_DATA: string;
+    FH_IMAGE_HEADER_OFFSET: uint32;
+    FH_IMAGE_HEADER_SIZE: uint32;
+    FH_NUM_IMAGE_SEGMENTS: uint32;
+    FH_TRE_OFFSET: uint32;
+    FH_TRE_SIZE: uint32;
+    FH_NUM_TRE_SEGMENTS: uint32;
+    FH_SUBHEADER_OFFSET: uint32;
+    FH_SUBHEADER_SIZE: uint32;
+    FH_NUM_SUBHEADER_SEGMENTS: uint32;
+    FH_RESERVED: bytes;
+}
+
+type NITF_Segment {
+    segment_header: NITF_Segment_Header;
+    segment_data: bytes;
+}
+
+type NITF_Segment_Header {
+    SH_SEGMENT_ID: string;
+    SH_SEGMENT_SIZE: uint32;
+    SH_DATA_OFFSET: uint32;
+    SH_DATA_SIZE: uint32;
+    SH_RESERVED: bytes;
+}
+
+#  ... (This is a highly simplified example.  A complete specification would require many more types and fields to represent all the possible segments, sub-segments, and data structures within the NITF standard.  Many fields would need more complex types than simple strings or integers to accurately reflect the standard's specifications.  Furthermore, many optional fields and their variations are omitted here.)

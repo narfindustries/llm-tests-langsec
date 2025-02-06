@@ -1,52 +1,54 @@
 module Bitcoin;
 
 public type Transaction = unit {
-    version: uint32 le;
-    tx_in_count: varint;
-    tx_in: TxInput[tx_in_count.value];
-    tx_out_count: varint;
-    tx_out: TxOutput[tx_out_count.value];
-    lock_time: uint32 le;
+    version: uint32;
+    has_witness: bool;
+    marker: uint8 &if=($input.length() >= 2 && self.has_witness);
+    flag: uint8 &if=($input.length() >= 2 && self.has_witness);
+    input_count: VarInt;
+    inputs: Input[self.input_count.value];
+    output_count: VarInt;
+    outputs: Output[self.output_count.value];
+    witnesses: Witness[self.input_count.value] &if=(self.has_witness);
+    lock_time: uint32;
 };
 
-type TxInput = unit {
-    previous_output: OutPoint;
-    script_length: varint;
-    signature_script: bytes &size=script_length.value;
-    sequence: uint32 le;
+type VarInt = unit {
+    prefix: uint8;
+    value: uint64;
 };
 
-type TxOutput = unit {
-    value: uint64 le;
-    pk_script_length: varint;
-    pk_script: bytes &size=pk_script_length.value;
+on VarInt::%done {
+    if (self.prefix < 0xfd)
+        self.value = self.prefix;
+    else if (self.prefix == 0xfd)
+        self.value = cast<uint64>(self.data);
+    else if (self.prefix == 0xfe)
+        self.value = cast<uint64>(self.data);
+    else
+        self.value = cast<uint64>(self.data);
+}
+
+type Input = unit {
+    prev_tx_hash: bytes &size=32;
+    prev_output_index: uint32;
+    script_length: VarInt;
+    script_sig: bytes &size=self.script_length.value;
+    sequence: uint32;
 };
 
-type OutPoint = unit {
-    hash: bytes &size=32;
-    index: uint32 le;
+type Output = unit {
+    value: uint64;
+    script_length: VarInt;
+    script_pubkey: bytes &size=self.script_length.value;
 };
 
-type varint = unit {
-    prefix: uint8 {
-        if ( self.prefix < 0xfd )
-            self.value = self.prefix;
-    }
-    
-    switch ( self.prefix ) {
-        0xfd -> value16: uint16 le {
-            self.value = self.value16;
-        }
-        0xfe -> value32: uint32 le {
-            self.value = self.value32;
-        }
-        0xff -> value64: uint64 le {
-            self.value = self.value64;
-        }
-    };
-
-    var value: uint64;
+type Witness = unit {
+    stack_size: VarInt;
+    stack_items: WitnessStackItem[self.stack_size.value];
 };
 
-public function parse_bitcoin_transaction(data: bytes) : Transaction
-    { return parse<Transaction>(data); }
+type WitnessStackItem = unit {
+    item_length: VarInt;
+    item: bytes &size=self.item_length.value;
+};

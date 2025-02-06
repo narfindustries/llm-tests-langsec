@@ -1,40 +1,80 @@
-module Network-Time-Protocol-Version-4;
+module NTP;
 
 public type Packet = unit {
-    li_vn_mode: uint8;
+    flags: bitfield(8) {
+        leap_indicator: 0..1 &convert=uint8;
+        version: 2..4 &convert=uint8;
+        mode: 5..7 &convert=uint8;
+    };
+    
     stratum: uint8;
     poll: int8;
     precision: int8;
-    root_delay: uint32;
+    root_delay: int32;
     root_dispersion: uint32;
-    reference_id: bytes &size=4;
+    reference_id: bytes(4);
     reference_timestamp: uint64;
-    originate_timestamp: uint64;
+    origin_timestamp: uint64;
     receive_timestamp: uint64;
     transmit_timestamp: uint64;
-
-    on li_vn_mode {
-        self.leap_indicator = (self.li_vn_mode & 0xC0) >> 6;
-        self.version = (self.li_vn_mode & 0x38) >> 3;
-        self.mode = self.li_vn_mode & 0x07;
+    
+    var leap_indicator_: uint8;
+    var version_: uint8;
+    var mode_: uint8;
+    
+    on done {
+        self.leap_indicator_ = self.flags.leap_indicator;
+        self.version_ = self.flags.version;
+        self.mode_ = self.flags.mode;
     }
-
-    var leap_indicator: uint8;
-    var version: uint8;
-    var mode: uint8;
+    
+    switch (self.version_) {
+        4 -> extensions: Extension[] &until($input.length() == 0);
+    }
 };
 
-on Packet -> event ntp::packet($packet_length,
-                             self.leap_indicator,
-                             self.version,
-                             self.mode,
-                             self.stratum,
-                             self.poll,
-                             self.precision,
-                             self.root_delay,
-                             self.root_dispersion,
-                             self.reference_id,
-                             self.reference_timestamp,
-                             self.originate_timestamp,
-                             self.receive_timestamp,
-                             self.transmit_timestamp);
+type Extension = unit {
+    field_type: uint16;
+    length: uint16;
+    value: bytes &size=self.length;
+    padding: bytes &size=(4 - (self.length % 4)) % 4;
+};
+
+type MAC = unit {
+    key_id: uint32;
+    digest: bytes &size=self.compute_digest_size();
+    
+    var digest_size: uint64;
+    
+    on init {
+        if ( self.context.connection.protocol == "MD5" )
+            self.digest_size = 16;
+        else if ( self.context.connection.protocol == "SHA1" )
+            self.digest_size = 20;
+    }
+    
+    function compute_digest_size(): uint64 {
+        return self.digest_size;
+    }
+};
+
+type NTPTimestamp = unit {
+    era: uint32;
+    seconds: uint32;
+    fraction: uint32;
+};
+
+const MODE_RESERVED1 = 0;
+const MODE_SYMMETRIC_ACTIVE = 1;
+const MODE_SYMMETRIC_PASSIVE = 2;
+const MODE_CLIENT = 3;
+const MODE_SERVER = 4;
+const MODE_BROADCAST = 5;
+const MODE_CONTROL = 6;
+const MODE_RESERVED2 = 7;
+
+const STRATUM_UNSPECIFIED = 0;
+const STRATUM_PRIMARY = 1;
+const STRATUM_SECONDARY_MIN = 2;
+const STRATUM_SECONDARY_MAX = 15;
+const STRATUM_UNSYNCHRONIZED = 16;

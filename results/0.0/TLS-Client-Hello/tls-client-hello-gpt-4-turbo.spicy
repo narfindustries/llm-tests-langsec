@@ -1,39 +1,41 @@
 module TLS;
 
+import spicy;
+
 public type ProtocolVersion = unit {
     major: uint8;
     minor: uint8;
 };
 
 public type Random = unit {
-    gmt_unix_time: uint32;
+    gmt_unix_time: bytes &size=4;
     random_bytes: bytes &size=28;
 };
 
 public type SessionID = unit {
     length: uint8;
-    session_id: bytes &size=self.length;
+    session_id: bytes &size=(self.length);
 };
 
 public type CipherSuites = unit {
     length: uint16;
-    cipher_suites: uint16[] &size=(self.length / 2);
+    cipher_suites: bytes &size=(self.length);
 };
 
 public type CompressionMethods = unit {
     length: uint8;
-    compression_methods: uint8[] &size=self.length;
+    methods: bytes &size=(self.length);
 };
 
 public type Extension = unit {
     extension_type: uint16;
-    length: uint16;
-    data: bytes &size=self.length;
+    extension_data_length: uint16;
+    extension_data: bytes &size=(self.extension_data_length);
 };
 
 public type Extensions = unit {
     length: uint16;
-    extensions: Extension[] &eod;
+    extensions: Extension[] &size=(self.length);
 };
 
 public type ClientHello = unit {
@@ -43,4 +45,11 @@ public type ClientHello = unit {
     cipher_suites: CipherSuites;
     compression_methods: CompressionMethods;
     extensions: Extensions;
+};
+
+public type TLSPlaintext = unit {
+    content_type: uint8;
+    legacy_record_version: ProtocolVersion;
+    length: uint16;
+    fragment: ClientHello;
 };

@@ -1,72 +1,123 @@
-# Define a module for the TIFF file format
-module Tiff;
+module TIFF;
 
-# Define the TIFF header
-type TiffHeader: record {
-    byte_order: uint8[2];
-    tiff_magic: uint16;
-    if_offset: uint32;
-} &byteorder=bigEndian;
-
-# Define the TIFF IFD (Image File Directory)
-type TiffIfd: record {
-    entry_count: uint16;
-    entries: TiffIfdEntry[entry_count];
-    next_ifd_offset: uint32;
+type tiff_header = record {
+  byte_order = uint16;
+  version = uint16;
 };
 
-# Define a single TIFF IFD entry
-type TiffIfdEntry: record {
-    tag: uint16;
-    type: uint16;
-    count: uint32;
-    value: bytestring &length=count;
+type ifd_entry = record {
+  tag = uint16;
+  type = uint16;
+  count = uint32;
+  value = data;
 };
 
-# Define the main parsing logic
-event zeek_init() {
-    # Register the TIFF parser
-    Analyzer::register_for_ports(tcp, 0/0, Tiff::parser);
-}
+type ifd = record {
+  num_entries = uint16;
+  entries = vector of ifd_entry;
+  next_ifd_offset = uint32;
+};
 
-event Tiff::parser(connection: Connection, data: string) {
-    # Parse the TIFF header
-    local header: TiffHeader;
-    header = TiffHeader($data=data);
+type tiff = record {
+  header = tiff_header;
+  ifd = ifd;
+};
 
-    # Check if the data is a valid TIFF file
-    if (header$tiff_magic != 0x002A) {
-        return;
-    }
+type data = case ifd_entry_type of {
+  1 => uint8,  # BYTE
+  2 => uint8,  # ASCII
+  3 => uint16,  # SHORT
+  4 => uint32,  # LONG
+  5 => rational,  # RATIONAL
+  6 => int8,  # SBYTE
+  7 => uint8,  # UNDEFINED
+  8 => int16,  # SSHORT
+  9 => int32,  # SLONG
+  10 => srational,  # SRATIONAL
+};
 
-    # Parse the TIFF IFD
-    local ifd: TiffIfd;
-    ifd = TiffIfd($data=subbytes(data, header$if_offset));
+type ifd_entry_type = uint16;
 
-    # Process each IFD entry
-    for (entry in ifd$entries) {
-        # Handle different types of IFD entries
-        switch (entry$type) {
-            case 1: # BYTE
-                local byte_value: uint8;
-                byte_value = uint8($data=entry$value);
-                print fmt("BYTE value: %d", byte_value);
-                break;
-            case 2: # ASCII
-                local ascii_value: string;
-                ascii_value = string($data=entry$value);
-                print fmt("ASCII value: %s", ascii_value);
-                break;
-            case 3: # SHORT
-                local short_value: uint16;
-                short_value = uint16($data=entry$value);
-                print fmt("SHORT value: %d", short_value);
-                break;
-            case 4: # LONG
-                local long_value: uint32;
-                long_value = uint32($data=entry$value);
-                print fmt("LONG value: %d", long_value);
-                break;
-        }
-    }
-}
+type rational = record {
+  numerator = uint32;
+  denominator = uint32;
+};
+
+type srational = record {
+  numerator = int32;
+  denominator = int32;
+};
+
+type tag_numbers = enum {
+  ImageWidth,
+  ImageLength,
+  BitsPerSample,
+  Compression,
+  PhotometricInterpretation,
+  Orientation,
+  SamplesPerPixel,
+  PlanarConfiguration,
+  YCbCrSubSampling,
+  YCbCrPositioning,
+  XResolution,
+  YResolution,
+  ResolutionUnit,
+  DateTime,
+  Artist,
+  ImageDescription,
+  Make,
+  Model,
+  Software,
+  DateTimeOriginal,
+  DateTimeDigitized,
+};
+
+type compression = enum {
+  None,
+  CCITTGroup3,
+  CCITTGroup4,
+  LZW,
+  PackBits,
+};
+
+type photometric_interpretation = enum {
+  WhiteIsZero,
+  BlackIsZero,
+  RGB,
+  PaletteColor,
+};
+
+type orientation = enum {
+  TopLeft,
+  TopRight,
+  BottomRight,
+  BottomLeft,
+  LeftTop,
+  RightTop,
+  RightBottom,
+  LeftBottom,
+};
+
+type planar_configuration = enum {
+  Chunky,
+  Planar,
+};
+
+type ycbcr_sub_sampling = enum {
+  YCbCr444,
+  YCbCr422,
+  YCbCr420,
+};
+
+type ycbcr_positioning = enum {
+  CoSited,
+  NonCoSited,
+};
+
+type resolution_unit = enum {
+  None,
+  Inch,
+  Centimeter,
+};
+
+let tiff_parser = TIFF::tiff; // parser for TIFF file format

@@ -1,28 +1,69 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/modbus"
-           xmlns:tns="http://example.com/dfdl/modbus">
+           targetNamespace="http://example.com/modbus"
+           xmlns:ex="http://example.com/modbus">
 
-  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="ModbusFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     binaryNumberRep="binary"
+                     bitOrder="mostSignificantBitFirst"
+                     lengthKind="delimited"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
 
-  <xs:element name="ModbusFrame" type="tns:ModbusFrameType"/>
+  <xs:element name="ModbusFrame">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:initiator="'\x00\x00'"/>
+        <xs:element name="LengthField" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../LengthField - 2 }"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="ModbusFrameType">
-    <xs:sequence>
-      <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
-      <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
-      <xs:element name="LengthField" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:encoding="binary, bigEndian"/>
-      <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
-      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:encoding="binary"/>
-      <xs:element name="Data" type="tns:DataField" dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="ErrorResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1"/>
+        <xs:element name="ExceptionCode" type="xs:unsignedByte" dfdl:length="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="DataField">
-    <xs:sequence>
-      <xs:element name="DataBytes" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="FunctionCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+      <xs:enumeration value="22"/>
+      <xs:enumeration value="23"/>
+      <xs:enumeration value="24"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ExceptionCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

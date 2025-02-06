@@ -1,30 +1,44 @@
-namespace zip;
+enum CompressionMethod : uint16 {
+    STORE = 0,
+    SHRINK = 1,
+    IMPLODE = 6,
+    DEFLATE = 8,
+    DEFLATE64 = 9,
+    BZIP2 = 12,
+    LZMA = 14,
+    PPMD = 98
+}
 
-struct ZipFile {
-    local uint32 signature = 0x04034b50;
-    uint16 version;
-    uint16 flags;
-    uint16 compression;
-    uint16 modTime;
-    uint16 modDate;
+struct LocalFileHeader {
+    uint32 signature = 0x04034b50;
+    uint16 versionNeededToExtract;
+    uint16 generalPurposeBitFlag;
+    CompressionMethod compressionMethod;
+    uint16 lastModFileTime;
+    uint16 lastModFileDate;
     uint32 crc32;
     uint32 compressedSize;
     uint32 uncompressedSize;
     uint16 fileNameLength;
     uint16 extraFieldLength;
-    string fileName[fileNameLength];
-    uint8 extraField[extraFieldLength];
-    uint8 compressedData[compressedSize];
+    uint8[fileNameLength] fileName;
+    uint8[extraFieldLength] extraField;
+}
+
+struct DataDescriptor {
+    uint32 crc32;
+    uint32 compressedSize;
+    uint32 uncompressedSize;
 }
 
 struct CentralDirectoryFileHeader {
-    local uint32 signature = 0x02014b50;
+    uint32 signature = 0x02014b50;
     uint16 versionMadeBy;
-    uint16 versionNeeded;
-    uint16 flags;
-    uint16 compression;
-    uint16 modTime;
-    uint16 modDate;
+    uint16 versionNeededToExtract;
+    uint16 generalPurposeBitFlag;
+    CompressionMethod compressionMethod;
+    uint16 lastModFileTime;
+    uint16 lastModFileDate;
     uint32 crc32;
     uint32 compressedSize;
     uint32 uncompressedSize;
@@ -35,25 +49,49 @@ struct CentralDirectoryFileHeader {
     uint16 internalFileAttributes;
     uint32 externalFileAttributes;
     uint32 relativeOffsetOfLocalHeader;
-    string fileName[fileNameLength];
-    uint8 extraField[extraFieldLength];
-    string fileComment[fileCommentLength];
+    uint8[fileNameLength] fileName;
+    uint8[extraFieldLength] extraField;
+    uint8[fileCommentLength] fileComment;
 }
 
 struct EndOfCentralDirectoryRecord {
-    local uint32 signature = 0x06054b50;
-    uint16 diskNumber;
-    uint16 centralDirectoryStartDisk;
-    uint16 centralDirectoryRecordsOnDisk;
-    uint16 totalCentralDirectoryRecords;
-    uint32 centralDirectorySize;
-    uint32 centralDirectoryOffset;
-    uint16 commentLength;
-    string comment[commentLength];
+    uint32 signature = 0x06054b50;
+    uint16 numberOfThisDisk;
+    uint16 diskWhereCentralDirectoryStarts;
+    uint16 numberOfCentralDirectoryRecordsOnThisDisk;
+    uint16 totalNumberOfCentralDirectoryRecords;
+    uint32 sizeOfCentralDirectory;
+    uint32 offsetOfStartOfCentralDirectory;
+    uint16 zipFileCommentLength;
+    uint8[zipFileCommentLength] zipFileComment;
 }
 
-struct ZipArchive {
-    ZipFile files[];
-    CentralDirectoryFileHeader centralDirectory[];
-    EndOfCentralDirectoryRecord endOfCentralDirectory;
+struct ZIP64EndOfCentralDirectoryRecord {
+    uint32 signature = 0x06064b50;
+    uint64 sizeOfZIP64EndOfCentralDirectoryRecord;
+    uint16 versionMadeBy;
+    uint16 versionNeededToExtract;
+    uint32 numberOfThisDisk;
+    uint32 diskWhereCentralDirectoryStarts;
+    uint64 numberOfCentralDirectoryRecordsOnThisDisk;
+    uint64 totalNumberOfCentralDirectoryRecords;
+    uint64 sizeOfCentralDirectory;
+    uint64 offsetOfStartOfCentralDirectory;
+    uint8[] zip64ExtensibleDataSector;
+}
+
+struct ZIP64EndOfCentralDirectoryLocator {
+    uint32 signature = 0x07064b50;
+    uint32 numberOfDiskWithStartOfZIP64EndOfCentralDirectory;
+    uint64 relativeOffsetOfZIP64EndOfCentralDirectoryRecord;
+    uint32 totalNumberOfDisks;
+}
+
+struct ZIPFile {
+    LocalFileHeader[] localFileHeaders;
+    DataDescriptor? dataDescriptor;
+    CentralDirectoryFileHeader[] centralDirectoryFileHeaders;
+    EndOfCentralDirectoryRecord endOfCentralDirectoryRecord;
+    ZIP64EndOfCentralDirectoryRecord? zip64EndOfCentralDirectoryRecord;
+    ZIP64EndOfCentralDirectoryLocator? zip64EndOfCentralDirectoryLocator;
 }

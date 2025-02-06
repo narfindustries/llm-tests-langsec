@@ -1,0 +1,269 @@
+module ELF;
+
+public type Elf32_Addr = uint32;
+public type Elf64_Addr = uint64;
+public type Elf32_Half = uint16;
+public type Elf64_Half = uint16;
+public type Elf32_Off = uint32;
+public type Elf64_Off = uint64;
+public type Elf32_Sword = int32;
+public type Elf64_Sword = int32;
+public type Elf32_Word = uint32;
+public type Elf64_Word = uint64;
+public type Elf32_Xword = uint64;
+public type Elf64_Xword = uint64;
+
+public type Elf32_Ehdr = unit {
+    e_ident: bytes &size=16;
+    e_type: Elf32_Half;
+    e_machine: Elf32_Half;
+   极e_version: Elf32_Word;
+    e_entry: Elf32_Addr;
+    e_phoff: Elf32_Off;
+    e_shoff: Elf32_Off;
+    e_flags: Elf32_Word;
+    e_ehsize: Elf32_Half;
+    e_phentsize: Elf32_Half;
+    e_phnum: Elf32_Half;
+    e_shentsize: Elf32_Half;
+    e_shnum: Elf32_Half;
+    e_shstrndx: Elf32_Half;
+};
+
+public type Elf64_Ehdr = unit {
+    e_ident: bytes &size=16;
+    e_type: Elf64_Half;
+    e_machine: Elf64_Half;
+    e_version: Elf64_Word;
+    e_entry: Elf64_Addr;
+    e_phoff: Elf64_Off;
+    e_shoff: Elf64_Off;
+    e_flags: Elf64_Word;
+    e_e极hsize: Elf64_Half;
+    e_phentsize: Elf64_Half;
+    e_phnum: Elf64_Half;
+    e_shentsize: Elf64_Half;
+    e_shnum: Elf64_Half;
+    e_shstrndx: Elf64_Half;
+};
+
+public type Elf32_Phdr = unit {
+    p_type: Elf32_Word;
+    p_offset: Elf32_Off;
+    p_vaddr: Elf32_Addr;
+    p_paddr: Elf32_Addr;
+    p_filesz: Elf32_Word;
+    p_memsz: Elf32_Word;
+    p_flags: Elf32_Word;
+    p_align: Elf32_Word;
+};
+
+public type Elf64_Phdr = unit {
+    p_type: Elf64_Word;
+    p_offset: Elf64_Off;
+    p_vaddr: Elf64_Addr;
+    p_paddr: Elf64_Addr;
+    p_filesz: Elf64_Xword;
+    p_memsz: Elf64_Xword;
+    p_flags: Elf64_Word;
+    p_align: Elf64_Xword;
+};
+
+public type Elf32_Shdr = unit {
+    sh_name: Elf32_Word;
+    sh_type: Elf32_Word;
+    sh_flags: Elf32_Word;
+    sh_addr: Elf32_Addr;
+    sh_offset: Elf32_Off;
+    sh_size: Elf32_极Word;
+    sh_link: Elf32_Word;
+    sh_info极: Elf32_Word;
+    sh_addralign: Elf32_Word;
+    sh_entsize: Elf32_Word;
+};
+
+public type Elf64_Shdr = unit {
+    sh_name: Elf64_Word;
+    sh_type: Elf64_Word;
+    sh_flags: Elf64_Xword;
+    sh_addr: Elf64_Addr;
+    sh_offset: Elf64_Off;
+    sh_size: Elf64_Xword;
+    sh_link: Elf64_Word;
+    sh_info: Elf64_Word;
+    sh_addralign: Elf64_Xword;
+    sh_entsize: Elf64_Xword;
+};
+
+public type Elf32_Sym = unit {
+    st_name: Elf32_Word;
+    st_value: Elf32_Addr;
+    st_size: Elf32_Word;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: Elf32_Half;
+};
+
+public type Elf64_Sym = unit {
+    st_name: Elf64_Word;
+    st_value: Elf64_Addr;
+    st_size: Elf64_Xword;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: Elf64_Half;
+};
+
+public type Elf32_Rel = unit {
+    r_offset: Elf32_Addr;
+    r_info: Elf32_Word;
+};
+
+public type Elf64_Rel = unit {
+    r_offset: Elf64_Addr;
+    r_info: Elf64_Xword;
+};
+
+public type Elf32_Rela = unit {
+    r_offset: Elf32_Addr;
+    r_info: Elf32_Word;
+    r_addend: Elf32_Sword;
+};
+
+public type Elf64_Rela = unit {
+    r_offset: Elf64_Addr;
+    r_info: Elf64_Xword;
+    r_addend: Elf64_Sword;
+};
+
+public type Elf32_Dyn = unit {
+    d_tag: Elf32_Sword;
+    d_val: Elf32_Word;
+};
+
+public type Elf64_Dyn = unit {
+    d_tag: Elf64_Sword;
+    d_val: Elf64_Xword;
+};
+
+public type Elf32_Verdef = unit {
+    vd_version: Elf32_Half;
+    vd_flags: Elf32_Half;
+    vd_ndx: Elf32_Half;
+    vd_cnt: Elf32_Half;
+    vd_hash: Elf32_Word;
+    vd_aux: Elf32_Word;
+    vd_next: Elf32_Word;
+};
+
+public type Elf64_Verdef = unit {
+    vd_version: Elf64_Half;
+    vd_flags: Elf64_Half;
+    vd_ndx: Elf64_Half;
+    vd_cnt: Elf64_Half;
+    vd_hash: Elf64_Word;
+    vd_aux: Elf64_Word;
+    vd_next: Elf64_Word;
+};
+
+public type Elf32_Verdaux = unit {
+    vda_name: Elf32_Word;
+    vda_next: Elf32_Word;
+};
+
+public type Elf64_Verdaux = unit {
+    vda_name: Elf64_Word;
+    vda_next: Elf64_Word;
+};
+
+public type Elf32_Verneed = unit {
+    vn_version: Elf32_Half;
+    vn_cnt: Elf32_Half;
+    vn_file: Elf32_Word;
+    vn_aux: Elf32_Word;
+    vn_next: Elf32_Word;
+};
+
+public type Elf64_Verneed = unit {
+    vn_version: Elf64_Half;
+    vn_cnt: Elf64_Half;
+    vn_file: Elf64_Word;
+    vn_aux: Elf64_Word;
+    vn_next: Elf64_Word;
+};
+
+public type Elf32_Vernaux = unit {
+    vna_hash: Elf32_Word;
+    vna_flags: Elf32_Half;
+    vna_other: Elf32_Half;
+    vna_name: Elf32_Word;
+    vna_next: Elf32_Word;
+};
+
+public type Elf64_Vernaux = unit {
+    vna_hash: Elf64_Word;
+    vna_flags: Elf64_Half;
+    vna_other: Elf64_Half;
+    vna_name: Elf64_Word;
+    vna_next: Elf64_Word;
+};
+
+public type Elf32_Nhdr = unit {
+    n_namesz: Elf32_Word;
+    n_descsz: Elf32_Word;
+    n_type: Elf32_Word;
+};
+
+public type Elf64_Nhdr = unit {
+    n_namesz: Elf64_Word;
+    n_descsz: Elf64_Word;
+    n_type: Elf64_Word;
+};
+
+public type Elf32_Move = unit {
+    m_value: Elf32_Xword;
+    m_info: Elf32_Xword;
+    m_poffset: Elf32_Xword;
+    m_repeat: Elf32_Half;
+    m_stride: Elf32_Half;
+};
+
+public type Elf64_Move = unit {
+    m_value: Elf64_Xword;
+    m_info: Elf64_Xword;
+    m_poffset: Elf64_Xword;
+    m_repeat: Elf64_Half;
+    m_stride: Elf64_Half;
+};
+
+public type Elf32_Lib = unit {
+    l_name: Elf32_Word;
+    l_time_stamp: Elf32_Word;
+    l_checksum: Elf32_Word;
+    l_version: Elf32_Word;
+    l_flags: Elf32_Word;
+};
+
+public type Elf64_Lib = unit {
+    l_name: Elf64_Word;
+    l_time_stamp: Elf64_Word;
+    l_checksum: Elf64_Word;
+    l_version: Elf64_Word;
+    l_flags: Elf64_Word;
+};
+
+public type Elf32_AddrRange = unit {
+    ar_addr: Elf32_Addr;
+    ar_size: Elf32_Word;
+};
+
+public type Elf64_AddrRange = unit {
+    ar_addr: Elf64_Addr;
+    ar_size: Elf64_Xword;
+};
+
+public type Elf32_Syminfo = unit {
+    si_boundto: Elf32_Half;
+    si_flags: Elf32_Half;
+};
+
+public type Elf64_Syminfo

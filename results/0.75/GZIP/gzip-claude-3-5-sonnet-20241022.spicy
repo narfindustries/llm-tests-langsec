@@ -1,43 +1,56 @@
 module GZIP;
 
-import spicy;
+public type Extra = unit {
+    xlen: uint16;
+    extra_data: bytes &size=self.xlen;
+};
 
-public type GZIP = unit {
-    magic1: uint8 &requires = 0x1f;
-    magic2: uint8 &requires = 0x8b;
-    compression_method: uint8 &requires = 0x08;  # DEFLATE
-    flags: uint8;
-    timestamp: uint32 be;
-    extra_flags: uint8;
+public type Filename = unit {
+    filename: bytes &until=b"\x00";
+};
+
+public type Comment = unit {
+    comment: bytes &until=b"\x00";
+};
+
+public type HeaderCRC = unit {
+    hcrc: uint16;
+};
+
+public type Header = unit {
+    id1: uint8 &requires = 0x1f;
+    id2: uint8 &requires = 0x8b;
+    cm: uint8;
+    flg: uint8;
+    mtime: uint32;
+    xfl: uint8;
     os: uint8;
 
-    # Optional fields based on flags
-    on flags & 0x04 -> {
-        extra_length: uint16;
-        extra_data: bytes &size=self.extra_length;
-    }
+    switch ( self.flg & 0x04 ) {
+        0x04 -> extra: Extra;
+    };
+    
+    switch ( self.flg & 0x08 ) {
+        0x08 -> filename: Filename;
+    };
+    
+    switch ( self.flg & 0x10 ) {
+        0x10 -> comment: Comment;
+    };
+    
+    switch ( self.flg & 0x02 ) {
+        0x02 -> header_crc: HeaderCRC;
+    };
 
-    on flags & 0x08 -> {
-        filename: bytes &until=b"\x00";
-    }
+    compressed_data: bytes &size=self.compressed_data_size();
+    crc32: uint32;
+    isize: uint32;
 
-    on flags & 0x10 -> {
-        comment: bytes &until=b"\x00";
-    }
-
-    on flags & 0x02 -> {
-        crc16: uint16;
-    }
-
-    compressed_data: bytes &eod;
-
-    on %done {
-        print "GZIP Header Parsed";
+    var compressed_data_size: function(): uint64 {
+        return self.input().length() - self.input().offset() - 8;
     }
 };
 
-# Protocol analyzer
-public analyzer GZIP over TCP:
-    parse with GZIP;
-
-on GZIP::GZIP -> event gzip_message($conn, self);
+public type GZIP_File = unit {
+    header: Header;
+};

@@ -1,90 +1,75 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
-#include <hammer/hammer.h> 
+#include <stdlib.h>
 
-// Basic fixed-size integer types
-static HParsedToken *act_uint16le(const HParseResult *p, void *user_data) {
-    const uint8_t *bytes = h_seq_elements(p->ast, 0);
-    return H_MAKE_UINT(((uint16_t)bytes[1] << 8) | bytes[0]);
-}
-
-static HParsedToken *act_uint32le(const HParseResult *p, void *user_data) {
-    const uint8_t *bytes = h_seq_elements(p->ast, 0);
-    return H_MAKE_UINT(((uint32_t)bytes[3] << 24) | ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[1] << 8) | bytes[0]);
-}
-
-static HParsedToken *act_uint64le(const HParseResult *p, void *user_data) {
-    const uint8_t *bytes = h_seq_elements(p->ast, 0);
-    return H_MAKE_UINT(((uint64_t)bytes[7] << 56) | ((uint64_t)bytes[6] << 48) | ((uint64_t)bytes[5] << 40) | ((uint64_t)bytes[4] << 32) | ((uint64_t)bytes[3] << 24) | ((uint64_t)bytes[2] << 16) | ((uint64_t)bytes[1] << 8) | bytes[0]);
-}
-
-// Varint parsing (compact representation for integers)
-static HParsedToken *act_varint(const HParseResult *p, void *user_data) {
-    uint64_t result = 0;
-    int shift = 0;
-    for (int i = 0; i < p->ast->seq->used; i++) {
-        uint8_t byte = HPInt_get_uint(p->ast->seq->elements[i]->token);
-        result |= (uint64_t)(byte & 0x7F) << shift;
-        shift += 7;
-        if ((byte & 0x80) == 0) break;
-    }
-    return H_MAKE_UINT(result);
-}
-
-static HParser *bitcoin_varint() {
-    return h_action(h_length_value(h_uint8(), h_int_range(h_uint8(), 0x00, 0xFD)), act_varint, NULL);
-}
-
-// Parser for transaction input
-static HParser *bitcoin_tx_in() {
-    HParser *txid = h_repeat_n(h_uint8(), 32);
-    HParser *vout = h_uint32le();
-    HParser *script_len = bitcoin_varint();
-    HParser *script_sig = h_action(h_length_value(script_len, h_uint8()), h_collect_uint8, NULL);
-    HParser *seq = h_uint32le();
-
-    return h_sequence(txid, vout, script_sig, seq, NULL);
-}
-
-// Parser for transaction output
-static HParser *bitcoin_tx_out() {
-    HParser *value = h_uint64le();
-    HParser *script_len = bitcoin_varint();
-    HParser *script_pubkey = h_action(h_length_value(script_len, h_uint8()), h_collect_uint8, NULL);
-
-    return h_sequence(value, script_pubkey, NULL);
-}
-
-// Main parser for a Bitcoin transaction
-static HParser *bitcoin_transaction() {
-    HParser *version = h_uint32le();
-    HParser *in_count = bitcoin_varint();
-    HParser *inputs = h_many(bitcoin_tx_in(), in_count);
-    HParser *out_count = bitcoin_varint();
-    HParser *outputs = h_many(bitcoin_tx_out(), out_count);
-    HParser *locktime = h_uint32le();
-
-    return h_sequence(version, inputs, outputs, locktime, NULL);
-}
+// Function prototypes
+static void parse_bitcoin_transaction(const uint8_t *buffer, size_t length);
 
 int main(int argc, char **argv) {
-    HParser *btc_parser = bitcoin_transaction();
-
-    // parsing simulation
-    const uint8_t testcase[] = {
-        0x01, 0x00, 0x00, 0x00, 0x01, // Version
-        // Inputs
-        0x01, 0x78, 0x30, 0xF4, 0xC6, 0xAA, 0x42, 0xDA, 0x04, 0x43, 0x19,
-        0x00, 0x00, 0x00, 0x00 // Locktime
-    };
-    size_t len = sizeof(testcase)/sizeof(testcase[0]);
-    HParseResult *res = h_parse(btc_parser, testcase, len);
-    if (res) {
-        printf("Parsed successfully.\n");
-    } else {
-        printf("Failed to parse.\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary transaction file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parse_result_free(res);
-    h_parser_free(btc_parser);
-    return 0;
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    parse_bitcoin_transaction(buffer, file_size);
+    free(buffer);
+
+    return EXIT_SUCCESS;
+}
+
+static void parse_bitcoin_transaction(const uint8_t *buffer, size_t length) {
+    HParser *uint32 = h_uint32();
+    HParser *uint64 = h_uint64();
+    HParser *var_int = h_uint64(); // Varint parser using uint64 directly
+    HParser *bits256 = h_bits(256, false);
+    HParser *bits32 = h_bits(32, false);
+    HParser *tx_in_previous_output = h_sequence(bits256, bits32, NULL);
+    HParser *tx_in_seq = uint32;
+
+    HParser *bytes = h_blob(); // Using h_blob() as a placeholder since h_bytes is not defined in Hammer
+    HParser *tx_input = h_sequence(tx_in_previous_output, h_length_value(var_int, bytes), tx_in_seq, NULL);
+
+    HParser *tx_out_value = uint64;
+    HParser *tx_out_script = h_length_value(var_int, bytes);
+    HParser *tx_output = h_sequence(tx_out_value, tx_out_script, NULL);
+
+    HParser *transaction = h_sequence(uint32,
+                                      h_length_value(var_int, tx_input),
+                                      h_length_value(var_int, tx_output),
+                                      uint32,
+                                      NULL);
+
+    HParseResult *result = h_parse(transaction, buffer, length);
+    if (result && result->result) {
+        printf("Transaction parsed successfully.\n");
+        h_pprint(stdout, result, 0, 0);
+    } else {
+        printf("Failed to parse transaction.\n");
+    }
+
+    h_parser_free(transaction);
+    h_parser_free(tx_input);
+    h_parser_free(tx_output);
+    h_parse_result_free(result);
 }

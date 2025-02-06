@@ -1,0 +1,89 @@
+module HL7v2;
+
+type HL7_Field = bytes &until=/\x0D/;
+type HL7_Segment = unit {
+    fields: HL7_Field[];
+};
+
+type MSH = unit {
+    field_separator:    bytes &size=1;
+    encoding_chars:     bytes &size=4;
+    sending_app:        HL7_Field;
+    sending_facility:   HL7_Field;
+    receiving_app:      HL7_Field;
+    receiving_facility:  HL7_Field;
+    date_time:          HL7_Field;
+    security:           HL7_Field;
+    message_type:       HL7_Field;
+    message_control_id: HL7_Field;
+    processing_id:      HL7_Field;
+    version_id:         HL7_Field;
+};
+
+type PID = unit {
+    set_id:             HL7_Field;
+    patient_id:         HL7_Field;
+    patient_identifier_list: HL7_Field;
+    alternate_patient_id: HL7_Field;
+    patient_name:       HL7_Field;
+    mother_maiden_name:  HL7_Field;
+    date_time_of_birth: HL7_Field;
+    sex:                HL7_Field;
+    patient_alias:      HL7_Field;
+    race:               HL7_Field;
+    patient_address:    HL7_Field;
+    county_code:        HL7_Field;
+    phone_home:         HL7_Field;
+    phone_business:    HL7_Field;
+    primary_language:   HL7_Field;
+    marital_status:     HL7_Field;
+};
+
+type PV1 = unit {
+    set_id:             HL7_Field;
+    patient_class:       HL7_Field;
+    assigned_location:   HL7_Field;
+    admission_type:      HL7_Field;
+    preadmit_number:     HL7_Field;
+    prior_location:      HL7_Field;
+    attending_doctor:   HL7_Field;
+    referring_doctor:    HL7_Field;
+    consulting_doctor:   HL7_Field;
+    hospital_service:    HL7_Field;
+};
+
+type OBX = unit {
+    set_id:             HL7_Field;
+    value_type:         HL7_Field;
+    observation_id:      HL7_Field;
+    observation_sub_id:  HL7_Field;
+    observation_value:   HL7_Field;
+    units:              HL7_Field;
+    references_range:    HL7_Field;
+    abnormal_flags:     HL7_Field;
+    probability:        HL7_Field;
+    nature_of_abnormal_test: HL7_Field;
+};
+
+type ORC = unit {
+    order_control:      HL7_Field;
+    placer_order_num:   HL7_Field;
+    filler_order_num:   HL7_Field;
+    placer_group_num:   HL7_Field;
+    order_status:       HL7_Field;
+    quantity_timing:    HL7_Field;
+    parent:             HL7_Field;
+    date_time_transaction: HL7_Field;
+};
+
+type HL7_Message = unit {
+    msh: MSH;
+    pid: PID;
+    pv1: PV1;
+    obx: OBX[];
+    orc: ORC[];
+};
+
+on HL7_Message::%done {
+    print "HL7 Message Parsed";
+}

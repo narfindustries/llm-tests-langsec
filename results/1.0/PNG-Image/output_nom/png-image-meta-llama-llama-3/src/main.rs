@@ -1,135 +1,141 @@
-use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::{length_data, many_till},
-    number::complete::{be_u16, be_u31, be_u8},
-    sequence::{tuple, preceded},
-    IResult,
-};
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
+use nom::bytes::complete::{tag, take};
+use nom::combinator::verify;
+use nom::number::complete::{be_u32};
+use nom::IResult;
 
-#[derive(Debug)]
-struct PngHeader {
-    signature: [u8; 8],
+const PNG_MAGIC_NUMBER: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+#[derive(Debug, PartialEq)]
+enum ColorType {
+    Grayscale,
+    RGB,
+    PLTE,
+    GreyscaleAlpha,
+    RGBA,
 }
 
-impl PngHeader {
-    fn parse(input: &[u8]) -> IResult<&[u8], PngHeader> {
-        map(take(8usize), |signature: &[u8]| PngHeader {
-            signature: signature.try_into().expect("signature has wrong length"),
-        })(input)
-    }
+#[derive(Debug, PartialEq)]
+enum CompressionMethod {
+    DeflateInflate,
 }
 
-#[derive(Debug)]
-enum PngChunkType {
-    Ihdr,
-    Plte,
-    Idat,
-    Iend,
-    Other([u8; 4]),
+#[derive(Debug, PartialEq)]
+enum FilterMethod {
+    Adaptive,
 }
 
-impl PngChunkType {
-    fn parse(input: &[u8]) -> IResult<&[u8], PngChunkType> {
-        let (input, chunk_type) = take(4usize)(input)?;
-        match chunk_type {
-            b"IHDR" => Ok((input, PngChunkType::Ihdr)),
-            b"PLTE" => Ok((input, PngChunkType::Plte)),
-            b"IDAT" => Ok((input, PngChunkType::Idat)),
-            b"IEND" => Ok((input, PngChunkType::Iend)),
-            _ => Ok((input, PngChunkType::Other(chunk_type.try_into().expect("wrong length")))),
-        }
-    }
+#[derive(Debug, PartialEq)]
+enum InterlaceMethod {
+    NoInterlacing,
+    Adam7,
 }
 
-#[derive(Debug)]
-struct PngChunk {
-    length: u32,
-    chunk_type: PngChunkType,
-    data: Vec<u8>,
-    crc: u32,
-}
-
-impl PngChunk {
-    fn parse(input: &[u8]) -> IResult<&[u8], PngChunk> {
-        let (input, length) = be_u31(input)?;
-        let (input, chunk_type) = PngChunkType::parse(input)?;
-        let (input, data) = take(length as usize)(input)?;
-        let (input, crc) = be_u32(input)?;
-        Ok((
-            input,
-            PngChunk {
-                length,
-                chunk_type,
-                data: data.to_vec(),
-                crc,
-            },
-        ))
-    }
-}
-
-#[derive(Debug)]
-struct PngIhdrChunk {
+#[derive(Debug, PartialEq)]
+struct IhdrChunk {
     width: u32,
     height: u32,
     bit_depth: u8,
-    color_type: u8,
-    compression_method: u8,
-    filter_method: u8,
-    interlace_method: u8,
+    color_type: ColorType,
+    compression_method: CompressionMethod,
+    filter_method: FilterMethod,
+    interlace_method: InterlaceMethod,
 }
 
-impl PngIhdrChunk {
-    fn parse(input: &[u8]) -> IResult<&[u8], PngIhdrChunk> {
+impl IhdrChunk {
+    fn parse(input: &[u8]) -> IResult<&[u8], IhdrChunk> {
         let (input, width) = be_u32(input)?;
         let (input, height) = be_u32(input)?;
-        let (input, bit_depth) = be_u8(input)?;
-        let (input, color_type) = be_u8(input)?;
-        let (input, compression_method) = be_u8(input)?;
-        let (input, filter_method) = be_u8(input)?;
-        let (input, interlace_method) = be_u8(input)?;
-        Ok((
-            input,
-            PngIhdrChunk {
-                width,
-                height,
-                bit_depth,
-                color_type,
-                compression_method,
-                filter_method,
-                interlace_method,
-            },
-        ))
+        let (input, bit_depth) = take(1u8)(input)?;
+        let (input, color_type) = take(1u8)(input)?;
+        let (input, compression_method) = take(1u8)(input)?;
+        let (input, filter_method) = take(1u8)(input)?;
+        let (input, interlace_method) = take(1u8)(input)?;
+
+        let color_type = match color_type[0] {
+            0 => ColorType::Grayscale,
+            2 => ColorType::RGB,
+            3 => ColorType::PLTE,
+            4 => ColorType::GreyscaleAlpha,
+            6 => ColorType::RGBA,
+            _ => panic!("Invalid color type"),
+        };
+
+        let compression_method = match compression_method[0] {
+            0 => CompressionMethod::DeflateInflate,
+            _ => panic!("Invalid compression method"),
+        };
+
+        let filter_method = match filter_method[0] {
+            0 => FilterMethod::Adaptive,
+            _ => panic!("Invalid filter method"),
+        };
+
+        let interlace_method = match interlace_method[0] {
+            0 => InterlaceMethod::NoInterlacing,
+            1 => InterlaceMethod::Adam7,
+            _ => panic!("Invalid interlace method"),
+        };
+
+        Ok((input, IhdrChunk {
+            width,
+            height,
+            bit_depth: bit_depth[0],
+            color_type,
+            compression_method,
+            filter_method,
+            interlace_method,
+        }))
     }
 }
 
-fn main() -> std::io::Result<()> {
+#[derive(Debug, PartialEq)]
+struct PngImage {
+    magic_number: [u8; 8],
+    ihdr_chunk: IhdrChunk,
+}
+
+impl PngImage {
+    fn parse(input: &[u8]) -> IResult<&[u8], PngImage> {
+        let (input, magic_number) = verify(take(8u8), |x| {
+            x == &PNG_MAGIC_NUMBER[..]
+        })(input)?;
+
+        let (input, _) = tag("IHDR")(input)?;
+        let (input, ihdr_length) = be_u32(input)?;
+        let (input, ihdr_chunk_data) = take(ihdr_length)(input)?;
+        let (_, ihdr_chunk) = IhdrChunk::parse(ihdr_chunk_data)?;
+
+        Ok((input, PngImage {
+            magic_number: [
+                magic_number[0], magic_number[1], magic_number[2], magic_number[3],
+                magic_number[4], magic_number[5], magic_number[6], magic_number[7],
+            ],
+            ihdr_chunk,
+        }))
+    }
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <input_file>", args[0]);
-        return Ok(());
+        println!("Usage: {} <png_file>", args[0]);
+        return;
     }
-    let mut file = File::open(&args[1])?;
+
+    let mut file = File::open(&args[1]).unwrap();
     let mut data = Vec::new();
-    file.read_to_end(&mut data)?;
-    let (_, header) = PngHeader::parse(&data).expect("failed to parse header");
-    println!("Header: {:?}", header);
-    let mut input = &data[8..];
-    let mut chunks = Vec::new();
-    while input.len() > 0 {
-        let (remaining, chunk) = PngChunk::parse(input).expect("failed to parse chunk");
-        chunks.push(chunk);
-        input = remaining;
-    }
-    for chunk in chunks {
-        match chunk.chunk_type {
-            PngChunkType::Ihdr => {
-                let (_, ihdr) = PngIhdrChunk::parse(&chunk.data).expect("failed to parse ihdr chunk");
-                println!("IHDR Chunk: {:?}", ihdr);
-            }
-            _ => println!("Chunk: {:?}", chunk),
+    file.read_to_end(&mut data).unwrap();
+
+    let result = PngImage::parse(&data);
+    match result {
+        Ok((_, png_image)) => {
+            println!("{:?}", png_image);
+        }
+        Err(err) => {
+            println!("{:?}", err);
         }
     }
-    Ok(())
 }

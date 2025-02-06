@@ -5,39 +5,50 @@
            xmlns="http://example.org/nitf"
            elementFormDefault="qualified">
 
-  <xs:element name="NITF">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Header" type="HeaderType"/>
-        <xs:element name="Body" type="BodyType" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
-    </xs:complexType>
-  </xs:element>
+  <xs:annotation>
+    <xs:documentation>DFDL schema for NITF (MIL-STD-2500C). This is a simplified representation and may not cover all edge cases or optional fields completely. Consult the official MIL-STD-2500C for complete details.</xs:documentation>
+  </xs:annotation>
 
-  <xs:complexType name="HeaderType">
+  <xs:element name="NITF" type="NITFType"/>
+
+  <xs:complexType name="NITFType">
     <xs:sequence>
-      <xs:element name="Title" type="xs:string"/>
-      <xs:element name="Date" type="xs:date"/>
+      <xs:element name="FileHeader" type="FileHeaderType"/>
+      <xs:element name="UserHeader" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ImageHeaders" type="ImageHeadersType"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="BodyType">
+  <xs:complexType name="FileHeaderType">
     <xs:sequence>
-      <xs:element name="Section" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="FileHeaderLength" type="xs:integer"/>
+      <xs:element name="Version" type="xs:string"/>
+      <xs:element name="UserHeaderLength" type="xs:integer"/>
+      <xs:element name="ImageHeaderLength" type="xs:integer"/>
+      <xs:element name="ImageDataListLength" type="xs:integer"/>
+      <xs:element name="NumberOfImages" type="xs:integer"/>
+      <!-- ... (Many more File Header fields - needs detailed mapping from MIL-STD-2500C) ... -->
     </xs:sequence>
   </xs:complexType>
 
+  <xs:complexType name="ImageHeadersType">
+    <xs:sequence>
+      <xs:element name="ImageHeader" type="ImageHeaderType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <dfdl:defineSchema>
-    <dfdl:format ref="http://www.ogf.org/dfdl/dfdl-1.0/"/>
-    <dfdl:textStandard ref="http://www.ogf.org/dfdl/dfdl-1.0/"/>
-    <dfdl:lengthKind>delimited</dfdl:lengthKind>
-    <dfdl:encoding>UTF-8</dfdl:encoding>
-    <dfdl:separator>
-        <dfdl:separatorPosition>before</dfdl:separatorPosition>
-        <dfdl:separatorString> </dfdl:separatorString>
-    </dfdl:separator>
-  </dfdl:defineSchema>
+  <xs:complexType name="ImageHeaderType">
+    <xs:sequence>
+      <xs:element name="ImageNumber" type="xs:integer"/>
+      <xs:element name="CompressionType" type="xs:string"/>
+      <xs:element name="ImageDataType" type="xs:string"/>
+      <xs:element name="NumberOfRows" type="xs:integer"/>
+      <xs:element name="NumberOfColumns" type="xs:integer"/>
+      <xs:element name="BitsPerPixel" type="xs:integer"/>
+      <xs:element name="SpatialResolution" type="xs:string"/>
+      <!-- ... (Many more Image Header fields - needs detailed mapping from MIL-STD-2500C) ... -->
+      <xs:element name="ImageData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

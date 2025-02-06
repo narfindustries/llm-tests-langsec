@@ -1,105 +1,101 @@
-use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_opt},
-    error::ParseError,
-    multi::{count, length_data, length_value, many0},
-    number::complete::{le_i32, le_u32, le_u64, le_u8, le_u16},
-    sequence::{preceded, tuple},
-    IResult,
-};
-use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::env;
+use nom::{
+    IResult,
+    bytes::complete::{take, take_while},
+    number::complete::{le_u32, le_u64},
+    combinator::map_res,
+    multi::length_data,
+    sequence::tuple,
+};
 
-// Bitcoin VarInt
-fn varint(input: &[u8]) -> IResult<&[u8], u64> {
-    let (input, first_byte) = le_u8(input)?;
-    match first_byte {
-        0xFD => map(le_u16, u64::from)(input),
-        0xFE => map(le_u32, u64::from)(input),
-        0xFF => le_u64(input),
-        _ => Ok((input, u64::from(first_byte))),
-    }
-}
-
-// Bitcoin Script
-fn script(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    length_data(varint)(input)
-}
-
-// Bitcoin Transaction Input
-fn tx_input(input: &[u8]) -> IResult<&[u8], TxInput> {
-    let (input, (prev_txid, prev_vout, script_sig, sequence)) = tuple((
-        take(32usize), // Previous transaction hash
-        le_u32,        // Previous transaction output index
-        script,        // ScriptSig
-        le_u32,        // Sequence
-    ))(input)?;
-    Ok((
-        input,
-        TxInput {
-            prev_txid: prev_txid.to_vec(),
-            prev_vout,
-            script_sig: script_sig.to_vec(),
-            sequence,
-        },
-    ))
-}
-
-// Bitcoin Transaction Output
-fn tx_output(input: &[u8]) -> IResult<&[u8], TxOutput> {
-    let (input, (value, script_pubkey)) = tuple((le_u64, script))(input)?;
-    Ok((
-        input,
-        TxOutput {
-            value,
-            script_pubkey: script_pubkey.to_vec(),
-        },
-    ))
-}
-
-// Bitcoin Transaction
-fn transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
-    let (input, (version, inputs, outputs, locktime)) = tuple((
-        le_i32,                                  // Version
-        length_value(varint, many0(tx_input)),   // Inputs
-        length_value(varint, many0(tx_output)),  // Outputs
-        le_u32,                                  // Locktime
-    ))(input)?;
-    Ok((
-        input,
-        Transaction {
-            version,
-            inputs,
-            outputs,
-            locktime,
-        },
-    ))
-}
-
-// Transaction Input Struct
 #[derive(Debug)]
-struct TxInput {
-    prev_txid: Vec<u8>,
-    prev_vout: u32,
-    script_sig: Vec<u8>,
+struct TransactionInput {
+    previous_transaction_hash: [u8; 32],
+    previous_transaction_output_index: u32,
+    script_length: u64,
+    signature_script: Vec<u8>,
     sequence: u32,
 }
 
-// Transaction Output Struct
 #[derive(Debug)]
-struct TxOutput {
+struct TransactionOutput {
     value: u64,
-    script_pubkey: Vec<u8>,
+    script_length: u64,
+    script_pub_key: Vec<u8>,
 }
 
-// Transaction Struct
 #[derive(Debug)]
 struct Transaction {
-    version: i32,
-    inputs: Vec<TxInput>,
-    outputs: Vec<TxOutput>,
+    version: u32,
+    inputs: Vec<TransactionInput>,
+    outputs: Vec<TransactionOutput>,
     locktime: u32,
+}
+
+fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
+    let (input, first_byte) = take(1usize)(input)?;
+    let first_byte = first_byte[0];
+    match first_byte {
+        0xFD => {
+            let (input, value) = le_u32(input)?;
+            Ok((input, value as u64))
+        }
+        0xFE => {
+            let (input, value) = le_u32(input)?;
+            Ok((input, value as u64))
+        }
+        0xFF => {
+            let (input, value) = le_u64(input)?;
+            Ok((input, value))
+        }
+        _ => Ok((input, first_byte as u64)),
+    }
+}
+
+fn parse_input(input: &[u8]) -> IResult<&[u8], TransactionInput> {
+    let (input, previous_transaction_hash) = take(32usize)(input)?;
+    let (input, previous_transaction_output_index) = le_u32(input)?;
+    let (input, script_length) = parse_varint(input)?;
+    let (input, signature_script) = take(script_length)(input)?;
+    let (input, sequence) = le_u32(input)?;
+
+    Ok((input, TransactionInput {
+        previous_transaction_hash: previous_transaction_hash.try_into().unwrap(),
+        previous_transaction_output_index,
+        script_length,
+        signature_script: signature_script.to_vec(),
+        sequence,
+    }))
+}
+
+fn parse_output(input: &[u8]) -> IResult<&[u8], TransactionOutput> {
+    let (input, value) = le_u64(input)?;
+    let (input, script_length) = parse_varint(input)?;
+    let (input, script_pub_key) = take(script_length)(input)?;
+
+    Ok((input, TransactionOutput {
+        value,
+        script_length,
+        script_pub_key: script_pub_key.to_vec(),
+    }))
+}
+
+fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
+    let (input, version) = le_u32(input)?;
+    let (input, input_count) = parse_varint(input)?;
+    let (input, inputs) = nom::multi::count(parse_input, input_count as usize)(input)?;
+    let (input, output_count) = parse_varint(input)?;
+    let (input, outputs) = nom::multi::count(parse_output, output_count as usize)(input)?;
+    let (input, locktime) = le_u32(input)?;
+
+    Ok((input, Transaction {
+        version,
+        inputs,
+        outputs,
+        locktime,
+    }))
 }
 
 fn main() {
@@ -114,8 +110,8 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match transaction(&buffer) {
-        Ok((_, tx)) => println!("{:?}", tx),
+    match parse_transaction(&buffer) {
+        Ok((_, transaction)) => println!("{:#?}", transaction),
         Err(e) => eprintln!("Failed to parse transaction: {:?}", e),
     }
 }

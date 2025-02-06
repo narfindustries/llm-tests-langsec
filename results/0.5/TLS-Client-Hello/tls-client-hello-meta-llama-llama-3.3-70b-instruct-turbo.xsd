@@ -1,76 +1,81 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/TLS-Client-Hello"
-           xmlns="http://example.com/TLS-Client-Hello"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           targetNamespace="http://example.com" 
+           xmlns="http://example.com" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="tls-client-hello">
+  <xs:element name="ClientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="record-layer" type="record-layerType" dfdl:Occurs="1..1" dfdl:OutputValueCalculator="{ 'messageType' }"/>
+        <xs:element name="legacy_version" type="xs:unsignedShort"/>
+        <xs:element name="random" type="xs:hexBinary" fixed="32"/>
+        <xs:element name="legacy_session_id" type="xs:hexBinary"/>
+        <xs:element name="cipher_suites">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="cipher_suite" type="xs:unsignedShort" maxOccurs="65535" minOccurs="2"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="legacy_compression_methods">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="compression_method" type="xs:unsignedByte" maxOccurs="255" minOccurs="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="extensions">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extension" maxOccurs="65535" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="extension_type" type="xs:unsignedShort"/>
+                    <xs:element name="extension_data" type="xs:hexBinary"/>
+                    <xs:choice>
+                      <xs:element name="supported_versions">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element name="version" type="xs:unsignedShort" maxOccurs="65535" minOccurs="1"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                      <xs:element name="pre_shared_key">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element name="identity" type="xs:hexBinary" maxOccurs="65535" minOccurs="1"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                      <xs:element name="key_share">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element name="group" type="xs:unsignedShort"/>
+                            <xs:element name="key_exchange" type="xs:hexBinary"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                      <xs:element name="supported_groups">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element name="group" type="xs:unsignedShort" maxOccurs="65535" minOccurs="1"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                      <xs:element name="signature_algorithms">
+                        <xs:complexType>
+                          <xs:sequence>
+                            <xs:element name="algorithm" type="xs:unsignedShort" maxOccurs="65535" minOccurs="1"/>
+                          </xs:sequence>
+                        </xs:complexType>
+                      </xs:element>
+                    </xs:choice>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="record-layerType">
-    <xs:sequence>
-      <xs:element name="content-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'contentType' }"/>
-      <xs:element name="version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'recordLength' }"/>
-      <xs:element name="handshake" type="handshakeType" dfdl:length="{ recordLength }" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="versionType">
-    <xs:sequence>
-      <xs:element name="major" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="minor" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="handshakeType">
-    <xs:sequence>
-      <xs:element name="handshake-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'handshakeType' }"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="3" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'handshakeLength' }"/>
-      <xs:element name="client-version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="random" type="xs:unsignedByte" dfdl:length="32" dfdl:encoding="utf-8"/>
-      <xs:element name="session-id" type="xs:unsignedByte" dfdl:length="{ session-id-length }" dfdl:encoding="utf-8"/>
-      <xs:element name="cipher-suites-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'cipherSuitesLength' }"/>
-      <xs:element name="cipher-suites" type="cipherSuitesType" dfdl:length="{ cipherSuitesLength * 2 }" dfdl:encoding="utf-8"/>
-      <xs:element name="compression-methods-length" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:OutputValueCalculator="{ 'compressionMethodsLength' }"/>
-      <xs:element name="compression-methods" type="compressionMethodsType" dfdl:length="{ compressionMethodsLength }" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="cipherSuitesType">
-    <xs:sequence>
-      <xs:element name="cipher-suite" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="compressionMethodsType">
-    <xs:sequence>
-      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="extensions">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="extension" type="extensionType" dfdl:Occurs="0..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="extensionType">
-    <xs:sequence>
-      <xs:element name="extension-type" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="extension-length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="extension-data" type="xs:unsignedByte" dfdl:length="{ extension-length }" dfdl:encoding="utf-8"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

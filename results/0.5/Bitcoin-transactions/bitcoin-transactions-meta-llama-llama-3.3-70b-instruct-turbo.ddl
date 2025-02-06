@@ -1,65 +1,57 @@
-domain BitcoinTransactions {
-  // Import required types and constants
-  import types: Integer, String, Bytes, DateTime, Boolean
-  import constants: MAX_TRANSACTION_SIZE
-
-  // Define the structure of a Bitcoin transaction
-  structure Transaction {
-    // Transaction version
-    field version: Integer(4)
-
-    // Input count
-    field input_count: Integer(1..MAX_TRANSACTION_SIZE)
-
-    // Transaction inputs
-    field inputs: array(TransactionInput, input_count)
-
-    // Output count
-    field output_count: Integer(1..MAX_TRANSACTION_SIZE)
-
-    // Transaction outputs
-    field outputs: array(TransactionOutput, output_count)
-
-    // Lock time
-    field lock_time: Integer(4)
+def bitcoin : 
+  type Transaction {
+    version: uint32 little_endian,
+    tx_in_count: varint,
+    tx_in: TransactionInput[tx_in_count],
+    tx_out_count: varint,
+    tx_out: TransactionOutput[tx_out_count],
+    lock_time: uint32 little_endian
   }
 
-  // Define the structure of a transaction input
-  structure TransactionInput {
-    // Previous transaction hash
-    field prev_transaction_hash: Bytes(32)
-
-    // Previous transaction index
-    field prev_transaction_index: Integer(4)
-
-    // Script length
-    field script_length: Integer(1..MAX_TRANSACTION_SIZE)
-
-    // Script
-    field script: Bytes(script_length)
-
-    // Sequence number
-    field sequence_number: Integer(4)
+  type TransactionInput {
+    previous_output: Hash32 big_endian,
+    previous_index: uint32 little_endian,
+    script_length: varint,
+    script_sig: bytes script_length,
+    sequence: uint32 little_endian
   }
 
-  // Define the structure of a transaction output
-  structure TransactionOutput {
-    // Value
-    field value: Integer(8)
-
-    // Script length
-    field script_length: Integer(1..MAX_TRANSACTION_SIZE)
-
-    // Script
-    field script: Bytes(script_length)
+  type TransactionOutput {
+    value: uint64 little_endian,
+    script_length: varint,
+    script_pub_key: bytes script_length
   }
 
-  // Define the top-level context
-  context Top {
-    // Transaction count
-    field transaction_count: Integer(1..MAX_TRANSACTION_SIZE)
-
-    // Transactions
-    field transactions: array(Transaction, transaction_count)
+  type Hash32 {
+    bytes: byte[32]
   }
-}
+
+  type varint {
+    value: uint64,
+    encoding: choice {
+      case value < 0xfd: byte value
+      case value <= 0xffff: byte 0xfd, uint16 little_endian value
+      case value <= 0xffffffff: byte 0xfe, uint32 little_endian value
+      case value <= 0xffffffffffffffff: byte 0xff, uint64 little_endian value
+    }
+  }
+
+  type bytes {
+    length: varint,
+    value: byte[length]
+  }
+
+  type uint32 {
+    value: uint32,
+    little_endian: byte[4] value
+  }
+
+  type uint64 {
+    value: uint64,
+    little_endian: byte[8] value
+  }
+
+  type uint16 {
+    value: uint16,
+    little_endian: byte[2] value
+  }

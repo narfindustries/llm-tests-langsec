@@ -1,26 +1,26 @@
 meta:
-  id: arp_meta
-  file-format: ARP
+  endian: be
+  id: arp
 seq:
-  - id: hardware_type
+  - id: htype
     type: u2
-  - id: protocol_type
+  - id: ptype
     type: u2
-  - id: hardware_size
+  - id: hlen
     type: u1
-  - id: protocol_size
+  - id: plen
     type: u1
-  - id: opcode
+  - id: oper
     type: u2
-  - id: sender_hardware_addr
+  - id: sha
     type: bytes
-    size: hardware_size
-  - id: sender_protocol_addr
+    size: hlen
+  - id: spa
     type: bytes
-    size: protocol_size
-  - id: target_hardware_addr
+    size: plen
+  - id: tha
     type: bytes
-    size: hardware_size
-  - id: target_protocol_addr
+    size: hlen
+  - id: tpa
     type: bytes
-    size: protocol_size
+    size: plen

@@ -1,57 +1,18 @@
-#ifndef _GZIP_H_
-#define _GZIP_H_
+module GZIP;
 
-#include <stdint.h>
-
-// Structure to represent a gzip header
-typedef struct {
-    uint8_t id1;       // ID1 (must be 0x1f)
-    uint8_t id2;       // ID2 (must be 0x8b)
-    uint8_t cm;        // Compression method (0x08 for deflate)
-    uint8_t flg;       // Flags
-    uint32_t mtime;    // Modification time
-    uint8_t xfl;       // Extra flags
-    uint8_t os;        // Operating system
-} gzip_header_t;
-
-// Function to check if a buffer is a valid gzip stream
-bool is_gzip(const uint8_t* buf, int len);
-
-
-// Function to decompress a gzip stream.  Returns NULL on error.
-uint8_t* decompress_gzip(const uint8_t* buf, int len, int* out_len);
-
-#endif
-
-#include "gzip.h"
-#include <zeek/Util.h>
-
-
-bool is_gzip(const uint8_t* buf, int len) {
-	if (len < 2) return false;
-	return buf[0] == 0x1f && buf[1] == 0x8b;
-}
-
-
-uint8_t* decompress_gzip(const uint8_t* buf, int len, int* out_len) {
-    // This is a placeholder.  Actual gzip decompression requires a 3rd party library.
-    *out_len = 0; // Indicate failure
-    return nullptr;
-}
-
-// Example usage (replace with your actual data)
-int main() {
-    uint8_t gzip_data[] = {0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    int data_len = sizeof(gzip_data);
-    int decompressed_len;
-    uint8_t* decompressed_data = decompress_gzip(gzip_data, data_len, &decompressed_len);
-    
-    if (decompressed_data != nullptr){
-        Bro::Info("Decompressed successfully. Length: ", decompressed_len);
-        delete[] decompressed_data;
-    } else {
-        Bro::Error("Decompression failed.");
-    }
-
-    return 0;
+record gzip_header {
+	id1: uint8;
+	id2: uint8;
+	cm: uint8;
+	flg: uint8;
+	mtime: uint32;
+	xfl: uint8;
+	os: uint8;
+	extra: optional bytes;
+	fname: optional string;
+	fcomment: optional string;
+	fhcrc: optional uint16;
+	compressed_data: bytes;
+	crc32: uint32;
+	isize: uint32;
 }

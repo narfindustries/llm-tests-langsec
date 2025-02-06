@@ -1,77 +1,87 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <hammer/hammer.h>
 
-static HParser *create_tls_client_hello_parser(void) {
-    // Define parsers for TLS Client Hello message structure
-    HParser *uint8 = h_uint8();
-    HParser *uint16 = h_uint16();
-    HParser *uint24 = h_repeat_n(uint8, 3);
-    HParser *uint32 = h_uint32();
+HParser *random_parser;
+HParser *legacy_session_id_parser;
+HParser *cipher_suite_parser;
+HParser *cipher_suites_parser;
+HParser *legacy_compression_methods_parser;
+HParser *extension_parser;
+HParser *extensions_parser;
+HParser *client_hello_parser;
 
-    // Define SSLVersion parser (2 bytes)
-    HParser *ssl_version = uint16;
+void init_parsers() {
+    random_parser = h_repeat_n(h_uint8(), 32);
 
-    // Define Random parser (32 bytes)
-    HParser *random = h_repeat_n(uint8, 32);
+    legacy_session_id_parser = h_length_value(h_uint8(), h_uint8());
 
-    // Define Session ID parser
-    HParser *session_id_length = uint8;
-    HParser *session_id = h_repeat(uint8, session_id_length);
+    cipher_suite_parser = h_uint16();
+    HParser *cipher_suites_length = h_uint16(); // Length prefix for cipher_suites
+    HParser *cipher_suites_body = h_many(cipher_suite_parser);
+    cipher_suites_parser = h_sequence(cipher_suites_length, cipher_suites_body, NULL);
 
-    // Define Cipher Suites parser
-    HParser *cipher_suite_length = uint16;
-    HParser *cipher_suites = h_repeat(uint16, h_length_value(cipher_suite_length, uint16));
+    legacy_compression_methods_parser = h_length_value(h_uint8(), h_uint8());
 
-    // Define Compression Methods parser
-    HParser *compression_methods_length = uint8;
-    HParser *compression_methods = h_repeat(uint8, compression_methods_length);
+    HParser *extension_type = h_uint16();
+    HParser *extension_length = h_uint16(); // Length prefix for extension_data
+    HParser *extension_data = h_length_value(extension_length, h_uint8()); // Generic parser for extensions
+    extension_parser = h_sequence(extension_type, extension_data, NULL);
+    HParser *extensions_length = h_uint16(); // Length prefix for extensions
+    HParser *extensions_body = h_many(extension_parser);
+    extensions_parser = h_sequence(extensions_length, extensions_body, NULL);
 
-    // Define Extensions parser
-    HParser *extensions_length = uint16;
-    HParser *extensions = h_repeat(uint8, h_length_value(extensions_length, uint8));
-
-    // Construct the full TLS Client Hello parser
-    HParser *tls_client_hello = h_sequence(
-        ssl_version,
-        random,
-        session_id,
-        cipher_suites,
-        compression_methods,
-        extensions,
+    client_hello_parser = h_sequence(
+        h_uint16(),                  // client_version
+        random_parser,               // random
+        legacy_session_id_parser,    // legacy_session_id
+        cipher_suites_parser,        // cipher_suites
+        legacy_compression_methods_parser, // legacy_compression_methods
+        extensions_parser,           // extensions
         NULL
     );
-
-    return tls_client_hello;
 }
 
 int main(int argc, char *argv[]) {
-    HParser *parser = create_tls_client_hello_parser();
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    // Example usage: parsing data
-    // Note: This is a placeholder. Replace with actual TLS Client Hello data.
-    const uint8_t data[] = {
-        0x03, 0x03, // TLS Version 1.2
-        // Random (32 bytes)
-        0x53, 0x2e, 0x86, 0x91, 0xa1, 0x56, 0x34, 0x5c, 0x2f, 0x23, 0x47, 0x10, 0x72, 0x7f, 0x37, 0xfc,
-        0x3e, 0x3a, 0x99, 0x84, 0xdc, 0x5e, 0x4f, 0x3a, 0x5e, 0x1b, 0x80, 0x8b, 0x93, 0x48, 0x4c, 0x9c,
-        0x00, // Session ID Length
-        0x00, 0x02, // Cipher Suites Length
-        0x13, 0x01, // Cipher Suite TLS_AES_128_GCM_SHA256
-        0x01, // Compression Methods Length
-        0x00, // Compression Method: null
-        0x00, 0x00, // Extensions Length
-        // Extensions (if any)
-    };
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
 
-    HParseResult *result = h_parse(parser, data, sizeof(data));
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    init_parsers();
+
+    HParseResult *result = h_parse(client_hello_parser, buffer, file_size);
     if (result) {
-        printf("Parsing successful.\n");
+        printf("Parsing successful!\n");
         h_parse_result_free(result);
     } else {
         printf("Parsing failed.\n");
     }
 
-    // Clean up
-    h_parser_free(parser);
+    free(buffer);
+    h_parse_free(client_hello_parser);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

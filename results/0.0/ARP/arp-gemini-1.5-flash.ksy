@@ -1,49 +1,35 @@
-meta:
-  id: arp-gemini-1
-  title: ARP Gemini 1 Flash Memory
-  homepage: ""
-  authors: []
-  license: ""
-  compiler: 
-    kaitai: 0.8
-
-types:
-  uint8:
-    type: int
-    size: 1
-
-  uint16:
-    type: int
-    size: 2
-    endian: be
-
-  uint32:
-    type: int
-    size: 4
-    endian: be
-
-  uint64:
-    type: int
-    size: 8
-    endian: be
-
-
-seq:
-  - id: header
-    type: header_t
-  - id: data
+$schema: https://kaitai.io/schema/draft-04
+type: struct
+endian: big
+fields:
+  - id: htype
+    type: u2
+  - id: ptype
+    type: u2
+  - id: hlen
+    type: u1
+  - id: plen
+    type: u1
+  - id: opcode
+    type: u2
+  - id: sha
     type: seq
-    size: lambda: self.header.data_len
-    read: lambda x: x.read_bytes(self.header.data_len)
-
-
-types:
-  header_t:
-    seq:
-      - id: magic
-        type: uint32
-      - id: version
-        type: uint16
-      - id: data_len
-        type: uint32
+    elements:
+      - type: u1
+    length: hlen
+  - id: spa
+    type: seq
+    elements:
+      - type: u1
+    length: plen
+  - id: tha
+    type: seq
+    elements:
+      - type: u1
+    length: hlen
+  - id: tpa
+    type: seq
+    elements:
+      - type: u1
+    length: plen
 

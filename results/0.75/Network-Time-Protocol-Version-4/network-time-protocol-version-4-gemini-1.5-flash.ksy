@@ -1,34 +1,45 @@
-$schema: https://kaitaistruct.org/schema/ksy.yaml#
-id: network_time_protocol_version_4_gemini_1
-endian: be
-seq:
-  - id: header
+type: struct
+id: ntpv4
+fields:
+  - id: li
+    type: bits
+    size: 2
+  - id: vn
+    type: bits
+    size: 3
+  - id: mode
+    type: bits
+    size: 3
+  - id: stratum
+    type: u1
+  - id: poll
+    type: u1
+  - id: precision
+    type: s1
+  - id: root_delay
+    type: f4
+  - id: root_dispersion
+    type: f4
+  - id: reference_id
+    type: u4
+  - id: reference_timestamp
+    type: f8
+  - id: originate_timestamp
+    type: f8
+  - id: receive_timestamp
+    type: f8
+  - id: transmit_timestamp
+    type: f8
+  - id: extension
     type: seq
-    seq:
-      - id: flags
-        type: u1
-      - id: leap
-        type: u1
-      - id: mode
-        type: u1
-      - id: stratum
-        type: u1
-      - id: poll
-        type: u1
-      - id: precision
-        type: u1
-      - id: root_delay
-        type: u4
-      - id: root_dispersion
-        type: u4
-      - id: reference_id
-        type: u4
-      - id: reference_timestamp
-        type: u8
-      - id: origin_timestamp
-        type: u8
-      - id: receive_timestamp
-        type: u8
-      - id: transmit_timestamp
-        type: u8
+    size: lambda (this.extension_len)
+    repeat: expr (this.extension_len > 0)
+    fields:
+      - id: extension_type
+        type: u2
+      - id: extension_len
+        type: u2
+      - id: extension_data
+        type: bytes
+        size: lambda (this.extension_len)
 

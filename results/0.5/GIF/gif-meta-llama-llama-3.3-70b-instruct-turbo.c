@@ -3,160 +3,103 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Define the structure for the GIF file format
+// Define the parser for the GIF signature
 typedef struct {
-    uint8_t signature[3];
-    uint8_t version[3];
+    char signature[3];
+} gif_signature_t;
+
+// Define the parser for the GIF version
+typedef struct {
+    char version[3];
+} gif_version_t;
+
+// Define the parser for the logical screen descriptor
+typedef struct {
     uint16_t width;
     uint16_t height;
-    uint8_t flags;
+    uint8_t packed_fields;
     uint8_t background_color_index;
-    uint8_t aspect_ratio;
-} GifHeader;
+    uint8_t pixel_aspect_ratio;
+} logical_screen_descriptor_t;
+
+// Define the parser for the global color table
+typedef struct {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+} color_table_entry_t;
 
 typedef struct {
-    uint8_t block_size;
-    uint8_t* block_data;
-} GifBlock;
+    color_table_entry_t entries[256];
+} global_color_table_t;
 
+// Define the parser for the image descriptor
 typedef struct {
-    GifHeader header;
-    GifBlock* blocks;
-    uint32_t block_count;
-} GifFile;
+    uint16_t left;
+    uint16_t top;
+    uint16_t width;
+    uint16_t height;
+    uint8_t packed_fields;
+} image_descriptor_t;
 
-// Function to parse the GIF file
-int parse_gif(const uint8_t* data, uint32_t size, GifFile* gif) {
-    // Check the signature and version
-    if (data[0] != 'G' || data[1] != 'I' || data[2] != 'F') {
-        return 0;
-    }
-    if (data[3] != '8' || data[4] != '9' || data[5] != 'a') {
-        return 0;
-    }
+// Define the parser for the local color table
+typedef struct {
+    color_table_entry_t entries[256];
+} local_color_table_t;
 
-    // Parse the header
-    gif->header.width = (data[6] << 8) | data[7];
-    gif->header.height = (data[8] << 8) | data[9];
-    gif->header.flags = data[10];
-    gif->header.background_color_index = data[11];
-    gif->header.aspect_ratio = data[12];
+// Define the parser for the image data
+typedef struct {
+    uint8_t *data;
+    size_t size;
+} image_data_t;
 
-    // Parse the blocks
-    uint32_t block_index = 13;
-    gif->block_count = 0;
-    while (block_index < size) {
-        // Check the block size
-        uint8_t block_size = data[block_index];
-        block_index++;
+// Define the parser for the GIF file
+typedef struct {
+    gif_signature_t signature;
+    gif_version_t version;
+    logical_screen_descriptor_t logical_screen_descriptor;
+    global_color_table_t global_color_table;
+    image_descriptor_t image_descriptor;
+    local_color_table_t local_color_table;
+    image_data_t image_data;
+} gif_file_t;
 
-        // Allocate memory for the block
-        gif->blocks = realloc(gif->blocks, (gif->block_count + 1) * sizeof(GifBlock));
-        gif->blocks[gif->block_count].block_size = block_size;
-        gif->blocks[gif->block_count].block_data = malloc(block_size);
-
-        // Copy the block data
-        memcpy(gif->blocks[gif->block_count].block_data, &data[block_index], block_size);
-        block_index += block_size;
-
-        // Increment the block count
-        gif->block_count++;
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
 
-    return 1;
-}
-
-// Function to generate the GIF file
-int generate_gif(const GifFile* gif, uint8_t** data, uint32_t* size) {
-    // Calculate the total size
-    uint32_t total_size = 13; // Header size
-    for (uint32_t i = 0; i < gif->block_count; i++) {
-        total_size += 1 + gif->blocks[i].block_size; // Block size byte + block data
+    FILE *input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        fprintf(stderr, "Error opening input file\n");
+        return 1;
     }
 
-    // Allocate memory for the GIF data
-    *data = malloc(total_size);
-    *size = total_size;
+    gif_file_t gif_file;
+    fread(&gif_file.signature, sizeof(gif_file_t), 1, input_file);
 
-    // Copy the header
-    (*data)[0] = 'G';
-    (*data)[1] = 'I';
-    (*data)[2] = 'F';
-    (*data)[3] = '8';
-    (*data)[4] = '9';
-    (*data)[5] = 'a';
-    (*data)[6] = (gif->header.width >> 8) & 0xFF;
-    (*data)[7] = gif->header.width & 0xFF;
-    (*data)[8] = (gif->header.height >> 8) & 0xFF;
-    (*data)[9] = gif->header.height & 0xFF;
-    (*data)[10] = gif->header.flags;
-    (*data)[11] = gif->header.background_color_index;
-    (*data)[12] = gif->header.aspect_ratio;
-
-    // Copy the blocks
-    uint32_t data_index = 13;
-    for (uint32_t i = 0; i < gif->block_count; i++) {
-        // Copy the block size
-        (*data)[data_index] = gif->blocks[i].block_size;
-        data_index++;
-
-        // Copy the block data
-        memcpy(&(*data)[data_index], gif->blocks[i].block_data, gif->blocks[i].block_size);
-        data_index += gif->blocks[i].block_size;
+    if (gif_file.signature.signature[0] == 'G' &&
+        gif_file.signature.signature[1] == 'I' &&
+        gif_file.signature.signature[2] == 'F') {
+        printf("GIF file parsed successfully\n");
+    } else {
+        printf("Error parsing GIF file\n");
     }
 
-    return 1;
-}
+    // Read the rest of the file
+    fseek(input_file, 0, SEEK_END);
+    long file_size = ftell(input_file);
+    rewind(input_file);
 
-int main() {
-    // Create a sample GIF file
-    GifFile gif;
-    gif.header.width = 100;
-    gif.header.height = 100;
-    gif.header.flags = 0;
-    gif.header.background_color_index = 0;
-    gif.header.aspect_ratio = 0;
-    gif.block_count = 1;
-    gif.blocks = malloc(sizeof(GifBlock));
-    gif.blocks[0].block_size = 10;
-    gif.blocks[0].block_data = malloc(10);
-    for (int i = 0; i < 10; i++) {
-        gif.blocks[0].block_data[i] = i;
-    }
+    char *file_data = malloc(file_size);
+    fread(file_data, file_size, 1, input_file);
 
-    // Generate the GIF data
-    uint8_t* data;
-    uint32_t size;
-    generate_gif(&gif, &data, &size);
+    gif_file.image_data.data = (uint8_t *)file_data;
+    gif_file.image_data.size = file_size;
 
-    // Parse the GIF data
-    GifFile parsed_gif;
-    parse_gif(data, size, &parsed_gif);
-
-    // Print the parsed GIF file
-    printf("Width: %d\n", parsed_gif.header.width);
-    printf("Height: %d\n", parsed_gif.header.height);
-    printf("Flags: %d\n", parsed_gif.header.flags);
-    printf("Background Color Index: %d\n", parsed_gif.header.background_color_index);
-    printf("Aspect Ratio: %d\n", parsed_gif.header.aspect_ratio);
-    for (uint32_t i = 0; i < parsed_gif.block_count; i++) {
-        printf("Block %d Size: %d\n", i, parsed_gif.blocks[i].block_size);
-        for (uint32_t j = 0; j < parsed_gif.blocks[i].block_size; j++) {
-            printf("%d ", parsed_gif.blocks[i].block_data[j]);
-        }
-        printf("\n");
-    }
-
-    // Free the allocated memory
-    free(data);
-    for (uint32_t i = 0; i < gif.block_count; i++) {
-        free(gif.blocks[i].block_data);
-    }
-    free(gif.blocks);
-    for (uint32_t i = 0; i < parsed_gif.block_count; i++) {
-        free(parsed_gif.blocks[i].block_data);
-    }
-    free(parsed_gif.blocks);
+    fclose(input_file);
+    free(file_data);
 
     return 0;
 }

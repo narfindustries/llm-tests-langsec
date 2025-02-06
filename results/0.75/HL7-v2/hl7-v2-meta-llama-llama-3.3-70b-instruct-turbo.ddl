@@ -1,73 +1,356 @@
-# HL7 v2 Meta Specification
-definition hl7_v2_meta {
-  # Import standard ISO dates
-  import "iso_dates.ddl"
-
-  # Define a HL7 v2 message structure
-  structure hl7_message {
-    # Message header
-    field MSH: segment {
-      # Field separator
-      field.1: byte = '\x7c'
-      # Encoding characters
-      field.2: bytes = "^\~\\&"
-      # Sending facility
-      field.4: string
-      # Sending application
-      field.5: string
-      # Receiving facility
-      field.6: string
-      # Receiving application
-      field.7: string
-      # Date and time
-      field.7: date_time
-    }
-
-    # Patient information
-    field PID: segment {
-      # Patient ID
-      field.3: string
-      # Patient name
-      field.5: string
-      # Date of birth
-      field.7: date
-      # Sex
-      field.8: string
-    }
-
-    # Visit information
-    field PV1: segment {
-      # Visit number
-      field.1: string
-      # Admission date and time
-      field.4: date_time
-      # Discharge date and time
-      field.6: date_time
-    }
-  }
-
-  # Define a grammar for HL7 v2 messages
-  grammar hl7_v2_grammar {
-    rule message: hl7_message
-    rule segment: MSH | PID | PV1
-  }
+TYPE MSH = SEGMENT {
+  MSH_1: separator = "|",
+  MSH_2: encoding_characters = "^~\&",
+  MSH_3: sending_application: string,
+  MSH_4: sending_facility: string,
+  MSH_5: receiving_application: string,
+  MSH_6: receiving_facility: string,
+  MSH_7: date: date,
+  MSH_8: time: time,
+  MSH_9: message_type: string,
+  MSH_10: message_control_id: string,
+  MSH_11: processing_id: string,
+  MSH_12: version_id: string
 }
 
-# Define the version of the HL7 v2 standard
-const hl7_v2_version = "2.3"
-
-# Define the character encoding
-const character_encoding = "UTF-8"
-
-# Define the structure for the output
-structure output_structure {
-  field message: hl7_message
+TYPE EVN = SEGMENT {
+  EVN_1: event_type_code: string,
+  EVN_2: recorded_date: date,
+  EVN_3: recorded_time: time,
+  EVN_4: date_time_planned_event: datetime,
+  EVN_5: event_reason_code: string,
+  EVN_6: operator_id: string,
+  EVN_7: event_occurrence_span: datetime,
+  EVN_8: event_facility: string
 }
 
-# Define the grammar for the output
-grammar output_grammar {
-  rule message: output_structure
+TYPE PID = SEGMENT {
+  PID_1: set_id: string,
+  PID_2: patient_id: string,
+  PID_3: patient_identifier_list: string,
+  PID_4: alternate_patient_id: string,
+  PID_5: patient_name: string,
+  PID_6: mother_s_maiden_name: string,
+  PID_7: date_of_birth: date,
+  PID_8: sex: string,
+  PID_9: patient_alias: string,
+  PID_10: race: string,
+  PID_11: patient_address: string,
+  PID_12: county_code: string,
+  PID_13: phone_number: string,
+  PID_14: business_phone_number: string,
+  PID_15: contact_person_s_name: string,
+  PID_16: contact_person_s_telephone_number: string,
+  PID_17: contact_person_s_address: string,
+  PID_18: marital_status: string,
+  PID_19: religion: string,
+  PID_20: patient_account_number: string,
+  PID_21: ssn_number: string,
+  PID_22: driver_s_license_number: string,
+  PID_23: mother_s_identifier: string,
+  PID_24: ethnic_group: string,
+  PID_25: birth_place: string,
+  PID_26: multiple_birth_indicator: string,
+  PID_27: birth_order: string,
+  PID_28: citizenship: string,
+  PID_29: veterans_military_status: string,
+  PID_30: nationality: string,
+  PID_31: patient_death_date: date,
+  PID_32: patient_death_time: time,
+  PID_33: patient_death_type: string,
+  PID_34: id_number: string
 }
 
-# Compile the specification
-compile specification hl7_v2_meta for output hl7_v2_grammar version hl7_v2_version character_encoding character_encoding output_structure output_structure
+TYPE PV1 = SEGMENT {
+  PV1_1: set_id: string,
+  PV1_2: visit_number: string,
+  PV1_3: patient_class: string,
+  PV1_4: visit_reason: string,
+  PV1_5: admission_type: string,
+  PV1_6: patient_type: string,
+  PV1_7: visit_number: string,
+  PV1_8: financial_class: string,
+  PV1_9: pre_admit_number: string,
+  PV1_10: prior_patient_location: string,
+  PV1_11: admitting_doctor: string,
+  PV1_12: hospital_service: string,
+  PV1_13: specialty: string,
+  PV1_14: admitting_time: time,
+  PV1_15: discharge_disposition: string,
+  PV1_16: discharged_to_location: string,
+  PV1_17: diet_type: string,
+  PV1_18: service: string,
+  PV1_19: special_care_unit: string,
+  PV1_20: isolation: string,
+  PV1_21: hospital_account_number: string,
+  PV1_22: unit_number: string,
+  PV1_23: facility: string,
+  PV1_24: bed_status: string,
+  PV1_25: prior_temporary_location: string,
+  PV1_26: prior_valuables_location: string,
+  PV1_27: visit_number_other: string,
+  PV1_28: patient_status: string,
+  PV1_29: discharge_disposition_other: string,
+  PV1_30: discharge_location: string,
+  PV1_31: visit_priority: string,
+  PV1_32: pre_admit_test_indicator: string,
+  PV1_33: readmission_indicator: string,
+  PV1_34: admission_source: string,
+  PV1_35: ambulatory_status: string,
+  PV1_36: vip_indicator: string,
+  PV1_37: admission_type_other: string,
+  PV1_38: visit_number_other_2: string,
+  PV1_39: clinic_organization_name: string,
+  PV1_40: patient_type_other: string,
+  PV1_41: visit_number_other_3: string,
+  PV1_42: facility_2: string,
+  PV1_43: facility_3: string,
+  PV1_44: facility_4: string,
+  PV1_45: facility_5: string,
+  PV1_46: facility_6: string,
+  PV1_47: facility_7: string,
+  PV1_48: facility_8: string,
+  PV1_49: patient_death_date_time: datetime,
+  PV1_50: patient_death_type_other: string
+}
+
+TYPE NK1 = SEGMENT {
+  NK1_1: set_id: string,
+  NK1_2: name: string,
+  NK1_3: relationship: string,
+  NK1_4: address: string,
+  NK1_5: phone_number: string,
+  NK1_6: business_phone_number: string,
+  NK1_7: contact_person_s_name: string,
+  NK1_8: contact_person_s_telephone_number: string,
+  NK1_9: contact_person_s_address: string,
+  NK1_10: next_of_kin_association: string,
+  NK1_11: next_of_kin_birth_date: date,
+  NK1_12: next_of_kin_social_security_number: string,
+  NK1_13: next_of_kin_sex: string,
+  NK1_14: next_of_kin_driver_s_license_number: string,
+  NK1_15: organization_name: string,
+  NK1_16: marital_status: string,
+  NK1_17: employment_status: string,
+  NK1_18: job_title: string,
+  NK1_19: job_code_class: string,
+  NK1_20: guarantor: string
+}
+
+TYPE IN1 = SEGMENT {
+  IN1_1: set_id: string,
+  IN1_2: insurance_plan_id: string,
+  IN1_3: insurance_company_id: string,
+  IN1_4: insurance_company_name: string,
+  IN1_5: insurance_company_address: string,
+  IN1_6: insurance_co_contact_person: string,
+  IN1_7: insurance_co_phone_number: string,
+  IN1_8: group_number: string,
+  IN1_9: group_name: string,
+  IN1_10: insured_s_group_number: string,
+  IN1_11: insured_s_group_name: string,
+  IN1_12: plan_sponsor_name: string,
+  IN1_13: plan_sponsor_address: string,
+  IN1_14: plan_sponsor_phone: string,
+  IN1_15: plan_sponsor_id: string,
+  IN1_16: plan_sponsor_type: string,
+  IN1_17: insurance_type: string,
+  IN1_18: coverage_type: string,
+  IN1_19: handcap: string,
+  IN1_20: policy_number: string,
+  IN1_21: policy_deductible: string,
+  IN1_22: policy_limit_amount: string,
+  IN1_23: policy_limit_days: string,
+  IN1_24: room_rate_semi_private: string,
+  IN1_25: room_rate_private: string,
+  IN1_26: insured_s_policy_number: string,
+  IN1_27: insured_s_policy_deductible: string,
+  IN1_28: insured_s_policy_limit_amount: string,
+  IN1_29: insured_s_policy_limit_days: string,
+  IN1_30: policy_effective_date: date,
+  IN1_31: policy_expiration_date: date,
+  IN1_32: policy_cancel_date: date,
+  IN1_33: non_concur_code: string,
+  IN1_34: non_concur_amount: string,
+  IN1_35: policy_type: string,
+  IN1_36: policy_sub_type: string,
+  IN1_37: insured_s_relationship_to_patient: string,
+  IN1_38: insured_s_date_of_birth: date,
+  IN1_39: insured_s_sex: string,
+  IN1_40: insured_s_employee_id: string,
+  IN1_41: insured_s_employer_name: string,
+  IN1_42: insured_s_employer_address: string,
+  IN1_43: insured_s_employer_phone: string,
+  IN1_44: mail_claim_party: string,
+  IN1_45: medicare_health_ins_card_number: string,
+  IN1_46: medicare_part_a_premium_pd: string,
+  IN1_47: medicare_part_a_premium_hd: string,
+  IN1_48: report_of_eligibility: string,
+  IN1_49: medicare_insurance_type: string,
+  IN1_50: is_hmo: string
+}
+
+TYPE IN2 = SEGMENT {
+  IN2_1: set_id: string,
+  IN2_2: insured_s_employee_id: string,
+  IN2_3: group_number: string,
+  IN2_4: group_name: string,
+  IN2_5: date_time_of_birth: datetime,
+  IN2_6: sex: string,
+  IN2_7: employee_d_number: string,
+  IN2_8: employer_information_data: string,
+  IN2_9: mail_claim_party: string,
+  IN2_10: medicare_health_ins_card_number: string,
+  IN2_11: hic_number: string,
+  IN2_12: bene_medical_plan_id: string,
+  IN2_13: payer_id: string,
+  IN2_14: payer_name: string,
+  IN2_15: payer_address: string,
+  IN2_16: payer_contact_person: string,
+  IN2_17: payer_phone_number: string,
+  IN2_18: claim_filing_indicator: string,
+  IN2_19: coverage_type: string,
+  IN2_20: employment_status: string,
+  IN2_21: job_title: string,
+  IN2_22: job_code_class: string,
+  IN2_23: guarantor: string,
+  IN2_24: employer_name: string,
+  IN2_25: employer_address: string,
+  IN2_26: employer_phone: string,
+  IN2_27: employer_id_number: string,
+  IN2_28: state_or_province: string,
+  IN2_29: zip_code: string,
+  IN2_30: country_code: string,
+  IN2_31: employer_type: string,
+  IN2_32: tax_identification_number: string
+}
+
+TYPE AL1 = SEGMENT {
+  AL1_1: set_id: string,
+  AL1_2: allergy_type: string,
+  AL1_3: allergy_code_mnemonic_description: string,
+  AL1_4: allergy_severity: string,
+  AL1_5: allergy_reaction: string,
+  AL1_6: identification_date: date
+}
+
+TYPE DG1 = SEGMENT {
+  DG1_1: set_id: string,
+  DG1_2: diagnosis_code_sequence_id: string,
+  DG1_3: diagnosis_code_mnemonic_description: string,
+  DG1_4: diagnosis_code_value: string,
+  DG1_5: diagnosis_description: string,
+  DG1_6: diagnosis_date: date,
+  DG1_7: diagnosis_type: string,
+  DG1_8: major_diagnostic_category: string,
+  DG1_9: diagnostic_category_code: string,
+  DG1_10: diagnosis_code_id: string,
+  DG1_11: diagnosis_code_list_version_id: string,
+  DG1_12: diagnosis_code_list_version_name: string,
+  DG1_13: diagnosis_code_list_version_date: date
+}
+
+TYPE PR1 = SEGMENT {
+  PR1_1: set_id: string,
+  PR1_2: procedure_code_sequence_id: string,
+  PR1_3: procedure_code_mnemonic_description: string,
+  PR1_4: procedure_code_value: string,
+  PR1_5: procedure_description: string,
+  PR1_6: procedure_date: date,
+  PR1_7: procedure_type: string,
+  PR1_8: procedure_priority: string,
+  PR1_9: procedure_status: string,
+  PR1_10: procedure_code_id: string,
+  PR1_11: procedure_code_list_version_id: string,
+  PR1_12: procedure_code_list_version_name: string,
+  PR1_13: procedure_code_list_version_date: date
+}
+
+TYPE RXO = SEGMENT {
+  RXO_1: identifier: string,
+  RXO_2: name_of_medication: string,
+  RXO_3: dosage_instruction: string,
+  RXO_4: dispensing_instruction: string,
+  RXO_5: administration_method: string,
+  RXO_6: treatment_date: date,
+  RXO_7: provider_s_name: string,
+  RXO_8: pharmaceutical_substance_name: string,
+  RXO_9: pharmaceutical_substance_identification: string,
+  RXO_10: medication_code_list_version_id: string,
+  RXO_11: medication_code_list_version_name: string,
+  RXO_12: medication_code_list_version_date: date
+}
+
+TYPE RXR = SEGMENT {
+  RXR_1: administration_method: string,
+  RXR_2: dosage_value: string,
+  RXR_3: dosage_unit: string,
+  RXR_4: rate_amount: string,
+  RXR_5: administration_duration: string,
+  RXR_6: administration_duration_unit: string,
+  RXR_7: administration_route: string,
+  RXR_8: site_type: string,
+  RXR_9: site_name: string,
+  RXR_10: administration_device: string,
+  RXR_11: administration_method_description: string,
+  RXR_12: dosage_instruction_description: string
+}
+
+TYPE RXC = SEGMENT {
+  RXC_1: component_type: string,
+  RXC_2: component_name: string,
+  RXC_3: component_amount: string,
+  RXC_4: component_unit: string,
+  RXC_5: component_code: string,
+  RXC_6: component_code_system: string
+}
+
+TYPE RXE = SEGMENT {
+  RXE_1: identifier: string,
+  RXE_2: transaction_type: string,
+  RXE_3: rx_order_status: string,
+  RXE_4: date_time_of_transaction: datetime,
+  RXE_5: prescriber_s_name: string,
+  RXE_6: pharmacy_reference_number: string,
+  RXE_7: pharmacy_name: string,
+  RXE_8: pharmacy_address: string,
+  RXE_9: pharmacy_phone_number: string,
+  RXE_10: dispensing_pharmacy: string,
+  RXE_11: dispensing_pharmacy_address: string,
+  RXE_12: dispensing_pharmacy_phone_number: string
+}
+
+TYPE RXG = SEGMENT {
+  RXG_1: give_substance_code: string,
+  RXG_2: give_amount_value: string,
+  RXG_3: give_amount_unit: string,
+  RXG_4: give_amount_type: string,
+  RXG_5: give_per_time_unit: string,
+  RXG_6: give_strength_value: string,
+  RXG_7: give_strength_unit: string,
+  RXG_8: give_indication_code: string,
+  RXG_9: give_indication_description: string,
+  RXG_10: give_text: string,
+  RXG_11: give_administration_code: string,
+  RXG_12: give_administration_route: string,
+  RXG_13: give_effective_date_time: datetime,
+  RXG_14: give_end_date_time: datetime,
+  RXG_15: give_completed_date_time: datetime,
+  RXG_16: give_discontinued_date_time: datetime,
+  RXG_17: give_discontinued_reason_code: string,
+  RXG_18: give_discontinued_reason_text: string
+}
+
+TYPE ORC = SEGMENT {
+  ORC_1: order_control: string,
+  ORC_2: placer_order_number: string,
+  ORC_3: filler_order_number: string,
+  ORC_4: placer_group_number: string,
+  ORC_5: order_status: string,
+  ORC_6: response_flag: string,
+  ORC_7: quantity_timing_value: string,
+  ORC_8: parent_order_value: string,
+  ORC_9: date_time_of_transaction: datetime,
+  ORC_10: entered_by: string,
+  ORC_11: verified_by: string
+}

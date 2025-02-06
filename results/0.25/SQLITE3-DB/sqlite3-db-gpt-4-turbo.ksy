@@ -1,107 +1,124 @@
 meta:
   id: sqlite3_db
-  file-extension: db
-  endian: le
   title: SQLite Database File
-  license: CC0-1.0
-  ks-version: 0.9
-
+  application: SQLite
+  file-extension: sqlite3
+  endian: le
 doc: |
-  SQLite is a C library that provides a lightweight disk-based database that doesn’t require
-  a separate server process and allows accessing the database using a nonstandard variant
-  of the SQL query language. Some applications can use SQLite for internal data storage.
-  It’s also possible to prototype an application using SQLite and then port the code to a
-  larger database such as PostgreSQL or Oracle.
-
+  SQLite is a C library that provides a lightweight disk-based database that doesn’t require a separate server process and allows accessing the database using a nonstandard variant of the SQL query language. Some applications can use SQLite for internal data storage. It’s also possible to prototype an application using SQLite and then port the code to a larger database such as PostgreSQL or Oracle.
 seq:
   - id: header
     type: file_header
-
   - id: pages
-    type: page
+    type: database_page
     repeat: expr
     repeat-expr: header.num_pages
 
 types:
   file_header:
     seq:
-      - id: magic
-        contents: "SQLite format 3\x00"
+      - id: header_string
+        contents: "SQLite format 3\0"
       - id: page_size
         type: u2
-        doc: The database page size in bytes.
       - id: write_version
         type: u1
-        doc: File format write version.
       - id: read_version
         type: u1
-        doc: File format read version.
       - id: reserved_space
         type: u1
-        doc: Bytes of unused "reserved" space at the end of each page.
       - id: max_payload_frac
         type: u1
-        doc: Maximum fraction of page used for payload.
       - id: min_payload_frac
         type: u1
-        doc: Minimum fraction of page used for payload.
       - id: leaf_payload_frac
         type: u1
-        doc: Leaf payload fraction.
       - id: file_change_counter
         type: u4
-        doc: File change counter.
       - id: num_pages
         type: u4
-        doc: Number of pages in the database.
       - id: first_freelist_trunk_page
         type: u4
-        doc: The first freelist trunk page.
       - id: num_freelist_pages
         type: u4
-        doc: Number of freelist pages.
       - id: schema_cookie
         type: u4
-        doc: The schema cookie.
       - id: schema_format
         type: u4
-        doc: Schema format number.
       - id: default_cache_size
+        type: s4
+      - id: largest_root_page
         type: u4
-        doc: Default page cache size.
-      - id: largest_root_btree_page
-        type: u4
-        doc: Largest root b-tree page.
       - id: text_encoding
-        type: u4
         enum: text_encodings
-        doc: Text encoding used.
+        type: u4
       - id: user_version
         type: u4
-        doc: User version.
       - id: incremental_vacuum_mode
         type: u4
-        doc: Incremental vacuum mode.
       - id: application_id
         type: u4
-        doc: Application ID.
       - id: reserved
         size: 20
-        doc: Reserved space for expansion.
       - id: version_valid_for
         type: u4
-        doc: Version valid for number.
       - id: sqlite_version_number
         type: u4
-        doc: SQLite version number.
+    enums:
+      text_encodings:
+        1: utf_8
+        2: utf_16le
+        3: utf_16be
 
-  page:
+  database_page:
     seq:
-      - id: data
-        size-eos: true
+      - id: page_type
+        type: u1
+        enum: page_types
+      - id: first_freeblock
+        type: u2
+      - id: num_cells
+        type: u2
+      - id: cell_content_offset
+        type: u2
+      - id: num_frag_free_bytes
+        type: u1
+      - id: right_most_pointer
+        type: u4
+        if: page_type == page_types::interior_index or page_type == page_types::interior_table
+      - id: cells
+        type: cell
+        repeat: expr
+        repeat-expr: num_cells
+    enums:
+      page_types:
+        2: interior_index
+        5: interior_table
+        10: leaf_index
+        13: leaf_table
 
-enums:
-  text_encodings:
-    1: utf_8
-    2: utf_16le
-    3: utf_16be
+  cell:
+    seq:
+      - id: left_child_page
+        type: u4
+        if: _parent.page_type == page_types::interior_index or _parent.page_type == page_types::interior_table
+      - id: payload_size
+        type: vlq
+        if: _parent.page_type == page_types::leaf_index or _parent.page_type == page_types::leaf_table
+      - id: row_id
+        type: vlq
+        if: _parent.page_type == page_types::leaf_table
+      - id: payload
+        size: payload_size.value
+        if: _parent.page_type == page_types::leaf_index or _parent.page_type == page_types::leaf_table
+
+  vlq:
+    seq:
+      - id: bytes
+        type: u1
+        repeat: until
+        repeat-until: _.value & 0x80 == 0
+    instances:
+      value:
+        value: >
+          _.bytes.map((b, i) => (b & 0x7f) << (7 * i)).reduce((a, b) => a + b, 0)

@@ -1,59 +1,75 @@
 module HTTP;
 
-import spicy;
-import zeek;
+type HTTPMessage = unit {
+    # Start line
+    start_line: StartLine;
 
-public type HTTPRequest = unit {
-    method: string &restofdata;
-    uri: string &restofdata;
-    version: string &restofdata;
-    headers: array of Header;
-    body: bytes &restofdata;
+    # Headers
+    headers: Headers;
 
-    on %done {
-        print fmt("HTTP Request: %s %s %s", method, uri, version);
-    }
-};
+    # Optional body
+    body: bytes &optional &size=body_size;
 
-public type Header = unit {
-    name: string &until=":";
-    value: string &restofdata;
-
-    on %done {
-        print fmt("Header: %s: %s", name, value);
-    }
-};
-
-public type HTTPResponse = unit {
-    version: string &restofdata;
-    status_code: uint16;
-    reason_phrase: string &restofdata;
-    headers: array of Header;
-    body: bytes &restofdata;
-
-    on %done {
-        print fmt("HTTP Response: %s %d %s", version, status_code, reason_phrase);
-    }
-};
-
-public module Parser = spicy::Parser {
-    parse = /(?P<request>HTTP\/1\.[01] \S+ \S+\r\n(?:[^\r\n]+\r\n)*\r\n)/;
-    parse = /(?P<response>HTTP\/1\.[01] \d{3} \S+\r\n(?:[^\r\n]+\r\n)*\r\n)/;
-
-    on %done {
-        if (request) {
-            local req = HTTPRequest(request);
-            print fmt("Parsed HTTP Request: %s", req);
+    on %init {
+        if ( headers.transfer_encoding == "chunked" ) {
+            body_size = 0; # Chunked encoding, body size is determined by chunks
         }
-        else if (response) {
-            local res = HTTPResponse(response);
-            print fmt("Parsed HTTP Response: %s", res);
+        else if ( headers.content_length ) {
+            body_size = headers.content_length;
         }
     }
 };
 
-public export {
-    function hook_zeek_init() {
-        print "HTTP Spicy parser initialized.";
+type StartLine = unit {
+    line: /[^\r\n]+/ &size=length;
+    on %init {
+        if ( line.startswith("HTTP/") ) {
+            self = StartLine::Response(line);
+        }
+        else {
+            self = StartLine::Request(line);
+        }
     }
-}
+};
+
+type StartLine::Request = unit {
+    method: /[A-Z]+/;
+    uri: /[^\s]+/;
+    version: /HTTP\/\d\.\d/;
+} &let { length = method.size() + 1 + uri.size() + 1 + version.size() };
+
+type StartLine::Response = unit {
+    version: /HTTP\/\d\.\d/;
+    status_code: /[0-9]{3}/;
+    reason_phrase: /[^\r\n]+/;
+} &let { length = version.size() + 1 + status_code.size() + 1 + reason_phrase.size() };
+
+type Headers = unit {
+    fields: /[^\r\n]+/ &until=fields_done;
+    fields_done: bool = /(\r\n\r\n|\n\n)/;
+
+    on %done {
+        for ( field in fields ) {
+            local name, value = field.split(":", 2);
+            name = name.trim().lower();
+            value = value.trim();
+
+            switch ( name ) {
+                case "content-length":
+                    content_length = to_int(value);
+                    break;
+                case "transfer-encoding":
+                    transfer_encoding = value;
+                    break;
+                # Add more cases for other headers as needed
+            }
+        }
+    }
+
+    content_length: uint64 &optional;
+    transfer_encoding: string &optional;
+};
+
+type HTTP = unit {
+    message: HTTPMessage;
+};

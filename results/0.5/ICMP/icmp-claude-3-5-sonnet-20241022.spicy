@@ -1,49 +1,71 @@
 module ICMP;
 
 public type Message = unit {
-    type: uint8;
+    msg_type: uint8 {
+        if ( self.msg_type == 0 ) {
+            self.message_type = MessageType::ECHO_REPLY;
+        } else if ( self.msg_type == 3 ) {
+            self.message_type = MessageType::DESTINATION_UNREACHABLE;
+        } else if ( self.msg_type == 4 ) {
+            self.message_type = MessageType::SOURCE_QUENCH;
+        } else if ( self.msg_type == 5 ) {
+            self.message_type = MessageType::REDIRECT;
+        } else if ( self.msg_type == 8 ) {
+            self.message_type = MessageType::ECHO_REQUEST;
+        } else if ( self.msg_type == 11 ) {
+            self.message_type = MessageType::TIME_EXCEEDED;
+        } else if ( self.msg_type == 12 ) {
+            self.message_type = MessageType::PARAMETER_PROBLEM;
+        } else if ( self.msg_type == 13 ) {
+            self.message_type = MessageType::TIMESTAMP;
+        } else if ( self.msg_type == 14 ) {
+            self.message_type = MessageType::TIMESTAMP_REPLY;
+        } else if ( self.msg_type == 15 ) {
+            self.message_type = MessageType::INFORMATION_REQUEST;
+        } else if ( self.msg_type == 16 ) {
+            self.message_type = MessageType::INFORMATION_REPLY;
+        }
+    }
     code: uint8;
     checksum: uint16;
     
-    switch ( self.type ) {
-        0 -> echo_reply: EchoMessage;
-        3 -> dest_unreachable: DestUnreachable;
-        8 -> echo_request: EchoMessage;
-        11 -> time_exceeded: TimeExceeded;
-        * -> : bytes &eod;
-    };
-
-    on %done {
-        self.checksum_verify();
+    switch ( self.message_type ) {
+        MessageType::ECHO_REPLY, MessageType::ECHO_REQUEST -> echo: EchoData;
+        MessageType::DESTINATION_UNREACHABLE -> unused: bytes &size=4;
+        MessageType::REDIRECT -> gateway: uint32;
+        MessageType::PARAMETER_PROBLEM -> : bytes &size=4;
+        MessageType::TIMESTAMP, MessageType::TIMESTAMP_REPLY -> timestamp: TimestampData;
+        MessageType::INFORMATION_REQUEST, MessageType::INFORMATION_REPLY -> info: bytes &eod;
+        * -> data: bytes &eod;
     }
 
-    function checksum_verify() {
-        local orig = self.checksum;
-        self.checksum = 0;
-        local computed = icmp_checksum(self);
-        self.checksum = orig;
-        
-        if ( orig != computed )
-            print "ICMP checksum mismatch", orig, computed;
-    }
+    var message_type: MessageType;
 };
 
-type EchoMessage = unit {
+type EchoData = unit {
     identifier: uint16;
     sequence: uint16;
-    payload: bytes &eod;
+    data: bytes &eod;
 };
 
-type DestUnreachable = unit {
-    unused: uint32;
-    payload: bytes &eod;
+type TimestampData = unit {
+    identifier: uint16;
+    sequence: uint16;
+    originate: uint32;
+    receive: uint32;
+    transmit: uint32;
 };
 
-type TimeExceeded = unit {
-    unused: uint32;
-    payload: bytes &eod;
+enum MessageType {
+    ECHO_REPLY = 0,
+    DESTINATION_UNREACHABLE = 3,
+    SOURCE_QUENCH = 4,
+    REDIRECT = 5,
+    ECHO_REQUEST = 8,
+    TIME_EXCEEDED = 11,
+    PARAMETER_PROBLEM = 12,
+    TIMESTAMP = 13,
+    TIMESTAMP_REPLY = 14,
+    INFORMATION_REQUEST = 15,
+    INFORMATION_REPLY = 16
 };
-
-function icmp_checksum(msg: Message): uint16 {
-    return 0;  # Placeholder - actual checksum calculation would go here
-}

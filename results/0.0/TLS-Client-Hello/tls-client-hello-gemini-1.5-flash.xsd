@@ -1,21 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tls-client-hello" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/tls_client_hello"
+           xmlns="http://example.org/tls_client_hello"
+           elementFormDefault="qualified">
 
-  <xs:element name="tlsClientHello">
+  <xs:element name="ClientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+        <xs:element name="ProtocolVersion" type="ProtocolVersionType" dfdl:length="2"/>
+        <xs:element name="Random" type="RandomType" dfdl:length="32"/>
+        <xs:element name="SessionId" type="SessionIdType" dfdl:lengthKind="explicit" dfdl:length="32" minOccurs="0"/>
+        <xs:element name="CipherSuites" type="CipherSuitesType"/>
+        <xs:element name="CompressionMethods" type="CompressionMethodsType"/>
+        <xs:element name="Extensions" type="ExtensionsType" minOccurs="0"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="RecordType">
+  <xs:complexType name="ProtocolVersionType">
+    <xs:simpleContent>
+      <xs:extension base="xs:unsignedShort"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="RandomType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="SessionIdType">
+    <xs:simpleContent>
+      <xs:extension base="xs:hexBinary"/>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="CipherSuitesType">
     <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="2" dfdl:occursCountKind="implicit"/>
-      <xs:element name="field2" type="xs:string" dfdl:length="4" dfdl:occursCountKind="implicit"/>
-      <!-- Add more fields as needed -->
+      <xs:element name="CipherSuite" type="xs:unsignedShort" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="CompressionMethodsType">
+    <xs:sequence>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionsType">
+    <xs:sequence>
+      <xs:element name="Extension" type="ExtensionType" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtensionType">
+    <xs:sequence>
+      <xs:element name="ExtensionType" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="ExtensionLength" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="ExtensionData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ExtensionLength}"/>
     </xs:sequence>
   </xs:complexType>
 
 </xs:schema>
-

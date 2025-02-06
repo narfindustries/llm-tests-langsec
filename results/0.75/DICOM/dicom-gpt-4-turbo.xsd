@@ -2,30 +2,30 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="ex:GeneralFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
-
-    <xs:complexType name="DICOMFile">
+    <xs:complexType name="FileMetaInformationType">
         <xs:sequence>
-            <xs:element name="preamble" type="xs:hexBinary" dfdl:length="128" dfdl:lengthKind="explicit"/>
-            <xs:element name="prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <xs:element name="elements" type="DICOMElement" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="FileMetaInformationGroupLength" type="xs:int" dfdl:length="4"/>
+            <xs:element name="FileMetaInformationVersion" type="xs:short" dfdl:length="2"/>
+            <xs:element name="MediaStorageSOPClassUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+            <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+            <xs:element name="TransferSyntaxUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
+            <xs:element name="ImplementationClassUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="DICOMElement">
+    <xs:complexType name="DataSetType">
         <xs:sequence>
-            <xs:element name="tagGroup" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="tagElement" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="vr" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="length" type="xs:int" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <xs:element name="value" type="xs:hexBinary" dfdl:length="{ ../length }" dfdl:lengthKind="explicit"/>
+            <!-- Definitions for different DataSet fields go here -->
         </xs:sequence>
     </xs:complexType>
 
-    <xs:element name="DICOM" type="DICOMFile"/>
+    <xs:element name="DICOMFile">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FileMetaInformation" type="FileMetaInformationType"/>
+                <xs:element name="DataSet" type="DataSetType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

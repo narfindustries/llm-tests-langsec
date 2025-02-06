@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/dns"
+           xmlns:dns="http://example.com/dns"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" encoding="UTF-8" alignment="1" lengthKind="explicit" occursCountKind="implicit" representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="yes" dfdl:leadingSkip="0">
+        <xs:element name="Header" type="dns:HeaderType"/>
+        <xs:element name="Question" type="dns:QuestionType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+        <xs:element name="Answer" type="dns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+        <xs:element name="Authority" type="dns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+        <xs:element name="Additional" type="dns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HeaderType">
+    <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="yes" dfdl:leadingSkip="0">
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="QR" type="xs:boolean" dfdl:representation="binary"/>
+      <xs:element name="OPCODE" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="AA" type="xs:boolean" dfdl:representation="binary"/>
+      <xs:element name="TC" type="xs:boolean" dfdl:representation="binary"/>
+      <xs:element name="RD" type="xs:boolean" dfdl:representation="binary"/>
+      <xs:element name="RA" type

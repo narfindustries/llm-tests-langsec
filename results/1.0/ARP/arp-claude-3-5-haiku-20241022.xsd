@@ -1,57 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/arp"
-           xmlns:arp="http://example.com/arp"
-           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-
+           targetNamespace="http://example.com/arp">
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        representation="text"
-        encoding="UTF-8"
-        separator=""
-        initiator=""
-        terminator=""
-        textNumberRep="standard"
-        textNumberPattern="#0"
-        escapeSchemeRef=""
-        lengthKind="delimited"
-        alignment="1"
-        alignmentUnits="bytes"
-        fillByte="%NUL;"
-        occursCountKind="parsed"
-        truncateSpecifiedLengthString="no"
-        prefixIncludesPadding="no"
-        textTrimKind="none"
-        textPadKind="none"/>
+      <dfdl:format representation="binary" 
+                  byteOrder="bigEndian" 
+                  encoding="ASCII"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ARPRecord" dfdl:lengthKind="implicit">
+  <xs:element name="ARPPacket" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="SenderMAC" type="xs:string" 
-          dfdl:lengthKind="pattern" 
-          dfdl:lengthPattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"/>
+      <xs:sequence>
+        <xs:element name="hardwareType" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
         
-        <xs:element name="SenderIP" type="xs:string"
-          dfdl:lengthKind="pattern"
-          dfdl:lengthPattern="(\d{1,3}\.){3}\d{1,3}"/>
+        <xs:element name="protocolType" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
         
-        <xs:element name="TargetMAC" type="xs:string"
-          dfdl:lengthKind="pattern" 
-          dfdl:lengthPattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"/>
+        <xs:element name="hardwareAddressLength" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="8"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
         
-        <xs:element name="TargetIP" type="xs:string"
-          dfdl:lengthKind="pattern"
-          dfdl:lengthPattern="(\d{1,3}\.){3}\d{1,3}"/>
+        <xs:element name="protocolAddressLength" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="8"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
         
-        <xs:element name="Operation" type="xs:string"
-          dfdl:lengthKind="pattern"
-          dfdl:lengthPattern="(request|reply)"/>
+        <xs:element name="operationCode" type="xs:unsignedShort">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="16"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="senderHardwareAddress" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="48"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="senderProtocolAddress" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="32"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="targetHardwareAddress" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="48"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="targetProtocolAddress" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:element lengthKind="explicit" length="32"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

@@ -1,68 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:example:sqlite3-db"
-           xmlns="urn:example:sqlite3-db"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified"
-           dfdl:encoding="utf-8">
-  
+           xmlns:dfdl="http://www.ogf.org/dfdl/"
+           targetNamespace="http://example.com/sqlite"
+           xmlns="http://example.com/sqlite"
+           elementFormDefault="qualified">
+
+  <!-- DFDL Format Definition -->
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format representation="binary"
-                   byteOrder="network"
-                   lengthKind="explicit"
-                   alignmentUnits="bytes"
-                   lengthUnits="bytes"
-                   occursCountKind="expression"
-                   occursCount="{ ../numEntries }"/>
+      <dfdl:format byteOrder="bigEndian" alignmentUnits="bytes" lengthUnits="bytes" encoding="utf-8"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="SQLite3Database">
+  <!-- SQLite Database File Format -->
+  <xs:element name="SQLiteDatabase">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Header" type="sqlite3:HeaderType"/>
-        <xs:element name="Page" type="sqlite3:PageType" maxOccurs="unbounded"/>
+        <!-- File Header -->
+        <xs:element name="FileHeader">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="HeaderString" type="xs:string" dfdl:length="16" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit" dfdl:encoding="ascii"/>
+              <xs:element name="PageSize" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="WriteVersion" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="ReadVersion" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="ReservedSpace" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="MaxPayloadFraction" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="MinPayloadFraction" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="LeafPayloadFraction" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="FileChangeCounter" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="DatabaseSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="FirstFreelistTrunkPage" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="FreelistPageCount" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="SchemaCookie" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="SchemaFormatNumber" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="DefaultPageCacheSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="LargestRootBTreePage" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="TextEncoding" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="UserVersion" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="IncrementalVacuumMode" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="ApplicationId" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="Reserved" type="xs:hexBinary" dfdl:length="20" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="VersionValidFor" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="SQLiteVersionNumber" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <!-- B-Tree Pages -->
+        <xs:element name="BTreePages" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PageType" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="FreeblockStart" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="NumberOfCells" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="CellContentStart" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="FragmentaryBytes" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <!-- Cell Structures -->
+        <xs:element name="Cells" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PayloadSize" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit"/>
+              <xs:element name="RowId" type="xs:unsignedInt" dfdl:representation="binary"/>
+              <xs:element name="LeftChildPointer" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit" minOccurs="0"/>
+              <xs:element name="OverflowPagePointer" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthUnits="bytes" dfdl:lengthKind="explicit" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="MagicString" type="xs:string" dfdl:length="16"/>
-      <xs:element name="PageSize" type="xs:unsignedShort"/>
-      <xs:element name="FormatVersion" type="xs:unsignedByte"/>
-      <xs:element name="WriteVersion" type="xs:unsignedByte"/>
-      <xs:element name="ReserveSpace" type="xs:unsignedByte"/>
-      <xs:element name="MaxPayload" type="xs:unsignedShort"/>
-      <xs:element name="MinPayload" type="xs:unsignedShort"/>
-      <xs:element name="ChangeCounter" type="xs:unsignedInt"/>
-      <xs:element name="NumPages" type="xs:unsignedInt"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageType">
-    <xs:sequence>      
-      <xs:element name="PageHeader" type="sqlite3:PageHeaderType"/>
-      <xs:element name="Cell" type="sqlite3:CellType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="PageHeaderType">
-    <xs:sequence>
-      <xs:element name="FirstFreeblock" type="xs:unsignedShort"/>
-      <xs:element name="CellCount" type="xs:unsignedShort"/>
-      <xs:element name="CellContent" type="xs:unsignedShort"/>
-      <xs:element name="FragmentedFreeBytes" type="xs:unsignedByte"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="CellType">
-    <xs:sequence>
-      <xs:element name="Payload" type="xs:hexBinary" dfdl:length="{ ../PayloadLength }"/>
-      <xs:element name="RowID" type="xs:unsignedLong"/>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

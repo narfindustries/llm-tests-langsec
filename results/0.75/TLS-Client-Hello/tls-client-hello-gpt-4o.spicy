@@ -1,9 +1,7 @@
-module TLSClientHello;
-
-import spicy;
+module TLS;
 
 public type ClientHello = unit {
-    version: uint16;
+    client_version: uint16;
     random: bytes &size=32;
     session_id_length: uint8;
     session_id: bytes &size=session_id_length;
@@ -13,17 +11,76 @@ public type ClientHello = unit {
     compression_methods: bytes &size=compression_methods_length;
     extensions_length: uint16;
     extensions: bytes &size=extensions_length;
-} &validate(version == 0x0301 || version == 0x0302 || version == 0x0303);
 
-public type TLSHandshake = unit {
-    handshake_type: uint8 &validate(handshake_type == 0x01);
-    length: uint24;
-    client_hello: ClientHello &parseFrom=input.limit(length);
+    on %init {
+        for ( pos in 0 .. extensions_length - 1 ) {
+            let ext = Extension($input, pos);
+            pos += ext.size();
+            extensions.add(ext);
+        }
+    }
 };
 
-public type TLSRecord = unit {
-    content_type: uint8 &validate(content_type == 0x16);
-    version: uint16 &validate(version == 0x0301 || version == 0x0302 || version == 0x0303);
-    length: uint16;
-    handshake: TLSHandshake &parseFrom=input.limit(length);
+public type Extension = unit {
+    extension_type: uint16;
+    extension_data_length: uint16;
+    extension_data: bytes &size=extension_data_length;
+
+    on %init {
+        switch ( extension_type ) {
+            case 0x0000: // server_name
+                : ServerNameExtension(extension_data);
+            case 0x000a: // supported_groups
+                : SupportedGroupsExtension(extension_data);
+            case 0x000b: // ec_point_formats
+                : ECPointFormatsExtension(extension_data);
+            case 0x000d: // signature_algorithms
+                : SignatureAlgorithmsExtension(extension_data);
+            case 0x002b: // supported_versions
+                : SupportedVersionsExtension(extension_data);
+            case 0x0033: // key_share
+                : KeyShareExtension(extension_data);
+            case 0x002d: // psk_key_exchange_modes
+                : PSKKeyExchangeModesExtension(extension_data);
+            case 0x0010: // application_layer_protocol_negotiation (ALPN)
+                : ALPNExtension(extension_data);
+            default:
+                break;
+        }
+    }
+};
+
+public type ServerNameExtension = unit {
+    server_name_list_length: uint16;
+    server_name_list: bytes &size=server_name_list_length;
+};
+
+public type SupportedGroupsExtension = unit {
+    named_group_list_length: uint16;
+    named_group_list: bytes &size=named_group_list_length;
+};
+
+public type SignatureAlgorithmsExtension = unit {
+    signature_algorithms_length: uint16;
+    signature_algorithms: bytes &size=signature_algorithms_length;
+};
+
+public type SupportedVersionsExtension = unit {
+    versions_length: uint8;
+    versions: bytes &size=versions_length;
+};
+
+public type KeyShareExtension = unit {
+    client_shares_length: uint16;
+    client_shares: bytes &size=client_shares_length;
+};
+
+public type PSKKeyExchangeModesExtension = unit {
+    ke_modes_length: uint8;
+    ke_modes: bytes &size=ke_modes_length;
+};
+
+public type ALPNExtension = unit {
+    protocol_name_list_length: uint16;
+    protocol_name_list: bytes &size=protocol_name_list_length;
 };

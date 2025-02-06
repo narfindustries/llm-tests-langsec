@@ -1,58 +1,55 @@
-# This is a Zeek Spicy specification for parsing Bitcoin transactions
+module BitcoinTransactions;
 
-# Define the record types
-type BitcoinTransaction = record {
-  version: uint32,
-  num_inputs: uint8,
-  inputs: array[Input] of num_inputs,
-  num_outputs: uint8,
-  outputs: array[Output] of num_outputs,
-  lock_time: uint32,
+type Txid = bytes :size 32;
+type Varint = uint8 | uint16 | uint32;
+type Int32 = int32;
+type Int64 = int64;
+type Uint32 = uint32;
+type Uint64 = uint64;
+type Byte = uint8;
+
+type Script = sequence byte, bytes;
+
+type TxIn = struct {
+  txid: Txid;
+  vout: Uint32;
+  scriptSig: Script;
+  sequence: Uint32;
 };
 
-type Input = record {
-  prev_tx_hash: bytestring(32),
-  prev_tx_out_index: uint32,
-  script_length: uint8,
-  script: bytestring of script_length,
-  sequence: uint32,
+type TxOut = struct {
+  value: Uint64;
+  scriptPubKey: Script;
 };
 
-type Output = record {
-  value: uint64,
-  script_length: uint8,
-  script: bytestring of script_length,
+type BlockHeader = struct {
+  version: Int32;
+  prev_block: Txid;
+  merkle_root: Txid;
+  time: Uint32;
+  bits: Uint32;
+  nonce: Uint32;
 };
 
-# Define the parser
-module BitcoinTransactionParser;
+type Transaction = struct {
+  version: Int32;
+  tx_in_count: Varint;
+  tx_in: vector(TxIn);
+  tx_out_count: Varint;
+  tx_out: vector(TxOut);
+  lock_time: Uint32;
+};
 
-# Define the parser for the Bitcoin transaction
-parser BitcoinTransactionParser::parse биткойн_транзакция = 
-  let version: uint32 = uint32                                                                       ;
-  let num_inputs: uint8 = uint8                                                                       ;
-  let inputs: array[Input] of num_inputs = array(num_inputs) of parse_input                           ;
-  let num_outputs: uint8 = uint8                                                                       ;
-  let outputs: array[Output] of num_outputs = array(num_outputs) of parse_output                      ;
-  let lock_time: uint32 = uint32                                                                       ;
-  BitcoinTransaction($version, $num_inputs, $inputs, $num_outputs, $outputs, $lock_time)              ;
+type Block = struct {
+  block_header: BlockHeader;
+  transaction_count: Varint;
+  transactions: vector(Transaction);
+};
 
-# Define the parser for the input
-parser BitcoinTransactionParser::parse_input вход = 
-  let prev_tx_hash: bytestring(32) = bytestring(32)                                                   ;
-  let prev_tx_out_index: uint32 = uint32                                                               ;
-  let script_length: uint8 = uint8                                                                     ;
-  let script: bytestring of script_length = bytestring(script_length)                                 ;
-  let sequence: uint32 = uint32                                                                        ;
-  Input($prev_tx_hash, $prev_tx_out_index, $script_length, $script, $sequence)                        ;
-
-# Define the parser for the output
-parser BitcoinTransactionParser::parse_output вывод = 
-  let value: uint64 = uint64                                                                           ;
-  let script_length: uint8 = uint8                                                                     ;
-  let script: bytestring of script_length = bytestring(script_length)                                 ;
-  Output($value, $script_length, $script)                                                              ;
-
-# Define the functor to dissect the data
-functor BitcoinTransactionParser::Dissector::dissect_bitcoin_transaction(sequence: bytestring) = 
-  BitcoinTransactionParser::parse sequence                                                            ;
+type BitcoinMessage = struct {
+  magic: bytes :size 4;
+  command: bytes :size 12;
+  length: Uint32;
+  checksum: bytes :size 4;
+  payload: Block | Transaction;
+};

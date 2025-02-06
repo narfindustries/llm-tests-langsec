@@ -1,101 +1,113 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the structures for a ZIP file
-static HParser *zip_end_of_central_dir;
-static HParser *zip_central_dir_file_header;
-static HParser *zip_local_file_header;
-
-// ZIP end of central directory record
-static void init_zip_end_of_central_dir() {
-    zip_end_of_central_dir = h_sequence(
-        h_string("PK\x05\x06", 4),                 // End of central dir signature
-        h_uint16(),                                // Number of this disk
-        h_uint16(),                                // Disk where central directory starts
-        h_uint16(),                                // Number of central directory records on this disk
-        h_uint16(),                                // Total number of central directory records
-        h_uint32(),                                // Size of central directory (bytes)
-        h_uint32(),                                // Offset of start of central directory, relative to start of archive
-        h_uint16(),                                // ZIP file comment length
-        h_bytes(h_uint16()),                       // ZIP file comment
+// Parser definitions for ZIP file format
+HParser *zip_local_file_header() {
+    return h_sequence(
+        h_bits(32, false),
+        h_uint16(), // version needed to extract
+        h_uint16(), // general purpose bit flag
+        h_uint16(), // compression method
+        h_uint16(), // last mod file time
+        h_uint16(), // last mod file date
+        h_uint32(), // crc-32
+        h_uint32(), // compressed size
+        h_uint32(), // uncompressed size
+        h_length_value(h_uint16(), h_bytes()), // file name
+        h_length_value(h_uint16(), h_bytes()), // extra field
         NULL
     );
 }
 
-// ZIP central directory file header
-static void init_zip_central_dir_file_header() {
-    zip_central_dir_file_header = h_sequence(
-        h_string("PK\x01\x02", 4),                 // Central file header signature
-        h_uint16(),                                // Version made by
-        h_uint16(),                                // Version needed to extract
-        h_uint16(),                                // General purpose bit flag
-        h_uint16(),                                // Compression method
-        h_uint16(),                                // Last mod file time
-        h_uint16(),                                // Last mod file date
-        h_uint32(),                                // CRC-32
-        h_uint32(),                                // Compressed size
-        h_uint32(),                                // Uncompressed size
-        h_uint16(),                                // File name length
-        h_uint16(),                                // Extra field length
-        h_uint16(),                                // File comment length
-        h_uint16(),                                // Disk number start
-        h_uint16(),                                // Internal file attributes
-        h_uint32(),                                // External file attributes
-        h_uint32(),                                // Relative offset of local file header
-        h_bytes(h_uint16()),                       // File name
-        h_bytes(h_uint16()),                       // Extra field
-        h_bytes(h_uint16()),                       // File comment
+HParser *zip_central_directory_file_header() {
+    return h_sequence(
+        h_bits(32, false),
+        h_uint16(), // version made by
+        h_uint16(), // version needed to extract
+        h_uint16(), // general purpose bit flag
+        h_uint16(), // compression method
+        h_uint16(), // last mod file time
+        h_uint16(), // last mod file date
+        h_uint32(), // crc-32
+        h_uint32(), // compressed size
+        h_uint32(), // uncompressed size
+        h_length_value(h_uint16(), h_bytes()), // file name
+        h_length_value(h_uint16(), h_bytes()), // extra field
+        h_length_value(h_uint16(), h_bytes()), // file comment
+        h_uint16(), // disk number start
+        h_uint16(), // internal file attributes
+        h_uint32(), // external file attributes
+        h_uint32(), // relative offset of local header
         NULL
     );
 }
 
-// ZIP local file header
-static void init_zip_local_file_header() {
-    zip_local_file_header = h_sequence(
-        h_string("PK\x03\x04", 4),                 // Local file header signature
-        h_uint16(),                                // Version needed to extract
-        h_uint16(),                                // General purpose bit flag
-        h_uint16(),                                // Compression method
-        h_uint16(),                                // Last mod file time
-        h_uint16(),                                // Last mod file date
-        h_uint32(),                                // CRC-32
-        h_uint32(),                                // Compressed size
-        h_uint32(),                                // Uncompressed size
-        h_uint16(),                                // File name length
-        h_uint16(),                                // Extra field length
-        h_bytes(h_uint16()),                       // File name
-        h_bytes(h_uint16()),                       // Extra field
+HParser *zip_end_of_central_directory_record() {
+    return h_sequence(
+        h_bits(32, false),
+        h_uint16(), // number of this disk
+        h_uint16(), // disk where central directory starts
+        h_uint16(), // number of central directory records on this disk
+        h_uint16(), // total number of central directory records
+        h_uint32(), // size of central directory
+        h_uint32(), // offset of start of central directory
+        h_length_value(h_uint16(), h_bytes()), // ZIP file comment
         NULL
     );
 }
 
-// Complete ZIP parser
-static void init_zip_parser() {
-    init_zip_end_of_central_dir();
-    init_zip_central_dir_file_header();
-    init_zip_local_file_header();
-
-    HParser *zip_file = h_sequence(
-        h_many(zip_local_file_header),             // Parse multiple local file headers
-        h_many(zip_central_dir_file_header),       // Parse multiple central directory file headers
-        zip_end_of_central_dir,                    // End of central directory record
+HParser *zip_file() {
+    return h_sequence(
+        h_many(zip_local_file_header()),
+        h_many(zip_central_directory_file_header()),
+        zip_end_of_central_directory_record(),
         NULL
     );
+}
 
-    // Compile the parser
-    HParseResult *result = h_parse(zip_file, input_buffer, input_length);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(data, 1, size, file) != size) {
+        perror("Failed to read file");
+        free(data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    HParser *parser = zip_file();
+    HParseResult *result = h_parse(parser, data, size);
     if (result) {
-        // Successfully parsed
         printf("ZIP file parsed successfully.\n");
     } else {
-        // Failed to parse
         printf("Failed to parse ZIP file.\n");
     }
-}
 
-int main(int argc, char **argv) {
-    // Initialize the ZIP parser
-    init_zip_parser();
-
+    h_parse_result_free(result);
+    h_free_parser(parser);
+    free(data);
     return 0;
 }

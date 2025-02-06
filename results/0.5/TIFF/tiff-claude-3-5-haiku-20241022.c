@@ -1,59 +1,109 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
-static const HParser *tiff_parser;
+typedef enum {
+    TIFF_LITTLE_ENDIAN = 0x4949,
+    TIFF_BIG_ENDIAN = 0x4D4D
+} TiffByteOrder;
 
-static const char* parse_tiff_header(const HParseResult *p, void *user_data) {
-    // Basic TIFF header validation logic
-    const uint8_t *bytes = (const uint8_t*)p->ast->data;
-    if (bytes[0] == 0x49 && bytes[1] == 0x49 && 
-        bytes[2] == 0x2A && bytes[3] == 0x00) {
-        return "Valid TIFF Header";
+typedef enum {
+    TIFF_MAGIC_NUMBER = 0x002A
+} TiffConstants;
+
+typedef enum {
+    COMPRESSION_NONE = 1,
+    COMPRESSION_CCITT3 = 2,
+    COMPRESSION_CCITT4 = 3,
+    COMPRESSION_LZW = 4,
+    COMPRESSION_JPEG = 5,
+    COMPRESSION_PACKBITS = 32773
+} TiffCompressionType;
+
+typedef struct {
+    uint16_t tag;
+    uint16_t type;
+    uint32_t count;
+    uint32_t value_or_offset;
+} TiffTag;
+
+HParser* parse_byte_order() {
+    return h_choice(
+        h_token((const char*)&(uint16_t){TIFF_LITTLE_ENDIAN}, 2),
+        h_token((const char*)&(uint16_t){TIFF_BIG_ENDIAN}, 2),
+        NULL
+    );
+}
+
+HParser* parse_magic_number() {
+    return h_token((const char*)&(uint16_t){TIFF_MAGIC_NUMBER}, 2);
+}
+
+HParser* parse_ifd_tag() {
+    return h_sequence(
+        h_uint16(),   // tag
+        h_uint16(),   // type
+        h_uint32(),   // count
+        h_uint32(),   // value or offset
+        NULL
+    );
+}
+
+HParser* create_tiff_parser() {
+    return h_sequence(
+        parse_byte_order(),
+        parse_magic_number(),
+        h_uint32(),  // first IFD offset
+        h_uint16(),  // number of directory entries
+        h_many(parse_ifd_tag()),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
+        return 1;
     }
-    return NULL;
-}
 
-static HParsedToken* tiff_semantic_action(const HParseResult *p, void *user_data) {
-    HParsedToken *token = h_make_token(p->arena, TT_BYTES, p->ast);
-    return token;
-}
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-static const HParser* make_tiff_parser() {
-    // Intel byte order marker (0x49 0x49)
-    HParser *byte_order = h_token("\x49\x49", 2);
-    
-    // TIFF version (0x2A 0x00)
-    HParser *version = h_token("\x2A\x00", 2);
-    
-    // IFD offset (typically 8)
-    HParser *ifd_offset = h_uint32();
-    
-    // Combine header components
-    tiff_parser = h_sequence(byte_order, version, ifd_offset, NULL);
-    
-    // Add semantic action for validation
-    tiff_parser = h_semantic_action(tiff_parser, tiff_semantic_action, NULL, NULL);
-    
-    return tiff_parser;
-}
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-int main(int argc, char **argv) {
-    h_init();
-    
-    const HParser *parser = make_tiff_parser();
-    
-    // Example usage of parser
-    const char *input_data = "\x49\x49\x2A\x00\x08\x00\x00\x00";
-    size_t input_len = 8;
-    
-    HParseResult *result = h_parse(parser, (const uint8_t*)input_data, input_len);
-    
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    if (bytes_read != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    HParser* tiff_parser = create_tiff_parser();
+    HParseResult* result = h_parse(tiff_parser, buffer, file_size);
+
     if (result && result->ast) {
-        printf("TIFF parsing successful\n");
+        printf("TIFF file parsed successfully\n");
+        h_parse_result_free(result);
     } else {
         printf("TIFF parsing failed\n");
     }
-    
-    h_destroy();
+
+    free(buffer);
+    fclose(file);
     return 0;
 }

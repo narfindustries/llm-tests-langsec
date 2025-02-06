@@ -3,87 +3,91 @@ meta:
   title: DNS (Domain Name System) packet
   file-extension: dns
   endian: be
-
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: flags
-  - id: qdcount
-    type: u2
-    doc: Number of questions
-  - id: ancount
-    type: u2
-    doc: Number of answers
-  - id: nscount
-    type: u2
-    doc: Number of authority records
-  - id: arcount
-    type: u2
-    doc: Number of additional records
+  - id: header
+    type: packet_header
   - id: questions
     type: question
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
   - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
-
+    repeat-expr: header.arcount
 types:
+  packet_header:
+    seq:
+      - id: id
+        type: u2
+      - id: flags
+        type: flags
+      - id: qdcount
+        type: u2
+        doc: Number of questions
+      - id: ancount
+        type: u2
+        doc: Number of answers
+      - id: nscount
+        type: u2
+        doc: Number of authority records
+      - id: arcount
+        type: u2
+        doc: Number of additional records
   flags:
     seq:
-      - id: qr
+      - id: flag_response
         type: b1
-        doc: Query (0) or Response (1)
       - id: opcode
         type: b4
-        doc: Operation code
-      - id: aa
+      - id: flag_authoritative
         type: b1
-        doc: Authoritative Answer
-      - id: tc
+      - id: flag_truncated
         type: b1
-        doc: Truncated
-      - id: rd
+      - id: flag_recursion_desired
         type: b1
-        doc: Recursion Desired
-      - id: ra
+      - id: flag_recursion_available
         type: b1
-        doc: Recursion Available
-      - id: z
+      - id: reserved
         type: b3
-        doc: Reserved
-      - id: rcode
+      - id: response_code
         type: b4
-        doc: Response code
-
+    enums:
+      opcode:
+        0: query
+        1: iquery
+        2: status
+      response_code:
+        0: no_error
+        1: format_error
+        2: server_failure
+        3: name_error
+        4: not_implemented
+        5: refused
   question:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: record_type
+        enum: type_type
       - id: class
         type: u2
         enum: class_type
-
   resource_record:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: record_type
+        enum: type_type
       - id: class
         type: u2
         enum: class_type
@@ -96,56 +100,46 @@ types:
         type:
           switch-on: type
           cases:
-            'record_type::a': rdata_a
-            'record_type::ns': domain_name
-            'record_type::cname': domain_name
-            'record_type::soa': rdata_soa
-            'record_type::ptr': domain_name
-            'record_type::mx': rdata_mx
-            'record_type::txt': rdata_txt
-            'record_type::aaaa': rdata_aaaa
+            'type_type::a': rdata_a
+            'type_type::ns': domain_name
+            'type_type::cname': domain_name
+            'type_type::soa': rdata_soa
+            'type_type::ptr': domain_name
+            'type_type::mx': rdata_mx
+            'type_type::aaaa': rdata_aaaa
             _: raw_rdata
-
   domain_name:
     seq:
       - id: labels
         type: label
         repeat: until
-        repeat-until: _.length == 0 or _.is_pointer
-
+        repeat-until: _.length == 0 or _.length >= 0xc0
   label:
     seq:
       - id: length
         type: u1
       - id: pointer
         type: u1
-        if: 'length & 0xc0 == 0xc0'
-      - id: name
+        if: length >= 0xc0
+      - id: data
         type: str
-        size: length & 0x3f
+        size: length
+        if: length < 0xc0
         encoding: ASCII
-        if: 'length & 0xc0 == 0'
-    instances:
-      is_pointer:
-        value: length & 0xc0 == 0xc0
-
   rdata_a:
     seq:
       - id: ip
         size: 4
-
   rdata_aaaa:
     seq:
       - id: ip
         size: 16
-
   rdata_mx:
     seq:
       - id: preference
         type: u2
       - id: exchange
         type: domain_name
-
   rdata_soa:
     seq:
       - id: mname
@@ -162,39 +156,24 @@ types:
         type: u4
       - id: minimum
         type: u4
-
-  rdata_txt:
-    seq:
-      - id: strings
-        type: txt_string
-        repeat: eos
-
-  txt_string:
-    seq:
-      - id: length
-        type: u1
-      - id: text
-        type: str
-        size: length
-        encoding: ASCII
-
   raw_rdata:
     seq:
       - id: data
         size-eos: true
-
 enums:
-  record_type:
+  type_type:
     1: a
     2: ns
     5: cname
     6: soa
     12: ptr
     15: mx
-    16: txt
     28: aaaa
-
+    252: axfr
+    255: any
   class_type:
     1: in
+    2: cs
     3: ch
     4: hs
+    255: any

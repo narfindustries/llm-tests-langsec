@@ -1,37 +1,68 @@
 module ICMP;
 
-import spicy;
-
 public type Message = unit {
-    type: uint8;
+    msg_type: uint8;
     code: uint8;
     checksum: uint16;
-    
-    switch ( self.type ) {
-        0 -> echo_reply: EchoMessage;
-        3 -> dest_unreach: DestUnreachMessage;
-        8 -> echo_request: EchoMessage;
-        11 -> time_exceeded: TimeExceededMessage;
-        * -> : bytes &eod;
+
+    switch ( self.msg_type ) {
+        0, 8 -> echo: EchoMessage;
+        3 -> dest_unreachable: DestinationUnreachable;
+        4 -> source_quench: SourceQuench;
+        5 -> redirect: Redirect;
+        11 -> time_exceeded: TimeExceeded;
+        12 -> parameter_problem: ParameterProblem;
+        13, 14 -> timestamp: TimestampMessage;
+        15, 16 -> info: InformationMessage;
     };
 };
 
 type EchoMessage = unit {
     identifier: uint16;
-    sequence: uint16;
-    payload: bytes &eod;
+    sequence_number: uint16;
+    data: bytes &eod;
 };
 
-type DestUnreachMessage = unit {
+type DestinationUnreachable = unit {
     unused: uint32;
-    payload: bytes &eod;
+    ip_header: bytes &size=20;
+    original_datagram: bytes &size=8;
 };
 
-type TimeExceededMessage = unit {
+type SourceQuench = unit {
     unused: uint32;
-    payload: bytes &eod;
+    ip_header: bytes &size=20;
+    original_datagram: bytes &size=8;
 };
 
-on Message::%done {
-    print self;
-}
+type Redirect = unit {
+    gateway_address: uint32;
+    ip_header: bytes &size=20;
+    original_datagram: bytes &size=8;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    ip_header: bytes &size=20;
+    original_datagram: bytes &size=8;
+};
+
+type ParameterProblem = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+    ip_header: bytes &size=20;
+    original_datagram: bytes &size=8;
+};
+
+type TimestampMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type InformationMessage = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+};

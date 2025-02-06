@@ -1,11 +1,11 @@
-use std::fs::File;
-use std::io::Read;
-use std::env;
 use nom::{
+    bytes::complete::take,
+    combinator::map,
+    sequence::tuple,
     IResult,
-    number::complete::{be_u8, be_u16, be_u32},
-    bytes::complete::take
 };
+use std::env;
+use std::fs;
 
 #[derive(Debug)]
 struct ArpPacket {
@@ -20,49 +20,56 @@ struct ArpPacket {
     tpa: Vec<u8>,
 }
 
-fn parse_arp(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-    let (input, htype) = be_u16(input)?;
-    let (input, ptype) = be_u16(input)?;
-    let (input, hlen) = be_u8(input)?;
-    let (input, plen) = be_u8(input)?;
-    let (input, oper) = be_u16(input)?;
+fn parse_u16(input: &[u8]) -> IResult<&[u8], u16> {
+    let (input, bytes) = take(2usize)(input)?;
+    Ok((input, u16::from_be_bytes([bytes[0], bytes[1]])))
+}
 
+fn parse_u8(input: &[u8]) -> IResult<&[u8], u8> {
+    let (input, byte) = take(1usize)(input)?;
+    Ok((input, byte[0]))
+}
+
+fn parse_arp(input: &[u8]) -> IResult<&[u8], ArpPacket> {
+    let (input, (htype, ptype, hlen, plen, oper)) =
+        tuple((parse_u16, parse_u16, parse_u8, parse_u8, parse_u16))(input)?;
     let (input, sha) = take(hlen)(input)?;
     let (input, spa) = take(plen)(input)?;
     let (input, tha) = take(hlen)(input)?;
     let (input, tpa) = take(plen)(input)?;
 
-    Ok((input, ArpPacket {
-        htype,
-        ptype,
-        hlen,
-        plen,
-        oper,
-        sha: sha.to_vec(),
-        spa: spa.to_vec(),
-        tha: tha.to_vec(),
-        tpa: tpa.to_vec(),
-    }))
+    Ok((
+        input,
+        ArpPacket {
+            htype,
+            ptype,
+            hlen,
+            plen,
+            oper,
+            sha: sha.to_vec(),
+            spa: spa.to_vec(),
+            tha: tha.to_vec(),
+            tpa: tpa.to_vec(),
+        },
+    ))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <binary file>", args[0]);
-        std::process::exit(1);
+        return;
     }
 
     let filename = &args[1];
-    let mut file = File::open(filename).expect("Unable to open file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Unable to read file");
+    let data = fs::read(filename).expect("Unable to read file");
 
-    match parse_arp(&buffer) {
+    match parse_arp(&data) {
         Ok((_, arp_packet)) => {
             println!("{:?}", arp_packet);
         }
-        Err(error) => {
-            eprintln!("Failed to parse ARP packet: {:?}", error);
+        Err(e) => {
+            eprintln!("Failed to parse ARP packet: {:?}", e);
         }
     }
 }

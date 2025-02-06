@@ -1,49 +1,56 @@
-{-# LANGUAGE OverloadedStrings #-}
-module SQLite3DB where
+module SQLite3 where
 
-import Daedalus.Type.AST
-import Daedalus.Value
+import Daedalus.AST
 
-data Gemini = Gemini {
-    field1 :: Integer,
-    field2 :: String
-} deriving (Show, Eq)
+data PageType = Leaf | Interior | Free deriving (Show, Eq, Bounded, Enum, Daedalus.Type.Hashable)
 
+data SQLiteHeader = SQLiteHeader
+  { magic :: String
+  , pageSize :: Integer
+  , writeCount :: Integer
+  , pageSize2 :: Integer
+  , version :: Integer
+  } deriving (Show, Eq, Daedalus.Type.Hashable)
 
--- Daedalus type definition for the Gemini data type.  Note that this is a simplification
--- and may need adjustments based on the actual schema.
-geminiType :: Type
-geminiType = TRecord [
-    ("field1", TInteger),
-    ("field2", TString)
-    ]
+data PageHeader = PageHeader
+  { pageNumber :: Integer
+  , pageType :: PageType
+  , freeBlockCount :: Integer
+  , checksum :: Integer
+  } deriving (Show, Eq, Daedalus.Type.Hashable)
 
--- Daedalus function to parse a Gemini record from a SQLite row.  This needs to be
--- adapted to match your specific column names and types in the SQLite database.
-parseGemini ::  [(String, Value)] -> Maybe Gemini
-parseGemini fields = do
-  field1Val <- lookup "field1" fields >>= getValue Integer
-  field2Val <- lookup "field2" fields >>= getValue String
-  return $ Gemini field1Val field2Val
+data Cell = Cell { cellData :: Bytes } deriving (Show, Eq, Daedalus.Type.Hashable)
 
-getValue :: (Value a) => String -> [(String, Value)] -> Maybe a
-getValue name fields = do
-    (name', val) <- lookup name fields
-    guard (name' == name)
-    return $ fromValue val
+data Row = Row { rowId :: Integer, cells :: [Cell] } deriving (Show, Eq, Daedalus.Type.Hashable)
 
---Example usage (Modify to match your actual SQL query and database interaction)
+data TableSchema = TableSchema { tableName :: String, columns :: [(String, ColumnType)] } deriving (Show, Eq, Daedalus.Type.Hashable)
 
--- This is a placeholder; replace with your actual database access code
-getGeminiData :: IO [(String, Value)]
-getGeminiData = return [("field1", fromInteger 123), ("field2", string "test")]
+data IndexEntry = IndexEntry { indexKey :: [Integer], rowId :: Integer } deriving (Show, Eq, Daedalus.Type.Hashable)
+
+data ColumnType = INT | TEXT | REAL | BLOB | NULL deriving (Show, Eq, Bounded, Enum, Daedalus.Type.Hashable)
 
 
+data SQLiteDatabase = SQLiteDatabase
+  { header :: SQLiteHeader
+  , pages :: [Page]
+  } deriving (Show, Eq, Daedalus.Type.Hashable)
 
-main :: IO ()
-main = do
-    geminiData <- getGeminiData
-    case parseGemini geminiData of
-      Just gemini -> print gemini
-      Nothing -> putStrLn "Failed to parse Gemini data"
+data Page = Page
+ { header :: PageHeader
+ , cells :: [Cell]
+ , rows :: Maybe [Row]
+ , children :: Maybe [Integer]
+ , tableSchema :: Maybe TableSchema
+ , indexEntries :: Maybe [IndexEntry]
+ } deriving (Show, Eq, Daedalus.Type.Hashable)
+
+
+sqlite3 :: Daedalus.AST.Type
+sqlite3 = Daedalus.AST.TApp (Daedalus.AST.TCon "Record") [Daedalus.AST.TRecord [("header", tSQLiteHeader), ("pages", tPages)]]
+
+tSQLiteHeader :: Daedalus.AST.Type
+tSQLiteHeader = Daedalus.AST.TNamed "SQLiteHeader" []
+
+tPages :: Daedalus.AST.Type
+tPages = Daedalus.AST.TList (Daedalus.AST.TNamed "Page" [])
 

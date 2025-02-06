@@ -1,70 +1,54 @@
-{-# LANGUAGE OverloadedStrings #-}
-module SQLite3DB where
-
-import Daedalus.AST
-import Daedalus.PP
-
-data GeminiVersion = GeminiV1_5
-
-data SQLite3DB = SQLite3DB
-  { version :: GeminiVersion
-  , tables :: [Table]
+data SqliteHeader = SqliteHeader
+  { magic :: String 16
+  , pageSize :: Word16
+  , writeVersion :: Word16
+  , readVersion :: Word16
+  , reservedByte :: Word8
+  , maxPageCount :: Word32
+  , textEncoding :: Word32
+  , userVersion :: Word32
+  , incrementalVacuumMode :: Word32
+  , applicationId :: Word64
+  , versionValidForAllPages :: Word32
+  , pageCount :: Word32
+  , checksumFlag :: Word32
+  , freePageCount :: Word32
+  , schemaVersion :: Word32
+  , schemaFormat :: Word32
+  , defaultPageCacheSize :: Word32
+  , largeFileSupport :: Word32
+  , pageSizeExtension :: Word32
+  , reservedBytes :: String 20
   }
 
-data Table = Table
-  { tableName :: String
-  , columns :: [Column]
+data PageHeader = PageHeader
+  { pageNumber :: Word32
+  , pageType :: Word8
+  , freeBlockCount :: Word8
+  , cellCount :: Word16
+  , firstFreeBlock :: Word16
+  , cellPointer :: Word16
+  , checksum :: Word32
   }
 
-data Column = Column
-  { columnName :: String
-  , columnType :: ColumnType
+data CellHeader = CellHeader
+  { headerSize :: Word16
+  , rowId :: Word64
+  , payloadSize :: Word16
+  , offsetToPayload :: Word16
   }
 
-data ColumnType = IntType | TextType | BlobType
+data CellPayload = CellPayload
+  { payload :: String
+  }
 
-instance Semigroup SQLite3DB where
-  SQLite3DB v1 t1 <> SQLite3DB v2 t2 = SQLite3DB v1 (t1 ++ t2)
+data SqlitePage = SqlitePage
+  { header :: PageHeader
+  , cells :: [CellHeader]
+  , payloads :: [CellPayload]
+  }
 
-instance Monoid SQLite3DB where
-  mempty = SQLite3DB GeminiV1_5 []
-
--- Example usage:
-exampleDB :: SQLite3DB
-exampleDB = mconcat
-  [ SQLite3DB GeminiV1_5 [Table "users" [Column "id" IntType, Column "name" TextType]]
-  , SQLite3DB GeminiV1_5 [Table "items" [Column "item_id" IntType, Column "description" TextType, Column "data" BlobType]]
-  ]
-
-
--- Daedalus code generation
-generateDDL :: SQLite3DB -> String
-generateDDL (SQLite3DB _ tables) = unlines $
-  [ "PRAGMA foreign_keys = ON;"
-  ] ++
-  map generateTableDDL tables
-
-generateTableDDL :: Table -> String
-generateTableDDL (Table tableName cols) =
-  unlines $
-  [ "CREATE TABLE IF NOT EXISTS " ++ tableName ++ " ("
-  ] ++
-  map generateColumnDDL cols ++
-  [ ");"
-  ]
-
-generateColumnDDL :: Column -> String
-generateColumnDDL (Column columnName columnType) =
-  columnName ++ " " ++ generateColumnTypeDDL columnType
-
-generateColumnTypeDDL :: ColumnType -> String
-generateColumnTypeDDL IntType = "INTEGER"
-generateColumnTypeDDL TextType = "TEXT"
-generateColumnTypeDDL BlobType = "BLOB"
-
-
-main :: IO ()
-main = do
-  let ddl = generateDDL exampleDB
-  putStrLn ddl
-
+data SqliteDatabase = SqliteDatabase
+  { header :: SqliteHeader
+  , pages :: [SqlitePage]
+  }

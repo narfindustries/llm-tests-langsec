@@ -1,20 +1,14 @@
 meta:
   id: gif
-  title: CompuServe Graphics Interchange Format
-  application: GIF
-  file-extension:
-    - gif
-  xref:
-    forensicswiki: GIF
-    wikidata: Q230853
-  license: CC0-1.0
+  file-extension: gif
+  title: GIF
+  application:
+    - GIF
   endian: le
-
 doc: |
-  GIF is a bitmap image format that was introduced by CompuServe in 1987 and
-  has since gained widespread usage on the World Wide Web due to its wide
-  support and portability.
-
+  GIF (Graphics Interchange Format) is a raster graphics file format 
+  that supports both static and animated images. GIF is widely used
+  for its support of animations and transparency.
 seq:
   - id: header
     type: header
@@ -22,12 +16,11 @@ seq:
     type: logical_screen_descriptor
   - id: global_color_table
     type: color_table
-    if: header.has_global_color_table
+    if: logical_screen_descriptor.has_global_color_table
   - id: blocks
     type: block
     repeat: until
-    repeat-until: _.block_type == block_types::end_of_file
-
+    repeat-until: block_type == 0x3B
 types:
   header:
     seq:
@@ -36,25 +29,11 @@ types:
       - id: version
         size: 3
         type: str
-      - id: width
-        type: u2
-      - id: height
-        type: u2
-      - id: flags
-        type: u1
-      - id: bg_color_index
-        type: u1
-      - id: pixel_aspect_ratio
-        type: u1
-    instances:
-      has_global_color_table:
-        value: (flags & 0x80) != 0
-
   logical_screen_descriptor:
     seq:
-      - id: width
+      - id: screen_width
         type: u2
-      - id: height
+      - id: screen_height
         type: u2
       - id: flags
         type: u1
@@ -62,46 +41,52 @@ types:
         type: u1
       - id: pixel_aspect_ratio
         type: u1
-
+    instances:
+      has_global_color_table:
+        value: (flags & 0x80) != 0
+      color_resolution:
+        value: (flags >> 4) & 0x07
+      is_sorted:
+        value: (flags & 0x08) != 0
+      size_of_global_color_table:
+        value: 1 << ((flags & 0x07) + 1)
   color_table:
     seq:
       - id: entries
         type: rgb
         repeat: expr
-        repeat-expr: (1 << ((flags & 0x07) + 1))
-
+        repeat-expr: entries_count
+    params:
+      - id: entries_count
+        type: u4
   rgb:
     seq:
-      - id: r
+      - id: red
         type: u1
-      - id: g
+      - id: green
         type: u1
-      - id: b
+      - id: blue
         type: u1
-
   block:
     seq:
       - id: block_type
         type: u1
       - id: body
-        size: (len - 1)
         type:
           switch-on: block_type
           cases:
-            "0x21": extension_block
-            "0x2c": image_descriptor
-            "0x3b": end_of_file
-
-  extension_block:
+            0x2C: image_block
+            0x21: extension_block
+            0x3B: trailer_block
+  image_block:
     seq:
-      - id: label
-        type: u1
-      - id: block_size
-        type: u1
-      - id: extension_data
-        size: block_size
-        type: bytes
-
+      - id: image_descriptor
+        type: image_descriptor
+      - id: local_color_table
+        type: color_table
+        if: image_descriptor.has_local_color_table
+      - id: image_data
+        type: image_data
   image_descriptor:
     seq:
       - id: left
@@ -114,20 +99,100 @@ types:
         type: u2
       - id: flags
         type: u1
-      - id: local_color_table
-        type: color_table
-        if: flags & 0x80 != 0
+    instances:
+      has_local_color_table:
+        value: (flags & 0x80) != 0
+      is_interlaced:
+        value: (flags & 0x40) != 0
+      is_sorted:
+        value: (flags & 0x20) != 0
+      size_of_local_color_table:
+        value: 1 << ((flags & 0x07) + 1)
+  image_data:
+    seq:
       - id: lzw_minimum_code_size
         type: u1
-      - id: image_data
-        type: sub_blocks
-
-  sub_blocks:
+      - id: blocks
+        type: subblocks
+  subblocks:
     seq:
-      - id: sub_blocks
-        type: bytes
+      - id: subblocks
+        type: subblock
         repeat: until
-        repeat-until: subtype == 0x00
-
-  end_of_file:
-    seq: []
+        repeat-until: _.size == 0
+  subblock:
+    seq:
+      - id: size
+        type: u1
+      - id: bytes
+        size: size
+  extension_block:
+    seq:
+      - id: label
+        type: u1
+      - id: extension
+        type:
+          switch-on: label
+          cases:
+            0xF9: graphic_control_extension
+            0xFE: comment_extension
+            0x01: plain_text_extension
+            0xFF: application_extension
+  graphic_control_extension:
+    seq:
+      - id: block_size
+        type: u1
+        assert: block_size == 4
+      - id: flags
+        type: u1
+      - id: delay_time
+        type: u2
+      - id: transparent_color_index
+        type: u1
+      - id: terminator
+        type: u1
+        assert: terminator == 0x00
+  comment_extension:
+    seq:
+      - id: comment_data
+        type: subblocks
+  plain_text_extension:
+    seq:
+      - id: block_size
+        type: u1
+        assert: block_size == 12
+      - id: text_grid_left
+        type: u2
+      - id: text_grid_top
+        type: u2
+      - id: text_grid_width
+        type: u2
+      - id: text_grid_height
+        type: u2
+      - id: char_width
+        type: u1
+      - id: char_height
+        type: u1
+      - id: text_fg_color_index
+        type: u1
+      - id: text_bg_color_index
+        type: u1
+      - id: plain_text_data
+        type: subblocks
+  application_extension:
+    seq:
+      - id: block_size
+        type: u1
+      - id: application_identifier
+        size: 8
+        type: str
+      - id: application_authentication_code
+        size: 3
+        type: str
+      - id: application_data
+        type: subblocks
+  trailer_block:
+    seq:
+      - id: terminator
+        type: u1
+        valid: terminator == 0x3B

@@ -1,88 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
-    <!-- DFDL Schema for GZIP File Format Following RFC 1952 -->
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <!-- Define specific format properties for entire schema -->
-            <dfdl:format ref="tns:GZipGeneralFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
-    
-    <xs:complexType name="GZipFile">
-        <xs:sequence>
-            <!-- Member: ID1 and ID2 -->
-            <xs:element name="ID1" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:element/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="ID2" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary">
-                <xs:annotation>
-                    <xs:appinfo source="http://www.ogf.org/dfdl/">
-                        <dfdl:element/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <!-- Member: Compression Method -->
-            <xs:element name="CM" type="xs:unsignedByte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-            <!-- Member: Flags -->
-            <xs:element name="FLG" type="xs:unsignedByte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-            <!-- Member: Modification Time -->
-            <xs:element name="MTIME" type="xs:unsignedInt" dfdl:length="4" dfdl:textNumberRep="binary"/>
-            <!-- Member: Extra Flags -->
-            <xs:element name="XFL" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-            <!-- Member: Operating System -->
-            <xs:element name="OS" type="xs:byte" dfdl:length="1" dfdl:textNumberRep="binary"/>
-            <!-- Optional Extra Field -->
-            <xs:group dfdl:hiddenGroupRef="tns:extraField"/>
-            <!-- Member: Optional Filename -->
-            <xs:group dfdl:hiddenGroupRef="tns:filenameField"/>
-            <!-- Member: Optional Comment -->
-            <xs:group dfdl:hiddenGroupRef="tns:commentField"/>
-            <!-- Member: Optional CRC16 for Header -->
-            <xs:group dfdl:hiddenGroupRef="tns:crc16Field"/>
-            <!-- Compressed Data Blocks -->
-            <xs:element name="CompressedData" type="xs:hexBinary"/>
-            <!-- CRC32 of the original data -->
-            <xs:element name="CRC32" type="xs:unsignedInt" dfdl:length="4" dfdl:textNumberRep="binary"/>
-            <!-- Size of the original uncompressed data -->
-            <xs:element name="ISIZE" type="xs:unsignedInt" dfdl:length="4" dfdl:textNumberRep="binary"/>
-        </xs:sequence>
-    </xs:complexType>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/gzip"
+           xmlns:tns="http://example.com/gzip">
+  
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="GZipFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     bitOrder="mostSignificantBitFirst"
+                     representation="binary"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:group name="extraField">
-        <xs:sequence>
-            <xs:element name="XLEN" type="xs:unsignedShort" dfdl:length="2" dfdl:textNumberRep="binary"/>
-            <xs:element name="ExtraField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="tns:XLEN"/>
-        </xs:sequence>
-    </xs:group>
+  <xs:element name="GZipFile" type="tns:GZipFileType"/>
 
-    <xs:group name="filenameField">
-        <xs:sequence>
-            <xs:element name="FileName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ASCII" dfdl:terminator="0"/>
-        </xs:sequence>
-    </xs:group>
+  <xs:complexType name="GZipFileType">
+    <xs:sequence>
+      <xs:element name="member" type="tns:GZipMemberType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <xs:group name="commentField">
-        <xs:sequence>
-            <xs:element name="Comment" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ASCII" dfdl:terminator="0"/>
-        </xs:sequence>
-    </xs:group>
+  <xs:complexType name="GZipMemberType">
+    <xs:sequence>
+      <xs:element name="ID1" type="xs:byte" dfdl:inputValueCalc="'{0x1F}'"/>
+      <xs:element name="ID2" type="xs:byte" dfdl:inputValueCalc="'{0x8B}'"/>
+      <xs:element name="CM" type="xs:byte"/>
+      <xs:element name="FLG" type="xs:byte"/>
+      <xs:element name="MTIME" type="xs:int"/>
+      <xs:element name="XFL" type="xs:byte"/>
+      <xs:element name="OS" type="xs:byte"/>
+      <xs:element name="extraField" type="tns:ExtraFieldType" minOccurs="0" />
+      <xs:element name="filename" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%00" minOccurs="0"/>
+      <xs:element name="comment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%00" minOccurs="0"/>
+      <xs:element name="headerCRC" type="xs:short" dfdl:length="2" minOccurs="0"/>
+      <xs:element name="compressedData" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+      <xs:element name="CRC32" type="xs:int"/>
+      <xs:element name="ISIZE" type="xs:int"/>
+    </xs:sequence>
+    <dfdl:format ref="tns:GZipFormat"/>
+  </xs:complexType>
 
-    <xs:group name="crc16Field">
-        <xs:sequence>
-            <xs:element name="CRC16" type="xs:unsignedShort" dfdl:length="2" dfdl:textNumberRep="binary"/>
-        </xs:sequence>
-    </xs:group>
+  <xs:complexType name="ExtraFieldType">
+    <xs:sequence>
+      <xs:element name="SI1" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="SI2" type="xs:byte" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="len" type="xs:short" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../len}" dfdl:binaryNumberRep="binary"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <!-- Default format properties for DFDL elements within this schema -->
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="GZipGeneralFormat">
-                <dfdl:format representation="binary" lengthKind="explicit" byteOrder="bigEndian" binaryNumberRep="binary" />
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
 </xs:schema>

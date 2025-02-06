@@ -1,12 +1,14 @@
 use nom::{
-    bytes::complete::{take, tag},
+    bytes::complete::{tag, take},
     number::complete::{le_u16, le_u32},
     sequence::tuple,
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
+use std::{
+    env,
+    fs::File,
+    io::{self, Read},
+};
 
 #[derive(Debug)]
 struct LocalFileHeader {
@@ -50,17 +52,17 @@ struct CentralDirectoryFileHeader {
 #[derive(Debug)]
 struct EndOfCentralDirectoryRecord {
     number_of_this_disk: u16,
-    number_of_the_disk_with_the_start_of_the_central_directory: u16,
-    total_number_of_entries_in_the_central_directory_on_this_disk: u16,
-    total_number_of_entries_in_the_central_directory: u16,
-    size_of_the_central_directory: u32,
-    offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number: u32,
+    disk_where_central_directory_starts: u16,
+    number_of_central_directory_records_on_this_disk: u16,
+    total_number_of_central_directory_records: u16,
+    size_of_central_directory: u32,
+    offset_of_start_of_central_directory: u32,
     zip_file_comment_length: u16,
     zip_file_comment: Vec<u8>,
 }
 
 fn parse_local_file_header(input: &[u8]) -> IResult<&[u8], LocalFileHeader> {
-    let (input, _) = tag("PK\x03\x04")(input)?;
+    let (input, _) = tag(b"\x50\x4B\x03\x04")(input)?;
     let (input, (version_needed, general_purpose_bit_flag, compression_method, last_mod_file_time, last_mod_file_date, crc_32, compressed_size, uncompressed_size, file_name_length, extra_field_length)) =
         tuple((le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u32, le_u16, le_u16))(input)?;
     let (input, file_name) = take(file_name_length)(input)?;
@@ -86,7 +88,7 @@ fn parse_local_file_header(input: &[u8]) -> IResult<&[u8], LocalFileHeader> {
 }
 
 fn parse_central_directory_file_header(input: &[u8]) -> IResult<&[u8], CentralDirectoryFileHeader> {
-    let (input, _) = tag("PK\x01\x02")(input)?;
+    let (input, _) = tag(b"\x50\x4B\x01\x02")(input)?;
     let (input, (version_made_by, version_needed, general_purpose_bit_flag, compression_method, last_mod_file_time, last_mod_file_date, crc_32, compressed_size, uncompressed_size, file_name_length, extra_field_length, file_comment_length, disk_number_start, internal_file_attributes, external_file_attributes, relative_offset_of_local_header)) =
         tuple((le_u16, le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u32, le_u16, le_u16, le_u16, le_u16, le_u16, le_u32, le_u32))(input)?;
     let (input, file_name) = take(file_name_length)(input)?;
@@ -120,8 +122,8 @@ fn parse_central_directory_file_header(input: &[u8]) -> IResult<&[u8], CentralDi
 }
 
 fn parse_end_of_central_directory_record(input: &[u8]) -> IResult<&[u8], EndOfCentralDirectoryRecord> {
-    let (input, _) = tag("PK\x05\x06")(input)?;
-    let (input, (number_of_this_disk, number_of_the_disk_with_the_start_of_the_central_directory, total_number_of_entries_in_the_central_directory_on_this_disk, total_number_of_entries_in_the_central_directory, size_of_the_central_directory, offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number, zip_file_comment_length)) =
+    let (input, _) = tag(b"\x50\x4B\x05\x06")(input)?;
+    let (input, (number_of_this_disk, disk_where_central_directory_starts, number_of_central_directory_records_on_this_disk, total_number_of_central_directory_records, size_of_central_directory, offset_of_start_of_central_directory, zip_file_comment_length)) =
         tuple((le_u16, le_u16, le_u16, le_u16, le_u32, le_u32, le_u16))(input)?;
     let (input, zip_file_comment) = take(zip_file_comment_length)(input)?;
 
@@ -129,11 +131,11 @@ fn parse_end_of_central_directory_record(input: &[u8]) -> IResult<&[u8], EndOfCe
         input,
         EndOfCentralDirectoryRecord {
             number_of_this_disk,
-            number_of_the_disk_with_the_start_of_the_central_directory,
-            total_number_of_entries_in_the_central_directory_on_this_disk,
-            total_number_of_entries_in_the_central_directory,
-            size_of_the_central_directory,
-            offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number,
+            disk_where_central_directory_starts,
+            number_of_central_directory_records_on_this_disk,
+            total_number_of_central_directory_records,
+            size_of_central_directory,
+            offset_of_start_of_central_directory,
             zip_file_comment_length,
             zip_file_comment: zip_file_comment.to_vec(),
         },
@@ -142,8 +144,9 @@ fn parse_end_of_central_directory_record(input: &[u8]) -> IResult<&[u8], EndOfCe
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "No file specified"));
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file>", args[0]);
+        return Ok(());
     }
 
     let mut file = File::open(&args[1])?;
@@ -152,6 +155,12 @@ fn main() -> io::Result<()> {
 
     let (_, local_file_header) = parse_local_file_header(&buffer).unwrap();
     println!("{:?}", local_file_header);
+
+    let (_, central_directory_file_header) = parse_central_directory_file_header(&buffer).unwrap();
+    println!("{:?}", central_directory_file_header);
+
+    let (_, end_of_central_directory_record) = parse_end_of_central_directory_record(&buffer).unwrap();
+    println!("{:?}", end_of_central_directory_record);
 
     Ok(())
 }

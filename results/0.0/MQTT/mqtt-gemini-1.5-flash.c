@@ -1,68 +1,99 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a hammer
-typedef struct {
-    char *name;
-    float weight;
-    int headSize;
-} Hammer;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 
-
-// Function to create a hammer
-Hammer* createHammer(const char *name, float weight, int headSize) {
-    Hammer *hammer = (Hammer*)malloc(sizeof(Hammer));
-    if (hammer == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        return NULL;
-    }
-    hammer->name = strdup(name);
-    if (hammer->name == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        free(hammer);
-        return NULL;
-    }
-    hammer->weight = weight;
-    hammer->headSize = headSize;
-    return hammer;
+static HParser mqtt_read_varint(HParser p) {
+    return hmap(htake_while1(hsatisfy((HPredicate) [](u8 b){ return (b & 0x80) != 0;})), [](HResult r){
+        u32 value = 0;
+        u32 shift = 0;
+        for (size_t i = 0; i < r.len; ++i) {
+            value |= ((u32)r.data[i] & 0x7F) << shift;
+            shift += 7;
+        }
+        return hresult_ok(value);
+    });
 }
 
-// Function to print hammer information
-void printHammer(const Hammer *hammer) {
-    if (hammer == NULL) {
-        fprintf(stderr, "Hammer is NULL\n");
-        return;
-    }
-    printf("Hammer Name: %s\n", hammer->name);
-    printf("Hammer Weight: %.2f\n", hammer->weight);
-    printf("Hammer Head Size: %d\n", hammer->headSize);
+static HParser mqtt_read_string(HParser p) {
+    return hbind(mqtt_read_varint, [](HResult len_res, HParser p){
+        if (hresult_is_err(len_res)) return len_res;
+        u16 len = len_res.data;
+        return hmap(htake(len), [](HResult r){
+            char* str = (char*)malloc(len + 1);
+            memcpy(str, r.data, len);
+            str[len] = '\0';
+            return hresult_ok(str);
+        });
+    });
 }
 
-
-// Function to free the dynamically allocated memory for a hammer.
-void freeHammer(Hammer *hammer) {
-    if (hammer != NULL) {
-        free(hammer->name);
-        free(hammer);
-    }
+static HParser mqtt_read_byte_array(HParser p){
+    return hbind(mqtt_read_varint, [](HResult len_res, HParser p){
+        if (hresult_is_err(len_res)) return len_res;
+        u16 len = len_res.data;
+        return hmap(htake(len), [](HResult r){
+            u8* arr = (u8*)malloc(r.len);
+            memcpy(arr, r.data, r.len);
+            return hresult_ok(arr);
+        });
+    });
 }
 
+static HParser mqtt_connect_packet(HParser p) {
+    return hseq(
+        mqtt_read_string, 
+        htake(1), 
+        htake(1), 
+        mqtt_read_varint, 
+        mqtt_read_string, 
+        hmaybe(mqtt_read_string), 
+        hmaybe(mqtt_read_byte_array), 
+        hmaybe(htake(1)), 
+        hmaybe(htake(1)), 
+        hmaybe(mqtt_read_string), 
+        hmaybe(mqtt_read_byte_array), 
+        [](HResult* results){
+            //Process results here
+            return hresult_ok(NULL);
+        }
+    );
+}
 
-int main() {
-    // Create a hammer
-    Hammer *myHammer = createHammer("My Hammer", 1.5, 10);
-
-    // Check if hammer creation was successful.
-    if (myHammer == NULL) {
-        return 1; // Indicate an error.
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Print hammer information
-    printHammer(myHammer);
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    // Free the dynamically allocated memory.
-    freeHammer(myHammer);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
+    u8* buffer = (u8*)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    HParser input = hfrom_buf(buffer, fsize);
+    HResult result = hparse(mqtt_connect_packet, input);
+
+    if (hresult_is_ok(result)) {
+        printf("MQTT packet parsed successfully!\n");
+    } else {
+        fprintf(stderr, "MQTT packet parsing failed: %s\n", hresult_get_error_msg(result));
+    }
+
+    free(buffer);
     return 0;
 }

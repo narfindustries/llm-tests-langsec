@@ -1,42 +1,77 @@
 module NITF;
 
-public type Header = unit {
-    file_profile_name: bytes &size=4;
-    file_version: bytes &size=5;
-    complexity_level: bytes &size=2;
-    system_type: bytes &size=2;
-    origin_station_id: bytes &size=10;
-    file_date_time: bytes &size=14;
-    file_title: bytes &size=80;
-    file_security_classification: bytes &size=1;
-    file_security_classification_system: bytes &size=2;
-    file_codewords: bytes &size=11;
-    file_control_and_handling: bytes &size=2;
-    file_releasing_instructions: bytes &size=20;
-    file_declassification_type: bytes &size=2;
-    file_declassification_date: bytes &size=8;
-    file_declassification_exemption: bytes &size=4;
-    file_downgrade: bytes &size=1;
-    file_downgrade_date: bytes &size=8;
-    file_classification_text: bytes &size=43;
-    file_classification_authority_type: bytes &size=1;
-    file_classification_authority: bytes &size=40;
-    file_classification_reason: bytes &size=1;
-    file_security_source_date: bytes &size=8;
-    file_security_control_number: bytes &size=15;
-    file_copy_number: bytes &size=5;
-    file_number_of_copies: bytes &size=5;
-    file_encryption: bytes &size=1;
-    file_length: uint32 &byte-order=big;
-    header_length: uint32 &byte-order=big;
-    number_of_image_segments: uint16 &byte-order=big;
-    number_of_graphics_segments: uint16 &byte-order=big;
-    number_of_text_files: uint16 &byte-order=big;
-    number_of_data_extension_segments: uint16 &byte-order=big;
-    number_of_reserved_extension_segments: uint16 &byte-order=big;
+type FileHeader = unit {
+    fhdr: bytes &size=9;          # File Header Version
+    clevel: bytes &size=2;        # Complexity Level
+    stype: bytes &size=4;         # Standard Type
+    ostaid: bytes &size=10;       # Originating Station ID
+    fdt: bytes &size=14;          # File Date and Time
+    ftitle: bytes &size=80;       # File Title
+    fsclas: bytes &size=1;        # File Security Classification
+    fscode: bytes &size=40;       # File Security Classification Code
+    fsctlh: bytes &size=40;       # File Security Control and Handling
+    fsrel: bytes &size=40;        # File Security Releasing Instructions
+    fsdctp: bytes &size=1;        # File Security Declassification Type
+    fsdcdt: bytes &size=8;        # File Security Declassification Date
+    fsdcxm: bytes &size=4;        # File Security Declassification Exemption
+    fsdg: bytes &size=1;          # File Security Downgrade
+    fsdgdt: bytes &size=8;        # File Security Downgrade Date
+    fsclsy: bytes &size=2;        # File Security Classification System
+    fsctln: bytes &size=15;       # File Security Control Number
+    fscop: bytes &size=5;         # File Security Copy Number
+    fscpys: bytes &size=5;        # File Security Number of Copies
+    encryp: bytes &size=1;        # Encryption
 };
 
-public type NITF = unit {
-    header: Header;
-    // Additional fields and parsing logic can be added here
+type ImageSegmentHeader = unit {
+    im: bytes &size=2;            # Image Identifier
+    iid1: bytes &size=10;         # Image Identifier 1
+    idatim: bytes &size=14;       # Image Date and Time
+    tgtid: bytes &size=17;        # Target Identifier
+    iid2: bytes &size=80;         # Image Identifier 2
+    isclas: bytes &size=1;        # Image Security Classification
+    iscode: bytes &size=40;       # Image Security Classification Code
+    isctlh: bytes &size=40;       # Image Security Control and Handling
+    isrel: bytes &size=40;        # Image Security Releasing Instructions
+    isdctp: bytes &size=1;        # Image Security Declassification Type
+    isdcdt: bytes &size=8;        # Image Security Declassification Date
+    isdcxm: bytes &size=4;        # Image Security Declassification Exemption
+    isdg: bytes &size=1;          # Image Security Downgrade
+    isdgdt: bytes &size=8;        # Image Security Downgrade Date
+    isclsy: bytes &size=2;        # Image Security Classification System
+    isctln: bytes &size=15;       # Image Security Control Number
+    isorce: bytes &size=42;       # Image Source
+    nrows: uint32;                # Number of Rows
+    ncols: uint32;                # Number of Columns
+    pvtype: bytes &size=3;        # Pixel Value Type
+    irep: bytes &size=8;          # Image Representation
+    icat: bytes &size=8;          # Image Category
+    abpp: uint8;                  # Actual Bits Per Pixel
+    pjust: bytes &size=1;         # Pixel Justification
+    icords: bytes &size=1;        # Image Coordinate Representation
+    igeolo: bytes &size=60;       # Image Geographic Location
+};
+
+type GraphicSegmentHeader = unit {
+    loffset: uint32;              # Length of Graphic Segment
+    geolo: bytes &size=60;        # Graphic Geographic Location
+};
+
+type TextSegmentHeader = unit {
+    txtalvl: bytes &size=1;       # Text Security Classification Level
+    txtdt: bytes &size=14;        # Text Date and Time
+    txtitl: bytes &size=80;       # Text Title
+};
+
+type DataExtensionSegmentHeader = unit {
+    desid: bytes &size=25;        # Data Extension Identifier
+    desver: bytes &size=2;        # Data Extension Version
+};
+
+type NITF = unit {
+    file_header: FileHeader;
+    image_segments: array of ImageSegmentHeader;
+    graphic_segments: array of GraphicSegmentHeader;
+    text_segments: array of TextSegmentHeader;
+    data_extension_segments: array of DataExtensionSegmentHeader;
 };

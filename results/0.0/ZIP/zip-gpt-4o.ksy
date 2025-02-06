@@ -2,36 +2,30 @@ meta:
   id: zip
   title: ZIP Archive
   file-extension: zip
-  xref:
-    justsolve: ZIP
-    mime: application/zip
-  license: CC0-1.0
   endian: le
-
 seq:
   - id: sections
-    type: pk_section
+    type: section
     repeat: eos
-
 types:
-  pk_section:
+  section:
     seq:
       - id: signature
         type: u4
       - id: body
-        size-eos: true
         type:
           switch-on: signature
           cases:
             0x04034b50: local_file_header
-            0x02014b50: central_dir_entry
-            0x06054b50: end_of_central_dir
-
+            0x02014b50: central_directory_file_header
+            0x06054b50: end_of_central_directory_record
+            0x06064b50: zip64_end_of_central_directory_record
+            0x07064b50: zip64_end_of_central_directory_locator
   local_file_header:
     seq:
-      - id: version
+      - id: version_needed_to_extract
         type: u2
-      - id: general_purpose_flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
@@ -45,26 +39,23 @@ types:
         type: u4
       - id: uncompressed_size
         type: u4
-      - id: file_name_len
+      - id: file_name_length
         type: u2
-      - id: extra_len
+      - id: extra_field_length
         type: u2
       - id: file_name
-        size: file_name_len
         type: str
+        size: file_name_length
         encoding: UTF-8
-      - id: extra
-        size: extra_len
-      - id: body
-        size: compressed_size
-
-  central_dir_entry:
+      - id: extra_field
+        size: extra_field_length
+  central_directory_file_header:
     seq:
       - id: version_made_by
         type: u2
-      - id: version_needed
+      - id: version_needed_to_extract
         type: u2
-      - id: general_purpose_flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
@@ -78,48 +69,77 @@ types:
         type: u4
       - id: uncompressed_size
         type: u4
-      - id: file_name_len
+      - id: file_name_length
         type: u2
-      - id: extra_len
+      - id: extra_field_length
         type: u2
-      - id: comment_len
+      - id: file_comment_length
         type: u2
       - id: disk_number_start
         type: u2
-      - id: internal_file_attrs
+      - id: internal_file_attributes
         type: u2
-      - id: external_file_attrs
+      - id: external_file_attributes
         type: u4
-      - id: local_header_offset
+      - id: relative_offset_of_local_header
         type: u4
       - id: file_name
-        size: file_name_len
         type: str
+        size: file_name_length
         encoding: UTF-8
-      - id: extra
-        size: extra_len
-      - id: comment
-        size: comment_len
+      - id: extra_field
+        size: extra_field_length
+      - id: file_comment
         type: str
+        size: file_comment_length
         encoding: UTF-8
-
-  end_of_central_dir:
+  end_of_central_directory_record:
     seq:
-      - id: disk_number
+      - id: number_of_this_disk
         type: u2
-      - id: central_dir_disk
+      - id: disk_where_central_directory_starts
         type: u2
-      - id: num_central_dir_entries_disk
+      - id: number_of_central_directory_records_on_this_disk
         type: u2
-      - id: num_central_dir_entries_total
+      - id: total_number_of_central_directory_records
         type: u2
-      - id: central_dir_size
+      - id: size_of_central_directory
         type: u4
-      - id: central_dir_offset
+      - id: offset_of_start_of_central_directory
         type: u4
-      - id: comment_len
+      - id: zip_file_comment_length
         type: u2
-      - id: comment
-        size: comment_len
+      - id: zip_file_comment
         type: str
+        size: zip_file_comment_length
         encoding: UTF-8
+  zip64_end_of_central_directory_record:
+    seq:
+      - id: size_of_zip64_end_of_central_directory_record
+        type: u8
+      - id: version_made_by
+        type: u2
+      - id: version_needed_to_extract
+        type: u2
+      - id: number_of_this_disk
+        type: u4
+      - id: disk_where_central_directory_starts
+        type: u4
+      - id: number_of_central_directory_records_on_this_disk
+        type: u8
+      - id: total_number_of_central_directory_records
+        type: u8
+      - id: size_of_central_directory
+        type: u8
+      - id: offset_of_start_of_central_directory
+        type: u8
+      - id: extensible_data_sector
+        size-eos: true
+  zip64_end_of_central_directory_locator:
+    seq:
+      - id: number_of_the_disk_with_start_of_zip64_end_of_central_directory
+        type: u4
+      - id: relative_offset_of_zip64_end_of_central_directory_record
+        type: u8
+      - id: total_number_of_disks
+        type: u4

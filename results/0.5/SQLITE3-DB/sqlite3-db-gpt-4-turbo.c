@@ -1,97 +1,139 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Forward declarations for parsers
-static HParser *sqlite_file();
-static HParser *header();
-static HParser *database_header();
-static HParser *page();
-static HParser *record();
-static HParser *cell();
-static HParser *payload();
+// Forward declarations for parsing functions
+static HParser *parse_header();
+static HParser *parse_btree_page();
+static HParser *parse_cell();
+static HParser *parse_overflow_page();
 
-// SQLite Database File Format
-static HParser *sqlite_file() {
-    return h_sequence(header(), h_many(page()), NULL);
-}
-
-// SQLite Database Header
-static HParser *header() {
+// Main parsing function for SQLite Database File
+static HParser *parse_sqlite_db() {
     return h_sequence(
-        h_bytes("SQLite format 3", 16),
-        h_uint16(),
-        h_uint16(),
-        h_uint32(),
-        h_uint32(),
-        h_uint32(),
-        h_uint32(),
-        h_uint32(),
-        h_uint32(),
-        h_ignore(h_uint32()),  // Reserved space for expansion
-        h_uint32(),
-        h_uint32(),
-        h_uint32(),
+        parse_header(),
+        h_many(parse_btree_page()),
         NULL
     );
 }
 
-// Page structure (simplified)
-static HParser *page() {
-    return h_choice(
-        database_header(),
-        h_many(cell(), NULL),
+// Parse the database header
+static HParser *parse_header() {
+    return h_sequence(
+        h_token("SQLite format 3\0", 16),
+        h_uint16(), // Page size
+        h_uint8(),  // File format write version
+        h_uint8(),  // File format read version
+        h_uint8(),  // Reserved space
+        h_uint8(),  // Max embedded payload fraction
+        h_uint8(),  // Min embedded payload fraction
+        h_uint8(),  // Leaf payload fraction
+        h_uint32(), // File change counter
+        h_uint32(), // Database size in pages
+        h_uint32(), // First freelist page
+        h_uint32(), // Number of freelist pages
+        h_uint32(), // Schema cookie
+        h_uint32(), // Schema format number
+        h_int32(),  // Default page cache size
+        h_uint32(), // Largest root B-tree page number
+        h_uint32(), // Database text encoding
+        h_uint32(), // User version
+        h_uint32(), // Incremental vacuum mode
+        h_uint32(), // Application ID
+        h_bits(160, false), // Reserved for expansion (20 bytes)
+        h_uint32(), // Version-valid-for number
+        h_uint32(), // SQLite version number
         NULL
     );
 }
 
-// Database Header for a Page
-static HParser *database_header() {
+// Parse B-tree page
+static HParser *parse_btree_page() {
     return h_sequence(
         h_uint8(),  // Page type
         h_uint16(), // First freeblock
         h_uint16(), // Number of cells
-        h_uint16(), // Start of content area
-        h_uint16(), // Fragmented free bytes
+        h_uint16(), // Start of cell content area
+        h_uint8(),  // Number of fragmented free bytes
+        h_many1(parse_cell()), // Cells
         NULL
     );
 }
 
-// Cell in a page
-static HParser *cell() {
-    return h_sequence(
-        h_uint16(), // Start of cell content
-        record(),
+// Parse a cell in a B-tree page
+static HParser *parse_cell() {
+    return h_choice(
+        h_sequence(
+            h_uint32(), // Left child pointer (for interior pages)
+            h_uint64(), // Payload size
+            h_uint64(), // Rowid (for table B-trees)
+            h_bits(0, false), // Payload (variable size)
+            h_uint32(), // Overflow page number
+            NULL
+        ),
+        h_sequence(
+            h_uint64(), // Payload size
+            h_uint64(), // Rowid (for table B-trees)
+            h_bits(0, false), // Payload (variable size)
+            h_uint32(), // Overflow page number
+            NULL
+        ),
         NULL
     );
 }
 
-// Record inside a cell
-static HParser *record() {
+// Parse overflow page
+static HParser *parse_overflow_page() {
     return h_sequence(
-        h_uint8(),  // Number of columns
-        payload(),
-        NULL
-    );
-}
-
-// Payload of a record
-static HParser *payload() {
-    return h_sequence(
-        h_many(h_int32(), NULL),  // Serialized data
+        h_uint32(), // Next overflow page
+        h_bits(0, false), // Data (variable size)
         NULL
     );
 }
 
 int main(int argc, char **argv) {
-    HParser *parser = sqlite_file();
-    HParseResult *result = h_parse(parser, (const uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        printf("Parse successful!\n");
-    } else {
-        printf("Parse failed!\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <SQLite db file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    rewind(file);
+
+    uint8_t *buffer = malloc(size);
+    if (!buffer) {
+        fprintf(stderr, "Failed to allocate memory\n");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, size, file) != size) {
+        fprintf(stderr, "Failed to read file\n");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    HParser *parser = parse_sqlite_db();
+    HParseResult *result = h_parse(parser, buffer, size);
+    if (result) {
+        printf("Parse successful.\n");
+    } else {
+        printf("Parse failed.\n");
+    }
+
     h_parse_result_free(result);
+    h_parser_free(parser);
+    free(buffer);
+
     return 0;
 }

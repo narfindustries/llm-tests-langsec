@@ -2,41 +2,96 @@ module DNS;
 
 import spicy;
 
-type Header = unit {
+type Opcode = enum {
+    QUERY = 0,
+    IQUERY = 1,
+    STATUS = 2
+};
+
+type RCode = enum {
+    NoError = 0,
+    FormatError = 1,
+    ServerFailure = 2,
+    NameError = 3,
+    NotImplemented = 4,
+    Refused = 5
+};
+
+type QType = enum {
+    A = 1,
+    NS = 2,
+    MD = 3,
+    MF = 4,
+    CNAME = 5,
+    SOA = 6,
+    MB = 7,
+    MG = 8,
+    MR = 9,
+    NULL = 10,
+    WKS = 11,
+    PTR = 12,
+    HINFO = 13,
+    MINFO = 14,
+    MX = 15,
+    TXT = 16,
+    AAAA = 28
+};
+
+type QClass = enum {
+    IN = 1,
+    CS = 2,
+    CH = 3,
+    HS = 4
+};
+
+type DNSHeader = unit {
     id: uint16;
-    qr: bool &bit=1;
-    opcode: uint4;
-    aa: bool &bit=1;
-    tc: bool &bit=1;
-    rd: bool &bit=1;
-    ra: bool &bit=1;
-    z: uint3;
-    rcode: uint4;
+    qr: bool;
+    opcode: Opcode;
+    aa: bool;
+    tc: bool;
+    rd: bool;
+    ra: bool;
+    z: bitfield(3);
+    rcode: RCode;
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
 };
 
+type Label = unit {
+    length: uint8;
+    label: bytes &size=this.length;
+};
+
+type DomainName = unit {
+    components: Label[] &eod;
+};
+
 type Question = unit {
-    qname: bytes &eod;
-    qtype: uint16;
-    qclass: uint16;
+    qname: DomainName;
+    qtype: QType;
+    qclass: QClass;
 };
 
 type ResourceRecord = unit {
-    name: bytes &eod;
-    type: uint16;
-    class: uint16;
+    name: DomainName;
+    type: QType;
+    class: QClass;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes &size=rdlength;
+    rdata: bytes &size=this.rdlength;
 };
 
-public type Message = unit {
-    header: Header;
-    questions: Question[] &size=header.qdcount;
-    answers: ResourceRecord[] &size=header.ancount;
-    authorities: ResourceRecord[] &size=header.nscount;
-    additional: ResourceRecord[] &size=header.arcount;
-} &byte-order=big;
+type DNSMessage = unit {
+    header: DNSHeader;
+    questions: Question[] &length=this.header.qdcount;
+    answers: ResourceRecord[] &length=this.header.ancount;
+    authorities: ResourceRecord[] &length=this.header.nscount;
+    additionals: ResourceRecord[] &length=this.header.arcount;
+};
+
+public type DNSPacket = unit {
+    msg: DNSMessage;
+};

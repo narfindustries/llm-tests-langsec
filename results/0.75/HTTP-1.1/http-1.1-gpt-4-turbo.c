@@ -1,108 +1,95 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define HTTP methods as an enumeration
-static HParser *http_method;
-static void init_http_method() {
-    H_RULE(DELETE, h_token("DELETE"));
-    H_RULE(GET, h_token("GET"));
-    H_RULE(HEAD, h_token("HEAD"));
-    H_RULE(POST, h_token("POST"));
-    H_RULE(PUT, h_token("PUT"));
-    H_RULE(CONNECT, h_token("CONNECT"));
-    H_RULE(OPTIONS, h_token("OPTIONS"));
-    H_RULE(TRACE, h_token("TRACE"));
-    H_RULE(PATCH, h_token("PATCH"));
-
-    http_method = h_choice(DELETE, GET, HEAD, POST, PUT, CONNECT, OPTIONS, TRACE, PATCH, NULL);
-}
-
-// Define HTTP version
 static HParser *http_version;
-static void init_http_version() {
-    http_version = h_sequence(h_token("HTTP/"), h_ch_range('1', '1'), h_ch('.'), h_ch_range('0', '1'), NULL);
-}
-
-// Define HTTP status code
+static HParser *method;
+static HParser *request_uri;
 static HParser *status_code;
-static void init_status_code() {
-    status_code = h_int_range(h_uint(), 100, 599);
-}
-
-// Define request line for HTTP request
-static HParser *request_line;
-static void init_request_line() {
-    H_RULE(space, h_ch(' '));
-    H_RULE(uri, h_plus(h_not_from(" \r\n"))); // Simplified URI
-    H_RULE(crlf, h_token("\r\n"));
-
-    request_line = h_sequence(http_method, space, uri, space, http_version, crlf, NULL);
-}
-
-// Define status line for HTTP response
-static HParser *status_line;
-static void init_status_line() {
-    H_RULE(space, h_ch(' '));
-    H_RULE(reason_phrase, h_plus(h_not_from("\r\n"))); // Simplified reason phrase
-    H_RULE(crlf, h_token("\r\n"));
-
-    status_line = h_sequence(http_version, space, status_code, space, reason_phrase, crlf, NULL);
-}
-
-// Define header field
-static HParser *header_field;
-static void init_header_field() {
-    H_RULE(field_name, h_plus(h_ch_range('A', 'Z')));
-    H_RULE(colon_space, h_token(": "));
-    H_RULE(field_value, h_plus(h_not_from("\r\n")));
-    H_RULE(crlf, h_token("\r\n"));
-
-    header_field = h_sequence(field_name, colon_space, field_value, crlf, NULL);
-}
-
-// Define headers (0 or more headers)
+static HParser *reason_phrase;
+static HParser *header;
 static HParser *headers;
-static void init_headers() {
-    headers = h_many(header_field);
-}
-
-// Define message body (simplified)
 static HParser *message_body;
-static void init_message_body() {
-    message_body = h_greedy(h_any(), 0);
+
+void init_parsers() {
+    http_version = h_token("HTTP/1.1", 8);
+    method = h_choice(
+        h_sequence(h_string("OPTIONS", 7), NULL),
+        h_sequence(h_string("GET", 3), NULL),
+        h_sequence(h_string("HEAD", 4), NULL),
+        h_sequence(h_string("POST", 4), NULL),
+        h_sequence(h_string("PUT", 3), NULL),
+        h_sequence(h_string("DELETE", 6), NULL),
+        h_sequence(h_string("TRACE", 5), NULL),
+        h_sequence(h_string("CONNECT", 7), NULL),
+        NULL
+    );
+    request_uri = h_token(h_ch_range(0x21, 0x7E), 1);
+    status_code = h_int_range(100, 599);
+    reason_phrase = h_token(h_ch_range(0x20, 0x7E), 1);
+    header = h_sequence(
+        h_token(h_many1(h_ch_range(0x21, 0x7E))),
+        h_ch(':'),
+        h_whitespace(),
+        h_token(h_many1(h_ch_range(0x21, 0x7E))),
+        h_token("\r\n", 2),
+        NULL
+    );
+    headers = h_many(header);
+    message_body = h_token(h_many(h_any()));
 }
 
-// Define full HTTP request
-static HParser *http_request;
-static void init_http_request() {
-    http_request = h_sequence(request_line, headers, message_body, NULL);
+HParser *http_request() {
+    return h_sequence(
+        method, h_ch(' '), request_uri, h_ch(' '), http_version, h_token("\r\n", 2),
+        headers,
+        message_body,
+        NULL
+    );
 }
 
-// Define full HTTP response
-static HParser *http_response;
-static void init_http_response() {
-    http_response = h_sequence(status_line, headers, message_body, NULL);
+HParser *http_response() {
+    return h_sequence(
+        http_version, h_ch(' '), status_code, h_ch(' '), reason_phrase, h_token("\r\n", 2),
+        headers,
+        message_body,
+        NULL
+    );
 }
 
 int main(int argc, char **argv) {
-    HParser *parser;
-
-    init_http_method();
-    init_http_version();
-    init_status_code();
-    init_request_line();
-    init_status_line();
-    init_header_field();
-    init_headers();
-    init_message_body();
-    init_http_request();
-    init_http_response();
-
-    parser = h_choice(http_request, http_response, NULL);
-    if (!parse_hammer(parser, argv[1])) {
-        fprintf(stderr, "Parsing failed.\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <http_message_file>\n", argv[0]);
         return EXIT_FAILURE;
     }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    unsigned char *data = malloc(length);
+    if (data) {
+        fread(data, 1, length, file);
+    }
+    fclose(file);
+
+    init_parsers();
+    HParser *parser = http_request();  // Change to http_response() as needed
+
+    HParseResult *result = h_parse(parser, data, length);
+    if (result) {
+        printf("HTTP message parsed successfully.\n");
+    } else {
+        printf("Failed to parse HTTP message.\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
 
     return EXIT_SUCCESS;
 }

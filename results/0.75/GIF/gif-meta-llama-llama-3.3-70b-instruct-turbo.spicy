@@ -1,67 +1,55 @@
-# Zeek Spicy Specification for GIF File Format
+module GIF;
 
-# Import necessary modules
-%import basic
+type gif_signature = byte[3] align(left) = "GIF";
+type gif_version = byte[3] align(left) = "87a" | "89a";
 
-# Define the GIF file format
-file-format gif {
-    magic = "GIF87a" / "GIF89a"
-    body = gif-header gif-logical-screen-descriptor
-           *(gif-color-table) *(gif-image)
-}
+type gif_packed_fields = uint8;
 
-# Define the GIF header
-type gif-header {
-    magic: bytestring(3) = "GIF"
-    version: bytestring(3)
-}
+type gif_color_table_entry = struct {
+  red: byte;
+  green: byte;
+  blue: byte;
+};
 
-# Define the GIF logical screen descriptor
-type gif-logical-screen-descriptor {
-    width: uint16be
-    height: uint16be
-    flags: uint8
-    aspect-ratio: uint8
-}
+type gif_global_color_table = struct {
+  count: uint8;
+  entries: gif_color_table_entry[count];
+};
 
-# Define the GIF color table
-type gif-color-table {
-    size: uint8
-    entries: array(size) of rgb-triple
-}
+type gif_image_descriptor_packed_fields = uint8;
 
-# Define the RGB triple
-type rgb-triple {
-    red: uint8
-    green: uint8
-    blue: uint8
-}
+type gif_local_color_table = struct {
+  count: uint8;
+  entries: gif_color_table_entry[count];
+};
 
-# Define the GIF image
-type gif-image {
-    separator: uint8 = 0x2C
-    left: uint16be
-    top: uint16be
-    width: uint16be
-    height: uint16be
-    flags: uint8
-    code-size: uint8
-    data: dynamic(length = * )
-}
+type gif_image_data = struct {
+  lzw_minimum_code_size: byte;
+  lzw_compressed_data: byte[];
+};
 
-# Define the GIF trailer
-type gif-trailer {
-    terminator: uint8 = 0x3B
-}
+type gif_image_descriptor = struct {
+  image_separator: byte align(left) = 0x2c;
+  left_position: uint16 align(left);
+  top_position: uint16 align(left);
+  width: uint16 align(left);
+  height: uint16 align(left);
+  packed_fields: gif_image_descriptor_packed_fields;
+  local_color_table: gif_local_color_table;
+  image_data: gif_image_data;
+};
 
-# Define the GIF file
-type gif-file {
-    header: gif-header
-    logical-screen-descriptor: gif-logical-screen-descriptor
-    *(color-table: gif-color-table)
-    *(image: gif-image)
-    trailer: gif-trailer
-}
+type gif_file = struct {
+  signature: gif_signature;
+  version: gif_version;
+  logical_screen_width: uint16 align(left);
+  logical_screen_height: uint16 align(left);
+  packed_fields: gif_packed_fields;
+  background_color_index: byte;
+  pixel_aspect_ratio: byte;
+  global_color_table: gif_global_color_table;
+  image_descriptors: gif_image_descriptor[];
+  trailer: byte align(left) = 0x3b;
+};
 
-# Define the condition for the GIF file format
-condition = magic == "GIF87a" || magic == "GIF89a"
+let gif = gif_file;

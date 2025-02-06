@@ -1,40 +1,152 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/mqtt"
-           xmlns:tns="http://example.com/mqtt">
+           xmlns:tns="http://example.com/mqtt"
+           elementFormDefault="qualified">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:mqttGeneralFormat"/>
+      <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst" encoding="UTF-8" />
     </xs:appinfo>
   </xs:annotation>
+
+  <xs:element name="MQTTMessage" type="tns:MQTTMessageType" dfdl:lengthKind="delimited"/>
 
   <xs:complexType name="MQTTMessageType">
     <xs:sequence>
-      <xs:element name="messageType" type="xs:byte" dfdl:length="1" dfdl:encoding="binary"/>
-      <xs:element name="flags" type="xs:byte" dfdl:length="1" dfdl:encoding="binary"/>
-      <xs:element name="remainingLength" type="xs:int" dfdl:lengthKind="delimited" dfdl:lengthPattern="\x00|\xFE" dfdl:encoding="binary"/>
-      <xs:element name="payload" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:lengthPattern="\x00|\xFE" dfdl:encoding="binary"/>
+      <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+      <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+      <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="delimited" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:element name="MQTTMessage" type="tns:MQTTMessageType"/>
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="PacketType" type="xs:int" dfdl:length="4" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="Flags" type="xs:int" dfdl:length="4" dfdl:binaryNumberRep="binary"/>
+      <xs:element name="RemainingLength" type="xs:int" dfdl:lengthKind="prefixed" dfdl:lengthUnits="bytes" dfdl:prefixLengthType="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="mqttGeneralFormat">
-        <dfdl:format byteOrder="bigEndian"
-                     bitOrder="mostSignificantBitFirst"
-                     binaryNumberRep="binary"
-                     textNumberRep="standard"
-                     textBooleanRep="true|false"
-                     lengthKind="delimited"
-                     encoding="UTF-8"
-                     ignoreCase="no"
-                     representation="binary"/>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
+  <xs:complexType name="VariableHeaderType">
+    <xs:choice>
+      <xs:element name="Connect" type="tns:ConnectType"/>
+      <xs:element name="ConnAck" type="tns:ConnAckType"/>
+      <xs:element name="Publish" type="tns:PublishType"/>
+      <xs:element name="PubAck" type="tns:PubAckType"/>
+      <xs:element name="Subscribe" type="tns:SubscribeType"/>
+      <xs:element name="SubAck" type="tns:SubAckType"/>
+      <xs:element name="Unsubscribe" type="tns:UnsubscribeType"/>
+      <xs:element name="UnsubAck" type="tns:UnsubAckType"/>
+      <xs:element name="PingReq" type="xs:string" dfdl:lengthKind="implicit"/>
+      <xs:element name="PingResp" type="xs:string" dfdl:lengthKind="implicit"/>
+      <xs:element name="Disconnect" type="tns:DisconnectType"/>
+      <xs:element name="Auth" type="tns:AuthType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="ConnectType">
+    <xs:sequence>
+      <xs:element name="ProtocolName" type="xs:string" dfdl:lengthKind="prefixed" dfdl:lengthUnits="bytes" dfdl:prefixLengthType="xs:int"/>
+      <xs:element name="VersionNumber" type="xs:int" dfdl:length="8"/>
+      <xs:element name="ConnectFlags" type="xs:int" dfdl:length="8"/>
+      <xs:element name="KeepAlive" type="xs:int" dfdl:length="16"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ConnAckType">
+    <xs:sequence>
+      <xs:element name="SessionPresentFlag" type="xs:boolean" dfdl:length="1"/>
+      <xs:element name="ConnectReasonCode" type="xs:int" dfdl:length="8"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PublishType">
+    <xs:sequence>
+      <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="prefixed" dfdl:lengthUnits="bytes" dfdl:prefixLengthType="xs:int"/>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16" minOccurs="0"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PubAckType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16"/>
+      <xs:element name="ReasonCode" type="xs:int" dfdl:length="8"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SubscribeType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+      <xs:element name="SubscriptionList" type="tns:SubscriptionListType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SubAckType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+      <xs:element name="ReasonCodeList" type="tns:ReasonCodeListType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UnsubscribeType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+      <xs:element name="TopicFilterList" type="tns:TopicFilterListType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UnsubAckType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="16"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+      <xs:element name="ReasonCodeList" type="tns:ReasonCodeListType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DisconnectType">
+    <xs:sequence>
+      <xs:element name="ReasonCode" type="xs:int" dfdl:length="8"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AuthType">
+    <xs:sequence>
+      <xs:element name="ReasonCode" type="xs:int" dfdl:length="8"/>
+      <xs:element name="Properties" type="tns:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:sequence>
+      <!-- Define specific properties here -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SubscriptionListType">
+    <xs:sequence>
+      <!-- Define subscription list details here -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReasonCodeListType">
+    <xs:sequence>
+      <!-- Define reason code list details here -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TopicFilterListType">
+    <xs:sequence>
+      <!-- Define topic filter list details here -->
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

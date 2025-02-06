@@ -1,79 +1,73 @@
-module Modbus {
-  // Define basic types
-  type U1 = UInt8;
-  type U2 = UInt16;
-  type U4 = UInt32;
+type ModbusFrame = struct {
+    transactionId : uint16;
+    protocolId    : uint16 = 0; // Modbus protocol
+    length        : uint16;     // Length includes Unit Identifier, Function Code and Data fields
+    unitId        : uint8;
+    functionCode  : uint8;
+    data          : bytes(length - 2);
+};
 
-  // Define Modbus function codes
-  enum FunctionCode : U1 {
-    ReadCoils = 0x01,
-    ReadDiscreteInputs = 0x02,
-    ReadHoldingRegisters = 0x03,
-    ReadInputRegisters = 0x04,
-    WriteSingleCoil = 0x05,
-    WriteSingleRegister = 0x06,
-    WriteMultipleCoils = 0x0F,
-    WriteMultipleRegisters = 0x10,
-    // Additional function codes can be added here
-  }
+type ModbusTCPFrame = struct {
+    mbapHeader : ModbusFrame;
+    payload    : ModbusPDU;
+};
 
-  // Define Modbus exception codes
-  enum ExceptionCode : U1 {
-    IllegalFunction = 0x01,
-    IllegalDataAddress = 0x02,
-    IllegalDataValue = 0x03,
-    ServerDeviceFailure = 0x04,
-    Acknowledge = 0x05,
-    ServerDeviceBusy = 0x06,
-    MemoryParityError = 0x08,
-    GatewayPathUnavailable = 0x0A,
-    GatewayTargetDeviceFailedToRespond = 0x0B
-  }
+type ModbusPDU = union {
+    case 1   : ReadCoilsRequest;
+    case 2   : ReadDiscreteInputsRequest;
+    case 3   : ReadHoldingRegistersRequest;
+    case 4   : ReadInputRegistersRequest;
+    case 5   : WriteSingleCoilRequest;
+    case 6   : WriteSingleRegisterRequest;
+    case 15  : WriteMultipleCoilsRequest;
+    case 16  : WriteMultipleRegistersRequest;
+    default  : UnknownFunction;
+} using ModbusTCPFrame.mbapHeader.functionCode;
 
-  // Define Modbus PDU (Protocol Data Unit)
-  struct PDU {
-    functionCode : FunctionCode;
-    data : match functionCode {
-      FunctionCode.ReadCoils | FunctionCode.ReadDiscreteInputs |
-      FunctionCode.ReadHoldingRegisters | FunctionCode.ReadInputRegisters => ReadRequest,
-      FunctionCode.WriteSingleCoil | FunctionCode.WriteSingleRegister => WriteSingleRequest,
-      FunctionCode.WriteMultipleCoils | FunctionCode.WriteMultipleRegisters => WriteMultipleRequest,
-      _ => Bytes // default case for unimplemented or custom function codes
-    }
-  }
+type ReadCoilsRequest = struct {
+    startingAddress : uint16;
+    quantityOfCoils : uint16;
+};
 
-  // Define Modbus ADU (Application Data Unit) for TCP
-  struct ADUTcp {
-    transactionId : U2;
-    protocolId : U2;
-    length : U2;
-    unitId : U1;
-    pdu : PDU;
-  }
+type ReadDiscreteInputsRequest = struct {
+    startingAddress : uint16;
+    quantityOfInputs : uint16;
+};
 
-  // Requests for reading multiple registers or coils
-  struct ReadRequest {
-    startingAddress : U2;
-    quantityOfRegisters : U2;
-  }
+type ReadHoldingRegistersRequest = struct {
+    startingAddress : uint16;
+    quantityOfRegisters : uint16;
+};
 
-  // Request for writing a single coil or register
-  struct WriteSingleRequest {
-    outputAddress : U2;
-    outputValue : U2; // For coils, 0xFF00 for ON and 0x0000 for OFF
-  }
+type ReadInputRegistersRequest = struct {
+    startingAddress : uint16;
+    quantityOfRegisters : uint16;
+};
 
-  // Request for writing multiple coils or registers
-  struct WriteMultipleRequest {
-    startingAddress : U2;
-    quantityOfOutputs : U2;
-    byteCount : U1;
-    outputValues : Bytes; // Values to be written
-  }
+type WriteSingleCoilRequest = struct {
+    outputAddress : uint16;
+    outputValue : uint16; // 0xFF00 for ON and 0x0000 for OFF
+};
 
-  // Exception response structure
-  struct ExceptionResponse {
-    functionCode : U1; // Function code + 0x80 to indicate an exception
-    exceptionCode : ExceptionCode;
-  }
-}
+type WriteSingleRegisterRequest = struct {
+    registerAddress : uint16;
+    registerValue : uint16;
+};
+
+type WriteMultipleCoilsRequest = struct {
+    startingAddress : uint16;
+    quantityOfOutputs : uint16;
+    byteCount : uint8;
+    outputValue : bytes(byteCount);
+};
+
+type WriteMultipleRegistersRequest = struct {
+    startingAddress : uint16;
+    quantityOfRegisters : uint16;
+    byteCount : uint8;
+    registerValues : bytes(byteCount);
+};
+
+type UnknownFunction = struct {
+    data : bytes(ModbusTCPFrame.mbapHeader.length - 2);
+};

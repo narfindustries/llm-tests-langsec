@@ -1,83 +1,81 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sqlite3.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
+#include <hammer/allocator.h>
 
-// Structure to represent a row in the database
 typedef struct {
-    int id;
-    char name[100];
-    char data[1000];
-} Row;
+    uint8_t magic[16];
+    uint16_t page_size;
+    uint32_t write_version;
+    uint32_t read_version;
+    uint32_t reserved_space;
+    uint32_t max_page_count;
+    uint32_t text_encoding;
+} sqlite_header;
 
+typedef struct {
+    uint32_t page_number;
+    uint8_t page_type;
+    uint16_t free_bytes;
+    uint16_t checksum;
+} sqlite_page_header;
 
-// Function to create the database and table
-int createDatabase(const char *dbName) {
-    sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-
-    rc = sqlite3_open(dbName, &db);
-
-    if (rc) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return 1;
-    }
-
-    char *sql = "CREATE TABLE IF NOT EXISTS data_table (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, data TEXT);";
-    rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-        sqlite3_close(db);
-        return 1;
-    }
-
-    sqlite3_close(db);
-    return 0;
+HParser sqlite_header_parser(HAllocator* allocator) {
+    return h_seq(allocator,
+                 h_string(allocator, "SQLite format 3\000"),
+                 h_uint16(allocator),
+                 h_uint32(allocator),
+                 h_uint32(allocator),
+                 h_uint32(allocator),
+                 h_uint32(allocator),
+                 h_uint32(allocator),
+                 h_map(allocator, h_result(allocator), h_alloc(allocator, sizeof(sqlite_header)), (void*)memcpy));
 }
 
-
-// Function to insert a row into the database
-int insertRow(const char *dbName, const Row *row) {
-    sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-    char sql[2048]; // Increased buffer size
-
-    rc = sqlite3_open(dbName, &db);
-    if (rc) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
-        return 1;
-    }
-
-    snprintf(sql, sizeof(sql), "INSERT INTO data_table (name, data) VALUES ('%s', '%s');", row->name, row->data);
-
-    rc = sqlite3_exec(db, sql, 0, 0, &zErrMsg);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-        sqlite3_close(db);
-        return 1;
-    }
-
-    sqlite3_close(db);
-    return 0;
+HParser sqlite_page_header_parser(HAllocator* allocator) {
+    return h_seq(allocator,
+                 h_uint32(allocator),
+                 h_uint8(allocator),
+                 h_uint16(allocator),
+                 h_uint16(allocator),
+                 h_map(allocator, h_result(allocator), h_alloc(allocator, sizeof(sqlite_page_header)), (void*)memcpy));
 }
 
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_db_file>\n", argv[0]);
+        return 1;
+    }
 
-int main() {
-    const char *dbName = "mydatabase.db";
-    createDatabase(dbName);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    Row row1 = {0, "Row 1", "This is the data for row 1."};
-    Row row2 = {0, "Row 2", "This is the data for row 2."};
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    insertRow(dbName, &row1);
-    insertRow(dbName, &row2);
+    uint8_t *fileContent = (uint8_t*)malloc(fileSize);
+    fread(fileContent, 1, fileSize, fp);
+    fclose(fp);
 
+    HAllocator* allocator = h_allocator_new();
+    HParseResult result = h_parse(allocator, sqlite_header_parser(allocator), fileContent, fileSize);
+
+    if (result.success) {
+        sqlite_header *header = (sqlite_header*)result.value;
+        printf("SQLite Header:\n");
+        printf("  Page Size: %u\n", header->page_size);
+        h_free(allocator, header);
+    } else {
+        fprintf(stderr, "Error parsing SQLite header: %s\n", result.error);
+    }
+
+    h_allocator_free(allocator);
+    free(fileContent);
     return 0;
 }

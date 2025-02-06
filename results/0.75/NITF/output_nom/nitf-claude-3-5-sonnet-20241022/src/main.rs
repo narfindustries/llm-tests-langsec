@@ -1,284 +1,177 @@
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::count,
-    number::complete::{be_u16, be_u32, be_u8},
+    character::complete::{char, digit1},
+    combinator::{map, map_res},
     sequence::tuple,
     IResult,
 };
-use std::{env, fs, path::Path};
 
 #[derive(Debug)]
-struct NITFHeader {
-    file_profile_name: [u8; 4],
-    file_version: [u8; 5],
-    complexity_level: [u8; 2],
-    standard_type: [u8; 4],
-    originating_station_id: [u8; 10],
-    file_date_time: [u8; 14],
-    file_title: [u8; 80],
-    file_security_classification: u8,
-    encryption: [u8; 1],
-    file_copy_number: [u8; 5],
-    file_number_of_copies: [u8; 5],
-    encryption_method: [u8; 1],
-    image_segments: u16,
-    graphic_segments: u16,
-    text_segments: u16,
-    data_extension_segments: u16,
-    reserved_extension_segments: u16,
+struct NitfHeader {
+    file_header: String,      // FHDR - 4 chars
+    file_version: String,     // FVER - 5 chars
+    complexity_level: u8,     // CLEVEL - 2 chars
+    standard_type: String,    // STYPE - 4 chars
+    originating_station: String, // OSTAID - 10 chars
+    file_date_time: String,   // FDT - 14 chars
+    file_title: String,       // FTITLE - 80 chars
+    file_security: FileSecurity,
+    copy_number: String,      // FSCOP - 5 chars
+    num_copies: String,       // FSCPYS - 5 chars
+    encrypted: char,          // ENCRYP
+    background_color: String, // FBKGC - 3 chars
+    originator_name: String,  // ONAME - 24 chars
+    originator_phone: String, // OPHONE - 18 chars
+    num_image_segments: u16,  // NUMI - 3 chars
+    num_graphic_segments: u16,// NUMS - 3 chars
+    reserved1: String,        // NUMX - 3 chars
+    num_text_segments: u16,   // NUMT - 3 chars
+    num_data_extensions: u16, // NUMDES - 3 chars
+    num_reserved_extensions: u16, // NUMRES - 3 chars
 }
 
 #[derive(Debug)]
-struct NITFImageSegment {
-    im: [u8; 2],
-    image_identifier: [u8; 10],
-    date_time: [u8; 14],
-    target_identifier: [u8; 17],
-    image_identifier2: [u8; 80],
-    security_classification: u8,
-    encryption: [u8; 1],
-    image_source: [u8; 42],
-    num_significant_rows: u32,
-    num_significant_cols: u32,
-    pixel_value_type: [u8; 3],
-    image_representation: [u8; 8],
-    image_category: [u8; 8],
-    actual_bits_per_pixel: u8,
-    pixel_justification: [u8; 1],
-    image_coordinate_system: [u8; 1],
-    image_geo_location: [u8; 60],
-    num_image_comments: u8,
-    image_comments: Vec<[u8; 80]>,
-    image_compression: [u8; 2],
-    compression_rate_code: [u8; 4],
-    num_bands: u8,
-    image_mode: [u8; 1],
-    num_blocks_per_row: u16,
-    num_blocks_per_col: u16,
-    num_pixels_per_block_horz: u16,
-    num_pixels_per_block_vert: u16,
-    num_pixels_per_band: u16,
-    image_display_level: u16,
-    attachment_level: u16,
-    image_location: u16,
-    image_magnification: [u8; 4],
-    user_defined_image_data_length: u32,
-    user_defined_overflow: u32,
-    extended_subheader_data_length: u32,
-    extended_subheader_overflow: u32,
+struct FileSecurity {
+    classification: String,   // FSCLAS - 1 char
+    system: String,          // FSCLSY - 2 chars
+    codewords: String,       // FSCODE - 11 chars
+    control_and_handling: String, // FSCTLH - 2 chars
+    release_instructions: String, // FSREL - 20 chars
+    declass_type: String,    // FSDCTP - 2 chars
+    declass_date: String,    // FSDCDT - 8 chars
+    declass_exemption: String, // FSDCXM - 4 chars
+    downgrade: String,       // FSDG - 1 char
+    downgrade_date: String,  // FSDGDT - 8 chars
+    classification_text: String, // FSCLTX - 43 chars
+    classification_authority_type: String, // FSCATP - 1 char
+    classification_authority: String,     // FSCAUT - 40 chars
+    classification_reason: String,        // FSCRSN - 1 char
+    security_source_date: String,        // FSSRDT - 8 chars
+    security_control_number: String,     // FSCTLN - 15 chars
 }
 
-fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NITFHeader> {
-    let (input, (
-        file_profile_name,
+fn parse_nitf_header(input: &[u8]) -> IResult<&[u8], NitfHeader> {
+    let (input, file_header) = map(take(4usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, file_version) = map(take(5usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, complexity_level) = map_res(take(2usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u8>()
+    })(input)?;
+    let (input, standard_type) = map(take(4usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, originating_station) = map(take(10usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, file_date_time) = map(take(14usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, file_title) = map(take(80usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    
+    let (input, file_security) = parse_file_security(input)?;
+    
+    let (input, copy_number) = map(take(5usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, num_copies) = map(take(5usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, encrypted) = map(take(1usize), |s: &[u8]| s[0] as char)(input)?;
+    let (input, background_color) = map(take(3usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, originator_name) = map(take(24usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, originator_phone) = map(take(18usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    
+    let (input, num_image_segments) = map_res(take(3usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u16>()
+    })(input)?;
+    let (input, num_graphic_segments) = map_res(take(3usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u16>()
+    })(input)?;
+    let (input, reserved1) = map(take(3usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, num_text_segments) = map_res(take(3usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u16>()
+    })(input)?;
+    let (input, num_data_extensions) = map_res(take(3usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u16>()
+    })(input)?;
+    let (input, num_reserved_extensions) = map_res(take(3usize), |s: &[u8]| {
+        String::from_utf8_lossy(s).parse::<u16>()
+    })(input)?;
+
+    Ok((input, NitfHeader {
+        file_header,
         file_version,
         complexity_level,
         standard_type,
-        originating_station_id,
+        originating_station,
         file_date_time,
         file_title,
-        file_security_classification,
-        encryption,
-        file_copy_number,
-        file_number_of_copies,
-        encryption_method,
-        image_segments,
-        graphic_segments,
-        text_segments,
-        data_extension_segments,
-        reserved_extension_segments,
-    )) = tuple((
-        take(4usize),
-        take(5usize),
-        take(2usize),
-        take(4usize),
-        take(10usize),
-        take(14usize),
-        take(80usize),
-        be_u8,
-        take(1usize),
-        take(5usize),
-        take(5usize),
-        take(1usize),
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-    ))(input)?;
-
-    Ok((input, NITFHeader {
-        file_profile_name: file_profile_name.try_into().unwrap(),
-        file_version: file_version.try_into().unwrap(),
-        complexity_level: complexity_level.try_into().unwrap(),
-        standard_type: standard_type.try_into().unwrap(),
-        originating_station_id: originating_station_id.try_into().unwrap(),
-        file_date_time: file_date_time.try_into().unwrap(),
-        file_title: file_title.try_into().unwrap(),
-        file_security_classification,
-        encryption: encryption.try_into().unwrap(),
-        file_copy_number: file_copy_number.try_into().unwrap(),
-        file_number_of_copies: file_number_of_copies.try_into().unwrap(),
-        encryption_method: encryption_method.try_into().unwrap(),
-        image_segments,
-        graphic_segments,
-        text_segments,
-        data_extension_segments,
-        reserved_extension_segments,
+        file_security,
+        copy_number,
+        num_copies,
+        encrypted,
+        background_color,
+        originator_name,
+        originator_phone,
+        num_image_segments,
+        num_graphic_segments,
+        reserved1,
+        num_text_segments,
+        num_data_extensions,
+        num_reserved_extensions,
     }))
 }
 
-fn parse_nitf_image_segment(input: &[u8]) -> IResult<&[u8], NITFImageSegment> {
-    let (input, (
-        im,
-        image_identifier,
-        date_time,
-        target_identifier,
-        image_identifier2,
-        security_classification,
-        encryption,
-        image_source,
-        num_significant_rows,
-        num_significant_cols,
-        pixel_value_type,
-        image_representation,
-        image_category,
-        actual_bits_per_pixel,
-        pixel_justification,
-        image_coordinate_system,
-        image_geo_location,
-        num_image_comments,
-    )) = tuple((
-        take(2usize),
-        take(10usize),
-        take(14usize),
-        take(17usize),
-        take(80usize),
-        be_u8,
-        take(1usize),
-        take(42usize),
-        be_u32,
-        be_u32,
-        take(3usize),
-        take(8usize),
-        take(8usize),
-        be_u8,
-        take(1usize),
-        take(1usize),
-        take(60usize),
-        be_u8,
-    ))(input)?;
+fn parse_file_security(input: &[u8]) -> IResult<&[u8], FileSecurity> {
+    let (input, classification) = map(take(1usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, system) = map(take(2usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, codewords) = map(take(11usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, control_and_handling) = map(take(2usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, release_instructions) = map(take(20usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, declass_type) = map(take(2usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, declass_date) = map(take(8usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, declass_exemption) = map(take(4usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, downgrade) = map(take(1usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, downgrade_date) = map(take(8usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, classification_text) = map(take(43usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, classification_authority_type) = map(take(1usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, classification_authority) = map(take(40usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, classification_reason) = map(take(1usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, security_source_date) = map(take(8usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
+    let (input, security_control_number) = map(take(15usize), |s: &[u8]| String::from_utf8_lossy(s).to_string())(input)?;
 
-    let (input, image_comments) = count(take(80usize), num_image_comments as usize)(input)?;
-    let image_comments: Vec<[u8; 80]> = image_comments
-        .into_iter()
-        .map(|x| x.try_into().unwrap())
-        .collect();
-
-    let (input, (
-        image_compression,
-        compression_rate_code,
-        num_bands,
-        image_mode,
-        num_blocks_per_row,
-        num_blocks_per_col,
-        num_pixels_per_block_horz,
-        num_pixels_per_block_vert,
-        num_pixels_per_band,
-        image_display_level,
-        attachment_level,
-        image_location,
-        image_magnification,
-        user_defined_image_data_length,
-        user_defined_overflow,
-        extended_subheader_data_length,
-        extended_subheader_overflow,
-    )) = tuple((
-        take(2usize),
-        take(4usize),
-        be_u8,
-        take(1usize),
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        be_u16,
-        take(4usize),
-        be_u32,
-        be_u32,
-        be_u32,
-        be_u32,
-    ))(input)?;
-
-    Ok((input, NITFImageSegment {
-        im: im.try_into().unwrap(),
-        image_identifier: image_identifier.try_into().unwrap(),
-        date_time: date_time.try_into().unwrap(),
-        target_identifier: target_identifier.try_into().unwrap(),
-        image_identifier2: image_identifier2.try_into().unwrap(),
-        security_classification,
-        encryption: encryption.try_into().unwrap(),
-        image_source: image_source.try_into().unwrap(),
-        num_significant_rows,
-        num_significant_cols,
-        pixel_value_type: pixel_value_type.try_into().unwrap(),
-        image_representation: image_representation.try_into().unwrap(),
-        image_category: image_category.try_into().unwrap(),
-        actual_bits_per_pixel,
-        pixel_justification: pixel_justification.try_into().unwrap(),
-        image_coordinate_system: image_coordinate_system.try_into().unwrap(),
-        image_geo_location: image_geo_location.try_into().unwrap(),
-        num_image_comments,
-        image_comments,
-        image_compression: image_compression.try_into().unwrap(),
-        compression_rate_code: compression_rate_code.try_into().unwrap(),
-        num_bands,
-        image_mode: image_mode.try_into().unwrap(),
-        num_blocks_per_row,
-        num_blocks_per_col,
-        num_pixels_per_block_horz,
-        num_pixels_per_block_vert,
-        num_pixels_per_band,
-        image_display_level,
-        attachment_level,
-        image_location,
-        image_magnification: image_magnification.try_into().unwrap(),
-        user_defined_image_data_length,
-        user_defined_overflow,
-        extended_subheader_data_length,
-        extended_subheader_overflow,
+    Ok((input, FileSecurity {
+        classification,
+        system,
+        codewords,
+        control_and_handling,
+        release_instructions,
+        declass_type,
+        declass_date,
+        declass_exemption,
+        downgrade,
+        downgrade_date,
+        classification_text,
+        classification_authority_type,
+        classification_authority,
+        classification_reason,
+        security_source_date,
+        security_control_number,
     }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <nitf_file>", args[0]);
         std::process::exit(1);
     }
 
-    let file_path = Path::new(&args[1]);
-    let data = fs::read(file_path)?;
+    let path = Path::new(&args[1]);
+    let mut file = File::open(path).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_nitf_header(&data) {
+    match parse_nitf_header(&buffer) {
         Ok((remaining, header)) => {
-            println!("NITF Header: {:#?}", header);
-            
-            if header.image_segments > 0 {
-                match parse_nitf_image_segment(remaining) {
-                    Ok((_, image_segment)) => {
-                        println!("Image Segment: {:#?}", image_segment);
-                    }
-                    Err(e) => eprintln!("Failed to parse image segment: {}", e),
-                }
-            }
+            println!("Successfully parsed NITF header:");
+            println!("{:#?}", header);
         }
-        Err(e) => eprintln!("Failed to parse NITF header: {}", e),
+        Err(e) => {
+            eprintln!("Failed to parse NITF file: {:?}", e);
+            std::process::exit(1);
+        }
     }
-
-    Ok(())
 }

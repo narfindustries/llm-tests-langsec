@@ -1,39 +1,24 @@
-module BitcoinTransactions
+namespace BitcoinTransactions
 
-type UInt32 = bytes[4]
-type VarInt = if (int) 
-                | (value & 0x80) == 0  => (value: UInt8)
-                | (value & 0x80) > 0  => (value: UInt16 & 0x7FFF)
-
-type Hash = bytes[32]
-
-struct TransactionInput {
-    previousOutput {
-        hash: Hash
-        index: UInt32
-    }
-    scriptLength: VarInt
-    scriptSig: bytes[scriptLength.value]
-    sequence: UInt32
+structure BitcoinTransaction {
+    version: uint32;
+    input_count: varint;
+    inputs: BitcoinInput[input_count];
+    output_count: varint;
+    outputs: BitcoinOutput[output_count];
+    locktime: uint32;
 }
 
-struct TransactionOutput {
-    value: int<64>
-    pkScriptLength: VarInt
-    pkScript: bytes[pkScriptLength.value]
+structure BitcoinInput {
+    prev_transaction_hash: byte[32];
+    prev_output_index: uint32;
+    script_length: varint;
+    signature_script: byte[script_length];
+    sequence_number: uint32;
 }
 
-struct Transaction {
-    version: UInt32
-    inputCount: VarInt
-    inputs: TransactionInput[inputCount.value]
-    outputCount: VarInt
-    outputs: TransactionOutput[outputCount.value]
-    lockTime: UInt32
-}
-
-struct BitcoinTransactionFile {
-    magicNumber: UInt32
-    blocksize: UInt32
-    transaction: Transaction
+structure BitcoinOutput {
+    value: uint64;
+    script_length: varint;
+    pubkey_script: byte[script_length];
 }

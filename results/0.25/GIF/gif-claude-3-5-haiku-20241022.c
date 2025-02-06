@@ -1,100 +1,153 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define the GIF file structure parser
-static HParser* gif_parser(void) {
-    // Magic number identifier
-    HParser* magic = h_literal_string("GIF87a");
+typedef struct {
+    HParser* signature;
+    HParser* version;
+    HParser* screen_width;
+    HParser* screen_height;
+    HParser* packed_fields;
+    HParser* background_color;
+    HParser* pixel_aspect_ratio;
+    HParser* global_color_table;
+} GifHeader;
 
-    // Logical Screen Descriptor
-    HParser* width = h_uint16();
-    HParser* height = h_uint16();
-    HParser* packed_fields = h_uint8();
-    HParser* background_color_index = h_uint8();
-    HParser* pixel_aspect_ratio = h_uint8();
+typedef struct {
+    HParser* image_separator;
+    HParser* left_position;
+    HParser* top_position;
+    HParser* width;
+    HParser* height;
+    HParser* packed_fields;
+    HParser* local_color_table;
+    HParser* image_data;
+} ImageDescriptor;
 
-    // Combine logical screen descriptor elements
-    HParser* logical_screen_descriptor = h_sequence(
-        width, height, 
-        packed_fields, 
-        background_color_index, 
-        pixel_aspect_ratio, 
-        NULL
-    );
+typedef struct {
+    HParser* extension_introducer;
+    HParser* extension_type;
+    HParser* extension_data;
+} ExtensionBlock;
 
-    // Global Color Table (optional)
-    HParser* color_table_flag = h_bits(1, false);
-    HParser* color_resolution = h_bits(3, false);
-    HParser* sort_flag = h_bits(1, false);
-    HParser* global_color_table_size = h_bits(3, false);
-
-    // Full GIF file structure
-    HParser* gif_file = h_sequence(
-        magic,
-        logical_screen_descriptor,
-        NULL
-    );
-
-    return gif_file;
+HParser* gif_signature() {
+    return h_literal(h_ch('G'), h_ch('I'), h_ch('F'));
 }
 
-int main(int argc, char** argv) {
-    // Initialize Hammer parser
-    HParser* parser = gif_parser();
+HParser* gif_version() {
+    return h_choice(
+        h_literal(h_ch('8'), h_ch('7'), h_ch('a')),
+        h_literal(h_ch('8'), h_ch('9'), h_ch('a')),
+        NULL
+    );
+}
 
-    // Input handling
-    if (argc < 2) {
+HParser* color_table() {
+    return h_repeat_n(
+        h_sequence(
+            h_uint8(),   // Red
+            h_uint8(),   // Green
+            h_uint8(),   // Blue
+            NULL
+        ),
+        256
+    );
+}
+
+HParser* gif_header() {
+    return h_sequence(
+        gif_signature(),
+        gif_version(),
+        h_uint16(),    // Screen width
+        h_uint16(),    // Screen height
+        h_uint8(),     // Packed fields
+        h_uint8(),     // Background color index
+        h_uint8(),     // Pixel aspect ratio
+        NULL
+    );
+}
+
+HParser* image_descriptor() {
+    return h_sequence(
+        h_literal(h_ch(0x2C)),  // Image separator
+        h_uint16(),  // Left position
+        h_uint16(),  // Top position
+        h_uint16(),  // Width
+        h_uint16(),  // Height
+        h_uint8(),   // Packed fields
+        NULL
+    );
+}
+
+HParser* extension_block() {
+    return h_sequence(
+        h_literal(h_ch(0x21)),  // Extension introducer
+        h_uint8(),  // Extension type
+        NULL
+    );
+}
+
+HParser* gif_parser() {
+    return h_sequence(
+        gif_header(),
+        h_optional(color_table()),  // Global color table
+        h_many(
+            h_choice(
+                image_descriptor(),
+                extension_block(),
+                NULL
+            )
+        ),
+        h_literal(h_ch(0x3B)),  // Trailer
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
         fprintf(stderr, "Usage: %s <gif_file>\n", argv[0]);
         return 1;
     }
 
-    // Read file contents
     FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Error opening file");
         return 1;
     }
 
-    // Get file size
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     rewind(file);
 
-    // Allocate buffer
     uint8_t* buffer = malloc(file_size);
     if (!buffer) {
-        perror("Memory allocation error");
+        perror("Memory allocation failed");
         fclose(file);
         return 1;
     }
 
-    // Read file contents
-    size_t read_size = fread(buffer, 1, file_size, file);
-    fclose(file);
-
-    if (read_size != file_size) {
-        perror("File read error");
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Error reading file");
         free(buffer);
+        fclose(file);
         return 1;
     }
+    fclose(file);
 
-    // Parse GIF file
-    HParseResult* result = h_parse(parser, buffer, read_size);
+    HParser* parser = gif_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
 
-    // Check parsing result
     if (result && result->ast) {
         printf("GIF file parsed successfully\n");
-        h_parse_result_free(result);
     } else {
-        fprintf(stderr, "Parsing failed\n");
+        printf("Parsing failed\n");
     }
 
-    // Cleanup
+    h_parse_result_free(result);
+    h_destroy_parser(parser);
     free(buffer);
-    h_parser_free(parser);
 
     return 0;
 }

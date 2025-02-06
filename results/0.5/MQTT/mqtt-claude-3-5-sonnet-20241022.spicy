@@ -1,82 +1,137 @@
 module MQTT;
 
-import spicy;
-
-public type Version = enum {
-    MQTT_3_1 = 0x03,
-    MQTT_3_1_1 = 0x04,
-    MQTT_5_0 = 0x05
+public type FixedHeader = unit {
+    packet_bits: bitfield(8) {
+        message_type: 0..3;
+        flags: 4..7;
+    };
+    remaining_length: VarByteInteger;
 };
 
-public type PacketType = enum {
-    CONNECT = 1,
-    CONNACK = 2,
-    PUBLISH = 3,
-    PUBACK = 4,
-    PUBREC = 5,
-    PUBREL = 6,
-    PUBCOMP = 7,
-    SUBSCRIBE = 8,
-    SUBACK = 9,
-    UNSUBSCRIBE = 10,
-    UNSUBACK = 11,
-    PINGREQ = 12,
-    PINGRESP = 13,
-    DISCONNECT = 14
+type VarByteInteger = unit {
+    value: bytes &until=(self.value & 0x80 == 0) &convert=bytes_to_uint;
 };
 
-type FixedHeader = unit {
-    packet_type: uint8 &convert=PacketType(($$ & 0xF0) >> 4);
-    flags: uint8 &convert=($$ & 0x0F);
-    remaining_length: uint32[] &until($$ < 0x80);
-
-    on remaining_length {
-        local len: uint32 = 0;
-        local multiplier: uint32 = 1;
-        
-        for (i in self.remaining_length) {
-            len += (i & 0x7F) * multiplier;
-            multiplier *= 128;
-        }
-        
-        self.remaining_bytes = len;
-    }
-
-    var remaining_bytes: uint32;
+type StringPair = unit {
+    key_length: uint16;
+    key: bytes &size=self.key_length;
+    value_length: uint16;
+    value: bytes &size=self.value_length;
 };
 
-public type Packet = unit {
-    header: FixedHeader;
-    payload: bytes &size=self.header.remaining_bytes;
+type MQTTString = unit {
+    length: uint16;
+    value: bytes &size=self.length;
+};
+
+type BinaryData = unit {
+    length: uint16;
+    value: bytes &size=self.length;
+};
+
+type Properties = unit {
+    length: VarByteInteger;
+    properties: bytes &size=self.length.value;
 };
 
 type ConnectFlags = unit {
-    reserved: uint8 &convert=($$ & 0x01);
-    clean_session: uint8 &convert=(($$ & 0x02) >> 1);
-    will_flag: uint8 &convert=(($$ & 0x04) >> 2);
-    will_qos: uint8 &convert=(($$ & 0x18) >> 3);
-    will_retain: uint8 &convert=(($$ & 0x20) >> 5);
-    password_flag: uint8 &convert=(($$ & 0x40) >> 6);
-    username_flag: uint8 &convert=(($$ & 0x80) >> 7);
+    flag_bits: bitfield(8) {
+        username: 7;
+        password: 6;
+        will_retain: 5;
+        will_qos: 3..4;
+        will_flag: 2;
+        clean_start: 1;
+        reserved: 0;
+    };
 };
 
-type ConnectPayload = unit {
-    protocol_name_length: uint16;
-    protocol_name: bytes &size=self.protocol_name_length;
-    protocol_version: uint8 &convert=Version($$);
+type ConnectPacket = unit {
+    protocol_name: MQTTString;
+    protocol_version: uint8;
     connect_flags: ConnectFlags;
     keep_alive: uint16;
-    client_id_length: uint16;
-    client_id: bytes &size=self.client_id_length;
+    properties: Properties;
+    client_id: MQTTString;
+    will_properties: Properties if(self.connect_flags.flag_bits.will_flag == 1);
+    will_topic: MQTTString if(self.connect_flags.flag_bits.will_flag == 1);
+    will_payload: BinaryData if(self.connect_flags.flag_bits.will_flag == 1);
+    username: MQTTString if(self.connect_flags.flag_bits.username == 1);
+    password: BinaryData if(self.connect_flags.flag_bits.password == 1);
 };
 
-type PublishPayload = unit {
-    topic_length: uint16;
-    topic: bytes &size=self.topic_length;
-    message_id: uint16 if (self.context.header.flags & 0x06) != 0;
-    message: bytes &eod;
+type ConnAckPacket = unit {
+    acknowledge_flags: bitfield(8) {
+        session_present: 0;
+        reserved: 1..7;
+    };
+    reason_code: uint8;
+    properties: Properties;
 };
 
-on MQTT::Packet -> event mqtt_packet($packet);
-on MQTT::ConnectPayload -> event mqtt_connect($payload);
-on MQTT::PublishPayload -> event mqtt_publish($payload);
+type PublishPacket = unit {
+    topic_name: MQTTString;
+    packet_identifier: uint16 if(self.parent.packet_bits.flags != 0);
+    properties: Properties;
+    payload: bytes &eod;
+};
+
+type PubAckPacket = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type SubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    subscription_list: bytes &eod;
+};
+
+type SubAckPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: bytes &eod;
+};
+
+type UnsubscribePacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    topic_filters: bytes &eod;
+};
+
+type UnsubAckPacket = unit {
+    packet_identifier: uint16;
+    properties: Properties;
+    reason_codes: bytes &eod;
+};
+
+type DisconnectPacket = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+type AuthPacket = unit {
+    reason_code: uint8;
+    properties: Properties;
+};
+
+public type Message = unit {
+    header: FixedHeader;
+    
+    switch(self.header.packet_bits.message_type) {
+        1 -> connect: ConnectPacket;
+        2 -> connack: ConnAckPacket;
+        3 -> publish: PublishPacket;
+        4 -> puback: PubAckPacket;
+        5 -> pubrec: PubAckPacket;
+        6 -> pubrel: PubAckPacket;
+        7 -> pubcomp: PubAckPacket;
+        8 -> subscribe: SubscribePacket;
+        9 -> suback: SubAckPacket;
+        10 -> unsubscribe: UnsubscribePacket;
+        11 -> unsuback: UnsubAckPacket;
+        14 -> disconnect: DisconnectPacket;
+        15 -> auth: AuthPacket;
+    };
+};

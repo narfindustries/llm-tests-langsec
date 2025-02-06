@@ -1,42 +1,245 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/modbus"
-           xmlns:mb="http://example.com/modbus">
+           targetNamespace="http://example.com/modbus">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        alignment="1" 
+      <dfdl:format
+        alignment="1"
         alignmentUnits="bytes"
-        byteOrder="big-endian"
+        byteOrder="bigEndian"
         encoding="UTF-8"
-        fillByte="%#r00"
-        occursCountKind="parsed"
-        representation="binary"
-        suppressValidationWarnings="yes"/>
+        initiator=""
+        separator=""
+        separatorPosition="prefix"
+        terminator=""
+        truncateSpecifiedLengthString="no"/>
     </xs:appinfo>
   </xs:annotation>
 
   <xs:element name="ModbusFrame">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="SlaveAddress" type="xs:unsignedByte" 
-          dfdl:representation="binary"/>
-        <xs:element name="FunctionCode" type="xs:unsignedByte" 
-          dfdl:representation="binary"/>
-        <xs:element name="Data">
+        <xs:element name="SlaveAddress" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert message="Slave Address must be between 0 and 247">
+                <xs:key xpath="$value &gt;= 0 and $value &lt;= 247"/>
+              </dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="FunctionCode" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:assert message="Invalid Function Code">
+                <xs:key xpath="$value = 1 or $value = 2 or $value = 3 or $value = 4 or 
+                               $value = 5 or $value = 6 or $value = 15 or 
+                               $value = 16 or $value = 22 or $value = 23"/>
+              </dfdl:assert>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+
+        <xs:element name="RequestData" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="ReadCoilsRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfCoils" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Coils must be between 1 and 2000">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 2000"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="ReadDiscreteInputsRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfInputs" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Inputs must be between 1 and 2000">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 2000"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="ReadHoldingRegistersRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Registers must be between 1 and 125">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 125"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="ReadInputRegistersRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Registers must be between 1 and 125">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 125"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="WriteSingleCoilRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+                    <xs:element name="OutputValue" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Output Value must be 0 or 65280">
+                            <xs:key xpath="$value = 0 or $value = 65280"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="WriteSingleRegisterRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RegisterAddress" type="xs:unsignedShort"/>
+                    <xs:element name="RegisterValue" type="xs:unsignedShort"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="WriteMultipleCoilsRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfCoils" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Coils must be between 1 and 1968">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 1968"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                    <xs:element name="CoilValues" type="xs:hexBinary"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="WriteMultipleRegistersRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity of Registers must be between 1 and 123">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 123"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                    <xs:element name="RegisterValues" type="xs:hexBinary"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="MaskWriteRegisterRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ReferenceAddress" type="xs:unsignedShort"/>
+                    <xs:element name="AndMask" type="xs:unsignedShort"/>
+                    <xs:element name="OrMask" type="xs:unsignedShort"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+
+              <xs:element name="ReadWriteMultipleRegistersRequest">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ReadStartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityToRead" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity to Read must be between 1 and 125">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 125"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="WriteStartingAddress" type="xs:unsignedShort"/>
+                    <xs:element name="QuantityToWrite" type="xs:unsignedShort">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:assert message="Quantity to Write must be between 1 and 121">
+                            <xs:key xpath="$value &gt;= 1 and $value &lt;= 121"/>
+                          </dfdl:assert>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="WriteByteCount" type="xs:unsignedByte"/>
+                    <xs:element name="WriteRegisterValues" type="xs:hexBinary"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="ExceptionResponse" minOccurs="0" maxOccurs="1">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="Payload" type="xs:hexBinary" 
-                dfdl:lengthKind="implicit"/>
+              <xs:element name="ExceptionCode" type="xs:unsignedByte">
+                <xs:annotation>
+                  <xs:appinfo>
+                    <dfdl:assert message="Invalid Exception Code">
+                      <xs:key xpath="$value = 1 or $value = 2 or $value = 3 or 
+                                     $value = 4 or $value = 5 or $value = 6 or 
+                                     $value = 7 or $value = 8"/>
+                    </dfdl:assert>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="CRC" type="xs:unsignedShort" 
-          dfdl:representation="binary"/>
+
+        <xs:element name="CRC" type="xs:unsignedShort"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

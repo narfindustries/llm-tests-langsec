@@ -1,33 +1,34 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::take,
-    number::complete::{be_u8, be_u16},
+    bytes::complete::{take, take_while},
+    combinator::{map},
+    number::complete::{be_u16, be_u8},
     IResult,
 };
 use std::env;
 use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::io::{Read};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum ModbusFunctionCode {
-    ReadCoils = 0x01,
-    ReadDiscreteInputs = 0x02,
+    ReadCoilStatus = 0x01,
+    ReadInputStatus = 0x02,
     ReadHoldingRegisters = 0x03,
     ReadInputRegisters = 0x04,
     WriteSingleCoil = 0x05,
     WriteSingleHoldingRegister = 0x06,
-    ReadExceptionStatus = 0x07,
-    Diagnostics = 0x08,
-    ProgramThatRelationFile = 0x14,
-   Polling = 0x0E,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleHoldingRegisters = 0x10,
     ReportSlaveID = 0x11,
-    WriteMaskRegister = 0x16,
+    ReadFileRecord = 0x14,
+    WriteFileRecord = 0x15,
+    MaskWriteRegister = 0x16,
+    ReadWriteMultipleRegisters = 0x17,
+    ReadFIFOQueue = 0x18,
+    EncapsulatedInterfaceTransport = 0x2B,
 }
 
 #[derive(Debug, PartialEq)]
-enum ModbusExceptionCode {
+enum ModbusErrorCode {
     IllegalFunction = 0x01,
     IllegalDataAddress = 0x02,
     IllegalDataValue = 0x03,
@@ -41,141 +42,153 @@ enum ModbusExceptionCode {
 }
 
 #[derive(Debug, PartialEq)]
-struct ModbusRequest {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
-    function_code: ModbusFunctionCode,
-    data: Vec<u8>,
+enum ModbusReferenceType {
+    Register = 0x06,
+    Coil = 0x07,
 }
 
 #[derive(Debug, PartialEq)]
-struct ModbusResponse {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
+struct ModbusMessage {
+    address: u8,
     function_code: ModbusFunctionCode,
     data: Vec<u8>,
+    crc: u16,
 }
 
-#[derive(Debug, PartialEq)]
-struct ModbusExceptionResponse {
-    transaction_id: u16,
-    protocol_id: u16,
-    length: u16,
-    unit_id: u8,
-    function_code: ModbusFunctionCode,
-    exception_code: ModbusExceptionCode,
+fn parse_modbus_address(input: &[u8]) -> IResult<&[u8], u8> {
+    map(take(1u8), |x: &[u8]| x[0])(input)
 }
 
-fn parse_modbus_request(input: &[u8]) -> IResult<&[u8], ModbusRequest> {
-    let (input, transaction_id) = be_u16(input)?;
-    let (input, protocol_id) = be_u16(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, unit_id) = be_u8(input)?;
-    let (input, function_code_raw) = be_u8(input)?;
-    let function_code = match function_code_raw {
-        0x01 => ModbusFunctionCode::ReadCoils,
-        0x02 => ModbusFunctionCode::ReadDiscreteInputs,
-        0x03 => ModbusFunctionCode::ReadHoldingRegisters,
-        0x04 => ModbusFunctionCode::ReadInputRegisters,
-        0x05 => ModbusFunctionCode::WriteSingleCoil,
-        0x06 => ModbusFunctionCode::WriteSingleHoldingRegister,
-        0x07 => ModbusFunctionCode::ReadExceptionStatus,
-        0x08 => ModbusFunctionCode::Diagnostics,
-        0x14 => ModbusFunctionCode::ProgramThatRelationFile,
-        0x0E => ModbusFunctionCode::Polling,
-        0x11 => ModbusFunctionCode::ReportSlaveID,
-        0x16 => ModbusFunctionCode::WriteMaskRegister,
-        _ => panic!("Invalid function code"),
-    };
-    let (input, data) = take(length as usize - 2)(input)?;
-    Ok((input, ModbusRequest {
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-        data: data.to_vec(),
-    }))
+fn parse_modbus_function_code(input: &[u8]) -> IResult<&[u8], ModbusFunctionCode> {
+    map(
+        be_u8,
+        |function_code: u8| match function_code {
+            0x01 => ModbusFunctionCode::ReadCoilStatus,
+            0x02 => ModbusFunctionCode::ReadInputStatus,
+            0x03 => ModbusFunctionCode::ReadHoldingRegisters,
+            0x04 => ModbusFunctionCode::ReadInputRegisters,
+            0x05 => ModbusFunctionCode::WriteSingleCoil,
+            0x06 => ModbusFunctionCode::WriteSingleHoldingRegister,
+            0x0F => ModbusFunctionCode::WriteMultipleCoils,
+            0x10 => ModbusFunctionCode::WriteMultipleHoldingRegisters,
+            0x11 => ModbusFunctionCode::ReportSlaveID,
+            0x14 => ModbusFunctionCode::ReadFileRecord,
+            0x15 => ModbusFunctionCode::WriteFileRecord,
+            0x16 => ModbusFunctionCode::MaskWriteRegister,
+            0x17 => ModbusFunctionCode::ReadWriteMultipleRegisters,
+            0x18 => ModbusFunctionCode::ReadFIFOQueue,
+            0x2B => ModbusFunctionCode::EncapsulatedInterfaceTransport,
+            _ => panic!("Invalid function code"),
+        },
+    )(input)
 }
 
-fn parse_modbus_response(input: &[u8]) -> IResult<&[u8], ModbusResponse> {
-    let (input, transaction_id) = be_u16(input)?;
-    let (input, protocol_id) = be_u16(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, unit_id) = be_u8(input)?;
-    let (input, function_code_raw) = be_u8(input)?;
-    let function_code = match function_code_raw {
-        0x01 => ModbusFunctionCode::ReadCoils,
-        0x02 => ModbusFunctionCode::ReadDiscreteInputs,
-        0x03 => ModbusFunctionCode::ReadHoldingRegisters,
-        0x04 => ModbusFunctionCode::ReadInputRegisters,
-        0x05 => ModbusFunctionCode::WriteSingleCoil,
-        0x06 => ModbusFunctionCode::WriteSingleHoldingRegister,
-        0x07 => ModbusFunctionCode::ReadExceptionStatus,
-        0x08 => ModbusFunctionCode::Diagnostics,
-        0x14 => ModbusFunctionCode::ProgramThatRelationFile,
-        0x0E => ModbusFunctionCode::Polling,
-        0x11 => ModbusFunctionCode::ReportSlaveID,
-        0x16 => ModbusFunctionCode::WriteMaskRegister,
-        _ => panic!("Invalid function code"),
-    };
-    let (input, data) = take(length as usize - 2)(input)?;
-    Ok((input, ModbusResponse {
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-        data: data.to_vec(),
-    }))
+fn parse_modbus_data<'a>(input: &'a [u8], function_code: &'a ModbusFunctionCode) -> IResult<&'a [u8], Vec<u8>> {
+    match function_code {
+        ModbusFunctionCode::ReadCoilStatus => {
+            let (input, _) = take(1u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadInputStatus => {
+            let (input, _) = take(1u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadHoldingRegisters => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadInputRegisters => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::WriteSingleCoil => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take(1u8)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::WriteSingleHoldingRegister => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take(2u8)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::WriteMultipleCoils => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::WriteMultipleHoldingRegisters => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReportSlaveID => {
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadFileRecord => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::WriteFileRecord => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::MaskWriteRegister => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take(2u8)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadWriteMultipleRegisters => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::ReadFIFOQueue => {
+            let (input, _) = take(2u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+        ModbusFunctionCode::EncapsulatedInterfaceTransport => {
+            let (input, _) = take(1u8)(input)?;
+            let (input, _) = take(1u8)(input)?;
+            let (input, data) = take_while(|x| x != 0)(input)?;
+            Ok((input, data.to_vec()))
+        }
+    }
 }
 
-fn parse_modbus_exception_response(input: &[u8]) -> IResult<&[u8], ModbusExceptionResponse> {
-    let (input, transaction_id) = be_u16(input)?;
-    let (input, protocol_id) = be_u16(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, unit_id) = be_u8(input)?;
-    let (input, function_code_raw) = be_u8(input)?;
-    let function_code = match function_code_raw {
-        0x01 => ModbusFunctionCode::ReadCoils,
-        0x02 => ModbusFunctionCode::ReadDiscreteInputs,
-        0x03 => ModbusFunctionCode::ReadHoldingRegisters,
-        0x04 => ModbusFunctionCode::ReadInputRegisters,
-        0x05 => ModbusFunctionCode::WriteSingleCoil,
-        0x06 => ModbusFunctionCode::WriteSingleHoldingRegister,
-        0x07 => ModbusFunctionCode::ReadExceptionStatus,
-        0x08 => ModbusFunctionCode::Diagnostics,
-        0x14 => ModbusFunctionCode::ProgramThatRelationFile,
-        0x0E => ModbusFunctionCode::Polling,
-        0x11 => ModbusFunctionCode::ReportSlaveID,
-        0x16 => ModbusFunctionCode::WriteMaskRegister,
-        _ => panic!("Invalid function code"),
-    };
-    let (input, exception_code) = map(be_u8, |x| match x {
-        0x01 => ModbusExceptionCode::IllegalFunction,
-        0x02 => ModbusExceptionCode::IllegalDataAddress,
-        0x03 => ModbusExceptionCode::IllegalDataValue,
-        0x04 => ModbusExceptionCode::SlaveDeviceFailure,
-        0x05 => ModbusExceptionCode::Acknowledge,
-        0x06 => ModbusExceptionCode::SlaveDeviceBusy,
-        0x07 => ModbusExceptionCode::NegativeAcknowledge,
-        0x08 => ModbusExceptionCode::MemoryParityError,
-        0x0A => ModbusExceptionCode::GatewayPathUnavailable,
-        0x0B => ModbusExceptionCode::GatewayTargetDeviceFailedToRespond,
-        _ => panic!("Invalid exception code"),
-    })(input)?;
-    Ok((input, ModbusExceptionResponse {
-        transaction_id,
-        protocol_id,
-        length,
-        unit_id,
-        function_code,
-        exception_code,
-    }))
+fn parse_modbus_crc(input: &[u8]) -> IResult<&[u8], u16> {
+    be_u16(input)
+}
+
+fn parse_modbus_message(input: &[u8]) -> IResult<&[u8], ModbusMessage> {
+    let (input, address) = parse_modbus_address(input)?;
+    let (input, function_code) = parse_modbus_function_code(input)?;
+    let (input, data) = parse_modbus_data(input, &function_code.clone())?;
+    let (input, crc) = parse_modbus_crc(input)?;
+    Ok((
+        input,
+        ModbusMessage {
+            address,
+            function_code: function_code.clone(),
+            data,
+            crc,
+        },
+    ))
 }
 
 fn main() {
@@ -184,18 +197,17 @@ fn main() {
         panic!("Usage: {} <input_file>", args[0]);
     }
     let input_file = &args[1];
-    let path = Path::new(input_file);
-    let mut file = File::open(path).expect("Failed to open file");
+    let mut file = match File::open(input_file) {
+        Ok(file) => file,
+        Err(_) => panic!("Failed to open file {}", input_file),
+    };
     let mut input = Vec::new();
-    file.read_to_end(&mut input).expect("Failed to read file");
-    match parse_modbus_request(&input) {
-        Ok((_, request)) => println!("{:?}", request),
-        Err(_) => match parse_modbus_response(&input) {
-            Ok((_, response)) => println!("{:?}", response),
-            Err(_) => match parse_modbus_exception_response(&input) {
-                Ok((_, exception_response)) => println!("{:?}", exception_response),
-                Err(e) => panic!("Error parsing input: {}", e),
-            },
-        },
+    match file.read_to_end(&mut input) {
+        Ok(_) => (),
+        Err(_) => panic!("Failed to read file {}", input_file),
+    }
+    match parse_modbus_message(&input) {
+        Ok((_, message)) => println!("{:?}", message),
+        Err(err) => panic!("Failed to parse message: {:?}", err),
     }
 }

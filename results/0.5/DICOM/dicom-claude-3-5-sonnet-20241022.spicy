@@ -1,39 +1,81 @@
 module DICOM;
 
-public type Message = unit {
+public type Header = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
     
-    on %done {
-        if ( self.prefix != b"DICM" )
-            self.set_error("Invalid DICOM prefix");
-    }
+    var is_valid: bool;
     
-    elements: DataElement[];
+    on %init {
+        self.is_valid = self.prefix == b"DICM";
+    }
 };
 
 type DataElement = unit {
     tag_group: uint16;
     tag_element: uint16;
-    vr: bytes &size=2 if (self.tag_group != 0xFFFE);
+    vr: bytes &size=2;
     length: uint32;
     value: bytes &size=self.length;
+};
 
+type DicomCommand = unit {
+    header: Header;
+    elements: DataElement[];
+};
+
+type PatientModule = unit {
+    patient_name: DataElement;
+    patient_id: DataElement;
+    patient_birth_date: DataElement;
+    patient_sex: DataElement;
+};
+
+type StudyModule = unit {
+    study_instance_uid: DataElement;
+    study_date: DataElement;
+    study_time: DataElement;
+    study_id: DataElement;
+    accession_number: DataElement;
+};
+
+type SeriesModule = unit {
+    series_instance_uid: DataElement;
+    series_number: DataElement;
+    modality: DataElement;
+};
+
+type ImageModule = unit {
+    image_type: DataElement;
+    instance_number: DataElement;
+    patient_orientation: DataElement;
+    rows: DataElement;
+    columns: DataElement;
+    bits_allocated: DataElement;
+    bits_stored: DataElement;
+    high_bit: DataElement;
+    pixel_representation: DataElement;
+};
+
+type PixelData = unit {
+    pixel_data_tag: DataElement;
+    pixel_data: bytes &size=self.pixel_data_tag.length;
+};
+
+public type DicomFile = unit {
+    header: Header;
+    patient: PatientModule;
+    study: StudyModule;
+    series: SeriesModule;
+    image: ImageModule;
+    pixel_data: PixelData;
+    
     on %done {
-        if ( self.tag_group == 0xFFFE && self.tag_element == 0xE000 )
-            self.set_error("Item Delimiter not supported");
+        if ( !self.header.is_valid )
+            throw "Invalid DICOM file";
     }
 };
 
-on DICOM::Message -> event dicom_message(
-    self.preamble,
-    self.prefix,
-    |self.elements|
-);
-
-on DICOM::DataElement -> event dicom_element(
-    self.tag_group,
-    self.tag_element,
-    self.vr,
-    self.value
-);
+on %done {
+    emit dicom_pixel_data(self.pixel_data);
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define common types -->
+  <xs:simpleType name="PacketType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CONNECT"/>
+      <xs:enumeration value="CONNACK"/>
+      <xs:enumeration value="PUBLISH"/>
+      <xs:enumeration value="PUBACK"/>
+      <xs:enumeration value="PUBREC"/>
+      <xs:enumeration value="PUBREL"/>
+      <xs:enumeration value="PUBCOMP"/>
+      <xs:enumeration value="SUBSCRIBE"/>
+      <xs:enumeration value="SUBACK"/>
+      <xs:enumeration value="UNSUBSCRIBE"/>
+      <xs:enumeration value="UNSUBACK"/>
+      <xs:enumeration value="PINGREQ"/>
+      <xs:enumeration value="PINGRESP"/>
+      <xs:enumeration value="DISCONNECT"/>
+      <xs:enumeration value极简风格，确保无多余字符，完整且无错误。

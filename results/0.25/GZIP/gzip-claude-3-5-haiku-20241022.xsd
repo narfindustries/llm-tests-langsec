@@ -1,110 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:gzip="http://www.w3.org/2001/XMLSchema"
-           targetNamespace="http://example.com/gzip"
-           elementFormDefault="qualified">
+           targetNamespace="http://example.com/gzip">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
       <dfdl:format
-        separator=""
-        initiator=""
-        terminator=""
+        alignment="1"
+        alignmentUnits="bytes"
+        byteOrder="littleEndian"
         encoding="UTF-8"
-        byteOrder="bigEndian"
-        occursCountKind="parsed"
-        representation="binary"
         lengthKind="explicit"
-        lengthUnits="bytes"/>
+        lengthUnits="bytes"
+        occursCountKind="parsed"
+        initiatedContent="no"
+        leadingSkip="0"
+        textBidi="no"
+        floating="no"
+        encodingErrorPolicy="replace"/>
     </xs:appinfo>
   </xs:annotation>
 
   <xs:element name="gzipFile">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="gzipHeader"/>
-        <xs:element name="compressedData" type="compressedBlock"/>
-        <xs:element name="footer" type="gzipFooter"/>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="id1" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:assert test="{ . eq 31 }"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="id2" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:assert test="{ . eq 139 }"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="compressionMethod" type="xs:unsignedByte">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:assert test="{ . eq 8 }"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="flags" type="xs:unsignedByte"/>
+        
+        <xs:element name="modificationTime" type="xs:unsignedInt"/>
+        
+        <xs:element name="extraFlags" type="xs:unsignedByte"/>
+        
+        <xs:element name="operatingSystem" type="xs:unsignedByte"/>
+        
+        <xs:element name="extraFields" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="extraLength" type="xs:unsignedShort"/>
+              <xs:element name="extraData" type="xs:hexBinary" 
+                          dfdl:lengthKind="explicit" 
+                          dfdl:length="{ ../extraLength }"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="originalFilename" type="xs:string" minOccurs="0">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator>
+                { ../flags mod 8 >= 4 }
+              </dfdl:discriminator>
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:terminator>0</dfdl:terminator>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="fileComment" type="xs:string" minOccurs="0">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator>
+                { ../flags mod 16 >= 8 }
+              </dfdl:discriminator>
+            </xs:appinfo>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/">
+                    <dfdl:terminator>0</dfdl:terminator>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="headerCRC" type="xs:unsignedShort" minOccurs="0">
+          <xs:annotation>
+            <xs:appinfo source="http://www.ogf.org/dfdl/">
+              <dfdl:discriminator>
+                { ../flags mod 2 = 1 }
+              </dfdl:discriminator>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="compressedData" type="xs:hexBinary"/>
+        
+        <xs:element name="dataCRC" type="xs:unsignedInt"/>
+        
+        <xs:element name="originalSize" type="xs:unsignedInt"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="gzipHeader">
-    <xs:sequence>
-      <xs:element name="magicNumber" type="xs:hexBinary">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="2" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="compressionMethod" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="1" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="flags" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="1" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="modificationTime" type="xs:unsignedInt">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="4" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="extraFlags" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="1" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="operatingSystem" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="1" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="compressedBlock">
-    <xs:sequence>
-      <xs:element name="compressedData" type="xs:hexBinary">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="implicit" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="gzipFooter">
-    <xs:sequence>
-      <xs:element name="crc32" type="xs:unsignedInt">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="4" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="originalSize" type="xs:unsignedInt">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthValue="4" representation="binary"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
 </xs:schema>

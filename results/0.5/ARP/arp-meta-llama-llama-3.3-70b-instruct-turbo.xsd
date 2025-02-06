@@ -1,30 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ARP"
-           xmlns:tns="http://example.com/ARP"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.example.org/ARP" 
+           xmlns:arp="http://www.example.org/ARP" 
            elementFormDefault="qualified">
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-  <xs:element name="arp" type="tns:arpType" dfdl:representation="binary" dfdl:encoding="utf-8">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formatInset>
-          <dfdl:binaryCrop start="0" end="28"/>
-        </dfdl:formatInset>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
+  <xs:element name="arp" type="arp:arpType"/>
   <xs:complexType name="arpType">
     <xs:sequence>
-      <xs:element name="hardwareType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="protocolType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="hardwareAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="protocolAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="opcode" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="senderHardwareAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="6" dfdl:encoding="utf-8"/>
-      <xs:element name="senderProtocolAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="4" dfdl:encoding="utf-8"/>
-      <xs:element name="targetHardwareAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="6" dfdl:encoding="utf-8"/>
-      <xs:element name="targetProtocolAddress" type="xs:hexBinary" dfdl:representation="binary" dfdl:length="4" dfdl:encoding="utf-8"/>
+      <xs:element name="hardwareType" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="protocolType" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="hardwareAddressLength" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="protocolAddressLength" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="1"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="operation" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="senderHardwareAddress" type="arp:hardwareAddressType"/>
+      <xs:element name="senderProtocolAddress" type="arp:protocolAddressType"/>
+      <xs:element name="targetHardwareAddress" type="arp:hardwareAddressType"/>
+      <xs:element name="targetProtocolAddress" type="arp:protocolAddressType"/>
     </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="hardwareAddressType">
+    <xs:choice>
+      <xs:element name="ethernetAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="6"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="otherAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="protocolAddressType">
+    <xs:choice>
+      <xs:element name="ipv4Address" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="4"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ipv6Address" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian" dfdl:length="16"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="otherAddress" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:representation dfdl:binary="true" dfdl:byteOrder="bigEndian"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:choice>
   </xs:complexType>
 </xs:schema>

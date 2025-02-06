@@ -12,35 +12,26 @@ public type Message = unit {
 
 type Header = unit {
     id: uint16;
-    flags: uint16;
+    
+    flags: bitfield(16) {
+        qr: 0..0;
+        opcode: 1..4;
+        aa: 5..5;
+        tc: 6..6;
+        rd: 7..7;
+        ra: 8..8;
+        z: 9..11;
+        rcode: 12..15;
+    };
+    
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
-    
-    on %done {
-        self.qr = (self.flags >> 15) & 0x1;
-        self.opcode = (self.flags >> 11) & 0xF;
-        self.aa = (self.flags >> 10) & 0x1;
-        self.tc = (self.flags >> 9) & 0x1;
-        self.rd = (self.flags >> 8) & 0x1;
-        self.ra = (self.flags >> 7) & 0x1;
-        self.z = (self.flags >> 4) & 0x7;
-        self.rcode = self.flags & 0xF;
-    }
-    
-    var qr: uint8;
-    var opcode: uint8;
-    var aa: uint8;
-    var tc: uint8;
-    var rd: uint8;
-    var ra: uint8;
-    var z: uint8;
-    var rcode: uint8;
 };
 
 type Question = unit {
-    name: Name;
+    qname: Name;
     qtype: uint16;
     qclass: uint16;
 };
@@ -48,33 +39,67 @@ type Question = unit {
 type ResourceRecord = unit {
     name: Name;
     type_: uint16;
-    class: uint16;
+    class_: uint16;
     ttl: uint32;
     rdlength: uint16;
     rdata: bytes &size=self.rdlength;
 };
 
-type Name = unit {
-    labels: Label[];
-    
-    on %done {
-        local parts: vector<string>;
-        for ( label in self.labels ) {
-            parts.push_back(label.name);
-        }
-        self.name = join(parts, ".");
-    }
-    
-    var name: string;
+type Label = unit {
+    length: uint8;
+    switch ( self.length ) {
+        0 -> : void;
+        0xc0..0xff -> pointer: uint8;
+        * -> label: bytes &size=self.length;
+    };
 };
 
-type Label = unit {
-    : uint8 &requires=($$ <= 63) &convert=cast<uint8>($$);
-    name: bytes &size=$$;
-} &until-including=($$ == 0);
+type Name = unit {
+    labels: Label[] &until($$.length == 0 || ($$.length & 0xc0) == 0xc0);
+};
 
-public function parse_message(msg: Message) {
-    # Process parsed message
-}
+public type Type = enum {
+    A = 1,
+    NS = 2,
+    MD = 3,
+    MF = 4,
+    CNAME = 5,
+    SOA = 6,
+    MB = 7,
+    MG = 8,
+    MR = 9,
+    NULL = 10,
+    WKS = 11,
+    PTR = 12,
+    HINFO = 13,
+    MINFO = 14,
+    MX = 15,
+    TXT = 16,
+    AXFR = 252,
+    MAILB = 253,
+    MAILA = 254,
+    ANY = 255
+};
 
-on DNS::Message -> event dns_message(self);
+public type Class = enum {
+    IN = 1,
+    CS = 2,
+    CH = 3,
+    HS = 4,
+    ANY = 255
+};
+
+public type Opcode = enum {
+    QUERY = 0,
+    IQUERY = 1,
+    STATUS = 2
+};
+
+public type Rcode = enum {
+    NOERROR = 0,
+    FORMERR = 1,
+    SERVFAIL = 2,
+    NXDOMAIN = 3,
+    NOTIMP = 4,
+    REFUSED = 5
+};

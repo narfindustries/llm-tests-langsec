@@ -1,0 +1,56 @@
+module ICMP;
+
+public type Header = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest: case (type) of {
+        0|8       -> echo: Echo;
+        3         -> destination_unreachable: DestinationUnreachable;
+        5         -> redirect: Redirect;
+        11        -> time_exceeded: TimeExceeded;
+        12        -> parameter_problem: ParameterProblem;
+        13|14     -> timestamp: Timestamp;
+        17|18     -> address_mask: AddressMask;
+        *         -> unknown: bytes &size=4;
+    };
+};
+
+type Echo = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+};
+
+type DestinationUnreachable = unit {
+    unused: uint32;
+    original_datagram: bytes &size=64;
+};
+
+type Redirect = unit {
+    gateway_internet_address: uint32;
+    original_datagram: bytes &size=64;
+};
+
+type TimeExceeded = unit {
+    unused: uint32;
+    original_datagram: bytes &size=64;
+};
+
+type ParameterProblem = unit {
+    unused: uint32;
+    original_datagram: bytes &size=64;
+};
+
+type Timestamp = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    originate_timestamp: uint32;
+    receive_timestamp: uint32;
+    transmit_timestamp: uint32;
+};
+
+type AddressMask = unit {
+    identifier: uint16;
+    sequence_number: uint16;
+    address_mask: uint32;
+};

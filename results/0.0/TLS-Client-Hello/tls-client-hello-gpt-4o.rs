@@ -1,22 +1,22 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt},
-    multi::{length_data, length_count, many0},
-    number::complete::{be_u16, be_u24, be_u8},
+    combinator::map_res,
+    multi::length_data,
+    number::complete::{be_u16, be_u8},
     sequence::{preceded, tuple},
     IResult,
 };
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 use std::env;
 
 #[derive(Debug)]
 struct ClientHello {
-    version: u16,
+    client_version: [u8; 2],
     random: [u8; 32],
-    session_id: Vec<u8>,
+    legacy_session_id: Vec<u8>,
     cipher_suites: Vec<u16>,
-    compression_methods: Vec<u8>,
+    legacy_compression_methods: Vec<u8>,
     extensions: Vec<Extension>,
 }
 
@@ -27,39 +27,37 @@ struct Extension {
 }
 
 fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, version) = be_u16(input)?;
-    let (input, random) = map(take(32usize), |bytes: &[u8]| {
-        let mut array = [0u8; 32];
-        array.copy_from_slice(bytes);
-        array
-    })(input)?;
-    let (input, session_id) = length_data(be_u8)(input)?;
-    let (input, cipher_suites) = length_count(be_u16, be_u16)(input)?;
-    let (input, compression_methods) = length_data(be_u8)(input)?;
-    let (input, extensions) = opt(length_data(be_u16))(input)?;
+    let (input, client_version) = take(2usize)(input)?;
+    let (input, random) = take(32usize)(input)?;
+    let (input, legacy_session_id) = length_data(be_u8)(input)?;
+    let (input, cipher_suites) = length_data(be_u16)(input)?;
+    let (input, legacy_compression_methods) = length_data(be_u8)(input)?;
+    let (input, extensions) = length_data(be_u16)(input)?;
 
-    let extensions = extensions
-        .map(|ext_data| {
-            let mut ext_input = ext_data;
-            let mut exts = Vec::new();
-            while !ext_input.is_empty() {
-                let (rest, ext) = parse_extension(ext_input)?;
-                exts.push(ext);
-                ext_input = rest;
-            }
-            Ok(exts)
-        })
-        .unwrap_or_else(|| Ok(Vec::new()))?;
+    let cipher_suites: Vec<u16> = cipher_suites
+        .chunks(2)
+        .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+        .collect();
+
+    let legacy_compression_methods: Vec<u8> = legacy_compression_methods.to_vec();
+
+    let mut ext_input = extensions;
+    let mut ext_vec = Vec::new();
+    while !ext_input.is_empty() {
+        let (rest, ext) = parse_extension(ext_input)?;
+        ext_vec.push(ext);
+        ext_input = rest;
+    }
 
     Ok((
         input,
         ClientHello {
-            version,
-            random,
-            session_id: session_id.to_vec(),
+            client_version: [client_version[0], client_version[1]],
+            random: random.try_into().unwrap(),
+            legacy_session_id: legacy_session_id.to_vec(),
             cipher_suites,
-            compression_methods: compression_methods.to_vec(),
-            extensions,
+            legacy_compression_methods,
+            extensions: ext_vec,
         },
     ))
 }
@@ -76,17 +74,16 @@ fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     ))
 }
 
-fn main() {
+fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <binary_file>", args[0]);
+        return Ok(());
     }
 
-    let filename = &args[1];
-    let mut file = File::open(filename).expect("Failed to open file");
+    let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    file.read_to_end(&mut buffer)?;
 
     match parse_client_hello(&buffer) {
         Ok((_, client_hello)) => {
@@ -96,4 +93,6 @@ fn main() {
             eprintln!("Failed to parse ClientHello: {:?}", e);
         }
     }
+
+    Ok(())
 }

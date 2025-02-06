@@ -1,54 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/sqlite3-db"
-           xmlns="http://example.org/sqlite3-db"
+           targetNamespace="http://example.org/sqlite3"
+           xmlns="http://example.org/sqlite3"
            elementFormDefault="qualified">
 
-  <xs:element name="sqlite3-db-gemini-1">
+  <xs:element name="sqlite3Database" dfdl:lengthKind="implicit">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
-        <xs:element name="records" type="RecordsType" dfdl:occursCountKind="unbounded"/>
-        <xs:element name="footer" type="FooterType" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
+        <xs:element name="header" type="headerType"/>
+        <xs:element name="pages" type="pagesType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:lengthKind="fixed" dfdl:length="4"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="headerType">
     <xs:sequence>
-      <xs:element name="creationDate" type="xs:date"/>
-      <xs:element name="databaseName" type="xs:string"/>
+      <xs:element name="SQLITE_FILE_HEADER" type="binaryType" dfdl:length="16"/>
+      <xs:element name="pageSize" type="xs:unsignedShort"/>
+      <xs:element name="writeVersion" type="xs:unsignedInt"/>
+      <xs:element name="readOnly" type="xs:boolean"/>
+      <xs:element name="reservedSpace" type="xs:unsignedInt"/>
+      <xs:element name="maxPageCount" type="xs:unsignedInt"/>
+      <xs:element name="changeCounter" type="xs:unsignedLong"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="RecordsType">
+  <xs:complexType name="pagesType">
     <xs:sequence>
-      <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+      <xs:element name="pageHeader" type="pageHeaderType"/>
+      <xs:element name="pageContent" type="pageContentType" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="RecordType">
+  <xs:complexType name="pageHeaderType">
     <xs:sequence>
-      <xs:element name="id" type="xs:integer"/>
-      <xs:element name="value" type="xs:string"/>
+      <xs:element name="pageNumber" type="xs:unsignedInt"/>
+      <xs:element name="pageType" type="xs:unsignedByte"/>
+      <xs:element name="freeblockCount" type="xs:unsignedShort"/>
+      <xs:element name="unused" type="binaryType" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="FooterType">
+
+  <xs:complexType name="pageContentType">
     <xs:sequence>
-      <xs:element name="recordCount" type="xs:integer"/>
+      <xs:element name="cellData" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
 
-  <dfdl:defineSchema>
-    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8"
-                 lengthUnits="bytes" representation="text"/>
-    <dfdl:textDelimiter occurrence="1" text="|"/>
-    <dfdl:layout textAlignment="left"/>
-    <dfdl:sequence separator=","/>
-  </dfdl:defineSchema>
-
+  <xs:simpleType name="binaryType">
+    <xs:restriction base="xs:hexBinary">
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

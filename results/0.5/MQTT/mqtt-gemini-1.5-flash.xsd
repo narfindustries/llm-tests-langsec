@@ -1,1 +1,77 @@
-Gemini API Error: 429 Resource has been exhausted (e.g. check quota).
+The error message indicates that `xs:attribute` elements are being placed incorrectly within the schema.  DFDL attributes should be placed within `<xs:annotation><xs:appinfo>` elements, not directly as children of complex types.  The previous attempts incorrectly nested the DFDL attributes.  This corrected version addresses this issue.  It's still a simplified representation and will require significant expansion to fully cover the MQTT 5.0 specification's complexity.
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/mqtt"
+           xmlns="http://example.org/mqtt"
+           elementFormDefault="qualified">
+
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+
+  <xs:element name="MQTTPacket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FixedHeader" type="FixedHeaderType"/>
+        <xs:element name="VariableHeader" minOccurs="0" type="VariableHeaderType"/>
+        <xs:element name="Payload" minOccurs="0" type="xs:base64Binary"/>
+      </xs:sequence>
+      <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+          <dfdl:lengthKind>implicit</dfdl:lengthKind>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FixedHeaderType">
+    <xs:sequence>
+      <xs:element name="MessageType" type="MessageTypeType"/>
+      <xs:element name="Flags" type="xs:unsignedByte"/>
+      <xs:element name="RemainingLength" type="xs:unsignedInt"/>
+    </xs:sequence>
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+        <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:complexType>
+
+  <xs:simpleType name="MessageTypeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <!-- Add remaining message types -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="VariableHeaderType">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort" minOccurs="0"/>
+      <xs:element name="Properties" type="PropertiesType" minOccurs="0"/>
+      <!-- Add other variable header elements -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:sequence>
+      <xs:element name="Property" type="PropertyType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertyType">
+    <xs:sequence>
+      <xs:element name="PropertyId" type="xs:unsignedShort"/>
+      <xs:choice>
+        <xs:element name="BooleanValue" type="xs:boolean"/>
+        <xs:element name="ByteValue" type="xs:unsignedByte"/>
+        <xs:element name="ShortValue" type="xs:unsignedShort"/>
+        <xs:element name="IntegerValue" type="xs:unsignedInt"/>
+        <xs:element name="StringValue" type="xs:string"/>
+        <xs:element name="BinaryValue" type="xs:base64Binary"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

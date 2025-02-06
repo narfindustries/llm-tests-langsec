@@ -1,26 +1,35 @@
 module TIFF;
 
-public type IfdEntry = unit {
+public type RATIONAL = unit {
+    numerator: uint32;
+    denominator: uint32;
+};
+
+public type SRATIONAL = unit {
+    numerator: int32;
+    denominator: int32;
+};
+
+type IFDEntry = unit {
     tag: uint16;
     type: uint16;
     count: uint32;
-    valueOffset: bytes &size=4;
+    valueOffset: uint32;
 };
 
-public type IFD = unit {
-    entries: IfdEntry[] &until($$.entries.size() == 0);
-    nextIfdOffset: uint32;
+type IFD = unit {
+    numEntries: uint16;
+    entries: IFDEntry[] &length=numEntries;
+    nextIFDOffset: uint32;
 };
 
-public type GPT4Turbo = unit {
-    header: bytes &size=8;
-    ifd: IFD;
-    
-    on %init {
-        print "Starting to parse TIFF file...";
-    }
+type ImageFileHeader = unit {
+    byteOrder: bytes &size=2;
+    magicNumber: uint16;
+    offsetFirstIFD: uint32;
+};
 
-    on %done {
-        print "Finished parsing TIFF file.";
-    }
+public type File = unit {
+    header: ImageFileHeader;
+    ifds: IFD[] &until($$.nextIFDOffset == 0) &seek($$.header.offsetFirstIFD);
 };

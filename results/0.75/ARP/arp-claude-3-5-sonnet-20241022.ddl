@@ -1,37 +1,13 @@
-def Main = {
-    $$ = {
-        title: Title;
-        lines: Lines;
-    }
+def ARP = {
+    hwtype: bits(16);
+    ptype: bits(16);
+    hwlen: bits(8);
+    plen: bits(8);
+    oper: bits(16);
+    sha: bytes(hwlen);
+    spa: bytes(plen);
+    tha: bytes(hwlen);
+    tpa: bytes(plen);
 }
 
-def Title = {
-    $$ = @text_line
-}
-
-def Lines = {
-    lines : seq 14 {
-        line: Line;
-        @line_end
-    };
-    $$ = lines
-}
-
-def Line = {
-    $$ = @text_line
-}
-
-def text_line = {
-    xs: (@alpha | @space | @punct)*;
-    FWS
-}
-
-def line_end = {
-    @newline
-}
-
-def newline = '\n'
-def space = ' '
-def alpha = /[A-Za-z]/
-def punct = /[,.!?;:'"-]/
-def FWS = /[ \t]*/
+def Main = ARP

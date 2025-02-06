@@ -1,49 +1,78 @@
-module TLSClientHello;
-
-import spicy;
-import zeek;
+module TLS;
 
 public type ClientHello = unit {
-    record_version: uint16;
+    client_version: uint16;
     random: bytes &size=32;
-    session_id_length: uint8;
-    session_id: bytes &size=session_id_length;
-    cipher_suites_length: uint16;
-    cipher_suites: bytes &size=cipher_suites_length;
-    compression_methods_length: uint8;
-    compression_methods: bytes &size=compression_methods_length;
-    extensions_length: uint16;
-    extensions: bytes &size=extensions_length;
+    legacy_session_id: bytes &size=uint8;
+    cipher_suites: bytes &size=uint16;
+    legacy_compression_methods: bytes &size=uint8;
+    extensions: bytes &size=uint16;
 };
 
-public type TLSHandshake = unit {
-    handshake_type: uint8;
-    length: uint24;
-    body: case handshake_type {
-        1 => ClientHello,
-        // Add other handshake types here if needed
-    };
+type Extension = unit {
+    extension_type: uint16;
+    extension_data: bytes &size=uint16;
 };
 
-public type TLSRecord = unit {
-    content_type: uint8;
-    version: uint16;
-    length: uint16;
-    handshake: TLSHandshake &if (content_type == 22);
+# Example of parsing specific extensions
+type SupportedVersions = unit {
+    versions: bytes &size=uint8;
 };
 
-public module TLSClientHelloAnalyzer = global {
-    export {
-        type Analyzer = unit {
-            : TLSRecord;
-        };
+type SupportedGroups = unit {
+    groups: bytes &size=uint16;
+};
+
+type SignatureAlgorithms = unit {
+    algorithms: bytes &size=uint16;
+};
+
+type KeyShare = unit {
+    client_shares: bytes &size=uint16;
+};
+
+type KeyShareEntry = unit {
+    group: uint16;
+    key_exchange: bytes &size=uint16;
+};
+
+type PskKeyExchangeModes = unit {
+    ke_modes: bytes &size=uint8;
+};
+
+type ServerName = unit {
+    list_length: uint16;
+    server_name_list: bytes &size=list_length;
+};
+
+type ServerNameEntry = unit {
+    name_type: uint8;
+    host_name: bytes &size=uint16;
+};
+
+type ALPN = unit {
+    protocol_name_list: bytes &size=uint16;
+};
+
+type ProtocolName = unit {
+    name: bytes &size=uint8;
+};
+
+type EarlyData = unit {
+    max_early_data_size: uint32;
+};
+
+# Example of how to parse extensions based on type
+public function parse_extension(ext: Extension): any {
+    switch (ext.extension_type) {
+        case 0x002b: return SupportedVersions(ext.extension_data);
+        case 0x000a: return SupportedGroups(ext.extension_data);
+        case 0x000d: return SignatureAlgorithms(ext.extension_data);
+        case 0x0033: return KeyShare(ext.extension_data);
+        case 0x002d: return PskKeyExchangeModes(ext.extension_data);
+        case 0x0000: return ServerName(ext.extension_data);
+        case 0x0010: return ALPN(ext.extension_data);
+        case 0x002a: return EarlyData(ext.extension_data);
+        default: return ext.extension_data;
     }
-};
-
-event zeek_init() {
-    Spicy::register_analyzer(
-        Analyzer::TLSClientHelloAnalyzer::Analyzer,
-        "TLSClientHello",
-        "tcp"
-    );
 }

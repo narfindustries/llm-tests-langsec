@@ -1,121 +1,119 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::take_till,
-    number::complete::{be_u16, be_u32},
+    error::{ErrorKind, Err, ParseError},
+    number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
+use std::env;
+use std::fs::File;
+use std::io::{Read, Result};
 
-#[derive(Debug, PartialEq)]
-enum Os {
-    FAT,
-    Amiga,
-    VMS,
-    Unix,
-    Atari,
-    OS2,
-    Macintosh,
-    TopSpeed,
-    NTFS,
-    QNX,
-    Unknown(u8),
+#[derive(Debug)]
+struct GzipHeader {
+    id1: u8,
+    id2: u8,
+    cm: u8,
+    flags: u8,
+    mtime: u32,
+    xfl: u8,
+    os: u8,
+    extra: Option<Vec<u8>>,
+    fname: Option<String>,
+    fcomment: Option<String>,
+    hcrc: Option<u16>,
 }
 
-impl From<u8> for Os {
-    fn from(os: u8) -> Self {
-        match os {
-            0 => Os::FAT,
-            1 => Os::Amiga,
-            2 => Os::VMS,
-            3 => Os::Unix,
-            4 => Os::Atari,
-            5 => Os::OS2,
-            6 => Os::Macintosh,
-            7 => Os::TopSpeed,
-            8 => Os::NTFS,
-            9 => Os::QNX,
-            _ => Os::Unknown(os),
+fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
+    let (input, _) = tag([0x1f, 0x8b])(input)?;
+    let (input, cm) = be_u8(input)?;
+    let (input, flags) = be_u8(input)?;
+    let (input, mtime) = be_u32(input)?;
+    let (input, xfl) = be_u8(input)?;
+    let (input, os) = be_u8(input)?;
+
+    let (input, extra) = if flags & 0x04 != 0 {
+        let (input, xlen) = be_u16(input)?;
+        let (input, extra) = take(xlen)(input)?;
+        (input, Some(extra.to_vec()))
+    } else {
+        (input, None)
+    };
+
+    let (input, fname) = if flags & 0x08 != 0 {
+        let (input, fname) = take_while(|c| c != 0)(input)?;
+        (input, Some(String::from_utf8_lossy(fname).into_owned()))
+    } else {
+        (input, None)
+    };
+
+    let (input, fcomment) = if flags & 0x10 != 0 {
+        let (input, fcomment) = take_while(|c| c != 0)(input)?;
+        (input, Some(String::from_utf8_lossy(fcomment).into_owned()))
+    } else {
+        (input, None)
+    };
+
+    let (input, hcrc) = if flags & 0x02 != 0 {
+        let (input, hcrc) = be_u16(input)?;
+        (input, Some(hcrc))
+    } else {
+        (input, None)
+    };
+
+    Ok((
+        input,
+        GzipHeader {
+            id1: 0x1f,
+            id2: 0x8b,
+            cm,
+            flags,
+            mtime,
+            xfl,
+            os,
+            extra,
+            fname,
+            fcomment,
+            hcrc,
+        },
+    ))
+}
+
+fn take_while<F>(predicate: F) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8]>
+where
+    F: Fn(u8) -> bool + Clone,
+{
+    move |input: &[u8]| {
+        let mut i = 0;
+        while i < input.len() && predicate(input[i]) {
+            i += 1;
         }
+        if i == 0 {
+            return Err(Err::Error(nom::error::Error::new(input, ErrorKind::NonEmpty)));
+        }
+        Ok((&input[i..], &input[..i]))
     }
 }
 
-fn compression_method(input: &[u8]) -> IResult<&[u8], u8> {
-    let (input, method) = take(1u8)(input)?;
-    verify(method, |m| *m == 8)?;
-    Ok((input, method[0]))
-}
-
-fn flags(input: &[u8]) -> IResult<&[u8], u8> {
-    take(1u8)(input)
-}
-
-fn extra_flags(input: &[u8]) -> IResult<&[u8], u8> {
-    take(1u8)(input)
-}
-
-fn filename(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    take_till(|c| c == b'\x00')(input)
-}
-
-fn extra_field(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    take_till(|c| c == b'\x00')(input)
-}
-
-fn comment(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    take_till(|c| c == b'\x00')(input)
-}
-
-fn header_crc16(input: &[u8]) -> IResult<&[u8], u16> {
-    be_u16(input)
-}
-
-fn gzip_header(input: &[u8]) -> IResult<&[u8], ([u8; 2], u8, u8, u8, Vec<u8>, Vec<u8>, Vec<u8>, u16)> {
-    let (input, id1) = take(1u8)(input)?;
-    let (input, id2) = take(1u8)(input)?;
-    let (input, method) = compression_method(input)?;
-    let (input, flags) = flags(input)?;
-    let (input, time) = take(4u8)(input)?;
-    let (input, extra_flags) = extra_flags(input)?;
-    let (input, os) = take(1u8)(input)?;
-    let (input, filename) = filename(input)?;
-    let (input, extra_field) = extra_field(input)?;
-    let (input, comment) = comment(input)?;
-    let (input, header_crc16) = header_crc16(input)?;
-    Ok((input, ([id1[0], id2[0]], method, flags, extra_flags, filename.to_vec(), extra_field.to_vec(), comment.to_vec(), header_crc16)))
-}
-
-fn gzip_footer(input: &[u8]) -> IResult<&[u8], (u32)> {
-    let (input, crc32) = be_u32(input)?;
-    let (input, isize) = be_u32(input)?;
-    Ok((input, (crc32, isize)))
-}
-
-fn gzip(input: &[u8]) -> IResult<&[u8], (([u8; 2], u8, u8, u8, Vec<u8>, Vec<u8>, Vec<u8>, u16), (u32))> {
-    let (input, header) = gzip_header(input)?;
-    let (input, trailer) = gzip_footer(input)?;
-    Ok((input, (header, trailer)))
-}
-
-fn main() {
+fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
-    let file = File::open(&args[1]).unwrap();
-    let mut reader = std::io::BufReader::new(file);
-    let mut input = Vec::new();
-    reader.read_to_end(&mut input).unwrap();
-    let result = gzip(&input);
-    match result {
-        Ok((remaining, (header, trailer))) => {
-            println!("Header: {:?}", header);
-            println!("Trailer: {:?}", trailer);
-            if !remaining.is_empty() {
-                println!("Warning: {} bytes remaining", remaining.len());
-            }
+    if args.len() != 2 {
+        println!("Usage: {} <input_file>", args[0]);
+        return Ok(());
+    }
+
+    let mut file = File::open(&args[1])?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+
+    match parse_gzip_header(&data) {
+        Ok((remaining, header)) => {
+            println!("Gzip Header: {:?}", header);
+            println!("Remaining data: {:?}", remaining);
         }
         Err(err) => {
-            println!("Error: {:?}", err);
+            println!("Error parsing gzip header: {:?}", err);
         }
     }
+
+    Ok(())
 }

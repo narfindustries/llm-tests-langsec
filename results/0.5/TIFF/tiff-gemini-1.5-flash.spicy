@@ -1,53 +1,73 @@
-#ifndef _SPICY_H
-#define _SPICY_H
+module TIFF;
 
-#include <stdint.h>
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
-typedef int64_t i64;
-
-// Define your Spicy types and functions here.  The error message suggests a problem
-// with the compilation of a file named "tiff-gemini-1.5-flash.spicy".  This
-// example provides a basic structure.  You'll need to replace this with your
-// actual code.
-
-// Example: A simple function to add two integers.
-i32 add(i32 a, i32 b) {
-    return a + b;
+type tiff_header {
+	byte_order: uint16;
+	magic_number: bytes:2;
 }
 
-// Example: A structure to represent a point.
-typedef struct {
-    i32 x;
-    i32 y;
-} Point;
-
-// Example: A function to create a point.
-Point create_point(i32 x, i32 y) {
-    Point p;
-    p.x = x;
-    p.y = y;
-    return p;
+type rational {
+	numerator: uint32;
+	denominator: uint32;
 }
 
-#endif // _SPICY_H
-
-
-#include "spicy.h"
-
-// This is a placeholder.  Replace this with the actual code from your
-// "tiff-gemini-1.5-flash.spicy" file.  The error message suggests that this
-// file contains the compilation problem.  Make sure to check for syntax errors,
-// type mismatches, and any other potential issues within this file.
-
-int main() {
-    i32 result = add(10, 20);
-    Point p = create_point(5, 10);
-    return 0;
+enum tiff_type_code {
+    BYTE = 1;
+    ASCII = 2;
+    SHORT = 3;
+    LONG = 4;
+    RATIONAL = 5;
+    SIGNED_BYTE = 6;
+    UNDEFINED = 7;
+    SSHORT = 8;
+    SLONG = 9;
+    SRATIONAL = 10;
+    FLOAT = 11;
+    DOUBLE = 12;
 }
+
+type ifd_entry {
+    tag: uint16;
+    type_code: tiff_type_code;
+    count: uint32;
+    value_offset: uint32;
+    value: any;
+}
+
+type tiff {
+    header: tiff_header;
+    ifd_offset: uint32;
+    ifds: ifd_entry*;
+}
+
+enum tiff_tag {
+    IMAGE_WIDTH = 256;
+    IMAGE_LENGTH = 257;
+    BITS_PER_SAMPLE = 258;
+    COMPRESSION = 259;
+    PHOTOMETRIC_INTERPRETATION = 262;
+    IMAGE_DESCRIPTION = 270;
+    MAKE = 271;
+    MODEL = 272;
+    STRIP_OFFSETS = 273;
+    ORIENTATION = 274;
+    SAMPLES_PER_PIXEL = 277;
+    ROW_PER_STRIP = 278;
+    STRIP_BYTE_COUNTS = 279;
+    X_RESOLUTION = 282;
+    Y_RESOLUTION = 283;
+    PLANAR_CONFIGURATION = 284;
+    RESOLUTION_UNIT = 296;
+    SOFTWARE = 305;
+    DATETIME = 306;
+    ARTIST = 315;
+    WHITE_POINT = 318;
+    PRIMARY_CHROMATICITIES = 319;
+    TRANSFER_FUNCTION = 320;
+    JPEG_TABLES = 347;
+    COPYRIGHT = 33432;
+    EXIF_IFD_POINTER = 34665;
+    GPS_IFD_POINTER = 34853;
+    INTEROPERABILITY_IFD_POINTER = 40965;
+}
+
+root = tiff;

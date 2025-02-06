@@ -1,53 +1,145 @@
-module HL7v2;
+module HL7V2;
 
-import spicy;
-import hilti;
-
-public type HL7v2Message = unit {
-    header: Header,
-    segments: list<Segment>,
+public type HL7Message = unit {
+    segments: array of Segment
+        &until($input.length == 0);
 };
 
-public type Header = unit {
-    field_separator: uint8 &requires=$$ == "|",
-    encoding_characters: string &length=4,
-    sending_application: string &until="\r" &optional,
-    sending_facility: string &until="\r" &optional,
-    receiving_application: string &until="\r" &optional,
-    receiving_facility: string &until="\r" &optional,
-    datetime_of_message: string &until="\r" &optional,
-    security: string &until="\r" &optional,
-    message_type: string &until="\r",
-    message_control_id: string &until="\r" &optional,
-    processing_id: string &until="\r" &optional,
-    version_id: string &until="\r",
+type Segment = unit {
+    id: string &length=3;
+    fields: array of Field
+        &until($input.length == 0 || $input[0] == '\r');
+} &requires(id in ["MSH", "PID", "OBR", "OBX"]);
+
+type Field = unit {
+    content: bytes &convert=to_string
+        &until($input.length == 0 || $input[0] == '|' || $input[0] == '\r');
 };
 
-public type Segment = unit {
-    id: string &length=3,
-    fields: list<string> &until="\r",
+function to_string(b: bytes): string {
+    return b.to_utf8();
+}
+
+public type MSHSegment = Segment &requires(id == "MSH") {
+    field_separator: Field;
+    encoding_characters: Field;
+    sending_application: Field;
+    sending_facility: Field;
+    receiving_application: Field;
+    receiving_facility: Field;
+    date_time_of_message: Field;
+    security: Field;
+    message_type: Field;
+    message_control_id: Field;
+    processing_id: Field;
+    version_id: Field;
+    sequence_number: Field;
+    continuation_pointer: Field;
+    accept_acknowledgment_type: Field;
+    application_acknowledgment_type: Field;
+    country_code: Field;
+    character_set: Field;
+    principal_language_of_message: Field;
+    alternate_character_set_handling_scheme: Field;
 };
 
-public module Parser = {
-    export {
-        type ParsedMessage = unit {
-            message: HL7v2Message,
-        };
-
-        hook spicy::Parser::define() {
-            self.add_type("HL7v2Message", HL7v2Message);
-        }
-    }
+public type PIDSegment = Segment &requires(id == "PID") {
+    set_id: Field;
+    patient_id: Field;
+    patient_identifier_list: Field;
+    alternate_patient_id: Field;
+    patient_name: Field;
+    mothers_maiden_name: Field;
+    date_time_of_birth: Field;
+    administrative_sex: Field;
+    patient_alias: Field;
+    race: Field;
+    patient_address: Field;
+    county_code: Field;
+    phone_number_home: Field;
+    phone_number_business: Field;
+    primary_language: Field;
+    marital_status: Field;
+    religion: Field;
+    patient_account_number: Field;
+    ssn_number: Field;
+    driver_license_number: Field;
+    mother_identifier: Field;
+    ethnic_group: Field;
+    birth_place: Field;
+    multiple_birth_indicator: Field;
+    birth_order: Field;
+    citizenship: Field;
+    veterans_military_status: Field;
+    nationality: Field;
+    patient_death_date_and_time: Field;
+    patient_death_indicator: Field;
 };
 
-public module Analyzer = {
-    export {
-        type HL7v2Analyzer = unit {
-            parsed_message: Parser::ParsedMessage,
-        };
+public type OBRSegment = Segment &requires(id == "OBR") {
+    set_id: Field;
+    placer_order_number: Field;
+    filler_order_number: Field;
+    universal_service_identifier: Field;
+    priority: Field;
+    requested_date_time: Field;
+    observation_date_time: Field;
+    observation_end_date_time: Field;
+    collection_volume: Field;
+    collector_identifier: Field;
+    specimen_action_code: Field;
+    danger_code: Field;
+    relevant_clinical_information: Field;
+    specimen_received_date_time: Field;
+    specimen_source: Field;
+    ordering_provider: Field;
+    order_callback_phone_number: Field;
+    placer_field_1: Field;
+    placer_field_2: Field;
+    filler_field_1: Field;
+    filler_field_2: Field;
+    results_rpt_status_chng_date_time: Field;
+    charge_to_practice: Field;
+    diagnostic_serv_sect_id: Field;
+    result_status: Field;
+    parent_result: Field;
+    quantity_timing: Field;
+    result_copies_to: Field;
+    parent: Field;
+    transportation_mode: Field;
+    reason_for_study: Field;
+    principal_result_interpreter: Field;
+    assistant_result_interpreter: Field;
+    technician: Field;
+    transcriptionist: Field;
+    scheduled_date_time: Field;
+    number_of_sample_containers: Field;
+    transport_arrangement_responsibility: Field;
+    transport_arranged: Field;
+    escort_required: Field;
+    planned_patient_transport_comment: Field;
+    procedure_code: Field;
+    procedure_code_modifier: Field;
+};
 
-        hook hilti::Analyzer::define() {
-            self.add_type("HL7v2Analyzer", HL7v2Analyzer);
-        }
-    }
+public type OBXSegment = Segment &requires(id == "OBX") {
+    set_id: Field;
+    value_type: Field;
+    observation_identifier: Field;
+    observation_sub_id: Field;
+    observation_value: Field;
+    units: Field;
+    references_range: Field;
+    abnormal_flags: Field;
+    probability: Field;
+    nature_of_abnormal_test: Field;
+    observation_result_status: Field;
+    effective_date_of_reference_range: Field;
+    user_defined_access_checks: Field;
+    date_time_of_the_observation: Field;
+    producer_id: Field;
+    responsible_observer: Field;
+    observation_method: Field;
+    equipment_instance_identifier: Field;
+    date_time_of_the_analysis: Field;
 };

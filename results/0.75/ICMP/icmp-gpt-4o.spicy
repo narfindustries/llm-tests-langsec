@@ -1,54 +1,66 @@
 module ICMP;
 
-import spicy;
-
-type ICMP = unit {
+public type ICMPHeader = unit {
     type: uint8;
     code: uint8;
     checksum: uint16;
-    body: switch(type) {
-        0, 8  => Echo,
-        3     => DestinationUnreachable,
-        11    => TimeExceeded,
-        5     => RedirectMessage,
-        13, 14 => Timestamp,
-        17, 18 => AddressMask,
-        // Add more ICMP message types as needed
-        default => bytes &restofdata
-    }
-} &byteorder=be;
+    rest_of_header: Payload(type);
+};
 
-type Echo = unit {
+type Payload = unit(type: uint8) {
+    // Echo Request and Echo Reply
+    echo: echo_payload &if (type == 0 || type == 8);
+
+    // Destination Unreachable
+    destination_unreachable: destination_unreachable_payload &if (type == 3);
+
+    // Redirect
+    redirect: redirect_payload &if (type == 5);
+
+    // Time Exceeded
+    time_exceeded: time_exceeded_payload &if (type == 11);
+
+    // Parameter Problem
+    parameter_problem: parameter_problem_payload &if (type == 12);
+
+    // Timestamp and Timestamp Reply
+    timestamp: timestamp_payload &if (type == 13 || type == 14);
+
+    // Address Mask Request and Reply
+    address_mask: address_mask_payload &if (type == 17 || type == 18);
+
+    // Default case for unknown or not specifically implemented types
+    raw_data: bytes &rest_of_data;
+};
+
+type echo_payload = unit {
     id: uint16;
     sequence: uint16;
-    data: bytes &restofdata;
-} &byteorder=be;
+};
 
-type DestinationUnreachable = unit {
+type destination_unreachable_payload = unit {
     unused: uint32;
-    data: bytes &restofdata;
-} &byteorder=be;
+};
 
-type TimeExceeded = unit {
+type redirect_payload = unit {
+    gateway_internet_address: uint32;
+};
+
+type time_exceeded_payload = unit {
     unused: uint32;
-    data: bytes &restofdata;
-} &byteorder=be;
+};
 
-type RedirectMessage = unit {
-    gateway: uint32;
-    data: bytes &restofdata;
-} &byteorder=be;
+type parameter_problem_payload = unit {
+    pointer: uint8;
+    unused: bytes &length=3;
+};
 
-type Timestamp = unit {
-    id: uint16;
-    sequence: uint16;
+type timestamp_payload = unit {
     originate_timestamp: uint32;
     receive_timestamp: uint32;
     transmit_timestamp: uint32;
-} &byteorder=be;
+};
 
-type AddressMask = unit {
-    id: uint16;
-    sequence: uint16;
-    mask: uint32;
-} &byteorder=be;
+type address_mask_payload = unit {
+    address_mask: uint32;
+};

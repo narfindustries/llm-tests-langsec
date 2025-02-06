@@ -1,40 +1,106 @@
-meta:
-  id: dicom-gemini-1
-  title: DICOM GEMINI 1.5 Flash
-  homepage: ""
-  authors: []
-  license: ""
-  compiler_options:
-    python:
-      module_name: dicom_gemini_1
-
 types:
-  - id: dicom_header
+  dicom_attribute:
     seq:
-      - id: magic
-        type: u4
-        doc: "Magic number"
-      - id: version
-        type: u2
-        doc: "Version number"
-      - id: flags
-        type: u2
-        doc: "Flags"
-      - id: data_size
-        type: u4
-        doc: "Size of the data section"
+      - id: tag
+        type: u2be
+      - id: vr
+        type: str
+        length: 2
+        encoding: ASCII
+      - id: length
+        type: u4be
+      - id: value
+        type:
+          switch-on: vr
+          cases:
+            AE:
+              type: str
+              encoding: ASCII
+            AS:
+              type: str
+              encoding: ASCII
+            AT:
+              type: u4be
+            CS:
+              type: str
+              encoding: ASCII
+            DA:
+              type: str
+              encoding: ASCII
+            DS:
+              type: f4be
+            DT:
+              type: str
+              encoding: ASCII
+            FD:
+              type: f8be
+            FL:
+              type: f4be
+            IS:
+              type: s4be
+            LO:
+              type: str
+              encoding: ASCII
+            LT:
+              type: str
+              encoding: ASCII
+            OB:
+              type: bytes
+            OD:
+              type: bytes
+            OF:
+              type: bytes
+            OW:
+              type: bytes
+            PN:
+              type: str
+              encoding: ASCII
+            SH:
+              type: str
+              encoding: ASCII
+            SL:
+              type: s4be
+            SQ:
+              type: seq
+              seq_type: dicom_sequence
+            SS:
+              type: s2be
+            ST:
+              type: str
+              encoding: ASCII
+            TM:
+              type: str
+              encoding: ASCII
+            UI:
+              type: str
+              encoding: ASCII
+            UL:
+              type: u4be
+            UN:
+              type: bytes
+            US:
+              type: u2be
+            UT:
+              type: str
+              encoding: ASCII
 
-  - id: dicom_data
+  dicom_sequence:
     seq:
-      - id: image_data
-        type: u1
-        repeat: expr(this.parent.header.data_size)
-        doc: "Image data"
+      - id: items
+        type: seq
+        seq_type: dicom_attribute
 
 
-seq:
-  - id: header
-    type: dicom_header
-  - id: data
-    type: dicom_data
+  dicom_file:
+    seq:
+      - id: preamble
+        type: bytes
+        length: 128
+      - id: prefix
+        type: str
+        length: 4
+        encoding: ASCII
+      - id: dicom_elements
+        type: seq
+        seq_type: dicom_attribute
 

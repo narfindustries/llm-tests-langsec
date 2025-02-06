@@ -1,57 +1,24 @@
-# GZIP File Format Specification in Zeek Spicy
+module GZIP;
 
-type GzipFile = struct {
-    # GZIP file magic
-    magic: byte[2] = {0x1f, 0x8b};
+type Gzip = Record {
+  id1 = uint8 &default=0x1F;
+  id2 = uint8 &default=0x8B;
+  cm = uint8 &default=0x08;
+  flags = uint8;
+  mtime = uint32;
+  xfl = uint8;
+  os = uint8;
 
-    # Compression method (always DEFLATE for GZIP)
-    compression_method: byte = 8;
+  xlen = uint16 &if (flags & 0x04 != 0);
+  extra = bytestring &length = if (flags & 0x04 != 0) then xlen else 0;
 
-    # Flags
-    flags: byte;
+  fname = bytestring &length = if (flags & 0x08 != 0) then until (0x00) else 0;
+  fcomment = bytestring &length = if (flags & 0x10 != 0) then until (0x00) else 0;
 
-    # Modification time
-    modification_time: uint32;
+  hcrc = uint16 &if (flags & 0x02 != 0);
 
-    # Extra flags
-    extra_flags: byte;
+  compressed_data = bytestring &length = rest;
+  isize = uint32;
+}
 
-    # Operating system
-    operating_system: byte;
-
-    # Optional extra field (variable length)
-    extra_field: byte[] = if (flags & 0x04) != 0 {
-        extra_len: uint16 = read uint16;
-        read byte[extra_len];
-    } else {
-        [];
-    };
-
-    # Optional file name (variable length, null-terminated)
-    file_name: string = if (flags & 0x08) != 0 {
-        read string (terminator: "\x00");
-    } else {
-        "";
-    };
-
-    # Optional comment (variable length, null-terminated)
-    comment: string = if (flags & 0x10) != 0 {
-        read string (terminator: "\x00");
-    } else {
-        "";
-    };
-
-    # Header CRC (optional)
-    header_crc: uint16 = if (flags & 0x02) != 0 {
-        read uint16;
-    } else {
-        0;
-    };
-
-    # Compressed data
-    compressed_data: byte[] = read until (at_end() || peek byte == 0x00);
-
-    # GZIP footer
-    crc32: uint32 = read uint32;
-    size: uint32 = read uint32;
-};
+&default read Gzip;

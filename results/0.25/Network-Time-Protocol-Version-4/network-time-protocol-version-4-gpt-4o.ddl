@@ -1,19 +1,21 @@
-module NetworkTimeProtocolVersion4
-
-type NTPPacket = struct {
-    leapIndicator: 2 bits
-    versionNumber: 3 bits
-    mode: 3 bits
-    stratum: uint8
-    poll: int8
-    precision: int8
-    rootDelay: int32
-    rootDispersion: uint32
-    referenceId: uint32
-    referenceTimestamp: uint64
-    originateTimestamp: uint64
-    receiveTimestamp: uint64
-    transmitTimestamp: uint64
+network_time_protocol_v4 : seq {
+    li: u2,
+    vn: u3,
+    mode: u3,
+    stratum: u8,
+    poll: i8,
+    precision: i8,
+    root_delay: s32,
+    root_dispersion: s32,
+    reference_id: u32,
+    reference_timestamp: u64,
+    originate_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    authenticator: authenticator ?,
 }
 
-root: NTPPacket
+authenticator : seq {
+    key_identifier: u32,
+    message_digest: u64,
+}

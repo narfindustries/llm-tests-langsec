@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/mqtt"
@@ -6,42 +5,128 @@
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:mqttGeneralFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
-
-    <xs:complexType name="MQTTMessageType">
-        <xs:sequence>
-            <xs:element name="type" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
-            <xs:element name="flags" type="xs:int" dfdl:length="4" dfdl:textNumberRep="binary"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="MQTTPayload">
-        <xs:sequence>
-            <xs:element name="length" type="xs:int" dfdl:lengthKind="implicit"/>
-            <xs:element name="content" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="utf-8"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="MQTT">
-        <xs:sequence>
-            <xs:element name="header" type="tns:MQTTMessageType"/>
-            <xs:element name="payload" type="tns:MQTTPayload"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:element name="MQTTMessage" type="tns:MQTT"/>
-
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="mqttGeneralFormat">
+            <dfdl:defineFormat name="MQTTGeneralFormat">
                 <dfdl:format byteOrder="bigEndian"
                              bitOrder="mostSignificantBitFirst"
-                             lengthKind="delimited"
-                             representation="binary"
-                             encoding="utf-8"/>
+                             representation="binary"/>
             </dfdl:defineFormat>
         </xs:appinfo>
     </xs:annotation>
+
+    <xs:element name="MQTTMessage" dfdl:lengthKind="delimited">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
+                <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
+                <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="delimited" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="FixedHeaderType">
+        <xs:sequence>
+            <xs:element name="PacketType" type="xs:int" dfdl:length="4" dfdl:alignmentUnits="bits"/>
+            <xs:element name="DUP" type="xs:int" dfdl:length="1" dfdl:alignmentUnits="bits"/>
+            <xs:element name="QoS" type="xs:int" dfdl:length="2" dfdl:alignmentUnits="bits"/>
+            <xs:element name="Retain" type="xs:int" dfdl:length="1" dfdl:alignmentUnits="bits"/>
+            <xs:element name="RemainingLength" type="tns:RemainingLengthType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="RemainingLengthType">
+        <xs:sequence>
+            <xs:element name="Length" type="xs:int" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="VariableHeaderType">
+        <xs:choice>
+            <xs:element name="Connect" type="tns:ConnectType" minOccurs="0"/>
+            <xs:element name="ConnAck" type="tns:ConnAckType" minOccurs="0"/>
+            <xs:element name="Publish" type="tns:PublishType" minOccurs="0"/>
+            <xs:element name="PubAck" type="tns:PubAckType" minOccurs="0"/>
+            <xs:element name="Subscribe" type="tns:SubscribeType" minOccurs="0"/>
+            <xs:element name="SubAck" type="tns:SubAckType" minOccurs="0"/>
+            <xs:element name="Unsubscribe" type="tns:UnsubscribeType" minOccurs="0"/>
+            <xs:element name="UnsubAck" type="tns:UnsubAckType" minOccurs="0"/>
+            <xs:element name="PingReq" type="xs:string" dfdl:lengthKind="implicit" minOccurs="0"/>
+            <xs:element name="PingResp" type="xs:string" dfdl:lengthKind="implicit" minOccurs="0"/>
+            <xs:element name="Disconnect" type="tns:DisconnectType" minOccurs="0"/>
+            <xs:element name="Auth" type="tns:AuthType" minOccurs="0"/>
+        </xs:choice>
+    </xs:complexType>
+
+    <!-- Definitions for Connect, ConnAck, Publish, etc., including mandatory and optional elements specific to each packet -->
+
+    <xs:complexType name="ConnectType">
+        <xs:sequence>
+            <xs:element name="ProtocolName" type="xs:string" dfdl:lengthKind="delimited"/>
+            <xs:element name="Version" type="xs:int" dfdl:length="1"/>
+            <xs:element name="ConnectFlags" type="xs:int" dfdl:length="1"/>
+            <xs:element name="KeepAlive" type="xs:int" dfdl:length="2"/>
+            <!-- Additional optional elements -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ConnAckType">
+        <xs:sequence>
+            <xs:element name="SessionPresent" type="xs:boolean" dfdl:length="1"/>
+            <xs:element name="ReturnCode" type="xs:int" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PublishType">
+        <xs:sequence>
+            <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited"/>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2" minOccurs="0"/>
+            <!-- Payload is handled in the main MQTTMessage sequence as Payload -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PubAckType">
+        <xs:sequence>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SubscribeType">
+        <xs:sequence>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2"/>
+            <xs:element name="TopicFilter" type="xs:string" dfdl:lengthKind="delimited"/>
+            <xs:element name="QoS" type="xs:int" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SubAckType">
+        <xs:sequence>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2"/>
+            <xs:element name="ReturnCode" type="xs:int" dfdl:length="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="UnsubscribeType">
+        <xs:sequence>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2"/>
+            <xs:element name="TopicFilter" type="xs:string" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="UnsubAckType">
+        <xs:sequence>
+            <xs:element name="PacketId" type="xs:int" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DisconnectType">
+        <xs:sequence>
+            <!-- Elements for Disconnect packet if any -->
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AuthType">
+        <xs:sequence>
+            <!-- Elements for Auth packet if any -->
+        </xs:sequence>
+    </xs:complexType>
+
 </xs:schema>

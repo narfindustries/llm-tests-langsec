@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/bitcoinTransactions" targetNamespace="http://example.org/bitcoinTransactions" elementFormDefault="qualified">
-
-  <xs:element name="BitcoinTransactions">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/bitcoin" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:tns="http://example.org/bitcoin">
+  <xs:element name="bitcoinTransaction">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Transaction" maxOccurs="unbounded">
+        <xs:element name="version" type="tns:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="inputs" dfdl:occurs="1..unbounded">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="TransactionID" type="xs:string" dfdl:length="64"/>
-              <xs:element name="Timestamp" type="xs:dateTime"/>
-              <xs:element name="Input" maxOccurs="unbounded">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="TransactionID" type="xs:string" dfdl:length="64"/>
-                    <xs:element name="OutputIndex" type="xs:integer"/>
-                    <xs:element name="Value" type="xs:decimal"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-              <xs:element name="Output" maxOccurs="unbounded">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="Address" type="xs:string" dfdl:length="34"/>
-                    <xs:element name="Value" type="xs:decimal"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
+              <xs:element name="previousTransactionHash" type="tns:hexBinary" dfdl:length="32" dfdl:representation="binary"/>
+              <xs:element name="previousTransactionOutputIndex" type="tns:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+              <xs:element name="scriptSig" type="tns:hexBinary" dfdl:length="0..unbounded" dfdl:representation="binary"/>
+              <xs:element name="sequence" type="tns:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="outputs" dfdl:occurs="1..unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="value" type="tns:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
+              <xs:element name="scriptPubKey" type="tns:hexBinary" dfdl:length="0..unbounded" dfdl:representation="binary"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="lockTime" type="tns:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="witness" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="witnessItem" type="tns:hexBinary" dfdl:occurs="1..unbounded" dfdl:length="0..unbounded" dfdl:representation="binary"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
   </xs:element>
-
-  <dfdl:defineSchema>
-    <dfdl:format binary="false" byteOrder="bigEndian" encoding="UTF-8" lengthUnits="bytes" representation="text"/>
-    <dfdl:textSeparator separator=",">
-      <dfdl:occurs count="1"/>
-    </dfdl:textSeparator>
-    <dfdl:sequence ignoreCase="false" textTrim="trim"/>
-  </dfdl:defineSchema>
-
+  <xs:simpleType name="unsignedInt">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+  <xs:simpleType name="unsignedLong">
+    <xs:restriction base="xs:unsignedLong"/>
+  </xs:simpleType>
+  <xs:simpleType name="hexBinary">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
 </xs:schema>

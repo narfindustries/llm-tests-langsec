@@ -1,43 +1,58 @@
 module HTTP;
 
-import spicy;
-import zeek;
+type HTTPMessage = unit {
+    # Start line
+    start_line: StartLine
 
-public type HTTPRequest = unit {
-    method: string &size = 4;
-    space1: bytes &size = 1 &assert($$ == " ");
-    uri: string &until = (|c| c == 0x20);
-    space2: bytes &size = 1 &assert($$ == " ");
-    version: string &size = 8 &assert($$ == "HTTP/1.1");
-    crlf: bytes &size = 2 &assert($$ == "\r\n");
-    headers: vector of HTTPHeader;
-    crlf_end: bytes &size = 2 &assert($$ == "\r\n");
+    # Headers
+    headers: Headers
+
+    # Optional body
+    body: bytes &optional &restofdata;
 };
 
-public type HTTPHeader = unit {
-    name: string &until = (|c| c == 0x3A) &convert = to_upper;
-    colon: bytes &size = 1 &assert($$ == ":");
-    space: bytes &size = 1 &assert($$ == " ");
-    value: string &until = (|c| c == 0x0D);
-    crlf: bytes &size = 2 &assert($$ == "\r\n");
+type StartLine = unit {
+    line: /[^\r\n]+/ &convert=to_string
+    on %done {
+        if ( line.startswith("HTTP/") )
+            self = StartLine::Response(line);
+        else
+            self = StartLine::Request(line);
+    }
 };
 
-public type HTTPResponse = unit {
-    version: string &size = 8 &assert($$ == "HTTP/1.1");
-    space1: bytes &size = 1 &assert($$ == " ");
-    status_code: uint16 &byteorder = big;
-    space2: bytes &size = 1 &assert($$ == " ");
-    reason_phrase: string &until = (|c| c == 0x0D);
-    crlf: bytes &size = 2 &assert($$ == "\r\n");
-    headers: vector of HTTPHeader;
-    crlf_end: bytes &size = 2 &assert($$ == "\r\n");
+type StartLine::Request = unit {
+    method: /[A-Z]+/
+    _ws1: /\s+/
+    uri: /[^\s]+/
+    _ws2: /\s+/
+    version: /HTTP\/\d+\.\d+/
+    _newline: /\r?\n/
 };
 
-public type HTTPMessage = unit {
-    request: HTTPRequest | HTTPResponse;
+type StartLine::Response = unit {
+    version: /HTTP\/\d+\.\d+/
+    _ws1: /\s+/
+    status_code: /\d{3}/
+    _ws2: /\s+/
+    reason_phrase: /[^\r\n]+/
+    _newline: /\r?\n/
 };
 
-public hook zeek_init() {
-    spicy::register_parser(HTTP::HTTPRequest, /http-request/, HTTP::HTTPMessage);
-    spicy::register_parser(HTTP::HTTPResponse, /http-response/, HTTP::HTTPMessage);
+type Headers = unit {
+    fields: HeaderField[] &until=->end_of_headers
+    end_of_headers: /\r?\n/
+};
+
+type HeaderField = unit {
+    name: /[A-Za-z0-9-]+/
+    _colon: ":"
+    _ws: /\s*/
+    value: /[^\r\n]+/
+    _newline: /\r?\n/
+};
+
+# Helper function to convert regex match to string
+function to_string(s: bytes): string {
+    return s.to_string();
 }

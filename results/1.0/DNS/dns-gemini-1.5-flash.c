@@ -1,130 +1,86 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <hammer/hammer.h>
 
-#define MAX_PACKET_SIZE 512
-#define DNS_PORT 53
+//Helper function to read a domain name
+static hm_result_t parse_domain_name(const uint8_t* buffer, size_t len, void* result) {
+    char* domain_name = (char*)malloc(256); // Adjust size as needed
+    size_t offset = 0;
+    char* ptr = domain_name;
+    uint8_t label_len;
 
-// Structure to represent a DNS header
-typedef struct {
-    unsigned short id;
-    unsigned short flags;
-    unsigned short qdcount;
-    unsigned short ancount;
-    unsigned short nscount;
-    unsigned short arcount;
-} dns_header;
-
-// Structure to represent a DNS question
-typedef struct {
-    unsigned char *qname;
-    unsigned short qtype;
-    unsigned short qclass;
-} dns_question;
-
-// Function to convert a domain name to a byte array
-unsigned char* domain_to_bytes(const char *domain) {
-    char *token;
-    char *rest = strdup(domain);
-    unsigned char *bytes;
-    int len = 0;
-    int i;
-
-    token = strtok_r(rest, ".", &rest);
-    while (token != NULL) {
-        len += strlen(token) + 1;
-        token = strtok_r(rest, ".", &rest);
+    while (offset < len) {
+        label_len = buffer[offset++];
+        if (label_len > 63) return HM_ERROR; //Invalid label length
+        if (label_len > 0) {
+            memcpy(ptr, buffer + offset, label_len);
+            ptr += label_len;
+            *ptr++ = '.';
+            offset += label_len;
+        } else {
+            break; // End of domain name
+        }
     }
-    len++; //for null termination
-
-    bytes = (unsigned char*)malloc(len);
-    i = 0;
-    token = strtok_r(strdup(domain), ".", &rest);
-    while (token != NULL) {
-        bytes[i++] = strlen(token);
-        strcpy((char*)(bytes + i), token);
-        i += strlen(token);
-        token = strtok_r(rest, ".", &rest);
-    }
-    bytes[i] = 0;
-    free(rest);
-    return bytes;
-
+    ptr[-1] = '\0'; //Remove trailing dot
+    *((char**)result) = domain_name;
+    return HM_OK;
 }
 
+static hm_parser_t* create_domain_name_parser() {
+    return hm_map(hm_bytes(parse_domain_name), hm_string());
+}
 
-int main(int argc, char *argv[]) {
+// Define Hammer parsers for DNS header
+static hm_parser_t* create_dns_header_parser() {
+    return hm_seq(
+        hm_uint16_le(), 
+        hm_uint16_le(), 
+        hm_uint16_le(), 
+        hm_uint16_le(), 
+        hm_uint16_le(), 
+        hm_uint16_le()
+    );
+}
+
+int main(int argc, char* argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <domain>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
 
-    char *domain = argv[1];
-    unsigned char *qname_bytes = domain_to_bytes(domain);
-
-    int sockfd;
-    struct sockaddr_in server_addr;
-    dns_header header;
-    dns_question question;
-    unsigned char buffer[MAX_PACKET_SIZE];
-    int n;
-
-    // Create socket
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("Error creating socket");
+    FILE* file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    // Set server address
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(DNS_PORT);
-    server_addr.sin_addr.s_addr = inet_addr("8.8.8.8"); // Google DNS
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    rewind(file);
 
-    // Prepare DNS query
-    header.id = htons(getpid());
-    header.flags = htons(0x0100); // Standard query
-    header.qdcount = htons(1);
-    header.ancount = htons(0);
-    header.nscount = htons(0);
-    header.arcount = htons(0);
+    uint8_t* buffer = (uint8_t*)malloc(fileSize);
+    if (fread(buffer, 1, fileSize, file) != fileSize) {
+        perror("Error reading file");
+        fclose(file);
+        free(buffer);
+        return 1;
+    }
+    fclose(file);
 
-    question.qname = qname_bytes;
-    question.qtype = htons(1); // A record
-    question.qclass = htons(1); // IN
+    hm_parser_t* dns_header_parser = create_dns_header_parser();
+    hm_parser_t* domain_name_parser = create_domain_name_parser();
 
-    // Assemble the query
-    memcpy(buffer, &header, sizeof(header));
-    memcpy(buffer + sizeof(header), &question, sizeof(question));
-    memcpy(buffer + sizeof(header) + sizeof(question), qname_bytes, strlen((char*)qname_bytes)+1);
+    hm_result_t result = hm_parse(dns_header_parser, buffer, fileSize, NULL);
 
-
-    // Send query
-    n = sendto(sockfd, buffer, sizeof(header) + sizeof(question) + strlen((char*)qname_bytes) + 1, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
-    if (n < 0) {
-        perror("Error sending query");
+    if (result != HM_OK) {
+        fprintf(stderr, "Error parsing DNS header: %s\n", hm_error_string(result));
+        free(buffer);
         return 1;
     }
 
-    // Receive response
-    n = recvfrom(sockfd, buffer, MAX_PACKET_SIZE, 0, NULL, NULL);
-    if (n < 0) {
-        perror("Error receiving response");
-        return 1;
-    }
-
-
-    // Process response (This is a placeholder -  needs to be implemented to extract IP addresses)
-    printf("DNS Response received (%d bytes)\n", n);
-
-
-    close(sockfd);
-    free(qname_bytes);
+    free(buffer);
     return 0;
 }
+

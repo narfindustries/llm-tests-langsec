@@ -1,9 +1,32 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-// DICOM Parser Combinators
-HParser* dicom_preamble() {
+// DICOM Data Element Parser
+HParser* dicom_tag() {
+    return h_sequence(h_uint16(), h_uint16(), NULL);
+}
+
+HParser* vr() {
+    return h_token((const uint8_t*)"AE", 2);
+    // Add all other VR types similarly
+}
+
+HParser* length() {
+    return h_choice(h_uint16(), h_uint32(), NULL);
+}
+
+HParser* value_field() {
+    return h_many(h_uint8());
+}
+
+HParser* data_element() {
+    return h_sequence(dicom_tag(), vr(), length(), value_field(), NULL);
+}
+
+// DICOM Meta Information
+HParser* file_preamble() {
     return h_repeat_n(h_uint8(), 128);
 }
 
@@ -11,114 +34,68 @@ HParser* dicom_prefix() {
     return h_token((const uint8_t*)"DICM", 4);
 }
 
-HParser* dicom_tag() {
-    return h_sequence(h_uint16(), h_uint16(), NULL);
+HParser* meta_information() {
+    return h_sequence(
+        file_preamble(),
+        dicom_prefix(),
+        h_many(data_element()),
+        NULL
+    );
 }
 
-HParser* dicom_vr() {
-    return h_choice(h_token((const uint8_t*)"AE", 2),
-                   h_token((const uint8_t*)"AS", 2),
-                   h_token((const uint8_t*)"AT", 2),
-                   h_token((const uint8_t*)"CS", 2),
-                   h_token((const uint8_t*)"DA", 2),
-                   h_token((const uint8_t*)"DS", 2),
-                   h_token((const uint8_t*)"DT", 2),
-                   h_token((const uint8_t*)"FL", 2),
-                   h_token((const uint8_t*)"FD", 2),
-                   h_token((const uint8_t*)"IS", 2),
-                   h_token((const uint8_t*)"LO", 2),
-                   h_token((const uint8_t*)"LT", 2),
-                   h_token((const uint8_t*)"OB", 2),
-                   h_token((const uint8_t*)"OW", 2),
-                   h_token((const uint8_t*)"PN", 2),
-                   h_token((const uint8_t*)"SH", 2),
-                   h_token((const uint8_t*)"SL", 2),
-                   h_token((const uint8_t*)"SQ", 2),
-                   h_token((const uint8_t*)"SS", 2),
-                   h_token((const uint8_t*)"ST", 2),
-                   h_token((const uint8_t*)"TM", 2),
-                   h_token((const uint8_t*)"UI", 2),
-                   h_token((const uint8_t*)"UL", 2),
-                   h_token((const uint8_t*)"UN", 2),
-                   h_token((const uint8_t*)"US", 2),
-                   h_token((const uint8_t*)"UT", 2),
-                   NULL);
+// DICOM Dataset
+HParser* dataset() {
+    return h_many(data_element());
 }
 
-HParser* dicom_value_length() {
-    return h_choice(h_uint16(), h_uint32(), NULL);
-}
-
-HParser* dicom_value_field(size_t length) {
-    return h_repeat_n(h_uint8(), length);
-}
-
-HParser* dicom_data_element() {
-    // This is a simplified version. A full implementation would need to handle
-    // different VR types and their specific value representations
-    return h_sequence(dicom_tag(),
-                     dicom_vr(),
-                     dicom_value_length(),
-                     NULL);
-}
-
-HParser* dicom_data_set() {
-    return h_many1(dicom_data_element());
-}
-
+// Complete DICOM File Parser
 HParser* dicom_file() {
-    return h_sequence(dicom_preamble(),
-                     dicom_prefix(),
-                     dicom_data_set(),
-                     NULL);
+    return h_sequence(meta_information(), dataset(), NULL);
 }
 
-int main(int argc, char* argv[]) {
+void print_parse_result(HParseResult* result) {
+    if (!result) {
+        printf("Parse failed\n");
+        return;
+    }
+    // Implement result printing based on AST
+}
+
+int main(int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
         return 1;
     }
 
-    FILE* file = fopen(argv[1], "rb");
-    if (!file) {
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
         perror("Failed to open file");
         return 1;
     }
 
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    uint8_t* buffer = malloc(file_size);
+    uint8_t* buffer = malloc(size);
     if (!buffer) {
-        perror("Failed to allocate memory");
-        fclose(file);
+        fclose(fp);
         return 1;
     }
 
-    if (fread(buffer, 1, file_size, file) != file_size) {
-        perror("Failed to read file");
+    if (fread(buffer, 1, size, fp) != size) {
         free(buffer);
-        fclose(file);
+        fclose(fp);
         return 1;
     }
 
     HParser* parser = dicom_file();
-    HParseResult* result = h_parse(parser, buffer, file_size);
-
-    if (!result) {
-        fprintf(stderr, "Failed to parse DICOM file\n");
-        free(buffer);
-        fclose(file);
-        return 1;
-    }
-
-    // Here you would process the parse tree in result->ast
-    // For now, we just indicate success
-    printf("Successfully parsed DICOM file\n");
+    HParseResult* result = h_parse(parser, buffer, size);
+    
+    print_parse_result(result);
 
     h_parse_result_free(result);
     free(buffer);
-    fclose(file);
+    fclose(fp);
     return 0;
 }

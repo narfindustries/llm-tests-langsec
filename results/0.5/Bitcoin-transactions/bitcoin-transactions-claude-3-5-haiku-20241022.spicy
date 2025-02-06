@@ -2,29 +2,46 @@ module Bitcoin;
 
 import spicy;
 
-public type Transaction = unit {
+public type Transaction = struct {
     version: uint32;
-    input_count: varuint;
-    inputs: Input[input_count];
-    output_count: varuint;
-    outputs: Output[output_count];
+    input_count: VarInt;
+    inputs: vector<TransactionInput> &size=(self.input_count.value);
+    output_count: VarInt;
+    outputs: vector<TransactionOutput> &size=(self.output_count.value);
     locktime: uint32;
+};
 
-    type Input = unit {
-        prev_tx_hash: bytes(32);
-        prev_tx_output_index: uint32;
-        script_length: varuint;
-        script_sig: bytes(script_length);
-        sequence: uint32;
+type TransactionInput = struct {
+    prev_tx_hash: bytes &size=32;
+    prev_output_index: uint32;
+    script_sig_length: VarInt;
+    script_sig: bytes &size=(self.script_sig_length.value);
+    sequence_number: uint32;
+};
+
+type TransactionOutput = struct {
+    value: uint64;
+    script_pubkey_length: VarInt;
+    script_pubkey: bytes &size=(self.script_pubkey_length.value);
+};
+
+type VarInt = unit {
+    value: uint64;
+    
+    parse: void {
+        local first_byte = self.input().read[uint8]();
+        
+        if ( first_byte < 0xfd ) {
+            self.value = first_byte;
+        }
+        else if ( first_byte == 0xfd ) {
+            self.value = self.input().read[uint16]();
+        }
+        else if ( first_byte == 0xfe ) {
+            self.value = self.input().read[uint32]();
+        }
+        else {
+            self.value = self.input().read[uint64]();
+        }
     }
-
-    type Output = unit {
-        value: uint64;
-        script_length: varuint;
-        script_pubkey: bytes(script_length);
-    }
-}
-
-public function parse_transaction(data: bytes) : Transaction {
-    return Transaction(data);
-}
+};

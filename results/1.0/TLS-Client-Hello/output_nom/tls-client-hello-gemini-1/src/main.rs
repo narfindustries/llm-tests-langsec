@@ -1,126 +1,85 @@
 use nom::{
-    bytes::complete::{tag, take, take_while, take_while1},
-    combinator::{map, map_res, opt, recognize},
-    error::ErrorKind,
-    multi::count,
-    number::complete::{be_u16, be_u24, be_u32, be_u8},
-    sequence::{preceded, tuple},
-    IResult,
+    bytes::complete::take,
+    combinator::opt,
+    multi::length_count,
+    number::complete::{be_u16, be_u8},
+    IResult, Err, error::ErrorKind
 };
-use std::fs::File;
-use std::io::Read;
-use std::net::Ipv4Addr;
-use std::str::from_utf8;
+use std::env;
+use std::fs;
 
 #[derive(Debug)]
 struct ClientHello {
-    client_version: (u8, u8),
-    random: [u8; 32],
-    session_id: Option<Vec<u8>>,
-    cipher_suites: Vec<(u8, u8)>,
+    client_version: u16,
+    random: Vec<u8>,
+    legacy_session_id: Option<Vec<u8>>,
+    cipher_suites: Vec<u16>,
     compression_methods: Vec<u8>,
-    extensions: Vec<Extension>,
+    extensions: Vec<u8>,
 }
 
-#[derive(Debug)]
-enum Extension {
-    ServerName(Vec<ServerName>),
-    // Add other extensions as needed
-    Unknown(Vec<u8>),
-}
+fn client_hello(input: &[u8]) -> IResult<&[u8], ClientHello, ErrorKind> {
+    let (rem, client_version) = be_u16(input)?;
+    let (rem, random) = take(32usize)(rem)?;
+    let (rem, legacy_session_id_len) = opt(be_u8)(rem)?;
+    let legacy_session_id = legacy_session_id_len.and_then(|len| {
+        let len = len as usize;
+        match take(len)(rem) {
+            Ok((rem1, legacy_session_id)) => Some((rem1, legacy_session_id.to_vec())),
+            Err(_) => None,
+        }
+    });
+    let (rem, legacy_session_id) = match legacy_session_id {
+        Some((rem, data)) => (rem, Some(data)),
+        None => (rem, None),
+    };
 
-#[derive(Debug)]
-struct ServerName {
-    name_type: u8,
-    host_name: String,
-}
+    let (rem, cipher_suites_len) = be_u16(rem)?;
+    let (rem, cipher_suites) = length_count(be_u16, be_u16)(rem)?;
 
-fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, client_version) = tuple((be_u8, be_u8))(input)?;
-    let (input, random) = take(32usize)(input)?;
-    let (input, session_id) = opt(preceded(be_u8, take_while(|b| b != 0)))(input)?;
-    let (input, cipher_suites) = count(tuple((be_u8, be_u8)), be_u16(input)? as usize)(input)?;
-    let (input, compression_methods) = count(be_u8, be_u8(input)? as usize)(input)?;
-    let (input, extensions) = opt(parse_extensions)(input)?;
+    let (rem, compression_methods_len) = be_u8(rem)?;
+    let (rem, compression_methods) = length_count(be_u8, be_u8)(rem)?;
 
+    let (rem, extensions_len) = be_u16(rem)?;
+    let (rem, extensions) = take(extensions_len as usize)(rem)?;
 
     Ok((
-        input,
+        rem,
         ClientHello {
             client_version,
-            random: random.try_into().unwrap(),
-            session_id: session_id.map(|x| x.to_vec()),
-            cipher_suites,
-            compression_methods,
-            extensions: extensions.unwrap_or_default(),
+            random: random.to_vec(),
+            legacy_session_id,
+            cipher_suites: cipher_suites.to_vec(),
+            compression_methods: compression_methods.to_vec(),
+            extensions: extensions.to_vec(),
         },
     ))
 }
 
-
-fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
-    let (mut input, extensions_length) = be_u16(input)?;
-    let (mut input, extensions) = take(extensions_length as usize)(input)?;
-    let mut parsed_extensions = Vec::new();
-    while !extensions.is_empty(){
-        let (rem, extension) = parse_extension(extensions)?;
-        parsed_extensions.push(extension);
-        extensions = rem;
-    }
-    Ok((input, parsed_extensions))
-}
-
-
-fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
-    let (input, extension_type) = be_u16(input)?;
-    let (input, extension_length) = be_u16(input)?;
-    let (input, extension_data) = take(extension_length as usize)(input)?;
-
-    match extension_type {
-        0 => {
-            let (input, server_names) = parse_server_name(extension_data)?;
-            Ok((input, Extension::ServerName(server_names)))
-        }
-        _ => Ok((input, Extension::Unknown(extension_data.to_vec()))),
-    }
-}
-
-fn parse_server_name(input: &[u8]) -> IResult<&[u8], Vec<ServerName>> {
-    let (input, list_length) = be_u16(input)?;
-    let (input, server_names) = count(parse_server_name_entry, list_length as usize)(input)?;
-    Ok((input, server_names))
-}
-
-fn parse_server_name_entry(input: &[u8]) -> IResult<&[u8], ServerName> {
-    let (input, name_type) = be_u8(input)?;
-    let (input, name_length) = be_u16(input)?;
-    let (input, name) = take(name_length as usize)(input)?;
-    let host_name = from_utf8(name).map_err(|_| nom::Err::Error((name, ErrorKind::Verify)))?;
-    Ok((input, ServerName { name_type, host_name: host_name.to_string() }))
-}
-
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = std::env::args().collect();
+fn main() {
+    let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        std::process::exit(1);
+        println!("Usage: {} <binary_file>", args[0]);
+        return;
     }
-
     let filename = &args[1];
-    let mut file = File::open(filename)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-
-    match parse_client_hello(&buffer) {
-        Ok((remaining, client_hello)) => {
-            println!("Parsed Client Hello:\n{:?}\nRemaining: {:?}", client_hello, remaining);
+    let contents = fs::read(filename).expect("Something went wrong reading the file");
+    match client_hello(&contents) {
+        Ok((rem, client_hello)) => {
+            println!("Parsed Client Hello:");
+            println!("  Client Version: 0x{:04x}", client_hello.client_version);
+            println!("  Random: {:?}", client_hello.random);
+            println!("  Legacy Session ID: {:?}", client_hello.legacy_session_id);
+            println!("  Cipher Suites: {:?}", client_hello.cipher_suites);
+            println!(
+                "  Compression Methods: {:?}",
+                client_hello.compression_methods
+            );
+            println!("  Extensions: {:?}", client_hello.extensions);
+            println!("Remaining bytes: {:?}", rem);
         }
         Err(e) => {
             println!("Error parsing Client Hello: {:?}", e);
         }
     }
-
-    Ok(())
 }
-

@@ -1,101 +1,217 @@
-#include <stdio.h>
-#include <string.h>
+#include <hammer/hammer.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the ZIP file structure
+#define FIXED_SIZE 4
+
 typedef struct {
-    uint32_t local_header;
-    uint16_t version;
-    uint16_t flags;
+    uint32_t local_header_signature;
+    uint16_t version_needed_to_extract;
+    uint16_t general_purpose_bit_flag;
     uint16_t compression_method;
     uint16_t last_mod_time;
     uint16_t last_mod_date;
-    uint32_t crc;
+    uint32_t crc32;
     uint32_t compressed_size;
     uint32_t uncompressed_size;
     uint16_t filename_length;
     uint16_t extra_field_length;
-    char filename[256];
-    char extra_field[256];
-} zip_local_file_header_t;
+} local_file_header;
 
 typedef struct {
-    uint32_t end_of_central_dir;
-    uint16_t num_this_disk;
-    uint16_t num_disk;
-    uint16_t num_entries;
-    uint32_t central_dir_size;
-    uint32_t central_dir_offset;
-    uint16_t comment_length;
-    char comment[256];
-} zip_end_of_central_dir_t;
+    uint32_t crc32;
+    uint32_t compressed_size;
+    uint32_t uncompressed_size;
+} data_descriptor;
 
-// Define the Llama structure
 typedef struct {
-    uint32_t llama_magic;
-    uint16_t llama_version;
-    uint16_t llama_flags;
-    uint32_t llama_size;
-    char llama_data[256];
-} llama_t;
+    uint32_t central_header_signature;
+    uint16_t version_made_by;
+    uint16_t version_needed_to_extract;
+    uint16_t general_purpose_bit_flag;
+    uint16_t compression_method;
+    uint16_t last_mod_time;
+    uint16_t last_mod_date;
+    uint32_t crc32;
+    uint32_t compressed_size;
+    uint32_t uncompressed_size;
+    uint16_t filename_length;
+    uint16_t extra_field_length;
+    uint16_t file_comment_length;
+    uint16_t disk_number_start;
+    uint16_t int_attributes;
+    uint32_t ext_attributes;
+    uint32_t local_header_offset;
+} central_directory_header;
 
-// Define the Turbo structure
 typedef struct {
-    uint32_t turbo_magic;
-    uint16_t turbo_version;
-    uint16_t turbo_flags;
-    uint32_t turbo_size;
-    char turbo_data[256];
-} turbo_t;
+    uint32_t end_of_central_dir_signature;
+    uint16_t number_of_this_disk;
+    uint16_t number_of_disk_with_start_of_central_dir;
+    uint16_t total_number_of_entries_in_central_dir_on_this_disk;
+    uint16_t total_number_of_entries_in_central_dir;
+    uint32_t size_of_central_dir;
+    uint32_t offset_of_start_of_central_dir;
+    uint16_t zipfile_comment_length;
+} end_of_central_directory;
 
-// Define the Hammer structure
-typedef struct {
-    uint32_t hammer_magic;
-    uint16_t hammer_version;
-    uint16_t hammer_flags;
-    uint32_t hammer_size;
-    char hammer_data[256];
-} hammer_t;
+void* local_file_header_rule(void* input) {
+    local_file_header* header = malloc(sizeof(local_file_header));
+    header->local_header_signature = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->version_needed_to_extract = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->general_purpose_bit_flag = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->compression_method = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->last_mod_time = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->last_mod_date = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->crc32 = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->compressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->uncompressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->filename_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->extra_field_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    return header;
+}
 
-int main() {
-    // Initialize the ZIP file
-    zip_local_file_header_t zip_header;
-    zip_header.local_header = 0x04034b50;
-    zip_header.version = 20;
-    zip_header.flags = 0;
-    zip_header.compression_method = 0;
-    zip_header.last_mod_time = 0;
-    zip_header.last_mod_date = 0;
-    zip_header.crc = 0;
-    zip_header.compressed_size = 0;
-    zip_header.uncompressed_size = 0;
-    zip_header.filename_length = 0;
-    zip_header.extra_field_length = 0;
+void* data_descriptor_rule(void* input) {
+    data_descriptor* descriptor = malloc(sizeof(data_descriptor));
+    descriptor->crc32 = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    descriptor->compressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    descriptor->uncompressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    return descriptor;
+}
 
-    // Initialize the Llama structure
-    llama_t llama;
-    llama.llama_magic = 0x4c4c414d;
-    llama.llama_version = 3;
-    llama.llama_flags = 0;
-    llama.llama_size = 256;
+void* central_directory_header_rule(void* input) {
+    central_directory_header* header = malloc(sizeof(central_directory_header));
+    header->central_header_signature = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->version_made_by = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->version_needed_to_extract = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->general_purpose_bit_flag = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->compression_method = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->last_mod_time = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->last_mod_date = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->crc32 = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->compressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->uncompressed_size = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->filename_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->extra_field_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->file_comment_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->disk_number_start = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->int_attributes = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    header->ext_attributes = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    header->local_header_offset = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    return header;
+}
 
-    // Initialize the Turbo structure
-    turbo_t turbo;
-    turbo.turbo_magic = 0x54555242;
-    turbo.turbo_version = 3;
-    turbo.turbo_flags = 0;
-    turbo.turbo_size = 256;
+void* end_of_central_directory_rule(void* input) {
+    end_of_central_directory* directory = malloc(sizeof(end_of_central_directory));
+    directory->end_of_central_dir_signature = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    directory->number_of_this_disk = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    directory->number_of_disk_with_start_of_central_dir = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    directory->total_number_of_entries_in_central_dir_on_this_disk = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    directory->total_number_of_entries_in_central_dir = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    directory->size_of_central_dir = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    directory->offset_of_start_of_central_dir = *(uint32_t*)input;
+    input += sizeof(uint32_t);
+    directory->zipfile_comment_length = *(uint16_t*)input;
+    input += sizeof(uint16_t);
+    return directory;
+}
 
-    // Initialize the Hammer structure
-    hammer_t hammer;
-    hammer.hammer_magic = 0x48414d4d;
-    hammer.hammer_version = 3;
-    hammer.hammer_flags = 0;
-    hammer.hammer_size = 256;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
 
-    // Compile and link the code
-    // This part is not implemented as it's not possible to compile and link code in a C program
-    // The compilation and linking process is typically done by a build system or a compiler
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        printf("Error opening file: %s\n", argv[1]);
+        return 1;
+    }
 
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* data = malloc(file_size);
+    fread(data, 1, file_size, file);
+
+    local_file_header* local_file_headers[1024];
+    int local_file_header_count = 0;
+
+    uint8_t* input = data;
+    while (input < data + file_size) {
+        local_file_header* header = local_file_header_rule(input);
+        if (header->local_header_signature != 0x04034b50) {
+            break;
+        }
+
+        local_file_headers[local_file_header_count] = header;
+        local_file_header_count++;
+
+        input += sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t);
+        input += header->filename_length + header->extra_field_length;
+
+        data_descriptor* descriptor = data_descriptor_rule(input);
+        input += sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    }
+
+    central_directory_header* central_directory_headers[1024];
+    int central_directory_header_count = 0;
+
+    while (input < data + file_size) {
+        central_directory_header* header = central_directory_header_rule(input);
+        if (header->central_header_signature != 0x02014b50) {
+            break;
+        }
+
+        central_directory_headers[central_directory_header_count] = header;
+        central_directory_header_count++;
+
+        input += sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t);
+        input += header->filename_length + header->extra_field_length + header->file_comment_length;
+    }
+
+    end_of_central_directory* end_of_central_directory = end_of_central_directory_rule(input);
+
+    fclose(file);
+    free(data);
     return 0;
 }

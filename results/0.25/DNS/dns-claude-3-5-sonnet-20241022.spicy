@@ -3,38 +3,39 @@ module DNS;
 import spicy;
 
 public type Message = unit {
-    header: Header;
-    questions: Question[header.qdcount];
-    answers: ResourceRecord[header.ancount];
-    authorities: ResourceRecord[header.nscount];
-    additionals: ResourceRecord[header.arcount];
+    header: Header {
+        self.questions_count = $$.qdcount;
+        self.answers_count = $$.ancount;
+        self.authorities_count = $$.nscount;
+        self.additionals_count = $$.arcount;
+    }
+    questions: Question[self.questions_count];
+    answers: ResourceRecord[self.answers_count];
+    authorities: ResourceRecord[self.authorities_count];
+    additionals: ResourceRecord[self.additionals_count];
+
+    var questions_count: uint16;
+    var answers_count: uint16;
+    var authorities_count: uint16;
+    var additionals_count: uint16;
 };
 
 type Header = unit {
     id: uint16;
-    flags: uint16;
+    flags: bitfield(16) {
+        qr: 0;
+        opcode: 1..4;
+        aa: 5;
+        tc: 6;
+        rd: 7;
+        ra: 8;
+        z: 9..11;
+        rcode: 12..15;
+    };
     qdcount: uint16;
     ancount: uint16;
     nscount: uint16;
     arcount: uint16;
-
-    on flags {
-        self.qr = (self.flags & 0x8000) != 0;
-        self.opcode = (self.flags & 0x7800) >> 11;
-        self.aa = (self.flags & 0x0400) != 0;
-        self.tc = (self.flags & 0x0200) != 0;
-        self.rd = (self.flags & 0x0100) != 0;
-        self.ra = (self.flags & 0x0080) != 0;
-        self.rcode = (self.flags & 0x000F);
-    }
-
-    var qr: bool;
-    var opcode: uint8;
-    var aa: bool;
-    var tc: bool;
-    var rd: bool;
-    var ra: bool;
-    var rcode: uint8;
 };
 
 type Question = unit {
@@ -46,7 +47,7 @@ type Question = unit {
 type ResourceRecord = unit {
     name: Name;
     type_: uint16;
-    class_: uint16;
+    class: uint16;
     ttl: uint32;
     rdlength: uint16;
     rdata: bytes &size=self.rdlength;
@@ -54,18 +55,38 @@ type ResourceRecord = unit {
 
 type Name = unit {
     labels: Label[];
-} &until($$.labels[-1].length == 0);
+    terminator: uint8;
+};
 
 type Label = unit {
     length: uint8;
-    label: bytes &size=self.length if self.length > 0;
+    label: bytes &size=self.length if (self.length > 0);
 };
 
-public function name_to_string(n: Name): string {
-    local parts: vector<string>;
-    for ( label in n.labels ) {
-        if ( label.length > 0 )
-            parts.push_back(label.label);
-    }
-    return join(parts, ".");
-}
+const TYPE_A = 1;
+const TYPE_NS = 2;
+const TYPE_CNAME = 5;
+const TYPE_SOA = 6;
+const TYPE_PTR = 12;
+const TYPE_HINFO = 13;
+const TYPE_MX = 15;
+const TYPE_AAAA = 28;
+const TYPE_AXFR = 252;
+const TYPE_ANY = 255;
+
+const CLASS_IN = 1;
+const CLASS_CS = 2;
+const CLASS_CH = 3;
+const CLASS_HS = 4;
+const CLASS_ANY = 255;
+
+const RCODE_NOERROR = 0;
+const RCODE_FORMERR = 1;
+const RCODE_SERVFAIL = 2;
+const RCODE_NXDOMAIN = 3;
+const RCODE_NOTIMP = 4;
+const RCODE_REFUSED = 5;
+
+const OPCODE_QUERY = 0;
+const OPCODE_IQUERY = 1;
+const OPCODE_STATUS = 2;

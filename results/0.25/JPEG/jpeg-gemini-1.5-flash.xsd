@@ -1,26 +1,92 @@
+The error message indicates a problem with the `dfdl:lengthKind` attribute.  The previous attempts incorrectly used it.  DFDL's length determination is more nuanced than simply setting `lengthKind`.  For variable-length fields like those in JPEG, you need to define how the length is determined.  This usually involves using the `dfdl:length` attribute with expressions referencing other fields (as was attempted before, but incorrectly).  Also, `dfdl:occursCountKind` is not directly applicable to the way JPEG segments are structured.  The occurrence of segments is implicit based on the JPEG structure itself.
+
+This revised DFDL schema attempts to address these issues by using a more appropriate approach for handling the variable-length segments within the JPEG structure.  It's still a simplification, as a truly complete DFDL schema for JPEG would be extremely complex.
+
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/jpeg_gemini"
-           xmlns="http://example.org/jpeg_gemini"
+           targetNamespace="http://example.org/jpeg"
+           xmlns="http://example.org/jpeg"
            elementFormDefault="qualified">
 
-  <xs:element name="jpegGemini">
+  <xs:element name="JPEG">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:lengthKind="explicit" dfdl:length="12"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+        <xs:element ref="SOI"/>
+        <xs:element ref="APP0" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DQT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="DHT" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="SOF"/>
+        <xs:element ref="ScanData"/>
+        <xs:element ref="EOI"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="magic_number" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="version" type="xs:unsignedShort" dfdl:length="2"/>
-      <xs:element name="image_width" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="image_height" type="xs:unsignedInt" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="SOI" dfdl:length="2" dfdl:representation="binary">
+    <xs:simpleType>
+      <xs:restriction base="xs:hexBinary">
+        <xs:pattern value="FFD8"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+
+  <xs:element name="APP0">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DQT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="DHT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="SOF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+        <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ScanData">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:length="{Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="EOI" dfdl:length="2" dfdl:representation="binary">
+    <xs:simpleType>
+      <xs:restriction base="xs:hexBinary">
+        <xs:pattern value="FFD9"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
 
 </xs:schema>
+
+**Important Note:**  Even this revised schema is a drastic simplification.  A truly robust DFDL schema for JPEG would require significantly more detail to handle the intricacies of Huffman coding, quantization tables, and other aspects of the JPEG specification.  This schema only provides a basic framework for representing the overall structure.  You'll likely need a more sophisticated approach (possibly involving external functions or custom DFDL extensions) to fully parse and represent the JPEG data.  The `Length` field in each segment is crucial for determining the length of the `Data` field, but the actual decoding of the data within those segments is beyond the scope of a simple DFDL schema.

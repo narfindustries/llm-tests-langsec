@@ -1,27 +1,56 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/pngImage"
-           xmlns="http://example.org/pngImage"
-           elementFormDefault="qualified">
-
-  <xs:element name="PNGImage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="headerType" dfdl:length="8" dfdl:occursCount="1"/>
-        <xs:element name="width" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="height" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4"/>
-        <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="implicit" dfdl:lengthUnits="bytes" dfdl:representation="binary"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:simpleContent>
-      <xs:extension base="xs:hexBinary">
-        <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCount="1"/>
-      </xs:extension>
-    </xs:simpleContent>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/png" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="dfdl.xsd"/>
+  <dfdl:defineSchema>
+    <dfdl:format ref="pngFormat"/>
+  </dfdl:defineSchema>
+  <dfdl:format name="pngFormat" lengthUnits="bytes" encoding="UTF-8">
+    <dfdl:textStandardEncoding/>
+    <dfdl:sequence>
+      <dfdl:element name="signature" type="xs:hexBinary" length="8">
+        <dfdl:fixedValue value="89504E470D0A1A0A"/>
+      </dfdl:element>
+      <dfdl:sequence occurs="*">
+        <dfdl:element name="chunk">
+          <dfdl:sequence>
+            <dfdl:element name="length" type="xs:unsignedInt" length="4"/>
+            <dfdl:element name="type" type="xs:string" length="4">
+              <dfdl:textString lengthKind="fixedLength"/>
+            </dfdl:element>
+            <dfdl:element name="data" type="xs:hexBinary" lengthKind="length">
+              <dfdl:length length="{../length}"/>
+            </dfdl:element>
+            <dfdl:element name="crc" type="xs:unsignedInt" length="4"/>
+          </dfdl:sequence>
+        </dfdl:element>
+      </dfdl:sequence>
+    </dfdl:sequence>
+  </dfdl:format>
+  <xs:complexType name="IHDR">
+    <xs:sequence>
+      <xs:element name="width" type="xs:unsignedInt"/>
+      <xs:element name="height" type="xs:unsignedInt"/>
+      <xs:element name="bitDepth" type="xs:unsignedByte"/>
+      <xs:element name="colorType" type="xs:unsignedByte"/>
+      <xs:element name="compressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="filterMethod" type="xs:unsignedByte"/>
+      <xs:element name="interlaceMethod" type="xs:unsignedByte"/>
+    </xs:sequence>
   </xs:complexType>
-
+  <xs:complexType name="IDAT">
+    <xs:sequence>
+      <xs:element name="imageData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PLTE">
+    <xs:sequence>
+      <xs:element name="paletteEntry" type="xs:hexBinary" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="tRNS">
+    <xs:choice maxOccurs="unbounded">
+      <xs:element name="alphaValues" type="xs:hexBinary"/>
+      <xs:element name="rgbValues" type="xs:hexBinary"/>
+    </xs:choice>
+  </xs:complexType>
+  <!-- Add other chunk types as needed -->
 </xs:schema>

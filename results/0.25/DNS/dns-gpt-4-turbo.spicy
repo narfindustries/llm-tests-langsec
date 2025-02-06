@@ -1,8 +1,15 @@
 module DNS;
 
-import spicy;
+public type DomainName = unit {
+    components: NameComponent[] &eod;
+};
 
-type Header = unit {
+type NameComponent = unit {
+    length: uint8;
+    name: bytes &size=length;
+};
+
+public type Header = unit {
     id: uint16;
     qr: bit;
     opcode: uint4;
@@ -11,17 +18,23 @@ type Header = unit {
     rd: bit;
     ra: bit;
     z: uint3;
+    ad: bit;
+    cd: bit;
     rcode: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
 };
 
-type Question = unit {
-    qname: bytes &eod;
+public type Question = unit {
+    qname: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
-type ResourceRecord = unit {
-    name: bytes &eod;
+public type ResourceRecord = unit {
+    name: DomainName;
     type: uint16;
     class: uint16;
     ttl: uint32;
@@ -29,21 +42,17 @@ type ResourceRecord = unit {
     rdata: bytes &size=rdlength;
 };
 
-type Message = unit {
+public type Message = unit {
     header: Header;
     questions: Question[] &size=header.qdcount;
     answers: ResourceRecord[] &size=header.ancount;
     authorities: ResourceRecord[] &size=header.nscount;
     additionals: ResourceRecord[] &size=header.arcount;
-    
-    on %init {
-        self.header.qdcount = 0;
-        self.header.ancount = 0;
-        self.header.nscount = 0;
-        self.header.arcount = 0;
-    }
 };
 
 public type DNSPacket = unit {
     message: Message;
-} &byte-order=big;
+    on %done {
+        print self.message;
+    }
+};

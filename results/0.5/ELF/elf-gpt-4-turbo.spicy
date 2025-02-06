@@ -1,17 +1,23 @@
 module ELF;
 
-public type ElfHeader = unit {
+import spicy;
+
+type ELF_Ident = unit {
     magic: bytes &size=4;
-    class: uint8;
-    data: uint8;
-    version: uint8;
+    file_class: uint8;
+    data_encoding: uint8;
+    file_version: uint8;
     os_abi: uint8;
     abi_version: uint8;
     pad: bytes &size=7;
+};
+
+type ELF_Header = unit {
+    ident: ELF_Ident;
     type: uint16;
     machine: uint16;
-    version2: uint32;
-    entry: addr;
+    version: uint32;
+    entry: uint64;
     phoff: uint64;
     shoff: uint64;
     flags: uint32;
@@ -21,30 +27,24 @@ public type ElfHeader = unit {
     shentsize: uint16;
     shnum: uint16;
     shstrndx: uint16;
-
-    on %init {
-        self.entry = self.class == 1 ? self.entry &as=addr_little : self.entry &as=addr_big;
-        self.phoff = self.class == 1 ? self.phoff &as=uint64_little : self.phoff &as=uint64_big;
-        self.shoff = self.class == 1 ? self.shoff &as=uint64_little : self.shoff &as=uint64_big;
-    }
 };
 
-public type ProgramHeader = unit {
+type ProgramHeader = unit {
     type: uint32;
     flags: uint32;
     offset: uint64;
-    vaddr: addr;
-    paddr: addr;
+    vaddr: uint64;
+    paddr: uint64;
     filesz: uint64;
     memsz: uint64;
     align: uint64;
 };
 
-public type SectionHeader = unit {
+type SectionHeader = unit {
     name: uint32;
     type: uint32;
     flags: uint64;
-    addr: addr;
+    addr: uint64;
     offset: uint64;
     size: uint64;
     link: uint32;
@@ -53,8 +53,8 @@ public type SectionHeader = unit {
     entsize: uint64;
 };
 
-public type ELFFile = unit {
-    header: ElfHeader;
-    program_headers: ProgramHeader[] &length=self.header.phnum;
-    section_headers: SectionHeader[] &length=self.header.shnum;
+type ELF_File = unit {
+    header: ELF_Header;
+    program_headers: vector<ProgramHeader> &size=this.header.phnum;
+    section_headers: vector<SectionHeader> &size=this.header.shnum;
 };

@@ -18,12 +18,10 @@ class Icmp(KaitaiStruct):
         echo_request = 8
         time_exceeded = 11
         parameter_problem = 12
-        timestamp_request = 13
+        timestamp = 13
         timestamp_reply = 14
         information_request = 15
         information_reply = 16
-        address_mask_request = 17
-        address_mask_reply = 18
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -34,111 +32,145 @@ class Icmp(KaitaiStruct):
         self.type = KaitaiStream.resolve_enum(Icmp.MessageType, self._io.read_u1())
         self.code = self._io.read_u1()
         self.checksum = self._io.read_u2be()
-        self.rest_of_header = self._io.read_u4be()
-        self.payload = self._io.read_bytes_full()
+        _on = self.type
+        if _on == Icmp.MessageType.time_exceeded:
+            self.rest_of_header = Icmp.UnusedData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.parameter_problem:
+            self.rest_of_header = Icmp.ParameterData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.destination_unreachable:
+            self.rest_of_header = Icmp.UnusedData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.information_request:
+            self.rest_of_header = Icmp.InfoData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.source_quench:
+            self.rest_of_header = Icmp.UnusedData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.redirect:
+            self.rest_of_header = Icmp.GatewayAddress(self._io, self, self._root)
+        elif _on == Icmp.MessageType.echo_reply:
+            self.rest_of_header = Icmp.EchoData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.echo_request:
+            self.rest_of_header = Icmp.EchoData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.timestamp:
+            self.rest_of_header = Icmp.TimestampData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.timestamp_reply:
+            self.rest_of_header = Icmp.TimestampData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.information_reply:
+            self.rest_of_header = Icmp.InfoData(self._io, self, self._root)
+        _on = self.type
+        if _on == Icmp.MessageType.echo_reply:
+            self.data = Icmp.ArbitraryData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.echo_request:
+            self.data = Icmp.ArbitraryData(self._io, self, self._root)
+        elif _on == Icmp.MessageType.timestamp:
+            self.data = Icmp.TimestampPayload(self._io, self, self._root)
+        elif _on == Icmp.MessageType.timestamp_reply:
+            self.data = Icmp.TimestampPayload(self._io, self, self._root)
+        else:
+            self.data = Icmp.ErrorMessageData(self._io, self, self._root)
 
-    @property
-    def receive_timestamp(self):
-        if hasattr(self, '_m_receive_timestamp'):
-            return self._m_receive_timestamp
+    class ErrorMessageData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.timestamp_request) or (self.type == Icmp.MessageType.timestamp_reply)) :
-            _pos = self._io.pos()
-            self._io.seek(8)
-            self._m_receive_timestamp = self._io.read_u4be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.ip_header = self._io.read_bytes(20)
+            self.original_datagram = self._io.read_bytes(8)
 
-        return getattr(self, '_m_receive_timestamp', None)
 
-    @property
-    def originate_timestamp(self):
-        if hasattr(self, '_m_originate_timestamp'):
-            return self._m_originate_timestamp
+    class GatewayAddress(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.timestamp_request) or (self.type == Icmp.MessageType.timestamp_reply)) :
-            _pos = self._io.pos()
-            self._io.seek(4)
-            self._m_originate_timestamp = self._io.read_u4be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.gateway_ip = self._io.read_u4be()
 
-        return getattr(self, '_m_originate_timestamp', None)
 
-    @property
-    def gateway_address(self):
-        if hasattr(self, '_m_gateway_address'):
-            return self._m_gateway_address
+    class EchoData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if self.type == Icmp.MessageType.redirect:
-            _pos = self._io.pos()
-            self._io.seek(4)
-            self._m_gateway_address = self._io.read_u4be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.identifier = self._io.read_u2be()
+            self.sequence_number = self._io.read_u2be()
 
-        return getattr(self, '_m_gateway_address', None)
 
-    @property
-    def unused(self):
-        if hasattr(self, '_m_unused'):
-            return self._m_unused
+    class TimestampPayload(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.destination_unreachable) or (self.type == Icmp.MessageType.time_exceeded) or (self.type == Icmp.MessageType.parameter_problem)) :
-            _pos = self._io.pos()
-            self._io.seek(4)
-            self._m_unused = self._io.read_u4be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.original_timestamp = self._io.read_u4be()
+            self.receive_timestamp = self._io.read_u4be()
+            self.transmit_timestamp = self._io.read_u4be()
 
-        return getattr(self, '_m_unused', None)
 
-    @property
-    def transmit_timestamp(self):
-        if hasattr(self, '_m_transmit_timestamp'):
-            return self._m_transmit_timestamp
+    class ArbitraryData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.timestamp_request) or (self.type == Icmp.MessageType.timestamp_reply)) :
-            _pos = self._io.pos()
-            self._io.seek(12)
-            self._m_transmit_timestamp = self._io.read_u4be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.payload = self._io.read_bytes_full()
 
-        return getattr(self, '_m_transmit_timestamp', None)
 
-    @property
-    def sequence_number(self):
-        if hasattr(self, '_m_sequence_number'):
-            return self._m_sequence_number
+    class ParameterData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.echo_reply) or (self.type == Icmp.MessageType.echo_request) or (self.type == Icmp.MessageType.timestamp_request) or (self.type == Icmp.MessageType.timestamp_reply) or (self.type == Icmp.MessageType.information_request) or (self.type == Icmp.MessageType.information_reply)) :
-            _pos = self._io.pos()
-            self._io.seek(6)
-            self._m_sequence_number = self._io.read_u2be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.pointer = self._io.read_u1()
+            self.unused = self._io.read_bytes(3)
 
-        return getattr(self, '_m_sequence_number', None)
 
-    @property
-    def pointer(self):
-        if hasattr(self, '_m_pointer'):
-            return self._m_pointer
+    class UnusedData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if self.type == Icmp.MessageType.parameter_problem:
-            _pos = self._io.pos()
-            self._io.seek(4)
-            self._m_pointer = self._io.read_u1()
-            self._io.seek(_pos)
+        def _read(self):
+            self.unused = self._io.read_u4be()
 
-        return getattr(self, '_m_pointer', None)
 
-    @property
-    def identifier(self):
-        if hasattr(self, '_m_identifier'):
-            return self._m_identifier
+    class InfoData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
 
-        if  ((self.type == Icmp.MessageType.echo_reply) or (self.type == Icmp.MessageType.echo_request) or (self.type == Icmp.MessageType.timestamp_request) or (self.type == Icmp.MessageType.timestamp_reply) or (self.type == Icmp.MessageType.information_request) or (self.type == Icmp.MessageType.information_reply)) :
-            _pos = self._io.pos()
-            self._io.seek(4)
-            self._m_identifier = self._io.read_u2be()
-            self._io.seek(_pos)
+        def _read(self):
+            self.identifier = self._io.read_u2be()
+            self.sequence_number = self._io.read_u2be()
 
-        return getattr(self, '_m_identifier', None)
+
+    class TimestampData(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.identifier = self._io.read_u2be()
+            self.sequence_number = self._io.read_u2be()
+
 
 

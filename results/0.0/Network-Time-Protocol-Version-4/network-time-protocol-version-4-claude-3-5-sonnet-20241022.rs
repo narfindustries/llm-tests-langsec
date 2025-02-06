@@ -1,40 +1,30 @@
 use nom::{
     bits::complete::take,
-    combinator::map,
     error::Error,
-    multi::count,
-    number::complete::{be_i32, be_u16, be_u32, be_u8},
     sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
-struct NTPTimestamp {
-    seconds: u32,
-    fraction: u32,
-}
-
-#[derive(Debug)]
-struct ReferenceIdentifier {
-    id: [u8; 4],
-}
-
-#[derive(Debug)]
-struct NTPPacket {
-    li_vn_mode: u8,
+struct NtpPacket {
+    li: u8,
+    vn: u8,
+    mode: u8,
     stratum: u8,
     poll: i8,
     precision: i8,
-    root_delay: u32,
-    root_dispersion: u32,
-    reference_id: ReferenceIdentifier,
-    reference_timestamp: NTPTimestamp,
-    origin_timestamp: NTPTimestamp,
-    receive_timestamp: NTPTimestamp,
-    transmit_timestamp: NTPTimestamp,
-    extension_fields: Vec<ExtensionField>,
-    mac: Option<Vec<u8>>,
+    root_delay: f32,
+    root_dispersion: f32,
+    reference_id: [u8; 4],
+    reference_timestamp: u64,
+    origin_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
+    extensions: Vec<ExtensionField>,
+    mac: Option<Mac>,
 }
 
 #[derive(Debug)]
@@ -44,105 +34,104 @@ struct ExtensionField {
     value: Vec<u8>,
 }
 
-fn parse_timestamp(input: &[u8]) -> IResult<&[u8], NTPTimestamp> {
-    let (input, (seconds, fraction)) = tuple((be_u32, be_u32))(input)?;
-    Ok((
-        input,
-        NTPTimestamp {
-            seconds,
-            fraction,
-        },
-    ))
+#[derive(Debug)]
+struct Mac {
+    key_id: u32,
+    digest: Vec<u8>,
 }
 
-fn parse_reference_id(input: &[u8]) -> IResult<&[u8], ReferenceIdentifier> {
-    let (input, id) = count(be_u8, 4)(input)?;
-    Ok((
-        input,
-        ReferenceIdentifier {
-            id: id.try_into().unwrap(),
-        },
-    ))
+fn parse_first_byte(input: &[u8]) -> IResult<&[u8], (u8, u8, u8)> {
+    nom::bits::bits(tuple((
+        take::<_, u8, usize, Error<(&[u8], usize)>>(2usize),
+        take::<_, u8, usize, Error<(&[u8], usize)>>(3usize),
+        take::<_, u8, usize, Error<(&[u8], usize)>>(3usize),
+    )))(input)
+}
+
+fn parse_fixed_point_16_16(input: &[u8]) -> IResult<&[u8], f32> {
+    let (input, bytes) = nom::number::complete::be_u32(input)?;
+    let integer = ((bytes >> 16) & 0xFFFF) as i16;
+    let fraction = (bytes & 0xFFFF) as u16;
+    let value = integer as f32 + (fraction as f32 / 65536.0);
+    Ok((input, value))
+}
+
+fn parse_timestamp(input: &[u8]) -> IResult<&[u8], u64> {
+    nom::number::complete::be_u64(input)
 }
 
 fn parse_extension_field(input: &[u8]) -> IResult<&[u8], ExtensionField> {
-    let (input, (field_type, length)) = tuple((be_u16, be_u16))(input)?;
-    let value_length = length as usize - 4;
-    let (input, value) = count(be_u8, value_length)(input)?;
-    Ok((
-        input,
-        ExtensionField {
-            field_type,
-            length,
-            value,
-        },
-    ))
+    let (input, field_type) = nom::number::complete::be_u16(input)?;
+    let (input, length) = nom::number::complete::be_u16(input)?;
+    let (input, value) = nom::bytes::complete::take(length as usize)(input)?;
+    
+    Ok((input, ExtensionField {
+        field_type,
+        length,
+        value: value.to_vec(),
+    }))
 }
 
-fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NTPPacket> {
-    let (input, (
-        li_vn_mode,
+fn parse_mac(input: &[u8]) -> IResult<&[u8], Mac> {
+    let (input, key_id) = nom::number::complete::be_u32(input)?;
+    let (input, digest) = nom::bytes::complete::take(20usize)(input)?;
+    
+    Ok((input, Mac {
+        key_id,
+        digest: digest.to_vec(),
+    }))
+}
+
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], NtpPacket> {
+    let (input, (li, vn, mode)) = parse_first_byte(input)?;
+    let (input, stratum) = nom::number::complete::u8(input)?;
+    let (input, poll) = nom::number::complete::i8(input)?;
+    let (input, precision) = nom::number::complete::i8(input)?;
+    let (input, root_delay) = parse_fixed_point_16_16(input)?;
+    let (input, root_dispersion) = parse_fixed_point_16_16(input)?;
+    let (input, reference_id) = nom::bytes::complete::take(4usize)(input)?;
+    let (input, reference_timestamp) = parse_timestamp(input)?;
+    let (input, origin_timestamp) = parse_timestamp(input)?;
+    let (input, receive_timestamp) = parse_timestamp(input)?;
+    let (input, transmit_timestamp) = parse_timestamp(input)?;
+
+    let mut remaining = input;
+    let mut extensions = Vec::new();
+    let mut mac = None;
+
+    while remaining.len() >= 4 {
+        if let Ok((new_remaining, extension)) = parse_extension_field(remaining) {
+            extensions.push(extension);
+            remaining = new_remaining;
+        } else {
+            break;
+        }
+    }
+
+    if remaining.len() >= 24 {
+        if let Ok((new_remaining, parsed_mac)) = parse_mac(remaining) {
+            mac = Some(parsed_mac);
+            remaining = new_remaining;
+        }
+    }
+
+    Ok((remaining, NtpPacket {
+        li,
+        vn,
+        mode,
         stratum,
         poll,
         precision,
         root_delay,
         root_dispersion,
-        reference_id,
+        reference_id: reference_id.try_into().unwrap(),
         reference_timestamp,
         origin_timestamp,
         receive_timestamp,
         transmit_timestamp,
-    )) = tuple((
-        be_u8,
-        be_u8,
-        map(be_i32, |x| x as i8),
-        map(be_i32, |x| x as i8),
-        be_u32,
-        be_u32,
-        parse_reference_id,
-        parse_timestamp,
-        parse_timestamp,
-        parse_timestamp,
-        parse_timestamp,
-    ))(input)?;
-
-    let mut remaining = input;
-    let mut extension_fields = Vec::new();
-    
-    while remaining.len() >= 4 {
-        match parse_extension_field(remaining) {
-            Ok((new_remaining, field)) => {
-                extension_fields.push(field);
-                remaining = new_remaining;
-            }
-            Err(_) => break,
-        }
-    }
-
-    let mac = if !remaining.is_empty() {
-        Some(remaining.to_vec())
-    } else {
-        None
-    };
-
-    Ok((
-        &[],
-        NTPPacket {
-            li_vn_mode,
-            stratum,
-            poll,
-            precision,
-            root_delay,
-            root_dispersion,
-            reference_id,
-            reference_timestamp,
-            origin_timestamp,
-            receive_timestamp,
-            transmit_timestamp,
-            extension_fields,
-            mac,
-        },
-    ))
+        extensions,
+        mac,
+    }))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -157,8 +146,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     file.read_to_end(&mut buffer)?;
 
     match parse_ntp_packet(&buffer) {
-        Ok((_, packet)) => println!("{:#?}", packet),
-        Err(e) => eprintln!("Failed to parse NTP packet: {:?}", e),
+        Ok((remaining, packet)) => {
+            println!("Parsed NTP packet: {:#?}", packet);
+            println!("Remaining unparsed bytes: {} bytes", remaining.len());
+        }
+        Err(e) => {
+            eprintln!("Failed to parse NTP packet: {:?}", e);
+            std::process::exit(1);
+        }
     }
 
     Ok(())

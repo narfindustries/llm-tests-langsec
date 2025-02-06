@@ -1,115 +1,85 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic structure of a SQLite database file
-static HParser *sqlite_header;
-static HParser *page_header;
-static HParser *btree_page;
-static HParser *cell_pointer;
-static HParser *cell;
-static HParser *payload;
-static HParser *record;
-static HParser *field;
-static HParser *sql_type;
+// Define constants based on SQLite format
+#define SQLITE_HEADER_STRING "SQLite format 3\000"
+#define SQLITE_PAGE_SIZE_MIN 512
+#define SQLITE_PAGE_SIZE_MAX 32768
 
-static void init_sqlite_parsers() {
-    // SQLite file header
-    sqlite_header = h_sequence(
-        h_bytes("SQLite format 3", 16), // Magic header
-        h_uint16(),                    // Page size
-        h_uint8(),                     // File format write version
-        h_uint8(),                     // File format read version
-        h_uint8(),                     // Reserved space at end of each page
-        h_uint8(),                     // Max embedded payload fraction
-        h_uint8(),                     // Min embedded payload fraction
-        h_uint8(),                     // Leaf payload fraction
-        h_uint32(),                    // File change counter
-        h_uint32(),                    // Database size in pages
-        h_uint32(),                    // First freelist page
-        h_uint32(),                    // Number of freelist pages
-        h_uint32(),                    // Schema cookie
-        h_uint32(),                    // Schema format number
-        h_uint32(),                    // Default page cache size
-        h_uint32(),                    // Largest B-tree page number
-        h_uint32(),                    // Text encoding
-        h_uint32(),                    // User version
-        h_uint32(),                    // Incremental vacuum mode
-        h_uint32(),                    // Application ID
-        h_ignore(20),                  // Reserved for expansion
-        h_uint32(),                    // Version-valid-for number
-        h_uint32(),                    // SQLITE version number
-        NULL
-    );
-
-    // Page header for B-tree pages
-    page_header = h_sequence(
-        h_uint8(),                     // Page type
-        h_uint16(),                    // First freeblock on the page
-        h_uint16(),                    // Number of cells on the page
-        h_uint16(),                    // Start of cell content area
-        h_uint8(),                     // Number of fragmented free bytes
-        NULL
-    );
-
-    // Cell pointer array
-    cell_pointer = h_uint16();
-
-    // Cell structure
-    cell = h_sequence(
-        h_uint32(),                    // Left child page
-        h_uint8(),                     // Number of bytes in payload
-        h_uint32(),                    // Rowid
-        NULL
-    );
-
-    // Payload for table B-tree leaf page
-    payload = h_sequence(
-        h_uint8(),                     // Number of bytes in the payload
-        h_many(h_uint8(), h_uint8()),  // Payload data
-        NULL
-    );
-
-    // Record structure
-    record = h_sequence(
-        h_many1(sql_type),             // SQL data types
-        h_many1(field),                // Fields
-        NULL
-    );
-
-    // Field data based on SQL type
-    field = h_choice(
-        h_int32(),                     // Integer
-        h_double(),                    // Float
-        h_null(),                      // NULL
-        h_bytes(1),                    // Text (simplified)
-        NULL
-    );
-
-    // SQL data type
-    sql_type = h_int8();
-
-    // B-tree page structure
-    btree_page = h_sequence(
-        page_header,
-        h_many(cell_pointer, h_uint16()), // Cell pointer array
-        h_many(cell, h_uint16()),         // Cells
-        NULL
-    );
-}
+// Function prototypes
+static void parse_sqlite_file(const char *filename);
+static HParser *sqlite_header_parser(void);
 
 int main(int argc, char **argv) {
-    init_sqlite_parsers();
-    HParser *sqlite3_parser = h_sequence(sqlite_header, h_many(btree_page, h_uint32()), NULL);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    // Assuming `input` is a pointer to your SQLite database file data and `size` is its size
-    // uint8_t *input;
-    // size_t size;
-    // HParseResult *result = h_parse(sqlite3_parser, input, size);
-    // if (result) {
-    //     printf("Parse successful!\n");
-    // } else {
-    //     printf("Parse failed!\n");
-    // }
+    parse_sqlite_file(argv[1]);
+    return EXIT_SUCCESS;
+}
 
-    return 0;
+static void parse_sqlite_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Create a parser for SQLite database header
+    HParser *header_parser = sqlite_header_parser();
+
+    // Read the header from the file
+    uint8_t header[100];
+    if (fread(header, sizeof(header), 1, file) != 1) {
+        fprintf(stderr, "Failed to read the header\n");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    // Parse the header
+    HParseResult *result = h_parse(header_parser, header, sizeof(header));
+    if (result == NULL) {
+        fprintf(stderr, "Failed to parse the header\n");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    // Successfully parsed the header
+    printf("Successfully parsed the SQLite header\n");
+
+    // Clean up
+    h_parse_result_free(result);
+    fclose(file);
+}
+
+static HParser *sqlite_header_parser(void) {
+    return h_sequence(
+        h_token((const uint8_t *)SQLITE_HEADER_STRING, 16),
+        h_uint16(), // Page size
+        h_uint8(),  // File format write version
+        h_uint8(),  // File format read version
+        h_uint8(),  // Reserved space
+        h_uint8(),  // Max payload fraction
+        h_uint8(),  // Min payload fraction
+        h_uint8(),  // Leaf payload fraction
+        h_uint32(), // File change counter
+        h_uint32(), // Number of pages
+        h_uint32(), // First freelist page
+        h_uint32(), // Freelist page count
+        h_uint32(), // Schema cookie
+        h_uint32(), // Schema format number
+        h_int32(),  // Default page cache size
+        h_uint32(), // Largest B-tree page
+        h_uint32(), // Database text encoding
+        h_uint32(), // User version
+        h_uint32(), // Incremental vacuum mode
+        h_uint32(), // Application ID
+        h_repeat_n(h_uint8(), 20), // Reserved for expansion
+        h_uint32(), // Version-valid-for number
+        h_uint32(), // SQLite version number
+        NULL
+    );
 }

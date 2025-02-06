@@ -1,59 +1,129 @@
-# Import necessary modules
-%import binpac
+module Modbus;
 
-# Define the Modbus protocol
-%protocol modbus {
-  # Define the frame structure
-  frame ModbusFrame {
-    # Modbus address
-    uint8_t address;
-    
-    # Modbus function code
-    uint8_t function_code;
-    
-    # Data length
-    uint8_t data_length;
-    
-    # Data
-    uint8_t[data_length] data;
-    
-    # CRC
-    uint16_t crc;
-  }
-}
+type ModbusMessage = struct {
+  address: uint8;
+  function_code: uint8;
+  data: DataField;
+};
 
-# Define the event for parsing Modbus frames
-%event modbus_frame(parse_result: ModbusFrame) {
-  # Log the parsed frame
-  print("Modbus frame parsed:");
-  print("Address:", parse_result.address);
-  print("Function code:", parse_result.function_code);
-  print("Data length:", parse_result.data_length);
-  print("Data:", parse_result.data);
-  print("CRC:", parse_result.crc);
+type DataField = struct {
+  start_address: uint16;
+  quantity: uint16;
+  values: array[uint16];
 }
+|
+struct {
+  register_address: uint16;
+  register_value: uint16;
+}
+|
+struct {
+  coil_address: uint16;
+  coil_value: uint16;
+}
+|
+struct {
+  file_record: FileRecord;
+}
+|
+struct {
+  read_exception_status: uint8;
+}
+|
+struct {
+  mask_write_register: struct {
+    register_address: uint16;
+    and_mask: uint16;
+    or_mask: uint16;
+  };
+}
+|
+struct {
+  read_fifo_queue: struct {
+    fifo_pointer_address: uint16;
+  };
+}
+|
+struct {
+  encapsulated_interface_transport: EncapsulatedInterfaceTransport;
+};
 
-# Define the parser for Modbus frames
-%parser modbus_parser ModbusFrame {
-  # Check if the frame has a valid CRC
-  CRC_OK {
-    uint16_t crc_value = 0;
-    for (i in 0..data_length-1) {
-      crc_value = crc_value ^ data[i];
-    }
-    crc_value = crc_value ^ (crc >> 8);
-    crc_value = crc_value ^ (crc & 0xFF);
-    if (crc_value != 0) {
-      # If the CRC is invalid, raise an error
-      error("Invalid CRC");
-    }
-  }
-}
+type FileRecord = struct {
+  file_number: uint16;
+  record_number: uint16;
+  record_data: array[uint8];
+};
 
-# Define the parser for the Modbus protocol
-%parser modbus_protocol {
-  # Parse the Modbus frame
-  frame = modbus_parser();
-  # Raise the modbus_frame event with the parsed frame
-  event modbus_frame(frame);
-}
+type EncapsulatedInterfaceTransport = struct {
+  interface_type: uint16;
+  interface_data: array[uint8];
+};
+
+type ModbusMessageRTU = struct {
+  message: ModbusMessage;
+  crc: uint16;
+};
+
+type ModbusExceptionResponse = struct {
+  address: uint8;
+  function_code: uint8;
+  error_code: uint8;
+};
+
+type ModbusASCII = struct {
+  message: ModbusMessage;
+  lrc: uint8;
+};
+
+type ModbusMessageASCII = struct {
+  colon: string = ":";
+  address: string;
+  function_code: string;
+  data: string;
+  crlf: string = "\r\n";
+};
+
+type ModbusExceptionResponseASCII = struct {
+  colon: string = ":";
+  address: string;
+  function_code: string;
+  error_code: string;
+  crlf: string = "\r\n";
+};
+
+let modbus_message: ModbusMessage;
+let modbus_message_rtu: ModbusMessageRTU;
+let modbus_exception_response: ModbusExceptionResponse;
+let modbus_ascii: ModbusASCII;
+let modbus_message_ascii: ModbusMessageASCII;
+let modbus_exception_response_ascii: ModbusExceptionResponseASCII;
+
+unit ModbusParser = parser {
+  let message: ModbusMessage =
+    parse ModbusMessage;
+};
+
+unit ModbusMessageRTUParser = parser {
+  let message_rtu: ModbusMessageRTU =
+    parse ModbusMessageRTU;
+};
+
+unit ModbusExceptionResponseParser = parser {
+  let exception_response: ModbusExceptionResponse =
+    parse ModbusExceptionResponse;
+};
+
+unit ModbusASCIIParser = parser {
+  let ascii: ModbusASCII =
+    parse ModbusASCII;
+};
+
+unit ModbusMessageASCIIParser = parser {
+  let ascii_message: ModbusMessageASCII =
+    parse ModbusMessageASCII;
+};
+
+unit ModbusExceptionResponseASCIIParser = parser {
+  let ascii_exception_response: ModbusExceptionResponseASCII =
+    parse ModbusExceptionResponseASCII;
+};

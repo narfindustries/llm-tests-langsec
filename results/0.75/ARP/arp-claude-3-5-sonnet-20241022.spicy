@@ -1,27 +1,35 @@
 module ARP;
 
-import spicy;
-
-public type Message = unit {
-    hardware_type: uint16;
+public type ARPPacket = unit {
+    hw_type: uint16;
     protocol_type: uint16;
-    hardware_size: uint8;
-    protocol_size: uint8;
+    hw_addr_len: uint8;
+    proto_addr_len: uint8;
     operation: uint16;
-    sender_mac: bytes &size=6;
-    sender_ip: bytes &size=4;
-    target_mac: bytes &size=6;
-    target_ip: bytes &size=4;
+    sender_hw_addr: bytes &size=self.hw_addr_len;
+    sender_proto_addr: bytes &size=self.proto_addr_len;
+    target_hw_addr: bytes &size=self.hw_addr_len;
+    target_proto_addr: bytes &size=self.proto_addr_len;
 
     on %done {
-        self.hardware_type = self.hardware_type;
-        self.protocol_type = self.protocol_type;
-        self.hardware_size = self.hardware_size;
-        self.protocol_size = self.protocol_size;
-        self.operation = self.operation;
-        self.sender_mac = self.sender_mac;
-        self.sender_ip = self.sender_ip;
-        self.target_mac = self.target_mac;
-        self.target_ip = self.target_ip;
+        self.hw_type_str = self.hw_type == 1 ? "Ethernet" :
+                          self.hw_type == 6 ? "IEEE 802" :
+                          self.hw_type == 16 ? "Frame Relay" :
+                          "Unknown";
+        
+        self.protocol_type_str = self.protocol_type == 0x0800 ? "IPv4" :
+                                self.protocol_type == 0x86DD ? "IPv6" :
+                                self.protocol_type == 0x0806 ? "ARP" :
+                                "Unknown";
+        
+        self.operation_str = self.operation == 1 ? "Request" :
+                            self.operation == 2 ? "Reply" :
+                            self.operation == 3 ? "RARP Request" :
+                            self.operation == 4 ? "RARP Reply" :
+                            "Unknown";
     }
+
+    var hw_type_str: string;
+    var protocol_type_str: string;
+    var operation_str: string;
 };

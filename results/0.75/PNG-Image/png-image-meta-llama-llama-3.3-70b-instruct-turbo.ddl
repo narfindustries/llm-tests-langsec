@@ -1,41 +1,91 @@
-grammar png_image_meta {
-  skip whitespace: /\s*/;
+def png:
+  signature: bytes = b"\x89PNG\r\n\x1a\n"
+  chunks: [chunk, ...]
 
-  rule png_header {
-    "PNG" ~ "\r\n" ~ [0x1a];
-    uint32be: png_signature;
-  }
+  def chunk_type:
+    enum = ["IHDR", "PLTE", "IDAT", "IEND", "cHRM", "gAMA", "iCCP", "sBIT", "sRGB", "tEXt", "tIME", "bKGD", "hIST", "pHYs", "sPLT", "tRNS"]
 
-  rule ihdr_chunk {
-    bytes: chunk_type = "IHDR";
-    uint32be: chunk_length = 13;
-    uint32be: width;
-    uint32be: height;
-    byte: bit_depth;
-    byte: color_type;
-    byte: compression_method;
-    byte: filter_method;
-    byte: interlace_method;
-    bytes: crc;
-  }
+  def chunk:
+    length: int
+    type: chunk_type
+    data: bytes = length
+    crc: int
 
-  rule idat_chunk {
-    bytes: chunk_type = "IDAT";
-    uint32be: chunk_length;
-    bytes: zipped_image_data;
-    bytes: crc;
-  }
+  def ihdr:
+    width: int
+    height: int
+    bit_depth: int
+    color_type: int
+    compression_method: int
+    filter_method: int
+    interlace_method: int
 
-  rule iend_chunk {
-    bytes: chunk_type = "IEND";
-    uint32be: chunk_length = 0;
-    bytes: crc;
-  }
+  def plte:
+    palette: [rgb, ...]
 
-  rule png_image {
-    png_header;
-    ihdr_chunk;
-    idat_chunk;
-    iend_chunk;
-  }
-}
+  def rgb:
+    r: int
+    g: int
+    b: int
+
+  def idat:
+    data: bytes
+
+  def iend:
+    pass
+
+  def chrm:
+    white_point_x: int
+    white_point_y: int
+    red_x: int
+    red_y: int
+    green_x: int
+    green_y: int
+    blue_x: int
+    blue_y: int
+
+  def gama:
+    gamma: int
+
+  def iccp:
+    profile_name: bytes
+    compression_method: int
+    compressed_profile: bytes
+
+  def sbit:
+    significant_bits: [int, int, int]
+
+  def srgb:
+    rendering_intent: int
+
+  def text:
+    keyword: bytes
+    text: bytes
+
+  def time:
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+    second: int
+
+  def bkgd:
+    color: rgb
+
+  def hist:
+    histogram: [int, ...]
+
+  def phys:
+    pixels_per_unit_x: int
+    pixels_per_unit_y: int
+    unit_specifier: int
+
+  def splte:
+    palette: [rgb, ...]
+
+  def trns:
+    transparency: bytes
+
+  assert chunks[0].type == "IHDR"
+  assert chunks[-1].type == "IEND"

@@ -1,70 +1,73 @@
-#ifndef _ZIP_GEMINI_1_5_FLASH_SPICY_H_
-#define _ZIP_GEMINI_1_5_FLASH_SPICY_H_
+module ZIP;
 
-#include <zeek/file.h>
-#include <zeek/analyzer.h>
+type zip_local_file_header {
+	uint32 signature = 0x04034b50;
+	uint16 version_needed;
+	uint16 gp_flags;
+	uint16 compression_method;
+	uint16 last_mod_time;
+	uint16 last_mod_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	bytes filename[filename_length];
+	bytes extra_field[extra_field_length];
+};
 
-namespace zeek::spicy {
+type zip_central_directory_entry {
+	uint32 signature = 0x02014b50;
+	uint16 version_made_by;
+	uint16 version_needed;
+	uint16 gp_flags;
+	uint16 compression_method;
+	uint16 last_mod_time;
+	uint16 last_mod_date;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+	uint16 filename_length;
+	uint16 extra_field_length;
+	uint16 file_comment_length;
+	uint16 disk_number_start;
+	uint16 internal_file_attributes;
+	uint32 external_file_attributes;
+	uint32 relative_offset_local_header;
+	bytes filename[filename_length];
+	bytes extra_field[extra_field_length];
+	bytes file_comment[file_comment_length];
+};
 
-class ZipGemini15Flash : public Analyzer {
-public:
-	ZipGemini15Flash();
-	~ZipGemini15Flash() override;
+type zip_data_descriptor {
+	uint32 signature = 0x08074b50;
+	uint32 crc32;
+	uint32 compressed_size;
+	uint32 uncompressed_size;
+};
 
-	void Init() override;
-	void Done() override;
-	void Run() override;
-
-
-private:
-
-	void ProcessPacket(const Packet& p);
-
-
+type zip_end_of_central_directory_record {
+	uint32 signature = 0x06054b50;
+	uint16 disk_number;
+	uint16 start_disk_number;
+	uint16 num_entries_this_disk;
+	uint16 num_entries_total;
+	uint32 size_central_directory;
+	uint32 offset_central_directory;
+	uint16 comment_length;
+	bytes comment[comment_length];
 };
 
 
-} // namespace zeek::spicy
+type zip_file {
+	zip_local_file_header header;
+	bytes compressed_data[header.compressed_size];
+	optional zip_data_descriptor data_descriptor;
+};
 
-#endif // _ZIP_GEMINI_1_5_FLASH_SPICY_H_
 
-
-#include "zip-gemini-1.5-flash.spicy.h"
-
-namespace zeek::spicy {
-
-ZipGemini15Flash::ZipGemini15Flash()
-	: Analyzer("zip-gemini-1.5-flash")
-{}
-
-ZipGemini15Flash::~ZipGemini15Flash() {}
-
-void ZipGemini15Flash::Init() {
-	// Add your initialization code here. For example, you could open files,
-	// initialize data structures, or register callbacks.
-}
-
-void ZipGemini15Flash::Done() {
-	// Add your cleanup code here. For example, you could close files or free
-	// allocated memory.
-
-}
-
-void ZipGemini15Flash::Run() {
-    // Add your main analysis logic here.  This will be called for each packet.
-	// You should probably call ProcessPacket here.
-}
-
-void ZipGemini15Flash::ProcessPacket(const Packet& p) {
-	// Add your packet processing code here.  This function will be called for
-	// each packet. Examine the packet's data to extract information relevant
-	// to your analysis.
-	// Example:
-	// auto data = p.payload();
-	// if (data.length() > 0) {
-	// 	// Process the packet payload.
-	// }
-}
-
-} // namespace zeek::spicy
-
+type zip_archive {
+	vector<zip_central_directory_entry> central_directory;
+	zip_end_of_central_directory_record end_of_central_directory;
+        vector<zip_file> files;
+};

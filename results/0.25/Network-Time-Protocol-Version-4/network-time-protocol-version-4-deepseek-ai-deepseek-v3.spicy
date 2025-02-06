@@ -1,0 +1,41 @@
+module NTP;
+
+public type NTP_Header = unit {
+    li: uint8;
+    vn: uint8;
+    mode: uint8;
+    stratum: uint8;
+    poll: uint8;
+    precision: uint8;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    ref_id: uint32;
+    ref_timestamp: uint64;
+    orig_timestamp: uint64;
+    recv_timestamp: uint64;
+    transmit_timestamp: uint64;
+
+    on %init {
+        if ( (self.mode & 0x07) == 6 || (self.mode & 0x07) == 7 ) {
+            self.extension_fields: NTP_Extension_Fields;
+        }
+    }
+
+    extension_fields: NTP_Extension_Fields &optional;
+};
+
+type NTP_Extension_Fields = unit {
+    key_id: uint32 &optional;
+    message_digest: bytes &size=16 &optional;
+};
+
+on NTP_Header::%done {
+    if ( self.extension_fields ) {
+        if ( self.extension_fields.key_id ) {
+            print "Key Identifier: ", self.extension_fields.key_id;
+        }
+        if ( self.extension_fields.message_digest ) {
+            print "Message Digest: ", self.extension_fields.message_digest;
+        }
+    }
+}

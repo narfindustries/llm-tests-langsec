@@ -4,77 +4,95 @@ meta:
   endian: le
 
 seq:
-  - id: magic
-    contents: [0x1f, 0x8b]
+  - id: magic1
+    contents: [0x1f]
+  - id: magic2
+    contents: [0x8b]
   - id: compression_method
     type: u1
-    enum: compression_methods
+    enum: compression_method
   - id: flags
-    type: flags_struct
-  - id: modification_time
+    type: flags
+  - id: mtime
     type: u4
   - id: extra_flags
     type: u1
   - id: operating_system
     type: u1
-    enum: operating_systems
+    enum: os
+  - id: extra_field
+    type: extra_field
+    if: flags.extra
+  - id: name
+    type: strz
+    encoding: utf-8
+    if: flags.name
+  - id: comment
+    type: strz
+    encoding: utf-8
+    if: flags.comment
+  - id: header_crc16
+    type: u2
+    if: flags.header_crc
   - id: compressed_data
-    size-eos: true
     type: compressed_data
-    if: not _io.eof
 
 types:
-  flags_struct:
+  flags:
     seq:
-      - id: text
+      - id: reserved2
         type: b1
-      - id: header_crc
+      - id: reserved1
+        type: b1
+      - id: reserved0
+        type: b1
+      - id: comment
+        type: b1
+      - id: name
         type: b1
       - id: extra
         type: b1
-      - id: name
+      - id: header_crc
         type: b1
-      - id: comment
+      - id: text
         type: b1
-      - id: reserved
-        type: b3
-
-  compressed_data:
-    seq:
-      - id: extra_fields
-        type: extra_field
-        if: _parent.flags.extra
-        repeat: until
-        repeat-until: _.id == 0
-      - id: name
-        type: strz
-        encoding: utf-8
-        if: _parent.flags.name
-      - id: comment
-        type: strz
-        encoding: utf-8
-        if: _parent.flags.comment
-      - id: header_crc16
-        type: u2
-        if: _parent.flags.header_crc
-      - id: deflate_data
-        size-eos: true
 
   extra_field:
     seq:
-      - id: id
+      - id: xlen
         type: u2
-      - id: len
-        type: u2
+      - id: extra_data
+        size: xlen
+
+  compressed_data:
+    seq:
       - id: data
-        size: len
+        size: _io.size - 8
+      - id: crc32
+        type: u4
+      - id: isize
+        type: u4
 
 enums:
-  compression_methods:
-    0: store
+  compression_method:
+    0: reserved0
+    1: reserved1
+    2: reserved2
+    3: reserved3
+    4: reserved4
+    5: reserved5
+    6: reserved6
+    7: reserved7
     8: deflate
+    9: reserved9
+    10: reserved10
+    11: reserved11
+    12: reserved12
+    13: reserved13
+    14: reserved14
+    15: reserved15
 
-  operating_systems:
+  os:
     0: fat
     1: amiga
     2: vms

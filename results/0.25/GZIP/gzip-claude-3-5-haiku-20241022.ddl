@@ -1,36 +1,32 @@
-format GZIP {
-    let magic_number = bytes([0x1F, 0x8B]);
-    let compression_method = 8; // Deflate
-    let flags = 0;
-    let mtime = 0;
-    let extra_flags = 0;
-    let os = 3; // Unix
-
-    type Header {
-        magic: magic_number,
-        compression: u8 = compression_method,
-        flags: u8 = flags,
-        mtime: u32 = mtime,
-        extra_flags: u8 = extra_flags,
-        os: u8 = os
-    }
-
-    type Compressed_Block {
-        is_last_block: bool,
-        block_type: u2,
-        block_data: bytes
-    }
-
-    type Footer {
-        crc32: u32,
-        input_size: u32
-    }
-
-    type File {
-        header: Header,
-        compressed_blocks: [Compressed_Block],
-        footer: Footer
-    }
-
-    let parse = File
+type GzipFile = {
+    magic: [2]u8 where magic[0] == 0x1F and magic[1] == 0x8B,
+    compression_method: u8 where value == 0x08,
+    flags: {
+        text: u1,
+        hcrc: u1,
+        extra: u1,
+        name: u1,
+        comment: u1,
+        encrypted: u1,
+        reserved: [2]u1
+    },
+    mtime: u32,
+    extra_flags: u8,
+    os: u8,
+    extra_field: if flags.extra == 1 then {
+        length: u16,
+        data: [length]u8
+    } else unit,
+    original_filename: if flags.name == 1 then {
+        chars: [*]u8 while current != 0,
+        terminator: u8 where value == 0
+    } else unit,
+    file_comment: if flags.comment == 1 then {
+        chars: [*]u8 while current != 0,
+        terminator: u8 where value == 0
+    } else unit,
+    header_crc: if flags.hcrc == 1 then u16 else unit,
+    compressed_data: opaque,
+    crc32: u32,
+    original_length: u32
 }

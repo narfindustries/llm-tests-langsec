@@ -1,0 +1,2 @@
+for<'a> fn(&'a str) -> Result<(&'a str, ((u16, &'a str), HashMap<&'a str, &'a str>)), nom::Err<nom::error::Error<&'a str>>> {response}
+(for<'a> fn(&'a str) -> Result<(&'a str, (&'a str, &'a str, &'a str, HashMap<&'a str, &'a str>)), nom::Err<nom::error::Error<&'a str>>> {request}, for<'a> fn(&'a str) -> Result<(&'a str, ((u16, &'a str), HashMap<&'a str, &'a str>)), nom::Err<nom::error::Error<&'a str>>> {response})

@@ -1,0 +1,87 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/icmp" xmlns:icmp="http://example.com/icmp" elementFormDefault="qualified">
+
+  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="delimited" initiator="" terminator="" separator="" separatorPosition="infix" separatorSuppressionPolicy="never"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ICMPPacket">
+    <xs:complexType>
+      <xs:sequence dfdl:byteOrder="bigEndian">
+        <xs:element name="Type" type="xs:unsignedByte" dfdl:representation="binary"/>
+        <xs:element name="Code" type="xs:unsignedByte" dfdl:representation="binary"/>
+        <xs:element name="Checksum" type="xs:unsignedShort" dfdl:representation="binary"/>
+        <xs:choice dfdl:initiatedContent="yes">
+          <xs:sequence dfdl:initiator="{if (../Type = 0 or ../Type = 8) then '' else 'x'}">
+            <xs:group ref="icmp:EchoMessage"/>
+          </xs:sequence>
+          <xs:sequence dfdl:initiator="{if (../Type = 3) then '' else 'x'}">
+            <xs:group ref="icmp:DestinationUnreachableMessage"/>
+          </xs:sequence>
+          <xs:sequence dfdl:initiator="{if (../Type = 5) then '' else 'x'}">
+            <xs:group ref="icmp:RedirectMessage"/>
+          </xs:sequence>
+          <xs:sequence dfdl:initiator="{if (../Type = 11) then '' else 'x'}">
+            <xs:group ref="icmp:TimeExceededMessage"/>
+          </xs:sequence>
+          <xs:sequence dfdl:initiator="{if (../Type = 12) then '' else 'x'}">
+            <xs:group ref="icmp:ParameterProblemMessage"/>
+          </xs:sequence>
+          <xs:sequence dfdl:initiator="{if (../Type = 13 or ../Type = 14) then '' else 'x'}">
+            <xs:group ref="icmp:TimestampMessage"/>
+          </xs:sequence>
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:group name="EchoMessage">
+    <xs:sequence>
+      <xs:element name="Identifier" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:group name="DestinationUnreachableMessage">
+    <xs:sequence>
+      <xs:element name="Unused" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="OriginalDatagram" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:group name="RedirectMessage">
+    <xs:sequence>
+      <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="OriginalDatagram" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:group name="TimeExceededMessage">
+    <xs:sequence>
+      <xs:element name="Unused" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="OriginalDatagram" type="xs:hexBinary" dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:group name="ParameterProblemMessage">
+    <xs:sequence>
+      <xs:element name="Pointer" type="xs:unsignedByte" dfdl:representation="binary"/>
+      <xs:element name="Unused" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="OriginalDatagram" type="xs:hexBinary极 dfdl:representation="binary" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:group name="TimestampMessage">
+    <xs:sequence>
+      <xs:element name="Identifier" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:representation="binary"/>
+      <xs:element name="OriginateTimestamp" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name="ReceiveTimestamp" type="xs:unsignedInt" dfdl:representation="binary"/>
+      <xs:element name极element name="TransmitTimestamp" type="xs:unsignedInt" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:group>
+
+</xs:schema>

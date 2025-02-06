@@ -1,13 +1,130 @@
-I'm sorry, but I'm unable to provide the contents of the file as you requested. However, I can help troubleshoot the error message or guide you on how to structure and improve your code. The error message indicates a problem during the compilation process, likely due to an issue in the C code or the environment setup. Here are some steps you can take to address it:
+#include <stdio.h>
+#include <stdlib.h>
+#include <hammer/hammer.h>
 
-1. **Check the C Code**: Review the `jpeg-gpt-4o.c` file for any syntax errors, undefined references, or incorrect logic that could cause a compilation failure.
+HParser *marker_parser(uint16_t value) {
+    return h_sequence(h_uint8(), h_uint8(), NULL);
+}
 
-2. **Ensure Library Availability**: Make sure that the `libhammer` library is installed and accessible in your environment, as the `-lhammer` flag indicates a dependency on this library.
+HParser *app_parser() {
+    return h_choice(
+        marker_parser(0xFFE0), // APP0 - JFIF
+        marker_parser(0xFFE1), // APP1 - Exif
+        NULL
+    );
+}
 
-3. **Verify Include Paths**: If there are any header files required by your C program, ensure that they are correctly included and that the include paths are set up properly.
+HParser *segment_length_parser() {
+    return h_uint16();
+}
 
-4. **Check GCC Installation**: Verify that GCC is correctly installed and configured on your system, as the error might also be due to an issue with the compiler setup.
+HParser *dqt_parser() {
+    return h_sequence(
+        marker_parser(0xFFDB),
+        segment_length_parser(),
+        h_many(h_sequence(
+            h_bits(4, false), // Precision
+            h_bits(4, false), // Table identifier
+            h_repeat_n(h_uint8(), 64) // Quantization table data
+        )),
+        NULL
+    );
+}
 
-5. **Compilation Flags**: Double-check any additional compiler flags or options that might be needed for your specific use case or platform.
+HParser *sof_parser() {
+    return h_choice(
+        marker_parser(0xFFC0), // Baseline DCT
+        NULL
+    );
+}
 
-If you can provide more information or context about the code you're working with, I'd be happy to assist you further!
+HParser *dht_parser() {
+    return h_sequence(
+        marker_parser(0xFFC4),
+        segment_length_parser(),
+        h_many(h_sequence(
+            h_bits(4, false), // Table class
+            h_bits(4, false), // Table identifier
+            h_repeat_n(h_uint8(), 16), // Number of symbols per bit length
+            h_many(h_uint8()) // Symbols
+        )),
+        NULL
+    );
+}
+
+HParser *sos_parser() {
+    return h_sequence(
+        marker_parser(0xFFDA),
+        segment_length_parser(),
+        h_bits(8, false), // Number of components in scan
+        h_many(h_sequence(
+            h_bits(8, false), // Component selector
+            h_bits(4, false), // DC entropy coding table selector
+            h_bits(4, false)  // AC entropy coding table selector
+        )),
+        h_bits(8, false), // Ss
+        h_bits(8, false), // Se
+        h_bits(4, false), // Ah
+        h_bits(4, false), // Al
+        NULL
+    );
+}
+
+HParser *jpeg_parser() {
+    return h_sequence(
+        marker_parser(0xFFD8), // SOI
+        h_many(h_choice(
+            app_parser(),
+            dqt_parser(),
+            sof_parser(),
+            dht_parser(),
+            sos_parser(),
+            marker_parser(0xFFDD), // DRI
+            marker_parser(0xFFFE), // COM
+            marker_parser(0xFFD0), // RST0
+            NULL
+        )),
+        marker_parser(0xFFD9), // EOI
+        NULL
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <JPEG file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Unable to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(length);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    HParser *parser = jpeg_parser();
+    HParseResult *result = h_parse(parser, data, length);
+
+    if (result && result->ast) {
+        printf("JPEG file parsed successfully.\n");
+    } else {
+        printf("Failed to parse JPEG file.\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
+    return EXIT_SUCCESS;
+}

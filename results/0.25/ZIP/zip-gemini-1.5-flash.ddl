@@ -1,43 +1,56 @@
-module ZipGemini where
+data ZipFile = ZipFile {
+  centralDirectory : [CentralDirectoryEntry],
+  endOfCentralDirectory : EndOfCentralDirectoryRecord
+}
 
-import Daedalus.TH
+data CentralDirectoryEntry = CentralDirectoryEntry {
+  signature : Constant { value = 0x02014b50, size = 4 },
+  versionMadeBy : UInt16,
+  versionNeededToExtract : UInt16,
+  bitFlag : UInt16,
+  method : UInt16,
+  lastModTime : UInt16,
+  lastModDate : UInt16,
+  crc32 : UInt32,
+  compressedSize : UInt32,
+  uncompressedSize : UInt32,
+  fileNameLength : UInt16,
+  extraFieldLength : UInt16,
+  fileCommentLength : UInt16,
+  diskNumberStart : UInt16,
+  internalAttributes : UInt16,
+  externalAttributes : UInt32,
+  localHeaderOffset : UInt32,
+  fileName : Bytes fileNameLength,
+  extraField : Bytes extraFieldLength,
+  fileComment : Bytes fileCommentLength
+}
 
-{-@ type ZipGemini = { zip :: { version :: Integer, files :: [File] } @-}
+data EndOfCentralDirectoryRecord = EndOfCentralDirectoryRecord {
+  signature : Constant { value = 0x06054b50, size = 4 },
+  diskNumber : UInt16,
+  diskWithCentralDirectory : UInt16,
+  entriesThisDisk : UInt16,
+  totalEntries : UInt16,
+  size : UInt32,
+  offset : UInt32,
+  commentLength : UInt16,
+  comment : Bytes commentLength
+}
 
-{-@ type File = { name :: String, data :: [Byte] } @-}
-
-{-@ type Byte = Integer @-}
-
-zipGemini :: Daedalus ZipGemini
-zipGemini = do
-  version <- integer
-  files <- many file
-  return $ ZipGemini { zip = ZipGemini' { version = version, files = files } }
-
-file :: Daedalus File
-file = do
-  name <- string
-  data <- many byte
-  return $ File { name = name, data = data }
-
-byte :: Daedalus Byte
-byte = integer
-
-integer :: Daedalus Integer
-integer = be integer
-
-string :: Daedalus String
-string = utf8
-
-instance Show ZipGemini where
-  show (ZipGemini { zip = ZipGemini' { version, files } }) =
-    "ZipGemini { version = " ++ show version ++ ", files = " ++ show files ++ " }"
-
-instance Show File where
-  show (File { name, data }) =
-    "File { name = \"" ++ name ++ "\", data = " ++ show data ++ " }"
-
-instance Show Byte where
-  show = show
-
-{-@ type ZipGemini' = { version :: Integer, files :: [File] } @-}
+data LocalFileHeader = LocalFileHeader {
+  signature : Constant { value = 0x04034b50, size = 4 },
+  version : UInt16,
+  bitFlag : UInt16,
+  method : UInt16,
+  lastModTime : UInt16,
+  lastModDate : UInt16,
+  crc32 : UInt32,
+  compressedSize : UInt32,
+  uncompressedSize : UInt32,
+  fileNameLength : UInt16,
+  extraFieldLength : UInt16,
+  fileName : Bytes fileNameLength,
+  extraField : Bytes extraFieldLength,
+  data : Bytes compressedSize
+}

@@ -1,19 +1,49 @@
-module Main where
+module ARP
 
-import Daedalus.TH
+import Data.Word
+import Data.Vector (Vector, replicateM, (!))
+import Data.Bits
 
-{-# LANGUAGE OverloadedStrings #-}
+data ARPHeader = ARPHeader {
+  hardware_type :: Word16,
+  protocol_type :: Word16,
+  hardware_len :: Word8,
+  protocol_len :: Word8,
+  opcode :: Word16,
+  sender_hardware_addr :: Vector Word8,
+  sender_protocol_addr :: Vector Word8,
+  target_hardware_addr :: Vector Word8,
+  target_protocol_addr :: Vector Word8
+}
 
-data MyRecord = MyRecord { field1 :: String, field2 :: Int }
+instance Show ARPHeader where
+  show (ARPHeader ht pt hl pl op sha spa tha tpa) =
+    unwords ["ARPHeader",
+             "hardware_type: " ++ show ht,
+             "protocol_type: " ++ show pt,
+             "hardware_len: " ++ show hl,
+             "protocol_len: " ++ show pl,
+             "opcode: " ++ show op,
+             "sender_hardware_addr: " ++ show sha,
+             "sender_protocol_addr: " ++ show spa,
+             "target_hardware_addr: " ++ show tha,
+             "target_protocol_addr: " ++ show tpa]
 
-mkRecord :: String -> Int -> MyRecord
-mkRecord a b = MyRecord { field1 = a, field2 = b }
+parseARPHeader :: Parser ARPHeader
+parseARPHeader = do
+  ht <- getWord16be
+  pt <- getWord16be
+  hl <- getWord8
+  pl <- getWord8
+  op <- getWord16be
+  sha <- getVector hl
+  spa <- getVector pl
+  tha <- getVector hl
+  tpa <- getVector pl
+  return $ ARPHeader ht pt hl pl op sha spa tha tpa
 
-main :: Daedalus.TH.Program
-main = do
-  let record1 = mkRecord "hello" 10
-      record2 = mkRecord "world" 20
-  return $ do
-    putStrLn (show record1)
-    putStrLn (show record2)
+getVector :: Int -> Parser (Vector Word8)
+getVector n = do
+  vec <- replicateM n getWord8
+  return vec
 

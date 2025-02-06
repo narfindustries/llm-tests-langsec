@@ -1,78 +1,119 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a GIF image
 typedef struct {
-    unsigned char *data;
-    int width;
-    int height;
-} GIFImage;
+    uint16_t width;
+    uint16_t height;
+    uint8_t packed_fields;
+    uint8_t background_color_index;
+    uint8_t pixel_aspect_ratio;
+    //  Add more fields to represent nested structures as needed.  This is a placeholder.
+} GIFHeader;
 
-// Function to load a GIF image (replace with actual GIF loading logic)
-GIFImage *loadGIF(const char *filename) {
-    // Replace this with your actual GIF loading code.  This is a placeholder.
-    GIFImage *image = malloc(sizeof(GIFImage));
-    if (image == NULL) return NULL;
-    image->width = 100;
-    image->height = 100;
-    image->data = malloc(image->width * image->height * 3); // Assuming 3 bytes per pixel (RGB)
-    if (image->data == NULL) {
-        free(image);
-        return NULL;
-    }
-    memset(image->data, 0, image->width * image->height * 3); // Initialize to black
-    return image;
+// Helper function to read a fixed-size string
+static HParser* fixed_string(const char* str) {
+    size_t len = strlen(str);
+    return h_string(str, len);
+}
+
+// Helper function to read a uint16_t in little-endian format
+static HParser* uint16_le() {
+    return h_le_uint16();
+}
+
+// Helper function to read a uint8_t
+static HParser* uint8() {
+    return h_uint8();
+}
+
+// Helper function for packed fields (needs further implementation to extract flags)
+static HParser* packed_fields() {
+    return h_uint8();
+}
+
+//Helper function for variable length blocks
+static HParser* variable_length_block(){
+  return h_sequence(h_uint8(), h_many(h_uint8()));
+}
+
+// Function to map parsed data to GIFHeader struct (incomplete - needs full implementation)
+static void* map_gif_header(void* data) {
+    // This function needs to be fully implemented to correctly populate the GIFHeader struct from the parsed data.
+    //  It's currently a placeholder.
+    return data;
+}
+
+// GIF 89a Parser
+HParser* gif_parser() {
+    return h_sequence(
+        fixed_string("GIF89a"),
+        h_map(h_sequence(
+                uint16_le(),
+                uint16_le(),
+                packed_fields(),
+                uint8(),
+                uint8(),
+                h_many(h_sequence(
+                    fixed_string(","),
+                    uint16_le(),
+                    uint16_le(),
+                    uint16_le(),
+                    uint16_le(),
+                    packed_fields(),
+                    h_optional(variable_length_block()),
+                    variable_length_block()
+                )),
+                h_many(h_sequence(
+                    fixed_string("!"),
+                    variable_length_block()
+                )),
+                fixed_string(";")
+            ), map_gif_header)
+    );
 }
 
 
-// Function to "hammer" the GIF (replace with your actual image processing)
-void hammerGIF(GIFImage *image) {
-    // Replace this with your actual image manipulation code.  This is a placeholder.
-    for (int i = 0; i < image->width * image->height * 3; i++) {
-        image->data[i] = 255 - image->data[i]; // Invert colors
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gif_file>\n", argv[0]);
+        return 1;
     }
-}
 
-// Function to save a GIF image (replace with actual GIF saving logic)
-int saveGIF(GIFImage *image, const char *filename) {
-    // Replace this with your actual GIF saving code.  This is a placeholder.
-    FILE *fp = fopen(filename, "wb");
-    if (fp == NULL) return 1; //Error
+    FILE* file = fopen(argv[1], "rb");
+    if (file == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    //Simulate saving
-    fprintf(fp, "GIF Data Placeholder\n");
-    fclose(fp);
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    fread(buffer, 1, fileSize, file);
+    fclose(file);
+
+    hammer_result_t result = hammer_parse(gif_parser(), buffer, fileSize);
+
+    if (result.success) {
+        printf("GIF parsed successfully!\n");
+        // Access parsed data via result.value (cast to GIFHeader*) - remember to fully implement map_gif_header
+        GIFHeader* header = (GIFHeader*)result.value;
+        printf("Width: %u, Height: %u\n", header->width, header->height); // Example access
+    } else {
+        fprintf(stderr, "GIF parsing failed at position %zu: %s\n", result.position, result.error);
+    }
+
+    free(buffer);
     return 0;
 }
 
-
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s input.gif output.gif\n", argv[0]);
-        return 1;
-    }
-
-    const char *inputFilename = argv[1];
-    const char *outputFilename = argv[2];
-
-    GIFImage *image = loadGIF(inputFilename);
-    if (image == NULL) {
-        fprintf(stderr, "Error loading GIF: %s\n", inputFilename);
-        return 1;
-    }
-
-    hammerGIF(image);
-
-    int saveResult = saveGIF(image, outputFilename);
-    if (saveResult != 0){
-        fprintf(stderr, "Error saving GIF: %s\n", outputFilename);
-        free(image->data);
-        free(image);
-        return 1;
-    }
-
-    free(image->data);
-    free(image);
-    return 0;
-}

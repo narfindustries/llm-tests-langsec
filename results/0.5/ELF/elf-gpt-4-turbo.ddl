@@ -1,61 +1,105 @@
-module ELF {
+type Elf32_Addr = uint32;
+type Elf32_Off = uint32;
+type Elf32_Half = uint16;
+type Elf32_Word = uint32;
+type Elf32_Sword = int32;
 
-  import utils;
+type Elf64_Addr = uint64;
+type Elf64_Off = uint64;
+type Elf64_Half = uint16;
+type Elf64_Word = uint32;
+type Elf64_Sword = int32;
+type Elf64_Xword = uint64;
+type Elf64_Sxword = int64;
 
-  // Define the ELF header
-  struct ElfHeader {
-    e_ident: array [u8] (16);  // ELF identification
-    e_type: u16;               // Object file type
-    e_machine: u16;            // Machine type
-    e_version: u32;            // Object file version
-    e_entry: u64;              // Entry point address
-    e_phoff: u64;              // Program header offset
-    e_shoff: u64;              // Section header offset
-    e_flags: u32;              // Processor-specific flags
-    e_ehsize: u16;             // ELF header size
-    e_phentsize: u16;          // Size of one program header entry
-    e_phnum: u16;              // Number of program header entries
-    e_shentsize: u16;          // Size of one section header entry
-    e_shnum: u16;              // Number of section header entries
-    e_shstrndx: u16;           // Section header string table index
-  }
+struct Elf_Ident {
+  uint32 ei_mag;         // Magic number, 0x7F454C46
+  uint8 ei_class;        // File class
+  uint8 ei_data;         // Data encoding
+  uint8 ei_version;      // File version
+  uint8 ei_osabi;        // OS/ABI identification
+  uint8 ei_abiversion;   // ABI version
+  bytes ei_pad;          // Padding bytes, 7 bytes
+};
 
-  // Define the Program Header
-  struct ProgramHeader {
-    p_type: u32;               // Type of segment
-    p_flags: u32;              // Segment attributes
-    p_offset: u64;             // Segment offset in file
-    p_vaddr: u64;              // Virtual address in memory
-    p_paddr: u64;              // Reserved
-    p_filesz: u64;             // Size of segment in file
-    p_memsz: u64;              // Size of segment in memory
-    p_align: u64;              // Segment alignment
-  }
+struct Elf32_Ehdr {
+  Elf_Ident e_ident;  // ELF Identification
+  Elf32_Half e_type;  // Object file type
+  Elf32_Half e_machine;  // Machine type
+  Elf32_Word e_version;  // Object file version
+  Elf32_Addr e_entry;  // Entry point address
+  Elf32_Off e_phoff;   // Program header offset
+  Elf32_Off e_shoff;   // Section header offset
+  Elf32_Word e_flags;  // Processor-specific flags
+  Elf32_Half e_ehsize; // ELF header size
+  Elf32_Half e_phentsize;  // Size of program header entry
+  Elf32_Half e_phnum;  // Number of program header entries
+  Elf32_Half e_shentsize;  // Size of section header entry
+  Elf32_Half e_shnum;  // Number of section header entries
+  Elf32_Half e_shstrndx;  // Section name string table index
+};
 
-  // Define the Section Header
-  struct SectionHeader {
-    sh_name: u32;              // Section name (index into the section header string table)
-    sh_type: u32;              // Section type
-    sh_flags: u64;             // Section attributes
-    sh_addr: u64;              // Virtual address in memory
-    sh_offset: u64;            // Offset in file
-    sh_size: u64;              // Size of section
-    sh_link: u32;              // Link to other section
-    sh_info: u32;              // Additional section information
-    sh_addralign: u64;         // Section alignment
-    sh_entsize: u64;           // Entry size if section holds table
-  }
+struct Elf64_Ehdr {
+  Elf_Ident e_ident;  // ELF Identification
+  Elf64_Half e_type;  // Object file type
+  Elf64_Half e_machine;  // Machine type
+  Elf64_Word e_version;  // Object file version
+  Elf64_Addr e_entry;  // Entry point address
+  Elf64_Off e_phoff;   // Program header offset
+  Elf64_Off e_shoff;   // Section header offset
+  Elf64_Word e_flags;  // Processor-specific flags
+  Elf64_Half e_ehsize; // ELF header size
+  Elf64_Half e_phentsize;  // Size of program header entry
+  Elf64_Half e_phnum;  // Number of program header entries
+  Elf64_Half e_shentsize;  // Size of section header entry
+  Elf64_Half e_shnum;  // Number of section header entries
+  Elf64_Half e_shstrndx;  // Section name string table index
+};
 
-  // Parse the ELF file
-  struct ELF_File {
-    header: ElfHeader;
-    programHeaders: array [ProgramHeader] (header.e_phnum);
-    sectionHeaders: array [SectionHeader] (header.e_shnum);
-  }
+struct Elf32_Phdr {
+  Elf32_Word p_type;   // Type of segment
+  Elf32_Off p_offset;  // Offset in file
+  Elf32_Addr p_vaddr;  // Virtual address in memory
+  Elf32_Addr p_paddr;  // Reserved
+  Elf32_Word p_filesz; // Size of segment in file
+  Elf32_Word p_memsz;  // Size of segment in memory
+  Elf32_Word p_flags;  // Segment flags
+  Elf32_Word p_align;  // Segment alignment
+};
 
-  // Utility functions for parsing
-  namespace utils {
-    // Example utility function
-    def exampleUtilityFunction(x: u32): u32 = x + 1;
-  }
-}
+struct Elf64_Phdr {
+  Elf64_Word p_type;   // Type of segment
+  Elf64_Word p_flags;  // Segment flags
+  Elf64_Off p_offset;  // Offset in file
+  Elf64_Addr p_vaddr;  // Virtual address in memory
+  Elf64_Addr p_paddr;  // Reserved
+  Elf64_Xword p_filesz; // Size of segment in file
+  Elf64_Xword p_memsz;  // Size of segment in memory
+  Elf64_Xword p_align;  // Segment alignment
+};
+
+struct Elf32_Shdr {
+  Elf32_Word sh_name;  // Section name (index into the section header string table)
+  Elf32_Word sh_type;  // Section type
+  Elf32_Word sh_flags; // Section flags
+  Elf32_Addr sh_addr;  // Address in memory
+  Elf32_Off sh_offset; // Offset in file
+  Elf32_Word sh_size;  // Size of section
+  Elf32_Word sh_link;  // Link to another section
+  Elf32_Word sh_info;  // Additional section information
+  Elf32_Word sh_addralign; // Section alignment
+  Elf32_Word sh_entsize; // Entry size if section holds table
+};
+
+struct Elf64_Shdr {
+  Elf64_Word sh_name;  // Section name (index into the section header string table)
+  Elf64_Word sh_type;  // Section type
+  Elf64_Xword sh_flags; // Section flags
+  Elf64_Addr sh_addr;  // Address in memory
+  Elf64_Off sh_offset; // Offset in file
+  Elf64_Xword sh_size;  // Size of section
+  Elf64_Word sh_link;  // Link to another section
+  Elf64_Word sh_info;  // Additional section information
+  Elf64_Xword sh_addralign; // Section alignment
+  Elf64_Xword sh_entsize; // Entry size if section holds table
+};

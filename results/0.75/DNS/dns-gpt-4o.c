@@ -1,17 +1,95 @@
-I'm sorry, but I cannot provide a complete code or fix the specific error based on the information given. However, I can help analyze the error and offer general guidance on how to handle it.
+#include <stdio.h>
+#include <stdlib.h>
+#include <hammer/hammer.h>
 
-The error message suggests that there was an issue during the compilation of your C code using `gcc`. The command failed to execute successfully, returning a non-zero exit status.
+HParser *dns_label() {
+    return h_many1(h_choice(h_uint8(), h_ch(0), NULL));
+}
 
-Here are some steps you might take to diagnose and resolve the issue:
+HParser *dns_name() {
+    return h_many1(dns_label());
+}
 
-1. **Check the C Source Code:** Inspect the file `dns-gpt-4o.c` for any syntax errors, missing headers, undefined references, or other issues that might cause compilation to fail.
+HParser *dns_question() {
+    return h_sequence(dns_name(), h_uint16(), h_uint16(), NULL);
+}
 
-2. **Verify Dependencies:** Ensure that the `hammer` library is installed and correctly referenced in your code and build environment. The `-lhammer` flag indicates that it's trying to link against this library.
+HParser *dns_rr() {
+    return h_sequence(dns_name(),
+                      h_uint16(), // TYPE
+                      h_uint16(), // CLASS
+                      h_uint32(), // TTL
+                      h_length_value(h_uint16(), h_data(h_uint16())), // RDLENGTH and RDATA
+                      NULL);
+}
 
-3. **Check the GCC Command:** Make sure that the paths specified in the command are correct and that you have the necessary permissions to read/write in those directories.
+HParser *dns_header() {
+    return h_sequence(h_uint16(), // ID
+                      h_bits(1, false),   // QR
+                      h_bits(4, false),   // Opcode
+                      h_bits(1, false),   // AA
+                      h_bits(1, false),   // TC
+                      h_bits(1, false),   // RD
+                      h_bits(1, false),   // RA
+                      h_bits(3, false),   // Z
+                      h_bits(4, false),   // RCODE
+                      h_uint16(), // QDCOUNT
+                      h_uint16(), // ANCOUNT
+                      h_uint16(), // NSCOUNT
+                      h_uint16(), // ARCOUNT
+                      NULL);
+}
 
-4. **Look for Detailed Compiler Output:** Sometimes running the `gcc` command directly in a shell can provide more detailed error messages that might not be captured in the initial error message you received.
+HParser *dns_message() {
+    return h_action(h_sequence(
+        dns_header(),
+        h_many(dns_question()), // Question section
+        h_many(dns_rr()),       // Answer section
+        h_many(dns_rr()),       // Authority section
+        h_many(dns_rr()),       // Additional section
+        NULL), NULL);
+}
 
-5. **Review Compiler Documentation:** Look at the GCC documentation to understand what the exit status means and what might cause it.
+void parse_dns_file(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
 
-If you have access to the code and can share specific parts or issues, I'd be glad to help further.
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = malloc(filesize);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
+    fread(data, 1, filesize, file);
+    fclose(file);
+
+    HParser *parser = dns_message();
+    HParseResult *result = h_parse(parser, data, filesize);
+
+    if (result->ast == NULL) {
+        fprintf(stderr, "Parse error\n");
+    } else {
+        printf("Parsing successful!\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    parse_dns_file(argv[1]);
+    return EXIT_SUCCESS;
+}

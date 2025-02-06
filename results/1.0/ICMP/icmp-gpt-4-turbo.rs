@@ -1,7 +1,6 @@
 use nom::{
-    IResult, 
-    bytes::complete::{take},
-    number::complete::{be_u8, be_u16}
+    number::complete::{be_u8, be_u16},
+    IResult, multi::count,
 };
 use std::env;
 use std::fs::File;
@@ -12,44 +11,44 @@ struct IcmpPacket {
     icmp_type: u8,
     code: u8,
     checksum: u16,
-    rest_of_header: [u8; 4],
-    data: Vec<u8>,
+    rest_of_header: Vec<u8>,  // Specific to type and code
 }
 
-fn parse_icmp(input: &[u8]) -> IResult<&[u8], IcmpPacket> {
+fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], IcmpPacket> {
     let (input, icmp_type) = be_u8(input)?;
     let (input, code) = be_u8(input)?;
     let (input, checksum) = be_u16(input)?;
-    let (input, rest_of_header) = take(4usize)(input)?;
-    let (rest, data) = take(input.len())(input)?;
-    
-    let mut fixed_header = [0u8; 4];
-    fixed_header.copy_from_slice(rest_of_header);
 
-    Ok((rest, IcmpPacket {
-        icmp_type,
-        code,
-        checksum,
-        rest_of_header: fixed_header,
-        data: data.to_vec(),
-    }))
+    // Determine the length of the rest of the header based on type and code
+    // For simplicity, gathering the rest as raw bytes
+    let length = input.len();
+    let (input, rest_of_header) = count(be_u8, length)(input)?;
+
+    Ok((
+        input,
+        IcmpPacket {
+            icmp_type,
+            code,
+            checksum,
+            rest_of_header,
+        },
+    ))
 }
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <filename>", args[0]);
-        std::process::exit(1);
-    }
-
     let filename = &args[1];
     let mut file = File::open(filename)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents)?;
 
-    match parse_icmp(&buffer) {
-        Ok((_, packet)) => println!("{:#?}", packet),
-        Err(error) => println!("Failed to parse ICMP packet: {:?}", error),
+    match parse_icmp_packet(&contents) {
+        Ok((_remaining, packet)) => {
+            println!("Parsed ICMP Packet: {:?}", packet);
+        },
+        Err(error) => {
+            println!("Error parsing packet: {:?}", error);
+        },
     }
 
     Ok(())

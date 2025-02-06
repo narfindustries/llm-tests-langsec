@@ -1,0 +1,78 @@
+module SQLite3;
+
+public type MagicHeader = unit {
+    magic: bytes &size=16;
+};
+
+public type DatabaseHeader = unit {
+    magic_header: MagicHeader;
+    page_size: uint16;
+    write_version: uint8;
+    read_version: uint8;
+    reserved_space: uint8;
+    max_payload_fraction: uint8;
+    min_payload_fraction: uint8;
+    leaf_payload_fraction: uint8;
+    file_change_counter: uint32;
+    db_size_in_pages: uint32;
+    first_freelist_trunk_page: uint32;
+    num_freelist_pages: uint32;
+    schema_cookie: uint32;
+    schema_format_number: uint32;
+    default_page_cache_size: uint32;
+    largest_root_b_tree_page: uint32;
+    text_encoding: uint32;
+    user_version: uint32;
+    incremental_vacuum_mode: uint32;
+    application_id: uint32;
+    reserved_for_expansion: bytes &size=20;
+    version_valid_for: uint32;
+    sqlite_version_number: uint32;
+};
+
+public type BTreePageHeader = unit {
+    page_type: uint8;
+    first_free_block: uint16;
+    num_cells: uint16;
+    cell_content_offset: uint16;
+    fragmented_free_bytes: uint8;
+};
+
+public type Varint = unit {
+    value: uint64;
+};
+
+public type RecordHeader = unit {
+    header_size: Varint;
+    type_codes: bytes &size=header_size.value;
+};
+
+public type Record = unit {
+    header: RecordHeader;
+    payload: bytes &size=header.header_size.value;
+};
+
+public type FreelistTrunkPage = unit {
+    next_trunk_page: uint32;
+    num_leaf_pages: uint32;
+    leaf_page_numbers: uint32[] &size=num_leaf_pages;
+};
+
+public type PointerMapEntry = unit {
+    page_type: uint8;
+    parent_page: uint32;
+};
+
+public type WALHeader = unit {
+    magic_number: uint32;
+    file_format_version: uint32;
+    page_size: uint32;
+    checkpoint_sequence_number: uint32;
+    salt: bytes &size=8;
+    checksum: bytes &size=8;
+};
+
+public type SQLite3File = unit {
+    header: DatabaseHeader;
+    pages: bytes[] &size=header.db_size_in_pages * header.page_size;
+};

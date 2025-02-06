@@ -1,94 +1,186 @@
 meta:
   id: gif
-  file-extension: gif
-  endianness: le
-  imports:
-    - ../../commontraits.ksy
+  title: Graphics Interchange Format
 seq:
   - id: header
     type: header
   - id: logical_screen_descriptor
     type: logical_screen_descriptor
   - id: global_color_table
-    size: if header.has_global_color_table == 1 then (2 << (header.color_resolution + 1)) * 3 else 0
-    type: seq
-    repeat: expr
-    repeat-expr: 2 << (header.color_resolution + 1)
-    seq:
-      - id: rgb
-        type: u1
-      - id: r
-        type: u1
-      - id: g
-        type: u1
-      - id: b
-        type: u1
+    type: global_color_table
+    if: header.version == "89a" and logical_screen_descriptor.packed_fields.global_color_table_flag
   - id: images
-    type: seq
-    repeat: until struct.has_image == 0
-    seq:
-      - id: image
-        type: image
+    type: image
+    repeat: eos
 types:
   header:
     seq:
-      - id: magic
-        content: "GIF"
+      - id: signature
+        size: 3
+        encoding: ascii
       - id: version
         size: 3
-        type: str
-      - id: has_global_color_table
-        type: u1
-      - id: color_resolution
-        type: u1
-      - id: sorted
-        type: u1
-      - id: size_of_global_color_table
-        type: u1
-      - id: background_color_index
-        type: u1
-      - id: pixel_aspect_ratio
-        type: u1
+        encoding: ascii
   logical_screen_descriptor:
     seq:
       - id: width
-        type: u2
+        size: 2
       - id: height
-        type: u2
+        size: 2
       - id: packed_fields
-        type: u1
+        type: packed_fields
       - id: background_color_index
-        type: u1
+        size: 1
       - id: pixel_aspect_ratio
-        type: u1
+        size: 1
+    types:
+      packed_fields:
+        bits: 8
+        seq:
+          - id: global_color_table_flag
+            type: bits_type
+            num_bits: 1
+          - id: color_resolution
+            type: bits_type
+            num_bits: 3
+          - id: sort_flag
+            type: bits_type
+            num_bits: 1
+          - id: size_of_global_color_table
+            type: bits_type
+            num_bits: 3
+  global_color_table:
+    seq:
+      - id: entries
+        type: rgb
+        repeat: expr
+        repeat-expr: (2 ** (logical_screen_descriptor.packed_fields.size_of_global_color_table + 1))
+    types:
+      rgb:
+        seq:
+          - id: red
+            size: 1
+          - id: green
+            size: 1
+          - id: blue
+            size: 1
   image:
     seq:
-      - id: separator
-        content: "\x2c"
+      - id: image_separator
+        contents: [44]
       - id: left
-        type: u2
+        size: 2
       - id: top
-        type: u2
+        size: 2
       - id: width
-        type: u2
+        size: 2
       - id: height
-        type: u2
+        size: 2
       - id: packed_fields
-        type: u1
-      - id: table_based_image_data
-        type: table_based_image_data
-  table_based_image_data:
-    seq:
-      - id: min_code_size
-        type: u1
-      - id: sub_blocks
-        type: seq
-        repeat: until struct.is_zero == 1
+        type: packed_fields
+      - id: local_color_table
+        type: local_color_table
+        if: packed_fields.local_color_table_flag
+      - id: image_data
+        type: image_data
+    types:
+      packed_fields:
+        bits: 8
         seq:
-          - id: length
-            type: u1
+          - id: local_color_table_flag
+            type: bits_type
+            num_bits: 1
+          - id: interlace_flag
+            type: bits_type
+            num_bits: 1
+          - id: sort_flag
+            type: bits_type
+            num_bits: 1
+          - id: reserved
+            type: bits_type
+            num_bits: 2
+          - id: size_of_local_color_table
+            type: bits_type
+            num_bits: 3
+      local_color_table:
+        seq:
+          - id: entries
+            type: rgb
+            repeat: expr
+            repeat-expr: (2 ** (packed_fields.size_of_local_color_table + 1))
+      image_data:
+        seq:
+          - id: blocks
+            type: image_data_block
+            repeat: until block_size == 0
+        types:
+          image_data_block:
+            seq:
+              - id: block_size
+                size: 1
+              - id: data
+                size: block_size
+  graphic_control_extension:
+    seq:
+      - id: extension_introducer
+        contents: [33]
+      - id: extension_label
+        contents: [70]
+      - id: block_size
+        size: 1
+      - id: packed_fields
+        type: packed_fields
+      - id: delay_time
+        size: 2
+      - id: transparent_color_index
+        size: 1
+      - id: block_terminator
+        contents: [0]
+    types:
+      packed_fields:
+        bits: 8
+        seq:
+          - id: reserved
+            type: bits_type
+            num_bits: 3
+          - id: disposal_method
+            type: bits_type
+            num_bits: 3
+          - id: user_input_flag
+            type: bits_type
+            num_bits: 1
+          - id: transparent_color_flag
+            type: bits_type
+            num_bits: 1
+  comment_extension:
+    seq:
+      - id: extension_introducer
+        contents: [33]
+      - id: extension_label
+        contents: [59]
+      - id: blocks
+        type: comment_data_block
+        repeat: until block_size == 0
+    types:
+      comment_data_block:
+        seq:
+          - id: block_size
+            size: 1
           - id: data
-            size: length
-            type: u1
-          - id: is_zero
-            type: u1
+            size: block_size
+  application_extension:
+    seq:
+      - id: extension_introducer
+        contents: [33]
+      - id: extension_label
+        contents: [43]
+      - id: blocks
+        type: application_data_block
+        repeat: until block_size == 0
+    types:
+      application_data_block:
+        seq:
+          - id: block_size
+            size: 1
+          - id: data
+            size: block_size

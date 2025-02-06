@@ -1,28 +1,58 @@
 module DICOM;
 
-import spicy;
+public type DicomHeader = unit {
+    # Patient Information
+    patient_name: bytes;
+    patient_id: bytes;
+    patient_birth_date: bytes;
+    patient_sex: bytes;
+    patient_age: bytes;
 
-public type Header = unit {
-    preamble: bytes(128);
-    magic_number: bytes(4) &requires($$=="DICM");
+    # Study Information
+    study_instance_uid: bytes;
+    study_date: bytes;
+    study_time: bytes;
+    accession_number: bytes;
+    referring_physician_name: bytes;
 
-    : void { 
-        validate(self.magic_number == b"DICM", "Invalid DICOM file signature");
-    }
-}
+    # Series Information
+    series_instance_uid: bytes;
+    series_number: uint32;
+    modality: bytes;
+    protocol_name: bytes;
 
-public type Element = unit {
-    tag: bytes(4);
-    vr: bytes(2);
-    length: uint32;
-    data: bytes(self.length) if ( self.length < 65536 );
-}
+    # Image Attributes
+    sop_instance_uid: bytes;
+    image_number: uint32;
+    pixel_data: bytes;
+    pixel_data_length: uint32;
+    rows: uint16;
+    columns: uint16;
+    bits_allocated: uint8;
+    bits_stored: uint8;
+    photometric_interpretation: bytes;
 
-public type File = unit {
-    header: Header;
-    elements: Element[] &until($input.is_eof());
-}
+    # Transfer Syntax
+    transfer_syntax: enum {
+        EXPLICIT_VR_LITTLE_ENDIAN,
+        IMPLICIT_VR_LITTLE_ENDIAN,
+        EXPLICIT_VR_BIG_ENDIAN,
+        JPEG_COMPRESSION,
+        RLE_COMPRESSION
+    };
 
-public function parse(f: File) {
-    return f;
-}
+    # Optional Fields
+    optional_fields: OptionalFieldsBlock;
+};
+
+type OptionalFieldsBlock = unit {
+    manufacturer: bytes;
+    model_name: bytes;
+    software_version: bytes;
+    patient_weight: double;
+    patient_height: double;
+    contrast_agent: bytes;
+    scanning_sequence: bytes;
+    sequence_variant: bytes;
+    scan_options: bytes;
+};

@@ -1,25 +1,320 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/TLS-Client-Hello"
-           xmlns:tns="http://example.com/TLS-Client-Hello"
+           targetNamespace="http://example.com/tls"
+           xmlns="http://example.com/tls"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation=" dfdltypes.xsd "/>
-
-  <xs:element name="TLS-Client-Hello" type="tns:TLS-Client-HelloType" dfdl: messageType="TLS-Client-Hello" dfdl:representation="binary" dfdl:sequenceKind="ordered" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-
-  <xs:complexType name="TLS-Client-HelloType">
+  <xs:element name="clientHello">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="legacyVersion" type="legacyVersionType" dfdl:occurs="1..1"/>
+        <xs:element name="random" type="randomType" dfdl:occurs="1..1"/>
+        <xs:element name="legacySessionId" type="legacySessionIdType" dfdl:occurs="0..1"/>
+        <xs:element name="cipherSuites" type="cipherSuitesType" dfdl:occurs="1..1"/>
+        <xs:element name="legacyCompressionMethods" type="legacyCompressionMethodsType" dfdl:occurs="1..1"/>
+        <xs:element name="extensions" type="extensionsType" dfdl:occurs="0..1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:simpleType name="legacyVersionType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="0303"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="randomType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="legacySessionIdType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{0,64}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="cipherSuitesType">
     <xs:sequence>
-      <xs:element name="record-layer-version" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="record-layer-length" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="handshake-type" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="handshake-length" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="handshake-version" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="random" type="xs:hexBinary" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="session-id" type="xs:hexBinary" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="cipher-suite" type="xs:unsignedShort" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
-      <xs:element name="compression-method" type="xs:unsignedInt" dfdl:alignment="binary" dfdl:alignmentUnits="bits" dfdl:lengthKind="implicit" dfdl:encoding="binary" dfdl:outputNewLine="no" dfdl:outputValueCalc="none" dfdl:escapeSchemeType="none" />
+      <xs:element name="cipherSuite" type="cipherSuiteType" dfdl:occurs="1.."/>
     </xs:sequence>
   </xs:complexType>
-</xs:schema>
+  <xs:simpleType name="cipherSuiteType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="legacyCompressionMethodsType">
+    <xs:sequence>
+      <xs:element name="compressionMethod" type="compressionMethodType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="compressionMethodType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="extensionsType">
+    <xs:sequence>
+      <xs:element name="extension" type="extensionType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="extensionType">
+    <xs:sequence>
+      <xs:element name="extensionType" type="extensionTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="extensionData" type="extensionDataType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="extensionTypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="extensionDataType">
+    <xs:choice>
+      <xs:element name="serverName" type="serverNameType" dfdl:occurs="1..1"/>
+      <xs:element name="maxFragmentLength" type="maxFragmentLengthType" dfdl:occurs="1..1"/>
+      <xs:element name="clientCertificateUrl" type="clientCertificateUrlType" dfdl:occurs="1..1"/>
+      <xs:element name="trustedCaKeys" type="trustedCaKeysType" dfdl:occurs="1..1"/>
+      <xs:element name="truncatedHmac" type="truncatedHmacType" dfdl:occurs="1..1"/>
+      <xs:element name="statusRequest" type="statusRequestType" dfdl:occurs="1..1"/>
+      <xs:element name="userMapping" type="userMappingType" dfdl:occurs="1..1"/>
+      <xs:element name="clientAuthz" type="clientAuthzType" dfdl:occurs="1..1"/>
+      <xs:element name="serverAuthz" type="serverAuthzType" dfdl:occurs="1..1"/>
+      <xs:element name="certType" type="certTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="supportedGroups" type="supportedGroupsType" dfdl:occurs="1..1"/>
+      <xs:element name="ecPointFormats" type="ecPointFormatsType" dfdl:occurs="1..1"/>
+      <xs:element name="srp" type="srpType" dfdl:occurs="1..1"/>
+      <xs:element name="signatureAlgorithms" type="signatureAlgorithmsType" dfdl:occurs="1..1"/>
+      <xs:element name="useSrtp" type="useSrtpType" dfdl:occurs="1..1"/>
+      <xs:element name="heartbeat" type="heartbeatType" dfdl:occurs="1..1"/>
+      <xs:element name="applicationLayerProtocolNegotiation" type="applicationLayerProtocolNegotiationType" dfdl:occurs="1..1"/>
+      <xs:element name="statusRequestV2" type="statusRequestV2Type" dfdl:occurs="1..1"/>
+      <xs:element name="signedCertificateTimestamp" type="signedCertificateTimestampType" dfdl:occurs="1..1"/>
+      <xs:element name="clientCertificateType" type="clientCertificateTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="serverCertificateType" type="serverCertificateTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="padding" type="paddingType" dfdl:occurs="1..1"/>
+      <xs:element name="keyShare" type="keyShareType" dfdl:occurs="1..1"/>
+      <xs:element name="preSharedKey" type="preSharedKeyType" dfdl:occurs="1..1"/>
+      <xs:element name="earlyData" type="earlyDataType" dfdl:occurs="1..1"/>
+      <xs:element name="supportedVersions" type="supportedVersionsType" dfdl:occurs="1..1"/>
+      <xs:element name="cookie" type="cookieType" dfdl:occurs="1..1"/>
+      <xs:element name="pskKeyExchangeModes" type="pskKeyExchangeModesType" dfdl:occurs="1..1"/>
+      <xs:element name="ticketEarlyDataInfo" type="ticketEarlyDataInfoType" dfdl:occurs="1..1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="serverNameType">
+    <xs:sequence>
+      <xs:element name="serverNameList" type="serverNameListType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="serverNameListType">
+    <xs:sequence>
+      <xs:element name="serverName" type="serverNameTypeType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="serverNameTypeType">
+    <xs:sequence>
+      <xs:element name="nameType" type="nameTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="hostName" type="hostNameType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="nameTypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="hostNameType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[^\\x00]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="maxFragmentLengthType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="02"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="clientCertificateUrlType">
+    <xs:sequence>
+      <xs:element name="urlAndOptionalHash" type="urlAndOptionalHashType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="urlAndOptionalHashType">
+    <xs:sequence>
+      <xs:element name="url" type="urlType" dfdl:occurs="1..1"/>
+      <xs:element name="hash" type="hashType" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="urlType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[^\\x00]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="hashType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{32}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="trustedCaKeysType">
+    <xs:sequence>
+      <xs:element name="trustedAuthority" type="trustedAuthorityType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="trustedAuthorityType">
+    <xs:sequence>
+      <xs:element name="identifier" type="identifierType" dfdl:occurs="1..1"/>
+      <xs:element name="hash" type="hashType" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="identifierType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{1,32}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="truncatedHmacType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="statusRequestType">
+    <xs:sequence>
+      <xs:element name="statusType" type="statusTypeType" dfdl:occurs="1..1"/>
+      <xs:element name="url" type="urlType" dfdl:occurs="1..1"/>
+      <xs:element name="hash" type="hashType" dfdl:occurs="0..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="statusTypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="userMappingType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="clientAuthzType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="serverAuthzType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="certTypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="supportedGroupsType">
+    <xs:sequence>
+      <xs:element name="namedGroup" type="namedGroupType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="namedGroupType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ecPointFormatsType">
+    <xs:sequence>
+      <xs:element name="ecPointFormat" type="ecPointFormatType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="ecPointFormatType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="srpType">
+    <xs:sequence>
+      <xs:element name="srpIdentifier" type="srpIdentifierType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="srpIdentifierType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="[0-9A-Fa-f]{1,32}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="signatureAlgorithmsType">
+    <xs:sequence>
+      <xs:element name="signatureAlgorithm" type="signatureAlgorithmType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="signatureAlgorithmType">
+    <xs:sequence>
+      <xs:element name="hashAlgorithm" type="hashAlgorithmType" dfdl:occurs="1..1"/>
+      <xs:element name="signatureAlgorithm" type="signatureAlgorithmTypeType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="hashAlgorithmType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="signatureAlgorithmTypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="useSrtpType">
+    <xs:sequence>
+      <xs:element name="srtpProtectionProfile" type="srtpProtectionProfileType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="srtpProtectionProfileType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="00"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="heartbeatType">
+    <xs:sequence>
+      <xs:element name="mode" type="modeType" dfdl:occurs="1..1"/>
+      <xs:element name="payloadLength" type="payloadLengthType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="modeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="payloadLengthType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="applicationLayerProtocolNegotiationType">
+    <xs:sequence>
+      <xs:element name="protocolName" type="protocolNameType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="protocolNameType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[^\\x00]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="statusRequestV2Type">
+    <xs:sequence>
+      <xs:element name="statusRequestV2" type="statusRequestV2TypeType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="statusRequestV2TypeType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:pattern value="01"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="signedCertificateTimestampType">
+    <xs:sequence>
+      <xs:element name="sctList" type="sctListType" dfdl:occurs="1..1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sctListType">
+    <xs:sequence>
+      <xs:element name="sct" type="sctType" dfdl:occurs="1.."/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sctType">
+    <xs:sequence>
+      <xs:element name="version" type="versionType" dfdl:occurs="1..1"/>
+      <xs:element name="logID" type="logIDType" dfdl:occurs="1..1"/>
+      <xs:element name="timestamp" type="timestampType" dfdl:occurs="1..1"/>
+      <xs:element name="extensions" type="extensionsTypeType" dfdl:occurs

@@ -1,57 +1,111 @@
-# This specification defines the structure of an HL7 v2 message.
-type HL7_V2_Message = record {
-    message: Message,
-} & byteorder=little-endian;
+module HL7v2
 
-# The message type defines the basic structure of an HL7 message.
-type Message = sequence {
-    segment: Segment,
-    while !segment_segment_terminator(segment),
-} & length=until(segment_segment_terminator);
-
-# The segment type represents a single segment in the message.
-type Segment = record {
-    name: SegmentName,
-    fields: Fields,
-} & length=name.length() + fields.length;
-
-# The segment name is always three characters long and identifies the segment type.
-type SegmentName = string(3) & encoding=ascii;
-
-# The segment fields are separated by the field separator (usually '|').
-type Fields = sequence {
-    field: Field,
-    while !field_segment_terminator(field),
-} & length=until(field_segment_terminator), separator='|';
-
-# A field is separated from the next field by the field separator.
-type Field = sequence {
-    component: Component,
-    while !component_field_separator(component),
-} & length=until(component_field_separator), separator='^';
-
-# A component is separated from the next component by the component separator.
-type Component = sequence {
-    subcomponent: Subcomponent,
-    while !subcomponent_component_separator(subcomponent),
-} & length=until(subcomponent_component_separator), separator='&';
-
-# A subcomponent is separated from the next subcomponent by the subcomponent separator.
-type Subcomponent = string & encoding=ascii;
-
-# Utility functions for determining the terminators.
-function segment_segment_terminator(segment: Segment): bool {
-    return segment.name == 'MSH' and segment.fields[0] == '\r';
+type MSH_MessageHeader = record {
+  field_separator: string = "|",
+  encoding_characters: string = "^~\&",
+  sending_application: string,
+  sending_facility: string,
+  receiving_application: string,
+  receiving_facility: string,
+  date: string(8) = "YYYYMMDD",
+  time: string(6) = "HHMMSS",
+  security: string,
+  message_type: string,
+  message_control_id: string,
+  processing_id: string(1) = ["P", "T"],
+  version_id: string = ["2.3", "2.5"],
+  sequence_number: integer,
+  continuation_pointer: string,
+  accept_acknowledgment_type: string(2) = ["AL", "ER"],
+  application_acknowledgment_type: string(2) = ["AL", "ER"],
+  country_code: string(3) = ISO3166,
+  character_set: string(10) = ["ASCII", "UTF-8"]
 }
 
-function field_segment_terminator(field: Field): bool {
-    return field[0] == '\r';
+type EVN_EventType = record {
+  event_type_code: string = HL7Table0003,
+  recorded_date_time: string(14) = "YYYYMMDDHHMMSS",
+  date_time_planned_event: string(14) = "YYYYMMDDHHMMSS",
+  event_reason_code: string(2) = HL7Table0187,
+  operator_id: string
 }
 
-function component_field_separator(component: Component): bool {
-    return component == '^';
+type PID_PatientIdentification = record {
+  set_id: integer,
+  patient_id: string,
+  patient_identifier_list: string,
+  alternate_patient_id: string,
+  patient_name: string,
+  mothers_maiden_name: string,
+  date_of_birth: string(8) = "YYYYMMDD",
+  sex: string(1) = ["M", "F"],
+  patient_alias: string,
+  race: string(10) = HL7Table0104,
+  patient_address: string,
+  county_code: string,
+  phone_number_home: string,
+  phone_number_business: string
 }
 
-function subcomponent_component_separator(subcomponent: Subcomponent): bool {
-    return subcomponent == '&';
+type PV1_PatientVisit = record {
+  set_id: integer,
+  visit_number: string,
+  patient_class: string(1) = ["I", "O"],
+  visit_number: string,
+  financial_class: string,
+  visit_priority_code: string(2) = HL7Table0303,
+  precaution_code: string(10) = HL7Table1002,
+  visit_type: string(1) = ["I", "O"]
+}
+
+type ORC_Order = record {
+  order_control: string(2) = HL7Table0443,
+  placer_order_number: string,
+  filler_order_number: string,
+  order_status: string(2) = HL7Table0443,
+  response_flag: string(1) = ["Y", "N"]
+}
+
+type OBR_Observation = record {
+  set_id: integer,
+  placer_order_number: string,
+  filler_order_number: string,
+  universal_service_identifier: string,
+  priority: string(1) = ["S", "A"]
+}
+
+type OBX_ObservationResult = record {
+  set_id: integer,
+  value_type: string(2) = HL7Table0125,
+  observation_result: string,
+  units: string,
+  reference_range: string
+}
+
+type AL1_Allergy = record {
+  set_id: integer,
+  allergen: string,
+  allergy_severity_code: string(1) = ["S", "M"],
+  allergy_reaction_code: string(10) = HL7Table1002
+}
+
+let HL7Table0003 = ["A01", "A02"]
+let HL7Table0069 = ["Y", "N"]
+let HL7Table0187 = ["01", "02"]
+let HL7Table0303 = ["EL", "UR"]
+let HL7Table0443 = ["NW", "CA"]
+let HL7Table1002 = ["1002-5", "1002-6"]
+let HL7Table0104 = ["1002-5", "1002-6"]
+let HL7Table0125 = ["NM", "TX"]
+let ISO3166 = ["USA", "CAN"]
+
+type HL7Message = record {
+  msh: MSH_MessageHeader,
+  evn: EVN_EventType,
+  pid: PID_PatientIdentification,
+  pv1: PV1_PatientVisit,
+  orc: ORC_Order,
+  obr: OBR_Observation,
+  obx: OBX_ObservationResult,
+  al1: AL1_Allergy
 }

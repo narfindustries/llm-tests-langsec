@@ -1,53 +1,73 @@
 module NITF;
 
 public type FileHeader = unit {
-    fileTypeID: /[A-Z0-9]{9}/;
-    fileTitle: /[A-Z0-9]{80}/;
-    fileSecurityClass: /[A-Z]{1}/;
-    fileCopyNumber: /[0-9]{5}/;
-    fileNumOfCopies: /[0-9]{5}/;
-    encryption: /[0-9]{1}/;
-    fileBgColor: /[A-Z0-9]{3}/;
-    originStationID: /[A-Z0-9]{10}/;
-    fileDateTime: /[0-9]{14}/;
-    fileHeaderLength: uint16;
-    fileUserDataLength: uint16;
-    : skip &length=(fileHeaderLength - 112);
-    userData: bytes &size=fileUserDataLength;
-};
-
-public type ImageSegmentHeader = unit {
-    imageID: /[A-Z0-9]{10}/;
-    imageDateTime: /[0-9]{14}/;
-    targetID: /[A-Z0-9]{17}/;
-    imageTitle: /[A-Z0-9]{80}/;
-    imageSecurityClass: /[A-Z]{1}/;
-    encryption: /[0-9]{1}/;
-    imageFormat: /[A-Z]{1}/;
-    numBlocksPerRow: uint16;
-    numBlocksPerCol: uint16;
-    numPixelsPerBlockHorz: uint16;
-    numPixelsPerBlockVert: uint16;
-    numBitsPerPixel: uint16;
-    imageCompression: /[A-Z0-9]{2}/;
-    imageCompressionRateCode: /[A-Z0-9]{4}/;
-    imageHeaderLength: uint16;
-    : skip &length=(imageHeaderLength - 133);
-};
-
-public type ImageData = unit {
-    data: bytes &size;
+    FHDR:      bytes &size=9;   // File Header and Version
+    CLEVEL:    bytes &size=2;   // Complexity Level
+    STYPE:     bytes &size=4;   // Standard Type
+    OSTAID:    bytes &size=10;  // Originating Station ID
+    FDT:       bytes &size=14;  // File Date and Time
+    FTITLE:    bytes &size=80;  // File Title
+    FSCLAS:    bytes &size=1;   // Security Classification
+    FSCLSY:    bytes &size=2;   // Security Classification System
+    FSCODE:    bytes &size=11;  // Codewords
+    FSCTLH:    bytes &size=2;   // Control and Handling
+    FSREL:     bytes &size=20;  // Release Instructions
+    FSDCTP:    bytes &size=2;   // Declassification Type
+    FSDCDT:    bytes &size=8;   // Declassification Date
+    FSDCXM:    bytes &size=4;   // Declassification Exemption
+    FSORGN:    bytes &size=24;  // Originating Organization
+    FSCAUT:    bytes &size=40;  // Classification Authority
+    FSCTLN:    bytes &size=15;  // Security Control Number
+    FSCOP:     bytes &size=5;   // Copy Number
+    FSCPYS:    bytes &size=5;   // Number of Copies
+    ENCRYP:    bytes &size=1;   // Encryption
+    FBKGC:     bytes &size=3;   // Background Color
+    ONAME:     bytes &size=24;  // Originator's Name
+    OPHONE:    bytes &size=18;  // Originator's Phone Number
 };
 
 public type ImageSegment = unit {
-    header: ImageSegmentHeader;
-    imageData: ImageData;
+    IID1:     bytes &size=10;  // Image Identifier 1
+    IDATIM:   bytes &size=14;  // Image Date and Time
+    TGTID:    bytes &size=17;  // Target Identifier
+    IID2:     bytes &size=80;  // Image Identifier 2
+    ISCLAS:   bytes &size=1;   // Security Classification
+    ISCLSY:   bytes &size=2;   // Security Classification System
+    ISCODE:   bytes &size=11;  // Codewords
+    ISCTLH:   bytes &size=2;   // Control and Handling
+    ISREL:    bytes &size=20;  // Release Instructions
+    ISDCTP:   bytes &size=2;   // Declassification Type
+    ISDCDT:   bytes &size=8;   // Declassification Date
+    ISDCXM:   bytes &size=4;   // Declassification Exemption
+    ISORGN:   bytes &size=24;  // Originating Organization
+    ISCAUT:   bytes &size=40;  // Classification Authority
+    ISCTLN:   bytes &size=15;  // Security Control Number
+    ISDWNG:   bytes &size=6;   // Downgrade
+    ISDEVT:   bytes &size=40;  // Event Type
+    ICAT:     bytes &size=8;   // Image Category
+    ABPP:     bytes &size=2;   // Actual Bits Per Pixel
+    PJUST:    bytes &size=1;   // Pixel Justification
+    ICORDS:   bytes &size=1;   // Image Coordinate System
+    IGEOLO:   bytes &size=60;  // Image Geolocation
+    NICOM:    uint16;          // Number of Image Comments
+    ICOM:     bytes[] &size=NICOM*80;  // Image Comments
+    NBANDS:   uint16;          // Number of Bands
+    IREP:     bytes &size=8;   // Image Representation
+    IC:       bytes &size=2;   // Image Compression
+    ISYNC:    bytes &size=1;   // Image Sync Code
+    IMODE:    bytes &size=1;   // Image Mode
+    NBPR:     uint16;          // Number of Blocks Per Row
+    NBPC:     uint16;          // Number of Blocks Per Column
+    NPPBH:    uint16;          // Number of Pixels Per Block Horizontal
+    NPPBV:    uint16;          // Number of Pixels Per Block Vertical
+    NBPP:     uint16;          // Number of Bits Per Pixel
+    IDLVL:    uint16;          // Image Display Level
+    IALVL:    uint16;          // Image Attachment Level
+    ILOC:     bytes &size=10;  // Image Location
+    IMAG:     bytes &size=4;   // Magnification Factor
 };
 
 public type NITFFile = unit {
     header: FileHeader;
-    imageSegments: ImageSegment[] &size=header.numImageSegments;
-    on %done {
-        print self;
-    }
+    images: ImageSegment[] &eod;
 };

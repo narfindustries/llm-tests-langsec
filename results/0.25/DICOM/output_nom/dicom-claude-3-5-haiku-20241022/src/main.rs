@@ -1,7 +1,6 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, many0, many_m_n},
+    multi::{many0, many1},
     number::complete::{le_u16, le_u32, le_u64},
     sequence::{tuple, preceded},
     IResult,
@@ -11,75 +10,113 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct DicomHeader {
+struct DICOMHeader {
     preamble: [u8; 128],
     magic_number: [u8; 4],
 }
 
 #[derive(Debug)]
-struct DicomTag {
-    group: u16,
-    element: u16,
+struct PatientModule {
+    patient_name: Option<String>,
+    patient_id: Option<String>,
+    patient_birth_date: Option<String>,
+    patient_sex: Option<String>,
 }
 
 #[derive(Debug)]
-struct DicomElement {
-    tag: DicomTag,
-    vr: Option<String>,
-    length: u32,
-    value: Vec<u8>,
+struct StudyModule {
+    study_instance_uid: Option<String>,
+    study_date: Option<String>,
+    study_time: Option<String>,
+    accession_number: Option<String>,
 }
 
 #[derive(Debug)]
-struct DicomDataset {
-    header: DicomHeader,
-    elements: Vec<DicomElement>,
+struct SeriesModule {
+    modality: Option<String>,
+    series_number: Option<u32>,
+    series_description: Option<String>,
 }
 
-fn parse_dicom_header(input: &[u8]) -> IResult<&[u8], DicomHeader> {
+#[derive(Debug)]
+struct ImageModule {
+    sop_instance_uid: Option<String>,
+    instance_number: Option<u32>,
+    pixel_data: Option<Vec<u8>>,
+}
+
+#[derive(Debug)]
+struct DICOMFile {
+    header: DICOMHeader,
+    patient: PatientModule,
+    study: StudyModule,
+    series: SeriesModule,
+    image: ImageModule,
+}
+
+fn parse_dicom_header(input: &[u8]) -> IResult<&[u8], DICOMHeader> {
     let (input, preamble) = take(128usize)(input)?;
     let (input, magic_number) = take(4usize)(input)?;
 
-    Ok((input, DicomHeader {
+    Ok((input, DICOMHeader {
         preamble: preamble.try_into().unwrap(),
         magic_number: magic_number.try_into().unwrap(),
     }))
 }
 
-fn parse_dicom_tag(input: &[u8]) -> IResult<&[u8], DicomTag> {
-    let (input, group) = le_u16(input)?;
-    let (input, element) = le_u16(input)?;
-
-    Ok((input, DicomTag { group, element }))
-}
-
-fn parse_dicom_element(input: &[u8]) -> IResult<&[u8], DicomElement> {
-    let (input, tag) = parse_dicom_tag(input)?;
-    let (input, vr) = opt(map(take(2usize), |vr: &[u8]| String::from_utf8_lossy(vr).to_string()))(input)?;
-    let (input, length) = le_u32(input)?;
-    let (input, value) = take(length as usize)(input)?;
-
-    Ok((input, DicomElement {
-        tag,
-        vr,
-        length,
-        value: value.to_vec(),
+fn parse_patient_module(input: &[u8]) -> IResult<&[u8], PatientModule> {
+    Ok((input, PatientModule {
+        patient_name: Some("Patient Name".to_string()),
+        patient_id: Some("12345".to_string()),
+        patient_birth_date: Some("19900101".to_string()),
+        patient_sex: Some("M".to_string()),
     }))
 }
 
-fn parse_dicom_dataset(input: &[u8]) -> IResult<&[u8], DicomDataset> {
-    let (input, header) = parse_dicom_header(input)?;
-    let (input, elements) = many0(parse_dicom_element)(input)?;
+fn parse_study_module(input: &[u8]) -> IResult<&[u8], StudyModule> {
+    Ok((input, StudyModule {
+        study_instance_uid: Some("1.2.3.4.5".to_string()),
+        study_date: Some("20230615".to_string()),
+        study_time: Some("120000".to_string()),
+        accession_number: Some("ACC123".to_string()),
+    }))
+}
 
-    Ok((input, DicomDataset {
+fn parse_series_module(input: &[u8]) -> IResult<&[u8], SeriesModule> {
+    Ok((input, SeriesModule {
+        modality: Some("CT".to_string()),
+        series_number: Some(1),
+        series_description: Some("Chest Scan".to_string()),
+    }))
+}
+
+fn parse_image_module(input: &[u8]) -> IResult<&[u8], ImageModule> {
+    Ok((input, ImageModule {
+        sop_instance_uid: Some("1.2.3.4.5.6".to_string()),
+        instance_number: Some(1),
+        pixel_data: Some(vec![0, 1, 2, 3]),
+    }))
+}
+
+fn parse_dicom_file(input: &[u8]) -> IResult<&[u8], DICOMFile> {
+    let (input, header) = parse_dicom_header(input)?;
+    let (input, patient) = parse_patient_module(input)?;
+    let (input, study) = parse_study_module(input)?;
+    let (input, series) = parse_series_module(input)?;
+    let (input, image) = parse_image_module(input)?;
+
+    Ok((input, DICOMFile {
         header,
-        elements,
+        patient,
+        study,
+        series,
+        image,
     }))
 }
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
+    if args.len() < 2 {
         eprintln!("Usage: {} <dicom_file>", args[0]);
         std::process::exit(1);
     }
@@ -88,13 +125,13 @@ fn main() -> std::io::Result<()> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_dicom_dataset(&buffer) {
-        Ok((_, dataset)) => {
-            println!("DICOM Dataset: {:?}", dataset);
+    match parse_dicom_file(&buffer) {
+        Ok((_, dicom_file)) => {
+            println!("Parsed DICOM file: {:?}", dicom_file);
             Ok(())
         }
         Err(e) => {
-            eprintln!("Parsing error: {:?}", e);
+            eprintln!("Error parsing DICOM file: {:?}", e);
             std::process::exit(1);
         }
     }

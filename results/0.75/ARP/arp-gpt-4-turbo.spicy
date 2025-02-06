@@ -1,21 +1,39 @@
 module ARP;
 
-public type ARP_Header = unit {
-    hwType: uint16;
-    protoType: uint16;
-    hwSize: uint8;
-    protoSize: uint8;
-    opcode: uint16;
-    senderHwAddr: bytes &size=6;
-    senderProtoAddr: bytes &size=4;
-    targetHwAddr: bytes &size=6;
-    targetProtoAddr: bytes &size=4;
+import spicy;
 
-    on %done {
-        print self;
-    }
+public type HardwareType = enum {
+    Ethernet : 1,
+    IEEE_802 : 6,
+    ARCNET : 7,
+    Frame_Relay : 15,
+    ATM : 16,
+    HDLC : 17,
+    Fibre_Channel : 18,
+    ATM19 : 19,
+    Serial_Line : 20
+};
+
+public type ProtocolType = enum {
+    IPv4 : 0x0800,
+    IPv6 : 0x86DD
+};
+
+public type Operation = enum {
+    ARP_Request : 1,
+    ARP_Reply : 2,
+    RARP_Request : 3,
+    RARP_Reply : 4
 };
 
 public type ARP_Packet = unit {
-    header: ARP_Header;
+    htype: HardwareType;
+    ptype: ProtocolType;
+    hlen: uint8;
+    plen: uint8;
+    oper: Operation;
+    sha: bytes &size=this.hlen;
+    spa: bytes &size=this.plen;
+    tha: bytes &size=this.hlen;
+    tpa: bytes &size=this.plen;
 };

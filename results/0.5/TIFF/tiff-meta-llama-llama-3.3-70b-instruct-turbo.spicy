@@ -1,85 +1,192 @@
-%header {
-    #ifdef HAVE_CONFIG_H
-    #  include "config.h"
-    #endif
-}
+module TIFF;
 
-%code {
-    #include <zeek/zeek.h>
-    #include <zeek/Spicy.h>
-    using namespace zeek::spicy;
+type byte_order = uint16;
+type magic = uint16;
+type ifd_offset = uint32;
 
-    #define DEBUG_SPICY 1
-    #if DEBUG_SPICY
-    #  define DEBUG_MSG(...) printf(__VA_ARGS__)
-    #else
-    #  define DEBUG_MSG(...)
-    #endif
-}
-
-%export {
-    #if DEBUG_SPICY
-    global log_file: file = open_log_file("spicy_debug.log");
-    #endif
-}
-
-%type tiff  = TIFF;
-%type ifd   = IFD;
-%type entry = Entry;
-
-%(include binpac_pia/zeek.pac)
-
-%parser tiff_parser {
-    tiff = $(header: TIFF_Header,
-             ifds: IFD*
-            );
+type tiff_header = struct {
+  byte_order: byte_order;
+  magic: magic;
+  ifd_offset: ifd_offset;
 };
 
-%parser ifd_parser {
-    ifd = $(tag: uint16,
-            type: uint16,
-            count: uint32,
-            value: bytestring &lengthφερ=count * (type == 1 ? 1 : type == 2 ? 1 : type == 3 ? 2 : type == 4 ? 4 : type == 5 ? 8 : type == 7 ? 1 : type == 9 ? 4 : type == 10 ? 8 : 0),
-            next_ifd: uint32 &optional &transient
-           );
+type tag = uint16;
+type type = uint16;
+type count = uint32;
+type value = uint32;
+
+type ifd_entry = struct {
+  tag: tag;
+  type: type;
+  count: count;
+  value: value;
 };
 
- TIFF_Header = record {
-    byte_order: bytestring(2);
-    magic: bytestring(2);
-    ifd_offset: uint32;
+type num_entries = uint16;
+type next_ifd_offset = uint32;
+
+type ifd = struct {
+  num_entries: num_entries;
+  entries: array(ifd_entry, num_entries);
+  next_ifd_offset: next_ifd_offset;
 };
 
-%allocator tiff {
-    header: $ctx->input()->Read(4);
-    ifd_offset: $ctx->input()->Read(4);
-    num_ifds: 1;
-    current_ifd: 0;
-    done: false;
+type image_data = bytes;
+
+type tiff = struct {
+  header: tiff_header;
+  ifd: ifd;
+  image_data: image_data;
 };
 
-%allocator ifd {
-    entry: $ctx->input()->Read(12);
-    num_entries: $(count: uint16 = $ctx->input()->Read(2), count);
-    current_entry: 0;
-    done: false;
+type field_image_width = struct {
+  tag: tag = 0x0100;
+  type: type = 0x0003;
+  count: count;
+  value: count;
 };
 
-%element entry -tag {
-    case $ctx->input()->Read(2) of {
-        254 -> $(type: uint16 = $ctx->input()->Read(2), value: uint32 = $ctx->input()->Read(4));
-        255 -> $(type: uint16 = $ctx->input()->Read(2), value: bytestring &length=4);
-        _ -> $(value: bytestring &length=$ctx->input()->Read(4));
-    }
+type field_image_length = struct {
+  tag: tag = 0x0101;
+  type: type = 0x0003;
+  count: count;
+  value: count;
 };
 
-%validator tiff {
-    DEBUG_MSG("Validating tiff...\n");
-    if ($ctx->input()->Size() < 8)
-        return false;
-    if ($ctx->input()->Read(2) != "\x49\x49")
-        return false;
-    if ($ctx->input()->Read(2) != "\x2A\x00")
-        return false;
-    return true;
+type field_bits_per_sample = struct {
+  tag: tag = 0x0102;
+  type: type = 0x0003;
+  count: count;
+  value: count;
 };
+
+type field_compression = struct {
+  tag: tag = 0x0103;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_photometric_interpretation = struct {
+  tag: tag = 0x0106;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_orientation = struct {
+  tag: tag = 0x010E;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_samples_per_pixel = struct {
+  tag: tag = 0x010F;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_planar_configuration = struct {
+  tag: tag = 0x011C;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_ycbcr_sub_sampling = struct {
+  tag: tag = 0x0212;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_ycbcr_positioning = struct {
+  tag: tag = 0x0213;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type numerator = uint32;
+type denominator = uint32;
+
+type rational = struct {
+  numerator: numerator;
+  denominator: denominator;
+};
+
+type field_x_resolution = struct {
+  tag: tag = 0x011A;
+  type: type = 0x0005;
+  count: count;
+  value: rational;
+};
+
+type field_y_resolution = struct {
+  tag: tag = 0x011B;
+  type: type = 0x0005;
+  count: count;
+  value: rational;
+};
+
+type field_resolution_unit = struct {
+  tag: tag = 0x0128;
+  type: type = 0x0003;
+  count: count;
+  value: count;
+};
+
+type field_date_time = struct {
+  tag: tag = 0x0132;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_artist = struct {
+  tag: tag = 0x013B;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_image_description = struct {
+  tag: tag = 0x010E;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_make = struct {
+  tag: tag = 0x010E;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_model = struct {
+  tag: tag = 0x010E;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_software = struct {
+  tag: tag = 0x0131;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+type field_copyright = struct {
+  tag: tag = 0x8298;
+  type: type = 0x0002;
+  count: count;
+  value: bytes;
+};
+
+let tiff_file = file("tiff_file.tiff");
+let tiff_data = read_file(tiff_file);
+let tiff_parsed = TIFF::tiff(tiff_data);

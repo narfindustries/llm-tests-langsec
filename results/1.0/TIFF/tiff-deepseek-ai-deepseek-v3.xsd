@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tiff="http://example.com/tiff"
+           targetNamespace="http://example.com/tiff"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="littleEndian" encoding="US-ASCII" lengthKind="explicit" representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="TIFF" dfdl:lengthKind="implicit">
+    <xs:complexType>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="Header" type="tiff:Header"/>
+        <xs:element name="ImageFileDirectory" type="tiff:IFD" maxOccurs="unbounded"/>
+        <xs:element name="ImageData" type="tiff:ImageData"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Header">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="ByteOrder" type="tiff:ByteOrder"/>
+      <xs:element name="Version" type="xs:short"/>
+      <xs:element name="OffsetToFirstIFD" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ByteOrder">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="II"/>
+      <xs:enumeration value="MM"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IFD">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="NumberOfDirectoryEntries" type="xs:short"/>
+      <xs:element name="DirectoryEntry" type="tiff:DirectoryEntry" maxOccurs="unbounded"/>
+      <xs:element name="OffsetToNextIFD" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DirectoryEntry">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="Tag" type="xs:short"/>
+      <xs:element name="FieldType" type="tiff:FieldType"/>
+      <xs:element name="ValueCount" type="xs:long"/>
+      <xs:element name="ValueOffset" type="xs:long"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="FieldType">
+    <xs:restriction base="xs:short">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ImageData">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="StripOffsets" type="tiff:StripOffsets"/>
+      <xs:element name="StripByteCounts" type="tiff:StripByteCounts"/>
+      <xs:element name="Data" type="tiff:Data"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StripOffsets">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="Offset" type="xs:long" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="StripByteCounts">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="ByteCount" type="xs:long" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Data">
+    <xs:sequence dfdl:sequenceKind="ordered">
+      <xs:element name="PixelData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -3,10 +3,11 @@ use nom::{
     combinator::{map, verify},
     multi::many0,
     number::complete::{be_u16, be_u8},
-    sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::env;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct JpegImage {
@@ -16,90 +17,102 @@ struct JpegImage {
 #[derive(Debug)]
 enum Segment {
     SOI,
-    APP0(APP0Segment),
-    APP1(Vec<u8>),
-    DQT(Vec<u8>),
-    SOF0(SOF0Segment),
-    DHT(Vec<u8>),
-    SOS(SOSSegment),
-    COM(Vec<u8>),
     EOI,
-    Other { marker: u8, data: Vec<u8> },
+    SOF0(FrameHeader),
+    SOF1(FrameHeader),
+    SOF2(FrameHeader),
+    DHT(HuffmanTable),
+    DQT(QuantizationTable),
+    SOS(StartOfScan),
+    APP0(App0Data),
+    APP1(App1Data),
+    DRI(RestartInterval),
+    COM(CommentData),
+    ImageData(Vec<u8>),
 }
 
 #[derive(Debug)]
-struct APP0Segment {
-    identifier: [u8; 5],
-    version: (u8, u8),
-    density_units: u8,
-    x_density: u16,
-    y_density: u16,
-    thumbnail_width: u8,
-    thumbnail_height: u8,
-    thumbnail_data: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct SOF0Segment {
+struct FrameHeader {
     precision: u8,
     height: u16,
     width: u16,
-    components: Vec<ComponentInfo>,
+    components: Vec<FrameComponent>,
 }
 
 #[derive(Debug)]
-struct ComponentInfo {
+struct FrameComponent {
     id: u8,
     sampling_factors: u8,
-    quantization_table_id: u8,
+    quantization_table: u8,
 }
 
 #[derive(Debug)]
-struct SOSSegment {
-    components: Vec<ScanComponentInfo>,
-    start_spectral: u8,
-    end_spectral: u8,
-    approx_high: u8,
-    approx_low: u8,
-    image_data: Vec<u8>,
+struct HuffmanTable {
+    class: u8,
+    destination: u8,
+    lengths: Vec<u8>,
+    values: Vec<u8>,
 }
 
 #[derive(Debug)]
-struct ScanComponentInfo {
-    component_id: u8,
-    dc_ac_table_ids: u8,
+struct QuantizationTable {
+    precision: u8,
+    table_id: u8,
+    values: Vec<u8>,
 }
 
-fn parse_app0(input: &[u8]) -> IResult<&[u8], APP0Segment> {
-    let (input, _) = be_u16(input)?;
-    let (input, identifier) = take(5usize)(input)?;
-    let (input, version_major) = be_u8(input)?;
-    let (input, version_minor) = be_u8(input)?;
-    let (input, density_units) = be_u8(input)?;
-    let (input, x_density) = be_u16(input)?;
-    let (input, y_density) = be_u16(input)?;
-    let (input, thumbnail_width) = be_u8(input)?;
-    let (input, thumbnail_height) = be_u8(input)?;
-    let thumbnail_size = (thumbnail_width as usize) * (thumbnail_height as usize) * 3;
-    let (input, thumbnail_data) = take(thumbnail_size)(input)?;
-
-    Ok((
-        input,
-        APP0Segment {
-            identifier: identifier.try_into().unwrap(),
-            version: (version_major, version_minor),
-            density_units,
-            x_density,
-            y_density,
-            thumbnail_width,
-            thumbnail_height,
-            thumbnail_data: thumbnail_data.to_vec(),
-        },
-    ))
+#[derive(Debug)]
+struct StartOfScan {
+    components: Vec<ScanComponent>,
+    spectral_start: u8,
+    spectral_end: u8,
+    approx: u8,
 }
 
-fn parse_sof0(input: &[u8]) -> IResult<&[u8], SOF0Segment> {
-    let (input, length) = be_u16(input)?;
+#[derive(Debug)]
+struct ScanComponent {
+    id: u8,
+    huffman_table: u8,
+}
+
+#[derive(Debug)]
+struct App0Data {
+    identifier: String,
+    version: u16,
+    units: u8,
+    x_density: u16,
+    y_density: u16,
+    thumb_width: u8,
+    thumb_height: u8,
+    thumb_data: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct App1Data {
+    identifier: String,
+    data: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct RestartInterval {
+    interval: u16,
+}
+
+#[derive(Debug)]
+struct CommentData {
+    data: Vec<u8>,
+}
+
+fn parse_soi(input: &[u8]) -> IResult<&[u8], Segment> {
+    map(tag(&[0xFF, 0xD8]), |_| Segment::SOI)(input)
+}
+
+fn parse_eoi(input: &[u8]) -> IResult<&[u8], Segment> {
+    map(tag(&[0xFF, 0xD9]), |_| Segment::EOI)(input)
+}
+
+fn parse_frame_header(input: &[u8]) -> IResult<&[u8], FrameHeader> {
+    let (input, _length) = be_u16(input)?;
     let (input, precision) = be_u8(input)?;
     let (input, height) = be_u16(input)?;
     let (input, width) = be_u16(input)?;
@@ -111,119 +124,172 @@ fn parse_sof0(input: &[u8]) -> IResult<&[u8], SOF0Segment> {
     for _ in 0..component_count {
         let (input, id) = be_u8(remaining)?;
         let (input, sampling_factors) = be_u8(input)?;
-        let (input, quantization_table_id) = be_u8(input)?;
-        components.push(ComponentInfo {
+        let (input, quantization_table) = be_u8(input)?;
+        components.push(FrameComponent {
             id,
             sampling_factors,
-            quantization_table_id,
+            quantization_table,
         });
         remaining = input;
     }
 
-    Ok((
-        remaining,
-        SOF0Segment {
-            precision,
-            height,
-            width,
-            components,
-        },
-    ))
+    Ok((remaining, FrameHeader {
+        precision,
+        height,
+        width,
+        components,
+    }))
 }
 
-fn parse_sos(input: &[u8]) -> IResult<&[u8], SOSSegment> {
-    let (input, length) = be_u16(input)?;
+fn parse_huffman_table(input: &[u8]) -> IResult<&[u8], HuffmanTable> {
+    let (input, _length) = be_u16(input)?;
+    let (input, info) = be_u8(input)?;
+    let class = info >> 4;
+    let destination = info & 0x0F;
+    
+    let (input, lengths) = take(16usize)(input)?;
+    let lengths = lengths.to_vec();
+    
+    let total_values: usize = lengths.iter().map(|&x| x as usize).sum();
+    let (input, values) = take(total_values)(input)?;
+    
+    Ok((input, HuffmanTable {
+        class,
+        destination,
+        lengths,
+        values: values.to_vec(),
+    }))
+}
+
+fn parse_quantization_table(input: &[u8]) -> IResult<&[u8], QuantizationTable> {
+    let (input, _length) = be_u16(input)?;
+    let (input, info) = be_u8(input)?;
+    let precision = info >> 4;
+    let table_id = info & 0x0F;
+    
+    let table_size: usize = if precision == 0 { 64 } else { 128 };
+    let (input, values) = take(table_size)(input)?;
+    
+    Ok((input, QuantizationTable {
+        precision,
+        table_id,
+        values: values.to_vec(),
+    }))
+}
+
+fn parse_start_of_scan(input: &[u8]) -> IResult<&[u8], StartOfScan> {
+    let (input, _length) = be_u16(input)?;
     let (input, component_count) = be_u8(input)?;
     
     let mut components = Vec::new();
     let mut remaining = input;
     
     for _ in 0..component_count {
-        let (input, component_id) = be_u8(remaining)?;
-        let (input, dc_ac_table_ids) = be_u8(input)?;
-        components.push(ScanComponentInfo {
-            component_id,
-            dc_ac_table_ids,
+        let (input, id) = be_u8(remaining)?;
+        let (input, huffman_table) = be_u8(input)?;
+        components.push(ScanComponent {
+            id,
+            huffman_table,
         });
         remaining = input;
     }
+    
+    let (input, spectral_start) = be_u8(remaining)?;
+    let (input, spectral_end) = be_u8(input)?;
+    let (input, approx) = be_u8(input)?;
+    
+    Ok((input, StartOfScan {
+        components,
+        spectral_start,
+        spectral_end,
+        approx,
+    }))
+}
 
-    let (input, start_spectral) = be_u8(remaining)?;
-    let (input, end_spectral) = be_u8(input)?;
-    let (input, approx_bits) = be_u8(input)?;
-    let approx_high = (approx_bits >> 4) & 0x0F;
-    let approx_low = approx_bits & 0x0F;
+fn parse_app0(input: &[u8]) -> IResult<&[u8], App0Data> {
+    let (input, _length) = be_u16(input)?;
+    let (input, identifier) = take(5usize)(input)?;
+    let identifier = String::from_utf8_lossy(identifier).to_string();
+    
+    let (input, version) = be_u16(input)?;
+    let (input, units) = be_u8(input)?;
+    let (input, x_density) = be_u16(input)?;
+    let (input, y_density) = be_u16(input)?;
+    let (input, thumb_width) = be_u8(input)?;
+    let (input, thumb_height) = be_u8(input)?;
+    
+    let thumb_size = (thumb_width as usize) * (thumb_height as usize) * 3;
+    let (input, thumb_data) = take(thumb_size)(input)?;
+    
+    Ok((input, App0Data {
+        identifier,
+        version,
+        units,
+        x_density,
+        y_density,
+        thumb_width,
+        thumb_height,
+        thumb_data: thumb_data.to_vec(),
+    }))
+}
 
-    // The rest is image data until EOI marker
-    let mut image_data = Vec::new();
-    let mut i = 0;
-    while i < input.len() {
-        if i + 1 < input.len() && input[i] == 0xFF && input[i + 1] == 0xD9 {
-            break;
-        }
-        image_data.push(input[i]);
-        i += 1;
-    }
+fn parse_app1(input: &[u8]) -> IResult<&[u8], App1Data> {
+    let (input, length) = be_u16(input)?;
+    let (input, identifier) = take(6usize)(input)?;
+    let identifier = String::from_utf8_lossy(identifier).to_string();
+    
+    let data_length = length as usize - 8;
+    let (input, data) = take(data_length)(input)?;
+    
+    Ok((input, App1Data {
+        identifier,
+        data: data.to_vec(),
+    }))
+}
 
-    Ok((
-        &input[i..],
-        SOSSegment {
-            components,
-            start_spectral,
-            end_spectral,
-            approx_high,
-            approx_low,
-            image_data,
-        },
-    ))
+fn parse_dri(input: &[u8]) -> IResult<&[u8], RestartInterval> {
+    let (input, _length) = be_u16(input)?;
+    let (input, interval) = be_u16(input)?;
+    
+    Ok((input, RestartInterval { interval }))
+}
+
+fn parse_comment(input: &[u8]) -> IResult<&[u8], CommentData> {
+    let (input, length) = be_u16(input)?;
+    let data_length = length as usize - 2;
+    let (input, data) = take(data_length)(input)?;
+    
+    Ok((input, CommentData {
+        data: data.to_vec(),
+    }))
 }
 
 fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
-    let (input, marker) = verify(be_u8, |&x| x == 0xFF)(input)?;
-    let (input, segment_type) = be_u8(input)?;
-
-    match segment_type {
-        0xD8 => Ok((input, Segment::SOI)),
-        0xE0 => map(parse_app0, Segment::APP0)(input),
-        0xE1 => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize - 2)(input)?;
-            Ok((input, Segment::APP1(data.to_vec())))
-        }
-        0xDB => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize - 2)(input)?;
-            Ok((input, Segment::DQT(data.to_vec())))
-        }
-        0xC0 => map(parse_sof0, Segment::SOF0)(input),
-        0xC4 => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize - 2)(input)?;
-            Ok((input, Segment::DHT(data.to_vec())))
-        }
-        0xDA => map(parse_sos, Segment::SOS)(input),
-        0xFE => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize - 2)(input)?;
-            Ok((input, Segment::COM(data.to_vec())))
-        }
-        0xD9 => Ok((input, Segment::EOI)),
-        _ => {
-            let (input, length) = be_u16(input)?;
-            let (input, data) = take(length as usize - 2)(input)?;
-            Ok((
-                input,
-                Segment::Other {
-                    marker: segment_type,
-                    data: data.to_vec(),
-                },
-            ))
-        }
+    let (input, marker) = verify(be_u16, |&x| x >= 0xFF00)(input)?;
+    
+    match marker {
+        0xFFD8 => parse_soi(input),
+        0xFFD9 => parse_eoi(input),
+        0xFFC0 => map(parse_frame_header, Segment::SOF0)(input),
+        0xFFC1 => map(parse_frame_header, Segment::SOF1)(input),
+        0xFFC2 => map(parse_frame_header, Segment::SOF2)(input),
+        0xFFC4 => map(parse_huffman_table, Segment::DHT)(input),
+        0xFFDB => map(parse_quantization_table, Segment::DQT)(input),
+        0xFFDA => map(parse_start_of_scan, Segment::SOS)(input),
+        0xFFE0 => map(parse_app0, Segment::APP0)(input),
+        0xFFE1 => map(parse_app1, Segment::APP1)(input),
+        0xFFDD => map(parse_dri, Segment::DRI)(input),
+        0xFFFE => map(parse_comment, Segment::COM)(input),
+        _ => Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        ))),
     }
 }
 
 fn parse_jpeg(input: &[u8]) -> IResult<&[u8], JpegImage> {
-    map(many0(parse_segment), |segments| JpegImage { segments })(input)
+    let (input, segments) = many0(parse_segment)(input)?;
+    Ok((input, JpegImage { segments }))
 }
 
 fn main() {
@@ -238,12 +304,7 @@ fn main() {
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_jpeg(&buffer) {
-        Ok((remaining, jpeg)) => {
-            println!("Successfully parsed JPEG: {:#?}", jpeg);
-            if !remaining.is_empty() {
-                println!("Warning: {} bytes remaining unparsed", remaining.len());
-            }
-        }
+        Ok((_, jpeg)) => println!("{:#?}", jpeg),
         Err(e) => eprintln!("Failed to parse JPEG: {:?}", e),
     }
 }

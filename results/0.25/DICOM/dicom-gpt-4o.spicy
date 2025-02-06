@@ -1,35 +1,23 @@
 module DICOM;
 
-import spicy;
-import zeek;
-
-public type DICOMMessage = unit {
+type DICOMHeader = unit {
     preamble: bytes &size=128;
-    prefix: bytes &size=4 &check=(self.prefix == "\x44\x49\x43\x4D"); # "DICM"
-    elements: array of DICOMElement;
+    prefix: bytes &size=4 &check=(self.prefix == b"DICM");
 };
 
-public type DICOMElement = unit {
-    tag: uint16;
-    vr: uint16;
+type DataElement = unit {
+    tag_group: uint16;
+    tag_element: uint16;
+    vr: bytes &size=2;
     length: uint32;
     value: bytes &size=self.length;
 };
 
-public global parse_dicom: function(input: string): DICOMMessage {
-    return DICOMMessage(input);
-}
+type DICOMFile = unit {
+    header: DICOMHeader;
+    elements: DataElement[];
+};
 
-event zeek_init() {
-    local file = open("sample.dcm", "r");
-    if ( file == nil ) {
-        print("Failed to open DICOM file.");
-        return;
-    }
-
-    local data = file.read(file.size());
-    file.close();
-
-    local dicom = parse_dicom(data);
-    print(fmt("Parsed DICOM with %d elements", |dicom.elements|));
-}
+public type DICOM = unit {
+    file: DICOMFile;
+};

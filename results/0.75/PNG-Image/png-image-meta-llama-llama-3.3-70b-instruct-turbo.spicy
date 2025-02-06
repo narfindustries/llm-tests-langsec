@@ -1,77 +1,297 @@
-# Zeek Spicy Specification for PNG Image Parsing
+module PNG_Image;
 
-%header {
-    # Import necessary modules
-    import zeek(spicy/bridge);
-}
+type png_file = record {
+  signature = /89 50 4e 47 0d 0a 1a 0a/,
+  chunks = chunk*
+};
 
-%config {
-    # Set module path for PNG library
-    module_path = "/usr/local/lib";
-}
+type chunk = record {
+  length = uint32,
+  type = string[4],
+  data = byte[length],
+  crc = uint32
+};
 
-%definition png_image {
-    magic = "\x89PNG\r\n\x1a\n";
+type ihdr_chunk = record {
+  width = uint32,
+  height = uint32,
+  bit_depth = uint8,
+  color_type = uint8,
+  compression_method = uint8,
+  filter_method = uint8,
+  interlace_method = uint8
+};
 
-    # PNG file signature (8 bytes)
-    signature: bytestring(8) = magic;
+type idat_chunk = record {
+  data = byte*
+};
 
-    # IHDR chunk (25 bytes)
-    ihdr: ihdr_chunk;
+type iend_chunk = record {
+};
 
-    # IDAT chunk(s)
-    idat: idat_chunk*;
+type plte_chunk = record {
+  palette_entries = plte_entry*
+};
 
-    # IEND chunk (12 bytes)
-    iend: iend_chunk;
+type plte_entry = record {
+  red = uint8,
+  green = uint8,
+  blue = uint8
+};
 
-    # Ensure IHDR chunk is present and valid
-    condition = ihdr.width > 0 && ihdr.height > 0;
+type trns_chunk = record {
+  transparency_data = byte*
+};
 
-    # Extract relevant metadata
-    metadata: png_metadata = {
-        width = ihdr.width,
-        height = ihdr.height,
-        bit_depth = ihdr.bit_depth,
-        color_type = ihdr.color_type,
-        compression_method = ihdr.compression_method,
-        filter_method = ihdr.filter_method,
-        interlace_method = ihdr.interlace_method
-    };
-}
+type chrm_chunk = record {
+  white_point_x = uint32,
+  white_point_y = uint32,
+  red_x = uint32,
+  red_y = uint32,
+  green_x = uint32,
+  green_y = uint32,
+  blue_x = uint32,
+  blue_y = uint32
+};
 
-%definition ihdr_chunk {
-    length: uint32 = 13;
-    type: bytestring(4) = "IHDR";
-    width: uint32;
-    height: uint32;
-    bit_depth: uint8;
-    color_type: uint8;
-    compression_method: uint8;
-    filter_method: uint8;
-    interlace_method: uint8;
-    crc: uint32;
-}
+type gama_chunk = record {
+  gamma_value = uint32
+};
 
-%definition idat_chunk {
-    length: uint32;
-    type: bytestring(4) = "IDAT";
-    data: bytestring(length);
-    crc: uint32;
-}
+type iccp_chunk = record {
+  profile_name = string,
+  compression_method = uint8,
+  compressed_profile = byte*
+};
 
-%definition iend_chunk {
-    length: uint32 = 0;
-    type: bytestring(4) = "IEND";
-    crc: uint32 = 0xae426082;
-}
+type sbit_chunk = record {
+  significant_bits = sbit_entry*
+};
 
-%definition png_metadata {
-    width: uint32;
-    height: uint32;
-    bit_depth: uint8;
-    color_type: uint8;
-    compression_method: uint8;
-    filter_method: uint8;
-    interlace_method: uint8;
+type sbit_entry = record {
+  gray = uint8,
+  red = uint8,
+  green = uint8,
+  blue = uint8,
+  alpha = uint8
+};
+
+type srgb_chunk = record {
+};
+
+type bkgd_chunk = record {
+  background_color = byte*
+};
+
+type hist_chunk = record {
+  histogram_data = byte*
+};
+
+type phys_chunk = record {
+  pixels_per_unit_x = uint32,
+  pixels_per_unit_y = uint32,
+  unit_specifier = uint8
+};
+
+type splte_chunk = record {
+  palette_name = string,
+  palette_entries = plte_entry*
+};
+
+type time_chunk = record {
+  year = uint16,
+  month = uint8,
+  day = uint8,
+  hour = uint8,
+  minute = uint8,
+  second = uint8
+};
+
+let png_file_parser = $(
+  .signature ==>
+  .chunks ==>
+  repeat(
+    .length ==>
+    .type ==>
+    conditional(.type == "IHDR", 
+      .data ==>
+      ihdr_chunk_parser
+    ) 
+    ||
+    conditional(.type == "IDAT", 
+      .data ==>
+      idat_chunk_parser
+    ) 
+    ||
+    conditional(.type == "IEND", 
+      .data ==>
+      iend_chunk_parser
+    ) 
+    ||
+    conditional(.type == "PLTE", 
+      .data ==>
+      plte_chunk_parser
+    ) 
+    ||
+    conditional(.type == "tRNS", 
+      .data ==>
+      trns_chunk_parser
+    ) 
+    ||
+    conditional(.type == "cHRM", 
+      .data ==>
+      chrm_chunk_parser
+    ) 
+    ||
+    conditional(.type == "gAMA", 
+      .data ==>
+      gama_chunk_parser
+    ) 
+    ||
+    conditional(.type == "iCCP", 
+      .data ==>
+      iccp_chunk_parser
+    ) 
+    ||
+    conditional(.type == "sBIT", 
+      .data ==>
+      sbit_chunk_parser
+    ) 
+    ||
+    conditional(.type == "sRGB", 
+      .data ==>
+      srgb_chunk_parser
+    ) 
+    ||
+    conditional(.type == "bKGD", 
+      .data ==>
+      bkgd_chunk_parser
+    ) 
+    ||
+    conditional(.type == "hIST", 
+      .data ==>
+      hist_chunk_parser
+    ) 
+    ||
+    conditional(.type == "pHYs", 
+      .data ==>
+      phys_chunk_parser
+    ) 
+    ||
+    conditional(.type == "sPLT", 
+      .data ==>
+      splte_chunk_parser
+    ) 
+    ||
+    conditional(.type == "tIME", 
+      .data ==>
+      time_chunk_parser
+    ), 
+    until(false)
+  )
+);
+
+let ihdr_chunk_parser = $(
+  .width ==>
+  .height ==>
+  .bit_depth ==>
+  .color_type ==>
+  .compression_method ==>
+  .filter_method ==>
+  .interlace_method ==>
+);
+
+let idat_chunk_parser = $(
+  .data ==>
+);
+
+let iend_chunk_parser = $(
+);
+
+let plte_chunk_parser = $(
+  repeat(
+    .red ==>
+    .green ==>
+    .blue ==>
+    plte_entry, 
+    until(false)
+  )
+);
+
+let trns_chunk_parser = $(
+  .transparency_data ==>
+);
+
+let chrm_chunk_parser = $(
+  .white_point_x ==>
+  .white_point_y ==>
+  .red_x ==>
+  .red_y ==>
+  .green_x ==>
+  .green_y ==>
+  .blue_x ==>
+  .blue_y ==>
+);
+
+let gama_chunk_parser = $(
+  .gamma_value ==>
+);
+
+let iccp_chunk_parser = $(
+  .profile_name ==>
+  .compression_method ==>
+  .compressed_profile ==>
+);
+
+let sbit_chunk_parser = $(
+  repeat(
+    .gray ==>
+    .red ==>
+    .green ==>
+    .blue ==>
+    .alpha ==>
+    sbit_entry, 
+    until(false)
+  )
+);
+
+let srgb_chunk_parser = $(
+);
+
+let bkgd_chunk_parser = $(
+  .background_color ==>
+);
+
+let hist_chunk_parser = $(
+  .histogram_data ==>
+);
+
+let phys_chunk_parser = $(
+  .pixels_per_unit_x ==>
+  .pixels_per_unit_y ==>
+  .unit_specifier ==>
+);
+
+let splte_chunk_parser = $(
+  .palette_name ==>
+  repeat(
+    .red ==>
+    .green ==>
+    .blue ==>
+    plte_entry, 
+    until(false)
+  )
+);
+
+let time_chunk_parser = $(
+  .year ==>
+  .month ==>
+  .day ==>
+  .hour ==>
+  .minute ==>
+  .second ==>
+);
+
+export {
+  png_file_parser
 }

@@ -1,42 +1,39 @@
 module TIFF;
 
-import spicy;
-import zeek;
-
-public type File = unit {
-    header: Header;
-    entries: Entries;
+public type Header = unit {
+    byteorder: bytes(2);
+    magic: uint16;
+    first_ifd_offset: uint32;
 };
 
-type Header = unit {
-    magic_number: bytes(2) &requires=$$ == b"\x49\x49" || $$ == b"\x4D\x4D";
-    version: uint16;
-    ifd_offset: uint32;
+type Tag = unit {
+    tag_id: uint16;
+    field_type: uint16;
+    field_count: uint32;
+    field_value: uint32;
 };
 
-type Entries = unit {
+type IFD = unit {
     num_entries: uint16;
-    entry: Entry[num_entries];
+    tags: Tag[num_entries];
     next_ifd_offset: uint32;
 };
 
-type Entry = unit {
-    tag: uint16;
-    field_type: uint16;
-    num_values: uint32;
-    value_or_offset: uint32;
+type RationalValue = unit {
+    numerator: uint32;
+    denominator: uint32;
 };
 
-public function generate_log(f: File) {
-    zeek::log_record("tiff", [
-        $tag = "header", 
-        $magic_number = f.header.magic_number,
-        $version = f.header.version
-    ]);
-}
+type ImageParams = unit {
+    width: uint32;
+    height: uint32;
+    bits_per_sample: uint16;
+    compression: uint16;
+    photometric_interpretation: uint16;
+};
 
-public type Parser = unit {
-    file: File {
-        -> done;
-    }
-} &kind="file";
+public type TIFFFile = unit {
+    header: Header;
+    first_ifd: IFD;
+    image_data: bytes &eod;
+};

@@ -1,39 +1,146 @@
-@header {
-  import "HTTP.pac"
-}
+module http;
 
-type HTTP_Message = record {
-  request_line: Request_Line,
-  headers: Header*,
-  body: bytestring,
+type http_version: uint16;
+type http_method: enum {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE
 };
-
-type Request_Line = record {
-  method: string(1..10),
-  request_uri: string(1..100),
-  http_version: string(1..10),
+type http_status_code: uint16;
+type http_reason_phrase: string;
+type http_request_line: record {
+    method: http_method;
+    request_uri: string;
+    http_version: http_version;
 };
-
-type Header = record {
-  name: string(1..50),
-  value: string(1..100),
+type http_status_line: record {
+    http_status_code: http_status_code;
+    reason_phrase: http_reason_phrase;
+    http_version: http_version;
 };
-
-refine type HTTP_Message += {
-  &request_line method == "GET" => {
-    body: bytestring &length=0,
-  };
-  &headers ~= {
-    name: "Host",
-    value: string(1..100),
-  };
-  &request_line http_version == "HTTP/1.1" => {
-    &headers ~= {
-      name: "Connection",
-      value: "close",
-    };
-  };
+type http_header_name: string;
+type http_header_value: string;
+type http_header: record {
+    name: http_header_name;
+    value: http_header_value;
 };
-
-# Compiler commands and build settings
-# Compile with spicyc -j -o output_spicy/http-1/tmp.hlto http-1.1-meta-llama-llama-3.3-70b-instruct-turbo.spicy
+type http_headers: vector of http_header;
+type http_request: record {
+    request_line: http_request_line;
+    headers: http_headers;
+    body: string;
+};
+type http_response: record {
+    status_line: http_status_line;
+    headers: http_headers;
+    body: string;
+};
+type http_message: enum {
+    request: http_request;
+    response: http_response;
+};
+type http_accept: record {
+    media_range: string;
+    accept_params: vector of string;
+};
+type http_accept_charset: record {
+    charset: string;
+    q: uint16;
+    accept_charset_params: vector of string;
+};
+type http_accept_encoding: record {
+    content_coding: string;
+    q: uint16;
+    accept_encoding_params: vector of string;
+};
+type http_accept_language: record {
+    language_range: string;
+    q: uint16;
+    accept_language_params: vector of string;
+};
+type http_authorization: record {
+    auth_scheme: string;
+    auth_params: vector of string;
+};
+type http_cache_control: record {
+    cache_directive: string;
+    cache_directive_params: vector of string;
+};
+type http_connection: record {
+    connection_token: string;
+    connection_params: vector of string;
+};
+type http_content_encoding: record {
+    content_coding: string;
+    content_encoding_params: vector of string;
+};
+type http_content_language: record {
+    language_tag: string;
+    content_language_params: vector of string;
+};
+type http_content_length: uint64;
+type http_content_location: string;
+type http_content_md5: string;
+type http_content_range: record {
+    byte_range_spec: string;
+    instance_length: uint64;
+};
+type http_content_type: record {
+    media_type: string;
+    content_type_params: vector of string;
+};
+type http_date: string;
+type http_etag: string;
+type http_expires: string;
+type http_from: string;
+type http_host: string;
+type http_if_match: string;
+type http_if_modified_since: string;
+type http_if_none_match: string;
+type http_if_range: string;
+type http_if_unmodified_since: string;
+type http_last_modified: string;
+type http_location: string;
+type http_max_forwards: uint16;
+type http_proxy_authorization: record {
+    auth_scheme: string;
+    auth_params: vector of string;
+};
+type http_range: record {
+    byte_range_spec: string;
+    byte_range_spec_params: vector of string;
+};
+type http_referer: string;
+type http_te: record {
+    t_codings: string;
+    trailer: string;
+};
+type http_trailer: string;
+type http_transfer_encoding: record {
+    transfer_coding: string;
+    transfer_encoding_params: vector of string;
+};
+type http_upgrade: record {
+    protocol: string;
+    protocol_version: string;
+};
+type http_user_agent: string;
+type http_vary: string;
+type http_via: record {
+    received_protocol: string;
+    received_protocol_params: vector of string;
+};
+type http_warning: record {
+    warn_code: uint16;
+    warn_agent: string;
+    warn_text: string;
+};
+type http_www_authenticate: record {
+    challenge: string;
+    challenge_params: vector of string;
+};

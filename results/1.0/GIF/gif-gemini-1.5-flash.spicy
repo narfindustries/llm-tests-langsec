@@ -1,28 +1,50 @@
-#ifndef GIF_GEMINI_1_5_FLASH_SPICY
-#define GIF_GEMINI_1_5_FLASH_SPICY
+module GIF;
 
-event gif_gemini_1_5_flash_event(uint8 frame_number, uint8 animation_delay) {
-    // Placeholder for actual event data
+type gif_header {
+	signature: bytes:4 = "GIF89a";
+	logical_screen_descriptor: gif_logical_screen_descriptor;
+	global_color_table: optional gif_global_color_table;
 }
 
-
-function gif_gemini_1_5_flash_decode(uint8[] data) : record {
-    // Placeholder for decoding logic. 
-    //  This should handle the specifics of the GIF format and extract relevant information
-    //  like frame numbers and animation delays.  The error suggests issues with compilation,
-    //  likely related to this section.  Replace this with your actual decoding logic.  Consider
-    //  error handling and robust parsing.
-
-    return (frame_number=0, animation_delay=0); //Replace with decoded values
+type gif_logical_screen_descriptor {
+	width: uint16;
+	height: uint16;
+	packed_fields: uint8;
 }
 
-
-event zeek_main() {
-    // Example usage. Replace with your actual data source.
-    uint8[] gif_data = read_file("/path/to/your/gif.gif"); // Replace with your gif file path
-    
-    record result = gif_gemini_1_5_flash_decode(gif_data);
-    gif_gemini_1_5_flash_event(result.frame_number, result.animation_delay);
+type gif_global_color_table {
+    entries_count: uint16;
+	entries: array[entries_count, gif_color_entry];
 }
 
-#endif
+type gif_color_entry {
+	red: uint8;
+	green: uint8;
+	blue: uint8;
+}
+
+type gif_image_descriptor {
+	image_separator: uint8 = 0x2C;
+	image_left_position: uint16;
+	image_top_position: uint16;
+	image_width: uint16;
+	image_height: uint16;
+	packed_fields: uint8;
+	local_color_table: optional gif_local_color_table;
+	image_data: gif_image_data;
+}
+
+type gif_local_color_table {
+    entries_count: uint16;
+	entries: array[entries_count, gif_color_entry];
+}
+
+type gif_image_data {
+	data: bytes;
+}
+
+type gif {
+	header: gif_header;
+	image_descriptors: array[count, gif_image_descriptor];
+	trailer: uint8 = 0x3B;
+}

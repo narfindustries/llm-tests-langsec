@@ -1,83 +1,123 @@
-Here's an updated Daedalus specification addressing potential compilation issues:
+def PngSignature = {
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+}
 
-module PNGImage
+type ColorType =
+    | Grayscale
+    | RGB
+    | Palette
+    | GrayscaleAlpha
+    | RGBAlpha
 
-// PNG image decoder and encoder
-type PNGImage {
-    width: Int,
-    height: Int,
+type InterlaceMethod =
+    | NoInterlace
+    | Adam7Interlace
+
+type CompressionMethod =
+    | Deflate
+
+type FilterMethod =
+    | AdaptiveFiltering
+
+type RenderingIntent =
+    | Perceptual
+    | RelativeColorimetric
+    | Saturation
+    | AbsoluteColorimetric
+
+type ChunkType =
+    | IHDR
+    | PLTE
+    | IDAT
+    | IEND
+    | tRNS
+    | cHRM
+    | gAMA
+    | iCCP
+    | sBIT
+    | sRGB
+    | tEXt
+    | zTXt
+    | iTXt
+    | bKGD
+    | pHYs
+    | sTER
+
+type PngChunk = {
+    length: U32,
+    type: ChunkType,
+    data: Bytes(length),
+    crc: U32
+}
+
+type ImageHeader = {
+    width: U32 where width > 0 and width < 2^31,
+    height: U32 where height > 0 and height < 2^31,
+    bitDepth: U8 where bitDepth in [1, 2, 4, 8, 16],
     colorType: ColorType,
-    data: Bytes
+    compressionMethod: CompressionMethod,
+    filterMethod: FilterMethod,
+    interlaceMethod: InterlaceMethod
 }
 
-enum ColorType {
-    Grayscale,
-    RGB,
-    Indexed,
-    GrayscaleAlpha,
-    RGBA
+type Palette = {
+    entries: List<(U8, U8, U8)> where len(entries) <= 256
 }
 
-// PNG file signature
-const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10]
+type Transparency = 
+    | PaletteAlpha of List<U8>
+    | GrayscaleAlpha of U16
+    | RGBAlpha of (U16, U16, U16)
 
-// IHDR chunk structure
-type ImageHeader {
-    width: Int32be,
-    height: Int32be,
-    bitDepth: U8,
-    colorType: U8,
+type ChromaticityPoints = {
+    whiteX: U32,
+    whiteY: U32,
+    redX: U32,
+    redY: U32,
+    greenX: U32,
+    greenY: U32,
+    blueX: U32,
+    blueY: U32
+}
+
+type PhysicalDimensions = {
+    pixelsPerUnitX: U32,
+    pixelsPerUnitY: U32,
+    unitSpecifier: U8
+}
+
+type StandardRGB = {
+    renderingIntent: RenderingIntent
+}
+
+type TextChunk = {
+    keyword: Str,
+    text: Str
+}
+
+type CompressedTextChunk = {
+    keyword: Str,
     compressionMethod: U8,
-    filterMethod: U8,
-    interlaceMethod: U8
+    compressedText: Bytes
 }
 
-// PNG chunk structure
-type Chunk {
-    length: Int32be,
-    type: Bytes(4),
-    data: Bytes,
-    crc: Int32be
+type InternationalTextChunk = {
+    keyword: Str,
+    compressionFlag: U8,
+    compressionMethod: U8,
+    languageTag: Str,
+    translatedKeyword: Str,
+    text: Str
 }
 
-// Main PNG parsing function
-function parsePNG(input: Bytes) -> PNGImage {
-    // Validate PNG signature
-    assert input[0:8] == PNG_SIGNATURE;
+type BackgroundColor = 
+    | PaletteBackground of U8
+    | GrayscaleBackground of U16
+    | RGBBackground of (U16, U16, U16)
 
-    // Find and parse IHDR chunk
-    let ihdrChunk = findChunk(input, "IHDR");
-    let header = parseImageHeader(ihdrChunk.data);
-
-    // Return parsed PNG image
-    return PNGImage {
-        width: header.width,
-        height: header.height,
-        colorType: mapColorType(header.colorType),
-        data: extractImageData(input)
-    }
-}
-
-function findChunk(input: Bytes, chunkType: String) -> Chunk {
-    // Implementation to locate and parse specific chunk
-    // Error handling and chunk validation
-}
-
-function parseImageHeader(data: Bytes) -> ImageHeader {
-    // Decode and validate image header
-}
-
-function mapColorType(typeCode: U8) -> ColorType {
-    match typeCode {
-        0 => ColorType.Grayscale,
-        2 => ColorType.RGB,
-        3 => ColorType.Indexed,
-        4 => ColorType.GrayscaleAlpha,
-        6 => ColorType.RGBA,
-        _ => error("Unsupported color type")
-    }
-}
-
-function extractImageData(input: Bytes) -> Bytes {
-    // Extract and decompress image data
+type PngFile = {
+    signature: PngSignature,
+    chunks: List<PngChunk> where
+        chunks[0].type == ChunkType.IHDR and
+        chunks[len(chunks)-1].type == ChunkType.IEND
 }

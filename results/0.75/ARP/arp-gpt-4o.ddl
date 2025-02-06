@@ -1,17 +1,28 @@
-module ARPProtocol
+struct ARP {
+    // Hardware Type
+    uint16 htype;
 
-import std::network
+    // Protocol Type
+    uint16 ptype;
 
-type ARP = record {
-    htype: uint16;       // Hardware type
-    ptype: uint16;       // Protocol type
-    hlen: uint8;         // Hardware address length
-    plen: uint8;         // Protocol address length
-    oper: uint16;        // Operation
-    sha: bytes[hlen];    // Sender hardware address
-    spa: bytes[plen];    // Sender protocol address
-    tha: bytes[hlen];    // Target hardware address
-    tpa: bytes[plen];    // Target protocol address
+    // Hardware Address Length
+    uint8 hlen;
+
+    // Protocol Address Length
+    uint8 plen;
+
+    // Operation
+    uint16 oper;
+
+    // Sender Hardware Address (variable length based on hlen)
+    byte sha[hlen];
+
+    // Sender Protocol Address (variable length based on plen)
+    byte spa[plen];
+
+    // Target Hardware Address (variable length based on hlen)
+    byte tha[hlen];
+
+    // Target Protocol Address (variable length based on plen)
+    byte tpa[plen];
 }
-
-root ARP

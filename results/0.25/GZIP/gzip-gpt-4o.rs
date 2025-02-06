@@ -1,27 +1,13 @@
-// Cargo.toml dependencies:
-// [dependencies]
-// nom = "7.1"
-// clap = { version = "4.0", features = ["derive"] }
-
-use clap::Parser;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_opt, map_res, opt},
-    error::Error,
-    multi::many0,
+    combinator::map_res,
     number::complete::{le_u16, le_u32, le_u8},
-    sequence::{preceded, tuple},
+    sequence::tuple,
     IResult,
 };
 use std::fs::File;
-use std::io::{self, Read};
-use std::path::PathBuf;
-
-#[derive(Parser)]
-struct Cli {
-    /// Input binary file
-    input: PathBuf,
-}
+use std::io::Read;
+use std::env;
 
 #[derive(Debug)]
 struct GzipHeader {
@@ -30,27 +16,19 @@ struct GzipHeader {
     compression_method: u8,
     flags: u8,
     mtime: u32,
-    extra_flags: u8,
+    xfl: u8,
     os: u8,
     extra: Option<Vec<u8>>,
-    filename: Option<String>,
-    comment: Option<String>,
-    crc16: Option<u16>,
+    fname: Option<String>,
+    fcomment: Option<String>,
+    fhcrc: Option<u16>,
 }
 
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, (id1, id2)) = tuple((le_u8, le_u8))(input)?;
-    if id1 != 0x1f || id2 != 0x8b {
-        return Err(nom::Err::Error(Error::new(input, nom::error::ErrorKind::Tag)));
-    }
+    let (input, (id1, id2, compression_method, flags, mtime, xfl, os)) =
+        tuple((le_u8, le_u8, le_u8, le_u8, le_u32, le_u8, le_u8))(input)?;
 
-    let (input, compression_method) = le_u8(input)?;
-    let (input, flags) = le_u8(input)?;
-    let (input, mtime) = le_u32(input)?;
-    let (input, extra_flags) = le_u8(input)?;
-    let (input, os) = le_u8(input)?;
-
-    let (input, extra) = if flags & 0b00000100 != 0 {
+    let (input, extra) = if flags & 0b0000_0100 != 0 {
         let (input, xlen) = le_u16(input)?;
         let (input, extra) = take(xlen)(input)?;
         (input, Some(extra.to_vec()))
@@ -58,27 +36,23 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
         (input, None)
     };
 
-    let (input, filename) = if flags & 0b00001000 != 0 {
-        let (input, filename) = map_res(take_until_null, |bytes: &[u8]| {
-            std::str::from_utf8(bytes).map(String::from)
-        })(input)?;
-        (input, Some(filename))
+    let (input, fname) = if flags & 0b0000_1000 != 0 {
+        let (input, fname) = take_until_null(input)?;
+        (input, Some(fname))
     } else {
         (input, None)
     };
 
-    let (input, comment) = if flags & 0b00010000 != 0 {
-        let (input, comment) = map_res(take_until_null, |bytes: &[u8]| {
-            std::str::from_utf8(bytes).map(String::from)
-        })(input)?;
-        (input, Some(comment))
+    let (input, fcomment) = if flags & 0b0001_0000 != 0 {
+        let (input, fcomment) = take_until_null(input)?;
+        (input, Some(fcomment))
     } else {
         (input, None)
     };
 
-    let (input, crc16) = if flags & 0b00000010 != 0 {
-        let (input, crc16) = le_u16(input)?;
-        (input, Some(crc16))
+    let (input, fhcrc) = if flags & 0b0000_0010 != 0 {
+        let (input, fhcrc) = le_u16(input)?;
+        (input, Some(fhcrc))
     } else {
         (input, None)
     };
@@ -91,20 +65,20 @@ fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
             compression_method,
             flags,
             mtime,
-            extra_flags,
+            xfl,
             os,
             extra,
-            filename,
-            comment,
-            crc16,
+            fname,
+            fcomment,
+            fhcrc,
         },
     ))
 }
 
-fn take_until_null(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    let (input, data) = take_while(|b| b != 0)(input)?;
-    let (input, _) = tag(&[0])(input)?;
-    Ok((input, data))
+fn take_until_null(input: &[u8]) -> IResult<&[u8], String> {
+    map_res(take_while(|b| b != 0), |bytes: &[u8]| {
+        String::from_utf8(bytes.to_vec())
+    })(input)
 }
 
 fn take_while<F>(cond: F) -> impl Fn(&[u8]) -> IResult<&[u8], &[u8]>
@@ -117,17 +91,20 @@ where
     }
 }
 
-fn main() -> io::Result<()> {
-    let args = Cli::parse();
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file>", args[0]);
+        std::process::exit(1);
+    }
 
-    let mut file = File::open(args.input)?;
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_gzip_header(&buffer) {
         Ok((_, header)) => println!("{:?}", header),
         Err(e) => eprintln!("Failed to parse GZIP header: {:?}", e),
     }
-
-    Ok(())
 }

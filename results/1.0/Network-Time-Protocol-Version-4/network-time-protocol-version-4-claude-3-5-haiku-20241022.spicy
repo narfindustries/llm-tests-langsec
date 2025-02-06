@@ -3,42 +3,60 @@ module NTP;
 import spicy;
 
 public type Packet = unit {
-    leap_indicator: bitfield(2) {
-        no_warning:      0x0;
-        last_minute_61s: 0x1;
-        last_minute_59s: 0x2;
-        alarm_condition: 0x3;
+    header: Header;
+
+    type Header = unit {
+        leap_indicator: bitfield(2);
+        version: bitfield(3);
+        mode: bitfield(3);
+        stratum: uint8;
+        poll: int8;
+        precision: int8;
+        root_delay: uint32;
+        root_dispersion: uint32;
+        reference_id: bytes(4);
+        reference_timestamp: uint64;
+        origin_timestamp: uint64;
+        receive_timestamp: uint64;
+        transmit_timestamp: uint64;
+
+        on leap_indicator {
+            self.leap_indicator = {
+                0b00: "no_warning",
+                0b01: "last_minute_61_sec",
+                0b10: "last_minute_59_sec",
+                0b11: "clock_unsynchronized"
+            };
+        }
+
+        on version {
+            self.version = {
+                1: "v1",
+                2: "v2",
+                3: "v3",
+                4: "v4"
+            };
+        }
+
+        on mode {
+            self.mode = {
+                0: "reserved",
+                1: "symmetric_active",
+                2: "symmetric_passive",
+                3: "client",
+                4: "server",
+                5: "broadcast",
+                6: "ntp_control",
+                7: "private_use"
+            };
+        }
+
+        on stratum {
+            self.stratum = {
+                0: "unspecified",
+                1: "primary_reference",
+                range(2, 255): "secondary_reference"
+            };
+        }
     };
-
-    version: bitfield(3) {
-        v1: 0x1;
-        v2: 0x2;
-        v3: 0x3;
-        v4: 0x4;
-    };
-
-    mode: bitfield(3) {
-        symmetric_active:  0x1;
-        symmetric_passive: 0x2;
-        client:            0x3;
-        server:            0x4;
-        broadcast:         0x5;
-        reserved_control:  0x6;
-        private:           0x7;
-    };
-
-    stratum: uint8;
-    poll_interval: int8;
-    precision: int8;
-    root_delay: bytes(4);
-    root_dispersion: bytes(4);
-    reference_id: bytes(4);
-    reference_timestamp: bytes(8);
-    originate_timestamp: bytes(8);
-    receive_timestamp: bytes(8);
-    transmit_timestamp: bytes(8);
-
-    : void {
-        validate(self.version == version::v4);
-    }
 };

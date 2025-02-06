@@ -1,86 +1,120 @@
 use nom::{
-    be_u8, be_u16, be_u32, be_u64,
     bytes::complete::take,
-    combinator::map,
-    multi::length_count,
-    sequence::{tuple, preceded},
+    combinator::{map, opt},
+    multi::count,
+    number::complete::{be_i32, be_i64, be_u32, be_u8},
     IResult,
 };
-use std::fs::read;
-use std::env;
+use std::fs;
+use std::path::Path;
 
 #[derive(Debug)]
 struct Transaction {
-    version: u32,
+    version: i32,
     inputs: Vec<TxIn>,
     outputs: Vec<TxOut>,
-    lock_time: u32,
+    locktime: u32,
+    witness: Option<Vec<Vec<Vec<u8>>>>,
 }
 
 #[derive(Debug)]
 struct TxIn {
-    prev_hash: [u8; 32],
-    prev_index: u32,
+    prev_out: (Vec<u8>, u32),
     script_sig: Vec<u8>,
     sequence: u32,
 }
 
 #[derive(Debug)]
 struct TxOut {
-    value: u64,
+    value: i64,
     script_pubkey: Vec<u8>,
 }
 
+fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
+    let (rest, first) = be_u8(input)?;
+    match first {
+        0xfd => map(take(2usize), |bytes: &[u8]| u64::from_be_bytes(bytes.try_into().unwrap()))(rest),
+        0xfe => map(take(4usize), |bytes: &[u8]| u64::from_be_bytes(bytes.try_into().unwrap()))(rest),
+        0xff => map(take(8usize), |bytes: &[u8]| u64::from_be_bytes(bytes.try_into().unwrap()))(rest),
+        _ => Ok((rest, first as u64)),
+    }
+}
 
-fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
-    let (input, version) = be_u32(input)?;
-
-    let (input, num_inputs) = be_u32(input)?;
-    let (input, inputs) = length_count(num_inputs as usize, parse_txin)(input)?;
-
-    let (input, num_outputs) = be_u32(input)?;
-    let (input, outputs) = length_count(num_outputs as usize, parse_txout)(input)?;
-
-    let (input, lock_time) = be_u32(input)?;
-
-    Ok((input, Transaction { version, inputs, outputs, lock_time }))
+fn parse_bytes(len: u64, input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    map(take(len as usize), |bytes: &[u8]| bytes.to_vec())(input)
 }
 
 fn parse_txin(input: &[u8]) -> IResult<&[u8], TxIn> {
-    let (input, prev_hash) = take(32usize)(input)?;
-    let (input, prev_index) = be_u32(input)?;
-    let (input, script_len) = be_u16(input)?;
-    let (input, script_sig) = take(script_len as usize)(input)?;
-    let (input, sequence) = be_u32(input)?;
-    Ok((input, TxIn { prev_hash: prev_hash.try_into().unwrap(), prev_index, script_sig: script_sig.to_vec(), sequence }))
+    let (rest, prev_out_hash) = take(32usize)(input)?;
+    let (rest, prev_out_index) = be_u32(rest)?;
+    let (rest, script_sig_len) = parse_varint(rest)?;
+    let (rest, script_sig) = parse_bytes(script_sig_len, rest)?;
+    let (rest, sequence) = be_u32(rest)?;
+    Ok((
+        rest,
+        TxIn {
+            prev_out: (prev_out_hash.to_vec(), prev_out_index),
+            script_sig,
+            sequence,
+        },
+    ))
 }
 
 fn parse_txout(input: &[u8]) -> IResult<&[u8], TxOut> {
-    let (input, value) = be_u64(input)?;
-    let (input, script_len) = be_u16(input)?;
-    let (input, script_pubkey) = take(script_len as usize)(input)?;
-    Ok((input, TxOut { value, script_pubkey: script_pubkey.to_vec() }))
+    let (rest, value) = be_i64(input)?;
+    let (rest, script_pubkey_len) = parse_varint(rest)?;
+    let (rest, script_pubkey) = parse_bytes(script_pubkey_len, rest)?;
+    Ok((rest, TxOut { value, script_pubkey }))
 }
 
+fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
+    let (rest, version) = be_i32(input)?;
+    let (rest, num_inputs) = parse_varint(rest)?;
+    let (rest, inputs) = count(parse_txin, num_inputs as usize)(rest)?;
+    let (rest, num_outputs) = parse_varint(rest)?;
+    let (rest, outputs) = count(parse_txout, num_outputs as usize)(rest)?;
+    let (rest, locktime) = be_u32(rest)?;
+    let (rest, witness) = opt(|i| {
+        let (rest, num_witnesses) = parse_varint(i)?;
+        count(
+            |i| {
+                let (rest, num_items) = parse_varint(i)?;
+                count(
+                    |i| {
+                        let (rest, item_len) = parse_varint(i)?;
+                        parse_bytes(item_len, rest)
+                    },
+                    num_items as usize,
+                )(rest)
+            },
+            num_witnesses as usize,
+        )(rest)
+    })(rest)?;
+
+    Ok((
+        rest,
+        Transaction {
+            version,
+            inputs,
+            outputs,
+            locktime,
+            witness,
+        },
+    ))
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <binary_file>", args[0]);
-        return;
+        eprintln!("Usage: {} <binary_file>", args[0]);
+        std::process::exit(1);
     }
 
-    let filename = &args[1];
-    let data = match read(filename) {
-        Ok(data) => data,
-        Err(e) => {
-            println!("Error reading file: {}", e);
-            return;
-        }
-    };
+    let path = Path::new(&args[1]);
+    let contents = fs::read(path).expect("Failed to read file");
 
-    match parse_transaction(&data) {
+    match parse_transaction(&contents) {
         Ok((_, transaction)) => println!("{:#?}", transaction),
-        Err(e) => println!("Error parsing transaction: {:?}", e),
+        Err(e) => eprintln!("Error parsing transaction: {:?}", e),
     }
 }

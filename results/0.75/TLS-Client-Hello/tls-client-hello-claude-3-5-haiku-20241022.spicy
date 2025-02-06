@@ -2,32 +2,30 @@ module TLS;
 
 import spicy;
 
-public type ClientHello = unit {
-    record_type: uint8 = 0x16;  # Handshake record type
-    version: uint16;             # Protocol version
-    length: uint16;              # Length of the handshake message
-
-    handshake_type: uint8 = 0x01;  # ClientHello type
-    handshake_length: uint24;      # Length of handshake message
-
-    client_version: uint16;         # Client-supported protocol version
-    random: bytes(32);              # Random bytes for connection
-
-    session_id_length: uint8;
-    session_id: bytes(session_id_length);
-
+public type ClientHello = struct {
+    legacy_version: uint16;
+    random: bytes;
+    legacy_session_id_length: uint8;
+    legacy_session_id: bytes;
     cipher_suites_length: uint16;
-    cipher_suites: list<uint16>(count=cipher_suites_length/2);
-
+    cipher_suites: vector<uint16>;
     compression_methods_length: uint8;
-    compression_methods: bytes(compression_methods_length);
-
+    compression_methods: vector<uint8>;
     extensions_length: uint16;
-    extensions: list<Extension>(count=extensions_length);
+    extensions: vector<Extension>;
+} &byteorder=spicy::ByteOrder::Network;
 
-    type Extension = unit {
-        type: uint16;
-        length: uint16;
-        data: bytes(length);
-    }
-};
+public type Extension = struct {
+    type: uint16;
+    length: uint16;
+    data: bytes;
+} &byteorder=spicy::ByteOrder::Network;
+
+public const SERVER_NAME = 0x0000;
+public const SUPPORTED_VERSIONS = 0x002b;
+public const SIGNATURE_ALGORITHMS = 0x000d;
+public const SUPPORTED_GROUPS = 0x000a;
+public const KEY_SHARE = 0x0033;
+public const PRE_SHARED_KEY = 0x0029;
+public const PSK_KEY_EXCHANGE_MODES = 0x002d;
+public const ALPN = 0x0010;

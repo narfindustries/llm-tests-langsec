@@ -1,0 +1,102 @@
+module GIF;
+
+public type GIF = unit {
+    magic  : b"\x47\x49\x46";  # Signature "GIF"
+    version: bytes &size=3;   # Version "87a" or "89a"
+
+    logical_screen_descriptor: LogicalScreenDescriptor;
+
+    global_color_table: bytes &rest=data if logical_screen_descriptor.global_color_table_flag == 1;
+
+    blocks: Block[] until $$.type == 0x3B;
+};
+
+type LogicalScreenDescriptor = unit {
+    width              : uint16;
+    height             : uint16;
+    packed_fields      : uint8;
+    background_color_idx: uint8;
+    pixel_aspect_ratio  : uint8;
+
+    global_color_table_flag: uint8 = (packed_fields >> 7) & 0x01;
+    color_resolution       : uint8 = (packed_fields >> 4) & 0x07;
+    sort_flag              : uint8 = (packed_fields >> 3) & 0x01;
+    global_color_table_size: uint8 = (packed_fields & 0x07);
+};
+
+type Block = unit {
+    type: uint8;
+
+    image_descriptor: ImageDescriptor if type == 0x2C;
+    graphic_control_extension: GraphicControlExtension if type == 0x21 && $$.label == 0xF9;
+    plain_text_extension: PlainTextExtension if type == 0x21 && $$.label == 0x01;
+    comment_extension: CommentExtension if type == 0x21 && $$.label == 0xFE;
+    application_extension: ApplicationExtension if type == 0x21 && $$.label == 0xFF;
+};
+
+type ImageDescriptor = unit {
+    left_position : uint16;
+    top_position  : uint16;
+    width         : uint16;
+    height        : uint16;
+    packed_fields : uint8;
+
+    local_color_table_flag: uint8 = (packed_fields >> 7) & 0x01;
+    interlace_flag        : uint8 = (packed_fields >> 6) & 0x01;
+    sort_flag             : uint8 = (packed_fields >> 5) & 0x01;
+    local_color_table_size: uint8 = (packed_fields & 0x07);
+
+    local_color_table: bytes &rest=data if local_color_table_flag == 1;
+
+    lzw_min_code_size: uint8;
+    image_data      : ImageData;
+};
+
+type ImageData = unit {
+    sub_blocks: SubBlock[] until $$.size == 0;
+};
+
+type SubBlock = unit {
+    size: uint8;
+    data: bytes &size=size;
+};
+
+type GraphicControlExtension = unit {
+    label      : uint8;
+    block_size : uint8 if $$ == 4;
+    packed_fields : uint8;
+    delay_time : uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8 if $$ == 0;
+
+    disposal_method: uint8 = (packed_fields >> 2) & 0x07;
+    user_input_flag : uint8 = (packed_fields >> 1) & 0x01;
+    transparency_flag: uint8 = (packed_fields & 0x01);
+};
+
+type PlainTextExtension = unit {
+    label      : uint8;
+    block_size : uint8 if $$ == 12;
+    text_grid_left          : uint16;
+    text_grid_top           : uint16;
+    text_grid_width         : uint16;
+    text_grid_height        : uint16;
+    character_cell_width     : uint8;
+    character_cell_height    : uint8;
+    text_foreground_color   : uint8;
+    text_background_color   : uint8;
+    text_data : SubBlock[] until $$.size == 0;
+};
+
+type CommentExtension = unit {
+    label      : uint8;
+    comment_data : SubBlock[] until $$.size == 0;
+};
+
+type ApplicationExtension = unit {
+    label      : uint8;
+    block_size : uint8 if $$ == 11;
+    application_identifier: bytes &size=8;
+    application_authentication_code: bytes &size=3;
+    application_data : SubBlock[] until $$.size == 0;
+};

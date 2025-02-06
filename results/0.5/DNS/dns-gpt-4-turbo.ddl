@@ -1,48 +1,67 @@
-module DNS;
+type uint8 = U8;
+type uint16 = U16 : BigEndian;
+type uint32 = U32 : BigEndian;
 
-import DAEDALUS::BitFields;
+type DomainName = List(uint8) using
+  | [] -> []
+  | len -> len :: (Array(len, uint8) ++ DomainName);
 
-type U8 = UInt 8;
-type U16 = UInt 16;
-type U32 = UInt 32;
+type Header = Struct {
+  id : uint16,
+  qr : Bits(1),
+  opcode : Bits(4),
+  aa : Bits(1),
+  tc : Bits(1),
+  rd : Bits(1),
+  ra : Bits(1),
+  z : Bits(3),
+  rcode : Bits(4),
+  qdcount : uint16,
+  ancount : uint16,
+  nscount : uint16,
+  arcount : uint16
+};
 
-record Header {
-    id          : U16;
-    qr          : U1;
-    opcode      : U4;
-    aa          : U1;
-    tc          : U1;
-    rd          : U1;
-    ra          : U1;
-    z           : U3;
-    rcode       : U4;
-    qdcount     : U16;
-    ancount     : U16;
-    nscount     : U16;
-    arcount     : U16;
-}
+type Question = Struct {
+  qname : DomainName,
+  qtype : uint16,
+  qclass : uint16
+};
 
-record Question {
-    qname       : List<U8> &until(v -> v == 0);
-    qtype       : U16;
-    qclass      : U16;
-}
+type RRData = Match(uint16) {
+  | 1 -> Struct { a : uint32 }
+  | 2 -> Struct { ns : DomainName }
+  | 5 -> Struct { cname : DomainName }
+  | 6 -> Struct {
+      mname : DomainName,
+      rname : DomainName,
+      serial : uint32,
+      refresh : uint32,
+      retry : uint32,
+      expire : uint32,
+      minimum : uint32
+    }
+  | 15 -> Struct {
+      preference : uint16,
+      exchange : DomainName
+    }
+  | 16 -> Array(uint8)
+  | _ -> Array(uint8)
+};
 
-record ResourceRecord {
-    name        : List<U8> &until(v -> v == 0);
-    rtype       : U16;
-    rclass      : U16;
-    ttl         : U32;
-    rdlength    : U16;
-    rdata       : List<U8> &length(rdlength);
-}
+type ResourceRecord = Struct {
+  name : DomainName,
+  type : uint16,
+  class : uint16,
+  ttl : uint32,
+  rdlength : uint16,
+  rdata : RRData @ Length(rdlength)
+};
 
-record DNSPacket {
-    header      : Header;
-    questions   : List<Question> &length(header.qdcount);
-    answers     : List<ResourceRecord> &length(header.ancount);
-    authorities : List<ResourceRecord> &length(header.nscount);
-    additionals : List<ResourceRecord> &length(header.arcount);
-}
-
-entrypoint DNSPacket;
+type DNSPacket = Struct {
+  header : Header,
+  questions : Array(header.qdcount, Question),
+  answers : Array(header.ancount, ResourceRecord),
+  authority : Array(header.nscount, ResourceRecord),
+  additional : Array(header.arcount, ResourceRecord)
+};

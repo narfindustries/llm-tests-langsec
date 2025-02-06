@@ -1,62 +1,39 @@
-def Main = {
-  def header = {
-    type = uint8;
-    code = uint8;
-    checksum = uint16;
-  }
+def Main = ICMP
 
-  def echo_request = {
-    id = uint16;
-    seq = uint16;
-    data = Many uint8;
-  }
+def ICMP = {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    rest_of_header: ICMPPayload(type);
+    data: bytes
+}
 
-  def echo_reply = {
-    id = uint16;
-    seq = uint16;
-    data = Many uint8;
-  }
-
-  def dest_unreachable = {
-    unused = uint32;
-    ip_header = Many uint8;
-    ip_datagram = Many uint8;
-  }
-
-  def time_exceeded = {
-    unused = uint32;
-    ip_header = Many uint8;
-    ip_datagram = Many uint8;
-  }
-
-  def parameter_problem = {
-    pointer = uint8;
-    unused = uint24;
-    ip_header = Many uint8;
-    ip_datagram = Many uint8;
-  }
-
-  def redirect = {
-    gateway_addr = uint32;
-    ip_header = Many uint8;
-    ip_datagram = Many uint8;
-  }
-
-  hdr = header;
-  payload = Switch hdr.type {
-    0 => echo_reply,
-    3 => dest_unreachable,
-    4 => source_quench,
-    5 => redirect,
-    8 => echo_request,
-    11 => time_exceeded,
-    12 => parameter_problem,
-    _ => Many uint8
-  };
-
-  def source_quench = {
-    unused = uint32;
-    ip_header = Many uint8;
-    ip_datagram = Many uint8;
-  }
+def ICMPPayload(msg_type: uint8) = {
+    if msg_type == 0 || msg_type == 8 || msg_type == 15 || msg_type == 16 {
+        identifier: uint16;
+        sequence_number: uint16
+    }
+    if msg_type == 3 || msg_type == 4 || msg_type == 11 {
+        unused: uint32;
+        ip_header: bytes;
+        original_datagram: bytes[8]
+    }
+    if msg_type == 5 {
+        gateway_address: uint32;
+        ip_header: bytes;
+        original_datagram: bytes[8]
+    }
+    if msg_type == 12 {
+        pointer: uint8;
+        unused: bytes[3];
+        ip_header: bytes;
+        original_datagram: bytes[8]
+    }
+    if msg_type == 13 || msg_type == 14 {
+        identifier: uint16;
+        sequence_number: uint16;
+        originate_timestamp: uint32;
+        receive_timestamp: uint32;
+        transmit_timestamp: uint32
+    }
 }

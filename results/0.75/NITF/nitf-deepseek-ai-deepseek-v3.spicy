@@ -1,0 +1,91 @@
+module NITF;
+
+import spicy;
+
+type FileHeader = unit {
+    magic: bytes &size=4 &requires=($.value == b"NITF");
+    fsize: uint32;
+    ftitle: bytes &size=80;
+    fsclas: bytes &size=1;
+    fscode: bytes &size=40;
+    fsctlh: bytes &size=40;
+    fsrel: bytes &size=40;
+    fsdctp: bytes &size=2;
+    fsdcdt: bytes &size=8;
+    fsdcxm: bytes &size=20;
+    fsdg: bytes &size=1;
+    fsdgdt: bytes &size=8;
+    fscltx: bytes &size=40;
+    fscatp: bytes &size=1;
+    fscrsn: bytes &size=40;
+    fssrdt: bytes &size=8;
+    fsctln: bytes &size=40;
+};
+
+type ImageSegmentHeader = unit {
+    magic: bytes &size=2 &requires=($.value == b"IM");
+    iid: bytes &size=10;
+    idatim: bytes &size=14;
+    tgtid: bytes &size=17;
+    ilevel: uint8;
+    iloc: bytes &size=10;
+    imag: bytes &size=2;
+    udidl: uint16;
+    udofl: uint16;
+    ixshdl: uint16;
+};
+
+type GraphicSegmentHeader = unit {
+    magic: bytes &size=2 &requires=($.value == b"SY");
+    sid: bytes &size=10;
+    sname: bytes &size=20;
+    scolor: bytes &size=1;
+    sdid: bytes &size=10;
+    sxhdl: uint16;
+};
+
+type TextSegmentHeader = unit {
+    magic: bytes &size=2 &requires=($.value == b"TE");
+    tid: bytes &size=10;
+    txtalvl: uint8;
+    txtdt: bytes &size=14;
+    txtitl: bytes &size=80;
+    txshdl: uint16;
+};
+
+type DataExtensionSegmentHeader = unit {
+    magic: bytes &size=2 &requires=($.value == b"DE");
+    desid: bytes &size=25;
+    desver: uint8;
+    desoflw: uint16;
+    desitem: uint16;
+    desshl: uint16;
+};
+
+type ReservedExtensionSegmentHeader = unit {
+    magic: bytes &size=2 &requires=($.value == b"RE");
+    resid: bytes &size=25;
+    resver: uint8;
+    resoflw: uint16;
+    resitem: uint16;
+    resshl: uint16;
+};
+
+type UserDefinedHeader = unit {
+    magic: bytes &size=3 &requires=($.value == b"UDH");
+    udid: bytes &size=25;
+    udver: uint8;
+    udoflw: uint16;
+    uditem: uint16;
+    udshl: uint16;
+};
+
+type NITF = unit {
+    file_header: FileHeader;
+    image_segment_headers: ImageSegmentHeader[] &until=($$.magic != b"IM");
+    graphic_segment_headers: GraphicSegmentHeader[] &until=($$.magic != b"SY");
+    text_segment_headers: TextSegmentHeader[] &until=($$.magic != b"TE");
+    data_extension_segment_headers: DataExtensionSegmentHeader[] &until=($$.magic != b"DE");
+    reserved_extension_segment_headers: ReservedExtensionSegmentHeader[] &until=($$.magic != b"RE");
+    user_defined_headers: UserDefinedHeader[] &until=($$.magic != b"UDH");
+};

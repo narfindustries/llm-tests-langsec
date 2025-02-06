@@ -2,39 +2,72 @@ module PNG;
 
 import spicy;
 
-public type Image = unit {
-    signature        : bytes(8) = b"\x89PNG\r\n\x1a\n";
-    chunks           : Chunk[] where $ > 0;
+public type File = unit {
+    signature: bytes &size=8 &requires=self == b"\x89PNG\r\n\x1a\n";
+    chunks: Chunk[] &eod;
 };
 
 type Chunk = unit {
-    length           : uint32;
-    type             : bytes(4);
-    data             : bytes(self.length) if (self.type != b"IEND");
-    crc              : uint32;
-};
+    length: uint32;
+    type: bytes &size=4;
+    data: Data;
+    crc: uint32;
 
-public type Header = unit {
-    width            : uint32;
-    height           : uint32;
-    bit_depth        : uint8;
-    color_type       : uint8;
-    compression      : uint8;
-    filter           : uint8;
-    interlace        : uint8;
-};
-
-public function is_png(input: bytes) : bool {
-    return |input| >= 8 && input[0:8] == b"\x89PNG\r\n\x1a\n";
-}
-
-public function extract_dimensions(input: bytes) : tuple<uint32, uint32> {
-    local img = parse Image(input);
-    for (chunk in img.chunks) {
-        if (chunk.type == b"IHDR") {
-            local header = parse Header(chunk.data);
-            return (header.width, header.height);
+    type Data = unit {
+        data: bytes &size=|self| {
+            switch ( type.decode() ) {
+                case "IHDR" => IHDR(data);
+                case "PLTE" => PLTE(data);
+                case "IDAT" => IDAT(data);
+                case "IEND" => IEND(data);
+                case "tRNS" => Transparency(data);
+                case "gAMA" => Gamma(data);
+                case "cHRM" => ChromaCoords(data);
+                default => UnknownChunk(data);
+            }
         }
     }
-    return (0, 0);
-}
+};
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8 &requires=self in [1, 2, 4, 8, 16];
+    color_type: uint8 &requires=self in [0, 2, 3, 4, 6];
+    compression: uint8 &requires=self == 0;
+    filter: uint8 &requires=self == 0;
+    interlace: uint8 &requires=self in [0, 1];
+};
+
+type PLTE = unit {
+    entries: bytes &max_size=768;
+};
+
+type IDAT = unit {
+    compressed_data: bytes;
+};
+
+type IEND = unit {};
+
+type Transparency = unit {
+    alpha_data: bytes;
+};
+
+type Gamma = unit {
+    gamma_value: uint32;
+};
+
+type ChromaCoords = unit {
+    white_x: uint32;
+    white_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+type UnknownChunk = unit {
+    raw_data: bytes;
+};

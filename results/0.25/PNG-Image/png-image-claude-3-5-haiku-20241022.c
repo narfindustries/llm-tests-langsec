@@ -1,118 +1,133 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// PNG Image Generation Parser and Generator
-
-// Define color structure
 typedef struct {
-    uint8_t red;
-    uint8_t green; 
-    uint8_t blue;
-    uint8_t alpha;
-} RGBAColor;
+    uint32_t width;
+    uint32_t height;
+    uint8_t bit_depth;
+    uint8_t color_type;
+    uint8_t compression_method;
+    uint8_t filter_method;
+    uint8_t interlace_method;
+} IHDRChunk;
 
-// Define PNG Image structure
 typedef struct {
-    int width;
-    int height;
-    RGBAColor* pixels;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} PaletteEntry;
+
+typedef struct {
+    PaletteEntry* entries;
+    size_t count;
+} PLTEChunk;
+
+typedef struct {
+    uint8_t* data;
+    size_t length;
+} IDATChunk;
+
+typedef struct {
+    char* keyword;
+    char* text;
+} tEXtChunk;
+
+typedef struct {
+    IHDRChunk ihdr;
+    PLTEChunk plte;
+    IDATChunk idat;
+    tEXtChunk* text_chunks;
+    size_t text_chunk_count;
 } PNGImage;
 
-// Parser for width
-static HParser* width_parser() {
-    return h_int_range(1, 4096);
+HParser* png_signature() {
+    static const uint8_t signature[] = {0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+    return h_token(signature, sizeof(signature));
 }
 
-// Parser for height 
-static HParser* height_parser() {
-    return h_int_range(1, 4096);
-}
-
-// Parser for color component
-static HParser* color_component_parser() {
-    return h_int_range(0, 255);
-}
-
-// Color parser
-static HParser* color_parser() {
+HParser* ihdr_chunk() {
     return h_sequence(
-        color_component_parser(), // Red
-        color_component_parser(), // Green
-        color_component_parser(), // Blue
-        color_component_parser(), // Alpha
+        h_uint32(),   // width
+        h_uint32(),   // height
+        h_uint8(),    // bit depth
+        h_uint8(),    // color type
+        h_uint8(),    // compression method
+        h_uint8(),    // filter method
+        h_uint8(),    // interlace method
         NULL
     );
 }
 
-// Full PNG image parser
-static HParser* png_image_parser() {
+HParser* palette_entry() {
     return h_sequence(
-        width_parser(),   // Width
-        height_parser(),  // Height
-        h_many(color_parser()), // Pixel array
+        h_uint8(),    // R
+        h_uint8(),    // G
+        h_uint8(),    // B
         NULL
     );
 }
 
-// Generator for PNG image
-static HResult* png_image_generator(HAllocator* allocator, void* context) {
-    PNGImage* image = (PNGImage*)context;
-    
-    // Allocate buffer for generation
-    HBuf* buf = h_buf_new(allocator);
-    
-    // Write width and height
-    h_buf_append_int(buf, image->width);
-    h_buf_append_int(buf, image->height);
-    
-    // Write pixel data
-    for (int i = 0; i < image->width * image->height; i++) {
-        h_buf_append_byte(buf, image->pixels[i].red);
-        h_buf_append_byte(buf, image->pixels[i].green);
-        h_buf_append_byte(buf, image->pixels[i].blue);
-        h_buf_append_byte(buf, image->pixels[i].alpha);
-    }
-    
-    return h_make_result(allocator, buf);
+HParser* plte_chunk() {
+    return h_many(palette_entry());
 }
 
-// Main generation function
-PNGImage* generate_png_image(int width, int height) {
-    PNGImage* image = malloc(sizeof(PNGImage));
-    image->width = width;
-    image->height = height;
-    image->pixels = malloc(width * height * sizeof(RGBAColor));
-    
-    // Generate random pixel data
-    for (int i = 0; i < width * height; i++) {
-        image->pixels[i].red = rand() % 256;
-        image->pixels[i].green = rand() % 256;
-        image->pixels[i].blue = rand() % 256;
-        image->pixels[i].alpha = rand() % 256;
-    }
-    
-    return image;
+HParser* text_chunk() {
+    return h_sequence(
+        h_many1(h_ch_range('A', 'Z')),  // keyword
+        h_many1(h_ch_range(' ', '~')),  // text
+        NULL
+    );
 }
 
-int main() {
-    // Initialize random seed
-    srand(time(NULL));
-    
-    // Create a sample PNG image
-    PNGImage* image = generate_png_image(100, 100);
-    
-    // Create Hammer parser
-    HParser* parser = png_image_parser();
-    
-    // Create Hammer generator
-    HGenerator* generator = h_generator_new(png_image_generator);
-    
-    // Free resources
-    free(image->pixels);
-    free(image);
-    
+HParser* png_parser() {
+    return h_sequence(
+        png_signature(),
+        ihdr_chunk(),
+        h_optional(plte_chunk()),
+        h_many(text_chunk()),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <png_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser* parser = png_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+
+    if (result) {
+        printf("PNG file parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("PNG parsing failed\n");
+    }
+
+    free(buffer);
     return 0;
 }

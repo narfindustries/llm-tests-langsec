@@ -1,63 +1,136 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DNS"
-           xmlns="http://example.com/DNS"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/DNS" 
+           xmlns="http://example.com/DNS" 
            elementFormDefault="qualified">
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/DFDL.xsd"/>
-  <xs:element name="dns-message">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="dns-headerType" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="question" type="dns-questionType" minOccurs="1" maxOccurs="unbounded" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="answer" type="dns-answerType" minOccurs="0" maxOccurs="unbounded" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="authority" type="dns-answerType" minOccurs="0" maxOccurs="unbounded" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-        <xs:element name="additional" type="dns-answerType" minOccurs="0" maxOccurs="unbounded" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:complexType name="dns-headerType">
+  <xs:element name="dnsMessage" type="dnsMessageType"/>
+  <xs:complexType name="dnsMessageType">
     <xs:sequence>
-      <xs:element name="id" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="flags" type="dns-flagsType" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="qdcnt" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="ancnt" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="nsnt" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="arcnt" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="header" type="dnsHeaderType"/>
+      <xs:element name="question" type="dnsQuestionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="answer" type="dnsResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="authority" type="dnsResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="additional" type="dnsResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="dns-flagsType">
+  <xs:complexType name="dnsHeaderType">
     <xs:sequence>
-      <xs:element name="qr" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="opcode" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="aa" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="tc" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="rd" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="ra" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="z" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="rcode" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="id" type="xs:unsignedShort"/>
+      <xs:element name="qr" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="opcode" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="aa" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="tc" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="rd" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ra" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="z" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="rcode" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 0 or $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="dns-questionType">
+  <xs:complexType name="dnsQuestionType">
     <xs:sequence>
-      <xs:element name="qname" type="dns-qnameType" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="qtype" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="qclass" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="qname" type="dnsDomainNameType"/>
+      <xs:element name="qtype" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 or $value = 6 or $value = 7 or $value = 8 or $value = 9 or $value = 10 or $value = 11 or $value = 12 or $value = 13 or $value = 14 or $value = 15 or $value = 16 or $value = 17 or $value = 18 or $value = 252 or $value = 253 or $value = 254 or $value = 255 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="qclass" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 or $value = 253 or $value = 254 or $value = 255 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="dns-qnameType">
+  <xs:complexType name="dnsResourceRecordType">
     <xs:sequence>
-      <xs:element name="label" type="xs:string" minOccurs="1" maxOccurs="unbounded" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="name" type="dnsDomainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 or $value = 6 or $value = 7 or $value = 8 or $value = 9 or $value = 10 or $value = 11 or $value = 12 or $value = 13 or $value = 14 or $value = 15 or $value = 16 or $value = 17 or $value = 18 or $value = 252 or $value = 253 or $value = 254 or $value = 255 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="class" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:assert test="{ $value = 1 or $value = 2 or $value = 3 or $value = 4 or $value = 5 or $value = 253 or $value = 254 or $value = 255 }"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:documentation>
+            The length of this element is determined by the rdlength element.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-  <xs:complexType name="dns-answerType">
+  <xs:complexType name="dnsDomainNameType">
     <xs:sequence>
-      <xs:element name="name" type="xs:string" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="type" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="class" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="ttl" type="xs:unsignedInt" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="rdlength" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
-      <xs:element name="rdata" type="xs:hexBinary" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="utf-8"/>
+      <xs:element name="label" type="xs:string" minOccurs="1" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:documentation>
+            The labels in a domain name are separated by a dot (.) character.
+          </xs:documentation>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

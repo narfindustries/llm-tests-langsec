@@ -1,88 +1,71 @@
-specification SQLITE3-DB {
-    type Database {
-        name: string,
-        tables: list of Table
-    }
+def sqlite3_file:
+  type MagicHeader = bytes(16)
+  type PageSize = u2 where constraint {
+    condition: 512 <= value <= 65536
+  }
+  type Version = u1
+  type ReservedSpace = u1
+  type Fraction = u1
+  type Counter = u4
+  type PageNumber = u4
+  type SchemaInfo = u4
 
-    type Table {
-        name: string,
-        columns: list of Column,
-        constraints: list of Constraint
-    }
+  type EncodingType = enum u1 {
+    UTF8 = 1,
+    UTF16_LE = 2,
+    UTF16_BE = 3
+  }
 
-    type Column {
-        name: string,
-        dataType: ColumnType,
-        nullable: boolean,
-        primaryKey: boolean,
-        unique: boolean,
-        defaultValue: optional string
-    }
+  type FileHeader = struct {
+    magic: MagicHeader,
+    pageSize: PageSize,
+    writeVersion: Version,
+    readVersion: Version,
+    reservedSpace: ReservedSpace,
+    maxEmbeddedPayloadFraction: Fraction,
+    minEmbeddedPayloadFraction: Fraction,
+    leafPayloadFraction: Fraction,
+    fileChangeCounter: Counter,
+    databaseFileSize: PageNumber,
+    firstFreelistTrunkPage: PageNumber,
+    totalFreelistPages: PageNumber,
+    schemaCookie: SchemaInfo,
+    schemaFormat: SchemaInfo,
+    defaultEncoding: EncodingType,
+    userVersion: u2,
+    incrementalVacuumMode: u4,
+    applicationId: u4,
+    reserved: bytes(20)
+  }
 
-    enum ColumnType {
-        INTEGER,
-        TEXT, 
-        REAL,
-        BLOB,
-        NUMERIC
-    }
+  type PageType = enum u1 {
+    INTERIOR_INDEX = 2,
+    INTERIOR_TABLE = 5,
+    LEAF_INDEX = 10,
+    LEAF_TABLE = 13
+  }
 
-    type Constraint {
-        type: ConstraintType,
-        details: string
-    }
+  type RecordHeader = struct {
+    length: vlq,
+    serialTypes: array(length, u1)
+  }
 
-    enum ConstraintType {
-        FOREIGN_KEY,
-        CHECK,
-        UNIQUE
-    }
+  type Cell = struct {
+    payloadSize: vlq,
+    rowId: vlq,
+    payload: bytes(payloadSize)
+  }
 
-    function createDatabase(name: string) -> Database {
-        return Database {
-            name: name,
-            tables: []
-        }
-    }
+  type Page = struct {
+    type: PageType,
+    firstFreeblock: u2,
+    cellCount: u2,
+    cellContentStart: u2,
+    fragmentedFreeBytes: u1,
+    cells: array(cellCount, Cell)
+  }
 
-    function addTable(database: Database, tableName: string) -> Database {
-        let newTable = Table {
-            name: tableName,
-            columns: [],
-            constraints: []
-        };
-        database.tables.append(newTable);
-        return database
-    }
-
-    function addColumn(table: Table, 
-                       columnName: string, 
-                       dataType: ColumnType, 
-                       nullable: boolean = true,
-                       primaryKey: boolean = false,
-                       unique: boolean = false,
-                       defaultValue: optional string = null) -> Table {
-        let newColumn = Column {
-            name: columnName,
-            dataType: dataType,
-            nullable: nullable,
-            primaryKey: primaryKey,
-            unique: unique,
-            defaultValue: defaultValue
-        };
-        table.columns.append(newColumn);
-        return table
-    }
-
-    function addForeignKeyConstraint(table: Table, 
-                                     columnName: string, 
-                                     referencedTable: string, 
-                                     referencedColumn: string) -> Table {
-        let constraint = Constraint {
-            type: ConstraintType.FOREIGN_KEY,
-            details: "FOREIGN KEY (" + columnName + ") REFERENCES " + referencedTable + "(" + referencedColumn + ")"
-        };
-        table.constraints.append(constraint);
-        return table
-    }
-}
+  type SqliteFile = struct {
+    header: FileHeader,
+    pages: array(header.databaseFileSize / header.pageSize, Page)
+  }

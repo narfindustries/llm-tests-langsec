@@ -1,65 +1,107 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// ARP packet structure: Hardware type (2 bytes), Protocol type (2 bytes), Hardware size (1 byte),
-// Protocol size (1 byte), Opcode (2 bytes), Sender MAC (6 bytes), Sender IP (4 bytes),
-// Target MAC (6 bytes), Target IP (4 bytes)
+// Define constants for ARP
+#define ETHERNET_HARDWARE_TYPE 1
+#define IPV4_PROTOCOL_TYPE 0x0800
+#define HW_ADDRESS_LENGTH 6
+#define PROTOCOL_ADDRESS_LENGTH 4
 
-// Define the basic parsers for ARP fields
-static HParser *arp_hwtype;
-static HParser *arp_prtype;
-static HParser *arp_hwsize;
-static HParser *arp_prsize;
-static HParser *arp_opcode;
-static HParser *arp_sender_mac;
-static HParser *arp_sender_ip;
-static HParser *arp_target_mac;
-static HParser *arp_target_ip;
+// ARP operation codes
+#define ARP_REQUEST 1
+#define ARP_REPLY 2
 
-// ARP packet parser
-static HParser *arp_packet;
+// Function declarations
+static void parse_arp(const uint8_t *input, size_t length);
+static void print_arp_info(const HParsedToken *hw_addr, const HParsedToken *proto_addr);
 
-void init_parsers() {
-    arp_hwtype = h_uint16();
-    arp_prtype = h_uint16();
-    arp_hwsize = h_uint8();
-    arp_prsize = h_uint8();
-    arp_opcode = h_uint16();
-    arp_sender_mac = h_repeat_n(h_uint8(), 6);
-    arp_sender_ip = h_repeat_n(h_uint8(), 4);
-    arp_target_mac = h_repeat_n(h_uint8(), 6);
-    arp_target_ip = h_repeat_n(h_uint8(), 4);
-
-    arp_packet = h_sequence(arp_hwtype, arp_prtype, arp_hwsize, arp_prsize, arp_opcode,
-                            arp_sender_mac, arp_sender_ip, arp_target_mac, arp_target_ip, NULL);
-}
-
-int main(int argc, char **argv) {
-    init_parsers();
-    HParser *parser = arp_packet;
-
-    // Example data for an ARP request
-    uint8_t example_arp_request[] = {
-        0x00, 0x01, // Hardware type: Ethernet (1)
-        0x08, 0x00, // Protocol type: IPv4 (0x0800)
-        0x06,       // Hardware size: 6
-        0x04,       // Protocol size: 4
-        0x00, 0x01, // Opcode: request (1)
-        0xde, 0xad, 0xbe, 0xef, 0xde, 0xad, // Sender MAC
-        0xc0, 0xa8, 0x01, 0x01,             // Sender IP
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Target MAC
-        0xc0, 0xa8, 0x01, 0x02              // Target IP
-    };
-
-    size_t len = sizeof(example_arp_request);
-    HParseResult *result = h_parse(parser, example_arp_request, len);
-    if (result) {
-        printf("ARP packet parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 0);
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse ARP packet.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <ARP binary file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    return 0;
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    parse_arp(buffer, file_size);
+    free(buffer);
+
+    return EXIT_SUCCESS;
+}
+
+static void parse_arp(const uint8_t *input, size_t length) {
+    HParser *uint16 = h_uint16();
+    HParser *uint8 = h_uint8();
+    HParser *hw_addr = h_bits(HW_ADDRESS_LENGTH * 8, false);
+    HParser *proto_addr = h_bits(PROTOCOL_ADDRESS_LENGTH * 8, false);
+
+    HParser *arp_parser = h_sequence(
+        uint16, // Hardware type
+        uint16, // Protocol type
+        uint8,  // Hardware address length
+        uint8,  // Protocol address length
+        uint16, // Operation
+        hw_addr, // Sender hardware address
+        proto_addr, // Sender protocol address
+        hw_addr, // Target hardware address
+        proto_addr, // Target protocol address
+        NULL
+    );
+
+    HParseResult *result = h_parse(arp_parser, input, length);
+    if (result) {
+        printf("ARP packet parsed successfully:\n");
+        printf("Hardware Type: %d\n", *(uint16_t *)h_value_uint(result->ast->children[0]));
+        printf("Protocol Type: 0x%04x\n", *(uint16_t *)h_value_uint(result->ast->children[1]));
+        printf("Hardware Address Length: %d\n", *(uint8_t *)h_value_uint(result->ast->children[2]));
+        printf("Protocol Address Length: %d\n", *(uint8_t *)h_value_uint(result->ast->children[3]));
+        printf("Operation: %d\n", *(uint16_t *)h_value_uint(result->ast->children[4]));
+        print_arp_info(result->ast->children[5], result->ast->children[6]);
+        print_arp_info(result->ast->children[7], result->ast->children[8]);
+    } else {
+        fprintf(stderr, "Failed to parse ARP packet\n");
+    }
+
+    h_parse_result_free(result);
+    h_free_parser(arp_parser);
+    h_free_parser(uint16);
+    h_free_parser(uint8);
+    h_free_parser(hw_addr);
+    h_free_parser(proto_addr);
+}
+
+static void print_arp_info(const HParsedToken *hw_addr, const HParsedToken *proto_addr) {
+    printf("Hardware Address: ");
+    for (size_t i = 0; i < HW_ADDRESS_LENGTH; i++) {
+        printf("%02X", ((uint8_t *)h_value_bits(hw_addr))[i]);
+        if (i < HW_ADDRESS_LENGTH - 1) printf(":");
+    }
+    printf("\n");
+
+    printf("Protocol Address: ");
+    for (size_t i = 0; i < PROTOCOL_ADDRESS_LENGTH; i++) {
+        printf("%d", ((uint8_t *)h_value_bits(proto_addr))[i]);
+        if (i < PROTOCOL_ADDRESS_LENGTH - 1) printf(".");
+    }
+    printf("\n");
 }

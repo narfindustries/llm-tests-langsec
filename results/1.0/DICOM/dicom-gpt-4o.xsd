@@ -1,41 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <schema xmlns="http://www.w3.org/2001/XMLSchema"
         xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="http://example.com/DFDL/DICOM"
+        targetNamespace="http://example.org/dicom"
         xmlns:xs="http://www.w3.org/2001/XMLSchema"
-        elementFormDefault="qualified"
-        dfdl:formatName="DICOM" dfdl:formatVersion="1.0">
-  
-  <dfdl:format ref="tns:dicomFormat"/>
-  
-  <dfdl:defineFormat name="dicomFormat">
-    <dfdl:lengthKind value="explicit"/>
-    <dfdl:lengthUnits value="bytes"/>
-    <dfdl:encoding value="utf-8"/>
-    <dfdl:terminateWhen value="yes"/>
-    <dfdl:initiator value=""/>
-    <dfdl:terminator value=""/>
-  </dfdl:defineFormat>
-  
-  <xs:element name="DICOM" type="tns:DicomType" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+        elementFormDefault="qualified">
 
-  <xs:complexType name="DicomType">
-    <xs:sequence>
-      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128"/>
-      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthKind="explicit"/>
-      <xs:element name="MetaInformationGroupLength" type="xs:unsignedInt" dfdl:length="4" dfdl:endian="big"/>
-      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary" dfdl:length="2"/>
-      <xs:element name="MediaStorageSOPClassUID" type="tns:UIDType"/>
-      <xs:element name="MediaStorageSOPInstanceUID" type="tns:UIDType"/>
-      <xs:element name="TransferSyntaxUID" type="tns:UIDType"/>
-      <xs:element name="ImplementationClassUID" type="tns:UIDType"/>
-      <xs:element name="ImplementationVersionName" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="ascii"/>
-    </xs:sequence>
-  </xs:complexType>
+  <!-- Define the DFDL format -->
+  <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="utf-8" />
 
-  <xs:simpleType name="UIDType">
+  <!-- Define simple types for constraints within targetNamespace -->
+  <xs:simpleType name="PatientSexType">
     <xs:restriction base="xs:string">
-      <xs:pattern value="\d+(\.\d+)*"/>
+      <xs:enumeration value="M"/>
+      <xs:enumeration value="F"/>
+      <xs:enumeration value="O"/>
     </xs:restriction>
   </xs:simpleType>
-  
+
+  <xs:simpleType name="ModalityType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CT"/>
+      <xs:enumeration value="MR"/>
+      <xs:enumeration value="US"/>
+      <!-- Add other modality codes as necessary -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PhotometricType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="MONOCHROME1"/>
+      <xs:enumeration value="MONOCHROME2"/>
+      <xs:enumeration value="RGB"/>
+      <!-- Add other photometric interpretations if needed -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Define the main DICOM element -->
+  <xs:element name="DICOM">
+    <xs:complexType>
+      <xs:sequence dfdl:initiatedContent="yes">
+        <!-- Patient Information -->
+        <xs:element name="PatientName" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="PatientID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="PatientBirthDate" type="xs:date" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="PatientSex" type="dicom:PatientSexType" minOccurs="0" dfdl:lengthKind="delimited"/>
+
+        <!-- Study Information -->
+        <xs:element name="StudyInstanceUID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="StudyDate" type="xs:date" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="StudyTime" type="xs:time" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="ReferringPhysicianName" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="StudyID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+
+        <!-- Series Information -->
+        <xs:element name="SeriesInstanceUID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="SeriesNumber" type="xs:integer" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="Modality" type="dicom:ModalityType" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="SeriesDate" type="xs:date" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="SeriesTime" type="xs:time" minOccurs="0" dfdl:lengthKind="delimited"/>
+
+        <!-- Image Information -->
+        <xs:element name="SOPInstanceUID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="ImageType" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="InstanceNumber" type="xs:integer" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="PhotometricInterpretation" type="dicom:PhotometricType" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="Rows" type="xs:integer" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="Columns" type="xs:integer" minOccurs="0" dfdl:lengthKind="delimited"/>
+
+        <!-- Acquisition Parameters -->
+        <xs:element name="AcquisitionDate" type="xs:date" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="AcquisitionTime" type="xs:time" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="PixelSpacing" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="SliceThickness" type="xs:decimal" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="KVP" type="xs:decimal" minOccurs="0" dfdl:lengthKind="delimited"/>
+
+        <!-- Other Metadata -->
+        <xs:element name="Manufacturer" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="InstitutionName" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="StationName" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+        <xs:element name="SoftwareVersions" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </schema>

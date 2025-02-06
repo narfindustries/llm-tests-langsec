@@ -1,10 +1,9 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::{take, tag},
     combinator::{map, opt},
-    error::ErrorKind,
-    multi::count,
-    number::complete::{be_u16, be_u8},
-    sequence::tuple,
+    multi::{count, many0},
+    number::complete::{be_u8, be_u16, be_u32},
+    sequence::{tuple, preceded},
     IResult,
 };
 use std::env;
@@ -12,72 +11,72 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct ModbusFrame {
-    slave_address: u8,
-    function_code: u8,
-    data: Vec<u8>,
-    crc: Option<u16>,
+enum ModbusFunction {
+    ReadCoils,
+    ReadDiscreteInputs,
+    ReadHoldingRegisters,
+    ReadInputRegisters,
+    WriteSingleCoil,
+    WriteSingleRegister,
+    WriteMultipleCoils,
+    WriteMultipleRegisters,
+    FileRecordRead,
+    FileRecordWrite,
+    EncapsulatedInterface,
 }
 
-fn parse_modbus_rtu(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
-    let (input, slave_address) = be_u8(input)?;
-    let (input, function_code) = be_u8(input)?;
-    
-    let (input, data) = match function_code {
-        0x01 | 0x02 | 0x03 | 0x04 => parse_read_data(input),
-        0x05 | 0x06 => parse_write_single_data(input),
-        0x0F | 0x10 => parse_write_multiple_data(input),
-        _ => return Err(nom::Err::Error((input, ErrorKind::Tag))),
-    }?;
+#[derive(Debug)]
+struct ModbusFrame {
+    transaction_id: u16,
+    protocol_id: u16,
+    length: u16,
+    unit_id: u8,
+    function_code: ModbusFunction,
+    data: Option<Vec<u8>>,
+    crc: u16,
+}
 
-    let (input, crc) = opt(be_u16)(input)?;
+fn parse_function_code(input: &[u8]) -> IResult<&[u8], ModbusFunction> {
+    map(be_u8, |code| match code {
+        0x01 => ModbusFunction::ReadCoils,
+        0x02 => ModbusFunction::ReadDiscreteInputs,
+        0x03 => ModbusFunction::ReadHoldingRegisters,
+        0x04 => ModbusFunction::ReadInputRegisters,
+        0x05 => ModbusFunction::WriteSingleCoil,
+        0x06 => ModbusFunction::WriteSingleRegister,
+        0x0F => ModbusFunction::WriteMultipleCoils,
+        0x10 => ModbusFunction::WriteMultipleRegisters,
+        0x14..=0x17 => ModbusFunction::FileRecordRead,
+        0x2B => ModbusFunction::EncapsulatedInterface,
+        _ => panic!("Unknown function code"),
+    })(input)
+}
+
+fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
+    let (input, transaction_id) = be_u16(input)?;
+    let (input, protocol_id) = be_u16(input)?;
+    let (input, length) = be_u16(input)?;
+    let (input, unit_id) = be_u8(input)?;
+    let (input, function_code) = parse_function_code(input)?;
+    
+    let (input, data) = opt(take(length as usize - 2))(input)?;
+    let (input, crc) = be_u16(input)?;
 
     Ok((input, ModbusFrame {
-        slave_address,
+        transaction_id,
+        protocol_id,
+        length,
+        unit_id,
         function_code,
-        data,
+        data: data.map(|d| d.to_vec()),
         crc,
     }))
-}
-
-fn parse_read_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, byte_count) = be_u8(input)?;
-    let (input, data) = take(byte_count)(input)?;
-    Ok((input, data.to_vec()))
-}
-
-fn parse_write_single_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, register_address) = be_u16(input)?;
-    let (input, register_value) = be_u16(input)?;
-    Ok((input, vec![
-        (register_address >> 8) as u8,
-        register_address as u8,
-        (register_value >> 8) as u8,
-        register_value as u8,
-    ]))
-}
-
-fn parse_write_multiple_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, start_address) = be_u16(input)?;
-    let (input, quantity) = be_u16(input)?;
-    let (input, byte_count) = be_u8(input)?;
-    let (input, data) = take(byte_count)(input)?;
-    Ok((input, [
-        vec![
-            (start_address >> 8) as u8,
-            start_address as u8,
-            (quantity >> 8) as u8,
-            quantity as u8,
-            byte_count,
-        ],
-        data.to_vec(),
-    ].concat()))
 }
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <modbus_file>", args[0]);
+        eprintln!("Usage: {} <input_file>", args[0]);
         std::process::exit(1);
     }
 
@@ -85,10 +84,10 @@ fn main() -> std::io::Result<()> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_modbus_rtu(&buffer) {
+    match parse_modbus_frame(&buffer) {
         Ok((_, frame)) => {
             println!("Parsed Modbus Frame: {:?}", frame);
-        }
+        },
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);

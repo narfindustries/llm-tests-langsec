@@ -3,45 +3,67 @@
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/tiff"
            xmlns="http://example.com/tiff"
-           elementFormDefault="qualified"
-           dfdl:formatRef="tns:TIFFFormat">
-  
-  <dfdl:format name="TIFFFormat" ref="tns:BaseFormat" lengthKind="explicit" byteOrder="bigEndian" encoding="UTF-8"/>
-  
-  <xs:include schemaLocation="baseFormat.xsd"/>
-  
-  <xs:element name="TIFFFile">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Header" type="tns:HeaderType"/>
-        <xs:element name="IFD" type="tns:IFDType" minOccurs="1" maxOccurs="unbounded"/>
-      </xs:sequence>
+           elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="TIFF">
+        <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <xs:element name="Header" type="HeaderType"/>
+                <xs:element name="IFD" type="IFDType" minOccurs="1" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="HeaderType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="ByteOrder" type="xs:string">
+                <xs:annotation>
+                    <xs:appinfo>
+                        <dfdl:element length="2" lengthUnits="bytes"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Version" type="xs:unsignedShort"/>
+            <xs:element name="FirstIFDOffset" type="xs:unsignedInt"/>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
-  
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="ByteOrder" type="xs:string" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Version" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="IFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-  
-  <xs:complexType name="IFDType">
-    <xs:sequence>
-      <xs:element name="NumDirectoryEntries" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="DirectoryEntry" type="tns:DirectoryEntryType" minOccurs="0" maxOccurs="unbounded"/>
-      <xs:element name="NextIFDOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-  
-  <xs:complexType name="DirectoryEntryType">
-    <xs:sequence>
-      <xs:element name="Tag" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Type" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Count" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
-      <xs:element name="ValueOffset" type="xs:unsignedInt" dfdl:length="4" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
+
+    <xs:complexType name="IFDType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="NumDirectoryEntries" type="xs:unsignedShort"/>
+            <xs:element name="DirectoryEntry" type="DirectoryEntryType" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="NextIFDOffset" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DirectoryEntryType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="Tag" type="xs:unsignedShort"/>
+            <xs:element name="Type" type="xs:unsignedShort"/>
+            <xs:element name="Count" type="xs:unsignedInt"/>
+            <xs:element name="ValueOffset" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Example of specific tag handling -->
+    <xs:complexType name="ImageWidthType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="Value" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ImageLengthType">
+        <xs:sequence dfdl:sequenceKind="ordered">
+            <xs:element name="Value" type="xs:unsignedInt"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Additional tag types would be defined similarly -->
 
 </xs:schema>

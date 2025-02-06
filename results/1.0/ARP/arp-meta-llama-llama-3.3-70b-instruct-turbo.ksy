@@ -1,27 +1,49 @@
 meta:
   id: arp
-  encoding: ASCII
-  endian: le
+  endian: be
+types:
+  byte_array:
+    type: seq
+    repeat: expr
+    seq:
+      - id: byte
+        type: u1
 seq:
-  - id: hw_type
+  - id: htype
     type: u2
-  - id: protocol_type
+  - id: ptype
     type: u2
-  - id: hw_size
+  - id: hlen
     type: u1
-  - id: protocol_size
+  - id: plen
     type: u1
-  - id: opcode
+  - id: oper
     type: u2
-  - id: sender_hw_addr
-    type: bytes
-    size: hw_size
-  - id: sender_protocol_addr
-    type: bytes
-    size: protocol_size
-  - id: target_hw_addr
-    type: bytes
-    size: hw_size
-  - id: target_protocol_addr
-    type: bytes
-    size: protocol_size
+  - id: sha
+    type: byte_array
+    repeat: expr
+    seq:
+      - id: byte
+        type: u1
+    repeat-expr: hlen
+  - id: spa
+    type: byte_array
+    repeat: expr
+    seq:
+      - id: byte
+        type: u1
+    repeat-expr: plen
+  - id: tha
+    type: byte_array
+    repeat: expr
+    seq:
+      - id: byte
+        type: u1
+    repeat-expr: hlen
+  - id: tpa
+    type: byte_array
+    repeat: expr
+    seq:
+      - id: byte
+        type: u1
+    repeat-expr: plen

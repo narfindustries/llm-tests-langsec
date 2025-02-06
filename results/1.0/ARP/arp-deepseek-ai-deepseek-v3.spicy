@@ -1,0 +1,13 @@
+module ARP;
+
+public type ARPPacket = unit {
+    htype: uint16;
+    ptype: uint16;
+    hlen: uint8;
+    plen: uint8;
+    oper: uint16;
+    sha: bytes &size=6;
+    spa: bytes &size=4;
+    tha: bytes &size=6;
+    tpa: bytes &size=4;
+};

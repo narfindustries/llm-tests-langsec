@@ -1,50 +1,138 @@
 module GIF;
 
-import spicy;
+type GIF_Header = unit {
+    signature: bytes &size=3 &requires=self.signature == "\x47\x49\x46" # "GIF"
+    version: bytes &size=3 &requires=self.version == "\x38\x39\x61" # "89a"
+};
 
-public type LogicalScreenDescriptor = unit {
-    width:  uint16;
-    height: uint16;
-
-    flags: bitfield {
-        global_color_table_flag: bool @0,
-        color_resolution:        uint8 @1..3,
-        sort_flag:               bool @4,
-        global_color_table_size: uint8 @5..7
-    };
-
+type LogicalScreenDescriptor = unit {
+    logical_screen_width: uint16;
+    logical_screen_height: uint16;
+    packed_fields: PackedFields;
     background_color_index: uint8;
-    pixel_aspect_ratio:     uint8;
+    pixel_aspect_ratio: uint8;
 };
 
-public type Color = unit {
-    red:   uint8;
+type PackedFields = bitfield {
+    global_color_table_flag: uint8 &bits=1;
+    color_resolution: uint8 &bits=3;
+    sort_flag: uint8 &bits=1;
+    size_of_global_color_table: uint8 &bits=3;
+};
+
+type ColorTable = unit {
+    entries: array<ColorEntry> &size=(2 ** (parent.packed_fields.size_of_global_color_table + 1));
+};
+
+type ColorEntry = unit {
+    red: uint8;
     green: uint8;
-    blue:  uint8;
+    blue: uint8;
 };
 
-public type ColorTable = unit(length: uint) {
-    colors: Color[length];
+type ImageDescriptor = unit {
+    image_separator: uint8 &requires=self.image_separator == 0x2C;
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: ImagePackedFields;
 };
 
-public type GIFHeader = unit {
-    magic: string &length=3 &validate= (self.magic == "GIF");
-    version: string &length=3;
+type ImagePackedFields = bitfield {
+    local_color_table_flag: uint8 &bits=1;
+    interlace_flag: uint8 &bits=1;
+    sort_flag: uint8 &bits=1;
+    reserved: uint8 &bits=2;
+    size_of_local_color_table: uint8 &bits=3;
 };
 
-public type GIFFile = unit {
-    header: GIFHeader;
-    screen_descriptor: LogicalScreenDescriptor;
+type LZWImageData = unit {
+    lzw_minimum_code_size: uint8;
+    image_data: repeat &until=$input.length() == 0 { SubBlock };
+};
 
-    global_color_table: optional<ColorTable> &if (self.screen_descriptor.flags.global_color_table_flag) {
-        size = 3 * (2 ** (self.screen_descriptor.flags.global_color_table_size + 1))
+type SubBlock = unit {
+    size: uint8;
+    data: bytes &size=size;
+};
+
+type Trailer = unit {
+    trailer: uint8 &requires=self.trailer == 0x3B;
+};
+
+type GIF = unit {
+    header: GIF_Header;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional<ColorTable> &if=.logical_screen_descriptor.packed_fields.global_color_table_flag;
+    blocks: repeat &until=$input.empty() { Block };
+    trailer: Trailer;
+};
+
+type Block = unit {
+    block_type: uint8 &lookahead;
+    body: case block_type of {
+        0x2C -> ImageBlock;
+        0x21 -> ExtensionBlock;
     };
-
-    # Placeholder for image data, extensions, etc.
 };
 
-public module Parser = spicy::Parser for GIFFile {
-    event parsed(g: GIFFile) {
-        print fmt("Parsed a GIF file: %s x %s", g.screen_descriptor.width, g.screen_descriptor.height);
-    }
+type ImageBlock = unit {
+    descriptor: ImageDescriptor;
+    local_color_table: optional<ColorTable> &if=descriptor.packed_fields.local_color_table_flag;
+    image_data: LZWImageData;
+};
+
+type ExtensionBlock = unit {
+    extension_label: uint8 &requires=extension_label == 0x21;
+    extension_type: uint8 &lookahead;
+    extension_body: case extension_type of {
+        0xF9 -> GraphicControlExtension;
+        0xFE -> CommentExtension;
+        0x01 -> PlainTextExtension;
+        0xFF -> ApplicationExtension;
+    };
+};
+
+type GraphicControlExtension = unit {
+    graphic_control_label: uint8 &requires=graphic_control_label == 0xF9;
+    block_size: uint8 &requires=block_size == 0x04;
+    packed_fields: GraphicControlPackedFields;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8 &requires=block_terminator == 0x00;
+};
+
+type GraphicControlPackedFields = bitfield {
+    reserved: uint8 &bits=3;
+    disposal_method: uint8 &bits=3;
+    user_input_flag: uint8 &bits=1;
+    transparent_color_flag: uint8 &bits=1;
+};
+
+type CommentExtension = unit {
+    comment_label: uint8 &requires=comment_label == 0xFE;
+    comment_data: repeat &until=$input.length() == 0 { SubBlock };
+};
+
+type PlainTextExtension = unit {
+    plain_text_label: uint8 &requires=plain_text_label == 0x01;
+    block_size: uint8 &requires=block_size == 0x0C;
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    character_cell_width: uint8;
+    character_cell_height: uint8;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    plain_text_data: repeat &until=$input.length() == 0 { SubBlock };
+};
+
+type ApplicationExtension = unit {
+    application_label: uint8 &requires=application_label == 0xFF;
+    block_size: uint8 &requires=block_size == 0x0B;
+    application_identifier: bytes &size=8;
+    application_authentication_code: bytes &size=3;
+    application_data: repeat &until=$input.length() == 0 { SubBlock };
 };

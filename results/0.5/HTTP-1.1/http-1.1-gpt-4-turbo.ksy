@@ -1,62 +1,57 @@
 meta:
   id: http_1_1
   title: HTTP 1.1 Protocol
-  application: Web Browsers, Web Servers
-  xref:
-    rfc: 2616
+  file-extension: http
+  endian: be
 doc: |
-  HTTP (Hypertext Transfer Protocol) 1.1 is a protocol used primarily for transferring data over the web. It includes methods like GET, POST, and HEAD.
+  HTTP/1.1 protocol as defined by RFC 2616. This specification covers the basic structure
+  of HTTP requests and responses.
+
 seq:
   - id: request
-    type: request_line
-    doc: The request line contains the method, path and the HTTP version.
-  - id: headers
-    type: header
-    repeat: eos
-    doc: HTTP headers, repeated until the sequence of characters \r\n\r\n
-  - id: body
-    size-eos: true
-    doc: Optional body, presence depends on method and headers.
+    type: http_request
+  - id: response
+    type: http_response
 
 types:
-  request_line:
+  http_request:
     seq:
       - id: method
         type: strz
-        encoding: ASCII
-        terminator: 0x20
-        doc: HTTP method (GET, POST, etc.)
-      - id: path
+      - id: uri
         type: strz
-        encoding: ASCII
-        terminator: 0x20
-        doc: Path requested by the client.
-      - id: http_version
+      - id: version
         type: strz
-        encoding: ASCII
-        terminator: 0x0D0A # CRLF
-        doc: HTTP version, typically "HTTP/1.1".
+      - id: headers
+        type: headers
+
+  http_response:
+    seq:
+      - id: version
+        type: strz
+      - id: status_code
+        type: strz
+      - id: reason_phrase
+        type: strz
+      - id: headers
+        type: headers
+
+  headers:
+    seq:
+      - id: entries
+        type: header
+        repeat: eos
 
   header:
     seq:
       - id: name
         type: strz
-        encoding: ASCII
-        terminator: 0x3A # Colon (:)
-        doc: Header name.
       - id: value
         type: strz
-        encoding: ASCII
-        terminator: 0x0D0A # CRLF
-        doc: Header value.
 
   strz:
     seq:
       - id: str
         type: str
+        terminator: 0x0D0A
         encoding: ASCII
-        terminator: 0x00
-        consume: true
-        include: false
-        eos-error: false
-        doc: Null-terminated ASCII string.

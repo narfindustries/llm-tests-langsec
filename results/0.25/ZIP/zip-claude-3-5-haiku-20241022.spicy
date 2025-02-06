@@ -2,14 +2,10 @@ module ZIP;
 
 import spicy;
 
-public type File = unit {
-    signature: bytes &size=4 
-        where $$ == b"PK\x03\x04" 
-        || $$ == b"PK\x05\x06"  # Also handle end of central directory
-        || $$ == b"PK\x07\x08"; # Spanning marker
-
+public type LocalFileHeader = struct {
+    signature: uint32;
     version_needed: uint16;
-    general_flags: uint16;
+    general_purpose_bit_flag: uint16;
     compression_method: uint16;
     last_mod_time: uint16;
     last_mod_date: uint16;
@@ -18,15 +14,67 @@ public type File = unit {
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
+    filename: bytes &size=self.filename_length;
+    extra_field: bytes &size=self.extra_field_length &optional;
+} &validate(self.signature == 0x04034b50);
 
-    filename: bytes &size=filename_length;
-    extra_field: bytes &size=extra_field_length;
+public type CentralDirectoryFileHeader = struct {
+    signature: uint32;
+    version_made_by: uint16;
+    version_needed: uint16;
+    general_purpose_bit_flag: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number_start: uint16;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
+    local_header_offset: uint32;
+    filename: bytes &size=self.filename_length;
+    extra_field: bytes &size=self.extra_field_length &optional;
+    file_comment: bytes &size=self.file_comment_length &optional;
+} &validate(self.signature == 0x02014b50);
 
-    on %done {
-        print self;
-    }
-}
+public type EndOfCentralDirectory = struct {
+    signature: uint32;
+    number_of_this_disk: uint16;
+    disk_with_central_directory: uint16;
+    total_entries_on_disk: uint16;
+    total_entries_in_central_directory: uint16;
+    size_of_central_directory: uint32;
+    central_directory_offset: uint32;
+    zip_file_comment_length: uint16;
+    zip_file_comment: bytes &size=self.zip_file_comment_length &optional;
+} &validate(self.signature == 0x06054b50);
 
-public type Parser = unit {
-    file: File;
+public type Zip64EndOfCentralDirectory = struct {
+    signature: uint32;
+    size_of_record: uint64;
+    version_made_by: uint16;
+    version_needed: uint16;
+    number_of_this_disk: uint32;
+    disk_with_central_directory: uint32;
+    total_entries_on_disk: uint64;
+    total_entries_in_central_directory: uint64;
+    size_of_central_directory: uint64;
+    central_directory_offset: uint64;
+} &validate(self.signature == 0x06064b50);
+
+public type ZIPFile = struct {
+    local_headers: vector<LocalFileHeader>;
+    central_directory: vector<CentralDirectoryFileHeader>;
+    end_of_central_directory: EndOfCentralDirectory;
+    zip64_end_of_central_directory: Zip64EndOfCentralDirectory &optional;
+};
+
+public function parse(data: bytes) : ZIPFile {
+    local zip_file = new ZIPFile();
+    # Parsing logic would be implemented here
+    return zip_file;
 }

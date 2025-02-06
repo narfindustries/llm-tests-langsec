@@ -1,80 +1,85 @@
-module Modbus
+modbus_protocol {
+    modbus modbus;
+}
 
--- Define the Modbus Protocol Data Unit
-PDU = structure {
-    function_code: uint8,                -- Function code
-    data: switch (self.function_code) {  -- Data based on function code
-        0x01 -> coil_status,
-        0x02 -> input_status,
-        0x03 -> holding_registers,
-        0x04 -> input_registers,
-        0x05 -> write_single_coil,
-        0x06 -> write_single_register,
-        0x0F -> write_multiple_coils,
-        0x10 -> write_multiple_registers
+modbus {
+    u8 unit_identifier;
+    u8 function_code;
+    payload payload;
+}
+
+payload {
+    switch (parent.function_code) {
+        case 0x01, 0x02: {
+            read_request_response read_request_response;
+        }
+        case 0x03, 0x04: {
+            read_register_request_response read_register_request_response;
+        }
+        case 0x05: {
+            write_single_coil write_single_coil;
+        }
+        case 0x06: {
+            write_single_register write_single_register;
+        }
+        case 0x0F: {
+            write_multiple_coils write_multiple_coils;
+        }
+        case 0x10: {
+            write_multiple_registers write_multiple_registers;
+        }
+        default: {
+            exception_response exception_response;
+        }
     }
 }
 
--- Define specific structures for different function codes
-
-coil_status = structure {
-    byte_count: uint8,
-    coil_status: array(uint8, self.byte_count)
+read_request_response {
+    u16 start_address;
+    u16 quantity;
+    u8 byte_count;
+    u8 coil_status[byte_count];
 }
 
-input_status = structure {
-    byte_count: uint8,
-    input_status: array(uint8, self.byte_count)
+read_register_request_response {
+    u16 start_address;
+    u16 quantity;
+    u8 byte_count;
+    u16 register_values[byte_count / 2];
 }
 
-holding_registers = structure {
-    byte_count: uint8,
-    registers: array(uint16, self.byte_count / 2)
+write_single_coil {
+    u16 coil_address;
+    u16 coil_value; // 0x0000 for OFF, 0xFF00 for ON
 }
 
-input_registers = structure {
-    byte_count: uint8,
-    registers: array(uint16, self.byte_count / 2)
+write_single_register {
+    u16 register_address;
+    u16 register_value;
 }
 
-write_single_coil = structure {
-    output_address: uint16,
-    output_value: uint16
+write_multiple_coils {
+    u16 start_address;
+    u16 quantity_of_coils;
+    u8 byte_count;
+    u8 coil_values[byte_count];
 }
 
-write_single_register = structure {
-    register_address: uint16,
-    register_value: uint16
+write_multiple_registers {
+    u16 start_address;
+    u16 quantity_of_registers;
+    u8 byte_count;
+    u16 register_values[byte_count / 2];
 }
 
-write_multiple_coils = structure {
-    starting_address: uint16,
-    quantity_of_outputs: uint16,
-    byte_count: uint8,
-    outputs_value: array(uint8, self.byte_count)
+exception_response {
+    u8 function_code_with_msb_set;
+    u8 exception_code;
 }
 
-write_multiple_registers = structure {
-    starting_address: uint16,
-    quantity_of_registers: uint16,
-    byte_count: uint8,
-    registers_value: array(uint16, self.byte_count / 2)
-}
-
--- Combine the Modbus Application Data Unit (ADU)
-ADU = structure {
-    address: uint8,  -- Address of the slave
-    pdu: PDU,        -- Protocol Data Unit
-    crc: uint16      -- Error checking
-}
-
--- Overall Modbus Frame
-ModbusFrame = structure {
-    mbap_header: structure {
-        transaction_id: uint16,
-        protocol_id: uint16,
-        length: uint16,
-        unit_id: uint8
-    },
-    adu: ADU
+modbus_tcp {
+    u16 transaction_id;
+    u16 protocol_id;
+    u16 length;
+    modbus modbus;
 }

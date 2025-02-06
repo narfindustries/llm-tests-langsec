@@ -1,78 +1,75 @@
-# ARP Spicy Specification
+module ARP;
 
-%header {
-    import Frameworks
+type ARP_HTYPE = enum {
+  Ethernet_10Mb = 1,
+  Experimental_Ethernet_3Mb = 2,
+  Amateur_Radio_AX_25 = 3,
+  Proteon_ProNET_Token_Ring = 4,
+  Chaos = 5,
+  IEEE_802_Networks = 6,
+  ARCNET = 7,
+  Hyperchannel = 8,
+  Lanstar = 9,
+  Autonet_Short_Address = 10,
+  LocalTalk = 11,
+  LocalNet = 12,
+  Ultra_Link = 13,
+  SMDS = 14,
+  Frame_Relay = 15,
+  ATM = 16,
+  HDLC = 17,
+  Fibre_Channel = 18,
+  ATM_2 = 19,
+  Serial_Line = 20,
+  ATM_3 = 21,
+  MIL_STD_188_220 = 22,
+  Metricom = 23,
+  IEEE_1394_1995 = 24,
+  MAPOS = 25,
+  Twinaxial = 26,
+  EUI_64 = 27,
+  HIPARP = 28,
+  IP_and_ARP_over_ISO_7816_3 = 29,
+  ARP_over_Fibre_Channel_FC = 30,
+  IBM_System_Network_Architecture_SNA = 31
 }
 
-%layer ARP {
-    # ARP Header
-    uint16 opcode:8;
-    uint16 htype:16;
-    uint16 ptype:16;
-    uint8  hlen:8;
-    uint8  plen:8;
-    uint8  src_mac[6];
-    uint32 src_ip:32;
-    uint8  dst_mac[6];
-    uint32 dst_ip:32;
-
-    # ARP Opcodes
-    const ARP_REQUEST = 1;
-    const ARP_REPLY   = 2;
-
-    # ARP Hardware Types
-    const ETHERNET = 1;
-
-    # ARP Protocol Types
-    const IPv4 = 0x0800;
-
-    # Conditionals
-    condition opcode == ARP_REQUEST;
-    condition opcode == ARP_REPLY;
-    condition htype == ETHERNET;
-    condition ptype == IPv4;
-
-    # Fields
-    field src_mac: bytestring &length=6;
-    field src_ip:  ip_addr &length=4;
-    field dst_mac: bytestring &length=6;
-    field dst_ip:  ip_addr &length=4;
-
-    # Types
-    type bytestring = uint8[];
-    type ip_addr    = uint32;
+type ARP_PTYPE = enum {
+  IPv4 = 0x0800,
+  ARP = 0x0806,
+  RARP = 0x0835,
+  Wake_on_LAN = 0x0842,
+  TRILL = 0x22F3,
+  IPv6 = 0x86DD
 }
 
-%parser ARP {
-    # ARP Parser
-    arp: ARP;
-
-    # Conditionals
-    condition arp.opcode == ARP_REQUEST;
-    condition arp.opcode == ARP_REPLY;
-    condition arp.htype == ETHERNET;
-    condition arp.ptype == IPv4;
-
-    # Events
-    event arp_request(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
-        = /arp.opcode == ARP_REQUEST/;
-    event arp_reply(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
-        = /arp.opcode == ARP_REPLY/;
+type ARP_OPER = enum {
+  Request = 1,
+  Reply = 2,
+  Request_Reverse = 3,
+  Reply_Reverse = 4
 }
 
-%protocol ARP {
-    # ARP Protocol
-    p: ARP;
+type ARP = struct {
+  htype: ARP_HTYPE,
+  ptype: ARP_PTYPE,
+  hlen: uint8,
+  plen: uint8,
+  oper: ARP_OPER,
+  sha: bytes,
+  spa: bytes,
+  tha: bytes,
+  tpa: bytes
+};
 
-    # Conditionals
-    condition p.opcode == ARP_REQUEST;
-    condition p.opcode == ARP_REPLY;
-    condition p.htype == ETHERNET;
-    condition p.ptype == IPv4;
-
-    # Events
-    event arp_request(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
-        = /p.opcode == ARP_REQUEST/;
-    event arp_reply(src_mac: bytestring, src_ip: ip_addr, dst_mac: bytestring, dst_ip: ip_addr)
-        = /p.opcode == ARP_REPLY/;
-}
+let arp_parser = parser ARP {
+  htype: parse ARP_HTYPE,
+  ptype: parse ARP_PTYPE,
+  hlen: parse uint8,
+  plen: parse uint8,
+  oper: parse ARP_OPER,
+  sha: parse bytes(hlen),
+  spa: parse bytes(plen),
+  tha: parse bytes(hlen),
+  tpa: parse bytes(plen)
+};

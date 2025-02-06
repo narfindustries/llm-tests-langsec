@@ -1,77 +1,96 @@
 meta:
-  id: gif-gemini-1
-  title: GIF Gemini 1.5 Flash
+  id: gif
   endian: be
-
 seq:
-  - id: header
-    type: gif_header
+  - id: signature
+    type: str
+    len: 6
+    encoding: ASCII
+    matches: "GIF89a"
   - id: logical_screen_descriptor
-    type: gif_logical_screen_descriptor
-  - id: global_color_table
-    type: gif_global_color_table
-  - id: blocks
-    type: blocks
-
-types:
-  gif_header:
-    seq:
-      - id: signature
-        type: str
-        size: 3
-      - id: version
-        type: str
-        size: 3
-
-  gif_logical_screen_descriptor:
-    seq:
+    struct:
       - id: width
         type: u2
       - id: height
         type: u2
       - id: packed_fields
         type: u1
+        struct:
+          - id: global_color_table_flag
+            type: bits
+            len: 1
+          - id: color_resolution
+            type: bits
+            len: 3
+          - id: sort_flag
+            type: bits
+            len: 1
+          - id: size_of_global_color_table
+            type: bits
+            len: 3
       - id: background_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
-
-  gif_global_color_table:
+  - id: global_color_table
     seq:
-      - id: color_table
-        type: color_table
-
-  color_table:
+      - id: color_table_entry
+        type: u3
+    size: (1 << ((this.logical_screen_descriptor.packed_fields.size_of_global_color_table + 1)))
+    if: this.logical_screen_descriptor.packed_fields.global_color_table_flag == 1
+  - id: image_descriptors
     seq:
-      - id: entries
-        type: color_table_entry
-        repeat: expr
-        repeat-expr: (self.parent.parent.logical_screen_descriptor.packed_fields & 0x80) != 0 ? (1 << ((self.parent.parent.logical_screen_descriptor.packed_fields & 0x07) + 1)) : 0
-
-  color_table_entry:
+      - id: image_separator
+        type: u1
+        matches: 0x2C
+      - id: image_left_position
+        type: u2
+      - id: image_top_position
+        type: u2
+      - id: image_width
+        type: u2
+      - id: image_height
+        type: u2
+      - id: packed_fields
+        type: u1
+        struct:
+          - id: local_color_table_flag
+            type: bits
+            len: 1
+          - id: interlace_flag
+            type: bits
+            len: 1
+          - id: sort_flag
+            type: bits
+            len: 1
+          - id: reserved
+            type: bits
+            len: 2
+          - id: size_of_local_color_table
+            type: bits
+            len: 3
+      - id: local_color_table
+        seq:
+          - id: color_table_entry
+            type: u3
+        size: (1 << ((this.packed_fields.size_of_local_color_table + 1)))
+        if: this.packed_fields.local_color_table_flag == 1
+      - id: lzw_min_code_size
+        type: u1
+      - id: lzw_data
+        type: bytes
+        size: this.image_width * this.image_height
+  - id: extension_blocks
     seq:
-      - id: red
+      - id: extension_introducer
         type: u1
-      - id: green
+        matches: 0x21
+      - id: extension_label
         type: u1
-      - id: blue
-        type: u1
-
-  blocks:
-    seq:
-      - id: block
-        type: block
-        repeat: until
-        until-expr: lambda x: x.terminator == 0x00
-
-  block:
-    seq:
-      - id: size
-        type: u1
-      - id: data
-        type: u1
-        repeat: expr
-        repeat-expr: self.size
-      - id: terminator
-        type: u1
+      - id: extension_data
+        type: bytes
+        read: until_terminator(0x00)
+  - id: trailer
+    type: u1
+    matches: 0x3B
 

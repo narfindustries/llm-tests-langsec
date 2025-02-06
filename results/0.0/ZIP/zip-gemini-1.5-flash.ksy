@@ -1,70 +1,44 @@
-meta:
-  id: zip-gemini-1
-  title: "ZIP Gemini 1.5 Flash"
-  homepage: ""
-  file-extension: ".zip"
-  endian: be
-
-seq:
-  - id: header
-    type: header
-  - id: central_directory
-    type: central_directory
-
 types:
-  header:
+  zip_end_central_directory_record:
     seq:
       - id: signature
         type: u4
         enum:
-          0x04034b50: local_file_header
-      - id: version
+          0x06054b50: end_central_directory
+      - id: disk_number
         type: u2
-      - id: flags
+      - id: disk_with_central_directory
         type: u2
-      - id: compression_method
+      - id: central_directory_entries_on_this_disk
         type: u2
-      - id: last_mod_time
+      - id: central_directory_entries_total
         type: u2
-      - id: last_mod_date
-        type: u2
-      - id: crc32
+      - id: central_directory_size
         type: u4
-      - id: compressed_size
+      - id: central_directory_offset
         type: u4
-      - id: uncompressed_size
-        type: u4
-      - id: filename_length
+      - id: zip_comment_length
         type: u2
-      - id: extra_field_length
-        type: u2
-      - id: filename
+      - id: zip_comment
         type: str
-        size: filename_length
-      - id: extra_field
-        type: bytes
-        size: extra_field_length
-      - id: file_data
-        type: bytes
-        size: compressed_size
-
-  central_directory:
+        size: zip_comment_length
+  zip_central_directory_entry:
     seq:
       - id: signature
         type: u4
         enum:
           0x02014b50: central_directory_entry
-      - id: version
+      - id: version_made_by
         type: u2
-      - id: version_needed
+      - id: version_needed_to_extract
         type: u2
-      - id: flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
-      - id: last_mod_time
+      - id: last_modified_time
         type: u2
-      - id: last_mod_date
+      - id: last_modified_date
         type: u2
       - id: crc32
         type: u4
@@ -95,4 +69,46 @@ types:
       - id: file_comment
         type: str
         size: file_comment_length
+  zip_local_file_header:
+    seq:
+      - id: signature
+        type: u4
+        enum:
+          0x04034b50: local_file_header
+      - id: version_needed_to_extract
+        type: u2
+      - id: general_purpose_bit_flag
+        type: u2
+      - id: compression_method
+        type: u2
+      - id: last_modified_time
+        type: u2
+      - id: last_modified_date
+        type: u2
+      - id: crc32
+        type: u4
+      - id: compressed_size
+        type: u4
+      - id: uncompressed_size
+        type: u4
+      - id: filename_length
+        type: u2
+      - id: extra_field_length
+        type: u2
+      - id: filename
+        type: str
+        size: filename_length
+      - id: extra_field
+        type: bytes
+        size: extra_field_length
+      - id: compressed_data
+        type: bytes
+        size: compressed_size
+  zip:
+    seq:
+      - id: central_directory
+        type: zip_central_directory_entry
+        repeat: eos
+      - id: end_central_directory_record
+        type: zip_end_central_directory_record
 

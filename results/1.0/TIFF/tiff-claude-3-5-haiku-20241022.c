@@ -1,88 +1,70 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <hammer/hammer.h>
 
-// Define the TIFF structure and parsing rules
-static const HParser *tiff_header;
-static const HParser *tiff_ifd;
-static const HParser *tiff_entry;
-static const HParser *tiff_file;
+typedef struct {
+    uint16_t byte_order;
+    uint16_t magic_number;
+    uint32_t first_ifd_offset;
+    
+    struct {
+        uint16_t tag;
+        uint16_t type;
+        uint32_t count;
+        uint32_t value_or_offset;
+    } *ifd_entries;
+    size_t ifd_entry_count;
+} TIFFImage;
 
-// TIFF Header Parser
-static const HParser* make_tiff_header() {
-    return h_sequence(
-        h_choice(
-            h_literal("II"), // Little Endian
-            h_literal("MM"), // Big Endian
-            NULL
-        ),
-        h_uint16(),           // Version number (42)
-        h_uint32(),           // First IFD offset
+HParser* parse_byte_order(void) {
+    return h_choice(
+        h_token("\x49\x49", 2),  // Little Endian
+        h_token("\x4D\x4D", 2),  // Big Endian
         NULL
     );
 }
 
-// TIFF IFD Entry Parser 
-static const HParser* make_tiff_entry() {
+HParser* parse_magic_number(void) {
+    return h_token("\x00\x2A", 2);
+}
+
+HParser* parse_ifd_entry(void) {
     return h_sequence(
         h_uint16(),   // Tag
-        h_uint16(),   // Type 
+        h_uint16(),   // Type
         h_uint32(),   // Count
-        h_uint32(),   // Value/Offset
+        h_uint32(),   // Value or Offset
         NULL
     );
 }
 
-// TIFF IFD Parser
-static const HParser* make_tiff_ifd() {
-    return h_sequence(
-        h_uint16(),   // Number of entries 
-        h_repeat_n(h_action(make_tiff_entry(), NULL), 0, 256),
-        h_uint32(),   // Next IFD offset
+TIFFImage* parse_tiff(const uint8_t* data, size_t length) {
+    HParser* parser = h_sequence(
+        parse_byte_order(),
+        parse_magic_number(),
+        h_uint32(),  // First IFD offset
+        h_many(parse_ifd_entry()),
         NULL
     );
-}
-
-// Complete TIFF File Parser
-static const HParser* make_tiff_file() {
-    return h_sequence(
-        h_action(make_tiff_header(), NULL),
-        h_action(make_tiff_ifd(), NULL),
-        NULL
-    );
-}
-
-// Parser initialization function
-void init_parsers() {
-    tiff_header = make_tiff_header();
-    tiff_entry = make_tiff_entry();
-    tiff_ifd = make_tiff_ifd();
-    tiff_file = make_tiff_file();
-}
-
-// Main parsing function
-int parse_tiff(const uint8_t *input, size_t length) {
-    init_parsers();
     
-    HParseResult *result = h_parse(tiff_file, input, length);
+    HParseResult* result = h_parse(parser, data, length);
+    if (!result) return NULL;
     
-    if (result == NULL) {
-        fprintf(stderr, "Parsing failed\n");
-        return -1;
-    }
+    TIFFImage* tiff = malloc(sizeof(TIFFImage));
+    // Extract parsed values into TIFFImage structure
     
     h_parse_result_free(result);
-    return 0;
+    return tiff;
 }
 
-int main(int argc, char **argv) {
-    if (argc < 2) {
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
         fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
         return 1;
     }
     
-    FILE *file = fopen(argv[1], "rb");
+    FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Error opening file");
         return 1;
@@ -90,20 +72,22 @@ int main(int argc, char **argv) {
     
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
-    rewind(file);
+    fseek(file, 0, SEEK_SET);
     
-    uint8_t *buffer = malloc(file_size);
-    if (!buffer) {
-        perror("Memory allocation failed");
-        fclose(file);
+    uint8_t* buffer = malloc(file_size);
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+    
+    TIFFImage* tiff = parse_tiff(buffer, file_size);
+    if (!tiff) {
+        fprintf(stderr, "Failed to parse TIFF file\n");
+        free(buffer);
         return 1;
     }
     
-    size_t read_size = fread(buffer, 1, file_size, file);
-    fclose(file);
-    
-    int result = parse_tiff(buffer, read_size);
+    // Print or process TIFF metadata
     
     free(buffer);
-    return result;
+    free(tiff);
+    return 0;
 }

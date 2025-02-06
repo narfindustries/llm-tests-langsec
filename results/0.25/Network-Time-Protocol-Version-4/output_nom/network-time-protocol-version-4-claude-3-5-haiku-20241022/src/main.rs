@@ -1,9 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    error::Error,
-    multi::count,
-    number::complete::{be_u16, be_u32, be_u64},
+    bits::complete::take as take_bits,
+    bytes::complete::take,
+    multi::many0,
+    number::complete::{be_f64, be_u8, be_u16, be_u32},
     sequence::tuple,
     IResult,
 };
@@ -19,14 +18,14 @@ struct NtpPacket {
     stratum: u8,
     poll_interval: i8,
     precision: i8,
-    root_delay: f32,
-    root_dispersion: f32,
+    root_delay: f64,
+    root_dispersion: f64,
     reference_id: u32,
-    reference_timestamp: u64,
-    origin_timestamp: u64,
-    receive_timestamp: u64,
-    transmit_timestamp: u64,
-    extensions: Option<Vec<NtpExtension>>,
+    reference_timestamp: f64,
+    originate_timestamp: f64,
+    receive_timestamp: f64,
+    transmit_timestamp: f64,
+    extensions: Vec<NtpExtension>,
 }
 
 #[derive(Debug)]
@@ -37,60 +36,68 @@ struct NtpExtension {
 }
 
 fn parse_ntp_header(input: &[u8]) -> IResult<&[u8], NtpPacket> {
-    map(
-        tuple((
-            take(1usize),
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u32,
-            opt(parse_extensions),
-        )),
-        |(first_byte, root_delay, root_dispersion, reference_id, ref_ts, origin_ts, recv_ts, trans_ts, extensions)| {
-            let leap_indicator = (first_byte[0] & 0b11000000) >> 6;
-            let version = (first_byte[0] & 0b00111000) >> 3;
-            let mode = first_byte[0] & 0b00000111;
+    let (input, first_byte) = take_bits(8u8)(input)?;
+    let leap_indicator = (first_byte >> 6) & 0b11;
+    let version = (first_byte >> 3) & 0b111;
+    let mode = first_byte & 0b111;
 
-            NtpPacket {
-                leap_indicator,
-                version,
-                mode,
-                stratum: 0,
-                poll_interval: 0,
-                precision: 0,
-                root_delay: f32::from_bits(root_delay),
-                root_dispersion: f32::from_bits(root_dispersion),
-                reference_id,
-                reference_timestamp: ref_ts,
-                origin_timestamp: origin_ts,
-                receive_timestamp: recv_ts,
-                transmit_timestamp: trans_ts,
-                extensions,
-            }
-        },
-    )(input)
-}
+    let (input, (stratum, poll_interval, precision)) = tuple((
+        be_u8,
+        be_u8,
+        be_u8,
+    ))(input)?;
 
-fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<NtpExtension>> {
-    let (input, _) = tag(&[0, 0, 0, 0])(input)?;
-    count(parse_extension, 1)(input)
+    let (input, (root_delay, root_dispersion, reference_id)) = tuple((
+        be_f64,
+        be_f64,
+        be_u32,
+    ))(input)?;
+
+    let (input, (
+        reference_timestamp,
+        originate_timestamp,
+        receive_timestamp,
+        transmit_timestamp,
+    )) = tuple((
+        be_f64,
+        be_f64,
+        be_f64,
+        be_f64,
+    ))(input)?;
+
+    let (input, extensions) = many0(parse_extension)(input)?;
+
+    Ok((input, NtpPacket {
+        leap_indicator,
+        version,
+        mode,
+        stratum,
+        poll_interval: poll_interval as i8,
+        precision: precision as i8,
+        root_delay,
+        root_dispersion,
+        reference_id,
+        reference_timestamp,
+        originate_timestamp,
+        receive_timestamp,
+        transmit_timestamp,
+        extensions,
+    }))
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], NtpExtension> {
-    map(
-        tuple((be_u16, be_u16, take_while!(|_| true))),
-        |(field_type, length, data)| NtpExtension {
-            field_type,
-            length,
-            data: data.to_vec(),
-        },
-    )(input)
+    let (input, field_type) = be_u16(input)?;
+    let (input, length) = be_u16(input)?;
+    let (input, data) = take(length as usize)(input)?;
+
+    Ok((input, NtpExtension {
+        field_type,
+        length,
+        data: data.to_vec(),
+    }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <ntp_file>", args[0]);
@@ -105,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok((_, packet)) => {
             println!("NTP Packet: {:?}", packet);
             Ok(())
-        }
+        },
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);

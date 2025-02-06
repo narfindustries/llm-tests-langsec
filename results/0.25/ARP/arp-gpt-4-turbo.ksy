@@ -5,82 +5,47 @@ meta:
   endian: be
 
 doc: |
-  The Address Resolution Protocol (ARP) is a network protocol used to find out
-  the address of a network node from its Internet address.
+  The Address Resolution Protocol (ARP) is a network layer protocol
+  used for converting an IP address into a physical address.
 
 seq:
-  - id: hw_type
+  - id: htype
     type: u2
-    enum: hardware_type
     doc: Hardware type (e.g., Ethernet = 1)
-
-  - id: proto_type
+  - id: ptype
     type: u2
-    enum: protocol_type
     doc: Protocol type (e.g., IPv4 = 0x0800)
-
-  - id: hw_size
+  - id: hlen
     type: u1
-    doc: Hardware size (e.g., Ethernet = 6)
-
-  - id: proto_size
+    doc: Hardware address length (e.g., Ethernet = 6)
+  - id: plen
     type: u1
-    doc: Protocol size (e.g., IPv4 = 4)
-
-  - id: opcode
+    doc: Protocol address length (e.g., IPv4 = 4)
+  - id: oper
     type: u2
-    enum: opcode
-    doc: ARP opcode (command)
-
-  - id: src_hw_addr
-    size: src_hw_addr_size
-    doc: Source hardware address (MAC)
-
-  - id: src_proto_addr
-    size: src_proto_addr_size
-    doc: Source protocol address (IP)
-
-  - id: dst_hw_addr
-    size: dst_hw_addr_size
-    doc: Destination hardware address (MAC)
-
-  - id: dst_proto_addr
-    size: dst_proto_addr_size
-    doc: Destination protocol address (IP)
-
-instances:
-  src_hw_addr_size:
-    value: hw_size
-
-  src_proto_addr_size:
-    value: proto_size
-
-  dst_hw_addr_size:
-    value: hw_size
-
-  dst_proto_addr_size:
-    value: proto_size
+    enum: operation
+    doc: ARP operation (e.g., request = 1, reply = 2)
+  - id: sha
+    size: hlen
+    doc: Sender hardware address
+  - id: spa
+    size: plen
+    doc: Sender protocol address
+  - id: tha
+    size: hlen
+    doc: Target hardware address
+  - id: tpa
+    size: plen
+    doc: Target protocol address
 
 enums:
-  hardware_type:
-    1: ethernet
-    6: ieee_802
-    7: arcnet
-    15: frame_relay
-    16: atm
-    17: hdlc
-    18: fibre_channel
-    19: atm_rfc2225
-    20: serial_line
-
-  protocol_type:
-    0x0800: ipv4
-    0x0806: arp
-    0x8035: rarp
-    0x86DD: ipv6
-
-  opcode:
+  operation:
     1: request
     2: reply
-    3: request_reverse
-    4: reply_reverse
+    3: rarp_request
+    4: rarp_reply
+    5: drarp_request
+    6: drarp_reply
+    7: drarp_error
+    8: inarp_request
+    9: inarp_reply

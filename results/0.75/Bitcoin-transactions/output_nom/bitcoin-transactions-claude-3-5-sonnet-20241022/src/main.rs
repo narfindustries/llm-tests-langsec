@@ -1,121 +1,101 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::map,
-    multi::count,
-    number::complete::{le_u16, le_u32, le_u64, le_u8},
-    sequence::tuple,
+    multi::{length_data, many0},
+    number::complete::{le_u32, le_u64, le_u8},
     IResult,
 };
 use std::env;
-use std::fs;
-use std::vec::Vec;
-
-#[derive(Debug)]
-struct TxIn {
-    previous_output: OutPoint,
-    script_length: u64,
-    signature_script: Vec<u8>,
-    sequence: u32,
-}
-
-#[derive(Debug)]
-struct TxOut {
-    value: u64,
-    pk_script_length: u64,
-    pk_script: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct OutPoint {
-    hash: Vec<u8>,
-    index: u32,
-}
+use std::fs::File;
+use std::io::Read;
 
 #[derive(Debug)]
 struct Transaction {
     version: u32,
-    flag: Option<u16>,
-    tx_in_count: u64,
-    tx_in: Vec<TxIn>,
-    tx_out_count: u64,
-    tx_out: Vec<TxOut>,
-    lock_time: u32,
+    inputs: Vec<TxInput>,
+    outputs: Vec<TxOutput>,
+    locktime: u32,
+}
+
+#[derive(Debug)]
+struct TxInput {
+    prev_tx_hash: [u8; 32],
+    prev_output_index: u32,
+    script: Vec<u8>,
+    sequence: u32,
+}
+
+#[derive(Debug)]
+struct TxOutput {
+    amount: u64,
+    script: Vec<u8>,
 }
 
 fn parse_varint(input: &[u8]) -> IResult<&[u8], u64> {
     let (input, first_byte) = le_u8(input)?;
     match first_byte {
-        0xff => le_u64(input),
-        0xfe => map(le_u32, |x| x as u64)(input),
-        0xfd => map(le_u16, |x| x as u64)(input),
+        0xff => {
+            let (input, value) = le_u64(input)?;
+            Ok((input, value))
+        }
+        0xfe => {
+            let (input, value) = le_u32(input)?;
+            Ok((input, value as u64))
+        }
+        0xfd => {
+            let (input, value) = le_u16(input)?;
+            Ok((input, value as u64))
+        }
         _ => Ok((input, first_byte as u64)),
     }
 }
 
-fn parse_outpoint(input: &[u8]) -> IResult<&[u8], OutPoint> {
-    let (input, (hash, index)) = tuple((take(32usize), le_u32))(input)?;
-    Ok((
-        input,
-        OutPoint {
-            hash: hash.to_vec(),
-            index,
-        },
-    ))
-}
-
-fn parse_txin(input: &[u8]) -> IResult<&[u8], TxIn> {
-    let (input, previous_output) = parse_outpoint(input)?;
+fn parse_tx_input(input: &[u8]) -> IResult<&[u8], TxInput> {
+    let (input, prev_tx_hash) = take(32usize)(input)?;
+    let (input, prev_output_index) = le_u32(input)?;
     let (input, script_length) = parse_varint(input)?;
-    let (input, signature_script) = take(script_length as usize)(input)?;
+    let (input, script) = take(script_length as usize)(input)?;
     let (input, sequence) = le_u32(input)?;
+
     Ok((
         input,
-        TxIn {
-            previous_output,
-            script_length,
-            signature_script: signature_script.to_vec(),
+        TxInput {
+            prev_tx_hash: prev_tx_hash.try_into().unwrap(),
+            prev_output_index,
+            script: script.to_vec(),
             sequence,
         },
     ))
 }
 
-fn parse_txout(input: &[u8]) -> IResult<&[u8], TxOut> {
-    let (input, value) = le_u64(input)?;
-    let (input, pk_script_length) = parse_varint(input)?;
-    let (input, pk_script) = take(pk_script_length as usize)(input)?;
+fn parse_tx_output(input: &[u8]) -> IResult<&[u8], TxOutput> {
+    let (input, amount) = le_u64(input)?;
+    let (input, script_length) = parse_varint(input)?;
+    let (input, script) = take(script_length as usize)(input)?;
+
     Ok((
         input,
-        TxOut {
-            value,
-            pk_script_length,
-            pk_script: pk_script.to_vec(),
+        TxOutput {
+            amount,
+            script: script.to_vec(),
         },
     ))
 }
 
 fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
     let (input, version) = le_u32(input)?;
-    let (input, flag) = if input.len() >= 2 && input[0] == 0x00 && input[1] == 0x01 {
-        let (input, _) = tag(&[0x00, 0x01])(input)?;
-        (input, Some(0x0001))
-    } else {
-        (input, None)
-    };
-    let (input, tx_in_count) = parse_varint(input)?;
-    let (input, tx_in) = count(parse_txin, tx_in_count as usize)(input)?;
-    let (input, tx_out_count) = parse_varint(input)?;
-    let (input, tx_out) = count(parse_txout, tx_out_count as usize)(input)?;
-    let (input, lock_time) = le_u32(input)?;
+    let (input, input_count) = parse_varint(input)?;
+    let (input, inputs) = many0(parse_tx_input)(input)?;
+    let (input, output_count) = parse_varint(input)?;
+    let (input, outputs) = many0(parse_tx_output)(input)?;
+    let (input, locktime) = le_u32(input)?;
+
     Ok((
         input,
         Transaction {
             version,
-            flag,
-            tx_in_count,
-            tx_in,
-            tx_out_count,
-            tx_out,
-            lock_time,
+            inputs,
+            outputs,
+            locktime,
         },
     ))
 }
@@ -123,16 +103,27 @@ fn parse_transaction(input: &[u8]) -> IResult<&[u8], Transaction> {
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <transaction_file>", args[0]);
+        eprintln!("Usage: {} <bitcoin_tx_file>", args[0]);
         std::process::exit(1);
     }
 
-    let data = fs::read(&args[1]).expect("Failed to read file");
-    match parse_transaction(&data) {
+    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect("Failed to read file");
+
+    match parse_transaction(&buffer) {
         Ok((remaining, transaction)) => {
-            println!("Parsed transaction: {:#?}", transaction);
+            println!("Successfully parsed transaction: {:?}", transaction);
             println!("Remaining bytes: {} bytes", remaining.len());
         }
-        Err(e) => eprintln!("Failed to parse transaction: {:?}", e),
+        Err(e) => {
+            eprintln!("Failed to parse transaction: {:?}", e);
+            std::process::exit(1);
+        }
     }
+}
+
+fn le_u16(input: &[u8]) -> IResult<&[u8], u16> {
+    let (input, bytes) = take(2usize)(input)?;
+    Ok((input, u16::from_le_bytes(bytes.try_into().unwrap())))
 }

@@ -1,55 +1,22 @@
-#ifndef TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
-#define TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+module TLS_Client_Hello;
 
-#include <stdint.h>
-
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-// Define structures as needed based on the TLS Client Hello message format.  This is a placeholder.
-// You'll need to replace this with the actual structure based on your specific needs.
-
-struct tls_client_hello {
-    u8 type;
-    u16 version;
-    u32 random;
-    u16 session_id_length;
-    u8 session_id[32]; // Adjust size as needed
-    u16 cipher_suites_length;
-    u16 cipher_suites[100]; // Adjust size as needed
-    u8 compression_methods_length;
-    u8 compression_methods[10]; // Adjust size as needed
-    u16 extensions_length;
-    // Add extensions as needed
-};
-
-
-// Function to parse the TLS Client Hello message.  This is a placeholder.
-// You'll need to replace this with the actual parsing logic.
-
-int parse_tls_client_hello(const u8* data, int len, struct tls_client_hello* hello) {
-    // Implement parsing logic here.  This is a placeholder.
-    // Check for errors and return -1 if there's an issue.
-    // Otherwise, populate the 'hello' structure and return 0.
-    return 0;
+type tls_client_hello {
+    uint16 protocol_version;
+    bytes random;
+    uint8 session_id_len;
+    bytes session_id = bytes[session_id_len];
+    uint16 cipher_suites_len;
+    uint16[cipher_suites_len / 2] cipher_suites;
+    uint8 compression_methods_len;
+    uint8[compression_methods_len] compression_methods;
+    uint16 extensions_len;
+    bytes extensions = bytes[extensions_len];
 }
 
-
-// Example usage (replace with your actual code)
-int main() {
-    u8 data[1024]; // Replace with actual data
-    int len = sizeof(data); // Replace with actual length
-    struct tls_client_hello hello;
-
-    if (parse_tls_client_hello(data, len, &hello) == 0) {
-        // Process the parsed 'hello' structure
-    } else {
-        // Handle parsing error
-    }
-
-    return 0;
+type extension {
+    uint16 type;
+    uint16 len;
+    bytes data = bytes[len];
 }
 
-#endif
+# Note: This is a simplified representation. The actual structure of extensions and their data fields is complex and varies greatly depending on the extension type. A complete specification would require defining each extension type individually. This example only shows the basic structure.  The "data" field would need to be further defined for each specific extension type.

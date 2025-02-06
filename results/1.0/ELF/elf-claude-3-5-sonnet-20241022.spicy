@@ -1,66 +1,128 @@
-#! /usr/bin/env zeek
 module ELF;
 
-type ElfHeader = unit {
+type Header = unit {
     magic: bytes &size=4;
-    class: uint8;
-    endian: uint8;
-    version: uint8;
-    osabi: uint8;
-    abiversion: uint8;
-    pad: bytes &size=7;
-    type: uint16;
-    machine: uint16;
-    version2: uint32;
-    entry: uint64;
-    phoff: uint64;
-    shoff: uint64;
-    flags: uint32;
-    ehsize: uint16;
-    phentsize: uint16;
-    phnum: uint16;
-    shentsize: uint16;
-    shnum: uint16;
-    shstrndx: uint16;
+    ei_class: uint8;
+    ei_data: uint8;
+    ei_version: uint8;
+    ei_osabi: uint8;
+    ei_abiversion: uint8;
+    ei_pad: bytes &size=7;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
 
-    on magic {
-        if ( self.magic != b"\x7fELF" )
-            confirm_error("Invalid ELF magic number");
+    program_headers: ProgramHeader[self.e_phnum];
+    section_headers: SectionHeader[self.e_shnum];
+
+    on %init {
+        if (self.magic != b"\x7fELF")
+            throw "invalid ELF magic";
     }
 };
 
 type ProgramHeader = unit {
-    type: uint32;
-    flags: uint32;
-    offset: uint64;
-    vaddr: uint64;
-    paddr: uint64;
-    filesz: uint64;
-    memsz: uint64;
-    align: uint64;
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
 };
 
 type SectionHeader = unit {
-    name: uint32;
-    type: uint32;
-    flags: uint64;
-    addr: uint64;
-    offset: uint64;
-    size: uint64;
-    link: uint32;
-    info: uint32;
-    addralign: uint64;
-    entsize: uint64;
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
 };
 
-public type File = unit {
-    header: ElfHeader;
-    program_headers: ProgramHeader[header.phnum];
-    section_headers: SectionHeader[header.shnum];
+type SymbolTableEntry = unit {
+    st_name: uint32;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: uint16;
+    st_value: uint64;
+    st_size: uint64;
 };
 
-on File::%done {
-    print fmt("ELF Analysis Complete. Found %d program headers and %d section headers", 
-              |self.program_headers|, 
-              |self.section_headers|);
-}
+type DynamicEntry = unit {
+    d_tag: uint64;
+    d_val: uint64;
+};
+
+type RelocationEntry = unit {
+    r_offset: uint64;
+    r_info: uint64;
+};
+
+type RelocationEntryAddend = unit {
+    r_offset: uint64;
+    r_info: uint64;
+    r_addend: int64;
+};
+
+public type ELF = Header;
+
+const ELFCLASSNONE = 0;
+const ELFCLASS32 = 1;
+const ELFCLASS64 = 2;
+const ELFDATANONE = 0;
+const ELFDATA2LSB = 1;
+const ELFDATA2MSB = 2;
+const ET_NONE = 0;
+const ET_REL = 1;
+const ET_EXEC = 2;
+const ET_DYN = 3;
+const ET_CORE = 4;
+
+const PT_NULL = 0;
+const PT_LOAD = 1;
+const PT_DYNAMIC = 2;
+const PT_INTERP = 3;
+const PT_NOTE = 4;
+const PT_SHLIB = 5;
+const PT_PHDR = 6;
+const PT_TLS = 7;
+
+const SHT_NULL = 0;
+const SHT_PROGBITS = 1;
+const SHT_SYMTAB = 2;
+const SHT_STRTAB = 3;
+const SHT_RELA = 4;
+const SHT_HASH = 5;
+const SHT_DYNAMIC = 6;
+const SHT_NOTE = 7;
+const SHT_NOBITS = 8;
+const SHT_REL = 9;
+const SHT_SHLIB = 10;
+const SHT_DYNSYM = 11;
+
+const SHF_WRITE = 0x1;
+const SHF_ALLOC = 0x2;
+const SHF_EXECINSTR = 0x4;
+const SHF_MERGE = 0x10;
+const SHF_STRINGS = 0x20;
+const SHF_INFO_LINK = 0x40;
+const SHF_LINK_ORDER = 0x80;
+const SHF_OS_NONCONFORMING = 0x100;
+const SHF_GROUP = 0x200;
+const SHF_TLS = 0x400;

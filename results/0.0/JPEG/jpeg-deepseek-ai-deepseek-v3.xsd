@@ -1,0 +1,116 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define the JPEG file structure -->
+  <xs:element name="JPEGFile">
+    <xs:complexType>
+      <xs:sequence dfdl:lengthKind="implicit">
+        <xs:element name="SOI" type="MarkerType" dfdl:length="2" dfdl:initiator="0xFFD8"/>
+        <xs:element name="Segments" type="SegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="EOI" type="MarkerType" dfdl:length="2" dfdl:initiator="0xFFD9"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define the Marker type -->
+  <xs:complexType name="MarkerType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the Segment type -->
+  <xs:complexType name="SegmentType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Marker" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:choice>
+        <xs:element name="SOF0" type="SOFType"/>
+        <xs:element name="DHT" type="DHTType"/>
+        <xs:element name="DQT" type="DQTType"/>
+        <xs:element name="DRI" type="DRIType"/>
+        <xs:element name="SOS" type="SOSType"/>
+        <xs:element name="APPn" type="APPnType"/>
+        <xs:element name="COM" type="COMType"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define SOF (Start of Frame) -->
+  <xs:complexType name="SOFType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponents" type="xs:unsignedByte"/>
+      <xs:element name="ComponentParameters" type="ComponentParametersType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define Component Parameters -->
+  <xs:complexType name="ComponentParametersType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="ComponentID" type="xs:unsignedByte"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableDestinationSelector" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DHT (Define Huffman Table) -->
+  <xs:complexType name="DHTType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="TableClassAndDestination" type="xs:unsignedByte"/>
+      <xs:element name="NumberOfCodes" type="xs:hexBinary" dfdl:length="16"/>
+      <xs:element name="CodeValues" type="xs:hexBinary" dfdl:length="{ ../Length - 19 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DQT (Define Quantization Table) -->
+  <xs:complexType name="DQTType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="PrecisionAndDestination" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableValues" type="xs:hexBinary" dfdl:length="{ if (../PrecisionAndDestination div 16 = 0) then 64 else 128 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define DRI (Define Restart Interval) -->
+  <xs:complexType name="DRIType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="RestartInterval" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define SOS (Start of Scan) -->
+  <xs:complexType name="SOSType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="NumberOfComponentsInScan" type="xs:unsignedByte"/>
+      <xs:element name="ComponentParameters" type="SOSComponentParametersType" maxOccurs="unbounded"/>
+      <xs:element name="StartOfSpectralSelection" type="xs:unsignedByte"/>
+      <xs:element name="EndOfSpectralSelection" type="xs:unsignedByte"/>
+      <xs:element name="SuccessiveApproximationBitPosition" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define SOS Component Parameters -->
+  <xs:complexType name="SOSComponentParametersType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="ComponentID" type="xs:unsignedByte"/>
+      <xs:element name="DCAndACEntropyCodingTableSelectors" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define APPn (Application-specific) -->
+  <xs:complexType name="APPnType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="Identifier" type="xs:string" dfdl:length="{ ../Length - 2 }"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{ ../Length - 2 - string-length(../Identifier) }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define COM (Comment) -->
+  <xs:complexType name="COMType">
+    <xs:sequence dfdl:lengthKind="implicit">
+      <xs:element name="CommentText" type="xs:string" dfdl:length="{ ../Length - 2 }"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

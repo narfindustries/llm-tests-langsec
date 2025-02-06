@@ -1,69 +1,108 @@
-module sqlite3-db-claude-3-5-sonnet-20241022 (
-    SQLite3DB
-)
+def DatabaseHeader:
+    magic_header: u8[16]
+    page_size: u16
+    write_version: u8
+    read_version: u8
+    reserved_space: u8
+    maximum_fraction: u8
+    minimum_fraction: u8
+    leaf_fraction: u8
+    file_change_counter: u32
+    database_size_pages: u32
+    first_freelist_page: u32
+    freelist_pages_count: u32
+    schema_cookie: u32
+    schema_format: u32
+    page_cache_size: u32
+    largest_root_btree: u32
+    text_encoding: u32
+    user_version: u32
+    incremental_vacuum: u32
+    application_id: u32
+    reserved: u8[20]
+    version_valid: u32
+    sqlite_version: u32
 
-@encoding("aligned")
-def SQLite3DB =
-    Header
-    TableDefinitions[]
+def PageHeader:
+    page_type: u8
+    first_freeblock: u16
+    cells_count: u16
+    cell_content_offset: u16
+    fragmented_free_bytes: u8
+    if page_type == 2 or page_type == 5:
+        rightmost_pointer: u32
 
-def Header =
-    Magic
-    uint16BE(1)
-    uint16BE(1)
-    uint8(64)
-    uint8(32)
-    uint32BE(0)
+def Varint:
+    value: u64
 
-def Magic =
-    "SQLite format 3\x00"
+def CellPointerArray:
+    cell_pointers: u16[]
 
-def TableDefinitions[] =
-    List { TableDefinition }*
+def TableLeafCell:
+    payload_size: Varint
+    rowid: Varint
+    payload: RecordFormat
 
-def TableDefinition =
-    uint32BE(1)  -- Page Type
-    uint16BE(0)  -- Free block offset
-    uint16BE     -- Number of cells
-    uint16BE     -- Cell content offset
-    uint8        -- Number of free bytes
-    SchemaData
+def TableInteriorCell:
+    left_child_page: u32
+    rowid: Varint
 
-def SchemaData =
-    "CREATE TABLE " Name
-    "(" ColumnDefinitions ")"
-    ";"
+def IndexLeafCell:
+    payload_size: Varint
+    payload: RecordFormat
 
-def Name =
-    [A-Za-z] [A-Za-z0-9_]*
+def IndexInteriorCell:
+    left_child_page: u32
+    payload_size: Varint
+    payload: RecordFormat
 
-def ColumnDefinitions =
-    List { ColumnDefinition /","/ }+
+def RecordFormat:
+    header_length: Varint
+    serial_types: Varint[]
+    values: DataValue[]
 
-def ColumnDefinition =
-    Name " " DataType Constraints*
+def DataValue:
+    type: u64
+    if type == 0:
+        null
+    elif type == 1:
+        value: i8
+    elif type == 2:
+        value: i16
+    elif type == 3:
+        value: i24
+    elif type == 4:
+        value: i32
+    elif type == 5:
+        value: i48
+    elif type == 6:
+        value: i64
+    elif type == 7:
+        value: f64
+    elif type >= 12 and type % 2 == 0:
+        blob: u8[(type - 12) / 2]
+    elif type >= 13 and type % 2 == 1:
+        text: string[(type - 13) / 2]
 
-def DataType =
-    "INTEGER" | "TEXT" | "BLOB" | "REAL" | "NUMERIC"
+def FreelistPage:
+    next_freelist_page: u32
+    pages_count: u32
+    page_numbers: u32[pages_count]
 
-def Constraints =
-    " " ("PRIMARY KEY" |
-         "NOT NULL" |
-         "UNIQUE" |
-         "DEFAULT" Value |
-         "CHECK" "(" Expression ")")
+def Page:
+    header: PageHeader
+    cell_pointers: CellPointerArray
+    if header.page_type == 13:
+        cells: TableLeafCell[header.cells_count]
+    elif header.page_type == 5:
+        cells: TableInteriorCell[header.cells_count]
+    elif header.page_type == 10:
+        cells: IndexLeafCell[header.cells_count]
+    elif header.page_type == 2:
+        cells: IndexInteriorCell[header.cells_count]
 
-def Value =
-    Number | String | "NULL"
+def SQLiteDatabase:
+    header: DatabaseHeader
+    pages: Page[]
 
-def Number =
-    [0-9]+ ("." [0-9]+)?
-
-def String =
-    "'" ([^'] | "''")* "'"
-
-def Expression =
-    Name " " Operator " " Value
-
-def Operator =
-    "=" | ">" | "<" | ">=" | "<=" | "!=" | "LIKE"
+main SQLiteDatabase

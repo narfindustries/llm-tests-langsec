@@ -1,44 +1,37 @@
-#ifndef NITF_GEMINI_1_5_FLASH_SPICY
-#define NITF_GEMINI_1_5_FLASH_SPICY
+module NITF;
 
-#include <zeek/file.h>
+type nitf_file_header {
+  uint32 file_header_length;
+  string file_identifier = "NITF02.00"; // e.g., "NITF02.00"  Added default value to address potential error
+  string unique_file_identifier;
+  uint32 security_classification; // Requires mapping to specific codes from standard
+  uint32 header_version;
+  // ... many more fields based on MIL-STD-2500C, potentially variable length strings and embedded structures
+}
 
-global file output_file;
+type nitf_image_header {
+  uint32 ih_length;
+  uint32 image_number;
+  uint32 image_width;
+  uint32 image_height;
+  uint32 bits_per_pixel;
+  string color_space; // e.g., "RGB", "GRAYSCALE"
+  string compression_type; // e.g., "JPEG", "JPEG2000"
+  // ... many more fields, including geolocation data, sensor data, potentially variable length data fields.  Many of these are optional.
+  // Requires a deep dive into MIL-STD-2500C to enumerate all possible fields
+}
 
-function init()
-	output_file = open_file("/tmp/nitf-gemini-1.5-flash.out", "w");
-	if (output_file == nil)
-		print("Error opening output file");
-	endif
-	
-	// Example processing. Replace with actual NITF processing logic.
-	print_to_file(output_file, "NITF Gemini 1.5 Flash processing started...\n");
-	
-	// Add error handling for file operations 
-	// Check file existence and handle potential errors.
-	// This will help avoid unexpected error status 1.
+type nitf_data_segment {
+  uint32 segment_length;
+  string segment_id; //e.g. "IM" for image
+  // This is highly variable, based on the type of data in the segment.  It can contain raw image data, geolocation data, or other ancillary data.  The format will depend heavily on the Image Header fields.
+  bytes data;
+}
 
+type nitf_file {
+  nitf_file_header file_header;
+  vector[nitf_image_header] image_headers;
+  vector[nitf_data_segment] data_segments;
+}
 
-	//Example of reading a file and processing it
-	local file input_file = open_file("generated/999999/1.0/NITF/nitf-gemini-1.5-flash.spicy","r");
-	if (input_file == nil)
-		print("Error opening input file");
-		return;
-	endif
-	
-	local count = 0;
-	local line;
-	while( (line = read_line(input_file)) != nil )
-	{
-		count += 1;
-		print_to_file(output_file, "Line " + count + ": " + line + "\n");
-	}
-	close(input_file);
-
-	print_to_file(output_file, "NITF Gemini 1.5 Flash processing completed.\n");
-	close(output_file);
-	return;
-
-	
-
-#endif
+end

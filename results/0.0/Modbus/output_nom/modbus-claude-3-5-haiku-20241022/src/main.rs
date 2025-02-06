@@ -1,36 +1,60 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::{take, tag},
     combinator::{map, opt},
-    error::ErrorKind,
-    multi::many0,
-    sequence::tuple,
+    multi::{count, many0},
+    number::complete::{le_u8, le_u16, le_u32},
+    sequence::{tuple, preceded},
     IResult,
-    number::complete::{be_u8, be_u16, be_u32},
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
+enum FunctionCode {
+    ReadCoils = 0x01,
+    ReadDiscreteInputs = 0x02,
+    ReadHoldingRegisters = 0x03,
+    ReadInputRegisters = 0x04,
+    WriteSingleCoil = 0x05,
+    WriteSingleRegister = 0x06,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleRegisters = 0x10,
+    FileRecordRead = 0x14,
+    FileRecordWrite = 0x15,
+    EncapsulatedInterfaceTransport = 0x2B,
+}
+
+#[derive(Debug)]
 struct ModbusFrame {
     slave_address: u8,
-    function_code: u8,
+    function_code: FunctionCode,
     data: Vec<u8>,
-    crc: Option<u16>,
+    crc: u16,
+}
+
+fn parse_function_code(input: &[u8]) -> IResult<&[u8], FunctionCode> {
+    map(le_u8, |code| match code {
+        0x01 => FunctionCode::ReadCoils,
+        0x02 => FunctionCode::ReadDiscreteInputs,
+        0x03 => FunctionCode::ReadHoldingRegisters,
+        0x04 => FunctionCode::ReadInputRegisters,
+        0x05 => FunctionCode::WriteSingleCoil,
+        0x06 => FunctionCode::WriteSingleRegister,
+        0x0F => FunctionCode::WriteMultipleCoils,
+        0x10 => FunctionCode::WriteMultipleRegisters,
+        0x14 => FunctionCode::FileRecordRead,
+        0x15 => FunctionCode::FileRecordWrite,
+        0x2B => FunctionCode::EncapsulatedInterfaceTransport,
+        _ => panic!("Invalid function code"),
+    })(input)
 }
 
 fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
-    let (input, slave_address) = be_u8(input)?;
-    let (input, function_code) = be_u8(input)?;
-    
-    let (input, data) = match function_code {
-        0x01 | 0x02 | 0x03 | 0x04 => parse_read_data(input)?,
-        0x05 | 0x06 => parse_write_single_data(input)?,
-        0x0F | 0x10 => parse_write_multiple_data(input)?,
-        _ => (input, Vec::new()),
-    };
-
-    let (input, crc) = opt(be_u16)(input)?;
+    let (input, slave_address) = le_u8(input)?;
+    let (input, function_code) = parse_function_code(input)?;
+    let (input, data) = many0(le_u8)(input)?;
+    let (input, crc) = le_u16(input)?;
 
     Ok((input, ModbusFrame {
         slave_address,
@@ -40,37 +64,7 @@ fn parse_modbus_frame(input: &[u8]) -> IResult<&[u8], ModbusFrame> {
     }))
 }
 
-fn parse_read_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, byte_count) = be_u8(input)?;
-    let (input, data) = take(byte_count)(input)?;
-    Ok((input, data.to_vec()))
-}
-
-fn parse_write_single_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, register_address) = be_u16(input)?;
-    let (input, register_value) = be_u16(input)?;
-    Ok((input, vec![
-        (register_address >> 8) as u8,
-        register_address as u8,
-        (register_value >> 8) as u8,
-        register_value as u8,
-    ]))
-}
-
-fn parse_write_multiple_data(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (input, start_address) = be_u16(input)?;
-    let (input, quantity) = be_u16(input)?;
-    let (input, byte_count) = be_u8(input)?;
-    let (input, data) = take(byte_count)(input)?;
-    Ok((input, [
-        vec![(start_address >> 8) as u8, start_address as u8],
-        vec![(quantity >> 8) as u8, quantity as u8],
-        vec![byte_count],
-        data.to_vec()
-    ].concat()))
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <input_file>", args[0]);
@@ -84,11 +78,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match parse_modbus_frame(&buffer) {
         Ok((_, frame)) => {
             println!("Parsed Modbus Frame: {:?}", frame);
-            Ok(())
         }
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);
         }
     }
+
+    Ok(())
 }

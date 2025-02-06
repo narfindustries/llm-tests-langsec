@@ -1,41 +1,98 @@
 module TIFF;
 
 import spicy;
-import std::bytes;
 
-public type File = unit {
-    header: Header;
-    entries: Entries;
+public type Header = struct {
+    byte_order: uint16;
+    magic_number: uint16;
+    first_ifd_offset: uint32;
+} &byteorder=(self.byte_order == 0x4949 ? spicy::ByteOrder::Little : spicy::ByteOrder::Big);
 
-    var byte_order: uint8 = 0;
-
-    on %init {
-        self.byte_order = 0;
-    }
+public type Rational = struct {
+    numerator: uint32;
+    denominator: uint32;
 };
 
-type Header = unit {
-    magic: bytes(2) &requires(self.magic == b"II" || self.magic == b"MM");
-    version: uint16;
-    ifd_offset: uint32;
+public type Tag = struct {
+    tag_id: uint16;
+    data_type: uint16;
+    data_count: uint32;
+    data_value: bytes &length=4;
 };
 
-type Entries = unit {
+public type ImageFileDirectory = struct {
     num_entries: uint16;
-    entries: Entry[self.num_entries];
+    tags: vector<Tag>;
+    next_ifd_offset: uint32;
 };
 
-type Entry = unit {
-    tag: uint16;
-    field_type: uint16;
-    count: uint32;
-    value_or_offset: uint32;
+public type TIFF = struct {
+    header: Header;
+    ifd: ImageFileDirectory;
 };
 
-type ImageData = unit {
-    data: bytes &eod;
+type TagDefinition = enum {
+    NewSubfileType = 254,
+    ImageWidth = 256,
+    ImageLength = 257,
+    BitsPerSample = 258,
+    Compression = 259,
+    PhotometricInterpretation = 262,
+    FillOrder = 266,
+    Artist = 315,
+    XResolution = 282,
+    YResolution = 283,
+    ResolutionUnit = 296,
+    SoftwareName = 305,
+    DateTime = 306,
+    ColorMap = 320,
+    Copyright = 33432
 };
 
-public function is_tiff(f: File) : bool {
-    return f.header.magic == b"II" || f.header.magic == b"MM";
-}
+type CompressionType = enum {
+    NoCompression = 1,
+    CCITT_MH_RLE = 2,
+    CCITT_Group3 = 3,
+    CCITT_Group4 = 4,
+    LZW = 5,
+    JPEG = 6,
+    PackBits = 32773
+};
+
+type PhotometricType = enum {
+    WhiteIsZero = 0,
+    BlackIsZero = 1,
+    RGB = 2,
+    PaletteColor = 3,
+    TransparencyMask = 4,
+    CMYK = 5,
+    YCbCr = 6,
+    CIELab = 8
+};
+
+type ResolutionUnit = enum {
+    NoUnit = 1,
+    Inches = 2,
+    Centimeters = 3
+};
+
+type SampleFormat = enum {
+    UnsignedInteger = 1,
+    SignedInteger = 2,
+    FloatingPoint = 3,
+    Undefined = 4
+};
+
+public type DataType = enum {
+    BYTE = 1,
+    ASCII = 2,
+    SHORT = 3,
+    LONG = 4,
+    RATIONAL = 5,
+    SBYTE = 6,
+    UNDEFINED = 7,
+    SSHORT = 8,
+    SLONG = 9,
+    FLOAT = 11,
+    DOUBLE = 12
+};

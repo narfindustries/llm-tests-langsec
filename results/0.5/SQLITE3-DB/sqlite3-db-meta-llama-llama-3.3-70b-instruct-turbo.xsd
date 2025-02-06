@@ -1,43 +1,144 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:ex="http://example.com"
-           targetNamespace="http://example.com"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.example.org/SQLITE3-DB" 
+           xmlns="http://www.example.org/SQLITE3-DB" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="=dfdl.dtd"/>
-
-  <xs:element name="sqlite3-db-meta-llama-llama">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="ex:sqlite3-db-header" dfdl:encoding="ISO-8859-1" dfdl:separator=" " dfdl:terminator=";" dfdl:format modificar=""/>
-        <xs:element ref="ex:sqlite3-db-schema" dfdl:encoding="UTF-8" dfdl:separator="\t" dfdl:terminator="\n" dfdl:format modifier="" occurs="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="sqlite3-db-header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header-magic" type="xs:hexBinary" dfdl:length="16" dfdl:encoding="binary" dfdl:format modifier=""/>
-        <xs:element name="page-size" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-        <xs:element name="write-version" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-        <xs:element name="read-version" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-        <xs:element name="reserved-space" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="sqlite3-db-schema">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="column-name" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
-        <xs:element name="column-type" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
-        <xs:element name="column-default-value" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="UTF-8" dfdl:separator="\x00" dfdl:terminator="\x00" dfdl:format modifier=""/>
-        <xs:element name="not-null" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-        <xs:element name="dflt-value" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-        <xs:element name="pk" type="xs:boolean" dfdl:length="1" dfdl:encoding="bigEndian" dfdl:format modifier=""/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="SQLite3DB" type="SQLite3DBType"/>
+  <xs:complexType name="SQLite3DBType">
+    <xs:sequence>
+      <xs:element name="fileHeader" type="fileHeaderType"/>
+      <xs:element name="page" type="pageType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="fileHeaderType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:string" fixed="SQLite format 3"/>
+      <xs:element name="page_size" type="pageSizeType"/>
+      <xs:element name="file_format_write_version" type="fileFormatVersionType"/>
+      <xs:element name="file_format_read_version" type="fileFormatVersionType"/>
+      <xs:element name="reserved_space" type="xs:integer" fixed="0"/>
+      <xs:element name="max_embedded_payload_fraction" type="xs:integer" fixed="64"/>
+      <xs:element name="min_embedded_payload_fraction" type="xs:integer" fixed="32"/>
+      <xs:element name="leaf_payload_fraction" type="xs:integer" fixed="32"/>
+      <xs:element name="file_change_counter" type="xs:integer"/>
+      <xs:element name="number_of_pages" type="xs:integer"/>
+      <xs:element name="first_freelist_trunk_page" type="xs:integer"/>
+      <xs:element name="number_of_freelist_pages" type="xs:integer"/>
+      <xs:element name="schema_cookie" type="xs:integer"/>
+      <xs:element name="schema_format_number" type="schemaFormatNumberType"/>
+      <xs:element name="default_page_cache_size" type="xs:integer"/>
+      <xs:element name="largest_root_btree_page" type="xs:integer"/>
+      <xs:element name="text_encoding" type="textEncodingType"/>
+      <xs:element name="user_version" type="xs:integer"/>
+      <xs:element name="incremental_vacuum_mode" type="incrementalVacuumModeType"/>
+      <xs:element name="application_id" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="pageSizeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="512"/>
+      <xs:enumeration value="1024"/>
+      <xs:enumeration value="2048"/>
+      <xs:enumeration value="4096"/>
+      <xs:enumeration value="8192"/>
+      <xs:enumeration value="16384"/>
+      <xs:enumeration value="32768"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="fileFormatVersionType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="schemaFormatNumberType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="textEncodingType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="incrementalVacuumModeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="pageType">
+    <xs:choice>
+      <xs:element name="btreePage" type="btreePageType"/>
+      <xs:element name="overflowPage" type="overflowPageType"/>
+      <xs:element name="pointerMapPage" type="pointerMapPageType"/>
+      <xs:element name="freelistTrunkPage" type="freelistTrunkPageType"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="btreePageType">
+    <xs:sequence>
+      <xs:element name="page_type" type="pageTypeType"/>
+      <xs:element name="first_freeblock" type="xs:integer"/>
+      <xs:element name="number_of_cells" type="xs:integer"/>
+      <xs:element name="offset_to_cell_content_area" type="xs:integer"/>
+      <xs:element name="number_of_fragmented_free_bytes" type="xs:integer"/>
+      <xs:element name="right_child_page_number" type="xs:integer"/>
+      <xs:element name="cell" type="cellType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="pageTypeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="cellType">
+    <xs:sequence>
+      <xs:element name="payload_length" type="xs:integer"/>
+      <xs:element name="header_length" type="xs:integer"/>
+      <xs:element name="num_columns" type="xs:integer"/>
+      <xs:element name="column_data" type="columnDataType" maxOccurs="unbounded"/>
+      <xs:element name="payload" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="columnDataType">
+    <xs:sequence>
+      <xs:element name="column_type" type="xs:integer"/>
+      <xs:element name="column_data" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="overflowPageType">
+    <xs:sequence>
+      <xs:element name="page_type" type="xs:integer" fixed="5"/>
+      <xs:element name="next_overflow_page_number" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pointerMapPageType">
+    <xs:sequence>
+      <xs:element name="page_type" type="xs:integer" fixed="10"/>
+      <xs:element name="page_number" type="xs:integer"/>
+      <xs:element name="pointer_map_type" type="pointerMapTypeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="pointerMapTypeType">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="freelistTrunkPageType">
+    <xs:sequence>
+      <xs:element name="page_type" type="xs:integer" fixed="1"/>
+      <xs:element name="first_free_page_number" type="xs:integer"/>
+      <xs:element name="number_of_free_pages" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

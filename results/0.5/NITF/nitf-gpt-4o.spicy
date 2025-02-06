@@ -1,36 +1,53 @@
 module NITF;
 
-public type Header = unit {
-    file_type: bytes &size=4;
-    version: bytes &size=5;
-    complexity: bytes &size=1;
-    system: bytes &size=9;
-    date_time: bytes &size=14;
-    file_title: bytes &size=80;
-    file_security: bytes &size=1;
-    security_classification: bytes &size=2;
-    security_control: bytes &size=11;
-    file_size: uint64;
-    header_size: uint64;
-    num_image_segments: uint64;
+type NITF_File = unit {
+    file_header: FileHeader
+    image_segments: array of ImageSegment(file_header.num_image_segments)
+    graphic_segments: array of GraphicSegment(file_header.num_graphic_segments)
+    text_segments: array of TextSegment(file_header.num_text_segments)
+    data_extension_segments: array of DataExtensionSegment(file_header.num_data_extension_segments)
+    reserved_extension_segments: array of ReservedExtensionSegment(file_header.num_reserved_extension_segments)
 };
 
-public type ImageSegment = unit {
-    image_id: bytes &size=10;
-    image_date_time: bytes &size=14;
-    image_security: bytes &size=1;
-    security_classification: bytes &size=2;
-    security_control: bytes &size=11;
-    image_size: uint64;
+type FileHeader = unit {
+    fheader: bytes &size=9 # "NITF02.10"
+    clevel: uint8
+    stype: bytes &size=4 # "BF01"
+    ostaid: bytes &size=10
+    fdt: bytes &size=14 # "YYYYMMDDhhmmss"
+    num_image_segments: uint16
+    num_graphic_segments: uint16
+    num_text_segments: uint16
+    num_data_extension_segments: uint16
+    num_reserved_extension_segments: uint16
 };
 
-public type NITFFile = unit {
-    header: Header;
-    image_segments: array of ImageSegment &length=header.num_image_segments;
+type ImageSegment = unit {
+    im: bytes &size=10
+    iid1: bytes &size=80
+    idatim: bytes &size=14 # "YYYYMMDDhhmmss"
+    isclas: bytes &size=1
+    encryp: bytes &size=1
 };
 
-public module NITFParser = module {
-    public function parse(data: bytes): NITFFile {
-        return parse_NITFFile(data);
-    }
+type GraphicSegment = unit {
+    sy: bytes &size=10
+    sfdt: bytes &size=14 # "YYYYMMDDhhmmss"
+    sclas: bytes &size=1
+};
+
+type TextSegment = unit {
+    textid: bytes &size=10
+    txtdt: bytes &size=14 # "YYYYMMDDhhmmss"
+    txclas: bytes &size=1
+};
+
+type DataExtensionSegment = unit {
+    desid: bytes &size=25
+    desver: bytes &size=2
+};
+
+type ReservedExtensionSegment = unit {
+    resid: bytes &size=25
+    resver: bytes &size=2
 };

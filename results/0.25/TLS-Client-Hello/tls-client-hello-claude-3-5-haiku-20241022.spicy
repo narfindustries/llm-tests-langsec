@@ -2,32 +2,83 @@ module TLS;
 
 import spicy;
 
-public type ClientHello = unit {
-    record_type: uint8 = 22;
-    version: uint16;
-    length: uint16;
-
-    handshake_type: uint8 = 1;
-    handshake_length: uint24;
-    client_version: uint16;
-    random: bytes(32);
-    session_id_length: uint8;
-    session_id: bytes(session_id_length);
+public type ClientHello = struct {
+    legacy_version: uint16;
+    random: bytes;
+    legacy_session_id_length: uint8;
+    legacy_session_id: bytes;
     cipher_suites_length: uint16;
-    cipher_suites: bytes(cipher_suites_length);
-    compression_methods_length: uint8;
-    compression_methods: bytes(compression_methods_length);
-
+    cipher_suites: vector<uint16>;
+    legacy_compression_methods_length: uint8;
+    legacy_compression_methods: bytes;
     extensions_length: uint16;
-    extensions: Extensions;
+    extensions: vector<Extension>;
 
-    type Extensions = unit {
-        extensions: list<Extension> &until($input.at_eof());
+    validate: method {
+        assert self.legacy_version == 0x0303;
+        assert self.legacy_compression_methods_length == 1;
+        assert self.legacy_compression_methods[0] == 0x00;
     }
+};
 
-    type Extension = unit {
-        type: uint16;
-        length: uint16;
-        data: bytes(length);
-    }
+public type Extension = struct {
+    type: uint16;
+    length: uint16;
+    data: bytes;
+};
+
+public type ServerNameExtension = struct {
+    list_length: uint16;
+    server_name_type: uint8;
+    server_name_length: uint16;
+    server_name: bytes;
+};
+
+public type SupportedVersionsExtension = struct {
+    versions_length: uint8;
+    versions: vector<uint16>;
+};
+
+public type SignatureAlgorithmsExtension = struct {
+    algorithms_length: uint16;
+    algorithms: vector<uint16>;
+};
+
+public type SupportedGroupsExtension = struct {
+    groups_length: uint16;
+    groups: vector<uint16>;
+};
+
+public type KeyShareExtension = struct {
+    client_shares_length: uint16;
+    client_shares: vector<KeyShareEntry>;
+};
+
+public type KeyShareEntry = struct {
+    group: uint16;
+    key_exchange_length: uint16;
+    key_exchange: bytes;
+};
+
+public type PreSharedKeyExtension = struct {
+    identities_length: uint16;
+    identities: vector<PskIdentity>;
+    binders_length: uint16;
+    binders: vector<bytes>;
+};
+
+public type PskIdentity = struct {
+    identity_length: uint16;
+    identity: bytes;
+    obfuscated_ticket_age: uint32;
+};
+
+public type PskKeyExchangeModesExtension = struct {
+    modes_length: uint8;
+    modes: vector<uint8>;
+};
+
+public type ALPNExtension = struct {
+    protocol_name_list_length: uint16;
+    protocol_name_list: vector<bytes>;
 };

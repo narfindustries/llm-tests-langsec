@@ -1,51 +1,91 @@
 module Modbus;
 
-import spicy;
-
-type ModbusHeader = unit {
+type MBAPHeader = unit {
     transactionID: uint16;
     protocolID: uint16;
     length: uint16;
     unitID: uint8;
 };
 
-type ModbusADU = unit {
-    header: ModbusHeader;
-    pdu: bytes &size=self.header.length - 1;
+public type FunctionCode = enum {
+    READ_COILS = 1,
+    READ_DISCRETE_INPUTS = 2,
+    READ_HOLDING_REGISTERS = 3,
+    READ_INPUT_REGISTERS = 4,
+    WRITE_SINGLE_COIL = 5,
+    WRITE_SINGLE_REGISTER = 6,
+    READ_EXCEPTION_STATUS = 7,
+    WRITE_MULTIPLE_COILS = 15,
+    WRITE_MULTIPLE_REGISTERS = 16,
+    REPORT_SERVER_ID = 17,
+    READ_FILE_RECORD = 20,
+    WRITE_FILE_RECORD = 21,
+    MASK_WRITE_REGISTER = 22,
+    READ_WRITE_MULTIPLE_REGISTERS = 23,
+    READ_FIFO_QUEUE = 24
 };
 
-public type ModbusPDU = unit {
-    function: uint8;
-    data: switch (self.function) {
-        1 -> { coilStatus: /[01]*/; }
-        2 -> { discreteInputs: /[01]*/; }
-        3 -> { holdingRegisters: /[\x00-\xff]{2}*/; }
-        4 -> { inputRegisters: /[\x00-\xff]{2}*/; }
-        5 -> { writeSingleCoil: /[\x00-\xff]{4}/; }
-        6 -> { writeSingleRegister: /[\x00-\xff]{4}/; }
-        15 -> { writeMultipleCoils: ModbusWriteMultipleCoils; }
-        16 -> { writeMultipleRegisters: ModbusWriteMultipleRegisters; }
-        _ -> { rawData: bytes &eod; }
-    };
+type ExceptionResponse = unit {
+    functionCode: uint8;
+    exceptionCode: uint8;
 };
 
-type ModbusWriteMultipleCoils = unit {
+type QueryRequest = unit {
     startingAddress: uint16;
-    quantityOfOutputs: uint16;
-    byteCount: uint8;
-    outputValue: bytes &size=this.byteCount;
+    quantityOfElements: uint16;
 };
 
-type ModbusWriteMultipleRegisters = unit {
+type WriteSingleRequest = unit {
+    address: uint16;
+    value: uint16;
+};
+
+type WriteMultipleRequest = unit {
     startingAddress: uint16;
     quantityOfRegisters: uint16;
     byteCount: uint8;
-    registerValues: bytes &size=this.byteCount;
+    values: bytes &size=byteCount;
 };
 
-public type Main = unit {
-    adu: ModbusADU;
-    on %done {
-        print self.adu;
-    }
+type RequestPDU = unit {
+    functionCode: FunctionCode;
+    data: switch (self.functionCode) {
+        FunctionCode::READ_COILS,
+        FunctionCode::READ_DISCRETE_INPUTS,
+        FunctionCode::READ_HOLDING_REGISTERS,
+        FunctionCode::READ_INPUT_REGISTERS,
+        FunctionCode::WRITE_MULTIPLE_COILS,
+        FunctionCode::WRITE_MULTIPLE_REGISTERS,
+        FunctionCode::READ_WRITE_MULTIPLE_REGISTERS => :QueryRequest;
+        FunctionCode::WRITE_SINGLE_COIL,
+        FunctionCode::WRITE_SINGLE_REGISTER,
+        FunctionCode::MASK_WRITE_REGISTER => :WriteSingleRequest;
+        default => :bytes &size=(self.$.length - 1);
+    };
+};
+
+type ResponsePDU = unit {
+    functionCode: FunctionCode;
+    data: switch (self.functionCode) {
+        FunctionCode::READ_COILS,
+        FunctionCode::READ_DISCRETE_INPUTS,
+        FunctionCode::READ_HOLDING_REGISTERS,
+        FunctionCode::READ_INPUT_REGISTERS,
+        FunctionCode::WRITE_SINGLE_COIL,
+        FunctionCode::WRITE_SINGLE_REGISTER,
+        FunctionCode::WRITE_MULTIPLE_COILS,
+        FunctionCode::WRITE_MULTIPLE_REGISTERS,
+        FunctionCode::READ_WRITE_MULTIPLE_REGISTERS => :QueryRequest;
+        default => :bytes &size=(self.$.length - 1);
+    };
+};
+
+type ModbusTCP = unit {
+    header: MBAPHeader;
+    pdu: switch {
+        self.header.protocolID == 0 -> RequestPDU;
+        self.header.protocolID == 1 -> ResponsePDU;
+        self.header.protocolID == 0xFFFF -> ExceptionResponse;
+        default -> :void;
+    };
 };

@@ -1,18 +1,64 @@
-# This is a placeholder.  The error message indicates a problem with the
-# Kaitai Struct compiler and/or the .ksy file, not the YAML specification itself.
-#  A valid .ksy file is needed to generate the Python code.  The error message
-# suggests problems with file paths or the Kaitai Struct definition within
-# 'hl7-v2-gemini-1.5-flash.ksy'.  Please provide a valid .ksy file for accurate code generation.
-
-#  This YAML structure is for illustrative purposes only.  Replace this with
-#  the actual content of your Kaitai Struct specification.
-
-# Example:  (This is NOT a valid HL7v2 spec; replace with your actual spec)
-type: struct
 endian: be
-fields:
-  - id: header
-    type: u4
-  - id: data
-    type: bytes
-    size: 100
+
+seq:
+  - id: msh
+    type: hl7_msh
+  - id: segments
+    type: seq
+    repeat: true
+    contents: any_segment
+
+types:
+  hl7_msh:
+    type: struct
+    fields:
+      - id: field_separator
+        type: u1
+      - id: encoding_characters
+        type: str
+        size: 3
+      - id: sending_application
+        type: str
+      - id: sending_facility
+        type: str
+      - id: receiving_application
+        type: str
+      - id: receiving_facility
+        type: str
+      - id: datetime
+        type: str
+      - id: security
+        type: str
+      - id: message_type
+        type: str
+      - id: message_control_id
+        type: str
+      - id: processing_id
+        type: str
+      - id: version_id
+        type: str
+      - id: sequence_number
+        type: str
+      - id: continuation_pointer
+        type: str
+      - id: accept_acknowledgement_type
+        type: str
+      - id: application_acknowledgement_type
+        type: str
+      - id: country_code
+        type: str
+      - id: character_set
+        type: str
+
+  any_segment:
+    type: switch
+    id: segment_type
+    tag: type
+    on:
+      MSH:
+        type: hl7_msh
+      # Add other segment types here as needed (e.g., PID, PV1, etc.)
+      # ... many more segment types ...  This is a placeholder; a real spec would require many more types.
+      default:
+        type: str
+

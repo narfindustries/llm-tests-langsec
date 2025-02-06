@@ -1,49 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/ns/local"
-    targetNamespace="http://example.com/ns/local"
-    elementFormDefault="unqualified">
-    
-    <xs:include schemaLocation="org/apache/daffodil/xsd/DFDLGeneralFormat.dfdl.xsd"/>
-    
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="GeneralFormat"
-                separator=""
-                initiator=""
-                terminator=""
-                leadingSkip="0"
-                trailingSkip="0"
-                textTrimKind="none"
-                encoding="UTF-8"
-                byteOrder="bigEndian"
-                alignment="1"
-                alignmentUnits="bytes"
-                fillByte="0"
-                lengthKind="delimited"
-                lengthUnits="bytes"
-                initiatedContent="no"/>
-        </xs:appinfo>
-    </xs:annotation>
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:nitf="http://example.com/nitf">
 
-    <xs:element name="sonnet">
-        <xs:complexType>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="1"
+                   alignmentUnits="bytes"
+                   lengthKind="explicit"
+                   representation="text"
+                   encoding="UTF-8"
+                   textPadKind="none"
+                   initiator=""
+                   terminator=""
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   textTrimKind="none"
+                   ignoreCase="no"
+                   textBidi="no"
+                   floating="no"
+                   encodingErrorPolicy="replace"
+                   initiatedContent="no"
+                   sequenceKind="ordered"
+                   fillByte="%SP;"
+                   byteOrder="bigEndian"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FHDR" type="xs:string" dfdl:length="4" fixed="NITF"/>
+        <xs:element name="FVER" type="xs:string" dfdl:length="5"/>
+        <xs:element name="CLEVEL" type="xs:string" dfdl:length="2"/>
+        <xs:element name="STYPE" type="xs:string" dfdl:length="4"/>
+        <xs:element name="OSTAID" type="xs:string" dfdl:length="10"/>
+        <xs:element name="FDT" type="xs:string" dfdl:length="14"/>
+        <xs:element name="FTITLE" type="xs:string" dfdl:length="80"/>
+        <xs:element name="FSCLAS" type="xs:string" dfdl:length="1"/>
+        <xs:element name="FL" type="xs:string" dfdl:length="12"/>
+        <xs:element name="HL" type="xs:string" dfdl:length="6"/>
+        <xs:element name="NUMI" type="xs:string" dfdl:length="3"/>
+        
+        <xs:element name="ImageSegments" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
             <xs:sequence>
-                <xs:element name="title" type="xs:string" dfdl:terminator="%NL;"/>
-                <xs:element name="author" type="xs:string" dfdl:terminator="%NL;"/>
-                <xs:element name="lines">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="line" type="xs:string" 
-                                      dfdl:terminator="%NL;"
-                                      minOccurs="14" maxOccurs="14"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
+              <xs:element name="ImageSegment" minOccurs="0" maxOccurs="999">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="IM" type="xs:string" dfdl:length="2" fixed="IM"/>
+                    <xs:element name="IID1" type="xs:string" dfdl:length="10"/>
+                    <xs:element name="IDATIM" type="xs:string" dfdl:length="14"/>
+                    <xs:element name="TGTID" type="xs:string" dfdl:length="17"/>
+                    <xs:element name="IID2" type="xs:string" dfdl:length="80"/>
+                    <xs:element name="ImageData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
             </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="NUMS" type="xs:string" dfdl:length="3"/>
+        <xs:element name="NUMT" type="xs:string" dfdl:length="3"/>
+        <xs:element name="NUMDES" type="xs:string" dfdl:length="3"/>
+        <xs:element name="NUMRES" type="xs:string" dfdl:length="3"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

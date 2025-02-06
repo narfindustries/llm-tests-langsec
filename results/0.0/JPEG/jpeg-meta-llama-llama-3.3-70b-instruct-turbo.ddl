@@ -1,66 +1,102 @@
-domain JPEG {
-  type SOI = byte[2] aligned(1) {
-    value == 0xffd8
-  }
+seq jpeg_file {
+  uint16 magic = 0xFFD8,
+  soi: StartOfImage,
+  tables: array[DefineQuantizationTable | DefineHuffmanTable | DefineArithmeticCodingConditioning | DefineProgressiveHuffmanTable | DefineLosslessHuffmanTable],
+  sos: StartOfScan,
+  entropy_coded_data: array[uint8],
+  eoi: EndOfImage,
+}
 
-  type APP0 = struct {
-    marker: byte[2] aligned(1) {
-      value == 0xffe0
-    }
-    length: uint16be aligned(2)
-    identifier: byte[5] aligned(1) {
-      value == "JFIF\0"
-    }
-    version: byte[2] aligned(1)
-    density_units: byte aligned(1)
-    x_density: uint16be aligned(2)
-    y_density: uint16be aligned(2)
-    thumbnail_height: byte aligned(1)
-    thumbnail_width: byte aligned(1)
-  } aligned(2)
+seq StartOfImage {
+  uint16 marker = 0xFFD8,
+  uint16 marker_length = 2,
+  uint8 precision,
+  uint16 height,
+  uint16 width,
+  uint8 num_components,
+  components: array[Component],
+}
 
-  type DQT = struct {
-    marker: byte[2] aligned(1) {
-      value == 0xffdb
-    }
-    length: uint16be aligned(2)
-    precision: byte aligned(1)
-    table_id: byte aligned(1)
-    table: byte[64] aligned(1)
-  } aligned(2)
+seq Component {
+  uint8 id,
+  uint8 horizontal_sampling_factor,
+  uint8 vertical_sampling_factor,
+  uint8 quantization_table_id,
+}
 
-  type DHT = struct {
-    marker: byte[2] aligned(1) {
-      value == 0xffc4
-    }
-    length: uint16be aligned(2)
-    table_class: byte aligned(1)
-    table_id: byte aligned(1)
-    num_symbols: byte aligned(1)
-    code_lengths: byte[16] aligned(1)
-    huffman_codes: byte[num_symbols] aligned(1)
-  } aligned(2)
+seq DefineQuantizationTable {
+  uint16 marker = 0xFFDB,
+  uint16 marker_length,
+  uint8 quantization_table_id,
+  uint8 precision,
+  quantization_table: array[uint8],
+}
 
-  type SOS = struct {
-    marker: byte[2] aligned(1) {
-      value == 0xffda
-    }
-    length: uint16be aligned(2)
-    num_components: byte aligned(1)
-    component_ids: byte[num_components] aligned(1)
-    huffman_tables: byte[num_components * 2] aligned(1)
-  } aligned(2)
+seq DefineHuffmanTable {
+  uint16 marker = 0xFFC4,
+  uint16 marker_length,
+  uint8 huffman_table_id,
+  uint8 class,
+  uint8 num_codes,
+  code_lengths: array[uint8],
+  huffman_codes: array[uint8],
+}
 
-  type EOI = byte[2] aligned(1) {
-    value == 0xffd9
-  }
+seq DefineArithmeticCodingConditioning {
+  uint16 marker = 0xFFC5,
+  uint16 marker_length,
+  uint8 arithmetic_coding_conditioning,
+}
 
-  type JPEG_file = struct {
-    soi: SOI
-    app0: APP0
-    dqt: DQT
-    dht: DHT
-    sos: SOS
-    eoi: EOI
-  } aligned(1)
+seq DefineProgressiveHuffmanTable {
+  uint16 marker = 0xFFC6,
+  uint16 marker_length,
+  uint8 progressive_huffman_table_id,
+  uint8 class,
+  uint8 num_codes,
+  code_lengths: array[uint8],
+  huffman_codes: array[uint8],
+}
+
+seq DefineLosslessHuffmanTable {
+  uint16 marker = 0xFFC7,
+  uint16 marker_length,
+  uint8 lossless_huffman_table_id,
+  uint8 class,
+  uint8 num_codes,
+  code_lengths: array[uint8],
+  huffman_codes: array[uint8],
+}
+
+seq StartOfScan {
+  uint16 marker = 0xFFDA,
+  uint16 marker_length,
+  uint8 num_components,
+  components: array[ScanComponent],
+  uint8 spectral_selection,
+  uint8 successive_approximation,
+  entropy_coded_data: array[uint8],
+}
+
+seq ScanComponent {
+  uint8 id,
+  uint8 dc_huffman_table_id,
+  uint8 ac_huffman_table_id,
+}
+
+seq EndOfImage {
+  uint16 marker = 0xFFD9,
+  uint16 marker_length = 2,
+}
+
+seq RestartInterval {
+  uint16 marker = 0xFFDD,
+  uint16 marker_length,
+  uint16 restart_interval,
+}
+
+seq ApplicationSpecific {
+  uint16 marker = 0xFFE0-0xFFEF,
+  uint16 marker_length,
+  application_data: array[uint8],
 }

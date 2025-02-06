@@ -1,5 +1,4 @@
 use nom::{
-    bytes::complete::take,
     number::complete::{be_u16, be_u8},
     IResult,
 };
@@ -8,7 +7,7 @@ use std::fs::File;
 use std::io::{self, Read};
 
 #[derive(Debug)]
-struct ARPHeader {
+struct ARP {
     htype: u16,
     ptype: u16,
     hlen: u8,
@@ -20,20 +19,20 @@ struct ARPHeader {
     tpa: Vec<u8>,
 }
 
-fn parse_arp_header(input: &[u8]) -> IResult<&[u8], ARPHeader> {
+fn parse_arp(input: &[u8]) -> IResult<&[u8], ARP> {
     let (input, htype) = be_u16(input)?;
     let (input, ptype) = be_u16(input)?;
     let (input, hlen) = be_u8(input)?;
     let (input, plen) = be_u8(input)?;
     let (input, oper) = be_u16(input)?;
-    let (input, sha) = take(hlen as usize)(input)?;
-    let (input, spa) = take(plen as usize)(input)?;
-    let (input, tha) = take(hlen as usize)(input)?;
-    let (input, tpa) = take(plen as usize)(input)?;
+    let (input, sha) = nom::bytes::complete::take(hlen as usize)(input)?;
+    let (input, spa) = nom::bytes::complete::take(plen as usize)(input)?;
+    let (input, tha) = nom::bytes::complete::take(hlen as usize)(input)?;
+    let (input, tpa) = nom::bytes::complete::take(plen as usize)(input)?;
 
     Ok((
         input,
-        ARPHeader {
+        ARP {
             htype,
             ptype,
             hlen,
@@ -51,19 +50,19 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
+        return Ok(());
     }
 
     let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_arp_header(&buffer) {
-        Ok((_, arp_header)) => {
-            println!("{:?}", arp_header);
+    match parse_arp(&buffer) {
+        Ok((_, arp)) => {
+            println!("{:?}", arp);
         }
         Err(e) => {
-            eprintln!("Failed to parse ARP header: {:?}", e);
+            eprintln!("Failed to parse ARP packet: {:?}", e);
         }
     }
 

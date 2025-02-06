@@ -1,78 +1,120 @@
-# gif-parser.spicy
+module GIF;
 
-@header {
-  include "base/types.zeek";
-  include "base/enum.zeek";
-}
+type gif_signature = byte[3] = "GIF";
+type gif_version = byte[3] = "87a" | "89a";
 
-type Log = record {
-  filename: string;
-  version: string;
+type gif_packed_fields = uint8 {
+  global_color_table_flag: bool = bit(0);
+  color_resolution: uint8 = bits(1..3);
+  sort_flag: bool = bit(4);
+  size_of_global_color_table: uint8 = bits(5..7);
+};
+
+type gif_header = struct {
+  signature: gif_signature;
+  version: gif_version;
+  logical_screen_width: uint16;
+  logical_screen_height: uint16;
+  packed_fields: gif_packed_fields;
+  background_color_index: uint8;
+  pixel_aspect_ratio: uint8;
+};
+
+type rgb_color = struct {
+  red: uint8;
+  green: uint8;
+  blue: uint8;
+};
+
+type gif_global_color_table = array {
+  type: rgb_color;
+  length: expr = 3 * (2 ^ (gif_packed_fields.size_of_global_color_table + 1));
+};
+
+type gif_image_separator = byte = 0x2C;
+
+type gif_image_descriptor_packed_fields = uint8 {
+  local_color_table_flag: bool = bit(0);
+  interlace_flag: bool = bit(1);
+  sort_flag: bool = bit(2);
+  reserved: uint8 = bits(3..5);
+  size_of_local_color_table: uint8 = bits(6..7);
+};
+
+type gif_image_descriptor = struct {
+  separator: gif_image_separator;
+  left_position: uint16;
+  top_position: uint16;
   width: uint16;
   height: uint16;
-  cols: uint8;
-  bg_color: uint8;
-  aspect_ratio: uint8;
+  packed_fields: gif_image_descriptor_packed_fields;
 };
 
-type GifHeader = record {
-  sig: string(3);
-  ver: string(3);
+type gif_local_color_table = array {
+  type: rgb_color;
+  length: expr = 3 * (2 ^ (gif_image_descriptor_packed_fields.size_of_local_color_table + 1));
 };
 
-type LogicalScreenDescriptor = record {
-  width: uint16;
-  height: uint16;
-  packed_fields: uint8;
-  bg_color: uint8;
-  aspect_ratio: uint8;
+type gif_image_data = bytes;
+
+type gif_graphic_control_extension_label = byte = 0xF9;
+
+type gif_graphic_control_extension_packed_fields = uint8 {
+  reserved: uint8 = bits(0..2);
+  disposal_method: uint8 = bits(3..5);
+  user_input_flag: bool = bit(6);
+  transparent_color_flag: bool = bit(7);
 };
 
-type ColorTable = array of uint8[3];
-
-type ImageDescriptor = record {
-  left: uint16;
-  top: uint16;
-  width: uint16;
-  height: uint16;
-  packed_fields: uint8;
+type gif_graphic_control_extension = struct {
+  extension_introducer: byte = 0x21;
+  label: gif_graphic_control_extension_label;
+  block_size: uint8;
+  packed_fields: gif_graphic_control_extension_packed_fields;
+  delay_time: uint16;
+  transparent_color_index: uint8;
 };
 
-type LocalColorTable = array of uint8[3];
+type gif_comment_extension_label = byte = 0xFE;
 
-type PixelData = array of uint8;
-
-type Trailer = record {
-  trailer: uint8;
+type gif_comment_extension = struct {
+  extension_introducer: byte = 0x21;
+  label: gif_comment_extension_label;
+  data: bytes;
 };
 
-type Gif = record {
-  header: GifHeader;
-  lsd: LogicalScreenDescriptor;
-  gct: ColorTable;
-  images: array of record {
-    id: ImageDescriptor;
-    lct: LocalColorTable;
-    data: PixelData;
+type gif_application_extension_label = byte = 0xFF;
+
+type gif_application_extension = struct {
+  extension_introducer: byte = 0x21;
+  label: gif_application_extension_label;
+  data: bytes;
+};
+
+type gif_trailer = byte = 0x3B;
+
+type gif_file = struct {
+  header: gif_header;
+  global_color_table: gif_global_color_table;
+  image_descriptors: array {
+    type: struct {
+      descriptor: gif_image_descriptor;
+      local_color_table: optional {
+        type: gif_local_color_table;
+      };
+      image_data: gif_image_data;
+      graphic_control_extensions: array {
+        type: gif_graphic_control_extension;
+      };
+      comment_extensions: array {
+        type: gif_comment_extension;
+      };
+      application_extensions: array {
+        type: gif_application_extension;
+      };
+    };
   };
-  trailer: Trailer;
+  trailer: gif_trailer;
 };
 
-hook LOG_GIF_RECORD(log: Log) {
-  print("Filename:", log.filename);
-  print("Version:", log.version);
-  print("Width:", log.width);
-  print("Height:", log.height);
-  print("Cols:", log.cols);
-  print("BG Color:", log.bg_color);
-  print("Aspect Ratio:", log.aspect_ratio);
-}
-
-event zeek_init() {
-  local l = Log($filename = "test.gif", $version = "89a", $width = 100, $height = 100, $cols = 256, $bg_color = 0, $aspect_ratio = 0);
-  LOG_GIF_RECORD(l);
-}
-
-event zeek_done() {
-  print("Done.");
-}
+let main = gif_file;

@@ -1,22 +1,23 @@
-module HL7v2GPT4Turbo {
-  import std::ascii
-
-  // Define the structure of an HL7 message segment
-  type Segment = struct {
-    name: ascii::StringN(3),
-    fields: [Field] using DelimitedBy('|', ascii::String)
+module HL7v2 {
+  type MSH = struct {
+    fieldSeparator: u8;
+    encodingCharacters: string(4);
+    sendingApplication: string;
+    sendingFacility: string;
+    receivingApplication: string;
+    receivingFacility: string;
+    dateTimeOfMessage: string;
+    security: option<string>;
+    messageType: string;
+    messageControlID: string;
+    processingID: string;
+    versionID: string;
+    sequenceNumber: option<string>;
+    continuationPointer: option<string>;
+    acceptAcknowledgmentType: option<string>;
+    applicationAcknowledgmentType: option<string>;
+    countryCode: option<string>;
+    characterSet: option<string>;
+    principalLanguageOfMessage: option<string>;
   }
-
-  // Define the structure of an HL7 message
-  type Message = struct {
-    segments: [Segment] using DelimitedBy('\r', Segment)
-  }
-
-  // Define the structure of a field, which can contain multiple components
-  type Field = struct {
-    components: [ascii::String] using DelimitedBy('^', ascii::String)
-  }
-
-  // Entry point for parsing
-  let parse_hl7 = Message
 }

@@ -1,83 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/icmp"
-           xmlns="http://example.org/icmp"
-           elementFormDefault="qualified">
+The error message indicates that the DFDL namespace declaration is missing from the root `<xs:schema>` element.  The previous responses were missing this crucial declaration.  Here's the corrected DFDL schema:
 
-  <xs:element name="icmp_gemini_1">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/1.0/" targetNamespace="http://example.org/icmp" elementFormDefault="qualified" dfdl:textStandard="US-ASCII">
+  <xs:element name="ICMP">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="payload" type="payloadType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="type" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="code" type="xs:unsignedByte" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="checksum" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="identifier" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="variable" dfdl:lengthUnits="bytes" dfdl:occursCountKind="implicit" dfdl:terminator="length" dfdl:terminatorLength="0"/>
       </xs:sequence>
-      <xs:attribute ref="dfdl:lengthKind" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:lengthKind>lengthDelimited</dfdl:lengthKind>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
-      <xs:attribute ref="dfdl:length" use="required">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:length value="1024"/>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:attribute>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="type" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="code" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="checksum" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="identifier" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="sequenceNumber" type="xs:unsignedShort">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="payloadType">
-    <xs:sequence>
-      <xs:element name="data" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded">
-          <xs:annotation>
-              <xs:appinfo source="http://www.ogf.org/dfdl/">
-                  <dfdl:lengthKind>implicit</dfdl:lengthKind>
-              </xs:appinfo>
-          </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
 </xs:schema>

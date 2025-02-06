@@ -1,206 +1,74 @@
-module HL7.v2.GPT4Turbo {
-  import DAEDALUS::Core;
+grammar HL7v2;
 
-  type MSHSegment = struct {
-    fieldSeparator : Char;
-    encodingCharacters : array[Char, 4];
-    sendingApplication : String;
-    sendingFacility : String;
-    receivingApplication : String;
-    receivingFacility : String;
-    dateTimeOfMessage : String;
-    security : String;
-    messageType : String;
-    messageControlID : String;
-    processingID : String;
-    versionID : String;
-  };
+type HL7String = string;
+type HL7DateTime = string;
+type HL7ID = string;
+type HL7Integer = int;
 
-  type EVNSegment = struct {
-    eventTypeCode : String;
-    recordedDateTime : String;
-    dateTimePlannedEvent : String;
-    eventReasonCode : String;
-    operatorID : String;
-    eventOccurred : String;
-    eventFacility : String;
-  };
+type Component = HL7String;
 
-  type PIDSegment = struct {
-    setID : String;
-    patientID : String;
-    patientIdentifierList : String;
-    alternatePatientID : String;
-    patientName : String;
-    motherMaidenName : String;
-    dateTimeOfBirth : String;
-    administrativeSex : String;
-    patientAlias : String;
-    race : String;
-    patientAddress : String;
-    countyCode : String;
-    phoneNumberHome : String;
-    phoneNumberBusiness : String;
-    primaryLanguage : String;
-    maritalStatus : String;
-    religion : String;
-    patientAccountNumber : String;
-    ssnNumberPatient : String;
-    driverLicenseNumberPatient : String;
-    motherIdentifier : String;
-    ethnicGroup : String;
-    birthPlace : String;
-    multipleBirthIndicator : String;
-    birthOrder : String;
-    citizenship : String;
-    veteransMilitaryStatus : String;
-    nationality : String;
-    patientDeathDateAndTime : String;
-    patientDeathIndicator : String;
-  };
+record Composite {
+  components: List[Component] sepBy '^';
+}
 
-  type HL7Message = struct {
-    segments : array[Segment];
-  };
+record MSH {
+  fieldSeparator: Char;
+  encodingCharacters: HL7String;
+  sendingApplication: Composite;
+  sendingFacility: Composite;
+  receivingApplication: Composite;
+  receivingFacility: Composite;
+  dateTimeOfMessage: HL7DateTime;
+  security: Optional[HL7String];
+  messageType: Composite;
+  messageControlID: HL7ID;
+  processingID: Composite;
+  versionID: HL7String;
+  sequenceNumber: Optional[HL7String];
+  continuationPointer: Optional[HL7String];
+  acceptAcknowledgmentType: Optional[Char];
+  applicationAcknowledgmentType: Optional[Char];
+  countryCode: Optional[HL7String];
+  characterSet: Optional[List[HL7String] sepBy '~'];
+  principalLanguageOfMessage: Optional[Composite];
+  alternateCharacterSetHandlingScheme: Optional[HL7String];
+  messageProfileIdentifier: Optional[List[Composite] sepBy '~'];
+}
 
-  type Segment = union {
-    msh : MSHSegment;
-    evn : EVNSegment;
-    pid : PIDSegment;
-  };
+record PID {
+  setID: Optional[HL7ID];
+  patientID: Optional[List[Composite] sepBy '~'];
+  patientIdentifierList: Optional[List[Composite] sepBy '~'];
+  alternatePatientID: Optional[List[Composite] sepBy '~'];
+  patientName: Optional[List[Composite] sepBy '~'];
+  motherMaidenName: Optional[List[Composite] sepBy '~'];
+  dateTimeOfBirth: Optional[HL7DateTime];
+  administrativeSex: Optional[Char];
+  patientAlias: Optional[List[Composite] sepBy '~'];
+  race: Optional[List[Composite] sepBy '~'];
+  patientAddress: Optional[List[Composite] sepBy '~'];
+  countyCode: Optional[HL7String];
+  phoneNumberHome: Optional[List[Composite] sepBy '~'];
+  phoneNumberBusiness: Optional[List[Composite] sepBy '~'];
+  primaryLanguage: Optional[Composite];
+  maritalStatus: Optional[Composite];
+  religion: Optional[Composite];
+  patientAccountNumber: Optional[Composite];
+  ssnNumberPatient: Optional[HL7String];
+  driverLicenseNumberPatient: Optional[Composite];
+  motherIdentifier: Optional[List[Composite] sepBy '~'];
+  ethnicGroup: Optional[List[Composite] sepBy '~'];
+  birthPlace: Optional[HL7String];
+  multipleBirthIndicator: Optional[Char];
+  birthOrder: Optional[HL7Integer];
+  citizenship: Optional[List[Composite] sepBy '~'];
+  veteransMilitaryStatus: Optional[Composite];
+  nationality: Optional[Composite];
+  patientDeathDateAndTime: Optional[HL7DateTime];
+  patientDeathIndicator: Optional[Char];
+}
 
-  type Message = struct {
-    header : MSHSegment;
-    body : array[Segment];
-  };
-
-  type HL7v2 = struct {
-    messages : array[Message];
-  };
-
-  let hl7MessageParser = parser {
-    let segments = many(parseSegment);
-    return HL7Message { segments };
-  };
-
-  let parseSegment = parser {
-    choice {
-      when (peekString(3) == "MSH") => parseMSHSegment;
-      when (peekString(3) == "EVN") => parseEVNSegment;
-      when (peekString(3) == "PID") => parsePIDSegment;
-    }
-  };
-
-  let parseMSHSegment = parser {
-    fieldSeparator <- parseChar;
-    encodingCharacters <- parseArray(parseChar, 4);
-    sendingApplication <- parseStringUntil('|');
-    sendingFacility <- parseStringUntil('|');
-    receivingApplication <- parseStringUntil('|');
-    receivingFacility <- parseStringUntil('|');
-    dateTimeOfMessage <- parseStringUntil('|');
-    security <- parseStringUntil('|');
-    messageType <- parseStringUntil('|');
-    messageControlID <- parseStringUntil('|');
-    processingID <- parseStringUntil('|');
-    versionID <- parseStringUntil('|');
-    return MSHSegment {
-      fieldSeparator,
-      encodingCharacters,
-      sendingApplication,
-      sendingFacility,
-      receivingApplication,
-      receivingFacility,
-      dateTimeOfMessage,
-      security,
-      messageType,
-      messageControlID,
-      processingID,
-      versionID
-    };
-  };
-
-  let parseEVNSegment = parser {
-    eventTypeCode <- parseStringUntil('|');
-    recordedDateTime <- parseStringUntil('|');
-    dateTimePlannedEvent <- parseStringUntil('|');
-    eventReasonCode <- parseStringUntil('|');
-    operatorID <- parseStringUntil('|');
-    eventOccurred <- parseStringUntil('|');
-    eventFacility <- parseStringUntil('|');
-    return EVNSegment {
-      eventTypeCode,
-      recordedDateTime,
-      dateTimePlannedEvent,
-      eventReasonCode,
-      operatorID,
-      eventOccurred,
-      eventFacility
-    };
-  };
-
-  let parsePIDSegment = parser {
-    setID <- parseStringUntil('|');
-    patientID <- parseStringUntil('|');
-    patientIdentifierList <- parseStringUntil('|');
-    alternatePatientID <- parseStringUntil('|');
-    patientName <- parseStringUntil('|');
-    motherMaidenName <- parseStringUntil('|');
-    dateTimeOfBirth <- parseStringUntil('|');
-    administrativeSex <- parseStringUntil('|');
-    patientAlias <- parseStringUntil('|');
-    race <- parseStringUntil('|');
-    patientAddress <- parseStringUntil('|');
-    countyCode <- parseStringUntil('|');
-    phoneNumberHome <- parseStringUntil('|');
-    phoneNumberBusiness <- parseStringUntil('|');
-    primaryLanguage <- parseStringUntil('|');
-    maritalStatus <- parseStringUntil('|');
-    religion <- parseStringUntil('|');
-    patientAccountNumber <- parseStringUntil('|');
-    ssnNumberPatient <- parseStringUntil('|');
-    driverLicenseNumberPatient <- parseStringUntil('|');
-    motherIdentifier <- parseStringUntil('|');
-    ethnicGroup <- parseStringUntil('|');
-    birthPlace <- parseStringUntil('|');
-    multipleBirthIndicator <- parseStringUntil('|');
-    birthOrder <- parseStringUntil('|');
-    citizenship <- parseStringUntil('|');
-    veteransMilitaryStatus <- parseStringUntil('|');
-    nationality <- parseStringUntil('|');
-    patientDeathDateAndTime <- parseStringUntil('|');
-    patientDeathIndicator <- parseStringUntil('|');
-    return PIDSegment {
-      setID,
-      patientID,
-      patientIdentifierList,
-      alternatePatientID,
-      patientName,
-      motherMaidenName,
-      dateTimeOfBirth,
-      administrativeSex,
-      patientAlias,
-      race,
-      patientAddress,
-      countyCode,
-      phoneNumberHome,
-      phoneNumberBusiness,
-      primaryLanguage,
-      maritalStatus,
-      religion,
-      patientAccountNumber,
-      ssnNumberPatient,
-      driverLicenseNumberPatient,
-      motherIdentifier,
-      ethnicGroup,
-      birthPlace,
-      multipleBirthIndicator,
-      birthOrder,
-      citizenship,
-      veteransMilitaryStatus,
-      nationality,
-      patientDeathDateAndTime,
-      patientDeathIndicator
-    };
-  };
+record HL7Message {
+  msh: MSH;
+  pid: Optional[PID];
 }

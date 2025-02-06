@@ -1,45 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <hammer/hammer.h>
 
-HParser *create_icmp_parser() {
-    // Define ICMP header fields
-    HParser *type = h_uint8();
-    HParser *code = h_uint8();
-    HParser *checksum = h_uint16();
-    HParser *rest_of_header = h_uint32();
-
-    // Define the ICMP header structure
-    HParser *icmp_header = h_sequence(type, code, checksum, rest_of_header, NULL);
-
-    // Define the ICMP payload (variable length)
-    HParser *payload = h_rest();
-
-    // Combine header and payload into the full ICMP packet parser
-    HParser *icmp_packet = h_sequence(icmp_header, payload, NULL);
-
-    return icmp_packet;
+// Define ICMP fields using Hammer
+HParser *icmp_type() {
+    return h_bits(8, false);
 }
 
-int main(int argc, char **argv) {
-    // Create the ICMP parser
-    HParser *icmp_parser = create_icmp_parser();
+HParser *icmp_code() {
+    return h_bits(8, false);
+}
 
-    // Example usage: parse an ICMP packet from a buffer
-    const uint8_t icmp_data[] = {
-        0x08, 0x00, 0xf7, 0xff, // ICMP header: type, code, checksum
-        0x00, 0x01, 0x02, 0x03, // Rest of header
-        0x61, 0x62, 0x63, 0x64  // Payload: "abcd"
-    };
-    HParseResult *result = h_parse(icmp_parser, icmp_data, sizeof(icmp_data));
+HParser *icmp_checksum() {
+    return h_bits(16, false);
+}
 
-    if (result) {
-        printf("ICMP packet parsed successfully.\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Failed to parse ICMP packet.\n");
+HParser *icmp_rest_of_header() {
+    return h_bits(32, false);
+}
+
+// Define ICMP message parser
+HParser *icmp_message() {
+    return h_sequence(
+        icmp_type(),
+        icmp_code(),
+        icmp_checksum(),
+        icmp_rest_of_header(),
+        h_end_p(), // Ensure the parser consumes the entire input
+        NULL
+    );
+}
+
+// Function to print ICMP message
+void print_icmp_message(const HParsedToken *parsed) {
+    if (!parsed) {
+        printf("Failed to parse ICMP message.\n");
+        return;
     }
 
-    // Free the parser
-    h_parser_free(icmp_parser);
+    uint8_t type = parsed->seq->elements[0]->uint;
+    uint8_t code = parsed->seq->elements[1]->uint;
+    uint16_t checksum = parsed->seq->elements[2]->uint;
+    uint32_t rest_of_header = parsed->seq->elements[3]->uint;
 
-    return 0;
+    printf("ICMP Message:\n");
+    printf("Type: %u\n", type);
+    printf("Code: %u\n", code);
+    printf("Checksum: 0x%04x\n", checksum);
+    printf("Rest of Header: 0x%08x\n", rest_of_header);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParseResult *result = h_parse(icmp_message(), buffer, file_size);
+    if (result && result->ast) {
+        print_icmp_message(result->ast);
+    } else {
+        fprintf(stderr, "Parsing failed.\n");
+    }
+
+    h_parse_result_free(result);
+    free(buffer);
+
+    return EXIT_SUCCESS;
 }

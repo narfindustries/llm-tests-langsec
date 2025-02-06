@@ -1,0 +1,68 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:daf="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/icmp" xmlns:icmp="http://example.com/icmp" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="icmp:ICMPFormat" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ICMPType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" />
+      <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+      <xs:choice dfdl:choiceDispatchKey="{../Type}">
+        <xs:sequence dfdl:choiceBranchKey="0">
+          <xs:element name="EchoReplyIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="EchoReplySequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="3">
+          <xs:element name="DestinationUnreachableUnused" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="4">
+          <xs:element name="SourceQuenchUnused" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="5">
+          <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="8">
+          <xs:element name="EchoIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="EchoSequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="11">
+          <xs:element name="TimeExceededUnused" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="12">
+          <xs:element name="Pointer" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian" />
+          <xs:element name="ParameterProblemUnused" type="xs:unsignedInt" dfdl:length="3" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="13">
+          <xs:element name="TimestampIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="TimestampSequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="OriginateTimestamp" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+          <xs:element name="ReceiveTimestamp" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+          <xs:element name="TransmitTimestamp" type="xs:unsignedInt" dfdl:length="4极dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="14">
+          <xs:element name="TimestampReplyIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="TimestampReplySequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="OriginateTimestamp" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+          <xs:element name="ReceiveTimestamp" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+          <xs:element name="TransmitTimestamp" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="15">
+          <xs:element name="InfoRequestIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="InfoRequestSequenceNumber" type极xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="16">
+          <xs:element name="InfoReplyIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+          <xs:element name="InfoReplySequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian" />
+        </xs:sequence>
+      </xs:choice>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="implicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ICMP" type="icmp:ICMPType" />
+
+</xs:schema>

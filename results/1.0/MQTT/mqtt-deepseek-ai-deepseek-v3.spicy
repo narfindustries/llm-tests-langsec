@@ -1,0 +1,147 @@
+module MQTT;
+
+import spicy;
+
+public type MQTT_Connect = unit {
+    protocol_name: bytes &size=2 &convert="utf8";
+    protocol_level: uint8;
+    connect_flags: uint8;
+    keep_alive: uint16;
+
+    properties: MQTT_Properties &optional;
+
+    client_id: bytes &eod &convert="utf8";
+
+    will_topic: bytes &eod &convert="utf8" &optional;
+    will_payload: bytes &eod &convert="utf8" &optional;
+
+    username: bytes &eod &convert="utf8" &optional;
+    password: bytes &eod &convert="utf8" &optional;
+};
+
+public type MQTT_Connack = unit {
+    session_present: bool;
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Publish = unit {
+    dup: bool;
+    qos: uint8;
+    retain: bool;
+    topic_name: bytes &eod &convert="utf8";
+    packet_identifier: uint16 &optional;
+
+    properties: MQTT_Properties &optional;
+
+    payload: bytes &eod &convert="utf8";
+};
+
+public type MQTT_Puback = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Pubrec = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Pubrel = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Pubcomp = unit {
+    packet_identifier: uint16;
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Subscribe = unit {
+    packet_identifier: uint16;
+    topic_filter: bytes &eod &convert="utf8";
+    subscription_options: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Suback = unit {
+    packet_identifier: uint16;
+    reason_codes: bytes &size=1;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Unsubscribe = unit {
+    packet_identifier: uint16;
+    topic_filters: bytes &eod &convert="utf8";
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Unsuback = unit {
+    packet_identifier: uint16;
+    reason_codes: bytes &size=1;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Pingreq = unit {};
+
+public type MQTT_Pingresp = unit {};
+
+public type MQTT_Disconnect = unit {
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Auth = unit {
+    reason_code: uint8;
+
+    properties: MQTT_Properties &optional;
+};
+
+public type MQTT_Properties = unit {
+    payload_format_indicator: uint8 &optional;
+    message_expiry_interval: uint32 &optional;
+    content_type: bytes &eod &convert="utf8" &optional;
+    response_topic: bytes &eod &convert="utf8" &optional;
+    correlation_data: bytes &eod &convert="utf8" &optional;
+    session_expiry_interval: uint32 &optional;
+    assigned_client_identifier: bytes &eod &convert="utf8" &optional;
+    server_keep_alive: uint16 &optional;
+    authentication_method: bytes &eod &convert="utf8" &optional;
+    authentication_data: bytes &eod &convert="utf8" &optional;
+};
+
+public type MQTT_Message = unit {
+    fixed_header: uint8;
+    remaining_length: uint32;
+    payload: case fixed_header >> 4 {
+        1 => MQTT_Connect;
+        2 => MQTT_Connack;
+        3 => MQTT_Publish;
+        4 => MQTT_Puback;
+        5 => MQTT_Pubrec;
+        6 => MQTT_Pubrel;
+        7 => MQTT_Pubcomp;
+        8 => MQTT_Subscribe;
+        9 => MQTT_Suback;
+        10 => MQTT_Unsubscribe;
+        11 => MQTT_Unsuback;
+        12 => MQTT_Pingreq;
+        13 => MQTT_Pingresp;
+        14 => MQTT_Disconnect;
+        15 => MQTT_Auth;
+    };
+};

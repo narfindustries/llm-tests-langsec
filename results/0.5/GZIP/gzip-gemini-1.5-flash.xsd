@@ -1,44 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/gemini"
-           xmlns="http://example.org/gemini"
-           elementFormDefault="qualified">
-
-  <xs:element name="gemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/gzip" targetNamespace="http://example.org/gzip" elementFormDefault="qualified">
+  <xs:element name="gzip">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType" minOccurs="1" maxOccurs="1"/>
-        <xs:element name="data" type="dataType" minOccurs="1" maxOccurs="unbounded"/>
-        <xs:element name="trailer" type="trailerType" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="id1" type="tns:gzipID" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary">
+        </xs:element>
+        <xs:element name="id2" type="tns:gzipID" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary">
+        </xs:element>
+        <xs:element name="cm" type="xs:unsignedByte" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary">
+          <dfdl:assert test=". = 8"/>
+        </xs:element>
+        <xs:element name="flg" type="xs:unsignedByte" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="mtime" type="xs:unsignedInt" dfdl:length="4" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="xfl" type="xs:unsignedByte" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="os" type="xs:unsignedByte" dfdl:length="1" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="xlen" type="xs:unsignedShort" dfdl:length="2" dfdl:occursCount="1" dfdl:representation="binary" dfdl:occursCountMin="0"/>
+        <xs:element name="extra" type="xs:base64Binary" dfdl:lengthKind="implicit" dfdl:length="xlen" dfdl:occursCount="1" dfdl:representation="binary" dfdl:occursCountMin="0"/>
+        <xs:element name="fname" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0" dfdl:occursCount="1" dfdl:representation="text" dfdl:occursCountMin="0"/>
+        <xs:element name="fcomment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="0" dfdl:occursCount="1" dfdl:representation="text" dfdl:occursCountMin="0"/>
+        <xs:element name="fhcrc" type="xs:unsignedShort" dfdl:length="2" dfdl:occursCount="1" dfdl:representation="binary" dfdl:occursCountMin="0"/>
+        <xs:element name="compressedData" type="xs:base64Binary" dfdl:lengthKind="implicit" dfdl:lengthUnits="bytes" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4" dfdl:occursCount="1" dfdl:representation="binary"/>
+        <xs:element name="isize" type="xs:unsignedInt" dfdl:length="4" dfdl:occursCount="1" dfdl:representation="binary"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:format ref="dfdl:gzip"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
-
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="dataType">
-    <xs:sequence>
-      <xs:element name="field3" type="xs:string" dfdl:length="20"/>
-      <xs:element name="field4" type="xs:decimal" dfdl:length="8" dfdl:fractionDigits="2"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="trailerType">
-    <xs:sequence>
-      <xs:element name="recordCount" type="xs:integer"/>
-    </xs:sequence>
-  </xs:complexType>
-
+  <xs:simpleType name="gzipID">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:pattern value="1f"/>
+      <xs:pattern value="8b"/>
+    </xs:restriction>
+  </xs:simpleType>
 </xs:schema>

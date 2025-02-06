@@ -1,0 +1,64 @@
+module HTTP;
+
+import spicy;
+
+type Version = unit {
+    major: uint8;
+    minor: uint8;
+};
+
+type Method = enum {
+    GET, POST, PUT, DELETE, HEAD, OPTIONS, TRACE, CONNECT, PATCH
+};
+
+type URI = bytes;
+
+type StatusCode = uint16;
+
+type ReasonPhrase = bytes;
+
+type Header = unit {
+    name: bytes;
+    value: bytes;
+};
+
+type Headers = unit {
+    headers: Header[] &until($$.value == b"\r\n");
+};
+
+type RequestLine = unit {
+    method: Method;
+    uri: URI;
+    version: Version;
+};
+
+type ResponseLine = unit {
+    version: Version;
+    status: StatusCode;
+    reason: ReasonPhrase;
+};
+
+type Request = unit {
+    request_line: RequestLine;
+    headers: Headers;
+    body: bytes;
+};
+
+type Response = unit {
+    response_line: ResponseLine;
+    headers: Headers;
+    body: bytes;
+};
+
+type HTTPMessage = unit {
+    request: Request &if(self.request_line.method != 0);
+    response: Response &if(self.request_line.method == 0);
+};
+
+on HTTPMessage::%done {
+    if ( self.request ) {
+        print "HTTP Request: ", self.request.request_line.method, " ", self.request.request_line.uri, " ", self.request.request_line.version.major, ".", self.request.request_line.version.minor;
+    } else if ( self.response ) {
+        print "HTTP Response: ", self.response.response_line.version.major, ".", self.response.response_line.version.minor, " ", self.response.response_line.status, " ", self.response.response_line.reason;
+    }
+}

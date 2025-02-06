@@ -1,42 +1,44 @@
 module Bitcoin;
 
-public type BitcoinTransaction = unit {
-    version: int32;
-    input_count: varint;
-    inputs: BitcoinInput(self.input_count)[] &size=input_count;
-    output_count: varint;
-    outputs: BitcoinOutput(self.output_count)[] &size=output_count;
-    lock_time: uint32;
-};
-
-public type BitcoinInput = unit(count: uint64) {
-    previous_output: BitcoinOutpoint;
-    script_length: varint;
-    signature_script: bytes &size=self.script_length;
-    sequence: uint32;
-};
-
-public type BitcoinOutput = unit(count: uint64) {
-    value: uint64;
-    pubkey_script_length: varint;
-    pubkey_script: bytes &size=self.pubkey_script_length;
-};
-
-public type BitcoinOutpoint = unit {
-    hash: bytes &size=32;
-    index: uint32;
-};
-
-public type varint = unit {
+type VarInt = unit {
     value: uint64;
     on %init {
         self.value = 0;
         local b: uint8;
-        local shift: uint = 0;
-        do {
-            b = self.&input.readBytes(1)[0];
-            self.value += (b & 0x7F) << shift;
-            shift += 7;
-        } while (b & 0x80 != 0);
+        local base: uint64 = 1;
+        while (true) {
+            b = self.%context.read<uint8>();
+            self.value += (b & 0x7F) * base;
+            if ((b & 0x80) == 0)
+                break;
+            base <<= 7;
+        }
     }
+};
+
+type TxIn = unit {
+    prev_output: bytes &size=32;
+    prev_index: uint32;
+    script_len: VarInt;
+    script_sig: bytes &size=script_len.value;
+    sequence: uint32;
+};
+
+type TxOut = unit {
+    value: uint64;
+    script_len: VarInt;
+    script_pub_key: bytes &size=script_len.value;
+};
+
+type Transaction = unit {
+    version: int32;
+    input_count: VarInt;
+    inputs: TxIn[] &size=input_count.value;
+    output_count: VarInt;
+    outputs: TxOut[] &size=output_count.value;
+    lock_time: uint32;
+};
+
+public type BitcoinTransaction = unit {
+    transactions: Transaction[];
 };

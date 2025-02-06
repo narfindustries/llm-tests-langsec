@@ -1,57 +1,105 @@
 meta:
   id: hl7_v2
-  title: HL7 Version 2 Message Specification
   file-extension: hl7
+  encoding: ascii
   endian: le
 
 seq:
-  - id: header
-    type: message_header
-  - id: segments
-    type: segment
-    repeat: eos
+  - id: message
+    type: hl7_message
 
 types:
-  message_header:
+  hl7_message:
+    seq:
+      - id: msh_segment
+        type: msh_segment
+      - id: segments
+        type: segment
+        repeat: until
+        repeat-until: _io.is_eof
+
+  msh_segment:
     seq:
       - id: field_separator
         type: str
+        encoding: ascii
         size: 1
-      - id: encoding_characters 
+      - id: encoding_characters
         type: str
+        encoding: ascii
         size: 4
       - id: sending_application
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: sending_facility
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: receiving_application
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: receiving_facility
-        type: field
-      - id: datetime
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
+      - id: message_datetime
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: security
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: message_type
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: message_control_id
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: processing_id
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
       - id: version
-        type: field
+        type: strz
+        encoding: ascii
+        terminator: 0x0D
 
   segment:
     seq:
-      - id: name
+      - id: segment_name
         type: str
+        encoding: ascii
         size: 3
       - id: fields
         type: field
-        repeat: eos
+        repeat: until
+        repeat-until: _io.is_eof or _buf[_io.pos] == 0x0D
 
   field:
     seq:
-      - id: components
-        type: str
-        terminator: 0x5E  # Field separator
+      - id: separator
+        type: u1
+        if: _io.pos > 0
+      - id: value
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
+        consume: false
+
+enums:
+  message_type:
+    ADT: 1
+    ORM: 2
+    ORU: 3
+    RDE: 4
+    VXU: 5
+
+  processing_mode:
+    D: 1
+    P: 2
+    T: 3

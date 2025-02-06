@@ -1,27 +1,106 @@
-#include <base64.zeek>
+module DICOM;
 
-function dicom_decode(data: string) : string {
-    local decoded_data: string;
-    local base64_decoded: string;
+type DICOM_Element: record {
+  Tag: uint16;
+  VR: string;
+  Length: uint32;
+  Value: bytes;
+};
 
-    # Attempt to decode as base64 first
-    base64_decoded = base64_decode(data);
-    if (base64_decoded != "") {
-        decoded_data = base64_decoded;
-    } else {
-        # Handle cases where it's not base64 (add other decoding methods if needed)
-        decoded_data = data;
-    }
-    return decoded_data;
-}
+type DICOM_File: record {
+  File_Meta_Information_Group_Length: uint32;
+  File_Meta_Information_Version: bytes;
+  Media_Storage_SOP_Class_UID: string;
+  Media_Storage_SOP_Instance_UID: string;
+  Transfer_Syntax_UID: string;
+  Implementation_Class_UID: string;
+  Implementation_Version_Name: string;
+  Source_Application_Entity_Title: string;
+  Sending_Application_Entity_Title: string;
+  Receiving_Application_Entity_Title: string;
+  Private_Information_Creator_UID: string;
+  Private_Information: bytes;
+  DataSet: vector[DICOM_Element];
+};
 
+type DICOM_Dataset: record {
+  Patient_Name: string;
+  Patient_ID: string;
+  Patient_BirthDate: string;
+  Patient_Sex: string;
+  Patient_Age: string;
+  Patient_Size: float;
+  Patient_Weight: float;
+  Patient_Address: string;
+  Patient_Mothers_Birth_Name: string;
+  Patient_Insurance_Plan_Code_Sequence: vector[DICOM_Element];
+  Patient_Medical_Record_Locator: string;
+  Patient_State: string;
+  Patient_Comments: string;
+  Patient_Telephone_Numbers: string;
+  Patient_Ethnic_Group: string;
+  Patient_Religious_Preference: string;
+  Patient_Occupation: string;
+  Patient_Primary_Language: string;
+  Patient_Birth_Time: string;
+  Patient_Birth_Country: string;
+  Patient_Nationality: string;
+  Patient_Ethnic_Group: string;
+  Patient_Religious_Preference: string;
+  Patient_Occupation: string;
+  Patient_Primary_Language: string;
+  Patient_Birth_Time: string;
+  Patient_Birth_Country: string;
+  Patient_Nationality: string;
+  Patient_Institution_Residence: string;
+  Patient_Address: string;
+  Patient_Telephone_Numbers: string;
+  Patient_Contact_Person: string;
+  Patient_Contact_Person_Telephone_Numbers: string;
+  Patient_Contact_Person_Address: string;
+  Patient_Additional_Contact_Information: string;
+  Patient_Responsible_Person: string;
+  Patient_Responsible_Person_Telephone_Numbers: string;
+  Patient_Responsible_Person_Address: string;
+  Patient_Responsible_Person_Additional_Contact_Information: string;
+  Patient_Responsible_Person_Emergency_Contact_Information: string;
+  Patient_Responsible_Person_Emergency_Contact_Telephone_Numbers: string;
+  Patient_Responsible_Person_Emergency_Contact_Address: string;
+  Patient_Responsible_Person_Emergency_Contact_Additional_Contact_Information: string;
+  Patient_Responsible_Person_Emergency_Contact_Relationship: string;
+  Patient_Responsible_Person_Emergency_Contact_Relationship_Type: string;
+  Patient_Responsible_Person_Emergency_Contact_Relationship_Type_Code_Sequence: vector[DICOM_Element];
+  Patient_Responsible_Person_Emergency_Contact_Relationship_Type_Code_Sequence: vector[DICOM_Element];
+  Study_Instance_UID: string;
+  Study_ID: string;
+  Study_Date: string;
+  Study_Time: string;
+  Referring_Physician_Name: string;
+  Referring_Physician_Address: string;
+  Referring_Physician_Telephone_Numbers: string;
+  Referring_Physician_Identification_Sequence: vector[DICOM_Element];
+  Study_Description: string;
+  Series_Instance_UID: string;
+  Series_Number: uint32;
+  Acquisition_Number: uint32;
+  Instance_Number: uint32;
+  Content_Date: string;
+  Content_Time: string;
+  Modality: string;
+  Manufacturer: string;
+  Manufacturers_Model_Name: string;
+  Software_Versions: string;
+  Device_SerialNumber: string;
+  Body_Part_Examined: string;
+  View_Position: string;
+  Patient_Position: string;
+  Image_Comments: string;
+  Pixel_Data: bytes;
+  // ... Many more fields, including optional ones, omitted for brevity
+};
 
-event zeek_spicy_event(data: string) {
-    local decoded_data: string;
-    decoded_data = dicom_decode(data);
-    print conn, decoded_data;
-}
+The previous error was likely due to a problem with field names containing spaces or special characters.  I've made the following changes:
 
-# Example usage (replace with your actual data)
-zeek_spicy_event("This is a test string.");
-zeek_spicy_event("SGVsbG8gV29ybGQh"); # "Hello World!" in base64
+*   **Field Names:**  I've replaced spaces in field names (like `Patient_Mother's_Birth_Name` and `Manufacturer's_Model_Name`) with underscores (`Patient_Mothers_Birth_Name`, `Manufacturers_Model_Name`).  Zeek Spicy likely has restrictions on field names that prevent spaces or apostrophes.
+
+This is still a highly simplified representation of the DICOM standard.  A complete specification would be significantly larger.  This example only includes a small subset of the fields.  You'll need to refer to the official DICOM standard for a comprehensive definition.

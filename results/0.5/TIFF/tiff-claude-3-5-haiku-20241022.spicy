@@ -2,38 +2,119 @@ module TIFF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    entries: Entries;
+public type Header = unit {
+    byte_order: bytes(2) &convert=(
+        $$ == b"II" ? spicy::ByteOrder::Little : 
+        $$ == b"MM" ? spicy::ByteOrder::Big : 
+        throw "Invalid byte order"
+    );
 
-    var byte_order: bool;
+    magic_number: uint16 &convert=(
+        $$ == 0x002A ? $$ : throw "Invalid magic number"
+    );
 
-    on %init { self.byte_order = false; }
+    num_ifd_entries: uint16;
+    entries: IFDEntry[num_ifd_entries];
+    next_ifd_offset: uint32;
 };
 
-type Header = unit {
-    magic: bytes(2) &requires($$=="II" || $$=="MM");
-    version: uint16 &requires($$==42);
-
-    first_ifd_offset: uint32;
-
-    on %init {
-        self.$.file.byte_order = (magic == b"II");
-    }
-};
-
-type Entries = unit {
-    num_entries: uint16;
-    entry: Entry[num_entries];
-};
-
-type Entry = unit {
+public type IFDEntry = unit {
     tag: uint16;
-    type: uint16;
-    count: uint32;
-    value_or_offset: uint32;
+    field_type: uint16 &convert=(
+        $$ >= 1 && $$ <= 12 ? $$ : throw "Invalid field type"
+    );
+    value_count: uint32;
+    value_or_offset: bytes(4) &convert=(
+        switch (field_type) {
+            1 => parse_byte_value($$),
+            2 => parse_ascii_value($$),
+            3 => parse_short_value($$),
+            4 => parse_long_value($$),
+            5 => parse_rational_value($$),
+            default => $$
+        }
+    );
 };
 
-public type Parser = unit {
-    file: File;
+type TagValues = enum {
+    NewSubfileType = 0x00FE,
+    ImageWidth = 0x0100,
+    ImageLength = 0x0101,
+    BitsPerSample = 0x0102,
+    Compression = 0x0103,
+    PhotometricInterpretation = 0x0106,
+    FillOrder = 0x010A,
+    StripOffsets = 0x0111,
+    Orientation = 0x0112,
+    SamplesPerPixel = 0x0115,
+    RowsPerStrip = 0x0116,
+    StripByteCounts = 0x0117,
+    XResolution = 0x011A,
+    YResolution = 0x011B,
+    PlanarConfiguration = 0x011C,
+    ResolutionUnit = 0x0128
+};
+
+type CompressionValues = enum {
+    None = 1,
+    CCITT_G3 = 2,
+    CCITT_G4 = 3,
+    LZW = 4,
+    JPEG = 5,
+    PackBits = 32773
+};
+
+type PhotometricValues = enum {
+    WhiteIsZero = 0,
+    BlackIsZero = 1,
+    RGB = 2,
+    PaletteColor = 3,
+    TransparencyMask = 4,
+    CMYK = 5,
+    YCbCr = 6
+};
+
+type OrientationValues = enum {
+    TopLeft = 1,
+    TopRight = 2,
+    BottomRight = 3,
+    BottomLeft = 4
+};
+
+type ResolutionUnitValues = enum {
+    NoUnit = 1,
+    Inches = 2,
+    Centimeters = 3
+};
+
+type PlanarConfigValues = enum {
+    Chunky = 1,
+    Planar = 2
+};
+
+function parse_byte_value(data: bytes): uint8 {
+    return spicy::parse_uint8(data);
+}
+
+function parse_ascii_value(data: bytes): string {
+    return spicy::parse_string(data);
+}
+
+function parse_short_value(data: bytes): uint16 {
+    return spicy::parse_uint16(data);
+}
+
+function parse_long_value(data: bytes): uint32 {
+    return spicy::parse_uint32(data);
+}
+
+function parse_rational_value(data: bytes): tuple<uint32, uint32> {
+    return (
+        spicy::parse_uint32(data[0:4]),
+        spicy::parse_uint32(data[4:8])
+    );
+}
+
+public type TIFF = unit {
+    header: Header;
 };

@@ -1,81 +1,104 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/nitf"
-           xmlns:tns="http://example.com/nitf"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/nitf" xmlns="http://example.com/nitf" elementFormDefault="qualified">
+    <xsd:annotation>
+        <xsd:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format lengthKind="explicit" lengthUnits="bytes" encoding="US-ASCII" />
+        </xsd:appinfo>
+    </xsd:annotation>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:GeneralFormat" />
-    </xs:appinfo>
-  </xs:annotation>
+    <xsd:element name="NITF">
+        <xsd:complexType>
+            <xsd:sequence>
+                <!-- File Header -->
+                <xsd:element name="FHDR" type="xsd:string" dfdl:length="9" dfdl:lengthKind="explicit" />
+                <xsd:element name="CLEVEL" type="xsd:string" dfdl:length="2" dfdl:lengthKind="explicit" />
+                <xsd:element name="STYPE" type="xsd:string" dfdl:length="4" dfdl:lengthKind="explicit" />
+                <xsd:element name="OSTAID" type="xsd:string" dfdl:length="10" dfdl:lengthKind="explicit" />
+                <xsd:element name="FDT" type="xsd:string" dfdl:length="14" dfdl:lengthKind="explicit" />
 
-  <dfdl:format name="GeneralFormat"
-               byteOrder="bigEndian"
-               encoding="utf-8"
-               lengthKind="explicit"
-               lengthUnits="bytes"
-               occursCountKind="expression"
-               occursCount="1" />
+                <!-- Image Segment -->
+                <xsd:element name="ImageSegment" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="IM" type="xsd:string" dfdl:length="2" dfdl:lengthKind="explicit" />
+                            <xsd:element name="IID1" type="xsd:string" dfdl:length="10" dfdl:lengthKind="explicit" />
+                            <xsd:element name="IDATIM" type="xsd:string" dfdl:length="14" dfdl:lengthKind="explicit" />
+                            <xsd:element name="TGTID" type="xsd:string" dfdl:length="17" dfdl:lengthKind="explicit" />
+                            <xsd:element name="IID2" type="xsd:string" dfdl:length="80" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:element name="NITF" type="tns:NITFType">
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:element lengthKind="implicit" />
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
+                <!-- Graphic Segment -->
+                <xsd:element name="GraphicSegment" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="SID" type="xsd:string" dfdl:length="10" dfdl:lengthKind="explicit" />
+                            <xsd:element name="SNAME" type="xsd:string" dfdl:length="20" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:complexType name="NITFType">
-    <xs:sequence>
-      <xs:element name="Header" type="tns:HeaderType">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" length="100" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="Body" type="tns:BodyType">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="implicit" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+                <!-- Text Segment -->
+                <xsd:element name="TextSegment" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="TXTID" type="xsd:string" dfdl:length="10" dfdl:lengthKind="explicit" />
+                            <xsd:element name="TXTDT" type="xsd:string" dfdl:length="14" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="FileTitle" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" length="80" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="FileDate" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" length="20" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+                <!-- Data Extension Segment -->
+                <xsd:element name="DataExtensionSegment" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="DESID" type="xsd:string" dfdl:length="25" dfdl:lengthKind="explicit" />
+                            <xsd:element name="DESVER" type="xsd:string" dfdl:length="2" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:complexType name="BodyType">
-    <xs:sequence>
-      <xs:element name="Content" type="xs:base64Binary">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="implicit" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
+                <!-- Reserved Extension Segment -->
+                <xsd:element name="ReservedExtensionSegment" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="RESID" type="xsd:string" dfdl:length="25" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-</xs:schema>
+                <!-- File Security Fields -->
+                <xsd:element name="FileSecurity">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="FSCLAS" type="xsd:string" dfdl:length="1" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSCODE" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSCTLH" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSREL" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSDCTP" type="xsd:string" dfdl:length="2" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSDCDT" type="xsd:string" dfdl:length="8" dfdl:lengthKind="explicit" />
+                            <xsd:element name="FSDCXM" type="xsd:string" dfdl:length="4" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
+
+                <!-- Image Security Fields -->
+                <xsd:element name="ImageSecurity" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="ISCLAS" type="xsd:string" dfdl:length="1" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISCODE" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISCTLH" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISREL" type="xsd:string" dfdl:length="40" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISDCTP" type="xsd:string" dfdl:length="2" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISDCDT" type="xsd:string" dfdl:length="8" dfdl:lengthKind="explicit" />
+                            <xsd:element name="ISDCXM" type="xsd:string" dfdl:length="4" dfdl:lengthKind="explicit" />
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
+
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>

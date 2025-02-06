@@ -1,8 +1,8 @@
 meta:
   id: hl7_v2
-  title: HL7 v2 Message
+  title: HL7 v2.x Message
   file-extension: hl7
-  endian: be
+  encoding: ASCII
 
 seq:
   - id: segments
@@ -15,14 +15,17 @@ types:
       - id: segment_id
         type: str
         size: 3
-        encoding: ascii
+      - id: field_separator
+        type: str
+        size: 1
       - id: fields
         type: field
-        repeat: eos
+        repeat: until
+        repeat-until: _io.peek_byte() == null
 
   field:
     seq:
       - id: value
         type: strz
-        encoding: ascii
-        terminator: 0x7C  # '|' character
+        terminator: 124  # ASCII code for '|'
+        include: true

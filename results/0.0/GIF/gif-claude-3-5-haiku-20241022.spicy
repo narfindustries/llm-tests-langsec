@@ -2,63 +2,80 @@ module GIF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    logical_screen: LogicalScreen;
-    blocks: Blocks;
+public type Signature = bytes(3);
+public type Version = bytes(3);
 
-    on %done { 
-        print "GIF file parsed successfully";
-    }
+public type PackedFields = uint8 {
+    global_color_table_flag: bitfield(0, 1),
+    color_resolution: bitfield(1, 3),
+    sort_flag: bitfield(4, 1),
+    global_color_table_size: bitfield(5, 3)
 };
 
-type Header = unit {
-    signature: bytes(3) &requires($$=="GIF");
-    version: bytes(3) &requires($$=="87a" || $$=="89a");
+public type ColorTableEntry = struct {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
 };
 
-type LogicalScreen = unit {
+public type LogicalScreenDescriptor = struct {
     width: uint16;
     height: uint16;
-    packed_fields: uint8;
+    packed_fields: PackedFields;
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
 };
 
-type Blocks = unit {
-    blocks: Block[] &until($$.type == BlockType::Trailer);
+public type GlobalColorTable = vector<ColorTableEntry>;
+
+public type ImagePackedFields = uint8 {
+    local_color_table_flag: bitfield(0, 1),
+    interlace_flag: bitfield(1, 1),
+    sort_flag: bitfield(2, 1),
+    local_color_table_size: bitfield(3, 3)
 };
 
-type Block = unit {
-    type: BlockType;
-
-    switch (type) {
-        BlockType::ImageDescriptor -> image_descriptor: ImageDescriptor;
-        BlockType::Extension -> extension: Extension;
-        BlockType::Trailer -> trailer: Trailer;
-    }
-};
-
-enum BlockType : uint8 {
-    ImageDescriptor = 0x2C,
-    Extension = 0x21,
-    Trailer = 0x3B
-};
-
-type ImageDescriptor = unit {
-    separator: uint8 &requires($$==0x2C);
-    left: uint16;
-    top: uint16;
+public type ImageDescriptor = struct {
+    separator: uint8;
+    left_position: uint16;
+    top_position: uint16;
     width: uint16;
     height: uint16;
-    packed_fields: uint8;
+    packed_fields: ImagePackedFields;
 };
 
-type Extension = unit {
+public type LocalColorTable = vector<ColorTableEntry>;
+
+public type GraphicControlExtensionPackedFields = uint8 {
+    disposal_method: bitfield(0, 3),
+    user_input_flag: bitfield(3, 1),
+    transparent_color_flag: bitfield(4, 1)
+};
+
+public type GraphicControlExtension = struct {
+    introducer: uint8;
     label: uint8;
-    data: bytes &eod;
+    block_size: uint8;
+    packed_fields: GraphicControlExtensionPackedFields;
+    delay_time: uint16;
+    transparent_color_index: uint8;
 };
 
-type Trailer = unit {
-    marker: uint8 &requires($$ == 0x3B);
+public type ImageData = struct {
+    lzw_min_code_size: uint8;
+    data_blocks: bytes;
 };
+
+public type GIF = struct {
+    signature: Signature;
+    version: Version;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional<GlobalColorTable>;
+    graphic_control_extension: optional<GraphicControlExtension>;
+    image_descriptor: ImageDescriptor;
+    local_color_table: optional<LocalColorTable>;
+    image_data: ImageData;
+    trailer: uint8;
+} &parse(p: Parser);
+
+public type Parser = spicy::Parser<GIF>;

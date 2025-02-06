@@ -1,10 +1,11 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
     multi::{count, many0},
-    number::complete::{le_u8, le_u16, le_u32},
+    number::complete::{le_u8, le_u16},
     sequence::{tuple, preceded},
     IResult,
+    branch::alt,
+    combinator::{map, opt, cond},
 };
 use std::env;
 use std::fs::File;
@@ -27,14 +28,13 @@ struct LogicalScreenDescriptor {
 
 #[derive(Debug)]
 struct ColorTableEntry {
-    red: u8,
-    green: u8,
-    blue: u8,
+    r: u8,
+    g: u8,
+    b: u8,
 }
 
 #[derive(Debug)]
 struct ImageDescriptor {
-    separator: u8,
     left: u16,
     top: u16,
     width: u16,
@@ -43,134 +43,153 @@ struct ImageDescriptor {
 }
 
 #[derive(Debug)]
-struct ImageData {
-    lzw_min_code_size: u8,
-    data_blocks: Vec<Vec<u8>>,
+struct GraphicControlExtension {
+    packed_fields: u8,
+    delay_time: u16,
+    transparent_color_index: u8,
 }
 
 #[derive(Debug)]
-struct GifFile {
+struct Gif {
     header: GifHeader,
-    logical_screen_descriptor: LogicalScreenDescriptor,
+    logical_screen: LogicalScreenDescriptor,
     global_color_table: Option<Vec<ColorTableEntry>>,
-    images: Vec<(ImageDescriptor, ImageData)>,
-    extensions: Vec<Vec<u8>>,
+    images: Vec<GifImage>,
 }
 
-fn parse_gif_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
-    map(
-        tuple((
-            take(3usize),
-            take(3usize),
-        )),
-        |(signature, version)| GifHeader {
-            signature: signature.try_into().unwrap(),
-            version: version.try_into().unwrap(),
-        }
-    )(input)
+#[derive(Debug)]
+struct GifImage {
+    descriptor: ImageDescriptor,
+    local_color_table: Option<Vec<ColorTableEntry>>,
+    graphic_control: Option<GraphicControlExtension>,
+    lzw_min_code_size: u8,
+    image_data: Vec<u8>,
+}
+
+fn parse_header(input: &[u8]) -> IResult<&[u8], GifHeader> {
+    let (input, signature) = take(3usize)(input)?;
+    let (input, version) = take(3usize)(input)?;
+    
+    Ok((input, GifHeader {
+        signature: signature.try_into().unwrap(),
+        version: version.try_into().unwrap(),
+    }))
 }
 
 fn parse_logical_screen_descriptor(input: &[u8]) -> IResult<&[u8], LogicalScreenDescriptor> {
-    map(
-        tuple((
-            le_u16,
-            le_u16,
-            le_u8,
-            le_u8,
-            le_u8,
-        )),
-        |(width, height, packed_fields, background_color_index, pixel_aspect_ratio)| 
-        LogicalScreenDescriptor {
-            width,
-            height,
-            packed_fields,
-            background_color_index,
-            pixel_aspect_ratio,
-        }
-    )(input)
+    let (input, width) = le_u16(input)?;
+    let (input, height) = le_u16(input)?;
+    let (input, packed_fields) = le_u8(input)?;
+    let (input, background_color_index) = le_u8(input)?;
+    let (input, pixel_aspect_ratio) = le_u8(input)?;
+
+    Ok((input, LogicalScreenDescriptor {
+        width,
+        height,
+        packed_fields,
+        background_color_index,
+        pixel_aspect_ratio,
+    }))
 }
 
-fn parse_color_table(input: &[u8], color_table_size: usize) -> IResult<&[u8], Vec<ColorTableEntry>> {
+fn parse_color_table(input: &[u8], table_size: usize) -> IResult<&[u8], Vec<ColorTableEntry>> {
     count(
-        map(
-            tuple((le_u8, le_u8, le_u8)),
-            |(red, green, blue)| ColorTableEntry { red, green, blue }
-        ),
-        color_table_size
+        map(tuple((le_u8, le_u8, le_u8)), |(r, g, b)| ColorTableEntry { r, g, b }),
+        table_size
     )(input)
 }
 
 fn parse_image_descriptor(input: &[u8]) -> IResult<&[u8], ImageDescriptor> {
-    map(
-        tuple((
-            tag(&[0x2C]),
-            le_u16,
-            le_u16,
-            le_u16,
-            le_u16,
-            le_u8,
-        )),
-        |(separator, left, top, width, height, packed_fields)| 
-        ImageDescriptor {
-            separator,
-            left,
-            top,
-            width,
-            height,
-            packed_fields,
-        }
-    )(input)
+    let (input, _) = tag([0x2C])(input)?;
+    let (input, left) = le_u16(input)?;
+    let (input, top) = le_u16(input)?;
+    let (input, width) = le_u16(input)?;
+    let (input, height) = le_u16(input)?;
+    let (input, packed_fields) = le_u8(input)?;
+
+    Ok((input, ImageDescriptor {
+        left,
+        top,
+        width,
+        height,
+        packed_fields,
+    }))
 }
 
-fn parse_image_data(input: &[u8]) -> IResult<&[u8], ImageData> {
-    map(
-        tuple((
-            le_u8,
-            many0(preceded(le_u8, take_while!(|x: u8| x != 0))),
-        )),
-        |(lzw_min_code_size, data_blocks)| ImageData {
-            lzw_min_code_size,
-            data_blocks,
-        }
-    )(input)
+fn parse_graphic_control_extension(input: &[u8]) -> IResult<&[u8], GraphicControlExtension> {
+    let (input, _) = tag([0x21, 0xF9])(input)?;
+    let (input, _block_size) = tag([4])(input)?;
+    let (input, packed_fields) = le_u8(input)?;
+    let (input, delay_time) = le_u16(input)?;
+    let (input, transparent_color_index) = le_u8(input)?;
+    let (input, _) = tag([0])(input)?;
+
+    Ok((input, GraphicControlExtension {
+        packed_fields,
+        delay_time,
+        transparent_color_index,
+    }))
 }
 
-fn parse_gif(input: &[u8]) -> IResult<&[u8], GifFile> {
-    let (input, header) = parse_gif_header(input)?;
-    let (input, logical_screen_descriptor) = parse_logical_screen_descriptor(input)?;
+fn parse_image_data(input: &[u8]) -> IResult<&[u8], (u8, Vec<u8>)> {
+    let (input, lzw_min_code_size) = le_u8(input)?;
+    let (input, data_blocks) = many0(preceded(le_u8, take_while_m_n))(input)?;
+    
+    Ok((input, (lzw_min_code_size, data_blocks.concat())))
+}
 
-    let global_color_table_size = if logical_screen_descriptor.packed_fields & 0x80 != 0 {
-        1 << ((logical_screen_descriptor.packed_fields & 0x07) + 1)
-    } else {
-        0
-    };
+fn take_while_m_n(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, block) = take(input[0] as usize)(input)?;
+    Ok((input, block.to_vec()))
+}
 
-    let (input, global_color_table) = if global_color_table_size > 0 {
-        let (input, color_table) = parse_color_table(input, global_color_table_size)?;
-        (input, Some(color_table))
+fn parse_gif(input: &[u8]) -> IResult<&[u8], Gif> {
+    let (input, header) = parse_header(input)?;
+    let (input, logical_screen) = parse_logical_screen_descriptor(input)?;
+
+    let (input, global_color_table) = if logical_screen.packed_fields & 0x80 != 0 {
+        let table_size = 2 << (logical_screen.packed_fields & 0x07);
+        let (input, table) = parse_color_table(input, table_size)?;
+        (input, Some(table))
     } else {
         (input, None)
     };
 
-    let (mut input, mut images) = many0(
-        tuple((
-            parse_image_descriptor,
-            parse_image_data,
-        ))
-    )(input)?;
+    let (input, images) = many0(parse_gif_image)(input)?;
+    let (input, _) = tag([0x3B])(input)?;
 
-    let (input, extensions) = many0(take_while!(|x: u8| x == 0x21))(input)?;
-
-    Ok((input, GifFile {
+    Ok((input, Gif {
         header,
-        logical_screen_descriptor,
+        logical_screen,
         global_color_table,
         images,
-        extensions,
     }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn parse_gif_image(input: &[u8]) -> IResult<&[u8], GifImage> {
+    let (input, graphic_control) = opt(parse_graphic_control_extension)(input)?;
+    let (input, descriptor) = parse_image_descriptor(input)?;
+
+    let (input, local_color_table) = if descriptor.packed_fields & 0x80 != 0 {
+        let table_size = 2 << (descriptor.packed_fields & 0x07);
+        let (input, table) = parse_color_table(input, table_size)?;
+        (input, Some(table))
+    } else {
+        (input, None)
+    };
+
+    let (input, (lzw_min_code_size, image_data)) = parse_image_data(input)?;
+
+    Ok((input, GifImage {
+        descriptor,
+        local_color_table,
+        graphic_control,
+        lzw_min_code_size,
+        image_data,
+    }))
+}
+
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <gif_file>", args[0]);

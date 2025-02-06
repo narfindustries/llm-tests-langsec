@@ -1,41 +1,27 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/bitcoinTransactions" elementFormDefault="qualified" dfdl:textStandard="US-ASCII" dfdl:separatorSuppressPolicy="trailingEmpty" dfdl:lengthUnits="bytes">
-
-  <xs:element name="BitcoinTransactions">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/bitcoin" elementFormDefault="qualified" attributeFormDefault="unqualified" xmlns:tns="http://example.org/bitcoin">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+  <xs:element name="bitcoinTransaction">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="Transaction" maxOccurs="unbounded">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="Version" type="xs:int" dfdl:length="4"/>
-              <xs:element name="InputCount" type="xs:int" dfdl:length="4"/>
-              <xs:element name="Inputs" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="PreviousTransactionHash" type="xs:hexBinary" dfdl:length="32"/>
-                    <xs:element name="PreviousTransactionOutputIndex" type="xs:int" dfdl:length="4"/>
-                    <xs:element name="ScriptLength" type="xs:int" dfdl:length="1"/>
-                    <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="{ScriptLength}"/>
-                    <xs:element name="Sequence" type="xs:int" dfdl:length="4"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-              <xs:element name="OutputCount" type="xs:int" dfdl:length="4"/>
-              <xs:element name="Outputs" dfdl:occursCountKind="implicit" dfdl:lengthKind="implicit">
-                <xs:complexType>
-                  <xs:sequence>
-                    <xs:element name="Value" type="xs:long" dfdl:length="8"/>
-                    <xs:element name="ScriptPubKeyLength" type="xs:int" dfdl:length="1"/>
-                    <xs:element name="ScriptPubKey" type="xs:hexBinary" dfdl:lengthKind="length" dfdl:length="{ScriptPubKeyLength}"/>
-                  </xs:sequence>
-                </xs:complexType>
-              </xs:element>
-              <xs:element name="LockTime" type="xs:int" dfdl:length="4"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
+        <xs:element name="version" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+        <xs:element name="inputs" type="tns:inputsType" dfdl:minOccurs="0" dfdl:maxOccurs="unbounded"/>
+        <xs:element name="outputs" type="tns:outputsType" dfdl:minOccurs="0" dfdl:maxOccurs="unbounded"/>
+        <xs:element name="locktime" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
+  <xs:complexType name="inputsType">
+    <xs:sequence>
+      <xs:element name="prev_out_hash" type="xs:hexBinary" dfdl:length="32" dfdl:representation="binary"/>
+      <xs:element name="prev_out_index" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+      <xs:element name="scriptSig" type="xs:hexBinary" dfdl:lengthKind="variable" dfdl:representation="binary"/>
+      <xs:element name="sequence" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="outputsType">
+    <xs:sequence>
+      <xs:element name="value" type="xs:unsignedLong" dfdl:length="8" dfdl:representation="binary"/>
+      <xs:element name="scriptPubKey" type="xs:hexBinary" dfdl:lengthKind="variable" dfdl:representation="binary"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

@@ -5,7 +5,7 @@ meta:
 
 seq:
   - id: magic
-    contents: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    contents: [137, 80, 78, 71, 13, 10, 26, 10]
   - id: chunks
     type: chunk
     repeat: until
@@ -19,33 +19,33 @@ types:
       - id: type
         type: str
         size: 4
-        encoding: UTF-8
+        encoding: ascii
       - id: data
         size: length
         type:
           switch-on: type
           cases:
-            '"IHDR"': ihdr_chunk
-            '"PLTE"': plte_chunk
-            '"IDAT"': idat_chunk
-            '"tRNS"': trns_chunk
-            '"gAMA"': gama_chunk
-            '"cHRM"': chrm_chunk
-            '"sRGB"': srgb_chunk
-            '"iCCP"': iccp_chunk
-            '"tEXt"': text_chunk
-            '"zTXt"': ztxt_chunk
-            '"iTXt"': itxt_chunk
-            '"bKGD"': bkgd_chunk
-            '"pHYs"': phys_chunk
-            '"sBIT"': sbit_chunk
-            '"sPLT"': splt_chunk
-            '"hIST"': hist_chunk
-            '"tIME"': time_chunk
+            '"IHDR"': chunk_header
+            '"PLTE"': chunk_palette
+            '"IDAT"': chunk_data
+            '"bKGD"': chunk_background
+            '"cHRM"': chunk_chromaticity
+            '"gAMA"': chunk_gamma
+            '"hIST"': chunk_histogram
+            '"iCCP"': chunk_icc_profile
+            '"iTXt"': chunk_international_text
+            '"pHYs"': chunk_physical
+            '"sBIT"': chunk_significant_bits
+            '"sPLT"': chunk_suggested_palette
+            '"sRGB"': chunk_standard_rgb
+            '"tEXt"': chunk_text
+            '"tIME"': chunk_time
+            '"tRNS"': chunk_transparency
+            '"zTXt"': chunk_compressed_text
       - id: crc
         type: u4
 
-  ihdr_chunk:
+  chunk_header:
     seq:
       - id: width
         type: u4
@@ -62,8 +62,9 @@ types:
         type: u1
       - id: interlace_method
         type: u1
+        enum: interlace_method
 
-  plte_chunk:
+  chunk_palette:
     seq:
       - id: entries
         type: rgb
@@ -78,22 +79,34 @@ types:
       - id: b
         type: u1
 
-  idat_chunk:
+  chunk_data:
     seq:
       - id: data
-        size-eos: true
+        size: _parent.length
 
-  trns_chunk:
+  chunk_background:
     seq:
       - id: data
-        size-eos: true
+        size: _parent.length
+        type:
+          switch-on: _root.chunks[0].data.as<chunk_header>.color_type
+          cases:
+            'color_type::greyscale': u2
+            'color_type::greyscale_alpha': u2
+            'color_type::truecolor': truecolor_background
+            'color_type::truecolor_alpha': truecolor_background
+            'color_type::indexed': u1
 
-  gama_chunk:
+  truecolor_background:
     seq:
-      - id: gamma
-        type: u4
+      - id: red
+        type: u2
+      - id: green
+        type: u2
+      - id: blue
+        type: u2
 
-  chrm_chunk:
+  chunk_chromaticity:
     seq:
       - id: white_point_x
         type: u4
@@ -112,95 +125,118 @@ types:
       - id: blue_y
         type: u4
 
-  srgb_chunk:
+  chunk_gamma:
     seq:
-      - id: rendering_intent
-        type: u1
+      - id: gamma_int
+        type: u4
 
-  iccp_chunk:
+  chunk_histogram:
     seq:
-      - id: name
+      - id: frequencies
+        type: u2
+        repeat: eos
+
+  chunk_icc_profile:
+    seq:
+      - id: profile_name
         type: strz
-        encoding: UTF-8
+        encoding: ascii
       - id: compression_method
         type: u1
       - id: compressed_profile
-        size-eos: true
+        size: _parent.length - profile_name.length - 2
 
-  text_chunk:
+  chunk_international_text:
     seq:
       - id: keyword
         type: strz
-        encoding: UTF-8
-      - id: text
-        type: str
-        encoding: UTF-8
-        size-eos: true
-
-  ztxt_chunk:
-    seq:
-      - id: keyword
-        type: strz
-        encoding: UTF-8
-      - id: compression_method
-        type: u1
-      - id: compressed_text
-        size-eos: true
-
-  itxt_chunk:
-    seq:
-      - id: keyword
-        type: strz
-        encoding: UTF-8
+        encoding: ascii
       - id: compression_flag
         type: u1
       - id: compression_method
         type: u1
       - id: language_tag
         type: strz
-        encoding: UTF-8
+        encoding: ascii
       - id: translated_keyword
         type: strz
-        encoding: UTF-8
+        encoding: utf8
       - id: text
-        size-eos: true
+        size: _parent.length - keyword.length - language_tag.length - translated_keyword.length - 5
 
-  bkgd_chunk:
-    seq:
-      - id: data
-        size-eos: true
-
-  phys_chunk:
+  chunk_physical:
     seq:
       - id: pixels_per_unit_x
         type: u4
       - id: pixels_per_unit_y
         type: u4
-      - id: unit_specifier
+      - id: unit
         type: u1
+        enum: phys_unit
 
-  sbit_chunk:
+  chunk_significant_bits:
     seq:
       - id: data
-        size-eos: true
+        size: _parent.length
 
-  splt_chunk:
+  chunk_suggested_palette:
     seq:
       - id: palette_name
         type: strz
-        encoding: UTF-8
+        encoding: ascii
       - id: sample_depth
         type: u1
       - id: entries
-        size-eos: true
-
-  hist_chunk:
-    seq:
-      - id: frequencies
-        type: u2
+        type:
+          switch-on: sample_depth
+          cases:
+            8: splt_entry8
+            16: splt_entry16
         repeat: eos
 
-  time_chunk:
+  splt_entry8:
+    seq:
+      - id: red
+        type: u1
+      - id: green
+        type: u1
+      - id: blue
+        type: u1
+      - id: alpha
+        type: u1
+      - id: frequency
+        type: u2
+
+  splt_entry16:
+    seq:
+      - id: red
+        type: u2
+      - id: green
+        type: u2
+      - id: blue
+        type: u2
+      - id: alpha
+        type: u2
+      - id: frequency
+        type: u2
+
+  chunk_standard_rgb:
+    seq:
+      - id: rendering_intent
+        type: u1
+        enum: srgb_intent
+
+  chunk_text:
+    seq:
+      - id: keyword
+        type: strz
+        encoding: ascii
+      - id: text_data
+        type: str
+        size: _parent.length - keyword.length - 1
+        encoding: ascii
+
+  chunk_time:
     seq:
       - id: year
         type: u2
@@ -215,10 +251,39 @@ types:
       - id: second
         type: u1
 
+  chunk_transparency:
+    seq:
+      - id: data
+        size: _parent.length
+
+  chunk_compressed_text:
+    seq:
+      - id: keyword
+        type: strz
+        encoding: ascii
+      - id: compression_method
+        type: u1
+      - id: compressed_text
+        size: _parent.length - keyword.length - 2
+
 enums:
   color_type:
     0: greyscale
-    2: rgb
-    3: palette
+    2: truecolor
+    3: indexed
     4: greyscale_alpha
-    6: rgb_alpha
+    6: truecolor_alpha
+
+  interlace_method:
+    0: none
+    1: adam7
+
+  phys_unit:
+    0: unknown
+    1: meter
+
+  srgb_intent:
+    0: perceptual
+    1: relative_colorimetric
+    2: saturation
+    3: absolute_colorimetric

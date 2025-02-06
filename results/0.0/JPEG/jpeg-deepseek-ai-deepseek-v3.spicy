@@ -1,0 +1,76 @@
+module JPEG;
+
+public type JPEG = unit {
+    soi: SOI;
+    segments: Segment[] &until($input.atend());
+    eoi: EOI;
+};
+
+type SOI = unit {
+    marker: uint16 &requires=0xFFD8;
+};
+
+type EOI = unit {
+    marker: uint16 &requires=0xFFD9;
+};
+
+type Segment = unit {
+    marker: uint16;
+    length: uint16 &if($marker != 0xFFD8 && $marker != 0xFFD9 && $marker != 0xFFDA && $marker != 0xFFD0 && $marker != 0xFFD1 && $marker != 0xFFD2 && $marker != 0xFFD3 && $marker != 0xFFD4 && $marker != 0xFFD5 && $marker != 0xFFD6 && $marker != 0xFFD7);
+    data: bytes &size=$length-2 &if($marker != 0xFFD8 && $marker != 0xFFD9 && $marker != 0xFFDA && $marker != 0xFFD0 && $marker != 0xFFD1 && $marker != 0xFFD2 && $marker != 0xFFD3 && $marker != 0xFFD4 && $marker != 0xFFD5 && $marker != 0xFFD6 && $marker != 0xFFD7);
+};
+
+type SOF = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[$num_components];
+};
+
+type Component = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    quantization_table_selector: uint8;
+};
+
+type DHT = unit {
+    table_class: uint8 &mask=0xF0;
+    table_destination_id: uint8 &mask=0x0F;
+    code_lengths: uint8[16];
+    code_values: uint8[] &size=sum($code_lengths);
+};
+
+type DQT = unit {
+    table_precision: uint8 &mask=0xF0;
+    table_destination_id: uint8 &mask=0x0F;
+    quantization_table_values: uint8[64] &if($table_precision == 0);
+    quantization_table_values: uint16[64] &if($table_precision == 1);
+};
+
+type SOS = unit {
+    num_components: uint8;
+    component_selectors: uint8[$num_components];
+    huffman_table_selectors: uint8[$num_components];
+    spectral_selection_start: uint8;
+    spectral_selection_end: uint8;
+    successive_approximation_high: uint8;
+    successive_approximation_low: uint8;
+};
+
+type APPn = unit {
+    identifier: uint8;
+    data: bytes &size=$length-3;
+};
+
+type COM = unit {
+    comment: bytes &size=$length-2;
+};
+
+type RSTn = unit {
+    marker: uint16 &requires=0xFFD0 | 0xFFD1 | 0xFFD2 | 0xFFD3 | 0xFFD4 | 0xFFD5 | 0xFFD6 | 0xFFD7;
+};
+
+type DAC = unit {
+    arithmetic_coding_conditioning_tables: uint8[] &size=$length-2;
+};

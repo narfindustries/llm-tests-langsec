@@ -2,47 +2,103 @@ module Modbus;
 
 import spicy;
 
-public type Message = unit {
+public type PDU = unit {
+    slave_address: uint8;
     function_code: uint8;
     
-    switch ( function_code ) {
-        1 -> read_coils: ReadRequest;
-        2 -> read_discrete_inputs: ReadRequest;
-        3 -> read_holding_registers: ReadRequest;
-        4 -> read_input_registers: ReadRequest;
-        5 -> write_single_coil: WriteSingleCoilRequest;
-        6 -> write_single_register: WriteSingleRegisterRequest;
-        15 -> write_multiple_coils: WriteMultipleCoilsRequest;
-        16 -> write_multiple_registers: WriteMultipleRegistersRequest;
-        default -> unknown: bytes;
-    };
-}
+    payload: bytes &size=(function_code == 0x01 || function_code == 0x02 || function_code == 0x03 || function_code == 0x04) ? 4 :
+             (function_code == 0x05 || function_code == 0x06) ? 4 :
+             (function_code == 0x0F || function_code == 0x10) ? 5 :
+             (function_code == 0x17) ? 10 : 1;
+    
+    switch_payload: bytes &optional;
+    
+    on %init {
+        switch ( self.function_code ) {
+            case 0x01: self.switch_payload = read_request();
+            case 0x81: self.switch_payload = read_exception_response();
+            
+            case 0x02: self.switch_payload = read_request();
+            case 0x82: self.switch_payload = read_exception_response();
+            
+            case 0x03: self.switch_payload = read_request();
+            case 0x83: self.switch_payload = read_exception_response();
+            
+            case 0x04: self.switch_payload = read_request();
+            case 0x84: self.switch_payload = read_exception_response();
+            
+            case 0x05: self.switch_payload = write_single_coil_request();
+            case 0x85: self.switch_payload = exception_response();
+            
+            case 0x06: self.switch_payload = write_single_register_request();
+            case 0x86: self.switch_payload = exception_response();
+            
+            case 0x0F: self.switch_payload = write_multiple_coils_request();
+            case 0x8F: self.switch_payload = write_multiple_response();
+            
+            case 0x10: self.switch_payload = write_multiple_registers_request();
+            case 0x90: self.switch_payload = write_multiple_response();
+            
+            case 0x17: self.switch_payload = read_write_multiple_registers_request();
+            case 0x97: self.switch_payload = read_write_multiple_registers_response();
+        }
+    }
+    
+    crc: uint16;
+};
 
-type ReadRequest = unit {
-    start_address: uint16;
+type read_request = unit {
+    starting_address: uint16;
     quantity: uint16;
-}
+};
 
-type WriteSingleCoilRequest = unit {
-    address: uint16;
-    value: uint16;
-}
+type read_exception_response = unit {
+    exception_code: uint8;
+};
 
-type WriteSingleRegisterRequest = unit {
-    address: uint16;
-    value: uint16;
-}
+type write_single_coil_request = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
 
-type WriteMultipleCoilsRequest = unit {
-    start_address: uint16;
-    quantity: uint16;
+type write_single_register_request = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type write_multiple_coils_request = unit {
+    starting_address: uint16;
+    quantity_of_outputs: uint16;
     byte_count: uint8;
-    coil_values: bytes(byte_count);
-}
+    output_values: bytes &size=byte_count;
+};
 
-type WriteMultipleRegistersRequest = unit {
-    start_address: uint16;
-    quantity: uint16;
+type write_multiple_registers_request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
     byte_count: uint8;
-    register_values: bytes(byte_count);
-}
+    register_values: bytes &size=byte_count;
+};
+
+type write_multiple_response = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+type read_write_multiple_registers_request = unit {
+    read_starting_address: uint16;
+    read_quantity: uint16;
+    write_starting_address: uint16;
+    write_quantity: uint16;
+    write_byte_count: uint8;
+    write_register_values: bytes &size=write_byte_count;
+};
+
+type read_write_multiple_registers_response = unit {
+    byte_count: uint8;
+    register_values: bytes &size=byte_count;
+};
+
+type exception_response = unit {
+    exception_code: uint8;
+};

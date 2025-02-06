@@ -1,0 +1,133 @@
+module Modbus;
+
+public type Modbus_PDU = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+    function_code: uint8;
+    data: case function_code of {
+        0x01 -> read_coils: ReadCoils_Request;
+        0x02 -> read_discrete_inputs: ReadDiscreteInputs_Request;
+        0x03 -> read_holding_registers: ReadHoldingRegisters_Request;
+        0x04 -> read_input_registers: ReadInputRegisters_Request;
+        0x05 -> write_single_coil: WriteSingleCoil_Request;
+        0x06 -> write_single_register: WriteSingleRegister_Request;
+        0x07 -> read_exception_status: ReadExceptionStatus_Request;
+        0x08 -> diagnostics: Diagnostics_Request;
+        0x0B -> get_comm_event_counter: GetCommEventCounter_Request;
+        0x0C -> get_comm_event_log: GetCommEventLog_Request;
+        0x0F -> write_multiple_coils: WriteMultipleCoils_Request;
+        0x10 -> write_multiple_registers: WriteMultipleRegisters_Request;
+        0x11 -> report_slave_id: ReportSlaveID_Request;
+        0x14 -> read_file_record: ReadFileRecord_Request;
+        0x15 -> write_file_record: WriteFileRecord_Request;
+        0x16 -> mask_write_register: MaskWriteRegister_Request;
+        0x17 -> read_write_multiple_registers: ReadWriteMultipleRegisters_Request;
+        0x18 -> read_fifo_queue: ReadFIFOQueue_Request;
+        0x2B -> encapsulated_interface_transport: EncapsulatedInterfaceTransport_Request;
+        default -> unknown_function: bytes &size=length-1;
+    };
+    exception_code: case function_code & 0x80 of {
+        0x80 -> exception: uint8;
+        default -> no_exception: empty;
+    };
+};
+
+type ReadCoils_Request = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+};
+
+type ReadDiscreteInputs_Request = unit {
+    starting_address: uint16;
+    quantity_of_inputs: uint16;
+};
+
+type ReadHoldingRegisters_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+type ReadInputRegisters_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+type WriteSingleCoil_Request = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteSingleRegister_Request = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type ReadExceptionStatus_Request = unit {};
+
+type Diagnostics_Request = unit {
+    sub_function: uint16;
+    data: bytes &size=length-2;
+};
+
+type GetCommEventCounter_Request = unit {};
+
+type GetCommEventLog_Request = unit {};
+
+type WriteMultipleCoils_Request = unit {
+    starting_address: uint16;
+    quantity_of_outputs: uint16;
+    byte_count: uint8;
+    outputs_value: bytes &size=byte_count;
+};
+
+type WriteMultipleRegisters_Request = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+    byte_count: uint8;
+    registers_value: bytes &size=byte_count;
+};
+
+type ReportSlaveID_Request = unit {};
+
+type ReadFileRecord_Request = unit {
+    byte_count: uint8;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
+};
+
+type WriteFileRecord_Request = unit {
+    byte_count: uint8;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
+    record_data: bytes &size=record_length*2;
+};
+
+type MaskWriteRegister_Request = unit {
+    reference_address: uint16;
+    and_mask: uint16;
+    or_mask: uint16;
+};
+
+type ReadWriteMultipleRegisters_Request = unit {
+    read_starting_address: uint16;
+    quantity_to_read: uint16;
+    write_starting_address: uint16;
+    quantity_to_write: uint16;
+    write_byte_count: uint8;
+    write_registers_value: bytes &size=write_byte_count;
+};
+
+type ReadFIFOQueue_Request = unit {
+    fifo_pointer_address: uint16;
+};
+
+type EncapsulatedInterfaceTransport_Request = unit {
+    mei_type: uint8;
+    mei_data: bytes &size=length-1;
+};

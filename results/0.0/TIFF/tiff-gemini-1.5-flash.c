@@ -1,81 +1,81 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
-// Structure to represent a TIFF header
-typedef struct {
-    uint16_t byteOrder;
-    uint16_t magicNumber;
-} TIFFHeader;
+typedef uint8_t byte;
+typedef uint16_t short_t;
+typedef uint32_t long_t;
+typedef struct { long_t num, den; } rational_t;
 
-
-//Simplified TIFF image structure (replace with actual TIFF structure if needed)
-typedef struct {
-    TIFFHeader header;
-    uint32_t width;
-    uint32_t height;
-    uint8_t* data; //Pixel data
-} TIFFImage;
-
-
-// Function to read a TIFF file (replace with actual TIFF reading logic)
-TIFFImage* readTIFF(const char* filename) {
-    TIFFImage* image = (TIFFImage*)malloc(sizeof(TIFFImage));
-    if (image == NULL) {
-        perror("Memory allocation failed");
-        return NULL;
-    }
-    //Replace with actual TIFF file reading code.  This is a placeholder.
-    image->header.byteOrder = 0x4949; //Example: Little-endian
-    image->header.magicNumber = 42; //Example
-    image->width = 100; //Example
-    image->height = 100; //Example
-    image->data = (uint8_t*)malloc(image->width * image->height); //Example
-    if (image->data == NULL) {
-        free(image);
-        perror("Memory allocation failed");
-        return NULL;
-    }
-    memset(image->data, 0, image->width * image->height); //Example: Initialize to black
-
-    return image;
+static hammer_parser_t read_bytes(size_t n) {
+    return hammer_map(hammer_take(n), (hammer_map_f)memcpy);
 }
 
+static hammer_parser_t parse_tiff_header() {
+    return hammer_and(
+        hammer_choice(
+            hammer_map(read_bytes(2), [](void* buf){ return *(short_t*)buf == 0x4949; }),
+            hammer_map(read_bytes(2), [](void* buf){ return *(short_t*)buf == 0x4D4D; })
+        ),
+        hammer_map(read_bytes(2), [](void* buf){ return *(short_t*)buf == 0x002A; })
+    );
+}
 
-// Function to write a TIFF file (replace with actual TIFF writing logic)
-int writeTIFF(const char* filename, TIFFImage* image) {
-    //Replace with actual TIFF file writing code. This is a placeholder.
-    FILE *fp = fopen(filename, "wb");
+static hammer_parser_t parse_ifd_entry() {
+  return hammer_map(
+      hammer_sequence4(
+          read_bytes(2), // Tag
+          read_bytes(2), // Type
+          read_bytes(4), // Count
+          read_bytes(4)  // Value or offset
+      ),
+      NULL //Replace with actual processing logic
+  );
+}
+
+static hammer_parser_t parse_ifd() {
+    return hammer_many(parse_ifd_entry());
+}
+
+static hammer_parser_t parse_tiff() {
+    return hammer_sequence(
+        parse_tiff_header(),
+        hammer_map(read_bytes(4), [](void* buf){ return *(long_t*)buf; }), 
+        parse_ifd()
+    );
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* fp = fopen(argv[1], "rb");
     if (fp == NULL) {
         perror("Error opening file");
         return 1;
     }
-    fwrite(&image->header, sizeof(TIFFHeader), 1, fp);
-    fwrite(&image->width, sizeof(uint32_t), 1, fp);
-    fwrite(&image->height, sizeof(uint32_t), 1, fp);
-    fwrite(image->data, image->width * image->height, 1, fp);
+
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char* fileContent = (char*)malloc(fileSize);
+    fread(fileContent, 1, fileSize, fp);
     fclose(fp);
+
+    hammer_result_t result = hammer_parse(parse_tiff(), fileContent, fileSize);
+
+    if (result.success) {
+        printf("TIFF file parsed successfully!\n");
+    } else {
+        fprintf(stderr, "Error parsing TIFF file: %s\n", result.error);
+    }
+
+    free(fileContent);
     return 0;
 }
 
-
-int main() {
-    const char* inputFile = "input.tiff";
-    const char* outputFile = "output.tiff";
-
-    TIFFImage* image = readTIFF(inputFile);
-    if (image == NULL) {
-        return 1;
-    }
-
-    if (writeTIFF(outputFile, image) != 0) {
-        free(image->data);
-        free(image);
-        return 1;
-    }
-
-    free(image->data);
-    free(image);
-    return 0;
-}

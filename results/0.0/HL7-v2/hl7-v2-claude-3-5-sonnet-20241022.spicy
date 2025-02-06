@@ -2,31 +2,97 @@ module HL7;
 
 public type Message = unit {
     segments: Segment[];
-} &eod;
-
-type Segment = unit {
-    : b"|";
-    segment_type: bytes &until(b"|");
-    fields: Field[];
-} &until($input.length() == 0 || *$input.offset() >= |$input|);
-
-type Field = unit {
-    field_content: bytes &until(b"|");
-    : b"|" if (!self.at_end());
 };
 
-function at_end(f: Field): bool {
-    return $input.length() == 0 || *$input.offset() >= |$input|;
-}
+type Segment = unit {
+    id: bytes &size=3;
+    separator: bytes &size=1;
+    
+    switch (self.id) {
+        b"MSH" -> msh: MSHSegment;
+        b"PID" -> pid: PIDSegment;
+        b"PV1" -> pv1: PV1Segment;
+        b"OBR" -> obr: OBRSegment;
+        b"OBX" -> obx: OBXSegment;
+        b"EVN" -> evn: EVNSegment;
+        b"NK1" -> nk1: NK1Segment;
+        *      -> unknown: UnknownSegment;
+    };
+};
 
-on Message::%done {
-    print self;
-}
+type MSHSegment = unit {
+    field_separator: bytes &size=1;
+    encoding_chars: bytes &size=4;
+    sending_app: bytes &until=b"|";
+    sending_facility: bytes &until=b"|";
+    receiving_app: bytes &until=b"|";
+    receiving_facility: bytes &until=b"|";
+    datetime: bytes &until=b"|";
+    security: bytes &until=b"|";
+    message_type: bytes &until=b"|";
+    message_control_id: bytes &until=b"|";
+    processing_id: bytes &until=b"|";
+    version_id: bytes &until=b"|";
+    sequence_number: bytes &until=b"|";
+    continuation_pointer: bytes &until=b"|";
+    accept_ack_type: bytes &until=b"|";
+    application_ack_type: bytes &until=b"|";
+    country_code: bytes &until=b"|";
+    character_set: bytes &until=b"|";
+    principal_language: bytes &until=b"|";
+    terminator: bytes &size=1;
+};
 
-on Segment::%done {
-    print self;
-}
+type PIDSegment = unit {
+    set_id: bytes &until=b"|";
+    patient_id: bytes &until=b"|";
+    patient_id_list: bytes &until=b"|";
+    alternate_id: bytes &until=b"|";
+    patient_name: bytes &until=b"|";
+    mother_maiden_name: bytes &until=b"|";
+    birth_date: bytes &until=b"|";
+    sex: bytes &until=b"|";
+    patient_alias: bytes &until=b"|";
+    race: bytes &until=b"|";
+    address: bytes &until=b"|";
+    county_code: bytes &until=b"|";
+    phone_home: bytes &until=b"|";
+    phone_business: bytes &until=b"|";
+    primary_language: bytes &until=b"|";
+    marital_status: bytes &until=b"|";
+    religion: bytes &until=b"|";
+    patient_account: bytes &until=b"|";
+    ssn: bytes &until=b"|";
+    drivers_license: bytes &until=b"|";
+    terminator: bytes &size=1;
+};
 
-on Field::%done {
-    print self;
-}
+type PV1Segment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};
+
+type OBRSegment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};
+
+type OBXSegment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};
+
+type EVNSegment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};
+
+type NK1Segment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};
+
+type UnknownSegment = unit {
+    data: bytes &until=b"\r";
+    terminator: bytes &size=1;
+};

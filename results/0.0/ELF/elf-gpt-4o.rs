@@ -1,26 +1,13 @@
-// Cargo.toml
-// [dependencies]
-// nom = "7.1"
-// clap = { version = "4.0", features = ["derive"] }
-
-use clap::Parser;
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::count,
+    bytes::complete::take,
+    combinator::map,
     number::complete::{le_u16, le_u32, le_u64, le_u8},
-    sequence::tuple,
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
-
-#[derive(Parser)]
-struct Cli {
-    /// The path to the ELF file to read
-    path: PathBuf,
-}
+use std::path::Path;
 
 #[derive(Debug)]
 struct ElfHeader {
@@ -46,11 +33,19 @@ fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
         arr.copy_from_slice(bytes);
         arr
     })(input)?;
-
-    let (input, (e_type, e_machine, e_version, e_entry, e_phoff, e_shoff, e_flags, e_ehsize, e_phentsize, e_phnum, e_shentsize, e_shnum, e_shstrndx)) =
-        tuple((
-            le_u16, le_u16, le_u32, le_u64, le_u64, le_u64, le_u32, le_u16, le_u16, le_u16, le_u16, le_u16, le_u16,
-        ))(input)?;
+    let (input, e_type) = le_u16(input)?;
+    let (input, e_machine) = le_u16(input)?;
+    let (input, e_version) = le_u32(input)?;
+    let (input, e_entry) = le_u64(input)?;
+    let (input, e_phoff) = le_u64(input)?;
+    let (input, e_shoff) = le_u64(input)?;
+    let (input, e_flags) = le_u32(input)?;
+    let (input, e_ehsize) = le_u16(input)?;
+    let (input, e_phentsize) = le_u16(input)?;
+    let (input, e_phnum) = le_u16(input)?;
+    let (input, e_shentsize) = le_u16(input)?;
+    let (input, e_shnum) = le_u16(input)?;
+    let (input, e_shstrndx) = le_u16(input)?;
 
     Ok((
         input,
@@ -74,18 +69,33 @@ fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
 }
 
 fn main() {
-    let args = Cli::parse();
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        eprintln!("Usage: {} <elf-file>", args[0]);
+        return;
+    }
 
-    let mut file = File::open(args.path).expect("Failed to open file");
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            return;
+        }
+    };
+
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    if let Err(err) = file.read_to_end(&mut buffer) {
+        eprintln!("Error reading file: {}", err);
+        return;
+    }
 
     match parse_elf_header(&buffer) {
         Ok((_, elf_header)) => {
             println!("{:?}", elf_header);
         }
-        Err(e) => {
-            eprintln!("Failed to parse ELF header: {:?}", e);
+        Err(err) => {
+            eprintln!("Error parsing ELF header: {:?}", err);
         }
     }
 }

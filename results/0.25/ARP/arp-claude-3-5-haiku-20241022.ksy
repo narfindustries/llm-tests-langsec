@@ -1,66 +1,58 @@
 meta:
   id: arp
-  title: Address Resolution Protocol (ARP)
+  title: Address Resolution Protocol
   endian: be
+
 seq:
-  - id: hardware_type
+  - id: htype
     type: u2
-    enum: hardware_type_enum
-  - id: protocol_type
+    enum: hardware_type
+  - id: ptype
     type: u2
-    enum: protocol_type_enum
-  - id: hardware_size
+    enum: protocol_type
+  - id: hlen
     type: u1
-  - id: protocol_size
+  - id: plen
     type: u1
-  - id: opcode
+  - id: oper
     type: u2
-    enum: opcode_enum
-  - id: sender_mac_addr
-    type: mac_address
-  - id: sender_ip_addr
-    type: ipv4_address
-  - id: target_mac_addr
-    type: mac_address
-  - id: target_ip_addr
-    type: ipv4_address
-
-types:
-  mac_address:
-    seq:
-      - id: addr
-        type: u1
-        repeat: expr
-        repeat-expr: 6
-
-  ipv4_address:
-    seq:
-      - id: addr
-        type: u1
-        repeat: expr
-        repeat-expr: 4
+    enum: operation_type
+  - id: sender_hardware_addr
+    type: hardware_address
+    size: hlen
+  - id: sender_protocol_addr
+    type: protocol_address
+    size: plen
+  - id: target_hardware_addr
+    type: hardware_address
+    size: hlen
+  - id: target_protocol_addr
+    type: protocol_address
+    size: plen
 
 enums:
-  hardware_type_enum:
+  hardware_type:
     1: ethernet
     6: ieee_802
     15: frame_relay
-    16: atm
-    17: hdlc
-    18: fibre_channel
-
-  protocol_type_enum:
+  protocol_type:
     0x0800: ipv4
-    0x0806: arp
     0x86dd: ipv6
-
-  opcode_enum:
+    0x0806: arp
+  operation_type:
     1: request
     2: reply
-    3: request_reverse
-    4: reply_reverse
-    5: drarp_request
-    6: drarp_reply
-    7: drarp_error
-    8: inarp_request
-    9: inarp_reply
+
+types:
+  hardware_address:
+    seq:
+      - id: addr
+        type: u1
+        repeat: expr
+        repeat-expr: _parent.hlen
+  protocol_address:
+    seq:
+      - id: addr
+        type: u1
+        repeat: expr
+        repeat-expr: _parent.plen

@@ -1,92 +1,129 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdint.h>
+#include <hammer/hammer.h>
+#include <hammer/allocator.h>
 
-// Define Bitcoin transaction structure
 typedef struct {
-    char* transaction_id;
-    char* sender;
-    char* recipient;
-    double amount;
-    uint64_t timestamp;
+    uint32_t version;
+    size_t input_count;
+    HParser* inputs;
+    size_t output_count;
+    HParser* outputs;
+    uint32_t locktime;
 } BitcoinTransaction;
 
-// Parser for Bitcoin transaction
-static HParser* bitcoin_transaction_parser() {
-    // Transaction ID: hexadecimal string of 64 characters
-    HParser* transaction_id = h_repeat_n(h_choice(
-        h_ch_range('0', '9'), 
-        h_ch_range('a', 'f'), 
-        h_ch_range('A', 'F')
-    ), 64);
+typedef struct {
+    uint8_t prev_tx_hash[32];
+    uint32_t prev_output_index;
+    size_t scriptsig_length;
+    uint8_t* scriptsig;
+    uint32_t sequence_number;
+} TransactionInput;
 
-    // Wallet address: alphanumeric string
-    HParser* wallet_address = h_repeat_n(h_choice(
-        h_ch_range('0', '9'), 
-        h_ch_range('a', 'z'), 
-        h_ch_range('A', 'Z')
-    ), 34);
+typedef struct {
+    uint64_t amount;
+    size_t scriptpubkey_length;
+    uint8_t* scriptpubkey;
+} TransactionOutput;
 
-    // Amount: decimal number
-    HParser* amount = h_float_range(0, INFINITY);
-
-    // Timestamp: 64-bit unsigned integer
-    HParser* timestamp = h_uint64();
-
-    // Combine parsers into transaction structure
-    return h_struct(
-        h_field_str("transaction_id", transaction_id),
-        h_field_str("sender", wallet_address),
-        h_field_str("recipient", wallet_address),
-        h_field_float("amount", amount),
-        h_field_uint64("timestamp", timestamp)
+HParser* bitcoin_transaction_parser() {
+    HArena* arena = h_new_arena();
+    
+    HParser* version = h_int32();
+    
+    HParser* var_int = h_choice(
+        h_uint8(),
+        h_uint16(),
+        h_uint32(),
+        h_uint64(),
+        NULL
     );
+    
+    HParser* input_count_parser = var_int;
+    
+    HParser* input_parser = h_sequence(
+        h_repeat_n(h_uint8(), 32),  // prev tx hash
+        h_uint32(),                 // prev output index
+        var_int,                    // scriptsig length
+        h_length_value(h_uint8(), var_int),  // scriptsig
+        h_uint32(),                 // sequence number
+        NULL
+    );
+    
+    HParser* inputs_parser = h_many(input_parser);
+    
+    HParser* output_count_parser = var_int;
+    
+    HParser* output_parser = h_sequence(
+        h_uint64(),                 // amount
+        var_int,                    // scriptpubkey length
+        h_length_value(h_uint8(), var_int),  // scriptpubkey
+        NULL
+    );
+    
+    HParser* outputs_parser = h_many(output_parser);
+    
+    HParser* locktime = h_uint32();
+    
+    HParser* transaction_parser = h_sequence(
+        version,
+        input_count_parser,
+        inputs_parser,
+        output_count_parser,
+        outputs_parser,
+        locktime,
+        NULL
+    );
+    
+    return transaction_parser;
 }
 
-// Validation function
-int validate_bitcoin_transaction(BitcoinTransaction* tx) {
-    if (!tx) return 0;
-    if (!tx->transaction_id || strlen(tx->transaction_id) != 64) return 0;
-    if (!tx->sender || strlen(tx->sender) != 34) return 0;
-    if (!tx->recipient || strlen(tx->recipient) != 34) return 0;
-    if (tx->amount <= 0) return 0;
-    return 1;
-}
-
-// Main parsing and validation function
-int parse_bitcoin_transactions(const uint8_t* input, size_t len) {
-    HParser* parser = bitcoin_transaction_parser();
-    HParseResult* result = h_parse(parser, input, len);
-
-    if (!result || !result->ast) {
-        return 0;
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <bitcoin_transaction_file>\n", argv[0]);
+        return 1;
     }
-
-    BitcoinTransaction tx = {
-        .transaction_id = h_ast_get_str(result->ast, "transaction_id"),
-        .sender = h_ast_get_str(result->ast, "sender"),
-        .recipient = h_ast_get_str(result->ast, "recipient"),
-        .amount = h_ast_get_float(result->ast, "amount"),
-        .timestamp = h_ast_get_uint64(result->ast, "timestamp")
-    };
-
-    int is_valid = validate_bitcoin_transaction(&tx);
+    
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+    
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
+    
+    size_t read_size = fread(buffer, 1, file_size, file);
+    fclose(file);
+    
+    if (read_size != file_size) {
+        perror("File read error");
+        free(buffer);
+        return 1;
+    }
+    
+    HArena* arena = h_new_arena();
+    HParser* parser = bitcoin_transaction_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+    
+    if (result && result->ast) {
+        printf("Transaction parsed successfully\n");
+    } else {
+        printf("Transaction parsing failed\n");
+    }
+    
     h_parse_result_free(result);
-    return is_valid;
-}
-
-int main() {
-    // Example usage
-    const char* sample_tx = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-                             "wallet1234567890abcdefghijklmnopqrst"
-                             "wallet9876543210abcdefghijklmnopqrst"
-                             "0.01"
-                             "1634567890";
-
-    int result = parse_bitcoin_transactions((const uint8_t*)sample_tx, strlen(sample_tx));
-    printf("Transaction validation result: %s\n", result ? "Valid" : "Invalid");
-
+    h_arena_free(arena, parser);
+    h_arena_free(arena, buffer);
+    
     return 0;
 }

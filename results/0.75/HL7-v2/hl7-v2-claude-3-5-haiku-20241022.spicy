@@ -1,38 +1,60 @@
-module HL7;
-
-import spicy;
+module hl7_v2;
 
 public type Message = unit {
-    segments: list<Segment>;
+    msh: MSH;
+    pid: PID;
+    pv1: optional<PV1>;
+    in1: optional<IN1>;
 };
 
-public type Segment = unit {
-    name: bytes;
-    separator: bytes = "|";
-    fields: list<Field> = [];
-
-    parse %{
-        auto name_match = context.input().match(r"[A-Z]{3}");
-        if (!name_match) {
-            return false;
-        }
-        self->name = name_match.str();
-        self->fields = context.parseAll<Field>();
-    %}
+type MSH = unit {
+    field_separator: bytes(size=1);
+    encoding_chars: bytes(size=4);
+    sending_app: string;
+    sending_facility: string;
+    receiving_app: string;
+    receiving_facility: string;
+    timestamp: string;
+    security: optional<string>;
+    message_type: string;
+    message_control_id: string;
+    processing_id: string;
+    version_id: string;
 };
 
-public type Field = unit {
-    value: bytes;
-    
-    parse %{
-        self->value = context.input().match(r"[^|]*").str();
-    %}
+type PID = unit {
+    set_id: uint8;
+    patient_id: string;
+    patient_name: string;
+    mother_maiden_name: optional<string>;
+    date_of_birth: string;
+    sex: bytes(size=1);
+    patient_address: string;
+    phone_number: optional<string>;
+    language: optional<string>;
+    marital_status: optional<bytes(size=1)>;
+    religion: optional<string>;
+    account_number: optional<string>;
+};
+
+type PV1 = unit {
+    patient_class: bytes(size=1);
+    assigned_location: string;
+    admission_type: optional<string>;
+    discharge_disposition: optional<string>;
+    attending_doctor: optional<string>;
+    referring_doctor: optional<string>;
+};
+
+type IN1 = unit {
+    insurance_plan_id: string;
+    insurance_company_name: string;
+    group_number: optional<string>;
+    group_name: optional<string>;
+    insured_name: string;
+    insured_relationship: bytes(size=1);
 };
 
 public type Parser = unit {
     message: Message;
-    
-    parse %{
-        self->message = context.parseAll<Message>();
-    %}
 };

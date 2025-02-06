@@ -1,75 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/ns/local"
-    xmlns:modbus="http://example.com/modbus"
-    targetNamespace="http://example.com/modbus">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:modbus="http://example.com/modbus"
+           targetNamespace="http://example.com/modbus">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
             <dfdl:format alignment="1" 
                         lengthKind="implicit"
-                        occursCountKind="implicit"
+                        byteOrder="bigEndian"
                         representation="binary"
                         binaryNumberRep="binary"
-                        byteOrder="bigEndian"/>
+                        occursCountKind="implicit"
+                        encoding="UTF-8"
+                        textBidi="no"
+                        floating="no"
+                        sequenceKind="ordered"
+                        initiatedContent="no"
+                        leadingSkip="0"
+                        trailingSkip="0"
+                        lengthUnits="bytes"
+                        alignmentUnits="bytes"
+                        initiator=""
+                        terminator=""
+                        separator=""
+                        encodingErrorPolicy="replace"
+                        truncateSpecifiedLengthString="no"
+                        ignoreCase="no"/>
         </xs:appinfo>
     </xs:annotation>
 
     <xs:element name="ModbusMessage">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Header">
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <xs:element name="MBAPHeader" minOccurs="0">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="TransactionID" type="xs:unsignedShort"/>
-                            <xs:element name="ProtocolID" type="xs:unsignedShort" dfdl:outputValueCalc="0"/>
+                        <xs:sequence dfdl:sequenceKind="ordered">
+                            <xs:element name="TransactionId" type="xs:unsignedShort"/>
+                            <xs:element name="ProtocolId" type="xs:unsignedShort" fixed="0"/>
                             <xs:element name="Length" type="xs:unsignedShort"/>
-                            <xs:element name="UnitID" type="xs:unsignedByte"/>
+                            <xs:element name="UnitId" type="xs:unsignedByte"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="FunctionCode" type="xs:unsignedByte"/>
-                <xs:element name="Data">
-                    <xs:complexType>
-                        <xs:choice>
-                            <xs:element name="ReadRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="QuantityOfRegisters" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ByteCount" type="xs:unsignedByte"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort" 
-                                                  minOccurs="0" maxOccurs="unbounded"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="WriteRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="WriteResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"/>
-                                        <xs:element name="RegisterValue" type="xs:unsignedShort"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:choice>
-                    </xs:complexType>
-                </xs:element>
+                <xs:choice>
+                    <xs:element name="ReadRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="Quantity" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="ReadResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="Data">
+                                    <xs:complexType>
+                                        <xs:sequence dfdl:sequenceKind="ordered">
+                                            <xs:element name="Value" type="xs:unsignedShort" 
+                                                      maxOccurs="125"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="WriteSingleRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+                                <xs:element name="OutputValue" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="WriteSingleResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="OutputAddress" type="xs:unsignedShort"/>
+                                <xs:element name="OutputValue" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="WriteMultipleRequest">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="Quantity" type="xs:unsignedShort"/>
+                                <xs:element name="ByteCount" type="xs:unsignedByte"/>
+                                <xs:element name="Values">
+                                    <xs:complexType>
+                                        <xs:sequence dfdl:sequenceKind="ordered">
+                                            <xs:element name="Value" type="xs:unsignedShort"
+                                                      maxOccurs="123"/>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="WriteMultipleResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="StartingAddress" type="xs:unsignedShort"/>
+                                <xs:element name="Quantity" type="xs:unsignedShort"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+
+                    <xs:element name="ErrorResponse">
+                        <xs:complexType>
+                            <xs:sequence dfdl:sequenceKind="ordered">
+                                <xs:element name="ExceptionCode" type="xs:unsignedByte"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:choice>
             </xs:sequence>
         </xs:complexType>
     </xs:element>

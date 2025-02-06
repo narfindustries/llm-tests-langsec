@@ -1,62 +1,36 @@
 module GIF;
 
+public type Color = unit {
+    R: uint8;
+    G: uint8;
+    B: uint8;
+};
+
 public type LogicalScreenDescriptor = unit {
-    canvasWidth: uint16;
-    canvasHeight: uint16;
+    screenWidth: uint16;
+    screenHeight: uint16;
     packedFields: uint8;
     backgroundColorIndex: uint8;
     pixelAspectRatio: uint8;
+
+    hasGlobalColorTable: bool := (packedFields & 0x80) != 0;
+    globalColorTableSize: uint := 2 ** ((packedFields & 0x07) + 1);
 };
 
 public type ImageDescriptor = unit {
-    leftPosition: uint16;
-    topPosition: uint16;
-    width: uint16;
-    height: uint16;
+    imageSeparator: uint8;
+    imageLeftPosition: uint16;
+    imageTopPosition: uint16;
+    imageWidth: uint16;
+    imageHeight: uint16;
     packedFields: uint8;
+
+    hasLocalColorTable: bool := (packedFields & 0x80) != 0;
+    localColorTableSize: uint := 2 ** ((packedFields & 0x07) + 1);
+    isInterlaced: bool := (packedFields & 0x40) != 0;
 };
 
-public type ColorTableEntry = unit {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
-};
-
-public type GlobalColorTable = unit {
-    entries: ColorTableEntry[] &size=globalColorTableSize;
-};
-
-public type ImageData = unit {
-    lzwMinimumCodeSize: uint8;
-    imageData: bytes &eod;
-};
-
-public type Block = unit {
-    introducer: uint8;
-    label: uint8;
-    blockSize: uint8;
-    data: switch (self.label) {
-        0xF9 -> graphicControl: GraphicControl;
-        0x01 -> plainText: PlainText;
-        0xFE -> comment: Comment;
-        0xFF -> application: Application;
-        default -> data: bytes &size=self.blockSize;
-    };
-    blockTerminator: uint8;
-};
-
-public type GIF = unit {
-    header: bytes &size=6;
-    logicalScreenDescriptor: LogicalScreenDescriptor;
-    globalColorTable: GlobalColorTable &if=(self.logicalScreenDescriptor.packedFields & 0x80) != 0;
-    contents: ImageData[];
-
-    on %done {
-        print "Finished parsing GIF file.";
-    }
-};
-
-public type GraphicControl = unit {
+public type GraphicControlExtension = unit {
     blockSize: uint8;
     packedFields: uint8;
     delayTime: uint16;
@@ -64,26 +38,41 @@ public type GraphicControl = unit {
     terminator: uint8;
 };
 
-public type PlainText = unit {
-    blockSize: uint8;
-    textGridLeftPosition: uint16;
-    textGridTopPosition: uint16;
-    textGridWidth: uint16;
-    textGridHeight: uint16;
-    characterCellWidth: uint8;
-    characterCellHeight: uint8;
-    textForegroundColorIndex: uint8;
-    textBackgroundColorIndex: uint8;
-    plainTextData: bytes &eod;
-};
-
-public type Comment = unit {
-    commentData: bytes &eod;
-};
-
-public type Application = unit {
+public type ApplicationExtension = unit {
     blockSize: uint8;
     applicationIdentifier: bytes &size=8;
     applicationAuthCode: bytes &size=3;
-    applicationData: bytes &eod;
+    data: bytes &eod;
+};
+
+public type CommentExtension = unit {
+    commentData: bytes &eod;
+};
+
+public type Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    content: variant switch (self.label) {
+        case 0xF9: GraphicControlExtension;
+        case 0xFE: CommentExtension;
+        case 0xFF: ApplicationExtension;
+        default: bytes &eod;
+    };
+};
+
+public type Block = unit {
+    introducer: uint8;
+    content: variant switch (self.introducer) {
+        case 0x2C: ImageDescriptor;
+        case 0x21: Extension;
+        default: bytes &eod;
+    };
+};
+
+public type GIFFile = unit {
+    header: bytes &size=6;
+    logicalScreenDescriptor: LogicalScreenDescriptor;
+    globalColorTable: Color[] &size=self.logicalScreenDescriptor.globalColorTableSize &if=self.logicalScreenDescriptor.hasGlobalColorTable;
+    blocks: Block[] &until=(self.input().peek() as uint8) == 0x3B;
+    trailer: uint8;
 };

@@ -1,39 +1,88 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define basic building blocks
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16be();
-static HParser *uint32 = h_uint32be();
+// Define PNG chunk types
+#define IHDR 0x49484452
+#define PLTE 0x504c5445
+#define IDAT 0x49444154
+#define IEND 0x49454e44
+#define tEXt 0x74455874
+#define zTXt 0x7a545874
+#define bKGD 0x624b4744
+#define pHYs 0x70485973
+#define gAMA 0x67414d41
+#define cHRM 0x6348524d
+#define sBIT 0x73424954
+#define sRGB 0x73524742
+#define iCCP 0x69434350
+#define tIME 0x74494d45
+#define sPLT 0x73504c54
 
-// Chunk type
-static HParser *chunk_type = h_bytes(4);
+// Helper function to read a file into memory
+unsigned char *read_file(const char *filename, size_t *length) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Unable to open file");
+        return NULL;
+    }
 
-// Chunk data
-static HParser *chunk_data = h_length_value(h_uint32(), h_bytes);
+    fseek(f, 0, SEEK_END);
+    *length = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-// CRC
-static HParser *crc = h_uint32();
+    unsigned char *data = malloc(*length);
+    if (!data) {
+        perror("Unable to allocate memory");
+        fclose(f);
+        return NULL;
+    }
 
-// PNG chunk
-static HParser *png_chunk = h_sequence(chunk_type, chunk_data, crc, NULL);
+    if (fread(data, 1, *length, f) != *length) {
+        perror("Error reading file");
+        free(data);
+        fclose(f);
+        return NULL;
+    }
 
-// PNG file format
-static HParser *png_file = h_sequence(
-    h_chrs("\x89PNG\r\n\x1a\n", 8),  // PNG signature
-    h_many(png_chunk),               // Multiple chunks
-    NULL
-);
+    fclose(f);
+    return data;
+}
+
+// Define parsers for PNG chunks
+HParser *png_chunk;
+
+void init_parsers() {
+    HParser *uint32 = h_uint32();
+    HParser *chunk_type = h_uint32();
+    HParser *chunk_data = h_length_value(h_uint32(), h_arbitrary_bytes());
+    HParser *crc = h_uint32();
+
+    png_chunk = h_sequence(uint32, chunk_type, chunk_data, crc, NULL);
+}
 
 int main(int argc, char **argv) {
-    HParser *parser = png_file;
-    HParseResult *result = h_parse(parser, (const uint8_t *)argv[1], strlen(argv[1]));
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <png file>\n", argv[0]);
+        return 1;
+    }
+
+    size_t length;
+    unsigned char *data = read_file(argv[1], &length);
+    if (!data) {
+        return 1;
+    }
+
+    init_parsers();
+
+    HParseResult *result = h_parse(png_chunk, data, length);
     if (result) {
-        printf("Parse successful!\n");
+        printf("PNG parsed successfully.\n");
         h_pprint(stdout, result->ast, 0, 0);
     } else {
-        printf("Parse failed!\n");
+        printf("Failed to parse PNG.\n");
     }
-    h_parse_result_free(result);
+
+    free(data);
     return 0;
 }

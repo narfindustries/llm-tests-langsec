@@ -1,23 +1,18 @@
 meta:
   id: gzip
-  title: Gzip (GNU zip) archive data format
+  title: Gzip Archive
   file-extension: gz
   endian: le
-  license: GPL-2.0+
-  ks-version: 0.9
+  license: CC0-1.0
 doc: |
   Gzip is a file format used for file compression and decompression. The format
-  was created by the GNU project in 1992, and is used by the gzip and gunzip utilities.
-  Gzip typically uses the DEFLATE algorithm to compress files, and it can include a header
-  with metadata such as the original file name and timestamp.
+  is defined in RFC 1952. This specication is designed to be sufficient to
+  decompress any Gzip file conforming to the RFC 1952 specification.
 seq:
   - id: magic
     contents: [0x1f, 0x8b]
   - id: compression_method
-    type: u1
-    enum: compression_methods
-    valid:
-      eq: compression_methods.deflate
+    contents: [0x08]
   - id: flags
     type: flags
   - id: mod_time
@@ -26,32 +21,29 @@ seq:
     type: u1
   - id: os
     type: u1
-    enum: operating_systems
   - id: extras
     type: extras
     if: flags.has_extra
-  - id: original_file_name
+  - id: name
     type: strz
-    encoding: UTF-8
+    encoding: ASCII
     if: flags.has_name
   - id: comment
     type: strz
-    encoding: UTF-8
+    encoding: ASCII
     if: flags.has_comment
   - id: header_crc16
     type: u2
-    if: flags.has_crc
-  - id: compressed_data
+    if: flags.has_header_crc
+  - id: body
     size-eos: true
-  - id: footer
-    type: footer
-
+    type: gzip_body
 types:
   flags:
     seq:
-      - id: reserved
-        type: b3
-      - id: has_crc
+      - id: text
+        type: b1
+      - id: has_header_crc
         type: b1
       - id: has_extra
         type: b1
@@ -59,53 +51,19 @@ types:
         type: b1
       - id: has_comment
         type: b1
-      - id: is_text
-        type: b1
-
+      - id: reserved
+        type: b3
   extras:
     seq:
       - id: len_extra
         type: u2
       - id: extra_fields
-        type: extra_field
-        repeat: expr
-        repeat-expr: len_extra
-
-  extra_field:
+        size: len_extra
+  gzip_body:
     seq:
-      - id: si1
-        type: u1
-      - id: si2
-        type: u1
-      - id: len_field
-        type: u2
-      - id: field_data
-        size: len_field
-
-  footer:
-    seq:
+      - id: compressed_data
+        size-eos: true
       - id: crc32
         type: u4
-      - id: input_size
+      - id: isize
         type: u4
-
-enums:
-  compression_methods:
-    8: deflate
-
-  operating_systems:
-    0: fat
-    1: amiga
-    2: vms
-    3: unix
-    4: vm_cms
-    5: atari_tos
-    6: hpfs
-    7: macintosh
-    8: z_system
-    9: cp_m
-    10: tops_20
-    11: ntfs
-    12: qdos
-    13: acorn_riscos
-    255: unknown

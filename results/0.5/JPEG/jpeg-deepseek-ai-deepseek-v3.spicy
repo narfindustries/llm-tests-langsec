@@ -1,0 +1,139 @@
+module JPEG;
+
+public type JPEG_File = unit {
+    soi: SOI;
+    segments: Segment[] &until($input.peek_bytes(2) == b"\xFF\xD9");
+    eoi: EOI;
+};
+
+type SOI = unit {
+    marker: uint16 &convert=0xFFD8;
+};
+
+type EOI = unit {
+    marker: uint16 &convert=0xFFD9;
+};
+
+type Segment = unit {
+    marker: uint16;
+    length: uint16 &if(marker != 0xFFD8 && marker != 0xFFD9 && marker != 0xFFDA && marker != 0xFF00 && marker != 0xFF01 && marker != 0xFFD0 && marker != 0xFFD1 && marker != 0xFFD2 && marker != 0xFFD3 && marker != 0xFFD4 && marker != 0xFFD5 && marker != 0xFFD6 && marker != 0xFFD7);
+    data: case marker of {
+        0xFFC0 => sof0: SOF0;
+        0xFFC1 => sof1: SOF1;
+        0xFFC2 => sof2: SOF2;
+        0xFFC3 => sof3: SOF3;
+        0xFFC4 => dht: DHT;
+        0xFFC5 => dht: DHT;
+        0xFFC6 => dht: DHT;
+        0xFFC7 => dht: DHT;
+        0xFFDB => dqt: DQT;
+        0xFFDA => sos: SOS;
+        0xFFDD => dri: DRI;
+        0xFFE0 => app0: APP0;
+        0xFFE1 => app1: APP1;
+        0xFFE2 => app2: APP2;
+        0xFFE3 => app3: APP3;
+        0xFFE4 => app4: APP4;
+        0xFFE5 => app5: APP5;
+        0xFFE6 => app6: APP6;
+        0xFFE7 => app7: APP7;
+        0xFFE8 => app8: APP8;
+        0xFFE9 => app9: APP9;
+        0xFFEA => app10: APP10;
+        0xFFEB => app11: APP11;
+        0xFFEC => app12: APP12;
+        0xFFED => app13: APP13;
+        0xFFEE => app14: APP14;
+        0xFFEF => app15: APP15;
+        0xFFFE => com: COM;
+        default => unknown: UnknownSegment;
+    } &requires(length);
+};
+
+type SOF0 = unit {
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[num_components];
+};
+
+type SOF1 = SOF0;
+type SOF2 = SOF0;
+type SOF3 = SOF0;
+
+type Component = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    quant_table: uint8;
+};
+
+type DHT = unit {
+    table_class: uint8;
+    table_id: uint8;
+    code_lengths: uint8[16];
+    code_values: uint8[sum(code_lengths)];
+};
+
+type DQT = unit {
+    precision: uint8;
+    table_id: uint8;
+    quant_table: uint8[64];
+};
+
+type SOS = unit {
+    num_components: uint8;
+    components: SOSComponent[num_components];
+    spectral_selection_start: uint8;
+    spectral_selection_end: uint8;
+    successive_approximation: uint8;
+};
+
+type SOSComponent = unit {
+    component_id: uint8;
+    dc_table: uint8;
+    ac_table: uint8;
+};
+
+type DRI = unit {
+    restart_interval: uint16;
+};
+
+type APP0 = unit {
+    identifier: uint8[5];
+    version: uint8[2];
+    units: uint8;
+    x_density: uint16;
+    y_density: uint16;
+    thumbnail_width: uint8;
+    thumbnail_height: uint8;
+    thumbnail_data: uint8[thumbnail_width * thumbnail_height * 3];
+};
+
+type APP1 = unit {
+    identifier: uint8[6];
+    data: uint8[length - 8];
+};
+
+type APP2 = APP1;
+type APP3 = APP1;
+type APP4 = APP1;
+type APP5 = APP1;
+type APP6 = APP1;
+type APP7 = APP1;
+type APP8 = APP1;
+type APP9 = APP1;
+type APP10 = APP1;
+type APP11 = APP1;
+type APP12 = APP1;
+type APP13 = APP1;
+type APP14 = APP1;
+type APP15 = APP1;
+
+type COM = unit {
+    comment: uint8[length - 2];
+};
+
+type UnknownSegment = unit {
+    data: uint8[length - 2];
+};

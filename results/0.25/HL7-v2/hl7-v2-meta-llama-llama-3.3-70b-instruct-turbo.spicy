@@ -1,67 +1,243 @@
-# File: hl7-v2.spicy
+module HL7v2;
 
-%description =
-  """
-  This is a parser for HL7 version 2 messages.
-  """
-
-%header =
-  """
-  parser HL7_V2 GetMessage(const u_char* msg) {
-  """
-
-%footer =
-  """
-  return msg;
-  }
-  """
-
-%include "hl7-v2-message.spicy"
-
-type Segment = record {
-  segment_id: bytestring(3),
-  fields: SegmentField[~],
+type MSH = record {
+  field1 = string, # MSG
+  field2 = string, # MSG
+  field3 = string, # Sending Facility
+  field4 = string, # Sending Facility Namespace ID
+  field5 = string, # Sending Application
+  field6 = string, # Sending Facility
+  field7 = string, # Date/Time of Message
+  field8 = string, # Security
+  field9 = string, # Message Type
+  field10 = string, # Message Control ID
+  field11 = string, # Processing ID
+  field12 = string, # Version ID
+  field13 = string, # Sequence Number
+  field14 = string, # Continuation Pointer
+  field15 = string, # Accept Acknowledgment Type
+  field16 = string, # Application Acknowledgment Type
+  field17 = string, # Country Code
+  field18 = string, # Character Set
+  field19 = string, # Principal Language of Message
+  field20 = string, # Conformance Statement ID
 };
 
-type SegmentField = record {
-  components: bytestring[~],
+type EVN = record {
+  field1 = string, # Set ID - Event Type
+  field2 = string, # Event Type Code
+  field3 = string, # Date/Time of Event
+  field4 = string, # Date/Time of Event
+  field5 = string, # Operator ID
+  field6 = string, # Event Facility
 };
 
-type HL7Message = record {
-  segments: Segment[~],
+type PID = record {
+  field1 = string, # Set ID - Patient ID
+  field2 = string, # Patient ID
+  field3 = string, # Patient ID Internal
+  field4 = string, # Alternate Patient ID
+  field5 = string, # Patient Name
+  field6 = string, # Mother's Maiden Name
+  field7 = string, # Date of Birth
+  field8 = string, # Sex
+  field9 = string, # Patient Alias
+  field10 = string, # Race
+  field11 = string, # Patient Address
+  field12 = string, # County Code
+  field13 = string, # Phone Number - Home
+  field14 = string, # Phone Number - Business
+  field15 = string, # Primary Care Physician
+  field16 = string, # Student Indicator
+  field17 = string, # Handicap
+  field18 = string, # Job Title
+  field19 = string, # Job Code/Class
+  field20 = string, # Employment Status
+  field21 = string, # Marital Status
+  field22 = string, # Citizenship
+  field23 = string, # Death Date
+  field24 = string, # Death Indicator
+  field25 = string, # Identity Unknown Indicator
+  field26 = string, # Identity Reliability Code
+  field27 = string, # Last Update Facility
+  field28 = string, # Last Update Date/Time
+  field29 = string, # Sex at Birth
 };
 
-%compiler = "zeek"
-
-type HL7MessageMessage = record {
-  header: Segment,
-  body: Segment[~],
-  footer: Segment,
+type PV1 = record {
+  field1 = string, # Set ID - Patient Visit
+  field2 = string, # Visit Number
+  field3 = string, # Patient Class
+  field4 = string, # Visit Number
+  field5 = string, # Admission Type
+  field6 = string, # Preadmit Number
+  field7 = string, # Prior Patient Location
+  field8 = string, # Admission Date/Time
+  field9 = string, # Discharge Date/Time
+  field10 = string, # Visit Number
+  field11 = string, # Financial Class
+  field12 = string, # Charge Price Indicator
+  field13 = string, # Courtesy Code
+  field14 = string, # Credit Rating
+  field15 = string, # Contract Code
+  field16 = string, # Contract Effective Date
+  field17 = string, # Contract Amount
+  field18 = string, # Contract Period
+  field19 = string, # Interest Rate
+  field20 = string, # Company ID
+  field21 = string, # Company Name
+  field22 = string, # Company Address
+  field23 = string, # Company City
+  field24 = string, # Company State or Province
+  field25 = string, # Company Zip
+  field26 = string, # Contact Person
+  field27 = string, # Contact Title
+  field28 = string, # Contact Phone Number
+  field29 = string, # Contact Address
+  field30 = string, # Contact City
+  field31 = string, # Contact State or Province
+  field32 = string, # Contact Zip
+  field33 = string, # Contact Country Code
+  field34 = string, # Bill Type
+  field35 = string, # Account Status
+  field36 = string, # Pending Location
+  field37 = string, # Prior Temporary Location
+  field38 = string, # Admitting Doctor
+  field39 = string, # Attending Doctor
+  field40 = string, # Referring Doctor
+  field41 = string, # Consulting Doctor
+  field42 = string, # Hospital Service
+  field43 = string, # Pre-Admit Test Indicator
+  field44 = string, # Re-Admission Indicator
+  field45 = string, # Admit Source
+  field46 = string, # Ambulatory Status
+  field47 = string, # VIP Indicator
+  field48 = string, # Admission Type
+  field49 = string, # Visit Priority Code
+  field50 = string, # Previous Service Date
+  field51 = string, # Expected Admission Date
+  field52 = string, # Expected Discharge Date
+  field53 = string, # Visit Number
+  field54 = string, # Current Patient Balance
+  field55 = string, # Total Charges
+  field56 = string, # Total Adjustments
+  field57 = string, # Total Payments
+  field58 = string, # Visit Indicator
+  field59 = string, # Other Healthcare Provider
+  field60 = string, # Visit Number
+  field61 = string, # Visit Number
+  field62 = string, # Discharge Disposition
+  field63 = string, # Discharged to Location
+  field64 = string, # Diet Type
+  field65 = string, # Isolation
+  field66 = string, # Hospital Service
+  field67 = string, # Special Program Code
+  field68 = string, # Retention Indicator
+  field69 = string, # Expected Number of Insurance Plans
+  field70 = string, # Visit Number
+  field71 = string, # Patient Valuables
+  field72 = string, # Patient Valuables Location
+  field73 = string, # Visit Number
+  field74 = string, # Visit Number
+  field75 = string, # Visit Number
+  field76 = string, # Visit Number
+  field77 = string, # Visit Number
+  field78 = string, # Visit Number
+  field79 = string, # Visit Number
+  field80 = string, # Visit Number
 };
 
-type Message = record {
-  msg: HL7MessageMessage,
+type OBR = record {
+  field1 = string, # Set ID - Observation Request
+  field2 = string, # Placer Order Number
+  field3 = string, # Filler Order Number
+  field4 = string, # Universal Service ID
+  field5 = string, # Priority
+  field6 = string, # Requested Date/Time
+  field7 = string, # Observation Date/Time
+  field8 = string, # Observation End Date/Time
+  field9 = string, # Collection Volume
+  field10 = string, # Collector Identifier
+  field11 = string, # Specimen Action Code
+  field12 = string, # Danger Code
+  field13 = string, # Relevant Clinical Information
+  field14 = string, # Specimen Received Date/Time
+  field15 = string, # Specimen Source
+  field16 = string, # Ordering Facility Name
+  field17 = string, # Ordering Facility Address
+  field18 = string, # Ordering Facility City
+  field19 = string, # Ordering Facility State or Province
+  field20 = string, # Ordering Facility Zip
+  field21 = string, # Ordering Facility Country
+  field22 = string, # Ordering Facility Phone Number
+  field23 = string, # Ordering Facility Contact Person
+  field24 = string, # Ordering Facility Contact Title
+  field25 = string, # Ordering Facility Contact Phone Number
+  field26 = string, # Ordering Facility Contact Address
+  field27 = string, # Ordering Facility Contact City
+  field28 = string, # Ordering Facility Contact State or Province
+  field29 = string, # Ordering Facility Contact Zip
+  field30 = string, # Ordering Facility Contact Country
+  field31 = string, # Diagnostic Serv Sect ID
+  field32 = string, # Result Status
+  field33 = string, # Parent Result
+  field34 = string, # Quantity/Timing
+  field35 = string, # Result Copies To
+  field36 = string, # Parent Universal Service ID
+  field37 = string, # Observation Result Status
+  field38 = string, # Effective Date/Time of Change
+  field39 = string, # Effective Date/Time of Change
+  field40 = string, # Collection Volume
+  field41 = string, # Collector Identifier
+  field42 = string, # Specimen Action Code
+  field43 = string, # Danger Code
+  field44 = string, # Relevant Clinical Information
+  field45 = string, # Specimen Received Date/Time
+  field46 = string, # Specimen Source
+  field47 = string, # Ordering Facility Name
+  field48 = string, # Ordering Facility Address
+  field49 = string, # Ordering Facility City
+  field50 = string, # Ordering Facility State or Province
 };
 
-GetMessage = function(msg: const u_char*): Message {
-  local msg_len: int = |msg|;
-  local ret_msg: Message;
-  
-  if (msg_len < 7) {
-    # Lack of enough input to process
-    return ret_msg;
-  }
-  
-  ret_msg$msg<header> = Segment(
-    segment_id = bytestring(3, @extract(msg, 0, 3)),
-    fields = SegmentField[1](SegmentField(components = bytestring(@extract(msg, 4, msg_len - 7)))),
-  );
-  
-  ret_msg$msg<body> = Segment[0];
-  ret_msg$msg<footer> = Segment(
-    segment_id = bytestring(3, @extract(msg, msg_len - 3, 3)),
-    fields = SegmentField[1](SegmentField(components = bytestring(""))),
-  );
-  
-  return ret_msg;
+type OBX = record {
+  field1 = string, # Set ID - Observation
+  field2 = string, # Value Type
+  field3 = string, # Observation Identifier
+  field4 = string, # Observation Sub-ID
+  field5 = string, # Observation Value
+  field6 = string, # Units
+  field7 = string, # Reference Range
+  field8 = string, # Abnormal Flags
+  field9 = string, # Probability
+  field10 = string, # Nature of Abnormal Test
+  field11 = string, # Observation Result Status
+  field12 = string, # Date Last Observation Normal
+  field13 = string, # User Defined Access Checks
+  field14 = string, # Date/Time of the Observation
+  field15 = string, # Producer's ID
+  field16 = string, # Responsible Observer
+  field17 = string, # Observation Method
+  field18 = string, # Equipment Instance Identifier
+  field19 = string, # Date/Time of the Analysis
+  field20 = string, # Observation Identifier of the Analysis
+  field21 = string, # Observation Sub-ID of the Analysis
+  field22 = string, # Observation Value of the Analysis
+  field23 = string, # Units of the Analysis
+  field24 = string, # Reference Range of the Analysis
+  field25 = string, # Abnormal Flags of the Analysis
+  field26 = string, # Probability of the Analysis
+  field27 = string, # Nature of Abnormal Test of the Analysis
+  field28 = string, # Observation Result Status of the Analysis
 };
+
+type message = record {
+  msh = MSH,
+  evn = EVN,
+  pid = PID,
+  pv1 = PV1,
+  obr = OBR,
+  obx = OBX
+};
+
+let hl7v2 = message;

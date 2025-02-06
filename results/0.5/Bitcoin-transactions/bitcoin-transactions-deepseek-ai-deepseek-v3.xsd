@@ -1,0 +1,20 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/bitcoin" xmlns:btc="http://example.com/bitcoin">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit" encoding="UTF-8" occursCountKind="implicit" leadingSkip="0" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="BitcoinTransaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Version" type="xs:int" dfdl:length="4" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+        <xs:element name="InputCount" type="xs:unsignedLong" dfdl:length="1" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+        <xs:element name="Inputs" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PreviousTransactionHash" type="xs:hexBinary" dfdl:length="32" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+              <xs:element name="PreviousOutputIndex" type="xs:unsignedInt" dfdl:length="4" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+              <xs:element name="ScriptLength" type="xs:unsignedInt" dfdl:length="1" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+              <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:length="{../ScriptLength}" dfdl:encoding="UTF-8" dfdl:leadingSkip="0" />
+              <xs:element name="SequenceNumber" type

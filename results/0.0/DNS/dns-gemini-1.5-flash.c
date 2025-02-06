@@ -1,72 +1,136 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #include <arpa/inet.h>
-#include <netdb.h>
+#include <string.h>
 
-#define MAX_PACKET_SIZE 512
-#define MAX_DOMAIN_NAME 255
+hammer_parser_t* parse_label(void) {
+    hammer_parser_t* len = hammer_uint8;
+    hammer_parser_t* data = hammer_bytes(hammer_len(len)); 
+    return hammer_bind(len, data, (hammer_bind_func_t)hammer_take);
+}
 
-// Structure to represent a DNS header
-typedef struct {
-    unsigned short id;
-    unsigned short flags;
-    unsigned short qdcount;
-    unsigned short ancount;
-    unsigned short nscount;
-    unsigned short arcount;
-} dns_header;
+hammer_parser_t* parse_domain_name(void) {
+    hammer_parser_t* parser = hammer_end_by(parse_label(), hammer_uint8(0));
+    return parser;
+}
 
-// Structure to represent a DNS question
-typedef struct {
-    unsigned char qname[MAX_DOMAIN_NAME];
-    unsigned short qtype;
-    unsigned short qclass;
-} dns_question;
+hammer_parser_t* parse_uint16(void) {
+    return hammer_map(hammer_uint16, (hammer_map_func_t) ntohs);
+}
 
-// Function to convert domain name to bytes
-int domain_to_bytes(const char *domain, unsigned char *bytes) {
-    int i = 0;
-    char *token;
-    char *rest = (char *)domain;
+hammer_parser_t* parse_uint32(void) {
+    return hammer_map(hammer_uint32, (hammer_map_func_t) ntohl);
+}
 
-    while ((token = strtok_r(rest, ".", &rest))) {
-        int len = strlen(token);
-        bytes[i++] = len;
-        memcpy(bytes + i, token, len);
-        i += len;
-    }
-    bytes[i++] = 0;
-    return i;
+hammer_parser_t* parse_flags(void) {
+    return hammer_tuple(
+        hammer_bits(1), 
+        hammer_bits(4), 
+        hammer_bits(1), 
+        hammer_bits(1), 
+        hammer_bits(1), 
+        hammer_bits(1), 
+        hammer_bits(3), 
+        hammer_bits(4)  
+    );
+}
+
+hammer_parser_t* parse_question(void) {
+    return hammer_tuple(
+        parse_domain_name(), 
+        parse_uint16(),     
+        parse_uint16()      
+    );
 }
 
 
-int main() {
-    //Example usage (replace with your actual DNS query)
-    char *domain = "www.example.com";
-    unsigned char buffer[MAX_PACKET_SIZE];
-    dns_header *header = (dns_header *)buffer;
-    dns_question *question = (dns_question *)(buffer + sizeof(dns_header));
+hammer_parser_t* parse_rdata_a(void){
+  return hammer_ipv4;
+}
 
-    header->id = htons(12345); // Random ID
-    header->flags = htons(0x0100); // Standard query
-    header->qdcount = htons(1);
-    header->ancount = htons(0);
-    header->nscount = htons(0);
-    header->arcount = htons(0);
+hammer_parser_t* parse_rdata_aaaa(void){
+  return hammer_ipv6;
+}
 
-    domain_to_bytes(domain, question->qname);
-    question->qtype = htons(1); // A record
-    question->qclass = htons(1); // IN class
+hammer_parser_t* parse_resource_record(void) {
+    hammer_parser_t* type = parse_uint16();
+    hammer_parser_t* rdlength = parse_uint16();
+    hammer_parser_t* rdata_parser = hammer_choice(
+        hammer_case(hammer_uint16(1), parse_rdata_a()), 
+        hammer_case(hammer_uint16(28), parse_rdata_aaaa()), 
+        hammer_default(hammer_bytes(hammer_len(rdlength))) 
+    );
 
-    //Send the DNS query (replace with your actual sending mechanism)
-    //This is a placeholder and needs to be implemented based on your networking requirements.
-    printf("DNS Query for %s generated.\n", domain);
-    printf("Query size: %zu bytes\n", sizeof(dns_header) + strlen(domain) + 1 + sizeof(dns_question));
-    // ... (Code to send the buffer over a socket) ...
+    return hammer_tuple(
+        parse_domain_name(), 
+        type,      
+        parse_uint16(),      
+        parse_uint32(),      
+        rdlength,      
+        rdata_parser
+    );
+}
 
+hammer_parser_t* parse_dns_header(void) {
+    return hammer_tuple(
+        parse_uint16(), 
+        parse_flags(),   
+        parse_uint16(), 
+        parse_uint16(), 
+        parse_uint16(), 
+        parse_uint16()  
+    );
+}
+
+hammer_parser_t* parse_dns_message(void) {
+    return hammer_tuple(
+        parse_dns_header(),
+        hammer_many(parse_question()), 
+        hammer_many(parse_resource_record()), 
+        hammer_many(parse_resource_record()), 
+        hammer_many(parse_resource_record())  
+    );
+}
+
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
+
+    hammer_parser_t* parser = parse_dns_message();
+    hammer_result_t result = hammer_parse(parser, buffer, fileSize);
+
+    if (result.success) {
+        printf("DNS message parsed successfully!\n");
+    } else {
+        fprintf(stderr, "DNS message parsing failed at offset %zu: %s\n", result.offset, result.error);
+    }
+
+    free(buffer);
+    hammer_free(parser);
     return 0;
 }

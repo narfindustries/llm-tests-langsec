@@ -1,62 +1,82 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DICOM"
-           xmlns:ex="http://example.com/DICOM">
+           targetNamespace="http://example.com/dicom"
+           xmlns:tns="http://example.com/dicom">
 
-  <xs:include schemaLocation="DICOMBaseTypes.xsd"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="defaultFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     bitOrder="mostSignificantBitFirst"
+                     representation="binary"
+                     lengthKind="explicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
 
-  <xs:element name="File" dfdl:lengthKind="implicit">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Preamble" type="ex:BinaryData" dfdl:length="128" dfdl:lengthUnits="bytes"/>
-        <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:lengthUnits="bytes"/>
-        <xs:element name="DataElements" type="ex:DataElementsType"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="DataElementsType">
-    <xs:sequence dfdl:occursCountKind="parsed">
-      <xs:element name="DataElement" maxOccurs="unbounded">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="Tag" type="ex:TagType"/>
-            <xs:element name="VR" type="ex:VRType"/>
-            <xs:element name="Length" type="ex:LengthType"/>
-            <xs:element name="Value" type="ex:ValueType" dfdl:inputValueCalc="{if (ex:Length eq 0) then '' else fn:substring-after(../ex:Length, ' ')}"/>
-          </xs:sequence>
-        </xs:complexType>
-      </xs:element>
+  <xs:complexType name="FileMetaInformation">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationGroupLength" type="xs:int" dfdl:length="4"/>
+      <xs:element name="FileMetaInformationVersion" type="xs:hexBinary" dfdl:length="2"/>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="TransferSyntaxUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="ImplementationClassUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00" dfdl:occursCountKind="implicit"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:simpleType name="TagType">
-    <xs:restriction base="xs:hexBinary">
-      <xs:length value="4"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <xs:complexType name="PatientInformation">
+    <xs:sequence>
+      <xs:element name="PatientName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="PatientID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="PatientBirthDate" type="xs:date" dfdl:length="8" dfdl:calendarPattern="yyyyMMdd"/>
+      <xs:element name="PatientSex" type="xs:string" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:simpleType name="VRType">
-    <xs:restriction base="xs:string">
-      <xs:length value="2"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <xs:complexType name="StudyInformation">
+    <xs:sequence>
+      <xs:element name="StudyInstanceUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="StudyDate" type="xs:date" dfdl:length="8" dfdl:calendarPattern="yyyyMMdd"/>
+      <xs:element name="StudyTime" type="xs:time" dfdl:length="6" dfdl:calendarPattern="HHmmss"/>
+      <xs:element name="ReferringPhysicianName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:simpleType name="LengthType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <xs:complexType name="SeriesInformation">
+    <xs:sequence>
+      <xs:element name="SeriesInstanceUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="SeriesNumber" type="xs:int" dfdl:length="4"/>
+      <xs:element name="Modality" type="xs:string" dfdl:length="2"/>
+      <xs:element name="SeriesDate" type="xs:date" dfdl:length="8" dfdl:calendarPattern="yyyyMMdd"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:simpleType name="ValueType">
-    <xs:restriction base="xs:string">
-      <xs:whiteSpace value="preserve"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <xs:complexType name="ImageInformation">
+    <xs:sequence>
+      <xs:element name="SOPInstanceUID" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="ImageType" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="AcquisitionDate" type="xs:date" dfdl:length="8" dfdl:calendarPattern="yyyyMMdd"/>
+      <xs:element name="AcquisitionTime" type="xs:time" dfdl:length="6" dfdl:calendarPattern="HHmmss"/>
+      <xs:element name="SamplesPerPixel" type="xs:int" dfdl:length="2"/>
+      <xs:element name="PhotometricInterpretation" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="00"/>
+      <xs:element name="Rows" type="xs:int" dfdl:length="2"/>
+      <xs:element name="Columns" type="xs:int" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
 
-  <xs:simpleType name="BinaryData">
-    <xs:restriction base="xs:base64Binary"/>
-  </xs:simpleType>
+  <xs:element name="DICOMFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileMetaInformation" type="tns:FileMetaInformation"/>
+        <xs:element name="PatientInformation" type="tns:PatientInformation"/>
+        <xs:element name="StudyInformation" type="tns:StudyInformation"/>
+        <xs:element name="SeriesInformation" type="tns:SeriesInformation"/>
+        <xs:element name="ImageInformation" type="tns:ImageInformation"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

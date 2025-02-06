@@ -2,28 +2,54 @@ module DICOM;
 
 import spicy;
 
-public type Header = unit {
-    preamble: bytes(128);
-    magic: bytes(4) &requires(self == b"DICM");
+type DicomHeader = unit {
+    preamble: bytes &size=128;
+    magic: bytes &size=4 &requires=self == b"DICM";
 
-    : void {
-        self.preamble.length() == 128;
-        self.magic == b"DICM";
-    }
+    patient_module: PatientModule;
+    study_module: StudyModule;
+    series_module: SeriesModule;
+    image_module: ImageModule;
 };
 
-public type DataElement = unit {
-    tag: bytes(4);
-    vr: bytes(2);
-    length: uint32;
-    value: bytes(self.length);
+type PatientModule = unit {
+    patient_name: string &optional;
+    patient_id: string &optional;
+    patient_birth_date: time &optional;
+    patient_sex: enum { Male, Female, Other } &optional;
+    patient_age: uint16 &optional;
 };
 
-public type File = unit {
-    header: Header;
-    elements: DataElement[] &until($input.is_eof());
+type StudyModule = unit {
+    study_instance_uid: string;
+    study_date: time &optional;
+    study_time: time &optional;
+    accession_number: string &optional;
+    referring_physician_name: string &optional;
+    study_description: string &optional;
 };
 
-public function parse(f: File): bool {
-    return true;
-}
+type SeriesModule = unit {
+    modality: enum { 
+        CT, MR, US, XA, CR, DX, MG, RF, NM, PET, SC 
+    };
+    series_number: uint32 &optional;
+    series_description: string &optional;
+    series_instance_uid: string;
+};
+
+type ImageModule = unit {
+    sop_class_uid: string;
+    image_type: string[] &optional;
+    pixel_spacing: tuple<real, real> &optional;
+    rows: uint16;
+    columns: uint16;
+    bits_allocated: uint8;
+    bits_stored: uint8;
+    pixel_representation: enum { Unsigned, Signed };
+    pixel_data: bytes &optional;
+};
+
+type DICOM = unit {
+    header: DicomHeader;
+};

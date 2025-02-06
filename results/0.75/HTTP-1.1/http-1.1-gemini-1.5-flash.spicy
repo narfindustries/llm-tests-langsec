@@ -1,42 +1,43 @@
-#ifndef HTTP_1_1_GEMINI_1_5_FLASH_SPICY
-#define HTTP_1_1_GEMINI_1_5_FLASH_SPICY
+module HTTP_1_1;
 
-#include <http.zeek>
-#include <gemini.zeek>
+type HTTP_Request_Line = record {
+    method: string;
+    uri: string;
+    version: string;
+};
 
-event http_request(HTTP::Request r)
-	{
-	//Check if it's a flash request
-	if (r.URI.contains(".swf"))
-		{
-		//Log the event
-		print fmt("Flash request detected: %s", r.URI);
+type HTTP_Header = record {
+    name: string;
+    value: string;
+};
 
-		//Perform further analysis based on the HTTP headers or the request itself
-		//For example:
-		//if (r.header("User-Agent").contains("Flash"))
-		//	{
-		//	print fmt("Request from Flash client: %s", r.header("User-Agent"));
-		//	}
-		}
-	}
+type HTTP_Headers = list[HTTP_Header];
 
-event gemini_request(Gemini::Request r)
-	{
-	//Check if it's a flash request
-	if (r.URI.contains(".swf"))
-		{
-		//Log the event
-		print fmt("Flash request detected: %s", r.URI);
+type HTTP_Status_Line = record {
+    version: string;
+    status_code: int;
+    reason_phrase: string;
+};
 
-		//Perform further analysis based on the Gemini headers or the request itself
-		//For example:
-		//if (r.header("User-Agent").contains("Flash"))
-		//	{
-		//	print fmt("Request from Flash client: %s", r.header("User-Agent"));
-		//	}
-		}
-	}
+type HTTP_Message = record {
+    start_line: HTTP_Request_Line | HTTP_Status_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
 
+type HTTP_Request = record {
+    request_line: HTTP_Request_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
 
-#endif
+type HTTP_Response = record {
+    status_line: HTTP_Status_Line;
+    headers: HTTP_Headers;
+    body: bytes;
+};
+
+type HTTP_Transaction = record {
+    request: HTTP_Request;
+    response: HTTP_Response;
+};

@@ -1,0 +1,46 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" encoding="UTF-8" lengthKind="explicit" occursCountKind="implicit" sequenceKind="ordered" initiatedContent="no" leadingSkip="0" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="BitcoinTransaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Version" type="xs:int" dfdl:length="4" />
+        <xs:element name="InputCount" type="xs:int" dfdl:length="1" />
+        <xs:element name="Inputs" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="PreviousTransactionHash" type="xs:hexBinary" dfdl:length="32" />
+              <xs:element name="PreviousOutputIndex" type="xs:int" dfdl:length="4" />
+              <xs:element name="ScriptSigLength" type="xs:int" dfdl:length="1" />
+              <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:length="{../ScriptSigLength}" />
+              <xs:element name="SequenceNumber" type="xs:int" dfdl:length="4" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="OutputCount" type="xs:int" dfdl:length="1" />
+        <xs:element name="Outputs" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Value" type="xs:long" dfdl:length="8" />
+              <xs:element name="ScriptPubKeyLength" type="xs:int" dfdl:length="1" />
+              <xs:element name="ScriptPubKey" type="xs:hexBinary" dfdl:length="{../ScriptPubKeyLength}" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="LockTime" type="xs:int" dfdl:length="4" />
+        <xs:element name="Witness" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="WitnessDataLength" type="xs:int" dfdl:length="1" />
+              <xs:element name="WitnessData" type="xs:hexBinary" dfdl:length="{../WitnessDataLength}" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

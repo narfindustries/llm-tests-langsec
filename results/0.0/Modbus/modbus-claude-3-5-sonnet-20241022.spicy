@@ -1,85 +1,13 @@
 module Modbus;
 
-import spicy;
-
-public type ModbusHeader = unit {
+public type MBAP = unit {
     transaction_id: uint16;
     protocol_id: uint16;
     length: uint16;
     unit_id: uint8;
-    function_code: uint8;
 };
 
-public type ModbusRequest = unit {
-    header: ModbusHeader;
-    switch ( self.header.function_code ) {
-        0x01, 0x02, 0x03, 0x04 -> read_request: ReadRequest;
-        0x05, 0x06 -> single_write_request: SingleWriteRequest;
-        0x0F, 0x10 -> multiple_write_request: MultipleWriteRequest;
-        * -> unknown: bytes &eod;
-    };
-};
-
-public type ModbusResponse = unit {
-    header: ModbusHeader;
-    switch ( self.header.function_code ) {
-        0x01, 0x02, 0x03, 0x04 -> read_response: ReadResponse;
-        0x05, 0x06 -> single_write_response: SingleWriteResponse;
-        0x0F, 0x10 -> multiple_write_response: MultipleWriteResponse;
-        0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x8F, 0x90 -> error_response: ErrorResponse;
-        * -> unknown: bytes &eod;
-    };
-};
-
-type ReadRequest = unit {
-    start_address: uint16;
-    quantity: uint16;
-};
-
-type SingleWriteRequest = unit {
-    output_address: uint16;
-    output_value: uint16;
-};
-
-type MultipleWriteRequest = unit {
-    start_address: uint16;
-    quantity: uint16;
-    byte_count: uint8;
-    values: bytes &size=self.byte_count;
-};
-
-type ReadResponse = unit {
-    byte_count: uint8;
-    values: bytes &size=self.byte_count;
-};
-
-type SingleWriteResponse = unit {
-    output_address: uint16;
-    output_value: uint16;
-};
-
-type MultipleWriteResponse = unit {
-    start_address: uint16;
-    quantity: uint16;
-};
-
-type ErrorResponse = unit {
-    exception_code: uint8;
-};
-
-public type ModbusExceptionCode = enum {
-    ILLEGAL_FUNCTION = 0x01,
-    ILLEGAL_DATA_ADDRESS = 0x02,
-    ILLEGAL_DATA_VALUE = 0x03,
-    SLAVE_DEVICE_FAILURE = 0x04,
-    ACKNOWLEDGE = 0x05,
-    SLAVE_DEVICE_BUSY = 0x06,
-    MEMORY_PARITY_ERROR = 0x08,
-    GATEWAY_PATH_UNAVAILABLE = 0x0A,
-    GATEWAY_TARGET_FAILED = 0x0B
-};
-
-public type ModbusFunctionCode = enum {
+type FunctionCode = enum {
     READ_COILS = 0x01,
     READ_DISCRETE_INPUTS = 0x02,
     READ_HOLDING_REGISTERS = 0x03,
@@ -87,5 +15,75 @@ public type ModbusFunctionCode = enum {
     WRITE_SINGLE_COIL = 0x05,
     WRITE_SINGLE_REGISTER = 0x06,
     WRITE_MULTIPLE_COILS = 0x0F,
-    WRITE_MULTIPLE_REGISTERS = 0x10
+    WRITE_MULTIPLE_REGISTERS = 0x10,
+    READ_FILE_RECORD = 0x14,
+    WRITE_FILE_RECORD = 0x15,
+    MASK_WRITE_REGISTER = 0x16,
+    READ_WRITE_MULTIPLE_REGISTERS = 0x17,
+    READ_FIFO_QUEUE = 0x18
+};
+
+type ExceptionCode = enum {
+    ILLEGAL_FUNCTION = 0x01,
+    ILLEGAL_DATA_ADDRESS = 0x02,
+    ILLEGAL_DATA_VALUE = 0x03,
+    SERVER_DEVICE_FAILURE = 0x04,
+    ACKNOWLEDGE = 0x05,
+    SERVER_DEVICE_BUSY = 0x06,
+    MEMORY_PARITY_ERROR = 0x08,
+    GATEWAY_PATH_UNAVAILABLE = 0x0A,
+    GATEWAY_TARGET_DEVICE_FAILED = 0x0B
+};
+
+public type PDU = unit {
+    function_code: uint8;
+    
+    switch ( self.function_code ) {
+        0x01, 0x02, 0x03, 0x04 -> read_request: ReadRequest;
+        0x05, 0x06 -> write_single_request: WriteSingleRequest;
+        0x0F, 0x10 -> write_multiple_request: WriteMultipleRequest;
+        0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x8F, 0x90 -> error_response: ErrorResponse;
+        * -> unknown: bytes &eod;
+    };
+};
+
+type ReadRequest = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+type WriteSingleRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteMultipleRequest = unit {
+    starting_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type ErrorResponse = unit {
+    exception_code: uint8;
+};
+
+type ReadResponse = unit {
+    byte_count: uint8;
+    values: bytes &size=self.byte_count;
+};
+
+type WriteSingleResponse = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteMultipleResponse = unit {
+    starting_address: uint16;
+    quantity: uint16;
+};
+
+public type ModbusPacket = unit {
+    mbap: MBAP;
+    pdu: PDU;
 };

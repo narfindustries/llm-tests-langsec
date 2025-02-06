@@ -1,75 +1,58 @@
-module Modbus {
-  -- Modbus function codes
-  enum FunctionCode : uint8 {
-    ReadCoils = 0x01,
-    ReadDiscreteInputs = 0x02,
-    ReadHoldingRegisters = 0x03,
-    ReadInputRegisters = 0x04,
-    WriteSingleCoil = 0x05,
-    WriteSingleRegister = 0x06,
-    ReadExceptionStatus = 0x07,
-    Diagnostics = 0x08,
-    GetComEventCounter = 0x0B,
-    GetComEventLog = 0x0C,
-    WriteMultipleCoils = 0x0F,
-    WriteMultipleRegisters = 0x10,
-    ReportServerID = 0x11,
-    ReadFileRecord = 0x14,
-    WriteFileRecord = 0x15,
-    MaskWriteRegister = 0x16,
-    ReadWriteMultipleRegisters = 0x17,
-    ReadFIFOQueue = 0x18,
-    EncapsulatedInterfaceTransport = 0x2B
-  }
+type MBAPHeader = struct {
+  transactionId : uint16 : big;
+  protocolId    : uint16 : big;
+  length        : uint16 : big;
+  unitId        : uint8;
+};
 
-  type ExceptionCode : uint8 {
-    IllegalFunction = 0x01,
-    IllegalDataAddress = 0x02,
-    IllegalDataValue = 0x03,
-    ServerDeviceFailure = 0x04,
-    Acknowledge = 0x05,
-    ServerDeviceBusy = 0x06,
-    MemoryParityError = 0x08,
-    GatewayPathUnavailable = 0x0A,
-    GatewayTargetDeviceFailedToRespond = 0x0B
-  }
+type FunctionCode = enum uint8 {
+  ReadCoils = 1,
+  ReadDiscreteInputs,
+  ReadHoldingRegisters,
+  ReadInputRegisters,
+  WriteSingleCoil = 5,
+  WriteSingleRegister,
+  WriteMultipleCoils = 15,
+  WriteMultipleRegisters,
+  ErrorResponse = 0x80
+};
 
-  type MBAPHeader = struct {
-    transactionId : uint16,
-    protocolId : uint16,
-    length : uint16,
-    unitId : uint8
+type RequestData = choice FunctionCode {
+  ReadCoils, ReadDiscreteInputs, ReadHoldingRegisters, ReadInputRegisters => struct {
+    startingAddress uint16 : big;
+    quantity uint16 : big;
+  },
+  WriteSingleCoil, WriteSingleRegister => struct {
+    outputAddress uint16 : big;
+    outputValue uint16 : big;
+  },
+  WriteMultipleCoils, WriteMultipleRegisters => struct {
+    startingAddress uint16 : big;
+    quantity uint16 : big;
+    values bytes;
   }
+};
 
-  type Request = struct {
-    functionCode : FunctionCode,
-    data : uint8[length(this._parent.length) - 2]
+type ResponseData = choice FunctionCode {
+  ReadCoils, ReadDiscreteInputs, ReadHoldingRegisters, ReadInputRegisters => bytes,
+  WriteSingleCoil, WriteSingleRegister, WriteMultipleCoils, WriteMultipleRegisters => struct {
+    startingAddress uint16 : big;
+    quantity uint16 : big;
+  },
+  ErrorResponse => struct {
+    originalFunctionCode uint8;
+    exceptionCode uint8;
   }
+};
 
-  type Response = struct {
-    functionCode : FunctionCode,
-    data : uint8[length(this._parent.length) - 2]
-  }
+type ModbusPDU = struct {
+  functionCode FunctionCode;
+  data RequestData | ResponseData;
+};
 
-  type ExceptionResponse = struct {
-    functionCode : uint8,  -- Function code + 0x80 to indicate an exception
-    exceptionCode : ExceptionCode
-  }
+type ModbusADU = struct {
+  header MBAPHeader;
+  pdu ModbusPDU;
+};
 
-  type ADU = struct {
-    header : MBAPHeader,
-    body : choice(header.length) {
-      default = fail("Unsupported function code or length"),
-      case (header.length == 5 && body.functionCode == FunctionCode.WriteSingleCoil) = Response,
-      case (header.length == 5 && body.functionCode == FunctionCode.WriteSingleRegister) = Response,
-      case (body.functionCode == FunctionCode.ReadCoils) = Response,
-      case (body.functionCode == FunctionCode.ReadDiscreteInputs) = Response,
-      case (body.functionCode == FunctionCode.ReadHoldingRegisters) = Response,
-      case (body.functionCode == FunctionCode.ReadInputRegisters) = Response,
-      case (body.functionCode == FunctionCode.WriteMultipleCoils) = Response,
-      case (body.functionCode == FunctionCode.WriteMultipleRegisters) = Response,
-      case (body.functionCode == FunctionCode.ReadFIFOQueue) = Response,
-      if (body.functionCode >= 0x80) = ExceptionResponse
-    }
-  }
-}
+root ModbusADU;

@@ -1,65 +1,93 @@
-# Definition of the NITF file format in Zeek Spicy
-file NITF {
-    # File header
-    header: Header;
+module NITF;
 
-    # File body
-    body: Body;
+type FileHeaderLength = uint32;
+type FileHeaderVersion = uint16;
+type FileType = string;
+type FileSecurityClassification = uint8;
+type FileControlNumber = string;
+type FileDateAndTime = string;
+type FileTitle = string;
+type FileSecurityInformation = string;
+type FileCopyNumber = uint32;
+type FileNumberOfCopies = uint32;
+
+type ImageSegmentHeaderLength = uint32;
+type ImageSegmentType = uint16;
+type ImageCompressionType = uint16;
+type ImageDataFormat = uint16;
+type ImagePixelType = uint16;
+type ImagePixelSize = uint32;
+type ImageRowSize = uint32;
+type ImageColumnSize = uint32;
+type ImageDataLength = uint64;
+type ImageDataOffset = uint64;
+
+type DataExtensionSegmentHeaderLength = uint32;
+type DataExtensionSegmentType = uint16;
+type DataExtensionDataFormat = uint16;
+type DataExtensionDataLength = uint64;
+type DataExtensionDataOffset = uint64;
+
+type ResidualDataSegmentHeaderLength = uint32;
+type ResidualDataSegmentType = uint16;
+type ResidualDataFormat = uint16;
+type ResidualDataLength = uint64;
+type ResidualDataOffset = uint64;
+
+struct FileHeader {
+  file_header_length = uint32;
+  file_header_version = uint16;
+  file_type = string;
+  file_security_classification = uint8;
+  file_control_number = string;
+  file_date_and_time = string;
+  file_title = string;
+  file_security_information = string;
+  file_copy_number = uint32;
+  file_number_of_copies = uint32;
 }
 
-# Header section
-type Header {
-    file_header_length: uint16;
-    file_header_fields: FileHeaderFields;
-    file_type: string(4);  # Should be "NITF"
-    file_version: string(5);  # Should be "02.10"
+struct ImageSegmentHeader {
+  image_segment_header_length = uint32;
+  image_segment_type = uint16;
+  image_compression_type = uint16;
+  image_data_format = uint16;
+  image_pixel_type = uint16;
+  image_pixel_size = uint32;
+  image_row_size = uint32;
+  image_column_size = uint32;
+  image_data_length = uint64;
+  image_data_offset = uint64;
 }
 
-# File header fields
-type FileHeaderFields {
-    file_id: string(25);
-    classification: string(1);
-    title: string(80);
-    security_control_info: string(11);
-    file_date: string(10);
-    file_title: string(80);
-    file_security_classification: string(1);
+struct DataExtensionSegmentHeader {
+  data_extension_segment_header_length = uint32;
+  data_extension_segment_type = uint16;
+  data_extension_data_format = uint16;
+  data_extension_data_length = uint64;
+  data_extension_data_offset = uint64;
 }
 
-# Body section
-type Body {
-    image_segments: Segment[ImageSegment];
-    text_segments: Segment[TextSegment];
-    graphics_segments: Segment[GraphicsSegment];
+struct ResidualDataSegmentHeader {
+  residual_data_segment_header_length = uint32;
+  residual_data_segment_type = uint16;
+  residual_data_format = uint16;
+  residual_data_length = uint64;
+  residual_data_offset = uint64;
 }
 
-# Segment
-type Segment<T> {
-    segment_type: string(2);  # Should be "IM" for image segments, "TE" for text segments, "GR" for graphics segments
-    segment_length: uint32;
-    data: T;
+struct NITF {
+  file_header = FileHeader;
+  image_segment_headers = vector(ImageSegmentHeader);
+  data_extension_segment_headers = vector(DataExtensionSegmentHeader);
+  residual_data_segment_headers = vector(ResidualDataSegmentHeader);
 }
 
-# Image segment
-type ImageSegment {
-    image_id: string(25);
-    image_date: string(10);
-    image_security_classification: string(1);
-    image_data: bytes($$.segment_length - 34);
+struct NITFFormat {
+  magic = string;
+  nitf = NITF;
 }
 
-# Text segment
-type TextSegment {
-    text_id: string(25);
-    text_date: string(10);
-    text_security_classification: string(1);
-    text_data: string($$.segment_length - 34);
-}
-
-# Graphics segment
-type GraphicsSegment {
-    graphics_id: string(25);
-    graphics_date: string(10);
-    graphics_security_classification: string(1);
-    graphics_data: bytes($$.segment_length - 34);
+export {
+  NITFFormat,
 }

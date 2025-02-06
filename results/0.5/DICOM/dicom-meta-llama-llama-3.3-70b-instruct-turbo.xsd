@@ -1,98 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DICOM"
-           xmlns="http://example.com/DICOM"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns:dcm="http://www.dicomstandard.org" 
+           targetNamespace="http://www.dicomstandard.org" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dicom.xsd"/>
-
-  <xs:element name="dicom-meta-llama-llama-3">
+  <xs:element name="DICOM">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="PatientName" dfdl:occursCount="1..1"/>
-        <xs:element ref="PatientID" dfdl:occursCount="1..1"/>
-        <xs:element ref="StudyInstanceUID" dfdl:occursCount="1..1"/>
-        <xs:element ref="SeriesInstanceUID" dfdl:occursCount="1..1"/>
-        <xs:element ref="SOPInstanceUID" dfdl:occursCount="1..1"/>
-        <xs:element ref="PixelData" dfdl:occursCount="1..1"/>
+        <xs:element name="FileMetaInformationGroup" type="dcm:FileMetaInformationGroupType" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Dataset" type="dcm:DatasetType" minOccurs="1" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="PatientName">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="vr" type="xs:string" fixed="PN"/>
-          <xs:attribute name="length" type="xs:int" fixed="64"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="PatientID">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="vr" type="xs:string" fixed="LO"/>
-          <xs:attribute name="length" type="xs:int" fixed="64"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="StudyInstanceUID">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="vr" type="xs:string" fixed="UI"/>
-          <xs:attribute name="length" type="xs:int" fixed="64"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="SeriesInstanceUID">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="vr" type="xs:string" fixed="UI"/>
-          <xs:attribute name="length" type="xs:int" fixed="64"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="SOPInstanceUID">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="vr" type="xs:string" fixed="UI"/>
-          <xs:attribute name="length" type="xs:int" fixed="64"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="PixelData">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:base64Binary">
-          <xs:attribute name="vr" type="xs:string" fixed="OB"/>
-          <xs:attribute name="length" type="xs:int" fixed="*"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
-
-  <dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-               separator(Address="," 
-                         Element="," 
-                         Sequence="," 
-                         Choice=",") 
-               encoding="ISO-8859-1" 
-               lengthKind="explicit" 
-               separationChar=","/>
-
+  <xs:complexType name="FileMetaInformationGroupType">
+    <xs:sequence>
+      <xs:element name="FileMetaInformationVersion" type="xs:unsignedInt" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="MediaStorageSOPClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="TransferSyntaxUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImplementationVersionName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SourceApplicationEntityTitle" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DatasetType">
+    <xs:sequence>
+      <xs:element name="PatientGroup" type="dcm:PatientGroupType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyGroup" type="dcm:StudyGroupType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesGroup" type="dcm:SeriesGroupType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageGroup" type="dcm:ImageGroupType" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PatientGroupType">
+    <xs:sequence>
+      <xs:element name="PatientID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientName" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="PatientBirthDate" type="xs:date" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientSex" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PatientAge" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="StudyGroupType">
+    <xs:sequence>
+      <xs:element name="StudyInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyDate" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyTime" type="xs:time" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="StudyDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="StudyID" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="SeriesGroupType">
+    <xs:sequence>
+      <xs:element name="SeriesInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesNumber" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SeriesDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SeriesDate" type="xs:date" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="SeriesTime" type="xs:time" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ImageGroupType">
+    <xs:sequence>
+      <xs:element name="SOPInstanceUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="SOPClassUID" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageType" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="ImageOrientationPatient" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ImagePositionPatient" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="PixelData" type="xs:base64Binary" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

@@ -1,108 +1,81 @@
-domain bitcoin_transactions {
-  type transaction {
-    bit_field {
-      name: "version"
-      length: 32
-      type: uint
-    }
-    var_length_string {
-      name: "tx_in_count"
-      type: uint
-    }
-    repeated {
-      name: "tx_in"
-      type: tx_in
-      length: "tx_in_count"
-    }
-    var_length_string {
-      name: "tx_out_count"
-      type: uint
-    }
-    repeated {
-      name: "tx_out"
-      type: tx_out
-      length: "tx_out_count"
-    }
-    bit_field {
-      name: "lock_time"
-      length: 32
-      type: uint
-    }
-  }
+format binary
 
-  type tx_in {
-    bytes {
-      name: "tx_id"
-      length: 32
-    }
-    uint {
-      name: "tx_index"
-      length: 32
-    }
-    bytes {
-      name: "script_sig"
-      length: var
-    }
-    bytes {
-      name: "sequence"
-      length: 32
-    }
-  }
+type Transaction {
+  version: uint32 little_endian,
+  tx_in_count: varint,
+  tx_in: TransactionInput[tx_in_count],
+  tx_out_count: varint,
+  tx_out: TransactionOutput[tx_out_count],
+  lock_time: uint32 little_endian
+}
 
-  type tx_out {
-    uint {
-      name: "value"
-      length: 64
-    }
-    bytes {
-      name: "script_pub_key"
-      length: var
-    }
-  }
+type TransactionInput {
+  previous_output: bytes(36),
+  script_length: varint,
+  scriptSig: bytes[script_length],
+  sequence: uint32 little_endian
+}
 
-  type block_header {
-    bit_field {
-      name: "version"
-      length: 32
-      type: uint
-    }
-    bytes {
-      name: "prev_block"
-      length: 32
-    }
-    bytes {
-      name: "merkle_root"
-      length: 32
-    }
-    uint {
-      name: "timestamp"
-      length: 32
-    }
-    uint {
-      name: "bits"
-      length: 32
-    }
-    uint {
-      name: "nonce"
-      length: 32
-    }
-  }
+type TransactionOutput {
+  value: uint64 little_endian,
+  script_length: varint,
+  scriptPubKey: bytes[script_length]
+}
 
-  type block {
-    bit_field {
-      name: "header"
-      type: block_header
-    }
-    var_length_string {
-      name: "transaction_count"
-      type: uint
-    }
-    repeated {
-      name: "transactions"
-      type: transaction
-      length: "transaction_count"
-    }
-  }
+type Block {
+  block_header: BlockHeader,
+  transaction_count: varint,
+  transactions: Transaction[transaction_count]
+}
 
-  root_type block
+type BlockHeader {
+  version: uint32 little_endian,
+  previous_block_hash: bytes(32),
+  merkle_root: bytes(32),
+  timestamp: uint32 little_endian,
+  target: uint32 little_endian,
+  nonce: uint32 little_endian
+}
+
+type NetworkMessage {
+  magic: bytes(4),
+  command: bytes(12),
+  payload_length: varint,
+  payload: bytes[payload_length],
+  checksum: bytes(4)
+}
+
+type VersionMessage {
+  version: uint32 little_endian,
+  services: uint64 little_endian,
+  timestamp: uint64 little_endian,
+  addr_recv: NetAddress,
+  addr_from: NetAddress,
+  nonce: uint64 little_endian,
+  user_agent: bytes[varint],
+  start_height: uint32 little_endian,
+  relay: bool
+}
+
+type NetAddress {
+  time: uint32 little_endian,
+  services: uint64 little_endian,
+  address: bytes(16),
+  port: uint16 big_endian
+}
+
+type VarInt {
+  value: uint64
+}
+
+function varint(value: uint64): bytes {
+  if value < 0xfd {
+    return bytes(1) + value
+  } else if value <= 0xffff {
+    return bytes(1) + 0xfd + uint16 little_endian(value)
+  } else if value <= 0xffffffff {
+    return bytes(1) + 0xfe + uint32 little_endian(value)
+  } else {
+    return bytes(1) + 0xff + uint64 little_endian(value)
+  }
 }

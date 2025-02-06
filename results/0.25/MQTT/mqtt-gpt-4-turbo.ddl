@@ -1,82 +1,139 @@
-module MQTT {
-  type Byte = U8;
+module MQTT;
 
-  type FixedHeader = struct {
-    packetTypeFlags : U8;
-    remainingLength : RemainingLength;
-  }
+import std.core;
 
-  type RemainingLength = struct {
-    bytes : [U8];
-    value : U32 = remainingLengthValue(bytes);
-  }
+// MQTT Control Packet Types
+enum PacketType : uint4 {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
+}
 
-  type ConnectFlags = struct {
-    reserved : U1 = 0;
-    cleanSession : U1;
-    willFlag : U1;
-    willQoS : U2;
-    willRetain : U1;
-    passwordFlag : U1;
-    usernameFlag : U1;
-  }
+// Fixed Header for all MQTT packets
+struct FixedHeader {
+    packetType : PacketType;
+    flags : uint4;
+    remainingLength : VarInt;
+}
 
-  type ConnectPayload = struct {
-    clientId : UTF8String;
-    willTopic : UTF8String if this.parent.connectFlags.willFlag == 1;
-    willMessage : UTF8String if this.parent.connectFlags.willFlag == 1;
-    username : UTF8String if this.parent.connectFlags.usernameFlag == 1;
-    password : UTF8String if this.parent.connectFlags.passwordFlag == 1;
-  }
+// Variable Byte Integer as per MQTT specification
+struct VarInt {
+    value : uint32;
+}
 
-  type ConnectVariableHeader = struct {
-    protocolName : UTF8String;
-    protocolLevel : U8;
-    connectFlags : ConnectFlags;
-    keepAlive : U16;
-  }
+// MQTT CONNECT Packet
+struct ConnectPacket {
+    header : FixedHeader;
+    protocolName : string;
+    protocolLevel : uint8;
+    connectFlags : uint8;
+    keepAlive : uint16;
+    properties : Properties;
+    clientIdentifier : string;
+    willProperties : optional<Properties>;
+    willTopic : optional<string>;
+    willPayload : optional<bytes>;
+    username : optional<string>;
+    password : optional<bytes>;
+}
 
-  type ConnectPacket = struct {
-    fixedHeader : FixedHeader;
-    variableHeader : ConnectVariableHeader;
-    payload : ConnectPayload;
-  }
+// MQTT CONNACK Packet
+struct ConnackPacket {
+    header : FixedHeader;
+    connectAcknowledgeFlags : uint8;
+    connectReasonCode : uint8;
+    properties : Properties;
+}
 
-  type PublishPacket = struct {
-    fixedHeader : FixedHeader;
-    topicName : UTF8String;
-    packetIdentifier : U16 if this.fixedHeader.packetTypeFlags & 0x06 != 0;
-    payload : [Byte];
-  }
+// MQTT PUBLISH Packet
+struct PublishPacket {
+    header : FixedHeader;
+    topicName : string;
+    packetIdentifier : optional<uint16>;
+    properties : Properties;
+    payload : bytes;
+}
 
-  type SubscribePayload = struct {
-    topicFilter : UTF8String;
-    qos : U8;
-  }
+// MQTT SUBSCRIBE Packet
+struct SubscribePacket {
+    header : FixedHeader;
+    packetIdentifier : uint16;
+    properties : Properties;
+    subscriptionData : array<SubscriptionData>;
+}
 
-  type SubscribePacket = struct {
-    fixedHeader : FixedHeader;
-    packetIdentifier : U16;
-    payload : [SubscribePayload];
-  }
+struct SubscriptionData {
+    topicFilter : string;
+    options : uint8;
+}
 
-  type UTF8String = struct {
-    length : U16;
-    string : [Byte] : length;
-  }
+// MQTT SUBACK Packet
+struct SubackPacket {
+    header : FixedHeader;
+    packetIdentifier : uint16;
+    properties : Properties;
+    returnCodes : array<uint8>;
+}
 
-  function remainingLengthValue(bytes : [U8]) : U32 {
-    var multiplier : U32 = 1;
-    var value : U32 = 0;
-    var index : U32 = 0;
-    while index < bytes.length {
-      value += U32(bytes[index] & 127) * multiplier;
-      if (bytes[index] & 128 == 0) {
-        break;
-      }
-      multiplier *= 128;
-      index += 1;
-    }
-    return value;
-  }
+// MQTT UNSUBSCRIBE Packet
+struct UnsubscribePacket {
+    header : FixedHeader;
+    packetIdentifier : uint16;
+    properties : Properties;
+    topicFilters : array<string>;
+}
+
+// MQTT UNSUBACK Packet
+struct UnsubackPacket {
+    header : FixedHeader;
+    packetIdentifier : uint16;
+    properties : Properties;
+    reasonCodes : array<uint8>;
+}
+
+// MQTT PINGREQ, PINGRESP Packets
+struct PingPacket {
+    header : FixedHeader;
+}
+
+// MQTT DISCONNECT, AUTH Packets
+struct DisconnectAuthPacket {
+    header : FixedHeader;
+    reasonCode : uint8;
+    properties : Properties;
+}
+
+// MQTT Properties (common structure for all properties in MQTT packets)
+struct Properties {
+    length : VarInt;
+    value : bytes; // This should be parsed according to the property identifier and length
+}
+
+// Main MQTT Packet structure
+struct MQTTPacket {
+    header : FixedHeader;
+    payload : switch (header.packetType) {
+        case PacketType.CONNECT: ConnectPacket;
+        case PacketType.CONNACK: ConnackPacket;
+        case PacketType.PUBLISH: PublishPacket;
+        case PacketType.SUBSCRIBE: SubscribePacket;
+        case PacketType.SUBACK: SubackPacket;
+        case PacketType.UNSUBSCRIBE: UnsubscribePacket;
+        case PacketType.UNSUBACK: UnsubackPacket;
+        case PacketType.PINGREQ, PacketType.PINGRESP: PingPacket;
+        case PacketType.DISCONNECT, PacketType.AUTH: DisconnectAuthPacket;
+        default: bytes;
+    };
 }

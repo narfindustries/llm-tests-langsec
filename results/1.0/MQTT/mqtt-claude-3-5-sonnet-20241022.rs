@@ -1,353 +1,253 @@
 use nom::{
-    bits::complete::take as take_bits,
-    branch::alt,
+    bits::complete::{tag as bits_tag, take as bits_take},
     bytes::complete::{tag, take},
     combinator::{map, verify},
-    multi::length_data,
-    number::complete::{be_u16, be_u8},
+    multi::{length_data, many0},
+    number::complete::{be_u16, be_u32, be_u8},
     sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read};
+use std::{env, fs, io::Read};
 
 #[derive(Debug)]
-pub enum MqttPacket {
-    Connect(ConnectPacket),
-    ConnAck(ConnAckPacket),
-    Publish(PublishPacket),
-    PubAck(PubAckPacket),
-    PubRec(PubRecPacket),
-    PubRel(PubRelPacket),
-    PubComp(PubCompPacket),
-    Subscribe(SubscribePacket),
-    SubAck(SubAckPacket),
-    Unsubscribe(UnsubscribePacket),
-    UnsubAck(UnsubAckPacket),
-    PingReq,
-    PingResp,
-    Disconnect,
+enum PacketType {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15,
 }
 
 #[derive(Debug)]
-pub struct ConnectPacket {
-    protocol_name: String,
-    protocol_level: u8,
-    clean_session: bool,
-    will_flag: bool,
-    will_qos: u8,
-    will_retain: bool,
+struct FixedHeader {
+    packet_type: PacketType,
+    dup_flag: bool,
+    qos_level: u8,
+    retain: bool,
+    remaining_length: u32,
+}
+
+#[derive(Debug)]
+struct Property {
+    identifier: u8,
+    value: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct ConnectFlags {
     username_flag: bool,
     password_flag: bool,
+    will_retain: bool,
+    will_qos: u8,
+    will_flag: bool,
+    clean_start: bool,
+}
+
+#[derive(Debug)]
+struct ConnectPacket {
+    protocol_name: String,
+    protocol_version: u8,
+    connect_flags: ConnectFlags,
     keep_alive: u16,
+    properties: Vec<Property>,
     client_id: String,
+    will_properties: Option<Vec<Property>>,
     will_topic: Option<String>,
-    will_message: Option<Vec<u8>>,
+    will_payload: Option<Vec<u8>>,
     username: Option<String>,
     password: Option<Vec<u8>>,
 }
 
-#[derive(Debug)]
-pub struct ConnAckPacket {
-    session_present: bool,
-    return_code: u8,
-}
-
-#[derive(Debug)]
-pub struct PublishPacket {
-    dup: bool,
-    qos: u8,
-    retain: bool,
-    topic_name: String,
-    packet_id: Option<u16>,
-    payload: Vec<u8>,
-}
-
-#[derive(Debug)]
-pub struct PubAckPacket {
-    packet_id: u16,
-}
-
-#[derive(Debug)]
-pub struct PubRecPacket {
-    packet_id: u16,
-}
-
-#[derive(Debug)]
-pub struct PubRelPacket {
-    packet_id: u16,
-}
-
-#[derive(Debug)]
-pub struct PubCompPacket {
-    packet_id: u16,
-}
-
-#[derive(Debug)]
-pub struct SubscribePacket {
-    packet_id: u16,
-    topics: Vec<(String, u8)>,
-}
-
-#[derive(Debug)]
-pub struct SubAckPacket {
-    packet_id: u16,
-    return_codes: Vec<u8>,
-}
-
-#[derive(Debug)]
-pub struct UnsubscribePacket {
-    packet_id: u16,
-    topics: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct UnsubAckPacket {
-    packet_id: u16,
-}
-
-fn parse_remaining_length(input: &[u8]) -> IResult<&[u8], usize> {
-    let mut multiplier = 1;
-    let mut value = 0;
+fn parse_remaining_length(input: &[u8]) -> IResult<&[u8], u32> {
+    let mut multiplier: u32 = 1;
+    let mut value: u32 = 0;
     let mut current_input = input;
-    
+    let mut byte_count = 0;
+
     loop {
         let (rest, byte) = be_u8(current_input)?;
         current_input = rest;
-        value += (byte & 0x7F) as usize * multiplier;
+        byte_count += 1;
+
+        value += ((byte & 0x7F) as u32) * multiplier;
         multiplier *= 128;
-        
-        if byte & 0x80 == 0 {
+
+        if byte & 0x80 == 0 || byte_count >= 4 {
             break;
         }
-        
-        if multiplier > 128 * 128 * 128 {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::TooLarge,
-            )));
-        }
     }
-    
+
     Ok((current_input, value))
 }
 
-fn parse_string(input: &[u8]) -> IResult<&[u8], String> {
+fn parse_fixed_header(input: &[u8]) -> IResult<&[u8], FixedHeader> {
+    let (input, (packet_type_bits, flags)) = bits::bits::<_, _, Error<(&[u8], usize)>, _, _>(
+        tuple((
+            bits_take(4usize),
+            bits_take(4usize),
+        ))
+    )(input)?;
+
+    let packet_type = match packet_type_bits {
+        1 => PacketType::CONNECT,
+        2 => PacketType::CONNACK,
+        3 => PacketType::PUBLISH,
+        4 => PacketType::PUBACK,
+        5 => PacketType::PUBREC,
+        6 => PacketType::PUBREL,
+        7 => PacketType::PUBCOMP,
+        8 => PacketType::SUBSCRIBE,
+        9 => PacketType::SUBACK,
+        10 => PacketType::UNSUBSCRIBE,
+        11 => PacketType::UNSUBACK,
+        12 => PacketType::PINGREQ,
+        13 => PacketType::PINGRESP,
+        14 => PacketType::DISCONNECT,
+        15 => PacketType::AUTH,
+        _ => return Err(nom::Err::Error(Error::new(input, ErrorKind::Tag))),
+    };
+
+    let (input, remaining_length) = parse_remaining_length(input)?;
+
+    Ok((input, FixedHeader {
+        packet_type,
+        dup_flag: (flags & 0x08) != 0,
+        qos_level: (flags & 0x06) >> 1,
+        retain: (flags & 0x01) != 0,
+        remaining_length,
+    }))
+}
+
+fn parse_utf8_string(input: &[u8]) -> IResult<&[u8], String> {
     let (input, len) = be_u16(input)?;
-    let (input, bytes) = take(len)(input)?;
-    Ok((input, String::from_utf8_lossy(bytes).into_owned()))
+    let (input, string_bytes) = take(len)(input)?;
+    Ok((input, String::from_utf8_lossy(string_bytes).into_owned()))
+}
+
+fn parse_property(input: &[u8]) -> IResult<&[u8], Property> {
+    let (input, identifier) = be_u8(input)?;
+    let (input, value) = match identifier {
+        0x01 | 0x17 | 0x24 | 0x25 | 0x28 | 0x29 | 0x2A => {
+            let (input, val) = be_u8(input)?;
+            (input, vec![val])
+        },
+        0x02 | 0x11 | 0x21 | 0x27 => {
+            let (input, val) = be_u32(input)?;
+            (input, val.to_be_bytes().to_vec())
+        },
+        0x22 | 0x23 => {
+            let (input, val) = be_u16(input)?;
+            (input, val.to_be_bytes().to_vec())
+        },
+        _ => {
+            let (input, str_val) = parse_utf8_string(input)?;
+            (input, str_val.into_bytes())
+        },
+    };
+    
+    Ok((input, Property { identifier, value }))
+}
+
+fn parse_properties(input: &[u8]) -> IResult<&[u8], Vec<Property>> {
+    let (input, length) = parse_remaining_length(input)?;
+    let (input, props) = many0(parse_property)(input)?;
+    Ok((input, props))
+}
+
+fn parse_connect_flags(input: &[u8]) -> IResult<&[u8], ConnectFlags> {
+    let (input, flags) = be_u8(input)?;
+    Ok((input, ConnectFlags {
+        username_flag: (flags & 0x80) != 0,
+        password_flag: (flags & 0x40) != 0,
+        will_retain: (flags & 0x20) != 0,
+        will_qos: (flags & 0x18) >> 3,
+        will_flag: (flags & 0x04) != 0,
+        clean_start: (flags & 0x02) != 0,
+    }))
 }
 
 fn parse_connect(input: &[u8]) -> IResult<&[u8], ConnectPacket> {
-    let (input, protocol_name) = parse_string(input)?;
-    let (input, protocol_level) = be_u8(input)?;
-    let (input, connect_flags) = be_u8(input)?;
+    let (input, protocol_name) = parse_utf8_string(input)?;
+    let (input, protocol_version) = verify(be_u8, |&x| x == 5)(input)?;
+    let (input, connect_flags) = parse_connect_flags(input)?;
     let (input, keep_alive) = be_u16(input)?;
-    let (input, client_id) = parse_string(input)?;
-    
-    let clean_session = (connect_flags & 0x02) != 0;
-    let will_flag = (connect_flags & 0x04) != 0;
-    let will_qos = (connect_flags & 0x18) >> 3;
-    let will_retain = (connect_flags & 0x20) != 0;
-    let username_flag = (connect_flags & 0x80) != 0;
-    let password_flag = (connect_flags & 0x40) != 0;
-    
-    let (input, will_topic) = if will_flag {
-        let (input, topic) = parse_string(input)?;
-        (input, Some(topic))
+    let (input, properties) = parse_properties(input)?;
+    let (input, client_id) = parse_utf8_string(input)?;
+
+    let (input, will_properties, will_topic, will_payload) = if connect_flags.will_flag {
+        let (input, props) = parse_properties(input)?;
+        let (input, topic) = parse_utf8_string(input)?;
+        let (input, payload) = length_data(be_u16)(input)?;
+        (input, Some(props), Some(topic), Some(payload.to_vec()))
     } else {
-        (input, None)
+        (input, None, None, None)
     };
-    
-    let (input, will_message) = if will_flag {
-        let (input, len) = be_u16(input)?;
-        let (input, message) = take(len)(input)?;
-        (input, Some(message.to_vec()))
-    } else {
-        (input, None)
-    };
-    
-    let (input, username) = if username_flag {
-        let (input, name) = parse_string(input)?;
+
+    let (input, username) = if connect_flags.username_flag {
+        let (input, name) = parse_utf8_string(input)?;
         (input, Some(name))
     } else {
         (input, None)
     };
-    
-    let (input, password) = if password_flag {
-        let (input, len) = be_u16(input)?;
-        let (input, pass) = take(len)(input)?;
+
+    let (input, password) = if connect_flags.password_flag {
+        let (input, pass) = length_data(be_u16)(input)?;
         (input, Some(pass.to_vec()))
     } else {
         (input, None)
     };
-    
-    Ok((
-        input,
-        ConnectPacket {
-            protocol_name,
-            protocol_level,
-            clean_session,
-            will_flag,
-            will_qos,
-            will_retain,
-            username_flag,
-            password_flag,
-            keep_alive,
-            client_id,
-            will_topic,
-            will_message,
-            username,
-            password,
-        },
-    ))
+
+    Ok((input, ConnectPacket {
+        protocol_name,
+        protocol_version,
+        connect_flags,
+        keep_alive,
+        properties,
+        client_id,
+        will_properties,
+        will_topic,
+        will_payload,
+        username,
+        password,
+    }))
 }
 
-fn parse_connack(input: &[u8]) -> IResult<&[u8], ConnAckPacket> {
-    let (input, flags) = be_u8(input)?;
-    let (input, return_code) = be_u8(input)?;
-    
-    Ok((
-        input,
-        ConnAckPacket {
-            session_present: (flags & 0x01) != 0,
-            return_code,
-        },
-    ))
-}
-
-fn parse_publish(dup: bool, qos: u8, retain: bool, input: &[u8]) -> IResult<&[u8], PublishPacket> {
-    let (input, topic_name) = parse_string(input)?;
-    let (input, packet_id) = if qos > 0 {
-        let (input, id) = be_u16(input)?;
-        (input, Some(id))
-    } else {
-        (input, None)
-    };
-    
-    Ok((
-        &input[0..0],
-        PublishPacket {
-            dup,
-            qos,
-            retain,
-            topic_name,
-            packet_id,
-            payload: input.to_vec(),
-        },
-    ))
-}
-
-fn parse_packet_id(input: &[u8]) -> IResult<&[u8], u16> {
-    be_u16(input)
-}
-
-fn parse_subscribe(input: &[u8]) -> IResult<&[u8], SubscribePacket> {
-    let (input, packet_id) = be_u16(input)?;
-    let mut topics = Vec::new();
-    let mut current_input = input;
-    
-    while !current_input.is_empty() {
-        let (rest, topic_name) = parse_string(current_input)?;
-        let (rest, qos) = be_u8(rest)?;
-        topics.push((topic_name, qos));
-        current_input = rest;
-    }
-    
-    Ok((
-        current_input,
-        SubscribePacket {
-            packet_id,
-            topics,
-        },
-    ))
-}
-
-fn parse_suback(input: &[u8]) -> IResult<&[u8], SubAckPacket> {
-    let (input, packet_id) = be_u16(input)?;
-    let return_codes = input.to_vec();
-    
-    Ok((
-        &input[input.len()..],
-        SubAckPacket {
-            packet_id,
-            return_codes,
-        },
-    ))
-}
-
-fn parse_unsubscribe(input: &[u8]) -> IResult<&[u8], UnsubscribePacket> {
-    let (input, packet_id) = be_u16(input)?;
-    let mut topics = Vec::new();
-    let mut current_input = input;
-    
-    while !current_input.is_empty() {
-        let (rest, topic_name) = parse_string(current_input)?;
-        topics.push(topic_name);
-        current_input = rest;
-    }
-    
-    Ok((
-        current_input,
-        UnsubscribePacket {
-            packet_id,
-            topics,
-        },
-    ))
-}
-
-fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (input, first_byte) = be_u8(input)?;
-    let packet_type = first_byte >> 4;
-    let flags = first_byte & 0x0F;
-    
-    let (input, remaining_length) = parse_remaining_length(input)?;
-    let (input, packet_data) = take(remaining_length)(input)?;
-    
-    match packet_type {
-        1 => map(parse_connect, MqttPacket::Connect)(packet_data),
-        2 => map(parse_connack, MqttPacket::ConnAck)(packet_data),
-        3 => {
-            let dup = (flags & 0x08) != 0;
-            let qos = (flags & 0x06) >> 1;
-            let retain = (flags & 0x01) != 0;
-            map(|input| parse_publish(dup, qos, retain, input), MqttPacket::Publish)(packet_data)
-        }
-        4 => map(parse_packet_id, |id| MqttPacket::PubAck(PubAckPacket { packet_id: id }))(packet_data),
-        5 => map(parse_packet_id, |id| MqttPacket::PubRec(PubRecPacket { packet_id: id }))(packet_data),
-        6 => map(parse_packet_id, |id| MqttPacket::PubRel(PubRelPacket { packet_id: id }))(packet_data),
-        7 => map(parse_packet_id, |id| MqttPacket::PubComp(PubCompPacket { packet_id: id }))(packet_data),
-        8 => map(parse_subscribe, MqttPacket::Subscribe)(packet_data),
-        9 => map(parse_suback, MqttPacket::SubAck)(packet_data),
-        10 => map(parse_unsubscribe, MqttPacket::Unsubscribe)(packet_data),
-        11 => map(parse_packet_id, |id| MqttPacket::UnsubAck(UnsubAckPacket { packet_id: id }))(packet_data),
-        12 => Ok((input, MqttPacket::PingReq)),
-        13 => Ok((input, MqttPacket::PingResp)),
-        14 => Ok((input, MqttPacket::Disconnect)),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        ))),
-    }
-}
-
-fn main() {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        std::process::exit(1);
+        println!("Usage: {} <mqtt_binary_file>", args[0]);
+        return Ok(());
     }
 
-    let mut file = File::open(&args[1]).expect("Failed to open file");
+    let mut file = fs::File::open(&args[1])?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    file.read_to_end(&mut buffer)?;
 
-    match parse_mqtt_packet(&buffer) {
-        Ok((remaining, packet)) => {
-            println!("Parsed packet: {:?}", packet);
-            if !remaining.is_empty() {
-                println!("Warning: {} bytes remaining", remaining.len());
+    match parse_fixed_header(&buffer) {
+        Ok((remaining, header)) => {
+            println!("Fixed Header: {:?}", header);
+            match header.packet_type {
+                PacketType::CONNECT => {
+                    match parse_connect(remaining) {
+                        Ok((_, packet)) => println!("Connect Packet: {:?}", packet),
+                        Err(e) => println!("Error parsing CONNECT: {:?}", e),
+                    }
+                },
+                _ => println!("Parsing for packet type {:?} not implemented", header.packet_type),
             }
-        }
-        Err(e) => eprintln!("Error parsing MQTT packet: {:?}", e),
+        },
+        Err(e) => println!("Error parsing fixed header: {:?}", e),
     }
+
+    Ok(())
 }

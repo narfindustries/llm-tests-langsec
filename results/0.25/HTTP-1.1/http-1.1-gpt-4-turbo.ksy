@@ -1,71 +1,85 @@
 meta:
-  id: http_1_1
+  id: http
   title: HTTP 1.1 Protocol
-  application: HTTP
-  file-extension: http
-  endian: be
-  license: CC0-1.0
+  application: Web Browsers, Web Servers
+  xref:
+    rfc: 2616
 doc: |
-  A basic implementation of HTTP/1.1 protocol parsing, focusing on the structure of HTTP requests and responses.
-
+  HTTP/1.1 protocol as defined by RFC 2616, handling both request and response structures.
 seq:
   - id: request
     type: http_request
   - id: response
     type: http_response
-
 types:
   http_request:
     seq:
       - id: method
         type: str
-        encoding: ASCII
         terminator: 0x20
+        encoding: ASCII
+        doc: HTTP method, e.g., GET, POST, PUT, DELETE, etc.
       - id: uri
         type: str
-        encoding: ASCII
         terminator: 0x20
+        encoding: ASCII
+        doc: Request URI.
       - id: version
         type: str
+        terminator: 0x0D0A
         encoding: ASCII
-        terminator: 0x0D
-      - id: crlf
-        size: 1
+        doc: HTTP version, typically "HTTP/1.1".
       - id: headers
         type: header
         repeat: eos
-
   http_response:
     seq:
       - id: version
         type: str
-        encoding: ASCII
         terminator: 0x20
+        encoding: ASCII
+        doc: HTTP version, typically "HTTP/1.1".
       - id: status_code
         type: str
-        encoding: ASCII
         terminator: 0x20
+        encoding: ASCII
+        doc: Status code returned by the server.
       - id: reason_phrase
         type: str
+        terminator: 0x0D0A
         encoding: ASCII
-        terminator: 0x0D
-      - id: crlf
-        size: 1
+        doc: Description of the status code.
       - id: headers
         type: header
         repeat: eos
-
   header:
     seq:
       - id: name
         type: str
+        terminator: 0x3A  # Colon (':')
         encoding: ASCII
-        terminator: 0x3A
-      - id: space
-        size: 1
+        doc: Name of the header.
       - id: value
         type: str
+        terminator: 0x0D0A
         encoding: ASCII
-        terminator: 0x0D
-      - id: crlf
-        size: 1
+        doc: Value of the header.
+  str:
+    seq:
+      - id: value
+        type: strz
+        encoding: ASCII
+    instances:
+      stripped:
+        value: |
+          value.rstrip("\r\n").lstrip()
+        doc: Stripped string, removing leading and trailing whitespace.
+  strz:
+    seq:
+      - id: text
+        type: str
+        encoding: ASCII
+        terminator: 0x0D0A
+        include: false
+        eos-error: false
+        doc: Null-terminated ASCII string.

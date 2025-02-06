@@ -1,94 +1,134 @@
-def Main = {
-  JPEG_file
+def Jpeg {
+    soi:SOI
+    segments:Segments*
+    eoi:EOI
 }
 
-def JPEG_file = {
-  markers_until_SOS;
-  entropy_coded_data;
-  EOI_marker
+def SOI {
+    marker1:u8[1]
+    marker2:u8[1]
 }
 
-def markers_until_SOS = {
-  SOI_marker;
-  repeat1 {
-    choice {
-      APP0_marker;
-      APP1_marker;
-      DQT_marker;
-      SOF0_marker;
-      DHT_marker;
-      SOS_marker
-    }
-  }
+def EOI {
+    marker1:u8[1]
+    marker2:u8[1]
 }
 
-def SOI_marker = {
-  Match (0xFF, 0xD8)
+def Segments {
+    | APP0 
+    | APP1_15 
+    | DQT 
+    | SOF0_15 
+    | DHT 
+    | SOS 
+    | DRI 
+    | COM 
+    | RST0_7
 }
 
-def APP0_marker = {
-  Match (0xFF, 0xE0);
-  length = UBE 2;
-  identifier = Array length - 2 UInt8
+def APP0 {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    identifier:JFIF_Identifier
+    version:u16[1]
+    units:u8[1]
+    x_density:u16[1]
+    y_density:u16[1]
+    thumb_width:u8[1]
+    thumb_height:u8[1]
+    thumb_data:u8[]
 }
 
-def APP1_marker = {
-  Match (0xFF, 0xE1);
-  length = UBE 2;
-  identifier = Array length - 2 UInt8
+def JFIF_Identifier {
+    magic:u8[5]
 }
 
-def DQT_marker = {
-  Match (0xFF, 0xDB);
-  length = UBE 2;
-  table_data = Array length - 2 UInt8
+def APP1_15 {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    data:u8[]
 }
 
-def SOF0_marker = {
-  Match (0xFF, 0xC0);
-  length = UBE 2;
-  precision = UInt8;
-  height = UBE 2;
-  width = UBE 2;
-  components = Array 3 {
-    component_id = UInt8;
-    sampling_factors = UInt8;
-    qt_number = UInt8
-  }
+def DQT {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    tables:DQT_Table[]
 }
 
-def DHT_marker = {
-  Match (0xFF, 0xC4);
-  length = UBE 2;
-  table_data = Array length - 2 UInt8
+def DQT_Table {
+    precision_and_id:u8[1]
+    qtable:u8[64]
 }
 
-def SOS_marker = {
-  Match (0xFF, 0xDA);
-  length = UBE 2;
-  ncomponents = UInt8;
-  components = Array ncomponents {
-    component_id = UInt8;
-    huffman_table = UInt8
-  };
-  ignored = Array 3 UInt8
+def SOF0_15 {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    precision:u8[1]
+    height:u16[1]
+    width:u16[1]
+    ncomponents:u8[1]
+    components:SOF_Component[]
 }
 
-def entropy_coded_data = {
-  repeat {
-    choice {
-      Match 0x00;
-      Match !0xFF;
-      ff_byte
-    }
-  }
+def SOF_Component {
+    id:u8[1]
+    sampling_factors:u8[1]
+    qtable_id:u8[1]
 }
 
-def ff_byte = {
-  Match 0xFF;
-  Match 0x00
+def DHT {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    tables:DHT_Table[]
 }
 
-def EOI_marker = {
-  Match (0xFF, 0xD9)
+def DHT_Table {
+    class_and_id:u8[1]
+    counts:u8[16]
+    values:u8[]
+}
+
+def SOS {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    ncomponents:u8[1]
+    components:SOS_Component[]
+    start_spectral:u8[1]
+    end_spectral:u8[1]
+    approx:u8[1]
+    entropy_data:EntropyData
+}
+
+def SOS_Component {
+    id:u8[1]
+    tables:u8[1]
+}
+
+def DRI {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    restart_interval:u16[1]
+}
+
+def COM {
+    marker1:u8[1]
+    marker2:u8[1]
+    length:u16[1]
+    comment:u8[]
+}
+
+def RST0_7 {
+    marker1:u8[1]
+    marker2:u8[1]
+}
+
+def EntropyData {
+    scan:u8[]
 }

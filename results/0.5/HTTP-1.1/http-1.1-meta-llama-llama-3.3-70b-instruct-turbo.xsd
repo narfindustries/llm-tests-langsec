@@ -1,120 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HTTP-1.1"
-           xmlns="http://example.com/HTTP-1.1"
-           elementFormDefault="qualified">
+           targetNamespace="http://www.w3.org/Protocols/HTTP/1.1"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           xmlns:tns="http://www.w3.org/Protocols/HTTP/1.1"
+           dfdl:lengthKind="delimited"
+           dfdl:sequenceKind="unordered"
+           dfdl:encoding="UTF-8">
 
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/xml-schema/DFDL-1.0.xsd"/>
-  
-  <xs:element name="httpMessage">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:group ref="httpMessage"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="HTTP">
+    <xs:complexType dfdl:lengthKind="delimited">
+      <xs:sequence>
+        <xs:element name="RequestLine" type="tns:RequestLineType" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Headers" type="tns:HeadersType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MessageBody" type="xs:base64Binary" minOccurs="0" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
   </xs:element>
 
-  <xs:element name="requestLine">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element ref="requestLine"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="statusLine">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element ref="statusLine"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="header">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element ref="header"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="headers">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:sequence ref="headers" occurs="*"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:element name="body">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element ref="body"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="httpMessageType">
+  <xs:complexType name="RequestLineType">
     <xs:sequence>
-      <xs:element ref="requestLine" minOccurs="0" maxOccurs="1"/>
-      <xs:element ref="statusLine" minOccurs="0" maxOccurs="1"/>
-      <xs:element ref="headers" minOccurs="0" maxOccurs="1"/>
-      <xs:element ref="body" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Method" type="tns:MethodType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="RequestURI" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="HTTPVersion" type="tns:HTTPVersionType" minOccurs="1" maxOccurs="1"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="requestLineType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="method" type="xs:string" use="required"/>
-        <xs:attribute name="requestTarget" type="xs:string" use="required"/>
-        <xs:attribute name="httpVersion" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+  <xs:simpleType name="MethodType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="GET"/>
+      <xs:enumeration value="POST"/>
+      <xs:enumeration value="PUT"/>
+      <xs:enumeration value="DELETE"/>
+      <xs:enumeration value="HEAD"/>
+      <xs:enumeration value="OPTIONS"/>
+      <xs:enumeration value="TRACE"/>
+      <xs:enumeration value="CONNECT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HTTPVersionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="HTTP/1.0"/>
+      <xs:enumeration value="HTTP/1.1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="HeadersType">
+    <xs:sequence>
+      <xs:element name="Accept" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AcceptCharset" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AcceptEncoding" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="AcceptLanguage" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Authorization" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="CacheControl" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Connection" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentEncoding" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLanguage" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLength" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentMD5" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentRange" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Date" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Expect" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="From" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Host" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="IfMatch" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="IfModifiedSince" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="IfNoneMatch" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="IfRange" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="IfUnmodifiedSince" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="MaxForwards" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ProxyAuthorization" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Range" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Referer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="TE" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="UserAgent" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Vary" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Via" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Warning" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="statusLineType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="httpVersion" type="xs:string" use="required"/>
-        <xs:attribute name="statusCode" type="xs:integer" use="required"/>
-        <xs:attribute name="reasonPhrase" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
+  <xs:element name="ResponseStatusLine">
+    <xs:complexType dfdl:lengthKind="delimited">
+      <xs:sequence>
+        <xs:element name="HTTPVersion" type="tns:HTTPVersionType" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="StatusCode" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ReasonPhrase" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="ResponseHeadersType">
+    <xs:sequence>
+      <xs:element name="AcceptRanges" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Age" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Allow" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="CacheControl" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Connection" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentEncoding" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLanguage" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLength" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentMD5" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentRange" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ContentType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Date" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ETag" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Expires" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="LastModified" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Location" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="ProxyAuthenticate" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="RetryAfter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Server" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Vary" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Via" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="Warning" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="WWWAuthenticate" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="headerType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="value" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
-  <xs:complexType name="bodyType">
-    <xs:simpleContent>
-      <xs:extension base="xs:base64Binary">
-        <xs:attribute name="contentType" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
-  <xs:element name="httpMessage" type="httpMessageType"/>
-
-  <xs:element name="requestLine" type="requestLineType"/>
-
-  <xs:element name="statusLine" type="statusLineType"/>
-
-  <xs:element name="header" type="headerType"/>
-
-  <xs:element name="headers" type="xs:string"/>
-
-  <xs:element name="body" type="bodyType"/>
-
-  <dfdl:format_checkThreshold>8</dfdl:format_checkThreshold>
-  <dfdl:readlish_checkThreshold>8</dfdl:readlish_checkThreshold>
-  <dfdl:writelish_checkThreshold>8</dfdl:writelish_checkThreshold>
 
 </xs:schema>

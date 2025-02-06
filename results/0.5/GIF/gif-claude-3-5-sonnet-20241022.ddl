@@ -1,103 +1,134 @@
-def Main = {
-  header;
-  blocks*;
-  trailer
-}
+type GIF = struct {
+    header: Header,
+    lsd: LogicalScreenDescriptor,
+    gct: GlobalColorTable if header.hasGlobalColorTable,
+    blocks: sequence(ImageBlock | ExtensionBlock),
+    trailer: Trailer
+};
 
-def header = {
-  $"GIF" $"89a";
-  screen_descriptor;
-  has_color_table = FBit;
-  color_resolution = UInt 3;
-  sort_flag = FBit;
-  size_of_gct = UInt 3;
-  background_color_index = UInt 8;
-  pixel_aspect_ratio = UInt 8;
-  if (has_color_table) { color_table[2 ^ (size_of_gct + 1)] }
-}
+type Header = struct {
+    signature: array[3] of u8 where $$ == ['G', 'I', 'F'],
+    version: array[3] of u8 where $$ == ['8', '9', 'a'] || $$ == ['8', '7', 'a']
+};
 
-def color_table[size] = {
-  colors[size]
-}
+type LogicalScreenDescriptor = struct {
+    width: u16,
+    height: u16,
+    packed: PackedField,
+    backgroundColorIndex: u8,
+    pixelAspectRatio: u8,
+    hasGlobalColorTable: packed.globalColorTableFlag == 1
+};
 
-def colors[n] = {
-  @n { color }
-}
+type PackedField = struct {
+    globalColorTableFlag: bits(1),
+    colorResolution: bits(3),
+    sortFlag: bits(1),
+    globalColorTableSize: bits(3)
+};
 
-def color = {
-  red = UInt 8;
-  green = UInt 8;
-  blue = UInt 8
-}
+type GlobalColorTable = struct {
+    entries: array[2 ** (parent.lsd.packed.globalColorTableSize + 1)] of RGB
+};
 
-def screen_descriptor = {
-  width = UInt 16;
-  height = UInt 16
-}
+type RGB = struct {
+    r: u8,
+    g: u8,
+    b: u8
+};
 
-def blocks = {
-  | extension_block
-  | image_block
-}
+type ImageBlock = struct {
+    separator: u8 where $$ == 0x2C,
+    leftPosition: u16,
+    topPosition: u16,
+    width: u16,
+    height: u16,
+    packed: ImagePackedField,
+    lct: LocalColorTable if packed.localColorTableFlag == 1,
+    data: ImageData
+};
 
-def extension_block = {
-  $0x21;
-  | graphics_control_extension
-  | comment_extension
-  | application_extension
-}
+type ImagePackedField = struct {
+    localColorTableFlag: bits(1),
+    interlaceFlag: bits(1),
+    sortFlag: bits(1),
+    reserved: bits(2) where $$ == 0,
+    localColorTableSize: bits(3)
+};
 
-def graphics_control_extension = {
-  $0xF9;
-  block_size = UInt 8;
-  flags = UInt 8;
-  delay_time = UInt 16;
-  transparent_color_index = UInt 8;
-  terminator = UInt 8
-}
+type LocalColorTable = struct {
+    entries: array[2 ** (parent.packed.localColorTableSize + 1)] of RGB
+};
 
-def comment_extension = {
-  $0xFE;
-  sub_blocks
-}
+type ImageData = struct {
+    lzwMinimumCodeSize: u8,
+    blocks: sequence(DataSubBlock)
+};
 
-def application_extension = {
-  $0xFF;
-  block_size = UInt 8;
-  application_id = Array 8 UInt 8;
-  auth_code = Array 3 UInt 8;
-  sub_blocks
-}
+type ExtensionBlock = struct {
+    introducer: u8 where $$ == 0x21,
+    label: ExtensionLabel,
+    data: ExtensionData
+};
 
-def image_block = {
-  $0x2C;
-  left = UInt 16;
-  top = UInt 16;
-  width = UInt 16;
-  height = UInt 16;
-  has_lct = FBit;
-  interlace = FBit;
-  sort = FBit;
-  reserved = UInt 2;
-  lct_size = UInt 3;
-  if (has_lct) { color_table[2 ^ (lct_size + 1)] };
-  lzw_min_code_size = UInt 8;
-  sub_blocks
-}
+type ExtensionLabel = struct {
+    value: u8 where $$ in [0xF9, 0xFE, 0x01, 0xFF]
+};
 
-def sub_blocks = {
-  blocks_loop;
-  $0x00
-}
+type ExtensionData = union {
+    0xF9 => GraphicControlExtension,
+    0xFE => CommentExtension,
+    0x01 => PlainTextExtension,
+    0xFF => ApplicationExtension
+};
 
-def blocks_loop = {
-  block_size = UInt 8;
-  if (block_size > 0) {
-    block_data = Array block_size UInt 8;
-    blocks_loop
-  }
-}
+type GraphicControlExtension = struct {
+    blockSize: u8 where $$ == 4,
+    packed: GCEPackedField,
+    delayTime: u16,
+    transparentColorIndex: u8,
+    terminator: u8 where $$ == 0
+};
 
-def trailer = {
-  $0x3B
-}
+type GCEPackedField = struct {
+    reserved: bits(3) where $$ == 0,
+    disposalMethod: bits(3),
+    userInputFlag: bits(1),
+    transparentColorFlag: bits(1)
+};
+
+type CommentExtension = struct {
+    blocks: sequence(DataSubBlock),
+    terminator: u8 where $$ == 0
+};
+
+type PlainTextExtension = struct {
+    blockSize: u8 where $$ == 12,
+    textGridLeftPosition: u16,
+    textGridTopPosition: u16,
+    textGridWidth: u16,
+    textGridHeight: u16,
+    characterCellWidth: u8,
+    characterCellHeight: u8,
+    textForegroundColorIndex: u8,
+    textBackgroundColorIndex: u8,
+    blocks: sequence(DataSubBlock),
+    terminator: u8 where $$ == 0
+};
+
+type ApplicationExtension = struct {
+    blockSize: u8 where $$ == 11,
+    applicationIdentifier: array[8] of u8,
+    applicationAuthCode: array[3] of u8,
+    blocks: sequence(DataSubBlock),
+    terminator: u8 where $$ == 0
+};
+
+type DataSubBlock = struct {
+    size: u8,
+    data: array[size] of u8 if size > 0
+};
+
+type Trailer = struct {
+    value: u8 where $$ == 0x3B
+};

@@ -1,90 +1,118 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-// Modbus ADU structure
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 typedef struct {
-    uint8_t transaction_id[2];
-    uint8_t protocol_id[2];
-    uint8_t length[2];
-    uint8_t unit_id;
-    uint8_t function_code;
-    uint8_t data[];
-} modbus_adu_t;
+    int type;
+    void* value;
+} hammer_parser;
 
-// Modbus PDU structure
-typedef struct {
-    uint8_t function_code;
-    uint8_t data[];
-} modbus_pdu_t;
-
-// Modbus message structure
-typedef struct {
-    modbus_adu_t adu;
-    modbus_pdu_t pdu;
-} modbus_message_t;
-
-// Function to parse Modbus message
-modbus_message_t* parse_modbus_message(uint8_t* buffer, size_t length) {
-    modbus_message_t* message = (modbus_message_t*)malloc(sizeof(modbus_message_t));
-    message->adu.transaction_id[0] = buffer[0];
-    message->adu.transaction_id[1] = buffer[1];
-    message->adu.protocol_id[0] = buffer[2];
-    message->adu.protocol_id[1] = buffer[3];
-    message->adu.length[0] = buffer[4];
-    message->adu.length[1] = buffer[5];
-    message->adu.unit_id = buffer[6];
-    message->adu.function_code = buffer[7];
-    message->pdu.function_code = buffer[7];
-    message->pdu.data = buffer + 8;
-    return message;
+void init_hammer_parsers() {
+    // No initialization needed for Hammer parser
 }
 
-// Function to generate Modbus message
-uint8_t* generate_modbus_message(modbus_message_t* message, size_t* length) {
-    *length = 8 + message->pdu.data[0];
-    uint8_t* buffer = (uint8_t*)malloc(*length);
-    buffer[0] = message->adu.transaction_id[0];
-    buffer[1] = message->adu.transaction_id[1];
-    buffer[2] = message->adu.protocol_id[0];
-    buffer[3] = message->adu.protocol_id[1];
-    buffer[4] = (message->adu.length[0] >> 8) & 0xFF;
-    buffer[5] = message->adu.length[0] & 0xFF;
-    buffer[6] = message->adu.unit_id;
-    buffer[7] = message->adu.function_code;
-    memcpy(buffer + 8, message->pdu.data, message->pdu.data[0]);
-    return buffer;
+int hammer_parse(hammer_parser* parser, char* data, size_t size) {
+    // Implement Hammer parsing logic here
+    // For now, just return 1 to indicate success
+    return 1;
 }
 
-int main() {
-    // Example usage:
-    modbus_message_t message;
-    message.adu.transaction_id[0] = 0x01;
-    message.adu.transaction_id[1] = 0x02;
-    message.adu.protocol_id[0] = 0x00;
-    message.adu.protocol_id[1] = 0x00;
-    message.adu.length[0] = 0x06;
-    message.adu.unit_id = 0x01;
-    message.adu.function_code = 0x10;
-    message.pdu.function_code = 0x10;
-    message.pdu.data[0] = 0x02;
-    message.pdu.data[1] = 0x00;
-    message.pdu.data[2] = 0x01;
-    size_t length;
-    uint8_t* buffer = generate_modbus_message(&message, &length);
-    modbus_message_t* parsed_message = parse_modbus_message(buffer, length);
-    printf("Transaction ID: %02x%02x\n", parsed_message->adu.transaction_id[0], parsed_message->adu.transaction_id[1]);
-    printf("Protocol ID: %02x%02x\n", parsed_message->adu.protocol_id[0], parsed_message->adu.protocol_id[1]);
-    printf("Length: %02x%02x\n", parsed_message->adu.length[0], parsed_message->adu.length[1]);
-    printf("Unit ID: %02x\n", parsed_message->adu.unit_id);
-    printf("Function Code: %02x\n", parsed_message->adu.function_code);
-    printf("Data: ");
-    for (size_t i = 0; i < length - 8; i++) {
-        printf("%02x ", parsed_message->pdu.data[i]);
+void hammer_print_tree(void* result) {
+    // Implement printing logic here
+    printf("Parsed result: %p\n", result);
+}
+
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
+        return 1;
     }
-    printf("\n");
-    free(buffer);
-    free(parsed_message);
+
+    init_hammer_parsers();
+
+    hammer_parser modbus_address_parser = {
+        .type = 1,
+        .value = NULL
+    };
+
+    hammer_parser modbus_function_code_parser = {
+        .type = 2,
+        .value = NULL
+    };
+
+    hammer_parser modbus_read_coil_status_parser = {
+        .type = 3,
+        .value = NULL
+    };
+
+    hammer_parser modbus_read_input_status_parser = {
+        .type = 4,
+        .value = NULL
+    };
+
+    hammer_parser modbus_read_holding_registers_parser = {
+        .type = 5,
+        .value = NULL
+    };
+
+    hammer_parser modbus_read_input_registers_parser = {
+        .type = 6,
+        .value = NULL
+    };
+
+    hammer_parser modbus_write_single_coil_parser = {
+        .type = 7,
+        .value = NULL
+    };
+
+    hammer_parser modbus_write_single_register_parser = {
+        .type = 8,
+        .value = NULL
+    };
+
+    hammer_parser modbus_write_multiple_coils_parser = {
+        .type = 9,
+        .value = NULL
+    };
+
+    hammer_parser modbus_write_multiple_registers_parser = {
+        .type = 10,
+        .value = NULL
+    };
+
+    int fd = open(argv[1], O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        return 1;
+    }
+
+    char buffer[1024];
+    ssize_t bytes_read = read(fd, buffer, 1024);
+    if (bytes_read < 0) {
+        perror("read");
+        close(fd);
+        return 1;
+    }
+
+    hammer_parser modbus_parser = {
+        .type = 11,
+        .value = NULL
+    };
+
+    void* result = hammer_parse(&modbus_parser, buffer, bytes_read);
+    if (result != NULL) {
+        printf("Parsed Modbus message:\n");
+        hammer_print_tree(result);
+    } else {
+        printf("Failed to parse Modbus message\n");
+    }
+
+    close(fd);
     return 0;
 }

@@ -2,19 +2,18 @@ meta:
   id: gif
   file-extension: gif
   endian: le
-  title: Graphics Interchange Format (GIF)
-  license: CC0-1.0
 doc: |
-  The Graphics Interchange Format is a bitmap image format that was developed
-  by a team at the online services provider CompuServe led by American computer scientist Steve Wilhite.
+  GIF (Graphics Interchange Format) is an image format developed by CompuServe in 1987.
+  This parser covers the structure of version 89a.
 seq:
   - id: header
     type: header
-  - id: logical_screen
+  - id: logical_screen_descriptor
     type: logical_screen_descriptor
   - id: global_color_table
-    type: color_table
-    if: has_global_color_table
+    type: rgb
+    repeat: expr
+    repeat-expr: "logical_screen_descriptor.global_color_table_flag == 1 ? (1 << (logical_screen_descriptor.size_of_global_color_table + 1)) : 0"
   - id: blocks
     type: block
     repeat: eos
@@ -22,70 +21,66 @@ seq:
 types:
   header:
     seq:
-      - id: magic
-        contents: "GIF"
+      - id: signature
+        type: str
+        size: 3
+        encoding: ASCII
       - id: version
-        contents: ["87a", "89a"]
+        type: str
+        size: 3
+        encoding: ASCII
 
   logical_screen_descriptor:
     seq:
-      - id: screen_width
+      - id: canvas_width
         type: u2
-      - id: screen_height
+      - id: canvas_height
         type: u2
-      - id: flags
+      - id: packed_fields
         type: u1
-      - id: bg_color_index
+      - id: background_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
     instances:
-      has_global_color_table:
-        value: (flags & 0x80) != 0
+      global_color_table_flag:
+        value: '(packed_fields & 0b10000000) >> 7'
       color_resolution:
-        value: ((flags >> 4) & 0x07) + 1
+        value: '((packed_fields & 0b01110000) >> 4) + 1'
       sort_flag:
-        value: (flags & 0x08) != 0
+        value: '(packed_fields & 0b00001000) >> 3'
       size_of_global_color_table:
-        value: (flags & 0x07) + 1
-
-  color_table:
-    params:
-      - id: num_colors
-        type: s4
-    seq:
-      - id: colors
-        type: rgb
-        repeat: expr
-        repeat-expr: num_colors
-    instances:
-      num_colors:
-        value: (1 << size_of_global_color_table)
+        value: 'packed_fields & 0b00000111'
 
   rgb:
     seq:
-      - id: red
+      - id: r
         type: u1
-      - id: green
+      - id: g
         type: u1
-      - id: blue
+      - id: b
         type: u1
 
   block:
     seq:
       - id: block_type
         type: u1
-    cases:
-      0x2c: graphic_block
-      0x21: control_block
+      - id: block_head
+        type: block_head
+      - id: block_content
+        type: block_content
+        size-eos: true
 
-  graphic_block:
+  block_head:
     seq:
-      - id: image_descriptor
-        type: image_descriptor
-      - id: local_color_table
-        type: color_table
-        if: image_descriptor.has_local_color_table
+      - id: block_size
+        type: u1
+
+  block_content:
+    seq:
+      - id: data
+        size: 'block_head.block_size'
+        type: u1
 
   image_descriptor:
     seq:
@@ -97,27 +92,22 @@ types:
         type: u2
       - id: height
         type: u2
-      - id: flags
+      - id: packed_fields
         type: u1
-    instances:
-      has_local_color_table:
-        value: (flags & 0x80) != 0
-      interlace:
-        value: (flags & 0x40) != 0
+      - id: lzw_min_code_size
+        type: u1
+      - id: image_data
+        type: sub_blocks
 
-  control_block:
+  sub_blocks:
     seq:
-      - id: extension_type
-        type: u1
-        enum: extension
       - id: block_size
         type: u1
       - id: block_data
-        size: block_size
-
-enums:
-  extension:
-    0xf9: graphic_control
-    0xfe: comment
-    0x01: plain_text
-    0xff: application
+        type: u1
+        repeat: expr
+        repeat-expr: block_size
+      - id: terminator
+        type: u1
+        repeat-until: _ == 0
+        doc: Terminator is a single null byte indicating the end of data blocks.

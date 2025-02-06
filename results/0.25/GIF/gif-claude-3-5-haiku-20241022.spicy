@@ -2,121 +2,81 @@ module GIF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    logical_screen: LogicalScreen;
-    blocks: Blocks;
-
-    on %done { 
-        print "GIF file parsed successfully";
-    }
-};
-
-type Header = unit {
+public type Header = unit {
     signature: bytes(3) &requires($$=="GIF");
     version: bytes(3) &requires($$=="87a" || $$=="89a");
 };
 
-type LogicalScreen = unit {
+public type LogicalScreenDescriptor = unit {
     width: uint16;
     height: uint16;
-    packed_fields: uint8;
+    packed_fields: bitfield {
+        global_color_table_flag: 1,
+        color_resolution: 3,
+        sort_flag: 1,
+        global_color_table_size: 3
+    };
     background_color_index: uint8;
     pixel_aspect_ratio: uint8;
 };
 
-type Blocks = unit {
-    blocks: Block[] &until($$.type == BlockType::Trailer);
+public type ColorTableEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
 };
 
-type Block = unit {
-    type: BlockType;
-
-    switch (type) {
-        BlockType::ImageDescriptor -> image_descriptor: ImageDescriptor;
-        BlockType::Extension -> extension: Extension;
-        BlockType::Trailer -> trailer: Trailer;
-    }
+public type ColorTable = unit(entries_count: uint) {
+    entries: vector<ColorTableEntry> &count=entries_count;
 };
 
-type ImageDescriptor = unit {
+public type ImageDescriptor = unit {
     separator: uint8 &requires($$==0x2C);
-    left: uint16;
-    top: uint16;
+    left_position: uint16;
+    top_position: uint16;
     width: uint16;
     height: uint16;
-    packed_fields: uint8;
-    local_color_table: bytes &length=(2 ** ((packed_fields & 0b00000111) + 1)) * 3 
-        if ( packed_fields & 0b10000000 ) > 0;
-    image_data: ImageData;
+    packed_fields: bitfield {
+        local_color_table_flag: 1,
+        interlace_flag: 1,
+        sort_flag: 1,
+        local_color_table_size: 3
+    };
 };
 
-type ImageData = unit {
-    lzw_code_size: uint8;
-    data_blocks: DataBlocks;
-};
-
-type DataBlocks = unit {
-    blocks: DataBlock[] &until($$.size == 0);
-};
-
-type DataBlock = unit {
-    size: uint8;
-    data: bytes &length=size;
-};
-
-type Extension = unit {
-    label: uint8;
-    data: ExtensionData;
-};
-
-type ExtensionData = unit {
-    switch ($$unit.label) {
-        0xF9 -> graphic_control: GraphicControlExtension;
-        0xFF -> application: ApplicationExtension;
-        0x01 -> plain_text: PlainTextExtension;
-        0xFE -> comment: CommentExtension;
-    }
-};
-
-type GraphicControlExtension = unit {
+public type GraphicControlExtension = unit {
+    introducer: uint8 &requires($$==0x21);
+    label: uint8 &requires($$==0xF9);
     block_size: uint8 &requires($$==4);
-    packed_fields: uint8;
+    packed_fields: bitfield {
+        disposal_method: 3,
+        user_input_flag: 1,
+        transparent_color_flag: 1
+    };
     delay_time: uint16;
     transparent_color_index: uint8;
-    terminator: uint8 &requires($$==0);
+    terminator: uint8;
 };
 
-type ApplicationExtension = unit {
-    block_size: uint8 &requires($$==11);
-    identifier: bytes(8);
-    authentication_code: bytes(3);
-    data_blocks: DataBlocks;
+public type Frame = unit {
+    graphic_control: optional<GraphicControlExtension>;
+    image_descriptor: ImageDescriptor;
+    local_color_table: optional<ColorTable>(
+        image_descriptor.packed_fields.local_color_table_flag ? 
+        (2 ** (image_descriptor.packed_fields.local_color_table_size + 1)) : 0
+    );
+    image_data: bytes;
 };
 
-type PlainTextExtension = unit {
-    block_size: uint8 &requires($$==12);
-    text_grid_left: uint16;
-    text_grid_top: uint16;
-    text_grid_width: uint16;
-    text_grid_height: uint16;
-    cell_width: uint8;
-    cell_height: uint8;
-    foreground_color_index: uint8;
-    background_color_index: uint8;
-    data_blocks: DataBlocks;
-};
-
-type CommentExtension = unit {
-    data_blocks: DataBlocks;
-};
-
-type Trailer = unit {
-    marker: uint8 &requires($$==0x3B);
-};
-
-enum BlockType {
-    ImageDescriptor = 0x2C,
-    Extension = 0xFF,
-    Trailer = 0x3B
+public type GIF = unit {
+    header: Header;
+    screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional<ColorTable>(
+        screen_descriptor.packed_fields.global_color_table_flag ? 
+        (2 ** (screen_descriptor.packed_fields.global_color_table_size + 1)) : 0
+    );
+    
+    frames: vector<Frame>;
+    
+    trailer: uint8 &requires($$==0x3B);
 };

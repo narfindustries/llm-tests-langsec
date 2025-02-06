@@ -1,58 +1,87 @@
-# This is a sample Kaitai Struct definition.  You'll need to replace this with your actual ELF file structure.
-# The error message suggests a problem with the compilation process, not necessarily the schema itself.
-#  The path 'generated/999999/0.0/ELF/elf-gemini-1.5-flash.ksy' indicates a potential issue with file paths or the Kaitai Struct compiler setup.
-
-# Ensure that the file 'elf-gemini-1.5-flash.ksy' exists in the correct directory.
-# Also, verify that the kaitai-struct-compiler is correctly installed and in your system's PATH.
-
-# Example ELF header (incomplete - adapt to your specific ELF file format)
+meta:
+  id: elf
+  endian: be
 types:
-  elf_header:
+  program_header:
     seq:
-      - id: magic
+      - id: p_type
         type: u4
-      - id: class
-        type: u1
-      - id: endianness
-        type: u1
-      - id: version
-        type: u1
-      - id: osabi
-        type: u1
-      - id: abiversion
-        type: u1
-      - id: pad
-        type: u1
-      - id: type
-        type: u2
-      - id: machine
-        type: u2
-      - id: version_elf
+      - id: p_offset
         type: u4
-      - id: entry
+      - id: p_vaddr
         type: u4
-      - id: phoff
+      - id: p_paddr
         type: u4
-      - id: shoff
+      - id: p_filesz
         type: u4
-      - id: flags
+      - id: p_memsz
         type: u4
-      - id: ehsize
-        type: u2
-      - id: phentsize
-        type: u2
-      - id: phnum
-        type: u2
-      - id: shentsize
-        type: u2
-      - id: shnum
-        type: u2
-      - id: shstrndx
-        type: u2
+      - id: p_flags
+        type: u4
+      - id: p_align
+        type: u4
+  section_header:
+    seq:
+      - id: sh_name
+        type: u4
+      - id: sh_type
+        type: u4
+      - id: sh_flags
+        type: u4
+      - id: sh_addr
+        type: u4
+      - id: sh_offset
+        type: u4
+      - id: sh_size
+        type: u4
+      - id: sh_link
+        type: u4
+      - id: sh_info
+        type: u4
+      - id: sh_addralign
+        type: u4
+      - id: sh_entsize
+        type: u4
+seq:
+  - id: e_ident
+    type: bytes
+    size: 16
+  - id: e_type
+    type: u2
+  - id: e_machine
+    type: u2
+  - id: e_version
+    type: u4
+  - id: e_entry
+    type: u4
+  - id: e_phoff
+    type: u4
+  - id: e_shoff
+    type: u4
+  - id: e_flags
+    type: u4
+  - id: e_ehsize
+    type: u2
+  - id: e_phentsize
+    type: u2
+  - id: e_phnum
+    type: u2
+  - id: e_shentsize
+    type: u2
+  - id: e_shnum
+    type: u2
+  - id: e_shstrndx
+    type: u2
+  - id: program_headers
+    type: seq
+    size: e_phnum
+    type: program_header
+  - id: section_headers
+    type: seq
+    size: e_shnum
+    type: section_header
+  - id: section_string_table
+    type: str
+    size: section_headers[e_shstrndx].sh_size
+    offset: section_headers[e_shstrndx].sh_offset
 
-# Add more types and sequences as needed to represent the complete ELF file structure.  This is a minimal example.
-
-# Example usage (adapt to your needs)
-instances:
-  elf_file:
-    type: elf_header

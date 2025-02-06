@@ -1,42 +1,72 @@
-module HTTP;
+module HTTP11;
 
-import spicy;
+public type HTTP = unit {
+    message: Message;
 
-public type Request = unit {
-    method: bytes;
-    sp1: bytes &size=1;
-    uri: bytes;
-    sp2: bytes &size=1;
-    version: bytes;
-    eol: bytes &size=2;
-
-    method_str: string = method.string();
-    uri_str: string = uri.string();
-    version_str: string = version.string();
-
-    on %done {
-        print self;
+    type Message = unit {
+        choice {
+            request: Request;
+            response: Response;
+        }
     }
-};
 
-public type Response = unit {
-    version: bytes;
-    sp1: bytes &size=1;
-    status_code: bytes;
-    sp2: bytes &size=1;
-    status_msg: bytes;
-    eol: bytes &size=2;
-
-    version_str: string = version.string();
-    status_code_str: string = status_code.string();
-    status_msg_str: string = status_msg.string();
-
-    on %done {
-        print self;
+    type Request = unit {
+        method: bytes(until: b" ");
+        sp1: bytes(size: 1);
+        uri: bytes(until: b" ");
+        sp2: bytes(size: 1);
+        version: bytes(until: b"\r\n");
+        newline: bytes(size: 2);
+        headers: Header[] foreach {
+            local stop = ($input.at_end() || ($input.lookahead(2) == b"\r\n"));
+        }
+        body: Body &optional;
     }
-};
 
-public type Message = unit {
-    request: Request;
-    response: Response;
-};
+    type Response = unit {
+        version: bytes(until: b" ");
+        sp1: bytes(size: 1);
+        status_code: bytes(until: b" ");
+        sp2: bytes(size: 1);
+        status_text: bytes(until: b"\r\n");
+        newline: bytes(size: 2);
+        headers: Header[] foreach {
+            local stop = ($input.at_end() || ($input.lookahead(2) == b"\r\n"));
+        }
+        body: Body &optional;
+    }
+
+    type Header = unit {
+        name: bytes(until: b":");
+        colon: bytes(size: 1);
+        sp: bytes(size: 1);
+        value: bytes(until: b"\r\n");
+        newline: bytes(size: 2);
+
+        var parsed_name = $$.name.decode().to_lower();
+
+        on parsed_name == "host" {
+            host_value: string;
+        }
+        on parsed_name == "content-length" {
+            content_length: uint64;
+        }
+        on parsed_name == "content-type" {
+            content_type: string;
+        }
+        on parsed_name == "user-agent" {
+            user_agent: string;
+        }
+        on parsed_name == "accept" {
+            accept_types: string[];
+        }
+        on parsed_name == "authorization" {
+            auth_type: string;
+            auth_credentials: string;
+        }
+    }
+
+    type Body = unit {
+        content: bytes &size=content_length;
+    }
+}

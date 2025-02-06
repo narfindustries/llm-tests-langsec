@@ -1,8 +1,6 @@
-module SQLite3;
+module SQLite;
 
-import spicy;
-
-type Header = unit {
+type SQLiteHeader = unit {
     magic: bytes &size=16;
     pageSize: uint16;
     writeVersion: uint8;
@@ -11,10 +9,10 @@ type Header = unit {
     maxPayloadFrac: uint8;
     minPayloadFrac: uint8;
     leafPayloadFrac: uint8;
-    changeCounter: uint32;
-    inHeaderDBSize: uint32;
-    firstFreelistTrunkPage: uint32;
-    totalFreelistPages: uint32;
+    fileChangeCounter: uint32;
+    numPages: uint32;
+    firstFreelistPage: uint32;
+    numFreelistPages: uint32;
     schemaCookie: uint32;
     schemaFormat: uint32;
     defaultCacheSize: uint32;
@@ -28,12 +26,56 @@ type Header = unit {
     sqliteVersion: uint32;
 };
 
-type Record = unit {
-    header: Header;
-    data: bytes &eod;
+type BTreePageHeader = unit {
+    pageType: uint8;
+    firstFreeblock: uint16;
+    numCells: uint16;
+    cellContentOffset: uint16;
+    numFragmentedFreeBytes: uint8;
+    rightmostPointer: uint32 &optional;
 };
 
-public type SQLite3File = unit {
-    header: Header;
-    records: Record[] &eod;
+type CellPointer = unit {
+    offset: uint16;
+};
+
+type RecordHeader = unit {
+    headerLength: uint64;
+    columnTypes: bytes &eod;
+};
+
+type Record = unit {
+    header: RecordHeader;
+    data: bytes &size=this.header.headerLength;
+};
+
+type BTreeLeafPage = unit {
+    header: BTreePageHeader;
+    cellPointers: CellPointer[] &size=this.header.numCells;
+    cells: Record[] &size=this.header.numCells;
+};
+
+type BTreeInteriorPage = unit {
+    header: BTreePageHeader;
+    cellPointers: CellPointer[] &size=this.header.numCells;
+    cells: uint32[] &size=this.header.numCells;  // Pointers to child pages
+};
+
+type OverflowPage = unit {
+    nextPage: uint32;
+    data: bytes &rest;
+};
+
+type SQLitePage = unit {
+    header: BTreePageHeader;
+    content: switch (this.header.pageType) {
+        2, 5 -> BTreeInteriorPage;
+        10, 13 -> BTreeLeafPage;
+        default -> bytes &rest;
+    };
+};
+
+type SQLiteDB = unit {
+    header: SQLiteHeader;
+    pages: SQLitePage[] &size=(this.header.numPages - 1);
 };

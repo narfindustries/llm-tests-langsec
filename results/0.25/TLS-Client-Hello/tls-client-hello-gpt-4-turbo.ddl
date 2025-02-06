@@ -1,70 +1,51 @@
-module TLS.ClientHello {
-  import DAEDALUS::Core
+module TLS_ClientHello;
 
-  type Version = struct {
-    major : UInt8
-    minor : UInt8
-  }
+struct ProtocolVersion {
+  u16 value;
+}
 
-  type Random = struct {
-    gmt_unix_time : UInt32
-    random_bytes  : Bytes<28>
-  }
+struct Random {
+  u8 bytes[32];
+}
 
-  type SessionID = struct {
-    length : UInt8
-    session_id : Bytes<length>
-  }
+struct SessionID {
+  u8 length;
+  u8 session_id[length];
+}
 
-  type CipherSuite = struct {
-    cipher_suites_length : UInt16
-    cipher_suites : List<CipherSuiteItem, cipher_suites_length / 2>
-  }
+struct CipherSuites {
+  u16 length;
+  u16 cipher_suites[length / 2];
+}
 
-  type CipherSuiteItem = struct {
-    item : UInt16
-  }
+struct CompressionMethods {
+  u8 length;
+  u8 methods[length];
+}
 
-  type CompressionMethod = struct {
-    compression_methods_length : UInt8
-    compression_methods : List<UInt8, compression_methods_length>
-  }
+struct Extension {
+  u16 extension_type;
+  u16 extension_data_length;
+  u8 extension_data[extension_data_length];
+}
 
-  type Extension = struct {
-    extension_type : UInt16
-    extension_length : UInt16
-    extension_data : Bytes<extension_length>
-  }
+struct Extensions {
+  u16 length;
+  Extension extensions[length];
+}
 
-  type Extensions = struct {
-    extensions_length : UInt16
-    extensions : List<Extension, compute_extensions_count(extensions_length)>
-  }
+struct ClientHello {
+  ProtocolVersion legacy_version;
+  Random random;
+  SessionID legacy_session_id;
+  CipherSuites cipher_suites;
+  CompressionMethods legacy_compression_methods;
+  Extensions extensions;
+}
 
-  // Helper function to compute the number of extensions based on the total length of extensions data
-  function compute_extensions_count(length: UInt16) -> UInt32 {
-    var count : UInt32 = 0
-    var total_length : UInt16 = 0
-    while total_length < length {
-      total_length += peek(UInt16) + 2 + 2 // extension_type + extension_length + length of extension_data
-      count += 1
-    }
-    return count
-  }
-
-  type ClientHello = struct {
-    version : Version
-    random : Random
-    session_id : SessionID
-    cipher_suites : CipherSuite
-    compression_methods : CompressionMethod
-    extensions : Extensions
-  }
-
-  type TLSPlaintext = struct {
-    content_type : UInt8
-    version : Version
-    length : UInt16
-    fragment : ClientHello
-  }
+struct TLSPlaintext {
+  u8 type;
+  ProtocolVersion version;
+  u16 length;
+  ClientHello fragment;
 }

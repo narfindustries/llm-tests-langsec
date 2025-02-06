@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" targetNamespace="http://example.com/modbus" xmlns:tns="http://example.com/modbus" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:ModbusFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ModbusADU">
+    <xs:sequence>
+      <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="PDU" type="tns:ModbusPDU"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ModbusPDU">
+    <xs:sequence>
+      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+      <xs:choice>
+        <xs:element name="ReadCoils" type="tns:ReadCoils"/>
+        <xs:element name="ReadDiscreteInputs" type="tns:ReadDiscreteInputs"/>
+        <xs:element name="ReadHoldingRegisters" type="tns:ReadHoldingRegisters"/>
+        <xs:element name="ReadInputRegisters" type="tns:ReadInputRegisters"/>
+        <xs:element name="WriteSingleCoil" type="tns:WriteSingleCoil"/>
+        <xs:element name="WriteSingleRegister" type="tns:WriteSingleRegister"/>
+        <xs:element name="ReadExceptionStatus" type="tns:ReadExceptionStatus"/>
+        <xs:element name="Diagnostics" type="tns:Diagnostics"/>
+        <xs:element name="GetCommEventCounter" type="tns:GetCommEventCounter"/>
+        <xs:element name="GetCommEventLog" type="tns:GetCommEventLog"/>
+        <xs:element name="WriteMultipleCoils" type="tns:WriteMultipleCoils"/>
+        <xs:element name="WriteMultipleRegisters" type="tns:WriteMultipleRegisters"/>
+        <xs:element name="ReportSlaveID" type="tns:ReportSlaveID"/>
+        <xs:element name="ReadFileRecord" type="tns:ReadFileRecord"/>
+        <xs:element name="WriteFileRecord" type="tns:WriteFileRecord"/>
+        <xs:element name="MaskWriteRegister" type="tns:MaskWriteRegister"/>
+        <xs:element name="ReadWriteMultipleRegisters" type="tns:ReadWriteMultipleRegisters"/>
+        <xs:element name="ReadFIFOQueue" type="tns:ReadFIFOQueue"/>
+        <xs:element name="ExceptionResponse" type="tns:ExceptionResponse"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReadCoils">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Quantity" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReadDiscreteInputs">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Quantity" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReadHoldingRegisters">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Quantity" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReadInputRegisters">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Quantity" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="WriteSingleCoil">
+    <xs:sequence>
+      <xs:element name="OutputAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="OutputValue" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="WriteSingleRegister">
+    <xs:sequence>
+      <xs:element name="RegisterAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="RegisterValue" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReadExceptionStatus">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="Diagnostics">
+    <xs:sequence>
+      <xs:element name="SubFunctionCode" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="0" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GetCommEventCounter">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="GetCommEventLog">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="WriteMultipleCoils">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="QuantityOfOutputs" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ByteCount" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="OutputsValue" type="xs:hexBinary" dfdl:length="0" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="WriteMultipleRegisters">
+    <xs:sequence>
+      <xs:element name="StartingAddress" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="QuantityOfRegisters" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="ByteCount" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+      <xs:element name="RegistersValue" type="xs:hexBinary" dfdl:length="0" dfdl:lengthKind="implicit"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReportSlaveID">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="ReadFileRecord">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="WriteFileRecord">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="MaskWriteRegister">
+    <xs:sequence/>
+  </xs:complexType>
+</xs:s

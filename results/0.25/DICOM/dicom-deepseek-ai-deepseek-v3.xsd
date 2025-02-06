@@ -1,0 +1,101 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.dicomstandard.org/" xmlns:dicom="http://www.dicomstandard.org/">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format encoding="ISO-8859-1" />
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="DICOMElement">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="VR" type="xs:string" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="ValueLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="ValueField" type="xs:hexBinary" dfdl:length="{../ValueLength}" dfdl:encoding="ISO-8859-1" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DICOMFile">
+    <xs:sequence>
+      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:encoding="ISO-8859-1" minOccurs="0" />
+      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:encoding="ISO-8859-1" fixed="DICM" />
+      <xs:element name="DataElements" type="dicom:DICOMElement" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DICOM" type="dicom:DICOMFile" />
+
+  <xs:simpleType name="VRType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="AE" />
+      <xs:enumeration value="AS" />
+      <xs:enumeration value="AT" />
+      <xs:enumeration value="CS" />
+      <xs:enumeration value="DA" />
+      <xs:enumeration value="DS" />
+      <xs:enumeration value="DT" />
+      <xs:enumeration value="FL" />
+      <xs:enumeration value="FD" />
+      <xs:enumeration value="IS" />
+      <xs:enumeration value="LO" />
+      <xs:enumeration value="LT" />
+      <xs:enumeration value="OB" />
+      <xs:enumeration value="OD" />
+      <xs:enumeration value="OF" />
+      <xs:enumeration value="OL" />
+      <xs:enumeration value="OW" />
+      <xs:enumeration value="PN" />
+      <xs:enumeration value="SH" />
+      <xs:enumeration value="SL" />
+      <xs:enumeration value="SQ" />
+      <xs:enumeration value="SS" />
+      <xs:enumeration value="ST" />
+      <xs:enumeration value="TM" />
+      <xs:enumeration value="UI" />
+      <xs:enumeration value="UL" />
+      <xs:enumeration value="US" />
+      <xs:enumeration value="UT" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="DICOMSequence">
+    <xs:sequence>
+      <xs:element name="Item" type="dicom:DICOMElement" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DICOMSequenceItem">
+    <xs:sequence>
+      <xs:element name="ItemLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="DataElements" type="dicom:DICOMElement" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DICOMNestedSequence">
+    <xs:sequence>
+      <xs:element name="SequenceLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="Items" type="dicom:DICOMSequenceItem" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DICOMOptionalElement">
+    <xs:sequence>
+      <xs:element name="Tag" type="xs:hexBinary" dfdl:length="4" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="VR" type="dicom:VRType" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="ValueLength" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="ISO-8859-1" />
+      <xs:element name="ValueField" type="xs:hexBinary" dfdl:length="{../ValueLength}" dfdl:encoding="ISO-8859-1" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DICOMFileWithOptional">
+    <xs:sequence>
+      <xs:element name="Preamble" type="xs:hexBinary" dfdl:length="128" dfdl:encoding="ISO-8859-1" minOccurs="0" />
+      <xs:element name="Prefix" type="xs:string" dfdl:length="4" dfdl:encoding="ISO-8859-1" fixed="DICM" />
+      <xs:element name="DataElements" type="dicom:DICOMElement" maxOccurs="unbounded" />
+      <xs:element name="OptionalElements" type="dicom:DICOMOptionalElement" maxOccurs="unbounded" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="DICOMWithOptional" type="dicom:DICOMFileWithOptional" />
+
+</xs:schema>

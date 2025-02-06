@@ -2,42 +2,155 @@ module Modbus;
 
 import spicy;
 
-public type Message = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
+public type PDU = unit {
     unit_id: uint8;
     function_code: uint8;
+    
+    payload: bytes &optional;
+    
+    switch (function_code) {
+        0x01 -> read_coils_request: ReadCoilsRequest,
+        0x81 -> read_coils_response: ReadCoilsResponse,
+        
+        0x02 -> read_discrete_inputs_request: ReadDiscreteInputsRequest,
+        0x82 -> read_discrete_inputs_response: ReadDiscreteInputsResponse,
+        
+        0x03 -> read_holding_registers_request: ReadHoldingRegistersRequest,
+        0x83 -> read_holding_registers_response: ReadHoldingRegistersResponse,
+        
+        0x04 -> read_input_registers_request: ReadInputRegistersRequest,
+        0x84 -> read_input_registers_response: ReadInputRegistersResponse,
+        
+        0x05 -> write_single_coil_request: WriteSingleCoilRequest,
+        0x85 -> write_single_coil_response: WriteSingleCoilResponse,
+        
+        0x06 -> write_single_register_request: WriteSingleRegisterRequest,
+        0x86 -> write_single_register_response: WriteSingleRegisterResponse,
+        
+        0x0F -> write_multiple_coils_request: WriteMultipleCoilsRequest,
+        0x8F -> write_multiple_coils_response: WriteMultipleCoilsResponse,
+        
+        0x10 -> write_multiple_registers_request: WriteMultipleRegistersRequest,
+        0x90 -> write_multiple_registers_response: WriteMultipleRegistersResponse,
+        
+        0x17 -> read_write_multiple_registers_request: ReadWriteMultipleRegistersRequest,
+        0x97 -> read_write_multiple_registers_response: ReadWriteMultipleRegistersResponse,
+        
+        0x08 -> diagnostic_request: DiagnosticRequest,
+        0x88 -> diagnostic_response: DiagnosticResponse
+    };
+    
+    crc: uint16;
+}
 
-    var payload_length = self.length - 2;
+type ReadCoilsRequest = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+}
 
-    payload: bytes &size=payload_length;
+type ReadCoilsResponse = unit {
+    byte_count: uint8;
+    coil_status: bytes &length=byte_count;
+}
 
-    on %done {
-        print self;
-    }
-};
+type ReadDiscreteInputsRequest = unit {
+    starting_address: uint16;
+    quantity_of_inputs: uint16;
+}
 
-public type PDU = unit {
-    function_code: uint8;
-    data: bytes &size=(|self| - 1);
-};
+type ReadDiscreteInputsResponse = unit {
+    byte_count: uint8;
+    input_status: bytes &length=byte_count;
+}
 
-public type Request = unit {
-    header: Message;
+type ReadHoldingRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+}
+
+type ReadHoldingRegistersResponse = unit {
+    byte_count: uint8;
+    register_values: bytes &length=byte_count;
+}
+
+type ReadInputRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+}
+
+type ReadInputRegistersResponse = unit {
+    byte_count: uint8;
+    register_values: bytes &length=byte_count;
+}
+
+type WriteSingleCoilRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+}
+
+type WriteSingleCoilResponse = unit {
+    output_address: uint16;
+    output_value: uint16;
+}
+
+type WriteSingleRegisterRequest = unit {
+    register_address: uint16;
+    register_value: uint16;
+}
+
+type WriteSingleRegisterResponse = unit {
+    register_address: uint16;
+    register_value: uint16;
+}
+
+type WriteMultipleCoilsRequest = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+    byte_count: uint8;
+    coil_values: bytes &length=byte_count;
+}
+
+type WriteMultipleCoilsResponse = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+}
+
+type WriteMultipleRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+    byte_count: uint8;
+    register_values: bytes &length=byte_count;
+}
+
+type WriteMultipleRegistersResponse = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+}
+
+type ReadWriteMultipleRegistersRequest = unit {
+    read_starting_address: uint16;
+    quantity_to_read: uint16;
+    write_starting_address: uint16;
+    quantity_to_write: uint16;
+    write_byte_count: uint8;
+    write_register_values: bytes &length=write_byte_count;
+}
+
+type ReadWriteMultipleRegistersResponse = unit {
+    byte_count: uint8;
+    read_register_values: bytes &length=byte_count;
+}
+
+type DiagnosticRequest = unit {
+    sub_function: uint16;
+    data: uint16;
+}
+
+type DiagnosticResponse = unit {
+    sub_function: uint16;
+    data: uint16;
+}
+
+public type Message = unit {
     pdu: PDU;
-};
-
-public type Response = unit {
-    header: Message;
-    pdu: PDU;
-};
-
-export function parse_modbus(data: bytes) : void {
-    try {
-        local msg = Message(data);
-    }
-    catch {
-        print "Parsing error";
-    }
 }

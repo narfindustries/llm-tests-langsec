@@ -1,78 +1,74 @@
-module JPEG {
-    type JPEGFile = struct {
-        segments: Segment*;
-    }
+type JPEG = struct {
+    segments: [Segment];
+};
 
-    type Segment = struct {
-        marker: Marker;
-        data: switch (marker) {
-            case SOI: SOI;
-            case APP(_): APP;
-            case DQT: DQT;
-            case SOF0: SOF0;
-            case DHT: DHT;
-            case SOS: SOS;
-            case EOI: EOI;
-            default: UnknownSegment;
-        }
-    }
+type Segment = union {
+    0xFFD8 -> SOI: void;
+    0xFFD9 -> EOI: void;
+    0xFFC0 -> SOF: SOF;
+    0xFFDA -> SOS: SOS;
+    0xFFDB -> DQT: DQT;
+    0xFFC4 -> DHT: DHT;
+    0xFFFE -> COM: COM;
+    [0xFFE0..0xFFEF] -> APPn: APPn;
+};
 
-    type Marker = enum(u16) {
-        SOI  = 0xFFD8,
-        EOI  = 0xFFD9,
-        APP0 = 0xFFE0,
-        APP1 = 0xFFE1,
-        APP2 = 0xFFE2,
-        APP3 = 0xFFE3,
-        APP4 = 0xFFE4,
-        APP5 = 0xFFE5,
-        APP6 = 0xFFE6,
-        APP7 = 0xFFE7,
-        APP8 = 0xFFE8,
-        APP9 = 0xFFE9,
-        APP10 = 0xFFEA,
-        APP11 = 0xFFEB,
-        APP12 = 0xFFEC,
-        APP13 = 0xFFED,
-        APP14 = 0xFFEE,
-        APP15 = 0xFFEF,
-        DQT  = 0xFFDB,
-        SOF0 = 0xFFC0,
-        DHT  = 0xFFC4,
-        SOS  = 0xFFDA
-    }
+type SOF = struct {
+    length: u16;
+    precision: u8;
+    height: u16;
+    width: u16;
+    num_components: u8;
+    components: [SOFComponent](:num_components);
+};
 
-    type SOI = struct {}
+type SOFComponent = struct {
+    component_id: u8;
+    sampling_factors: u8;
+    quant_table_id: u8;
+};
 
-    type EOI = struct {}
+type SOS = struct {
+    length: u16;
+    num_components: u8;
+    components: [SOSComponent](:num_components);
+    start_spectral_selection: u8;
+    end_spectral_selection: u8;
+    successive_approximation: u8;
+};
 
-    type APP = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
+type SOSComponent = struct {
+    component_id: u8;
+    huffman_table_ids: u8;
+};
 
-    type DQT = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
+type DQT = struct {
+    length: u16;
+    tables: [DQTTable];
+};
 
-    type SOF0 = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
+type DQTTable = struct {
+    table_info: u8;
+    values: [u8](64);
+};
 
-    type DHT = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
+type DHT = struct {
+    length: u16;
+    tables: [DHTTable];
+};
 
-    type SOS = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
+type DHTTable = struct {
+    table_info: u8;
+    num_codes: [u16](16);
+    symbols: [u8];
+};
 
-    type UnknownSegment = struct {
-        length: u16;
-        data: u8[length - 2];
-    }
-}
+type COM = struct {
+    length: u16;
+    comment: [u8];
+};
+
+type APPn = struct {
+    length: u16;
+    data: [u8];
+};

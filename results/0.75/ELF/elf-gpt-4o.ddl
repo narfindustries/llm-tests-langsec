@@ -1,89 +1,73 @@
-import "base" {
-    from base import *;
-}
+define Elf = struct {
+    header: ElfHeader,
+    programHeaders: ProgramHeader[header.e_phnum],
+    sectionHeaders: SectionHeader[header.e_shnum],
+    symbolTables: optional SymbolTableEntry[],
+    relocations: optional RelocationEntry[]
+};
 
-struct ELF {
-    magic: MagicBytes;
-    class: ElfClass;
-    data: ElfData;
-    version: u8;
-    osabi: u8;
-    abiversion: u8;
-    pad: PadBytes;
-    type: ElfType;
-    machine: ElfMachine;
-    entry: u32;
-    phoff: u32;
-    shoff: u32;
-    flags: u32;
-    ehsize: u16;
-    phentsize: u16;
-    phnum: u16;
-    shentsize: u16;
-    shnum: u16;
-    shstrndx: u16;
-    ph: Array<ProgramHeader>[phnum];
-    sh: Array<SectionHeader>[shnum];
-}
+define ElfHeader = struct {
+    e_ident: ElfIdent,
+    e_type: u16,
+    e_machine: u16,
+    e_version: u32,
+    e_entry: u64, // Adjusted for 64-bit
+    e_phoff: u64,
+    e_shoff: u64,
+    e_flags: u32,
+    e_ehsize: u16,
+    e_phentsize: u16,
+    e_phnum: u16,
+    e_shentsize: u16,
+    e_shnum: u16,
+    e_shstrndx: u16
+};
 
-struct MagicBytes {
-    bytes: u8[4];
-    assert bytes == [0x7F, 'E', 'L', 'F'];
-}
+define ElfIdent = struct {
+    magic: u32, // 0x7F 'E' 'L' 'F'
+    class: u8,
+    data: u8,
+    version: u8,
+    osabi: u8,
+    abiversion: u8,
+    pad: u8[7]
+};
 
-enum ElfClass : u8 {
-    ELFCLASS32 = 1,
-    ELFCLASS64 = 2
-}
+define ProgramHeader = struct {
+    p_type: u32,
+    p_offset: u64,
+    p_vaddr: u64,
+    p_paddr: u64,
+    p_filesz: u64,
+    p_memsz: u64,
+    p_flags: u32,
+    p_align: u64
+};
 
-enum ElfData : u8 {
-    ELFDATA2LSB = 1,
-    ELFDATA2MSB = 2
-}
+define SectionHeader = struct {
+    sh_name: u32,
+    sh_type: u32,
+    sh_flags: u64,
+    sh_addr: u64,
+    sh_offset: u64,
+    sh_size: u64,
+    sh_link: u32,
+    sh_info: u32,
+    sh_addralign: u64,
+    sh_entsize: u64
+};
 
-enum ElfType : u16 {
-    ET_NONE = 0,
-    ET_REL = 1,
-    ET_EXEC = 2,
-    ET_DYN = 3,
-    ET_CORE = 4
-}
+define SymbolTableEntry = struct {
+    st_name: u32,
+    st_info: u8,
+    st_other: u8,
+    st_shndx: u16,
+    st_value: u64,
+    st_size: u64
+};
 
-enum ElfMachine : u16 {
-    EM_NONE = 0,
-    EM_M32 = 1,
-    EM_SPARC = 2,
-    EM_386 = 3,
-    EM_68K = 4,
-    EM_88K = 5,
-    EM_860 = 7,
-    EM_MIPS = 8
-}
-
-struct PadBytes {
-    bytes: u8[7];
-}
-
-struct ProgramHeader {
-    type: u32;
-    offset: u32;
-    vaddr: u32;
-    paddr: u32;
-    filesz: u32;
-    memsz: u32;
-    flags: u32;
-    align: u32;
-}
-
-struct SectionHeader {
-    name: u32;
-    type: u32;
-    flags: u32;
-    addr: u32;
-    offset: u32;
-    size: u32;
-    link: u32;
-    info: u32;
-    addralign: u32;
-    entsize: u32;
-}
+define RelocationEntry = struct {
+    r_offset: u64,
+    r_info: u64,
+    r_addend: optional u64
+};

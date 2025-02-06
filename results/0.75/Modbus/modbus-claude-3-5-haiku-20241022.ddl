@@ -1,64 +1,107 @@
-type modbus_function_code = 
-  | Read_Coils                  -- 0x01
-  | Read_Discrete_Inputs        -- 0x02
-  | Read_Holding_Registers      -- 0x03
-  | Read_Input_Registers        -- 0x04
-  | Write_Single_Coil           -- 0x05
-  | Write_Single_Register       -- 0x06
-  | Read_Exception_Status       -- 0x07
-  | Diagnostics                 -- 0x08
-  | Write_Multiple_Coils        -- 0x0F
-  | Write_Multiple_Registers    -- 0x10
-  | Report_Slave_ID             -- 0x11
+protocol Modbus {
+  enum FunctionCode : u8 {
+    ReadCoils = 0x01,
+    ReadDiscreteInputs = 0x02,
+    ReadHoldingRegisters = 0x03,
+    ReadInputRegisters = 0x04,
+    WriteSingleCoil = 0x05,
+    WriteSingleRegister = 0x06,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleRegisters = 0x10
+  }
 
-type modbus_exception_code = 
-  | Illegal_Function
-  | Illegal_Data_Address
-  | Illegal_Data_Value
-  | Slave_Device_Failure
-  | Acknowledge
-  | Slave_Device_Busy
-  | Negative_Acknowledge
-  | Memory_Parity_Error
+  enum ExceptionCode : u8 {
+    IllegalFunction = 0x01,
+    IllegalDataAddress = 0x02,
+    IllegalDataValue = 0x03,
+    ServerDeviceFailure = 0x04,
+    Acknowledge = 0x05,
+    ServerDeviceBusy = 0x06,
+    NegativeAcknowledge = 0x07,
+    MemoryParityError = 0x08,
+    GatewayPathUnavailable = 0x0A,
+    GatewayTargetDeviceFailed = 0x0B
+  }
 
-type modbus_frame = {
-  slave_address: u8,
-  function_code: modbus_function_code,
-  data: list<u8>,
-  crc: u16
+  type ModbusRTUFrame = {
+    slave_address: u8 where 0 <= value && value <= 247,
+    function_code: FunctionCode,
+    payload: match function_code {
+      FunctionCode.ReadCoils => ReadCoilsRequest,
+      FunctionCode.ReadDiscreteInputs => ReadDiscreteInputsRequest,
+      FunctionCode.ReadHoldingRegisters => ReadHoldingRegistersRequest,
+      FunctionCode.ReadInputRegisters => ReadInputRegistersRequest,
+      FunctionCode.WriteSingleCoil => WriteSingleCoilRequest,
+      FunctionCode.WriteSingleRegister => WriteSingleRegisterRequest,
+      FunctionCode.WriteMultipleCoils => WriteMultipleCoilsRequest,
+      FunctionCode.WriteMultipleRegisters => WriteMultipleRegistersRequest
+    },
+    crc: u16
+  }
+
+  type ModbusTCPFrame = {
+    transaction_id: u16,
+    protocol_id: u16 = 0,
+    length: u16,
+    unit_id: u8,
+    function_code: FunctionCode,
+    payload: match function_code {
+      FunctionCode.ReadCoils => ReadCoilsRequest,
+      FunctionCode.ReadDiscreteInputs => ReadDiscreteInputsRequest,
+      FunctionCode.ReadHoldingRegisters => ReadHoldingRegistersRequest,
+      FunctionCode.ReadInputRegisters => ReadInputRegistersRequest,
+      FunctionCode.WriteSingleCoil => WriteSingleCoilRequest,
+      FunctionCode.WriteSingleRegister => WriteSingleRegisterRequest,
+      FunctionCode.WriteMultipleCoils => WriteMultipleCoilsRequest,
+      FunctionCode.WriteMultipleRegisters => WriteMultipleRegistersRequest
+    }
+  }
+
+  type ReadCoilsRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 2000
+  }
+
+  type ReadDiscreteInputsRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 2000
+  }
+
+  type ReadHoldingRegistersRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 125
+  }
+
+  type ReadInputRegistersRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 125
+  }
+
+  type WriteSingleCoilRequest = {
+    address: u16,
+    value: u16 where value == 0xFF00 || value == 0x0000
+  }
+
+  type WriteSingleRegisterRequest = {
+    address: u16,
+    value: u16
+  }
+
+  type WriteMultipleCoilsRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 2000,
+    byte_count: u8,
+    coil_values: [u8] where length == byte_count
+  }
+
+  type WriteMultipleRegistersRequest = {
+    start_address: u16,
+    quantity: u16 where 1 <= value && value <= 125,
+    byte_count: u8,
+    register_values: [u16] where length == quantity
+  }
+
+  type ExceptionResponse = {
+    exception_code: ExceptionCode
+  }
 }
-
-let calculate_crc16(frame_data: list<u8>) -> u16 = 
-  let initial_value = 0xFFFF in
-  let polynomial = 0xA001 in
-  let crc = frame_data.fold(initial_value, fun(current_crc, byte) -> 
-    let xored_crc = current_crc ^ byte in
-    let result = [0..7].fold(xored_crc, fun(temp_crc, _) ->
-      if temp_crc & 0x0001 == 1 
-      then (temp_crc >> 1) ^ polynomial 
-      else temp_crc >> 1
-    ) in
-    result
-  ) in
-  crc
-
-let validate_modbus_frame(frame: modbus_frame) -> bool = 
-  let frame_data = [
-    frame.slave_address, 
-    frame.function_code as u8, 
-  ] in
-  let calculated_crc = calculate_crc16(frame_data) in
-  calculated_crc == frame.crc
-
-parser modbus_protocol = {
-  slave_address: u8,
-  function_code: modbus_function_code,
-  data_length: u8,
-  data: list<u8> where data.length == data_length,
-  crc: u16
-} when validate_modbus_frame({
-  slave_address: slave_address,
-  function_code: function_code,
-  data: data,
-  crc: crc
-})

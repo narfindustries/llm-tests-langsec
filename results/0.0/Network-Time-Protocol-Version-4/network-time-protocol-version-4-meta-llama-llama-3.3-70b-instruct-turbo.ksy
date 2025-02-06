@@ -1,31 +1,55 @@
 meta:
-  id: network-time-protocol-version-4
-  title: Network Time Protocol Version 4
-  doc: |
-    Network Time Protocol Version 4 (NTPv4) is widely used for clock
-    synchronization across the Internet. This spec describes the format of NTPv4
-    packets.
+  endian: be
+
 seq:
-  - id: flags
-    type: u1
-  - id: stratum
-    type: u1
+  - id: leap
+    type: u2
+  - id: version
+    type: u2
+  - id: mode
+    type: u2
   - id: poll
     type: u1
   - id: precision
     type: u1
-  - id: delay
+  - id: root_delay
     type: u4
-  - id: dispersion
+  - id: root_dispersion
     type: u4
-  - id: identifier
-    type: str
-    size: 4
+  - id: reference_id
+    type: u4
   - id: reference_timestamp
     type: u8
-  - id: originate_timestamp
+  - id: origin_timestamp
     type: u8
   - id: receive_timestamp
     type: u8
   - id: transmit_timestamp
     type: u8
+  - id: extensions
+    type: extension
+    repeat: expr
+    repeat-expr: _io.pos < _io.size
+    until: extension.type == 4
+
+types:
+  extension:
+    seq:
+      - id: type
+        type: u2
+      - id: length
+        type: u2
+      - id: body
+        type:
+          switch-on: type
+          cases:
+            - 2:
+                seq:
+                  - id: key_id
+                    type: u4
+                  - id: value
+                    type: str
+                    size: length - 4
+            - else:
+                type: bytes
+                size: length - 4

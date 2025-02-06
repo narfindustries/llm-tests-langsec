@@ -1,58 +1,107 @@
-# JPEG File Format Parser
+module JPEG;
 
-# Define the JPEG file format
-file_format jpeg {
-  magic "\xFF\xD8\xFF"
+type APP0: record {
+  marker: uint16 = 0xFFE0;
+  length: uint16;
+  identifier: bytestring = "JFIF\0";
+  major_version: uint8 = 1;
+  minor_version: uint8 = 2;
+  density_units: uint8;
+  x_density: uint16;
+  y_density: uint16;
+  thumbnail_width: uint8;
+  thumbnail_height: uint8;
 }
 
-# Define the JPEG file structure
-struct JpegFile {
-  # Start of Image (SOI) marker
-  uint8 soi[2] = "\xFF\xD8"
-
-  # APP0 segment
-  uint8 app0[2] = "\xFF\xE0"
-  uint16 app0_length
-  uint8 app0_data[app0_length - 2]
-
-  # DQT segment
-  uint8 dqt[2] = "\xFF\xDB"
-  uint16 dqt_length
-  uint8 dqt_data[dqt_length - 2]
-
-  # SOF0 segment
-  uint8 sof0[2] = "\xFF\xC0"
-  uint16 sof0_length
-  uint8 sof0_data[sof0_length - 2]
-
-  # DHT segment
-  uint8 dht[2] = "\xFF\xC4"
-  uint16 dht_length
-  uint8 dht_data[dht_length - 2]
-
-  # SOS segment
-  uint8 sos[2] = "\xFF\xDA"
-  uint16 sos_length
-  uint8 sos_data[sos_length - 2]
-
-  # Image data
-  uint8 image_data[*]
+type APPN: record {
+  marker: uint16;
+  length: uint16;
+  data: bytestring;
 }
 
-# Define the JPEG parser
-parser JpegParser {
-  # Parse the JPEG file
-  parse JpegFile
+type DQT: record {
+  marker: uint16 = 0xFFDB;
+  length: uint16;
+  table_precision: uint8;
+  table_id: uint8;
+  table_data: bytestring;
 }
 
-# Define the JPEG analyzer
-analyzer JpegAnalyzer {
-  # Analyze the JPEG file
-  analyze JpegParser
+type SOF0: record {
+  marker: uint16 = 0xFFC0;
+  length: uint16;
+  sample_precision: uint8;
+  image_height: uint16;
+  image_width: uint16;
+  num_components: uint8;
+  components: Component[num_components];
 }
 
-# Define the JPEG meta data
-meta JpegMeta {
-  # Extract the JPEG meta data
-  extract JpegAnalyzer
+type Component: record {
+  component_id: uint8;
+  horizontal_sampling_factor: uint8;
+  vertical_sampling_factor: uint8;
+  quantization_table_id: uint8;
+}
+
+type DHT: record {
+  marker: uint16 = 0xFFC4;
+  length: uint16;
+  table_class: uint8;
+  table_id: uint8;
+  table_data: bytestring;
+}
+
+type SOS: record {
+  marker: uint16 = 0xFFDA;
+  length: uint16;
+  num_components: uint8;
+  components: SOSComponent[num_components];
+  start_spectral_selection: uint8;
+  end_spectral_selection: uint8;
+  successive_approximation_high: uint8;
+  successive_approximation_low: uint8;
+}
+
+type SOSComponent: record {
+  component_id: uint8;
+  dc_huffman_table_id: uint8;
+  ac_huffman_table_id: uint8;
+}
+
+type JPEG: record {
+  soi: uint16 = 0xFFD8;
+  app0: APP0;
+  appn: APPN[*];
+  dqt: DQT[*];
+  sof0: SOF0;
+  dht: DHT[*];
+  sos: SOS;
+  scan: bytestring;
+  eoi: uint16 = 0xFFD9;
+}
+
+type RST: record {
+  marker: uint16;
+  data: bytestring;
+}
+
+type COM: record {
+  marker: uint16 = 0xFFFE;
+  length: uint16;
+  comment: bytestring;
+}
+
+type JPEGFile: record {
+  soi: uint16 = 0xFFD8;
+  app0: APP0;
+  appn: APPN[*];
+  dqt: DQT[*];
+  sof0: SOF0;
+  dht: DHT[*];
+  sos: SOS;
+  scan: bytestring;
+  rst: RST[*];
+  com: COM[*];
+  eoi: uint16 = 0xFFD9;
 }

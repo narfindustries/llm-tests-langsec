@@ -1,13 +1,13 @@
-use nom::{
-    bytes::complete::take,
-    combinator::map_res,
-    number::complete::{be_u16, be_u8},
-    IResult,
-};
+use nom::bytes::complete::take;
+use nom::combinator::map_res;
+use nom::error::ErrorKind;
+use nom::number::complete::{be_u16, u8};
+use nom::IResult;
+use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::env;
 
+// ARP Packet structure
 #[derive(Debug)]
 struct ArpPacket {
     htype: u16,
@@ -21,11 +21,12 @@ struct ArpPacket {
     tpa: Vec<u8>,
 }
 
-fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
+// Parse ARP packet
+fn parse_arp(input: &[u8]) -> IResult<&[u8], ArpPacket> {
     let (input, htype) = be_u16(input)?;
     let (input, ptype) = be_u16(input)?;
-    let (input, hlen) = be_u8(input)?;
-    let (input, plen) = be_u8(input)?;
+    let (input, hlen) = u8(input)?;
+    let (input, plen) = u8(input)?;
     let (input, oper) = be_u16(input)?;
     let (input, sha) = take(hlen)(input)?;
     let (input, spa) = take(plen)(input)?;
@@ -51,21 +52,20 @@ fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <binary_file>", args[0]);
+        return Ok(());
     }
 
     let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_arp_packet(&buffer) {
+    match parse_arp(&buffer) {
         Ok((_, arp_packet)) => {
             println!("{:?}", arp_packet);
         }
-        Err(e) => {
-            eprintln!("Failed to parse ARP packet: {:?}", e);
-            std::process::exit(1);
+        Err(err) => {
+            eprintln!("Failed to parse ARP packet: {:?}", err);
         }
     }
 

@@ -1,48 +1,74 @@
 module Modbus;
 
-type ModbusRequest = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
-    function_code: uint8;
-    payload: bytes &size = length - 2;
+type ModbusExceptionCode = enum {
+    IllegalFunction = 0x01,
+    IllegalDataAddress = 0x02,
+    IllegalDataValue = 0x03,
+    SlaveDeviceFailure = 0x04,
+    Acknowledge = 0x05,
+    SlaveDeviceBusy = 0x06
 };
 
-type ModbusResponse = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
-    function_code: uint8;
-    payload: bytes &size = length - 2;
+type ModbusFunctionCode = enum {
+    ReadCoils = 0x01,
+    ReadDiscreteInputs = 0x02,
+    ReadHoldingRegisters = 0x03,
+    ReadInputRegisters = 0x04,
+    WriteSingleCoil = 0x05,
+    WriteSingleRegister = 0x06,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleRegisters = 0x10
 };
 
-public type ModbusMessage = unit {
-    request: optional<ModbusRequest>;
-    response: optional<ModbusResponse>;
-
-    on %parse {
-        if ( $transaction_id != 0 and $protocol_id == 0x0000 ) {
-            if ( $unit_id in resort context().request_ports() &&
-                 $function_code in resort context().request_codes() ) {
-                self.request = ModbusRequest;
-            }
-            else if ( $unit_id in resort context().response_ports() &&
-                      $function_code in resort context().response_codes() ) {
-                self.response = ModbusResponse;
-            }
-        }
-        else {
-            warn "Invalid Modbus protocol header";
-        }
+type ExceptionResponse = unit {
+    function_code: ModbusFunctionCode;
+    exception_code: ModbusExceptionCode;
+    on %init {
+        self.function_code = (self.exception_code & 0x7F);
     }
 };
 
-module ModbusAnalyzer;
+type CRC = uint16;
 
-import Modbus;
+type ModbusPDU = unit {
+    f_code: ModbusFunctionCode;
+    data: bytes;
 
-hook zeek_init() &priority = 5 {
-    Analyzer::register_for_ports(Analyzer::ANALYZER_EXAMPLE, { 502/tcp });
-}
+    on %done {
+        print fmt("PDU with function code %s and data of size %d", self.f_code, self.data.length());
+    }
+};
+
+type ModbusADU = unit {
+    address: uint8;
+    pdu: ModbusPDU;
+    crc: CRC;
+
+    on %done {
+        print fmt("ADU with address %u", self.address);
+    }
+};
+
+type ModbusMBAPHeader = unit {
+    transaction_id: uint16;
+    protocol_id: uint16;
+    length: uint16;
+    unit_id: uint8;
+};
+
+type ModbusTCPADU = unit {
+    header: ModbusMBAPHeader;
+    pdu: ModbusPDU;
+
+    on %done {
+        print fmt("TCP ADU with transaction ID %u", self.header.transaction_id);
+    }
+};
+
+type ModbusLog = unit {
+    adu: ModbusADU;
+
+    on %init {
+        print fmt("Log for Modbus ADU at address %u", self.adu.address);
+    }
+};

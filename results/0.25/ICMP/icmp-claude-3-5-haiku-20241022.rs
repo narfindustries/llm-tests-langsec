@@ -1,9 +1,9 @@
 use nom::{
     bits::{streaming::take as take_bits, streaming::tag as tag_bits},
-    bytes::streaming::{tag, take},
-    combinator::{map, opt},
+    bytes::streaming::{take, tag},
+    combinator::{map, complete},
     error::ErrorKind,
-    multi::count,
+    multi::many0,
     number::streaming::{be_u8, be_u16, be_u32},
     sequence::tuple,
     IResult,
@@ -13,108 +13,124 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct ICMPPacket {
-    icmp_type: u8,
-    code: u8,
-    checksum: u16,
-    rest_of_header: Option<ICMPRestHeader>,
+enum ICMPType {
+    EchoReply,
+    DestinationUnreachable(DestUnreachableCode),
+    SourceQuench,
+    Redirect(RedirectCode),
+    EchoRequest,
+    RouterAdvertisement,
+    RouterSolicitation,
+    TimeExceeded(TimeExceededCode),
+    ParameterProblem(ParameterProblemCode),
+    Timestamp,
+    TimestampReply,
+    InformationRequest,
+    InformationReply,
+    Unknown(u8),
 }
 
 #[derive(Debug)]
-enum ICMPRestHeader {
-    EchoRequest {
-        identifier: u16,
-        sequence_number: u16,
-    },
-    EchoReply {
-        identifier: u16,
-        sequence_number: u16,
-    },
-    DestinationUnreachable {
-        unused: u32,
-    },
-    TimeExceeded {
-        unused: u32,
-    },
-    Redirect {
-        gateway_address: u32,
-    },
-    RouterAdvertisement {
-        num_addresses: u8,
-        entry_size: u8,
-        lifetime: u16,
-        addresses: Vec<u32>,
-    },
-    RouterSolicitation,
-    Timestamp {
-        identifier: u16,
-        sequence_number: u16,
-        originate_timestamp: u32,
-        receive_timestamp: u32,
-        transmit_timestamp: u32,
-    },
-    Other {
-        data: Vec<u8>,
-    },
+enum DestUnreachableCode {
+    NetUnreachable,
+    HostUnreachable,
+    ProtocolUnreachable,
+    PortUnreachable,
+    FragmentationNeeded,
+    SourceRouteFailed,
+    DestNetUnknown,
+    DestHostUnknown,
+    Unknown(u8),
 }
 
-fn parse_icmp_packet(input: &[u8]) -> IResult<&[u8], ICMPPacket> {
-    let (input, (icmp_type, code, checksum)) = tuple((be_u8, be_u8, be_u16))(input)?;
+#[derive(Debug)]
+enum RedirectCode {
+    NetworkRedirect,
+    HostRedirect,
+    TypeOfServiceNetRedirect,
+    TypeOfServiceHostRedirect,
+    Unknown(u8),
+}
 
-    let (input, rest_of_header) = match (icmp_type, code) {
-        (8, 0) => map(tuple((be_u16, be_u16)), |(identifier, sequence_number)| {
-            Some(ICMPRestHeader::EchoRequest {
-                identifier,
-                sequence_number,
-            })
-        })(input)?,
-        (0, 0) => map(tuple((be_u16, be_u16)), |(identifier, sequence_number)| {
-            Some(ICMPRestHeader::EchoReply {
-                identifier,
-                sequence_number,
-            })
-        })(input)?,
-        (3, _) => map(be_u32, |unused| Some(ICMPRestHeader::DestinationUnreachable { unused }))(input)?,
-        (11, _) => map(be_u32, |unused| Some(ICMPRestHeader::TimeExceeded { unused }))(input)?,
-        (5, _) => map(be_u32, |gateway_address| Some(ICMPRestHeader::Redirect { gateway_address }))(input)?,
-        (9, 0) => {
-            let (input, (num_addresses, entry_size, lifetime)) = tuple((be_u8, be_u8, be_u16))(input)?;
-            let (input, addresses) = count(be_u32, num_addresses as usize)(input)?;
-            Ok((
-                input,
-                Some(ICMPRestHeader::RouterAdvertisement {
-                    num_addresses,
-                    entry_size,
-                    lifetime,
-                    addresses,
-                }),
-            ))
-        }
-        (10, 0) => Ok((input, Some(ICMPRestHeader::RouterSolicitation))),
-        (13, 0) => map(
-            tuple((be_u16, be_u16, be_u32, be_u32, be_u32)),
-            |(identifier, sequence_number, originate_timestamp, receive_timestamp, transmit_timestamp)| {
-                Some(ICMPRestHeader::Timestamp {
-                    identifier,
-                    sequence_number,
-                    originate_timestamp,
-                    receive_timestamp,
-                    transmit_timestamp,
-                })
-            },
-        )(input)?,
-        _ => map(take(input.len()), |data: &[u8]| Some(ICMPRestHeader::Other { data: data.to_vec() }))(input)?,
-    };
+#[derive(Debug)]
+enum TimeExceededCode {
+    TTLExpired,
+    FragmentReassemblyTimeExceeded,
+    Unknown(u8),
+}
 
-    Ok((
-        input,
-        ICMPPacket {
-            icmp_type,
-            code,
-            checksum,
-            rest_of_header,
-        },
-    ))
+#[derive(Debug)]
+enum ParameterProblemCode {
+    PointerIndicatesError,
+    MissingRequiredOption,
+    BadLength,
+    Unknown(u8),
+}
+
+#[derive(Debug)]
+struct ICMPHeader {
+    icmp_type: ICMPType,
+    code: u8,
+    checksum: u16,
+    rest_of_header: u32,
+}
+
+fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], ICMPType> {
+    map(be_u8, |type_val| match type_val {
+        0 => ICMPType::EchoReply,
+        3 => ICMPType::DestinationUnreachable(match input[1] {
+            0 => DestUnreachableCode::NetUnreachable,
+            1 => DestUnreachableCode::HostUnreachable,
+            2 => DestUnreachableCode::ProtocolUnreachable,
+            3 => DestUnreachableCode::PortUnreachable,
+            4 => DestUnreachableCode::FragmentationNeeded,
+            5 => DestUnreachableCode::SourceRouteFailed,
+            6 => DestUnreachableCode::DestNetUnknown,
+            7 => DestUnreachableCode::DestHostUnknown,
+            x => DestUnreachableCode::Unknown(x),
+        }),
+        4 => ICMPType::SourceQuench,
+        5 => ICMPType::Redirect(match input[1] {
+            0 => RedirectCode::NetworkRedirect,
+            1 => RedirectCode::HostRedirect,
+            2 => RedirectCode::TypeOfServiceNetRedirect,
+            3 => RedirectCode::TypeOfServiceHostRedirect,
+            x => RedirectCode::Unknown(x),
+        }),
+        8 => ICMPType::EchoRequest,
+        9 => ICMPType::RouterAdvertisement,
+        10 => ICMPType::RouterSolicitation,
+        11 => ICMPType::TimeExceeded(match input[1] {
+            0 => TimeExceededCode::TTLExpired,
+            1 => TimeExceededCode::FragmentReassemblyTimeExceeded,
+            x => TimeExceededCode::Unknown(x),
+        }),
+        12 => ICMPType::ParameterProblem(match input[1] {
+            0 => ParameterProblemCode::PointerIndicatesError,
+            1 => ParameterProblemCode::MissingRequiredOption,
+            2 => ParameterProblemCode::BadLength,
+            x => ParameterProblemCode::Unknown(x),
+        }),
+        13 => ICMPType::Timestamp,
+        14 => ICMPType::TimestampReply,
+        15 => ICMPType::InformationRequest,
+        16 => ICMPType::InformationReply,
+        x => ICMPType::Unknown(x),
+    })(input)
+}
+
+fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], ICMPHeader> {
+    let (input, icmp_type) = parse_icmp_type(input)?;
+    let (input, code) = be_u8(input)?;
+    let (input, checksum) = be_u16(input)?;
+    let (input, rest_of_header) = be_u32(input)?;
+
+    Ok((input, ICMPHeader {
+        icmp_type,
+        code,
+        checksum,
+        rest_of_header,
+    }))
 }
 
 fn main() -> std::io::Result<()> {
@@ -128,10 +144,14 @@ fn main() -> std::io::Result<()> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_icmp_packet(&buffer) {
-        Ok((_, packet)) => println!("Parsed ICMP Packet: {:?}", packet),
-        Err(e) => eprintln!("Parsing error: {:?}", e),
+    match parse_icmp_header(&buffer) {
+        Ok((_, header)) => {
+            println!("Parsed ICMP Header: {:?}", header);
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Parsing error: {:?}", e);
+            std::process::exit(1);
+        }
     }
-
-    Ok(())
 }

@@ -1,78 +1,78 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <hammer/hammer.h>
 
-// DICOM File Format (Simplified)
+// DICOM Tag Definitions
+#define GROUP_LENGTH (0x0000)
+#define AFFECTED_SOP_CLASS_UID (0x0002)
+// Additional tags should be defined here...
 
-// Helper function to define a sequence of bytes
-static HParser *byte_sequence(const uint8_t *str, size_t len) {
-    HParser **parsers = malloc(sizeof(HParser*) * len);
-    for (size_t i = 0; i < len; i++) {
-        parsers[i] = h_uint8();
+// DICOM VR (Value Representation) Definitions
+HParser *vr_ae;  // Application Entity
+HParser *vr_cs;  // Code String
+HParser *vr_da;  // Date
+// Additional VR parsers should be defined here...
+
+// DICOM Element Parser
+HParser *dicom_element;
+
+void init_vr_parsers() {
+    vr_ae = h_token("AE", 2);
+    vr_cs = h_token("CS", 2);
+    vr_da = h_token("DA", 2);
+    // Initialize other VR parsers here...
+}
+
+void init_dicom_element() {
+    // This is a simplified example. Each element should have a specific parser based on its VR.
+    dicom_element = h_sequence(
+        h_uint16(),  // Group ID
+        h_uint16(),  // Element ID
+        h_uint32(),  // Length
+        h_choice(vr_ae, vr_cs, vr_da, NULL),  // Value based on VR; more VRs should be added
+        NULL
+    );
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
+        return 1;
     }
-    HParser *seq = h_sequence(parsers, len, HParseResult *);
-    free(parsers);
-    return h_sequence(h_bytes((const uint8_t *)str, len), seq, NULL);
-}
 
-// Define a DICOM Tag: group number and element number
-static HParser *dicom_tag() {
-    return h_sequence(h_uint16(), h_uint16(), NULL);
-}
-
-// Define a DICOM Element: tag, VR (Value Representation), length, value
-static HParser *dicom_element() {
-    return h_sequence(
-        dicom_tag(),
-        h_bytes(2),  // VR is 2 bytes
-        h_uint16(),  // Length of the value field (16-bit unsigned integer)
-        h_bytes(1),  // Value field (variable length)
-        NULL
-    );
-}
-
-// Define a DICOM File: Preamble, prefix, and a sequence of elements
-static HParser *dicom_file() {
-    return h_sequence(
-        h_bytes(128),  // Preamble: 128 byte fixed length
-        byte_sequence((uint8_t *)"DICM", 4),  // DICOM prefix: "DICM"
-        h_many(dicom_element()),  // Sequence of DICOM elements
-        NULL
-    );
-}
-
-int main(int argc, char *argv[]) {
-    HParser *dicom_parser = dicom_file();
-    FILE *fp = fopen("example.dcm", "rb");
-    if (!fp) {
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
         perror("Failed to open file");
-        return EXIT_FAILURE;
+        return 1;
     }
 
-    fseek(fp, 0, SEEK_END);
-    size_t size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    uint8_t *buffer = malloc(size);
+    // Initialize parsers
+    init_vr_parsers();
+    init_dicom_element();
+
+    // Read file into memory
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    uint8_t *buffer = malloc(file_size);
     if (!buffer) {
-        perror("Failed to allocate buffer");
-        fclose(fp);
-        return EXIT_FAILURE;
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
     }
+    fread(buffer, 1, file_size, file);
 
-    fread(buffer, 1, size, fp);
-    fclose(fp);
-
-    HParseResult *result = h_parse(dicom_parser, buffer, size);
+    // Parse the DICOM file
+    HParseResult *result = h_parse(dicom_element, buffer, file_size);
     if (result) {
         printf("DICOM file parsed successfully.\n");
+        // Here, you would typically do something with the parse result.
     } else {
-        printf("Failed to parse DICOM file.\n");
+        fprintf(stderr, "Failed to parse DICOM file.\n");
     }
 
+    // Cleanup
     free(buffer);
-    h_parse_result_free(result);
-    h_parser_free(dicom_parser);
-
-    return EXIT_SUCCESS;
+    fclose(file);
+    return 0;
 }
-This C code uses the Hammer parsing library to parse a DICOM file, including its preamble, prefix, and a sequence of elements defined by tags, value representations, lengths, and values. The main function opens a DICOM file, reads it into memory, and attempts to parse it using the defined grammar. If successful, it prints a success message; otherwise, it indicates a failure. This code handles memory allocation and deallocation and ensures the file is properly closed.

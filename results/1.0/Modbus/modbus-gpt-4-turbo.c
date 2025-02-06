@@ -1,72 +1,90 @@
-The error message you posted likely indicates there was an issue during the compilation process, possibly due to syntax errors, missing dependencies, or configuration issues in the Hammer parser specification for Modbus generated in C. 
-
-Given that the goal is to have a complete and functioning Modbus parser using Hammer in C, here is a revised Hammer specification in C language that aims to handle the known Modbus specification parts correctly:
-
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 
-static const HParser *modbus_function;
+// Custom action functions prototypes
+static HParsedToken *act_parse_uint16(const HParseResult *p, void *user_data);
+static HParsedToken *act_parse_uint8(const HParseResult *p, void *user_data);
+static HParsedToken *act_parse_data(const HParseResult *p, void *user_data);
 
-// Modbus common headers
-static const HParser *modbus_adu = NULL;
-static const HParser *modbus_pdu = NULL;
+// Parser creation function
+static HParser *create_modbus_tcp_parser(size_t data_size);
 
-HParsedToken *act_identity(const HParseResult *p, void *user_data) {
-    return h_act_identity(p, user_data);
-}
-
-void init_modbus_protocol() {
-    // Modbus TCP ADU (Application Data Unit)
-    modbus_adu = h_sequence(
-        h_uint16(), // Transaction Identifier
-        h_uint16(), // Protocol Identifier
-        h_uint16(), // Length
-        h_uint8(),  // Unit Identifier
-        NULL
-    );
-
-    // Modbus PDU (Protocol Data Unit)
-    modbus_function = h_uint8(); // Function code
-
-    // PDU continued after function code, assuming function code 0x03 Read Holding Registers example
-    modbus_pdu = h_sequence(
-        modbus_function,
-        h_uint16(),  // Starting Address
-        h_uint16(),  // Quantity of Registers
-        NULL
-    );
-}
-
-int main() {
-    init_modbus_protocol();
-
-    // Example data (Modbus TCP with Read Holding Registers request)
-    uint8_t modbus_request[] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x10, 0x00, 0x02};
-
-    // Parsing Modbus TCP ADU
-    HParseResult *result_adu = h_parse(modbus_adu, modbus_request, sizeof(modbus_request));
-    if(result_adu) {
-        printf("Modbus ADU parsed successfully.\n");
-    } else {
-        printf("Failed to parse Modbus ADU.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <modbus_binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Parsing Modbus PDU right after ADU which starts from byte 7 in example data
-    HParseResult *result_pdu = h_parse(modbus_pdu, modbus_request + 7, sizeof(modbus_request) - 7);
-    if(result_pdu) {
-        printf("Modbus PDU parsed successfully.\n");
-        h_pprint(stdout, result_pdu);
-    } else {
-        printf("Failed to parse Modbus PDU.\n");
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
     }
 
-    h_free_result(result_adu);
-    h_free_result(result_pdu);
+    fseek(fp, 0, SEEK_END);
+    size_t file_size = ftell(fp);
+    rewind(fp);
+
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        fclose(fp);
+        fprintf(stderr, "Memory allocation failed\n");
+        return EXIT_FAILURE;
+    }
+
+    if (fread(buffer, 1, file_size, fp) != file_size) {
+        fclose(fp);
+        free(buffer);
+        fprintf(stderr, "Failed to read file\n");
+        return EXIT_FAILURE;
+    }
+    fclose(fp);
+
+    HParser *modbus_tcp_parser = create_modbus_tcp_parser(file_size - 9);  // excluding non-data fields
+    HParseResult *result = h_parse(modbus_tcp_parser, buffer, file_size);
+
+    if (result) {
+        printf("Parsing successful.\n");
+    } else {
+        printf("Parsing failed.\n");
+    }
+
+    h_parse_result_free(result);
+    h_parser_unref(modbus_tcp_parser);
+    free(buffer);
+
     return 0;
 }
 
-This C code snippet uses the Hammer parsing library to define and parse Modbus TCP messages, handling a simple case for function code 0x03 (Read Holding Registers). It ensures that the transaction identifier, protocol identifier, length, unit identifier, function code, starting address, and quantity of registers are parsed from the input data.
+static HParsedToken *act_parse_uint16(const HParseResult *p, void *user_data) {
+    uint16_t num = *(const uint16_t *)p->ast->token;
+    return H_MAKE_UINT(num);
+}
 
-Before compiling and running this code, make sure you have installed the Hammer library correctly and configured your environment to find the Hammer headers and libraries. This example only addresses one Modbus function code and does not include error checking or dynamic function code parsing, which would be necessary for a complete implementation.
+static HParsedToken *act_parse_uint8(const HParseResult *p, void *user_data) {
+    uint8_t num = *(const uint8_t *)p->ast->token;
+    return H_MAKE_UINT(num);
+}
+
+static HParsedToken *act_parse_data(const HParseResult *p, void *user_data) {
+    // Assuming the entire payload as the data
+    return h_make_bytes(p->ast->token, p->ast->seq->used);
+}
+
+static HParser *create_modbus_tcp_parser(size_t data_size) {
+    HParser *p_uint16 = h_bind(h_uint16(), act_parse_uint16, NULL);
+    HParser *p_uint8 = h_bind(h_uint8(), act_parse_uint8, NULL);
+    HParser *p_data = h_bind(h_repeat_n(h_uint8(), data_size), act_parse_data, NULL);
+
+    return h_sequence(
+        p_uint16, // Transaction Identifier
+        p_uint16, // Protocol Identifier
+        p_uint16, // Length
+        p_uint8,  // Unit Identifier
+        p_uint8,  // Function Code
+        p_data,   // Data
+        p_uint16, // CRC Checksum (assuming it is a uint16)
+        NULL
+    );
+}

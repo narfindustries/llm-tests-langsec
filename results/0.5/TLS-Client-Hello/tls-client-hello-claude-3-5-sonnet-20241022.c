@@ -1,83 +1,160 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static const uint8_t tls_versions[] = {0x03, 0x03}; // TLS 1.2
+HParser *init_client_hello_parser(void) {
+    HParser *legacy_version_p = h_uint16();
+    HParser *random_p = h_repeat_n(h_uint8(), 32);
+    HParser *legacy_session_id_p = h_length_value(h_uint8(), h_uint8());
+    HParser *cipher_suite_p = h_uint16();
+    HParser *cipher_suites_p = h_length_value(h_uint16(), h_repeat_n(cipher_suite_p, 2));
+    HParser *compression_methods_p = h_length_value(h_uint8(), h_uint8());
 
-HParser* init_tls_client_hello_parser(void) {
-    // Basic integer parsers
-    HParser* uint8 = h_uint8();
-    HParser* uint16 = h_uint16();
-    
-    // Content Type (0x16 for Handshake)
-    HParser* content_type = h_ch(0x16);
-    
-    // Protocol Version (0x0303 for TLS 1.2)
-    HParser* protocol_version = h_sequence(h_ch(0x03), h_ch(0x03), NULL);
-    
-    // Record Length (16 bits)
-    HParser* record_length = uint16;
-    
-    // Handshake Type (1 for ClientHello)
-    HParser* handshake_type = h_ch(0x01);
-    
-    // Handshake Length (24 bits, 3 bytes)
-    HParser* handshake_length = h_sequence(uint8, uint16, NULL);
-    
-    // Client Version
-    HParser* client_version = h_sequence(h_ch(0x03), h_ch(0x03), NULL);
-    
-    // Random (32 bytes)
-    HParser* random = h_repeat_n(uint8, 32);
-    
-    // Session ID
-    HParser* session_id_length = uint8;
-    HParser* session_id = h_length_value(session_id_length, uint8);
-    
-    // Cipher Suites
-    HParser* cipher_suites_length = uint16;
-    HParser* cipher_suites = h_length_value(cipher_suites_length, uint8);
-    
-    // Compression Methods
-    HParser* compression_methods_length = uint8;
-    HParser* compression_methods = h_length_value(compression_methods_length, uint8);
-    
-    // Extensions Length
-    HParser* extensions_length = uint16;
-    
-    // Extension
-    HParser* extension_type = uint16;
-    HParser* extension_length = uint16;
-    HParser* extension_data = h_length_value(extension_length, uint8);
-    HParser* extension = h_sequence(extension_type, extension_length, extension_data, NULL);
-    
-    // Extensions
-    HParser* extensions = h_length_value(extensions_length, extension);
-    
-    // Combine all parts into ClientHello
-    HParser* client_hello = h_sequence(
-        content_type,
-        protocol_version,
-        record_length,
-        handshake_type,
-        handshake_length,
-        client_version,
-        random,
-        session_id,
-        cipher_suites,
-        compression_methods,
-        extensions,
+    HParser *supported_versions_p = h_sequence(
+        h_bits(16, 0x002b),
+        h_length_value(h_uint16(), h_repeat_n(h_uint16(), 1)),
         NULL
     );
-    
-    return client_hello;
+
+    HParser *signature_algorithms_p = h_sequence(
+        h_bits(16, 0x000d),
+        h_length_value(h_uint16(), h_repeat_n(h_uint16(), 1)),
+        NULL
+    );
+
+    HParser *supported_groups_p = h_sequence(
+        h_bits(16, 0x000a),
+        h_length_value(h_uint16(), h_repeat_n(h_uint16(), 1)),
+        NULL
+    );
+
+    HParser *key_share_entry_p = h_sequence(
+        h_uint16(),
+        h_length_value(h_uint16(), h_many1(h_uint8())),
+        NULL
+    );
+
+    HParser *key_share_p = h_sequence(
+        h_bits(16, 0x0033),
+        h_length_value(h_uint16(), h_many1(key_share_entry_p)),
+        NULL
+    );
+
+    HParser *server_name_p = h_sequence(
+        h_bits(16, 0x0000),
+        h_length_value(h_uint16(), h_many1(h_uint8())),
+        NULL
+    );
+
+    HParser *psk_key_exchange_modes_p = h_sequence(
+        h_bits(16, 0x002d),
+        h_length_value(h_uint16(), h_uint8()),
+        NULL
+    );
+
+    HParser *pre_shared_key_p = h_sequence(
+        h_bits(16, 0x0029),
+        h_length_value(h_uint16(), 
+            h_sequence(
+                h_length_value(h_uint16(), h_many1(h_uint8())),
+                h_length_value(h_uint16(), h_many1(h_uint8())),
+                NULL
+            )
+        ),
+        NULL
+    );
+
+    HParser *early_data_p = h_sequence(
+        h_bits(16, 0x002a),
+        h_bits(16, 0x0000),
+        NULL
+    );
+
+    HParser *cookie_p = h_sequence(
+        h_bits(16, 0x002c),
+        h_length_value(h_uint16(), h_many1(h_uint8())),
+        NULL
+    );
+
+    HParser *padding_p = h_sequence(
+        h_bits(16, 0x0015),
+        h_length_value(h_uint16(), h_many1(h_ch(0x00))),
+        NULL
+    );
+
+    HParser *extension_p = h_choice(
+        supported_versions_p,
+        signature_algorithms_p,
+        supported_groups_p,
+        key_share_p,
+        server_name_p,
+        psk_key_exchange_modes_p,
+        pre_shared_key_p,
+        early_data_p,
+        cookie_p,
+        padding_p,
+        NULL
+    );
+
+    HParser *extensions_p = h_length_value(h_uint16(), h_many1(extension_p));
+
+    return h_sequence(
+        h_ch(0x01),           // HandshakeType
+        h_uint8(),            // Length (3 bytes split)
+        h_uint16(),
+        legacy_version_p,     // Legacy version
+        random_p,             // Random
+        legacy_session_id_p,  // Legacy session ID
+        cipher_suites_p,      // Cipher suites
+        compression_methods_p, // Compression methods
+        extensions_p,         // Extensions
+        NULL
+    );
 }
 
-int main(int argc, char** argv) {
-    HParser* parser = init_tls_client_hello_parser();
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
         return 1;
     }
+
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t *data = malloc(size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(f);
+        return 1;
+    }
+
+    if (fread(data, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(data);
+        fclose(f);
+        return 1;
+    }
+
+    fclose(f);
+
+    HParser *parser = init_client_hello_parser();
+    HParseResult *result = h_parse(parser, data, size);
     
+    if (!result) {
+        fprintf(stderr, "Failed to parse ClientHello\n");
+        free(data);
+        return 1;
+    }
+
+    h_parse_result_free(result);
+    free(data);
     return 0;
 }

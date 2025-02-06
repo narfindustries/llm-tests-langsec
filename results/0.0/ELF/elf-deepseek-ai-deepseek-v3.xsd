@@ -1,0 +1,240 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:elf="http://example.com/elf" targetNamespace="http://example.com/elf" xmlns:tns="http://example.com/elf">
+  <xs:import namespace="http://www.w3.org/2001/XMLSchema" schemaLocation="http://www.w3.org/2001/XMLSchema.xsd"/>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ElfHeader">
+    <xs:sequence>
+      <xs:element name="e_ident" type="elf:ElfIdent"/>
+      <xs:element name="e_type" type="elf:ElfType"/>
+      <xs:element name="e_machine" type="elf:ElfMachine"/>
+      <xs:element name="e_version" type="elf:ElfVersion"/>
+      <xs:element name="e_entry" type="xs:unsignedLong"/>
+      <xs:element name="极e_phoff" type="xs:unsignedLong"/>
+      <xs:element name="e_shoff" type="xs:unsignedLong"/>
+      <xs:element name="e_flags" type="xs:unsignedInt"/>
+      <xs:element name="e_ehsize" type="xs:unsignedShort"/>
+      <xs:element name="e_phentsize" type="xs:unsignedShort"/>
+      <xs:element name="e_phnum" type="xs:unsignedShort"/>
+      <xs:element name="e_shentsize" type="xs:unsignedShort"/>
+      <xs:element name="e_shnum" type="xs:unsignedShort"/>
+      <xs:element name="e_shstrndx" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ElfIdent">
+    <xs:sequence>
+      <xs:element name="ei_mag" type="elf:ElfMagic"/>
+      <xs:element name="ei_class" type="elf:ElfClass"/>
+      <xs:element name="ei_data" type="elf:ElfData"/>
+      <xs:element name="ei_version" type="elf:ElfVersion"/>
+      <xs:element name="ei_osabi" type="elf:ElfOsAbi"/>
+      <xs:element name="ei_abiversion" type="xs:unsignedByte"/>
+      <xs:element name="ei_pad" type="xs:hexBinary" dfdl:length="7"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ElfMagic">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="极ElfClass">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfData">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfVersion">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfOsAbi">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="6"/>
+      <xs:极enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="97"/>
+      <xs:enumeration value="255"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ElfMachine">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="62"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ProgramHeader">
+    <xs:sequence>
+      <xs:element name="p_type" type="elf:ProgramHeaderType"/>
+      <xs:element name="p_offset" type="xs:unsignedLong"/>
+      <xs:element name="p_vaddr" type="xs:unsignedLong"/>
+      <xs:element name="p_paddr" type="xs:unsignedLong"/>
+      <xs:element name="p_filesz" type="xs:unsignedLong"/>
+      <xs:element name="p_memsz" type="xs:unsignedLong"/>
+      <xs:element name="p_flags" type="elf:ProgramHeaderFlags"/>
+      <xs:element name="p_align" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ProgramHeaderType">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ProgramHeaderFlags">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="SectionHeader">
+    <xs:sequence>
+      <xs:element name="sh_name" type="xs:unsignedInt"/>
+      <xs:element name="sh_type" type="elf:SectionHeaderType"/>
+      <xs:element name="sh_flags" type="elf:SectionHeaderFlags"/>
+      <xs:element name="sh_addr" type="xs:unsignedLong"/>
+      <xs:element name="sh_offset" type="xs:unsignedLong"/>
+      <xs:element name="sh_size" type="xs:unsignedLong"/>
+      <xs:element name="sh_link" type="xs:unsignedInt"/>
+      <xs:element name="sh_info" type="xs:unsignedInt"/>
+      <xs:element name="sh_addralign" type="xs:unsignedLong"/>
+      <xs:element name="sh_entsize" type="xs:unsignedLong"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="SectionHeaderType">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SectionHeaderFlags">
+    <xs:restriction base="xs:unsignedLong">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="16"/>
+      <xs:enumeration value="32"/>
+      <xs:enumeration value="64"/>
+      <xs:enumeration value="128"/>
+      <xs:enumeration value="256"/>
+      <xs:enumeration value="512"/>
+      <xs:enumeration value="1024"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="SymbolTable">
+    <xs:sequence>
+      <xs:element name="st_name" type="xs:unsignedInt"/>
+      <xs:element name="st_value" type="xs:unsignedLong"/>
+      <xs:element name="st_size" type="xs:unsignedLong"/>
+      <xs:element name="st_info" type="elf:SymbolInfo"/>
+      <xs:element name="st_other" type="elf:SymbolVisibility"/>
+      <xs:element name="st_shndx" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="SymbolInfo">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SymbolVisibility">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Relocation">
+    <xs:sequence>
+      <xs:element name="r_offset" type="xs:unsignedLong"/>
+      <xs:element name="r_info" type="elf:RelocationInfo"/>
+      <xs:element name="r_addend" type="xs:long" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="RelocationInfo">
+    <xs:restriction base="xs:unsignedLong">
+      <xs:pattern value="[0-9A-Fa-f]{16}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="ELF" type="elf:ElfHeader"/>
+</xs:schema>

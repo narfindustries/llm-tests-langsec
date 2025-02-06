@@ -1,79 +1,100 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include <hammer/hammer.h>
 #include <hammer/glue.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
 
-// ICMP packet structure definition
 typedef struct {
     uint8_t type;
     uint8_t code;
     uint16_t checksum;
-    uint16_t identifier;
-    uint16_t sequence_number;
+    union {
+        struct {
+            uint16_t identifier;
+            uint16_t sequence_number;
+        } echo;
+        struct {
+            uint8_t pointer;
+            uint8_t unused[3];
+        } parameter_problem;
+        struct {
+            uint16_t unused;
+            uint16_t next_hop_mtu;
+        } fragmentation;
+        struct {
+            uint32_t gateway_address;
+        } redirect;
+        struct {
+            uint32_t original_timestamp;
+            uint32_t receive_timestamp;
+            uint32_t transmit_timestamp;
+        } timestamp;
+        uint32_t raw_data;
+    } payload;
 } ICMPPacket;
 
-// Hammer parser for ICMP packet
-static HParser *icmp_parser = NULL;
-
-// Create Hammer parser for ICMP packet
-static HParser* make_icmp_parser() {
-    // Define individual field parsers
-    HParser *type_parser = h_uint8();
-    HParser *code_parser = h_uint8();
-    HParser *checksum_parser = h_uint16();
-    HParser *identifier_parser = h_uint16();
-    HParser *sequence_parser = h_uint16();
-
-    // Combine parsers into a struct parser
-    return h_struct(
-        h_field("type", type_parser),
-        h_field("code", code_parser),
-        h_field("checksum", checksum_parser),
-        h_field("identifier", identifier_parser),
-        h_field("sequence_number", sequence_parser),
-        NULL
+HParser* icmp_parser() {
+    HAllocator* allocator = h_default_allocator();
+    HParser* parser = h_choice(allocator,
+        h_sequence(allocator,
+            h_uint8(),   // type
+            h_uint8(),   // code
+            h_uint16(),  // checksum
+            h_choice(allocator,
+                h_sequence(allocator, h_uint16(), h_uint16(), NULL),  // echo
+                h_sequence(allocator, h_uint8(), h_repeat_n(h_uint8(), 3), NULL),  // parameter problem
+                h_sequence(allocator, h_uint16(), h_uint16(), NULL),  // fragmentation
+                h_uint32(),  // redirect/raw data
+                h_sequence(allocator, h_uint32(), h_uint32(), h_uint32(), NULL)  // timestamp
+            ),
+            NULL
+        )
     );
+    return parser;
 }
 
-// Parse ICMP packet
-static HParsedToken* parse_icmp_packet(void* data, size_t len) {
-    if (!icmp_parser) {
-        icmp_parser = make_icmp_parser();
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <icmp_file>\n", argv[0]);
+        return 1;
     }
-    return h_parse(icmp_parser, data, len);
-}
 
-// Validate ICMP packet
-static int validate_icmp_packet(HParsedToken* parsed) {
-    if (!parsed) return 0;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    // Add specific validation logic
-    HHashTable* packet = (HHashTable*)parsed;
-    uint8_t type = *(uint8_t*)h_hashtable_get(packet, "type");
-    uint8_t code = *(uint8_t*)h_hashtable_get(packet, "code");
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Example validation rules
-    return (type == 8 && code == 0);  // Echo request
-}
+    uint8_t *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 1;
+    }
 
-// Main parsing and validation function
-int parse_and_validate_icmp(uint8_t* data, size_t length) {
-    HParsedToken* parsed = parse_icmp_packet(data, length);
-    return parsed ? validate_icmp_packet(parsed) : 0;
-}
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
 
-int main() {
-    // Example ICMP Echo Request packet
-    uint8_t sample_packet[] = {
-        0x08, 0x00,   // Type (8), Code (0)
-        0x12, 0x34,   // Checksum
-        0x56, 0x78,   // Identifier
-        0x90, 0xAB    // Sequence Number
-    };
+    HParser *parser = icmp_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
 
-    int result = parse_and_validate_icmp(sample_packet, sizeof(sample_packet));
-    printf("ICMP Packet Validation Result: %s\n", result ? "VALID" : "INVALID");
+    if (result) {
+        printf("ICMP Packet parsed successfully\n");
+        h_parse_result_free(result);
+    } else {
+        printf("ICMP Packet parsing failed\n");
+    }
 
+    h_arena_free(parser->arena);
+    free(buffer);
     return 0;
 }

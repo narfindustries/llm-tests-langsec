@@ -1,20 +1,19 @@
 meta:
   id: png
+  title: Portable Network Graphics (PNG)
   file-extension: png
   endian: be
-  title: Portable Network Graphics
-  application: 
-    - Multi-purpose
-  xref:
-    mime: image/png
-    wikidata: Q178682
+  license: CC0-1.0
+  ks-version: 0.9
 
 doc: |
-  PNG (Portable Network Graphics) format stores graphical information in a compressed form.
+  PNG is a bitmap image format that employs lossless data compression.
+  PNG was created to improve upon and replace GIF as an image-file format
+  not requiring a patent license.
 
 seq:
   - id: signature
-    contents: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+    contents: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
 
   - id: chunks
     type: chunk
@@ -38,9 +37,17 @@ types:
             '"PLTE"': plte_chunk
             '"IDAT"': idat_chunk
             '"IEND"': iend_chunk
+            '"tRNS"': trns_chunk
+            '"cHRM"': chrm_chunk
+            '"gAMA"': gama_chunk
+            '"iTXt"': itxt_chunk
             '"tEXt"': text_chunk
+            '"zTXt"': ztxt_chunk
             '"bKGD"': bkgd_chunk
             '"pHYs"': phys_chunk
+            '"sBIT"': sbit_chunk
+            '"sRGB"': srgb_chunk
+            '"hIST"': hist_chunk
             '"tIME"': time_chunk
       - id: crc
         type: u4
@@ -64,19 +71,10 @@ types:
 
   plte_chunk:
     seq:
-      - id: palette
-        type: palette_entry
+      - id: entries
+        type: rgb
         repeat: expr
         repeat-expr: _parent.length / 3
-
-  palette_entry:
-    seq:
-      - id: red
-        type: u1
-      - id: green
-        type: u1
-      - id: blue
-        type: u1
 
   idat_chunk:
     seq:
@@ -84,43 +82,49 @@ types:
         size-eos: true
 
   iend_chunk:
-    seq: []
+    doc: Marks the end of the PNG datastream
+
+  trns_chunk:
+    doc: Transparency information
+
+  chrm_chunk:
+    doc: Primary chromaticities and white point
+
+  gama_chunk:
+    doc: Image gamma information
+
+  itxt_chunk:
+    doc: Compressed international textual data
 
   text_chunk:
-    seq:
-      - id: keyword
-        type: strz
-        encoding: ISO-8859-1
-      - id: text
-        type: str
-        size-eos: true
-        encoding: ISO-8859-1
+    doc: Uncompressed international textual data
+
+  ztxt_chunk:
+    doc: Compressed textual data
 
   bkgd_chunk:
-    seq:
-      - id: background
-        size-eos: true
+    doc: Background color
 
   phys_chunk:
-    seq:
-      - id: pixels_per_unit_x
-        type: u4
-      - id: pixels_per_unit_y
-        type: u4
-      - id: unit
-        type: u1
+    doc: Physical pixel dimensions
+
+  sbit_chunk:
+    doc: Significant bits
+
+  srgb_chunk:
+    doc: Standard RGB color space
+
+  hist_chunk:
+    doc: Image histogram
 
   time_chunk:
+    doc: Image last-modification time
+
+  rgb:
     seq:
-      - id: year
-        type: u2
-      - id: month
+      - id: red
         type: u1
-      - id: day
+      - id: green
         type: u1
-      - id: hour
-        type: u1
-      - id: minute
-        type: u1
-      - id: second
+      - id: blue
         type: u1

@@ -1,0 +1,95 @@
+module GIF;
+
+public type GIF = unit {
+    header: Header;
+    logical_screen_descriptor: LogicalScreenDescriptor;
+    global_color_table: optional bytes &size=global_color_table_size();
+    blocks: Block[] &until($$ == 0x3B);
+    trailer: uint8;
+};
+
+type Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+};
+
+type LogicalScreenDescriptor = unit {
+    logical_screen_width: uint16;
+    logical_screen_height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+type Block = unit {
+    block_type: uint8;
+    case (block_type) {
+        0x21 -> extension: Extension;
+        0x2C -> image: Image;
+        default -> unknown: bytes &size=0;
+    }
+};
+
+type Extension = unit {
+    extension_label: uint8;
+    case (extension_label) {
+        0xF9 -> graphic_control: GraphicControlExtension;
+        0x01 -> plain_text: PlainTextExtension;
+        0xFF -> application: ApplicationExtension;
+        0xFE -> comment: CommentExtension;
+        default -> unknown: bytes &size=0;
+    }
+};
+
+type GraphicControlExtension = unit {
+    block_size: uint8;
+    packed_fields: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    block_terminator: uint8;
+};
+
+type PlainTextExtension = unit {
+    block_size: uint8;
+    text_grid_left_position: uint16;
+    text_grid_top_position: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    character_cell_width: uint8;
+    character_cell_height: uint8;
+    text_foreground_color_index: uint8;
+    text_background_color_index: uint8;
+    plain_text_data: bytes[] &until($$ == 0x00);
+};
+
+type ApplicationExtension = unit {
+    block_size: uint8;
+    application_identifier: bytes &size=8;
+    application_authentication_code: bytes &size=3;
+    application_data: bytes[] &until($$ == 0x00);
+};
+
+type CommentExtension = unit {
+    comment_data: bytes[] &until($$ == 0x00);
+};
+
+type Image = unit {
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: uint8;
+    local_color_table: optional bytes &size=local_color_table_size();
+    lzw_minimum_code_size: uint8;
+    image_data: bytes[] &until($$ == 0x00);
+};
+
+%byte-order = little-endian;
+
+function global_color_table_size(): uint64 {
+    return (logical_screen_descriptor.packed_fields & 0x80) ? (1 << ((logical_screen_descriptor.packed_fields & 0x07) + 1)) * 3 : 0;
+}
+
+function local_color_table_size(): uint64 {
+    return (image.packed_fields & 0x80) ? (1 << ((image.packed_fields & 0x07) + 1)) * 3 : 0;
+}

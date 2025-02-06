@@ -1,0 +1,32 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:ntp="http://example.com/ntp" targetNamespace="http://example.com/ntp" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="NTPPacket">
+    <xs:sequence>
+      <xs:element name="LeapIndicator" type="xs:unsignedByte" dfdl:length="2"/>
+      <xs:element name="VersionNumber" type="xs:unsignedByte" dfdl:length="3"/>
+      <xs:element name="Mode" type="xs:unsignedByte" dfdl:length="3"/>
+      <xs:element name="Stratum" type="xs:unsignedByte"/>
+      <xs:element name="Poll" type="xs:unsignedByte"/>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="RootDelay" type="xs:unsignedInt"/>
+      <xs:element name="RootDispersion" type="xs:unsignedInt"/>
+      <xs:element name="ReferenceIdentifier" type="xs:unsignedInt"/>
+      <xs:element name="ReferenceTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="OriginTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="ReceiveTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="TransmitTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="ExtensionFields" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="KeyIdentifier" type="xs:unsignedInt" minOccurs="0"/>
+      <xs:element name="MessageDigest" type="xs:hexBinary" minOccurs="0" dfdl:length="128"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="NTP" type="ntp:NTPPacket"/>
+
+</xs:schema>

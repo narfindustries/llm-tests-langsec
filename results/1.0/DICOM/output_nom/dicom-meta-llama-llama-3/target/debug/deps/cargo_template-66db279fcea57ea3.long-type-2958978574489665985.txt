@@ -1,0 +1,2 @@
+for<'a> fn(&'a [u8], u32) -> Result<(&'a [u8], Vec<u8>), nom::Err<nom::error::Error<&'a [u8]>>> {parse_value}
+(for<'a> fn(&'a [u8]) -> Result<(&'a [u8], (u16, u16)), nom::Err<nom::error::Error<&'a [u8]>>> {parse_tag}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], Vr), nom::Err<nom::error::Error<&'a [u8]>>> {parse_vr}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], u32), nom::Err<nom::error::Error<&'a [u8]>>> {parse_length}, for<'a> fn(&'a [u8], u32) -> Result<(&'a [u8], Vec<u8>), nom::Err<nom::error::Error<&'a [u8]>>> {parse_value})

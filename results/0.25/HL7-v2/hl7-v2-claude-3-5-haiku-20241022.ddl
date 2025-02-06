@@ -1,106 +1,91 @@
-module HL7-v2
-
-type Message {
-    segments: List<Segment>
-}
-
-type Segment {
-    name: String,
-    fields: List<Field>
-}
-
-type Field {
-    name: String,
-    value: String,
-    repetitions: List<String>?
-}
-
-type Patient {
-    id: String,
-    name: String,
-    birthDate: String,
-    gender: String
-}
-
-type Observation {
-    code: String,
-    value: String,
-    units: String?
-}
-
-type MSH_Segment inherits Segment {
-    sendingApplication: String,
-    sendingFacility: String,
-    receivingApplication: String,
-    receivingFacility: String,
-    dateTimeOfMessage: String,
-    messageType: String
-}
-
-type PID_Segment inherits Segment {
-    patientIdentifier: String,
-    patientName: String,
-    dateOfBirth: String,
-    administrativeSex: String
-}
-
-type OBX_Segment inherits Segment {
-    observationIdentifier: String,
-    observationValue: String,
-    units: String?
-}
-
-function parseHL7Message(rawMessage: String) -> Message {
-    // Parsing logic for HL7 v2 message
-    segments = split(rawMessage, "\r")
-    
-    return Message {
-        segments: segments.map(parseSegment)
+module HL7V2 {
+    enum MessageType {
+        ADT,
+        ORM,
+        ORU,
+        RDE
     }
-}
 
-function parseSegment(segmentText: String) -> Segment {
-    fields = split(segmentText, "|")
-    
-    match fields[0] {
-        "MSH" => return MSH_Segment {
-            name: "MSH",
-            fields: fields.map(createField),
-            sendingApplication: fields[2],
-            sendingFacility: fields[3],
-            receivingApplication: fields[4],
-            receivingFacility: fields[5],
-            dateTimeOfMessage: fields[6],
-            messageType: fields[8]
-        },
-        "PID" => return PID_Segment {
-            name: "PID", 
-            fields: fields.map(createField),
-            patientIdentifier: fields[3],
-            patientName: fields[5],
-            dateOfBirth: fields[7],
-            administrativeSex: fields[8]
-        },
-        "OBX" => return OBX_Segment {
-            name: "OBX",
-            fields: fields.map(createField),
-            observationIdentifier: fields[3],
-            observationValue: fields[5],
-            units: fields[6]
-        },
-        _ => return Segment {
-            name: fields[0],
-            fields: fields.map(createField)
+    type Separator = u8
+
+    type Delimiters = {
+        field: Separator,
+        component: Separator,
+        repetition: Separator,
+        escape: Separator,
+        subcomponent: Separator
+    }
+
+    type Timestamp = {
+        year: u16,
+        month: u8,
+        day: u8,
+        hour: u8,
+        minute: u8,
+        second: u8
+    }
+
+    type PersonName = {
+        family_name: string,
+        given_name: string,
+        middle_name: optional string,
+        suffix: optional string,
+        prefix: optional string
+    }
+
+    type Address = {
+        street: string,
+        city: string,
+        state: string,
+        postal_code: string,
+        country: optional string
+    }
+
+    type MessageHeader = {
+        sending_application: string,
+        sending_facility: string,
+        receiving_application: string,
+        receiving_facility: string,
+        timestamp: Timestamp,
+        message_type: MessageType,
+        message_control_id: string,
+        processing_id: string,
+        version: string
+    }
+
+    type PatientIdentification = {
+        patient_id: string,
+        patient_name: PersonName,
+        date_of_birth: Timestamp,
+        gender: string,
+        address: optional Address,
+        phone_number: optional string
+    }
+
+    type PatientVisit = {
+        visit_number: string,
+        patient_class: string,
+        assigned_location: {
+            ward: string,
+            room: string,
+            bed: string
         }
     }
-}
 
-function createField(fieldValue: String) -> Field {
-    return Field {
-        name: "",  // Field name can be added if needed
-        value: fieldValue,
-        repetitions: fieldValue.contains("~") 
-            ? split(fieldValue, "~") 
-            : null
+    type ObservationResult = {
+        identifier: string,
+        value: string,
+        units: optional string,
+        reference_range: optional string,
+        status: string,
+        timestamp: Timestamp
+    }
+
+    type Message = {
+        delimiters: Delimiters,
+        header: MessageHeader,
+        patient: PatientIdentification,
+        visit: optional PatientVisit,
+        observations: optional [ObservationResult]
     }
 }

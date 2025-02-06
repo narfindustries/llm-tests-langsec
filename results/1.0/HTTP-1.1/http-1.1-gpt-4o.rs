@@ -1,106 +1,86 @@
+extern crate nom;
+
 use nom::{
-    bytes::complete::{take_until, take_while, tag},
-    character::complete::{space0, space1, digit1},
-    combinator::{map_res, opt},
-    multi::{many0, separated_list0},
-    sequence::{delimited, preceded, terminated, tuple},
+    bytes::complete::{tag, take_until},
+    character::complete::{alphanumeric1, crlf, space1},
+    combinator::map_res,
+    multi::separated_list0,
+    sequence::{preceded, terminated, tuple},
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::env;
-use std::str;
+use std::{env, fs::File, io::Read};
 
 #[derive(Debug)]
-struct RequestLine {
+struct HttpRequest {
     method: String,
-    request_target: String,
-    http_version: String,
+    uri: String,
+    version: String,
+    headers: Vec<HttpHeader>,
 }
 
 #[derive(Debug)]
-struct Header {
+struct HttpHeader {
     name: String,
     value: String,
 }
 
-#[derive(Debug)]
-struct HttpRequest {
-    request_line: RequestLine,
-    headers: Vec<Header>,
-    body: Option<String>,
+fn parse_http_method(input: &[u8]) -> IResult<&[u8], &str> {
+    map_res(alphanumeric1, std::str::from_utf8)(input)
 }
 
-fn parse_method(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_until(" "), str::from_utf8)(input)
+fn parse_request_line(input: &[u8]) -> IResult<&[u8], (&str, &str, &str)> {
+    tuple((
+        parse_http_method,
+        preceded(space1, map_res(take_until(" "), std::str::from_utf8)),
+        preceded(space1, map_res(take_until("\r\n"), std::str::from_utf8)),
+    ))(input)
 }
 
-fn parse_request_target(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_until(" "), str::from_utf8)(input)
+fn parse_header(input: &[u8]) -> IResult<&[u8], HttpHeader> {
+    let (input, (name, _, value)) = tuple((alphanumeric1, tag(": "), take_until("\r\n")))(input)?;
+    Ok((
+        input,
+        HttpHeader {
+            name: String::from_utf8(name.to_vec()).unwrap(),
+            value: String::from_utf8(value.to_vec()).unwrap(),
+        },
+    ))
 }
 
-fn parse_http_version(input: &[u8]) -> IResult<&[u8], &str> {
-    preceded(tag("HTTP/"), map_res(take_while(|c| c.is_ascii_digit() || c == b'.'), str::from_utf8))(input)
+fn parse_headers(input: &[u8]) -> IResult<&[u8], Vec<HttpHeader>> {
+    separated_list0(crlf, parse_header)(input)
 }
 
-fn parse_request_line(input: &[u8]) -> IResult<&[u8], RequestLine> {
-    let (input, (method, _, request_target, _, http_version, _)) = tuple((
-        parse_method,
-        space1,
-        parse_request_target,
-        space1,
-        parse_http_version,
-        tag("\r\n"),
-    ))(input)?;
-    Ok((input, RequestLine { method: method.to_string(), request_target: request_target.to_string(), http_version: http_version.to_string() }))
+fn parse_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
+    let (input, (method, uri, version)) = terminated(parse_request_line, crlf)(input)?;
+    let (input, headers) = terminated(parse_headers, crlf)(input)?;
+
+    Ok((
+        input,
+        HttpRequest {
+            method: method.to_string(),
+            uri: uri.to_string(),
+            version: version.to_string(),
+            headers,
+        },
+    ))
 }
 
-fn parse_header_name(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_until(":"), str::from_utf8)(input)
-}
-
-fn parse_header_value(input: &[u8]) -> IResult<&[u8], &str> {
-    map_res(preceded(tag(": "), take_until("\r\n")), str::from_utf8)(input)
-}
-
-fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
-    let (input, (name, value, _)) = tuple((
-        parse_header_name,
-        parse_header_value,
-        tag("\r\n"),
-    ))(input)?;
-    Ok((input, Header { name: name.to_string(), value: value.to_string() }))
-}
-
-fn parse_headers(input: &[u8]) -> IResult<&[u8], Vec<Header>> {
-    separated_list0(tag("\r\n"), parse_header)(input)
-}
-
-fn parse_http_request(input: &[u8]) -> IResult<&[u8], HttpRequest> {
-    let (input, request_line) = parse_request_line(input)?;
-    let (input, headers) = parse_headers(input)?;
-    let (input, _) = tag("\r\n")(input)?;
-    let (input, body) = opt(map_res(take_until(""), str::from_utf8))(input)?;
-    Ok((input, HttpRequest { request_line, headers, body: body.map(|s| s.to_string()) }))
-}
-
-fn main() -> io::Result<()> {
+fn main() {
     let args: Vec<String> = env::args().collect();
-
-    if args.len() < 2 {
-        eprintln!("Usage: {} <filename>", args[0]);
-        std::process::exit(1);
+    if args.len() != 2 {
+        eprintln!("Usage: {} <file_path>", args[0]);
+        return;
     }
 
-    let filename = &args[1];
-    let mut file = File::open(filename)?;
+    let file_path = &args[1];
+    let mut file = File::open(file_path).expect("Failed to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer)
+        .expect("Failed to read file");
 
-    match parse_http_request(&buffer) {
+    match parse_request(&buffer) {
         Ok((_, request)) => println!("{:#?}", request),
-        Err(e) => eprintln!("Failed to parse HTTP request: {:?}", e),
+        Err(e) => eprintln!("Error parsing HTTP request: {:?}", e),
     }
-
-    Ok(())
 }

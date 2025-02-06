@@ -1,43 +1,57 @@
+use std::env;
+use std::fs::File;
+use std::io::{Read, BufReader};
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_till, take_while},
-    character::complete::{char, digit1, multispace0, multispace1},
-    combinator::{map, map_res, opt, recognize},
-    multi::{many0, separated_list0, separated_pair},
-    sequence::{delimited, preceded, tuple},
+    bytes::complete::{tag, take_while_m_n, take_while},
+    character::complete::{char, digit1, multispace1},
+    combinator::{map, opt, recognize},
+    multi::{many0, many1},
     IResult,
 };
-use std::{
-    collections::HashMap,
-    env, fs,
-    io::{self, Read},
-    str,
-};
+use nom::branch::alt;
+use nom::sequence::{delimited, preceded, tuple};
 
-// HL7 v2 message structure
-#[derive(Debug, PartialEq)]
-enum Message {
-    MessageSegment(Vec<Segment>),
+#[derive(Debug)]
+enum DataType {
+    ST(String),
+    NM(f64),
+    TX(String),
 }
 
-// HL7 v2 segment
-#[derive(Debug, PartialEq)]
-enum Segment {
-    Msh(MshSegment),
-    Evn(EvnSegment),
-    Pid(PidSegment),
-    // Add other segment types as needed
+#[derive(Debug)]
+enum FieldType {
+    ID(String),
+    IS(f64),
+    NM(f64),
+    ST(String),
+    TX(String),
 }
 
-// HL7 v2 MSH segment
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+enum SegmentType {
+    MSH(MshSegment),
+    EVN(EvnSegment),
+    PID(PidSegment),
+    PV1(Pv1Segment),
+    ORC(OrSegment),
+    OBR(ObrSegment),
+    OBX(ObxSegment),
+    DG1(Dg1Segment),
+    IN1(In1Segment),
+    GT1(Gt1Segment),
+}
+
+#[derive(Debug)]
 struct MshSegment {
     field_separator: char,
-    encoding_chars: String,
-    sending_facility: String,
+    encoding_characters: String,
     sending_application: String,
-    date_time_of_message: String,
-    security: String,
+    sending_facility: String,
+    receiving_application: String,
+    receiving_facility: String,
+    date: String,
+    time: String,
+    security: Option<String>,
     message_type: MessageType,
     message_control_id: String,
     processing_id: String,
@@ -45,473 +59,253 @@ struct MshSegment {
     sequence_number: Option<String>,
     continuation_pointer: Option<String>,
     accept_acknowledgment_type: Option<String>,
-    application_acknowledgment_type: Option<String>,
-    country_code: Option<String>,
-    character_set: Option<String>,
-    principal_language_of_message: Option<String>,
 }
 
-// HL7 v2 EVN segment
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct EvnSegment {
     event_type_code: String,
-    recorded_date_time: String,
-    date_time_planned_event: Option<String>,
-    event_reason_code: Option<String>,
-    operator_id: Option<String>,
-    event_occurred: Option<String>,
+    recorded_date: String,
+    recorded_time: String,
+    event_facility: Option<String>,
+    event_staff_id: Option<String>,
+    event_id: Option<String>,
 }
 
-// HL7 v2 PID segment
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct PidSegment {
-    set_id: String,
-    patient_id: String,
-    patient_identifier_list: Vec<PatientIdentifier>,
-    patient_name: Vec<PatientName>,
-    date_of_birth: Option<String>,
-    sex: Option<String>,
-    patient_alias: Option<Vec<PatientAlias>>,
-    patient_address: Option<Vec<PatientAddress>>,
-    county_code: Option<String>,
-    phone_number_home: Option<String>,
-    phone_number_business: Option<String>,
+    set_id_patient_id: String,
+    patient_id_external_id: String,
+    patient_id_internal_id: Option<String>,
+    alternate_patient_id: Option<String>,
+    patient_name: String,
+    mother_s_maiden_name: Option<String>,
 }
 
-// HL7 v2 message type
-#[derive(Debug, PartialEq)]
-enum MessageType {
-    A01,
-    A02,
-    A03,
-    // Add other message types as needed
+#[derive(Debug)]
+struct Pv1Segment {
+    set_id_patient_visit: String,
+    visit_number: String,
+    patient_class: String,
+    visit_reason: Option<String>,
 }
 
-// HL7 v2 patient identifier
-#[derive(Debug, PartialEq)]
-struct PatientIdentifier {
-    identifier_type: String,
-    identifier: String,
+#[derive(Debug)]
+struct OrSegment {
+    order_control: String,
+    placer_order_number: String,
+    filler_order_number: String,
 }
 
-// HL7 v2 patient name
-#[derive(Debug, PartialEq)]
-struct PatientName {
-    name_type: String,
-    family_name: String,
-    given_name: String,
-    suffix: Option<String>,
+#[derive(Debug)]
+struct ObrSegment {
+    set_id_observation_request: String,
+    placer_order_number: String,
+    filler_order_number: String,
+    universal_service_id: String,
 }
 
-// HL7 v2 patient alias
-#[derive(Debug, PartialEq)]
-struct PatientAlias {
-    alias_type: String,
-    alias: String,
+#[derive(Debug)]
+struct ObxSegment {
+    set_id_observation_result: String,
+    value_type: String,
+    observation_identifier: String,
+    observation_value: DataType,
 }
 
-// HL7 v2 patient address
-#[derive(Debug, PartialEq)]
-struct PatientAddress {
-    address_type: String,
-    street_address: String,
-    city: String,
-    state_or_province: String,
-    zip: String,
-    country: Option<String>,
+#[derive(Debug)]
+struct Dg1Segment {
+    set_id_diagnosis: String,
+    diagnosis_code: String,
+    diagnosis_description: Option<String>,
 }
 
-fn parse_message(input: &[u8]) -> IResult<&[u8], Message> {
-    map(
-        many0(parse_segment),
-        |segments: Vec<Segment>| Message::MessageSegment(segments),
-    )(input)
+#[derive(Debug)]
+struct In1Segment {
+    set_id_insurance: String,
+    insurance_plan_id: String,
+    insurance_company_id: Option<String>,
 }
 
-fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
-    alt((parse_msh, parse_evn, parse_pid))(input)
+#[derive(Debug)]
+struct Gt1Segment {
+    set_id_guarantor: String,
+    guarantor_number: String,
+    guarantor_name: String,
 }
 
-fn parse_msh(input: &[u8]) -> IResult<&[u8], Segment> {
-    map(
-        tuple((
-            tag("MSH"),
-            multispace1,
-            parse_field_separator,
-            parse_encoding_chars,
-            parse_sending_facility,
-            parse_sending_application,
-            parse_date_time_of_message,
-            parse_security,
-            parse_message_type,
-            parse_message_control_id,
-            parse_processing_id,
-            parse_version_id,
-            opt(parse_sequence_number),
-            opt(parse_continuation_pointer),
-            opt(parse_accept_acknowledgment_type),
-            opt(parse_application_acknowledgment_type),
-            opt(parse_country_code),
-            opt(parse_character_set),
-            opt(parse_principal_language_of_message),
-        )),
-        |(
-            _,
-            _,
-            field_separator,
-            encoding_chars,
-            sending_facility,
-            sending_application,
-            date_time_of_message,
-            security,
-            message_type,
-            message_control_id,
-            processing_id,
-            version_id,
-            sequence_number,
-            continuation_pointer,
-            accept_acknowledgment_type,
-            application_acknowledgment_type,
-            country_code,
-            character_set,
-            principal_language_of_message,
-        )| {
-            Segment::Msh(MshSegment {
-                field_separator,
-                encoding_chars,
-                sending_facility,
-                sending_application,
-                date_time_of_message,
-                security,
-                message_type,
-                message_control_id,
-                processing_id,
-                version_id,
-                sequence_number,
-                continuation_pointer,
-                accept_acknowledgment_type,
-                application_acknowledgment_type,
-                country_code,
-                character_set,
-                principal_language_of_message,
-            })
-        },
-    )(input)
+#[derive(Debug)]
+struct MessageType {
+    message_type: String,
+    trigger_event: String,
+    message_structure: String,
 }
 
-fn parse_evn(input: &[u8]) -> IResult<&[u8], Segment> {
-    map(
-        tuple((
-            tag("EVN"),
-            multispace1,
-            parse_event_type_code,
-            parse_recorded_date_time,
-            opt(parse_date_time_planned_event),
-            opt(parse_event_reason_code),
-            opt(parse_operator_id),
-            opt(parse_event_occurred),
-        )),
-        |(
-            _,
-            _,
-            event_type_code,
-            recorded_date_time,
-            date_time_planned_event,
-            event_reason_code,
-            operator_id,
-            event_occurred,
-        )| {
-            Segment::Evn(EvnSegment {
-                event_type_code,
-                recorded_date_time,
-                date_time_planned_event,
-                event_reason_code,
-                operator_id,
-                event_occurred,
-            })
-        },
-    )(input)
+fn field_separator(input: &str) -> IResult<&str, char> {
+    char('|')(input)
 }
 
-fn parse_pid(input: &[u8]) -> IResult<&[u8], Segment> {
-    map(
-        tuple((
-            tag("PID"),
-            multispace1,
-            parse_set_id,
-            parse_patient_id,
-            many0(parse_patient_identifier),
-            many0(parse_patient_name),
-            opt(parse_date_of_birth),
-            opt(parse_sex),
-            opt(many0(parse_patient_alias)),
-            opt(many0(parse_patient_address)),
-            opt(parse_county_code),
-            opt(parse_phone_number_home),
-            opt(parse_phone_number_business),
-        )),
-        |(
-            _,
-            _,
-            set_id,
-            patient_id,
-            patient_identifier_list,
-            patient_name_list,
-            date_of_birth,
-            sex,
-            patient_alias_list,
-            patient_address_list,
-            county_code,
-            phone_number_home,
-            phone_number_business,
-        )| {
-            Segment::Pid(PidSegment {
-                set_id,
-                patient_id,
-                patient_identifier_list,
-                patient_name: patient_name_list,
-                date_of_birth,
-                sex,
-                patient_alias: patient_alias_list,
-                patient_address: patient_address_list,
-                county_code,
-                phone_number_home,
-                phone_number_business,
-            })
-        },
-    )(input)
+fn encoding_characters(input: &str) -> IResult<&str, String> {
+    recognize(take_while_m_n(1, 3, |c: char| c == '^' || c == '~' || c == '&'))(input)
 }
 
-fn parse_field_separator(input: &[u8]) -> IResult<&[u8], char> {
-    map_res(take_while(|c| c != b'|' as u8), |field_separator: &[u8]| {
-        char::from_utf8(field_separator[0])
-    })(input)
+fn data_type(input: &str) -> IResult<&str, DataType> {
+    alt((map(recognize(take_while(|c: char| c.is_numeric() || c == '.')), |s: &str| DataType::NM(s.parse().unwrap())), 
+         map(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')), |s: &str| DataType::ST(s.to_string())),
+         map(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ' || c == '.')), |s: &str| DataType::TX(s.to_string()))))(input)
 }
 
-fn parse_encoding_chars(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |encoding_chars: &[u8]| {
-        String::from_utf8_lossy(encoding_chars).into_owned()
-    })(input)
+fn field_type(input: &str) -> IResult<&str, FieldType> {
+    alt((map(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')), |s: &str| FieldType::ID(s.to_string())),
+         map(recognize(digit1), |s: &str| FieldType::IS(s.parse().unwrap())),
+         map(recognize(take_while(|c: char| c.is_numeric() || c == '.')), |s: &str| FieldType::NM(s.parse().unwrap())),
+         map(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')), |s: &str| FieldType::ST(s.to_string())),
+         map(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ' || c == '.')), |s: &str| FieldType::TX(s.to_string()))))(input)
 }
 
-fn parse_sending_facility(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |sending_facility: &[u8]| {
-        String::from_utf8_lossy(sending_facility).into_owned()
-    })(input)
+fn message_type(input: &str) -> IResult<&str, MessageType> {
+    let (input, message_type) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = char('^')(input)?;
+    let (input, trigger_event) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = char('^')(input)?;
+    let (input, message_structure) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    Ok((input, MessageType { message_type: message_type.to_string(), trigger_event: trigger_event.to_string(), message_structure: message_structure.to_string() }))
 }
 
-fn parse_sending_application(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |sending_application: &[u8]| {
-        String::from_utf8_lossy(sending_application).into_owned()
-    })(input)
+fn msh_segment(input: &str) -> IResult<&str, MshSegment> {
+    let (input, _) = tag("MSH")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, field_separator) = field_separator(input)?;
+    let (input, encoding_characters) = encoding_characters(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, sending_application) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, sending_facility) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, receiving_application) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, receiving_facility) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, date) = recognize(take_while(|c: char| c.is_numeric() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, time) = recognize(take_while(|c: char| c.is_numeric() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, security) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, message_type) = message_type(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, message_control_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, processing_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, version_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, sequence_number) = opt(recognize(take_while(|c: char| c.is_numeric() || c == '^')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, continuation_pointer) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, accept_acknowledgment_type) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    Ok((input, MshSegment { field_separator, encoding_characters: encoding_characters.to_string(), sending_application: sending_application.to_string(), sending_facility: sending_facility.to_string(), receiving_application: receiving_application.to_string(), receiving_facility: receiving_facility.to_string(), date: date.to_string(), time: time.to_string(), security, message_type, message_control_id: message_control_id.to_string(), processing_id: processing_id.to_string(), version_id: version_id.to_string(), sequence_number, continuation_pointer, accept_acknowledgment_type }))
 }
 
-fn parse_date_time_of_message(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |date_time_of_message: &[u8]| {
-        String::from_utf8_lossy(date_time_of_message).into_owned()
-    })(input)
+fn evn_segment(input: &str) -> IResult<&str, EvnSegment> {
+    let (input, _) = tag("EVN")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, event_type_code) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, recorded_date) = recognize(take_while(|c: char| c.is_numeric() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, recorded_time) = recognize(take_while(|c: char| c.is_numeric() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, event_facility) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, event_staff_id) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, event_id) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    Ok((input, EvnSegment { event_type_code: event_type_code.to_string(), recorded_date: recorded_date.to_string(), recorded_time: recorded_time.to_string(), event_facility, event_staff_id, event_id }))
 }
 
-fn parse_security(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |security: &[u8]| {
-        String::from_utf8_lossy(security).into_owned()
-    })(input)
+fn pid_segment(input: &str) -> IResult<&str, PidSegment> {
+    let (input, _) = tag("PID")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_patient_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, patient_id_external_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, patient_id_internal_id) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, alternate_patient_id) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, patient_name) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, mother_s_maiden_name) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    Ok((input, PidSegment { set_id_patient_id: set_id_patient_id.to_string(), patient_id_external_id: patient_id_external_id.to_string(), patient_id_internal_id, alternate_patient_id, patient_name: patient_name.to_string(), mother_s_maiden_name }))
 }
 
-fn parse_message_type(input: &[u8]) -> IResult<&[u8], MessageType> {
-    alt((tag("A01"), tag("A02"), tag("A03")))(input)
+fn pv1_segment(input: &str) -> IResult<&str, Pv1Segment> {
+    let (input, _) = tag("PV1")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_patient_visit) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, visit_number) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, patient_class) = recognize(take_while(|c: char| c.is_alphabetic() || c == ' '))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, visit_reason) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    Ok((input, Pv1Segment { set_id_patient_visit: set_id_patient_visit.to_string(), visit_number: visit_number.to_string(), patient_class: patient_class.to_string(), visit_reason }))
 }
 
-fn parse_message_control_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |message_control_id: &[u8]| {
-        String::from_utf8_lossy(message_control_id).into_owned()
-    })(input)
+fn or_segment(input: &str) -> IResult<&str, OrSegment> {
+    let (input, _) = tag("ORC")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, order_control) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, placer_order_number) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, filler_order_number) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    Ok((input, OrSegment { order_control: order_control.to_string(), placer_order_number: placer_order_number.to_string(), filler_order_number: filler_order_number.to_string() }))
 }
 
-fn parse_processing_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |processing_id: &[u8]| {
-        String::from_utf8_lossy(processing_id).into_owned()
-    })(input)
+fn obr_segment(input: &str) -> IResult<&str, ObrSegment> {
+    let (input, _) = tag("OBR")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_observation_request) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, placer_order_number) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, filler_order_number) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, universal_service_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    Ok((input, ObrSegment { set_id_observation_request: set_id_observation_request.to_string(), placer_order_number: placer_order_number.to_string(), filler_order_number: filler_order_number.to_string(), universal_service_id: universal_service_id.to_string() }))
 }
 
-fn parse_version_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |version_id: &[u8]| {
-        String::from_utf8_lossy(version_id).into_owned()
-    })(input)
+fn obx_segment(input: &str) -> IResult<&str, ObxSegment> {
+    let (input, _) = tag("OBX")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_observation_result) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, value_type) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, observation_identifier) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, observation_value) = data_type(input)?;
+    Ok((input, ObxSegment { set_id_observation_result: set_id_observation_result.to_string(), value_type: value_type.to_string(), observation_identifier: observation_identifier.to_string(), observation_value }))
 }
 
-fn parse_sequence_number(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |sequence_number: &[u8]| {
-        String::from_utf8_lossy(sequence_number).into_owned()
-    })(input)
+fn dg1_segment(input: &str) -> IResult<&str, Dg1Segment> {
+    let (input, _) = tag("DG1")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_diagnosis) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, diagnosis_code) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, diagnosis_description) = opt(recognize(take_while(|c: char| c.is_alphabetic() || c == ' ')))(input)?;
+    Ok((input, Dg1Segment { set_id_diagnosis: set_id_diagnosis.to_string(), diagnosis_code: diagnosis_code.to_string(), diagnosis_description }))
 }
 
-fn parse_continuation_pointer(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |continuation_pointer: &[u8]| {
-        String::from_utf8_lossy(continuation_pointer).into_owned()
-    })(input)
-}
-
-fn parse_accept_acknowledgment_type(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |accept_acknowledgment_type: &[u8]| {
-        String::from_utf8_lossy(accept_acknowledgment_type).into_owned()
-    })(input)
-}
-
-fn parse_application_acknowledgment_type(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |application_acknowledgment_type: &[u8]| {
-        String::from_utf8_lossy(application_acknowledgment_type).into_owned()
-    })(input)
-}
-
-fn parse_country_code(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |country_code: &[u8]| {
-        String::from_utf8_lossy(country_code).into_owned()
-    })(input)
-}
-
-fn parse_character_set(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |character_set: &[u8]| {
-        String::from_utf8_lossy(character_set).into_owned()
-    })(input)
-}
-
-fn parse_principal_language_of_message(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |principal_language_of_message: &[u8]| {
-        String::from_utf8_lossy(principal_language_of_message).into_owned()
-    })(input)
-}
-
-fn parse_event_type_code(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |event_type_code: &[u8]| {
-        String::from_utf8_lossy(event_type_code).into_owned()
-    })(input)
-}
-
-fn parse_recorded_date_time(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |recorded_date_time: &[u8]| {
-        String::from_utf8_lossy(recorded_date_time).into_owned()
-    })(input)
-}
-
-fn parse_date_time_planned_event(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |date_time_planned_event: &[u8]| {
-        String::from_utf8_lossy(date_time_planned_event).into_owned()
-    })(input)
-}
-
-fn parse_event_reason_code(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |event_reason_code: &[u8]| {
-        String::from_utf8_lossy(event_reason_code).into_owned()
-    })(input)
-}
-
-fn parse_operator_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |operator_id: &[u8]| {
-        String::from_utf8_lossy(operator_id).into_owned()
-    })(input)
-}
-
-fn parse_event_occurred(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |event_occurred: &[u8]| {
-        String::from_utf8_lossy(event_occurred).into_owned()
-    })(input)
-}
-
-fn parse_set_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |set_id: &[u8]| {
-        String::from_utf8_lossy(set_id).into_owned()
-    })(input)
-}
-
-fn parse_patient_id(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |patient_id: &[u8]| {
-        String::from_utf8_lossy(patient_id).into_owned()
-    })(input)
-}
-
-fn parse_patient_identifier(input: &[u8]) -> IResult<&[u8], PatientIdentifier> {
-    map(
-        tuple((parse_identifier_type, parse_identifier)),
-        |(identifier_type, identifier)| PatientIdentifier {
-            identifier_type,
-            identifier,
-        },
-    )(input)
-}
-
-fn parse_identifier_type(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'^' as u8), |identifier_type: &[u8]| {
-        String::from_utf8_lossy(identifier_type).into_owned()
-    })(input)
-}
-
-fn parse_identifier(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |identifier: &[u8]| {
-        String::from_utf8_lossy(identifier).into_owned()
-    })(input)
-}
-
-fn parse_patient_name(input: &[u8]) -> IResult<&[u8], PatientName> {
-    map(
-        tuple((parse_name_type, parse_family_name, parse_given_name, opt(parse_suffix))),
-        |(name_type, family_name, given_name, suffix)| PatientName {
-            name_type,
-            family_name,
-            given_name,
-            suffix,
-        },
-    )(input)
-}
-
-fn parse_name_type(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'^' as u8), |name_type: &[u8]| {
-        String::from_utf8_lossy(name_type).into_owned()
-    })(input)
-}
-
-fn parse_family_name(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'^' as u8), |family_name: &[u8]| {
-        String::from_utf8_lossy(family_name).into_owned()
-    })(input)
-}
-
-fn parse_given_name(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'^' as u8), |given_name: &[u8]| {
-        String::from_utf8_lossy(given_name).into_owned()
-    })(input)
-}
-
-fn parse_suffix(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |suffix: &[u8]| {
-        String::from_utf8_lossy(suffix).into_owned()
-    })(input)
-}
-
-fn parse_date_of_birth(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |date_of_birth: &[u8]| {
-        String::from_utf8_lossy(date_of_birth).into_owned()
-    })(input)
-}
-
-fn parse_sex(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8), |sex: &[u8]| {
-        String::from_utf8_lossy(sex).into_owned()
-    })(input)
-}
-
-fn parse_patient_alias(input: &[u8]) -> IResult<&[u8], PatientAlias> {
-    map(
-        tuple((parse_alias_type, parse_alias)),
-        |(alias_type, alias)| PatientAlias { alias_type, alias },
-    )(input)
-}
-
-fn parse_alias_type(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'^' as u8), |alias_type: &[u8]| {
-        String::from_utf8_lossy(alias_type).into_owned()
-    })(input)
-}
-
-fn parse_alias(input: &[u8]) -> IResult<&[u8], String> {
-    map_res(take_while(|c| c != b'|' as u8),
+fn in1_segment(input: &str) -> IResult<&str, In1Segment> {
+    let (input, _) = tag("IN1")(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, set_id_insurance) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) = field_separator(input)?;
+    let (input, insurance_plan_id) = recognize(take_while(|c: char| c.is_alphabetic() || c == '^'))(input)?;
+    let (input, _) =

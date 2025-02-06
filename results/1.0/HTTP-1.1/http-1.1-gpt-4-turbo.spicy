@@ -1,89 +1,84 @@
 module HTTP;
 
-import spicy;
-
-type HTTP_Method = enum {
-    GET,
-    POST,
-    HEAD,
-    PUT,
-    DELETE,
-    CONNECT,
-    OPTIONS,
-    TRACE,
-    PATCH
+public type HTTPVersion = unit {
+    major: uint8;
+    minor: uint8;
 };
 
-type RequestLine = unit {
-    method: HTTP_Method;
-    uri: bytes &eod;
-    version: bytes;
-    
-    on %init {
-        self.version = b"HTTP/1.1";
-    }
+public type RequestLine = unit {
+    method: bytes &until= b" ";
+    uri: bytes &until= b" ";
+    version: HTTPVersion;
+    : skip to end;
 };
 
-type StatusLine = unit {
-    version: bytes;
+public type ResponseLine = unit {
+    version: HTTPVersion;
     code: uint16;
-    reason: bytes &eod;
-    
-    on %init {
-        self.version = b"HTTP/1.1";
-    }
+    reason: bytes &until= b"\r\n";
+    : skip to end;
 };
 
-type Header = unit {
-    name: bytes &until=b":";
-    value: bytes &eod;
+public type Header = unit {
+    name: bytes &until= b":";
+    _: bytes &size=1; // skip space
+    value: bytes &until= b"\r\n";
 };
 
-type Headers = unit {
-    entries: Header[] &eod;
+public type Headers = unit {
+    entries: Header[] &until= b"\r\n";
 };
 
-type MessageBody = unit {
-    body: bytes &size=self.length;
-    length: uint64;
-    
-    on %init {
-        self.length = self.length();  # capturing length might need to be hooked or predefined
-    }
+public type MessageBody = unit(length: uint) {
+    content: bytes &size=length;
+};
+
+public type Chunk = unit { 
+    size: bytes &until=b"\r\n";
+    data: bytes &size=(parseSize(size) - 2);
+    _: bytes &size=2; // CRLF
+};
+
+function parseSize(data: bytes): uint64 {
+    return to_uint(parse(data, 16).data);
+}
+
+public type ChunkedBody = unit {
+    chunks: Chunk[] &eod;
 };
 
 public type Request = unit {
-    line: RequestLine;
+    requestLine: RequestLine;
     headers: Headers;
-    body: optional<MessageBody>;
-    
-    on %init {
-        if (self.headers.getHeader("Content-Length")) {
-            self.body = MessageBody(length=uint64(self.headers.getHeader("Content-Length")));
-        }
-    }
+    body: switch (findEncoding(headers)) {
+        case "chunked": ChunkedBody;
+        default: MessageBody(to_uint(findContentLength(headers)));
+    };
 };
 
 public type Response = unit {
-    status: StatusLine;
+    responseLine: ResponseLine;
     headers: Headers;
-    body: optional<MessageBody>;
-    
-    on %init {
-        if (self.headers.getHeader("Content-Length")) {
-            self.body = MessageBody(length=uint64(self.headers.getHeader("Content-Length")));
-        }
-    }
+    body: switch (findEncoding(headers)) {
+        case "chunked": ChunkedBody;
+        default: MessageBody(to_uint(findContentLength(headers)));
+    };
 };
 
-public type Connection = unit {
-    is_orig: bool;
-    requests: Request[] &optional;
-    responses: Response[] &optional;
-    on %done {
-        if (self.is_orig) 
-            print "Completed request from originator";
-        else 
-            print "Completed response from responder";
+function findEncoding(headers: Headers): string {
+    for ( entry in headers.entries ) {
+        if ( to_string(entry.name) == "Transfer-Encoding" ) {
+            return to_string(entry.value);
+        }
     }
-};
+    return "";
+}
+
+function findContentLength(headers: Headers): string {
+    for ( entry in headers.entries ) {
+        if ( to_string(entry.name) == "Content-Length" ) {
+            return to_string(entry.value);
+        }
+    }
+    return "0"; // Default value if Content-Length is not specified
+}

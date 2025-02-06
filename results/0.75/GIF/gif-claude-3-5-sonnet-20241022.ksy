@@ -2,17 +2,29 @@ meta:
   id: gif
   file-extension: gif
   endian: le
-
+enums:
+  block_type:
+    0x21: extension
+    0x2c: image
+    0x3b: end_of_file
+  extension_type:
+    0xf9: graphics_control
+    0xfe: comment
+    0x01: plain_text
+    0xff: application
 seq:
   - id: header
     type: header
   - id: logical_screen
-    type: logical_screen
+    type: logical_screen_descriptor
+  - id: global_color_table
+    type: color_table
+    if: logical_screen.has_global_color_table
+    size: logical_screen.global_color_table_size
   - id: blocks
     type: block
     repeat: until
-    repeat-until: _.block_type == block_type::end_of_file
-
+    repeat-until: _.block_type == 0x3b
 types:
   header:
     seq:
@@ -22,79 +34,62 @@ types:
         type: str
         size: 3
         encoding: ASCII
-
-  logical_screen:
+  logical_screen_descriptor:
     seq:
       - id: screen_width
         type: u2
       - id: screen_height
         type: u2
       - id: flags
-        type: packed_field
+        type: u1
       - id: bg_color_index
         type: u1
       - id: pixel_aspect_ratio
-        type: u1
-      - id: global_color_table
-        type: color_table
-        if: flags.has_global_color_table
-        size: flags.global_color_table_size * 3
-
-  packed_field:
-    seq:
-      - id: flags
         type: u1
     instances:
       has_global_color_table:
         value: (flags & 0b10000000) != 0
       color_resolution:
-        value: ((flags & 0b01110000) >> 4) + 1
-      global_color_table_sorted:
+        value: (flags & 0b01110000) >> 4
+      sort_flag:
         value: (flags & 0b00001000) != 0
       global_color_table_size:
-        value: 1 << ((flags & 0b00000111) + 1)
-
+        value: 3 * (1 << ((flags & 0b00000111) + 1))
   color_table:
     seq:
       - id: entries
         type: rgb
         repeat: eos
-
   rgb:
     seq:
-      - id: red
+      - id: r
         type: u1
-      - id: green
+      - id: g
         type: u1
-      - id: blue
+      - id: b
         type: u1
-
   block:
     seq:
       - id: block_type
         type: u1
-        enum: block_type
-      - id: body
+      - id: block_data
         type:
           switch-on: block_type
           cases:
-            'block_type::extension': extension_block
-            'block_type::image': image_block
-
+            0x21: extension_block
+            0x2c: image_block
   extension_block:
     seq:
       - id: extension_type
         type: u1
-        enum: extension_type
       - id: body
         type:
           switch-on: extension_type
           cases:
-            'extension_type::graphics_control': graphics_control_ext
-            'extension_type::comment': comment_ext
-            'extension_type::plain_text': plain_text_ext
-            'extension_type::application': application_ext
-
+            0xf9: graphics_control_ext
+            0xfe: comment_ext
+            0x01: plain_text_ext
+            0xff: application_ext
   graphics_control_ext:
     seq:
       - id: block_size
@@ -103,20 +98,25 @@ types:
         type: u1
       - id: delay_time
         type: u2
-      - id: transparent_color_index
+      - id: transparent_idx
         type: u1
       - id: terminator
         contents: [0x00]
-
+    instances:
+      disposal_method:
+        value: (flags & 0b00011100) >> 2
+      user_input:
+        value: (flags & 0b00000010) != 0
+      transparent_color_flag:
+        value: (flags & 0b00000001) != 0
   comment_ext:
     seq:
       - id: subblocks
         type: subblocks
-
   plain_text_ext:
     seq:
       - id: block_size
-        contents: [0x0C]
+        contents: [0x0c]
       - id: grid_left
         type: u2
       - id: grid_top
@@ -135,82 +135,60 @@ types:
         type: u1
       - id: subblocks
         type: subblocks
-
   application_ext:
     seq:
       - id: block_size
-        contents: [0x0B]
-      - id: application_identifier
+        contents: [0x0b]
+      - id: application_id
         type: str
         size: 8
         encoding: ASCII
-      - id: application_auth_code
+      - id: auth_code
         size: 3
       - id: subblocks
         type: subblocks
-
   image_block:
     seq:
-      - id: image_left
+      - id: left
         type: u2
-      - id: image_top
+      - id: top
         type: u2
-      - id: image_width
+      - id: width
         type: u2
-      - id: image_height
+      - id: height
         type: u2
-      - id: flags
-        type: image_flags
-      - id: local_color_table
-        type: color_table
-        if: flags.has_local_color_table
-        size: flags.local_color_table_size * 3
-      - id: image_data
-        type: image_data
-
-  image_flags:
-    seq:
       - id: flags
         type: u1
+      - id: local_color_table
+        type: color_table
+        if: has_local_color_table
+        size: len_local_color_table
+      - id: image_data
+        type: image_data
     instances:
       has_local_color_table:
         value: (flags & 0b10000000) != 0
-      interlace:
+      is_interlaced:
         value: (flags & 0b01000000) != 0
-      sort:
+      is_sorted:
         value: (flags & 0b00100000) != 0
-      local_color_table_size:
-        value: 1 << ((flags & 0b00000111) + 1)
-
+      len_local_color_table:
+        value: 3 * (1 << ((flags & 0b00000111) + 1))
   image_data:
     seq:
       - id: lzw_min_code_size
         type: u1
       - id: subblocks
         type: subblocks
-
   subblocks:
     seq:
       - id: entries
         type: subblock
         repeat: until
-        repeat-until: _.block_size == 0
-
+        repeat-until: _.len_data == 0
   subblock:
     seq:
-      - id: block_size
+      - id: len_data
         type: u1
       - id: data
-        size: block_size
-
-enums:
-  block_type:
-    0x21: extension
-    0x2c: image
-    0x3b: end_of_file
-
-  extension_type:
-    0xf9: graphics_control
-    0xfe: comment
-    0x01: plain_text
-    0xff: application
+        size: len_data

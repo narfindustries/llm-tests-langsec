@@ -1,95 +1,138 @@
-#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+module PNG-Image;
 
-#include <stdint.h>
+type png_signature = bytes:8;
 
-// Define data structures as needed based on the PNG format and your requirements.  This is a placeholder.
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint8_t* data;
-} PNGImage;
+type png_chunk_header = record {
+    length: uint32;
+    type: bytes:4;
+};
 
+type png_ihdr = record {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
 
-// Function to process the PNG image.  This is a placeholder.  Replace with your actual image processing logic.
-PNGImage process_png_image(const uint8_t* input_data, size_t input_size) {
-    PNGImage image;
-    image.width = 0; // Replace with actual width calculation
-    image.height = 0; // Replace with actual height calculation
-    image.data = NULL; // Allocate and populate with processed image data
+type png_idat = record {
+    data: bytes;
+};
 
-    //Error Handling - Example
-    if (input_size == 0) {
-        //Handle empty input
-        image.width = 0;
-        image.height = 0;
-        image.data = NULL;
-        return image;
-    }
+type png_plte = record {
+    palette: array of record { red: uint8, green: uint8, blue: uint8 };
+};
 
-    // ... your actual PNG processing code here ...
+type png_trns = record {
+    alpha: oneof {
+        bytes:1,
+        array of uint16
+    };
+};
 
-    return image;
-}
+type png_gama = record {
+    gamma: uint32;
+};
 
+type png_chrm = record {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
 
-// Function to write the processed PNG image. This is a placeholder.
-bool write_png_image(const PNGImage* image, const char* output_filename) {
-    // ... your actual PNG writing code here ...
-    return true; // Replace with actual success/failure indication
-}
+type png_sbit = record {
+    significant_bits: array of uint8;
+};
 
+type png_srgb = record {
+    rendering_intent: uint8;
+};
 
-// Main function to handle the PNG image processing pipeline.
-int main(int argc, char** argv) {
-    // Check for correct number of arguments.
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input_png_file>\n", argv[0]);
-        return 1;
-    }
+type png_iccp = record {
+    profile_name: string;
+    compressed_profile: bytes;
+};
 
-    // Read the input PNG file.  Replace with your actual file reading code.
-    FILE* input_file = fopen(argv[1], "rb");
-    if (input_file == NULL) {
-        fprintf(stderr, "Error opening input file: %s\n", argv[1]);
-        return 1;
-    }
+type png_bkgd = record {
+    background_color: oneof {
+        uint16,
+        array of uint8
+    };
+};
 
-    fseek(input_file, 0, SEEK_END);
-    size_t input_size = ftell(input_file);
-    fseek(input_file, 0, SEEK_SET);
+type png_hist = record {
+    histogram: array of uint16;
+};
 
-    uint8_t* input_data = (uint8_t*)malloc(input_size);
-    if (input_data == NULL) {
-        fprintf(stderr, "Memory allocation failed.\n");
-        fclose(input_file);
-        return 1;
-    }
+type png_phys = record {
+    pixels_per_unit_x: uint32;
+    pixels_per_unit_y: uint32;
+    unit_specifier: uint8;
+};
 
-    size_t bytes_read = fread(input_data, 1, input_size, input_file);
-    fclose(input_file);
+type png_text = record {
+    keyword: string;
+    text: string;
+};
 
-    if (bytes_read != input_size) {
-        fprintf(stderr, "Error reading input file.\n");
-        free(input_data);
-        return 1;
-    }
+type png_ztxt = record {
+    keyword: string;
+    compressed_text: bytes;
+};
 
+type png_itxt = record {
+    keyword: string;
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: string;
+    translated_keyword: string;
+    text: bytes;
+};
 
-    // Process the PNG image.
-    PNGImage processed_image = process_png_image(input_data, input_size);
-    free(input_data);
+type png_time = record {
+    year: uint16;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};
 
-    // Write the processed PNG image.  Replace "output.png" with your desired output filename.
-    if (!write_png_image(&processed_image, "output.png")) {
-        fprintf(stderr, "Error writing output file.\n");
-        //Free processed_image.data if necessary
-        return 1;
-    }
+type png_chunk_data = oneof {
+    png_ihdr,
+    png_idat,
+    png_plte,
+    png_trns,
+    png_gama,
+    png_chrm,
+    png_sbit,
+    png_srgb,
+    png_iccp,
+    png_bkgd,
+    png_hist,
+    png_phys,
+    png_text,
+    png_ztxt,
+    png_itxt,
+    png_time,
+    bytes
+};
 
-    //Free processed_image.data if necessary
+type png_chunk = record {
+    header: png_chunk_header;
+    data: png_chunk_data;
+    crc: uint32;
+};
 
-    return 0;
-}
-
-#endif
+type png_image = record {
+    signature: png_signature;
+    chunks: array of png_chunk;
+};
+end

@@ -1,62 +1,85 @@
-module ZIP where
+module ZIP;
 
-import DaeDaLus.Lib
-import DaeDaLus.Bits
-import DaeDaLus.Parser
+type U2 = uint(16);
+type U4 = uint(32);
 
-data EndOfCentralDir = EndOfCentralDir {
-  signature       :: UInt32be -- expected 0x06054b50
-, diskNum         :: UInt16be
-, startDiskNum    :: UInt16be
-, numEntriesDisk  :: UInt16be
-, numEntriesTotal :: UInt16be
-, sizeCentralDir  :: UInt32be
-, offsetCentralDir:: UInt32be
-, zipCommentLen   :: UInt16be
-, zipComment      :: String zipCommentLen ISO8859_1
-} deriving Show
+// Parsing MS-DOS time and date
+def parseDosTime(time: U2): (U2, U2, U2) = (
+    (time >> 11) & 0x1F, // hours
+    (time >> 5) & 0x3F,  // minutes
+    (time & 0x1F) * 2    // seconds
+);
 
-data LocalFileHeader = LocalFileHeader {
-  lSignature     :: UInt32be -- 0x04034b50
-, versionNeeded  :: UInt16be
-, flags          :: UInt16be
-, compression    :: UInt16be
-, modTime        :: UInt16be
-, modDate        :: UInt16be
-, crc32          :: UInt32be
-, compSize       :: UInt32be
-, uncompSize     :: UInt32be
-, fileNameLen    :: UInt16be
-, extraFieldLen  :: UInt16be
-, fileName       :: String fileNameLen ISO8859_1
-, extraField     :: Bytes extraFieldLen
-} deriving Show
+def parseDosDate(date: U2): (U2, U2, U2) = (
+    ((date >> 9) & 0x7F) + 1980, // year
+    (date >> 5) & 0x0F,          // month
+    date & 0x1F                  // day
+);
 
-data CentralDir = CentralDir {
-  cSignature     :: UInt32be -- expected 0x02014b50
-, versionMadeBy  :: UInt16be
-, versionNeededToExtract :: UInt16be
-, flags          :: UInt16be
-, compression    :: UInt16be
-, modTime        :: UInt16be
-, modDate        :: UInt16be
-, crc32          :: UInt32be
-, compSize       :: UInt32be
-, uncompSize     :: UInt32be
-, fileNameLen    :: UInt16be
-, extraFieldLen  :: UInt16be
-, fileCommentLen :: UInt16be
-, diskNumStart   :: UInt16be
-, intFileAttr    :: UInt16be
-, extFileAttr    :: UInt32be
-, relOffsetLH    :: UInt32be
-, fileName       :: String fileNameLen ISO8859_1
-, extraField     :: Bytes extraFieldLen
-, fileComment    :: String fileCommentLen ISO8859_1
-} deriving Show
+// Local File Header
+structure LocalFileHeader {
+    U4 signature = 0x04034b50;
+    U2 versionNeeded;
+    U2 generalPurposeBits;
+    U2 compressionMethod;
+    U2 lastModTime;
+    U2 lastModDate;
+    U4 crc32;
+    U4 compressedSize;
+    U4 uncompressedSize;
+    U2 fileNameLength;
+    U2 extraFieldLength;
+    byte[fileNameLength] filename;
+    byte[extraFieldLength] extraField;
+}
 
-localFileHeader = Find 0x04034b50 >> Struct LocalFileHeader
-centralDirectory = Find 0x02014b50 >> Struct CentralDir
-endOfCentralDir = Find 0x06054b50 >> Struct EndOfCentralDir
+// Data Descriptor
+structure DataDescriptor {
+    U4 crc32 = if (@.generalPurposeBits & 0x0008) != 0 then input.u32le;
+    U4 compressedSize = if (@.generalPurposeBits & 0x0008) != 0 then input.u32le;
+    U4 uncompressedSize = if (@.generalPurposeBits & 0x0008) != 0 then input.u32le;
+}
 
-zipFile = Many localFileHeader .*. Many centralDirectory .*. endOfCentralDir
+// Central Directory File Header
+structure CentralDirectoryFileHeader {
+    U4 signature = 0x02014b50;
+    U2 versionMadeBy;
+    U2 versionNeededToExtract;
+    U2 generalPurposeBits;
+    U2 compressionMethod;
+    U2 lastModTime;
+    U2 lastModDate;
+    U4 crc32;
+    U4 compressedSize;
+    U4 uncompressedSize;
+    U2 fileNameLength;
+    U2 extraFieldLength;
+    U2 fileCommentLength;
+    U2 diskNumberStart;
+    U2 internalFileAttributes;
+    U4 externalFileAttributes;
+    U4 offsetOfLocalHeader;
+    byte[fileNameLength] filename;
+    byte[extraFieldLength] extraField;
+    byte[fileCommentLength] fileComment;
+}
+
+// End of Central Directory Record
+structure EndOfCentralDirectoryRecord {
+    U4 signature = 0x06054b50;
+    U2 numberOfThisDisk;
+    U2 diskWithCentralDirectory;
+    U2 entriesOnThisDisk;
+    U2 totalEntries;
+    U4 sizeOfCentralDirectory;
+    U4 offsetOfStartOfCentralDirectory;
+    U2 zipFileCommentLength;
+    byte[zipFileCommentLength] comment;
+}
+
+// Complete ZIP file structure
+structure ZIPFile {
+    repeat(LocalFileHeader) files;
+    repeat(CentralDirectoryFileHeader) centralDirectories;
+    EndOfCentralDirectoryRecord endOfCentralDirectory;
+}

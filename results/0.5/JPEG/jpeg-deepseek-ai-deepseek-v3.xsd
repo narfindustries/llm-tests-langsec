@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.com/jpeg"
+           xmlns:jpeg="http://www.example.com/jpeg"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" representation="binary"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="JPEGType">
+    <xs:sequence>
+      <xs:element name="SOI" type="jpeg:MarkerType" dfdl:length="2"/>
+      <xs:element name="Segments" type="jpeg:SegmentsType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="EOI" type="jpeg:MarkerType" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentsType">
+    <xs:sequence>
+      <xs:element name="Marker" type="jpeg:MarkerType" dfdl:length="2"/>
+      <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:choice>
+        <xs:element name="APPn" type="jpeg:APPnType"/>
+        <xs:element name="SOF0" type="jpeg:SOF0Type"/>
+        <xs:element name="DHT" type="jpeg:DHTType"/>
+        <xs:element name="DQT" type="jpeg:DQTType"/>
+        <xs:element name="SOS" type="jpeg:SOSType"/>
+        <xs:element name="COM" type="jpeg:COMType"/>
+        <xs:element name="DRI" type="jpeg:DRIType"/>
+        <xs:element name="Other" type="jpeg:OtherType"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MarkerType">
+    <xs:sequence>
+      <xs:element name="MarkerCode" type="xs:hexBinary" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="APPnType">
+    <xs:sequence>
+      <xs:element name="ApplicationData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOF0Type">
+    <xs:sequence>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="Height" type="xs:unsignedShort"/>
+      <xs:element name="Width" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfComponents" type="xs:unsignedByte"/>
+      <xs:element name="Component" type="jpeg:ComponentType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentID" type="xs:unsignedByte"/>
+      <xs:element name="SamplingFactors" type="xs:unsignedByte"/>
+      <xs:element name="QuantizationTableSelector" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DHTType">
+    <xs:sequence>
+      <xs:element name="TableClass" type="xs:unsignedByte"/>
+      <xs:element name="TableDestinationIdentifier" type="xs:unsignedByte"/>
+      <xs:element name="NumberOfCodes" type="xs:unsignedByte" maxOccurs="16"/>
+      <xs:element name="Symbols" type="xs:unsignedByte" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DQTType">
+    <xs:sequence>
+      <xs:element name="Precision" type="xs:unsignedByte"/>
+      <xs:element name="TableDestinationIdentifier" type="xs:unsignedByte"/>
+      <xs:element name="TableValues" type="xs:unsignedShort" maxOccurs="64"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SOSType">
+    <xs:sequence>
+      <xs:element name="NumberOfComponentsInScan" type="xs:unsignedByte"/>
+      <xs:element name="Component" type="jpeg:ScanComponentType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ScanComponentType">
+    <xs:sequence>
+      <xs:element name="ComponentSelector" type="xs:unsignedByte"/>
+      <xs:element name="DCACEntropyCodingTableSelector" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="COMType">
+    <xs:sequence>
+      <xs:element name="Comment" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DRIType">
+    <xs:sequence>
+      <xs:element name="RestartInterval" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OtherType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="JPEG" type="jpeg:JPEGType"/>
+
+</xs:schema>

@@ -1,90 +1,87 @@
 meta:
   id: gzip
-  title: Gzip (GNU zip) is a compression format
+  title: Gzip Archive
   file-extension: gz
   endian: le
-  license: GPL-2.0+
-doc: |
-  Gzip is a popular compression format used in various Internet applications.
-  This specification describes the structure of a gzip file.
+  license: CC0-1.0
 seq:
   - id: magic
     contents: [0x1f, 0x8b]
   - id: compression_method
     type: u1
     enum: compression_methods
-    doc: Compression method used (only deflate is supported by this specification)
   - id: flags
     type: flags
   - id: mod_time
     type: u4
-    doc: Modification time of the original file
   - id: extra_flags
     type: u1
     enum: extra_flags
-    doc: Extra flags, depend on compression method
   - id: os
     type: u1
     enum: operating_systems
-    doc: Operating system on which the file was compressed
   - id: extras
     type: extras
     if: flags.has_extra
-  - id: original_filename
+  - id: name
     type: strz
-    encoding: UTF-8
+    encoding: ASCII
     if: flags.has_name
   - id: comment
     type: strz
-    encoding: UTF-8
+    encoding: ASCII
     if: flags.has_comment
   - id: header_crc16
     type: u2
     if: flags.has_crc
   - id: compressed_data
     size-eos: true
-    doc: The actual compressed data
+    type: deflate_blocks
   - id: crc32
     type: u4
-    doc: CRC-32 checksum of the uncompressed data
-  - id: uncompressed_size
+  - id: input_size
     type: u4
-    doc: Size of the uncompressed data, modulo 2^32
-
 types:
   flags:
     seq:
-      - id: has_text
-        type: b1
-      - id: has_crc
-        type: b1
-      - id: has_extra
+      - id: reserved
+        type: b3
+      - id: has_comment
         type: b1
       - id: has_name
         type: b1
-      - id: has_comment
+      - id: has_extra
         type: b1
-      - id: is_encrypted
+      - id: has_crc
         type: b1
-      - id: is_reserved
-        type: b7
-
+      - id: is_text
+        type: b1
   extras:
     seq:
-      - id: len
+      - id: num_extra_fields
         type: u2
+      - id: extra_fields
+        type: extra_field
+        repeat: expr
+        repeat-expr: num_extra_fields
+  extra_field:
+    seq:
+      - id: subfield_id
+        type: u2
+      - id: len_subfield_data
+        type: u2
+      - id: subfield_data
+        size: len_subfield_data
+  deflate_blocks:
+    seq:
       - id: data
-        size: len
-
+        size-eos: true
 enums:
   compression_methods:
     8: deflate
-
   extra_flags:
-    2: maximum
-    4: fast
-    6: super_fast
-
+    2: maximum_compression
+    4: fastest_compression
   operating_systems:
     0: fat
     1: amiga

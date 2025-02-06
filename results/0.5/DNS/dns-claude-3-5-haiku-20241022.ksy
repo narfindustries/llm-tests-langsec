@@ -1,29 +1,23 @@
 meta:
   id: dns
-  title: DNS Protocol
   endian: be
 seq:
   - id: transaction_id
     type: u2
-    doc: Unique identifier for the DNS query/response
   - id: flags
     type: flags_struct
-  - id: questions_count
+  - id: question_count
     type: u2
-    doc: Number of questions in the query
   - id: answer_count
     type: u2
-    doc: Number of answer records
   - id: authority_count
     type: u2
-    doc: Number of authority records
   - id: additional_count
     type: u2
-    doc: Number of additional records
-  - id: queries
-    type: query
+  - id: questions
+    type: question
     repeat: expr
-    repeat-expr: questions_count
+    repeat-expr: question_count
   - id: answers
     type: resource_record
     repeat: expr
@@ -45,13 +39,13 @@ types:
         doc: Query (0) or Response (1)
       - id: opcode
         type: b4
-        doc: Type of query
+        doc: Operation type
       - id: aa
         type: b1
         doc: Authoritative Answer
       - id: tc
         type: b1
-        doc: Truncated
+        doc: Truncation
       - id: rd
         type: b1
         doc: Recursion Desired
@@ -65,16 +59,16 @@ types:
         type: b4
         doc: Response Code
 
-  query:
+  question:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: query_type
-      - id: query_class
+        enum: record_type
+      - id: class
         type: u2
-        enum: query_class
+        enum: class_type
 
   resource_record:
     seq:
@@ -82,73 +76,52 @@ types:
         type: domain_name
       - id: type
         type: u2
-        enum: query_type
-      - id: record_class
+        enum: record_type
+      - id: class
         type: u2
-        enum: query_class
+        enum: class_type
       - id: ttl
         type: u4
-        doc: Time to live in seconds
       - id: rdlength
         type: u2
-        doc: Length of record data
       - id: rdata
+        type: rdata
         size: rdlength
-        type: 
-          switch-on: type
-          cases:
-            'query_type::a': ipv4_address
-            'query_type::aaaa': ipv6_address
-            'query_type::cname': domain_name
-            'query_type::mx': mx_record
-            _: raw_data
 
   domain_name:
     seq:
       - id: name_parts
         type: name_part
         repeat: until
-        repeat-until: _.length == 0
+        repeat-until: _.length == 0 or _.pointer != 0
 
   name_part:
     seq:
       - id: length
         type: u1
+      - id: pointer
+        type: b2
+        if: length >= 0xc0
       - id: part
         type: str
         size: length
+        if: length < 0xc0 and length > 0
         encoding: ascii
-        if: length > 0
 
-  ipv4_address:
+  rdata:
     seq:
-      - id: address
-        type: u1
-        repeat: expr
-        repeat-expr: 4
+      - id: content
+        type: byte_array
+        size-eos: true
 
-  ipv6_address:
-    seq:
-      - id: address
-        type: u2
-        repeat: expr
-        repeat-expr: 8
-
-  mx_record:
-    seq:
-      - id: preference
-        type: u2
-      - id: exchange
-        type: domain_name
-
-  raw_data:
+  byte_array:
     seq:
       - id: data
         type: u1
         repeat: eos
 
 enums:
-  query_type:
+  record_type:
     1: a
     2: ns
     5: cname
@@ -156,10 +129,8 @@ enums:
     12: ptr
     15: mx
     28: aaaa
-    252: axfr
-    255: any
 
-  query_class:
+  class_type:
     1: in
     3: ch
     4: hs

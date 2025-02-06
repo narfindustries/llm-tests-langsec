@@ -1,259 +1,183 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take, take_till},
-    combinator::{map, map_res, opt},
-    error::ErrorKind,
-    multi::{length_data, many_till, separated_list0},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{delimited, preceded, tuple},
+    bytes::complete::{tag, take},
+    combinator::{map, many1},
+    number::complete::{be_u16, be_u32},
     IResult,
 };
 use std::{
-    collections::HashMap,
+    env,
     fs::File,
-    io::{BufReader, Read},
-    path::Path,
+    io::{Read, Result},
 };
 
 #[derive(Debug, PartialEq)]
-enum DnsClass {
-    Internet,
-    Csnet,
-    Chaos,
-    Hesiod,
-    None,
-    Any,
+enum QueryType {
+    A,
+    NS,
+    MD,
+    MF,
+    CNAME,
+    SOA,
+    MX,
+    TXT,
+    AAAA,
+    Other(u16),
+}
+
+impl From<u16> for QueryType {
+    fn from(t: u16) -> Self {
+        match t {
+            1 => QueryType::A,
+            2 => QueryType::NS,
+            3 => QueryType::MD,
+            4 => QueryType::MF,
+            5 => QueryType::CNAME,
+            6 => QueryType::SOA,
+            15 => QueryType::MX,
+            16 => QueryType::TXT,
+            28 => QueryType::AAAA,
+            _ => QueryType::Other(t),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
-enum DnsType {
-    A,
-    Ns,
-    Md,
-    Mf,
-    Cname,
-    Soa,
-    Mb,
-    Mg,
-    Mr,
-    Null,
-    Wks,
-    Ptr,
-    Hinfo,
-    Minfo,
-    Mx,
-    Txt,
-    Rp,
-    Afsdb,
-    X25,
-    Isdn,
-    Rt,
-    Nsap,
-    NsapPtr,
-    Sig,
-    Key,
-    Pxp,
-    Gpos,
-    Aaaa,
-    Loc,
-    Nxt,
-    Eid,
-    Nimloc,
-    Srv,
-    Atma,
-    Napptr,
-    Kx,
-    Cert,
-    A6,
-    Dname,
-    Sink,
-    Opt,
-    Apl,
-    Ds,
-    Sshfp,
-    Ipseckey,
-    Rrsig,
-    Nsec,
-    Dnskey,
-    Dhcuid,
-    Nsec3,
-    Nsec3param,
-    Tlsa,
-    Smimea,
-    Https,
-    Eui48,
-    Eui64,
-    Tkey,
-    Tsig,
-    Irev,
-    Uri,
-    Caa,
-    Avcs,
-    Tao,
-    Dlv,
+enum Class {
+    IN,
+    CS,
+    CH,
+    HS,
+    Other(u16),
 }
 
-impl DnsType {
-    fn from_u16(value: u16) -> Self {
-        match value {
-            1 => DnsType::A,
-            2 => DnsType::Ns,
-            3 => DnsType::Md,
-            4 => DnsType::Mf,
-            5 => DnsType::Cname,
-            6 => DnsType::Soa,
-            7 => DnsType::Mb,
-            8 => DnsType::Mg,
-            9 => DnsType::Mr,
-            10 => DnsType::Null,
-            11 => DnsType::Wks,
-            12 => DnsType::Ptr,
-            13 => DnsType::Hinfo,
-            14 => DnsType::Minfo,
-            15 => DnsType::Mx,
-            16 => DnsType::Txt,
-            17 => DnsType::Rp,
-            18 => DnsType::Afsdb,
-            19 => DnsType::X25,
-            20 => DnsType::Isdn,
-            21 => DnsType::Rt,
-            22 => DnsType::Nsap,
-            23 => DnsType::NsapPtr,
-            24 => DnsType::Sig,
-            25 => DnsType::Key,
-            26 => DnsType::Pxp,
-            27 => DnsType::Gpos,
-            28 => DnsType::Aaaa,
-            29 => DnsType::Loc,
-            30 => DnsType::Nxt,
-            31 => DnsType::Eid,
-            32 => DnsType::Nimloc,
-            33 => DnsType::Srv,
-            34 => DnsType::Atma,
-            35 => DnsType::Napptr,
-            36 => DnsType::Kx,
-            37 => DnsType::Cert,
-            38 => DnsType::A6,
-            39 => DnsType::Dname,
-            40 => DnsType::Sink,
-            41 => DnsType::Opt,
-            42 => DnsType::Apl,
-            43 => DnsType::Ds,
-            44 => DnsType::Sshfp,
-            45 => DnsType::Ipseckey,
-            46 => DnsType::Rrsig,
-            47 => DnsType::Nsec,
-            48 => DnsType::Dnskey,
-            49 => DnsType::Dhcuid,
-            50 => DnsType::Nsec3,
-            51 => DnsType::Nsec3param,
-            52 => DnsType::Tlsa,
-            53 => DnsType::Smimea,
-            54 => DnsType::Https,
-            55 => DnsType::Eui48,
-            56 => DnsType::Eui64,
-            249 => DnsType::Tkey,
-            250 => DnsType::Tsig,
-            251 => DnsType::Irev,
-            252 => DnsType::Uri,
-            257 => DnsType::Caa,
-            258 => DnsType::Avcs,
-            259 => DnsType::Tao,
-            32768 => DnsType::Dlv,
-            _ => panic!("Unrecognized type"),
+impl From<u16> for Class {
+    fn from(c: u16) -> Self {
+        match c {
+            1 => Class::IN,
+            2 => Class::CS,
+            3 => Class::CH,
+            4 => Class::HS,
+            _ => Class::Other(c),
         }
     }
 }
 
-impl DnsClass {
-    fn from_u16(value: u16) -> Self {
-        match value {
-            1 => DnsClass::Internet,
-            2 => DnsClass::Csnet,
-            3 => DnsClass::Chaos,
-            4 => DnsClass::Hesiod,
-            254 => DnsClass::None,
-            255 => DnsClass::Any,
-            _ => panic!("Unrecognized class"),
+#[derive(Debug, PartialEq)]
+enum OpCode {
+    QUERY,
+    IQUERY,
+    STATUS,
+    Other(u8),
+}
+
+impl From<u8> for OpCode {
+    fn from(o: u8) -> Self {
+        match o {
+            0 => OpCode::QUERY,
+            1 => OpCode::IQUERY,
+            2 => OpCode::STATUS,
+            _ => OpCode::Other(o),
         }
     }
 }
 
-#[derive(Debug)]
-struct DomainName(Vec<String>);
-
-fn domain_name(input: &[u8]) -> IResult<&[u8], DomainName> {
-    let (input, labels) = many_till(
-        alt((map(take_till(|x| x == b'.' || x == 0), |x| String::from_utf8_lossy(x).into_owned()), map(tag([0]), |_| String::new()))),
-        tag([0]),
-    )(input)?;
-    let domain_name = DomainName(labels);
-    Ok((input, domain_name))
+#[derive(Debug, PartialEq)]
+enum ResponseCode {
+    NOERROR,
+    FORMERR,
+    SERVFAIL,
+    Other(u8),
 }
 
-#[derive(Debug)]
-enum ResourceRecord {
-    A { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, ip: [u8; 4] },
-    Ns { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, nsdname: DomainName },
-    Md { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, madname: DomainName },
-    Mf { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, madname: DomainName },
-    Cname { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, canonical_dname: DomainName },
-    Soa { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, mname: DomainName, rname: DomainName, serial: u32, refresh: u32, retry: u32, expire: u32, minimum: u32 },
-    Mb { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, madname: DomainName },
-    Mg { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, madname: DomainName },
-    Mr { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, newname: DomainName },
-    Null { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32 },
-    Wks { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, address: [u8; 4], protocol: u8, bitmap: Vec<u8> },
-    Ptr { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, ptrdname: DomainName },
-    Hinfo { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, cpu: String, os: String },
-    Minfo { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, rmailbx: DomainName, emailbx: DomainName },
-    Mx { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, preference: u16, exchange: DomainName },
-    Txt { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, txt_data: Vec<Vec<u8>> },
-    Rp { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, mbox_dname: DomainName, txt_dname: DomainName },
-    Afsdb { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, subtype: u16, hostname: DomainName },
-    X25 { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, psdn_address: Vec<u8> },
-    Isdn { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, address: Vec<u8>, subaddress: Vec<u8> },
-    Rt { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, preference: u16, intermediate_host: DomainName },
-    Nsap { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, nsap: Vec<u8> },
-    NsapPtr { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, nsap_ptr: DomainName },
-    Sig { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, type_covered: u8, algorithm: u8, labels: u8, original_ttl: u32, signature_expiration: u32, signature_inception: u32, key_tag: u16, signer_name: DomainName, signature: Vec<u8> },
-    Key { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, flags: u16, protocol: u8, algorithm: u8, public_key: Vec<u8> },
-    Pxp { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, Lexington_string: Vec<u8> },
-    Gpos { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, coordinates: Vec<u8> },
-    Aaaa { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, ip: [u8; 16] },
-    Loc { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, version: u8, size: u8, horizontal_precision: u8, vertical_precision: u8, latitude: i32, longitude: i32, altitude: i32 },
-    Nxt { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, nxt_domain_name: DomainName, type_bit_maps: Vec<u8> },
-    Eid { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, endpoint_identifier: Vec<u8> },
-    Nimloc { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, nimloc_host_32: u32, nimloc_host_128: [u8; 16] },
-    Srv { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, priority: u16, weight: u16, port: u16, target: DomainName },
-    Atma { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, address_family: u8, address: Vec<u8> },
-    Napptr { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, order: u16, preference: u16, flags: u16, service: String, regexp: String, replacement: DomainName },
-    Kx { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, preference: u16, exchange: DomainName },
-    Cert { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, type_: u16, key_tag: u16, algorithm: u8, certificate_or_crl: Vec<u8> },
-    A6 { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, prefix_length: u8, address_suffix: [u8; 16], prefix: [u8; 16] },
-    Dname { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, target: DomainName },
-    Sink { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32 },
-    Opt { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, opts: HashMap<u16, Vec<u8>> },
-    Apl { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, address_family: u16, prefix_length: u8, address: Vec<u8> },
-    Ds { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, key_tag: u16, algorithm: u8, digest_type: u8, digest: Vec<u8> },
-    Sshfp { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, algorithm: u8, fingerprint_type: u8, fingerprint: Vec<u8> },
-    Ipseckey { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, precedence: u8, gateway_type: u8, algorithm: u8, public_key: Vec<u8> },
-    Rrsig { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, type_covered: u8, algorithm: u8, labels: u8, original_ttl: u32, signature_expiration: u32, signature_inception: u32, key_tag: u16, signer_name: DomainName, signature: Vec<u8> },
-    Nsec { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, next_domain_name: DomainName, type_bit_maps: Vec<u8> },
-    Dnskey { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, flags: u16, protocol: u8, algorithm: u8, public_key: Vec<u8> },
-    Dhcuid { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, client_id: Vec<u8> },
-    Nsec3 { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, algorithm: u8, flags: u8, iterations: u16, salt: Vec<u8>, next_hashed_owner_name: Vec<u8>, type_bit_maps: Vec<u8> },
-    Nsec3param { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, algorithm: u8, flags: u8, iterations: u16, salt: Vec<u8> },
-    Tlsa { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, cert_usage: u8, selector: u8, matching_type: u8, certificate_association_data: Vec<u8> },
-    Smimea { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, cert_usage: u8, selector: u8, matching_type: u8, certificate_association_data: Vec<u8> },
-    Https { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, hpv: u8, port: u16, target: DomainName },
-    Eui48 { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, eui_48: [u8; 6] },
-    Eui64 { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, eui_64: [u8; 8] },
-    Tkey { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, algorithm: u8, inception: u32, expiration: u32, mode: u8, error: u16, key: Vec<u8>, other_data: Vec<u8> },
-    Tsig { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, algorithm: u8, time_signed: u48, fudge: u16, mac: Vec<u8>, original_id: u16, error: u16, other_data: Vec<u8> },
-    Irev { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32 },
-    Uri { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, priority: u16, weight: u16, target: String },
-    Caa { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32, flags: u8, tag: String, value: String },
-    Avcs { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32 },
-    Tao { domain_name: DomainName, type_: DnsType, class: DnsClass, ttl: u32 },
-    Dlv { domain_name:
+impl From<u8> for ResponseCode {
+    fn from(r: u8) -> Self {
+        match r {
+            0 => ResponseCode::NOERROR,
+            1 => ResponseCode::FORMERR,
+            2 => ResponseCode::SERVFAIL,
+            _ => ResponseCode::Other(r),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Header {
+    id: u16,
+    qr: bool,
+    opcode: OpCode,
+    aa: bool,
+    tc: bool,
+    rd: bool,
+    ra: bool,
+    z: u8,
+    rcode: ResponseCode,
+}
+
+fn parse_header(input: &[u8]) -> IResult<&[u8], Header> {
+    let (input, id) = be_u16(input)?;
+    let (input, qr) = map(take(1usize), |x: &[u8]| x[0] & 0x80 != 0)(input)?;
+    let (input, opcode) = map(take(1usize), |x: &[u8]| OpCode::from((x[0] >> 3) & 0x0F))(input)?;
+    let (input, aa) = map(take(1usize), |x: &[u8]| x[0] & 0x04 != 0)(input)?;
+    let (input, tc) = map(take(1usize), |x: &[u8]| x[0] & 0x02 != 0)(input)?;
+    let (input, rd) = map(take(1usize), |x: &[u8]| x[0] & 0x01 != 0)(input)?;
+    let (input, ra) = map(take(1usize), |x: &[u8]| x[0] & 0x80 != 0)(input)?;
+    let (input, z) = map(take(1usize), |x: &[u8]| x[0] & 0x70)(input)?;
+    let (input, rcode) = map(take(1usize), |x: &[u8]| ResponseCode::from(x[0] & 0x0F))(input)?;
+    let parts = [id, qr, opcode, aa, tc, rd, ra, z, rcode];
+    let header = Header {
+        id,
+        qr,
+        opcode,
+        aa,
+        tc,
+        rd,
+        ra,
+        z,
+        rcode,
+    };
+    Ok((input, header))
+}
+
+fn parse_label(input: &[u8]) -> IResult<&[u8], String> {
+    let (input, len) = take(1usize)(input)?;
+    let (input, data) = take(len[0] as usize)(input)?;
+    let data = String::from_utf8_lossy(data).into_owned();
+    Ok((input, data))
+}
+
+fn parse_question(input: &[u8]) -> IResult<&[u8], (String, QueryType, Class)> {
+    let (input, labels) = many1(parse_label)(input)?;
+    let name: String = labels.into_iter().map(|label| label + ".").collect::<String>().trim_end_matches('.').to_string();
+    let (input, qtype) = map(be_u16, QueryType::from)(input)?;
+    let (input, qclass) = map(be_u16, Class::from)(input)?;
+    Ok((input, (name, qtype, qclass)))
+}
+
+fn parse_rr(input: &[u8]) -> IResult<&[u8], (String, u16, u32, u16, Vec<u8>)> {
+    let (input, labels) = many1(parse_label)(input)?;
+    let name: String = labels.into_iter().map(|label| label + ".").collect::<String>().trim_end_matches('.').to_string();
+    let (input, rtype) = be_u16(input)?;
+    let (input, rclass) = be_u16(input)?;
+    let (input, ttl) = be_u32(input)?;
+    let (input, rdlength) = be_u16(input)?;
+    let (input, rdata) = take(rdlength as usize)(input)?;
+    Ok((input, (name, rtype, ttl, rdlength, rdata.to_vec())))
+}
+
+fn parse_dns(input: &[u8]) -> IResult<&[u8], (Header, Vec<(String, QueryType, Class)>, Vec<(String, u16, u32, u16, Vec<u8>)>, Vec<(String, u16, u32, u16, Vec<u8>)>)> {
+    let (input, header) = parse_header(input)?;
+    let (input, questions) = many1(parse_question)(input)?;
+    let (input, answers) = many1(parse_rr)(input)?;
+    let (input, authorities) = many1(parse_rr)(input)?;
+    Ok((input, (header, questions, answers, authorities)))
+}
+
+fn main() -> Result<()> {
+    let args: Vec<String> = env::args().collect();
+    let mut file = File::open(&args[1])?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    let dns = parse_dns(&buffer).unwrap().1;
+    println!("{:?}", dns);
+    Ok(())
+}

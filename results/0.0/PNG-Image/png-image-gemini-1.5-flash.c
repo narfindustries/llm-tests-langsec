@@ -1,64 +1,127 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
-// Structure to represent a PNG image header
 typedef struct {
-    unsigned char signature[8];
-    unsigned int width;
-    unsigned int height;
-    unsigned char bit_depth;
-    unsigned char color_type;
-    unsigned char compression_method;
-    unsigned char filter_method;
-    unsigned char interlace_method;
-} PNGHeader;
+    uint32_t width;
+    uint32_t height;
+    uint8_t bit_depth;
+    uint8_t color_type;
+    uint8_t compression_method;
+    uint8_t filter_method;
+    uint8_t interlace_method;
+} IHDR;
+
+typedef struct {
+    uint32_t length;
+    char type[4];
+    union {
+        IHDR ihdr;
+        // Add other chunk types here as needed...
+    } data;
+    uint32_t crc;
+} Chunk;
 
 
-//Simplified PNG writing (no error handling for brevity)
-void writePNG(const char* filename, PNGHeader header, unsigned char* imageData) {
-    FILE *fp = fopen(filename, "wb");
-    fwrite(header.signature, 1, 8, fp);
-    //Write other header chunks (simplified for this example)
-    fwrite(&header.width, sizeof(unsigned int), 1, fp);
-    fwrite(&header.height, sizeof(unsigned int), 1, fp);
-    fwrite(&header.bit_depth, 1, 1, fp);
-    fwrite(&header.color_type, 1, 1, fp);
-    fwrite(&header.compression_method, 1, 1, fp);
-    fwrite(&header.filter_method, 1, 1, fp);
-    fwrite(&header.interlace_method, 1, 1, fp);
+hammer_parser_t* uint32_parser() {
+    return hammer_uint32_le();
+}
 
-    //Write image data (simplified for this example)
-    fwrite(imageData, 1, header.width * header.height * 4, fp); //Assuming RGBA
+hammer_parser_t* uint8_parser() {
+    return hammer_uint8();
+}
 
-    fclose(fp);
+hammer_parser_t* string4_parser() {
+    return hammer_string(4);
+}
+
+hammer_parser_t* crc32_parser() {
+    return hammer_uint32_le();
+}
+
+hammer_parser_t* ihdr_data_parser() {
+    return hammer_map(
+        hammer_seq(
+            uint32_parser(),
+            uint32_parser(),
+            uint8_parser(),
+            uint8_parser(),
+            uint8_parser(),
+            uint8_parser(),
+            uint8_parser(),
+            NULL
+        ),
+        (hammer_map_func_t) (void*) &IHDR
+    );
 }
 
 
-int main() {
-    // Example usage:
-    PNGHeader header;
-    memcpy(header.signature, "\x89PNG\r\n\x1a\n", 8);
-    header.width = 100;
-    header.height = 100;
-    header.bit_depth = 8;
-    header.color_type = 6; //RGBA
-    header.compression_method = 0;
-    header.filter_method = 0;
-    header.interlace_method = 0;
+hammer_parser_t* png_signature_parser() {
+    return hammer_string_literal("\x89PNG\r\n\x1a\n");
+}
 
-    //Allocate memory for image data (replace with your actual image data)
-    unsigned char* imageData = (unsigned char*)malloc(header.width * header.height * 4);
-    if (imageData == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
+
+hammer_parser_t* chunk_parser() {
+  return hammer_map(
+    hammer_seq(
+        uint32_parser(),
+        string4_parser(),
+        hammer_choice(
+            ihdr_data_parser(),
+            hammer_many(uint8_parser()), // idat, etc.
+            hammer_empty(), // iend
+            hammer_many(uint8_parser()), // plte, etc.
+            hammer_many(uint8_parser()), // trns, etc.
+            NULL
+        ),
+        crc32_parser(),
+        NULL
+    ),
+    (hammer_map_func_t)(void*)&Chunk
+  );
+}
+
+hammer_parser_t* png_parser() {
+    return hammer_seq(
+        png_signature_parser(),
+        hammer_many(chunk_parser()),
+        NULL
+    );
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <png_file>\n", argv[0]);
         return 1;
     }
-    //Fill imageData with sample data (replace with your actual image processing)
-    memset(imageData, 255, header.width * header.height * 4); //White image
 
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    writePNG("output.png", header, imageData);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    free(imageData);
+    char* buffer = (char*)malloc(fsize);
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser_t* parser = png_parser();
+    hammer_result_t result = hammer_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        printf("PNG file parsed successfully!\n");
+        // Access parsed data through result.value (a list of Chunk structs)
+    } else {
+        fprintf(stderr, "Error parsing PNG file: %s\n", result.error);
+    }
+
+    free(buffer);
+    hammer_free(parser);
     return 0;
 }

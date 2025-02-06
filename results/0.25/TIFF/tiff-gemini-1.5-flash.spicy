@@ -1,40 +1,70 @@
-#ifndef _SPICY_H_
-#define _SPICY_H_
+module TIFF;
 
-#include <stdint.h>
+type byte_order = enum {
+	II = 0x4949,
+	MM = 0x4D4D
+};
 
-// Define data structures and functions here as needed.  The error message doesn't provide enough information to determine the necessary structures.  A complete example would require more context about the intended functionality.
+type rational = record {
+	uint32 numerator;
+	uint32 denominator;
+};
 
+type tiff_tag {
+	uint16 tag_id;
+	uint16 type;
+	uint32 count;
+	bytes value;
+};
 
-// Example:  A simple structure to represent a TIFF image header.  Replace with your actual needs.
-typedef struct {
-    uint16_t magic_number;
-    uint16_t version;
-    // ... other header fields ...
-} tiff_header_t;
+type tiff_ifd {
+	vector[tiff_tag] tags;
+	uint32 next_ifd_offset;
+};
 
+type tiff_header {
+	byte_order byte_order;
+	uint16 magic_number; 
+};
 
-// Example function:  Replace with your actual Spicy functions.
-int process_tiff(const char* filename) {
-    // ...Implementation to process TIFF file...
-    return 0; // Return 0 for success, non-zero for failure.
-}
+type tiff_file {
+	tiff_header header;
+	uint32 ifd_offset;
+	vector[tiff_ifd] ifds;
+	bytes image_data; 
+};
 
-#endif // _SPICY_H_
+#define TIFF_TAG_IMAGEWIDTH 256
+#define TIFF_TAG_IMAGELENGTH 257
+#define TIFF_TAG_BITSPERSAMPLE 258
+#define TIFF_TAG_COMPRESSION 259
+#define TIFF_TAG_PHOTOMETRICINTERP 262
+#define TIFF_TAG_STRIPOFFSETS 273
+#define TIFF_TAG_SAMPLESPERPIXEL 277
+#define TIFF_TAG_ROWSPERSTRIP 278
+#define TIFF_TAG_STRIPBYTECOUNTS 279
+#define TIFF_TAG_XRESOLUTION 282
+#define TIFF_TAG_YRESOLUTION 283
+#define TIFF_TAG_RESOLUTIONUNIT 296
+#define TIFF_TAG_PLANARCONFIGURATION 284
+#define TIFF_TAG_SOFTWARE 305
+#define TIFF_TAG_DATETIME 306
+#define TIFF_TAG_ARTIST 315
+#define TIFF_TAG_MAKE 271
+#define TIFF_TAG_MODEL 272
 
+#define TIFF_TYPE_BYTE 1
+#define TIFF_TYPE_ASCII 2
+#define TIFF_TYPE_SHORT 3
+#define TIFF_TYPE_LONG 4
+#define TIFF_TYPE_RATIONAL 5
+#define TIFF_TYPE_SBYTE 6
+#define TIFF_TYPE_SSHORT 8
+#define TIFF_TYPE_SLONG 9
+#define TIFF_TYPE_FLOAT 11
+#define TIFF_TYPE_DOUBLE 12
+#define TIFF_TYPE_IFD 13
+#define TIFF_TYPE_LONG8 16
+#define TIFF_TYPE_SLONG8 17
 
-// Example Spicy file: tiff-gemini-1.5-flash.spicy
-#include "spicy.h"
-#include "_SPICY_H_"
-
-int main() {
-    const char* filename = "input.tiff"; // Replace with your input TIFF filename.
-
-    int result = process_tiff(filename);
-    if (result != 0) {
-        fprintf(stderr, "Error processing TIFF file: %s\n", filename);
-        return 1;
-    }
-
-    return 0;
-}
+end

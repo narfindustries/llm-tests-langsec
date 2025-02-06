@@ -1,74 +1,99 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
-// Structure to represent a TIFF header
-typedef struct {
-    uint16_t byteOrder;
-    uint16_t version;
-} TIFFHeader;
+typedef uint16_t TIFF_WORD;
+typedef uint32_t TIFF_DWORD;
 
-
-//Simplified TIFF image data structure (replace with actual TIFF structure if needed)
-typedef struct {
-    TIFFHeader header;
-    uint32_t width;
-    uint32_t height;
-    uint8_t* data; //Raw image data
-} TIFFImage;
-
-
-// Function to read a TIFF file (replace with actual TIFF reading logic)
-TIFFImage* readTIFF(const char* filename) {
-    TIFFImage* image = (TIFFImage*)malloc(sizeof(TIFFImage));
-    if (image == NULL) {
-        perror("Memory allocation failed");
-        return NULL;
-    }
-    //Simulate reading TIFF data. Replace with actual file I/O
-    image->header.byteOrder = 0x4949; //II - Little Endian
-    image->header.version = 42;
-    image->width = 256;
-    image->height = 256;
-    image->data = (uint8_t*)malloc(image->width * image->height);
-    if (image->data == NULL) {
-        perror("Memory allocation failed");
-        free(image);
-        return NULL;
-    }
-    memset(image->data, 0, image->width * image->height); //Fill with zeros
-
-    return image;
+static TIFF_WORD read_word(hammer_parser_t *parser) {
+    TIFF_WORD word;
+    if (!hammer_parse_uint16(parser, &word)) return 0;
+    return word;
 }
 
-
-// Function to write a TIFF file (replace with actual TIFF writing logic)
-int writeTIFF(const char* filename, TIFFImage* image) {
-    //Simulate writing TIFF data. Replace with actual file I/O
-    printf("Writing simulated TIFF data to %s...\n", filename);
-    free(image->data);
-    free(image);
-    return 0;
+static TIFF_DWORD read_dword(hammer_parser_t *parser) {
+    TIFF_DWORD dword;
+    if (!hammer_parse_uint32(parser, &dword)) return 0;
+    return dword;
 }
 
+static hammer_result_t read_bytes(hammer_parser_t *parser, uint8_t *buffer, size_t len) {
+    return hammer_parse_bytes(parser, buffer, len);
+}
 
-int main() {
-    const char* inputFilename = "input.tiff";
-    const char* outputFilename = "output.tiff";
+hammer_parser_t *tiff_ifd_entry(void) {
+    return hammer_seq(
+        hammer_map(hammer_parse_uint16, NULL),
+        hammer_map(hammer_parse_uint16, NULL),
+        hammer_map(hammer_parse_uint32, NULL),
+        hammer_choice(
+            hammer_map(hammer_parse_bytes, NULL),
+            hammer_map(hammer_parse_uint32, NULL)
+        ),
+        NULL
+    );
+}
 
-    TIFFImage* image = readTIFF(inputFilename);
-    if (image == NULL) {
-        fprintf(stderr, "Error reading TIFF file.\n");
+hammer_parser_t *tiff_ifd(void) {
+    return hammer_seq(
+        hammer_map(hammer_parse_uint16, NULL),
+        hammer_many(tiff_ifd_entry()),
+        NULL
+    );
+}
+
+hammer_parser_t *tiff_parser(void) {
+    return hammer_seq(
+        hammer_string("II"),
+        hammer_map(hammer_parse_uint16, NULL),
+        hammer_map(hammer_parse_uint32, NULL),
+        tiff_ifd(),
+        NULL
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
         return 1;
     }
 
-    int result = writeTIFF(outputFilename, image);
-    if (result != 0) {
-        fprintf(stderr, "Error writing TIFF file.\n");
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    printf("TIFF processing complete.\n");
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *buffer = malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
+
+    hammer_parser_t *parser = tiff_parser();
+    hammer_parser_t *p = hammer_from_memory(buffer, fsize);
+    hammer_result_t result = hammer_parse(p, parser);
+
+    free(buffer);
+    hammer_free(p);
+    hammer_free(parser);
+
+    if (result.success) {
+        printf("TIFF file parsed successfully!\n");
+    } else {
+        fprintf(stderr, "Error parsing TIFF file: %s\n", result.error);
+    }
+
     return 0;
 }
+

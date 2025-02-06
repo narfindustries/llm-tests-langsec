@@ -1,213 +1,150 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res},
-    multi::{many0, many1},
+    error::ParseError,
+    multi::{many1},
     number::complete::{be_u16, be_u8},
     IResult,
 };
-use std::{
-    env,
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::env;
+use std::fs::File;
+use std::io::{Read, BufReader};
 
-#[derive(Debug)]
-enum JpegMarker {
+#[derive(Debug, PartialEq)]
+enum Marker {
     SOI,
-    APP0,
-    APP1,
-    APP2,
-    APP3,
-    APP4,
-    APP5,
-    APP6,
-    APP7,
-    APP8,
-    APP9,
-    APP10,
-    APP11,
-    APP12,
-    APP13,
-    APP14,
-    APP15,
-    DHT,
-    DQT,
+    EOI,
     SOF0,
     SOF1,
     SOF2,
     SOF3,
+    DHT,
+    DAC,
+    DNL,
     DRI,
-    SOS,
-    EOI,
+    DQT,
     Other(u8),
 }
 
-fn parse_marker(input: &[u8]) -> IResult<&[u8], JpegMarker> {
-    map_res(be_u8, |marker| match marker {
-        0xD8 => Ok(JpegMarker::SOI),
-        0xE0 => Ok(JpegMarker::APP0),
-        0xE1 => Ok(JpegMarker::APP1),
-        0xE2 => Ok(JpegMarker::APP2),
-        0xE3 => Ok(JpegMarker::APP3),
-        0xE4 => Ok(JpegMarker::APP4),
-        0xE5 => Ok(JpegMarker::APP5),
-        0xE6 => Ok(JpegMarker::APP6),
-        0xE7 => Ok(JpegMarker::APP7),
-        0xE8 => Ok(JpegMarker::APP8),
-        0xE9 => Ok(JpegMarker::APP9),
-        0xEA => Ok(JpegMarker::APP10),
-        0xEB => Ok(JpegMarker::APP11),
-        0xEC => Ok(JpegMarker::APP12),
-        0xED => Ok(JpegMarker::APP13),
-        0xEE => Ok(JpegMarker::APP14),
-        0xEF => Ok(JpegMarker::APP15),
-        0xC4 => Ok(JpegMarker::DHT),
-        0xDB => Ok(JpegMarker::DQT),
-        0xC0 => Ok(JpegMarker::SOF0),
-        0xC1 => Ok(JpegMarker::SOF1),
-        0xC2 => Ok(JpegMarker::SOF2),
-        0xC3 => Ok(JpegMarker::SOF3),
-        0xDD => Ok(JpegMarker::DRI),
-        0xDA => Ok(JpegMarker::SOS),
-        0xD9 => Ok(JpegMarker::EOI),
-        _ => Ok(JpegMarker::Other(marker)),
-    })(input)
+impl Marker {
+    fn parse(input: &[u8]) -> IResult<&[u8], Marker> {
+        let (input, marker) = take(2u8)(input)?;
+        match marker {
+            [0xFF, 0xD8] => Ok((input, Marker::SOI)),
+            [0xFF, 0xD9] => Ok((input, Marker::EOI)),
+            [0xFF, 0xC0] => Ok((input, Marker::SOF0)),
+            [0xFF, 0xC1] => Ok((input, Marker::SOF1)),
+            [0xFF, 0xC2] => Ok((input, Marker::SOF2)),
+            [0xFF, 0xC3] => Ok((input, Marker::SOF3)),
+            [0xFF, 0xC4] => Ok((input, Marker::DHT)),
+            [0xFF, 0xCC] => Ok((input, Marker::DAC)),
+            [0xFF, 0xCD] => Ok((input, Marker::DNL)),
+            [0xFF, 0xCE] => Ok((input, Marker::DRI)),
+            [0xFF, 0xCF] => Ok((input, Marker::DQT)),
+            [0xFF, other] => Ok((input, Marker::Other(*other))),
+            _ => Err(nom::Err::Error(nom::error::Error::from_error_kind(input, nom::error::ErrorKind::Tag))),
+        }
+    }
 }
 
-#[derive(Debug)]
-struct App0 {
-    length: u16,
-    identifier: String,
-    version: String,
-    units: u8,
-    x_density: u16,
-    y_density: u16,
-    thumbnail_x: u8,
-    thumbnail_y: u8,
-}
-
-fn parse_app0(input: &[u8]) -> IResult<&[u8], App0> {
-    let (input, _) = tag([0xFF, 0xE0])(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, identifier) = take(5u8)(input)?;
-    let (input, version) = take(2u8)(input)?;
-    let (input, units) = be_u8(input)?;
-    let (input, x_density) = be_u16(input)?;
-    let (input, y_density) = be_u16(input)?;
-    let (input, thumbnail_x) = be_u8(input)?;
-    let (input, thumbnail_y) = be_u8(input)?;
-    let app0 = App0 {
-        length,
-        identifier: String::from_utf8_lossy(identifier).into_owned(),
-        version: String::from_utf8_lossy(version).into_owned(),
-        units,
-        x_density,
-        y_density,
-        thumbnail_x,
-        thumbnail_y,
-    };
-    Ok((input, app0))
-}
-
-#[derive(Debug)]
-struct Dht {
-    length: u16,
-    table_class: u8,
-    table_id: u8,
-    table: Vec<u8>,
-}
-
-fn parse_dht(input: &[u8]) -> IResult<&[u8], Dht> {
-    let (input, _) = tag([0xFF, 0xC4])(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, table_class) = be_u8(input)?;
-    let (input, table_id) = be_u8(input)?;
-    let (input, table) = take(length - 2)(input)?;
-    let dht = Dht {
-        length,
-        table_class,
-        table_id,
-        table: table.to_vec(),
-    };
-    Ok((input, dht))
-}
-
-#[derive(Debug)]
-struct Dqt {
-    length: u16,
-    precision: u8,
-    table_id: u8,
-    table: Vec<u8>,
-}
-
-fn parse_dqt(input: &[u8]) -> IResult<&[u8], Dqt> {
-    let (input, _) = tag([0xFF, 0xDB])(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, precision) = be_u8(input)?;
-    let (input, table_id) = be_u8(input)?;
-    let (input, table) = take(length - 2)(input)?;
-    let dqt = Dqt {
-        length,
-        precision,
-        table_id,
-        table: table.to_vec(),
-    };
-    Ok((input, dqt))
-}
-
-#[derive(Debug)]
-struct Sof0 {
-    length: u16,
+#[derive(Debug, PartialEq)]
+struct SOF0 {
     precision: u8,
     height: u16,
     width: u16,
     num_components: u8,
-    components: Vec<(u8, u8, u8)>,
+    components: Vec<Component>,
 }
 
-fn parse_sof0(input: &[u8]) -> IResult<&[u8], Sof0> {
-    let (input, _) = tag([0xFF, 0xC0])(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, precision) = be_u8(input)?;
-    let (input, height) = be_u16(input)?;
-    let (input, width) = be_u16(input)?;
-    let (input, num_components) = be_u8(input)?;
-    let (input, components) = many1(map(
-        take(3u8),
-        |component: &[u8]| (component[0], component[1], component[2]),
-    ))(input)?;
-    let sof0 = Sof0 {
-        length,
-        precision,
-        height,
-        width,
-        num_components,
-        components: components.to_vec(),
-    };
-    Ok((input, sof0))
+#[derive(Debug, PartialEq)]
+struct Component {
+    id: u8,
+    horizontal_sampling_factor: u8,
+    vertical_sampling_factor: u8,
+    quantization_table_number: u8,
 }
 
-#[derive(Debug)]
-struct Sos {
-    length: u16,
-    num_components: u8,
-    components: Vec<(u8, u8)>,
+impl SOF0 {
+    fn parse(input: &[u8]) -> IResult<&[u8], SOF0> {
+        let (input, _) = tag([0xFF, 0xC0])(input)?;
+        let (_input, _length) = be_u16(input)?;
+        let (input, precision) = be_u8(input)?;
+        let (input, height) = be_u16(input)?;
+        let (input, width) = be_u16(input)?;
+        let (input, num_components) = be_u8(input)?;
+        let (input, components) = many1(Component::parse)(input)?;
+        Ok((input, SOF0 {
+            precision,
+            height,
+            width,
+            num_components,
+            components,
+        }))
+    }
 }
 
-fn parse_sos(input: &[u8]) -> IResult<&[u8], Sos> {
-    let (input, _) = tag([0xFF, 0xDA])(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, num_components) = be_u8(input)?;
-    let (input, components) = many1(map(
-        take(2u8),
-        |component: &[u8]| (component[0], component[1]),
-    ))(input)?;
-    let sos = Sos {
-        length,
-        num_components,
-        components: components.to_vec(),
-    };
-    Ok((input, sos))
+impl Component {
+    fn parse(input: &[u8]) -> IResult<&[u8], Component> {
+        let (input, id) = be_u8(input)?;
+        let (input, horizontal_sampling_factor) = be_u8(input)?;
+        let (input, vertical_sampling_factor) = be_u8(input)?;
+        let (input, quantization_table_number) = be_u8(input)?;
+        Ok((input, Component {
+            id,
+            horizontal_sampling_factor,
+            vertical_sampling_factor,
+            quantization_table_number,
+        }))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct DHT {
+    table_class: u8,
+    table_destination: u8,
+    num_codes: u8,
+    code_lengths: Vec<u8>,
+    code_values: Vec<u8>,
+}
+
+impl DHT {
+    fn parse(input: &[u8]) -> IResult<&[u8], DHT> {
+        let (input, _) = tag([0xFF, 0xC4])(input)?;
+        let (_input, _length) = be_u16(input)?;
+        let (input, table_class) = be_u8(input)?;
+        let (input, table_destination) = be_u8(input)?;
+        let (input, num_codes) = be_u8(input)?;
+        let (input, code_lengths) = many1(be_u8)(input)?;
+        let (input, code_values) = many1(be_u8)(input)?;
+        Ok((input, DHT {
+            table_class,
+            table_destination,
+            num_codes,
+            code_lengths,
+            code_values,
+        }))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct DQT {
+    table_precision: u8,
+    table_number: u8,
+    quantization_values: Vec<u8>,
+}
+
+impl DQT {
+    fn parse(input: &[u8]) -> IResult<&[u8], DQT> {
+        let (input, _) = tag([0xFF, 0xCF])(input)?;
+        let (_input, _length) = be_u16(input)?;
+        let (input, table_precision) = be_u8(input)?;
+        let (input, table_number) = be_u8(input)?;
+        let (input, quantization_values) = many1(be_u8)(input)?;
+        Ok((input, DQT {
+            table_precision,
+            table_number,
+            quantization_values,
+        }))
+    }
 }
 
 fn main() {
@@ -220,35 +157,20 @@ fn main() {
     let mut reader = BufReader::new(file);
     let mut data = Vec::new();
     reader.read_to_end(&mut data).unwrap();
-    let (input, _) = many0(map(
-        parse_marker,
-        |marker| match marker {
-            JpegMarker::APP0 => {
-                let (input, app0) = parse_app0(input)?;
-                println!("{:?}", app0);
-                input
-            }
-            JpegMarker::DHT => {
-                let (input, dht) = parse_dht(input)?;
-                println!("{:?}", dht);
-                input
-            }
-            JpegMarker::DQT => {
-                let (input, dqt) = parse_dqt(input)?;
-                println!("{:?}", dqt);
-                input
-            }
-            JpegMarker::SOF0 => {
-                let (input, sof0) = parse_sof0(input)?;
-                println!("{:?}", sof0);
-                input
-            }
-            JpegMarker::SOS => {
-                let (input, sos) = parse_sos(input)?;
-                println!("{:?}", sos);
-                input
-            }
-            _ => input,
-        },
-    ))(&data);
+    let (input, marker) = Marker::parse(&data).unwrap();
+    match marker {
+        Marker::SOI => {
+            let (_input, sof0) = SOF0::parse(input).unwrap();
+            println!("{:?}", sof0);
+        }
+        Marker::DHT => {
+            let (_input, dht) = DHT::parse(input).unwrap();
+            println!("{:?}", dht);
+        }
+        Marker::DQT => {
+            let (_input, dqt) = DQT::parse(input).unwrap();
+            println!("{:?}", dqt);
+        }
+        _ => println!("Unsupported marker"),
+    }
 }

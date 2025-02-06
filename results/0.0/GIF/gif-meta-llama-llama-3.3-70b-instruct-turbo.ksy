@@ -1,48 +1,28 @@
 meta:
   id: gif
-  file-extension: gif
   endian: le
 seq:
-  - id: header
-    type: header
-  - id: logical_screen_descriptor
-    type: logical_screen_descriptor
+  - id: signature
+    type: str
+    size: 3
+    encoding: ascii
+  - id: version
+    type: str
+    size: 3
+    encoding: ascii
+  - id: logical_screen_width
+    type: u2
+  - id: logical_screen_height
+    type: u2
+  - id: packed_fields
+    type: u1
+  - id: background_color_index
+    type: u1
+  - id: pixel_aspect_ratio
+    type: u1
   - id: global_color_table
-    type: global_color_table
-    if: logical_screen_descriptor.global_color_table_flag
-  - id: images
-    type: image
-    repeat: until
-    until: _ == 0x3b
-types:
-  header:
-    seq:
-      - id: magic
-        content: 'GIF'
-      - id: version
-        size: 3
-  logical_screen_descriptor:
-    seq:
-      - id: width
-        type: u2
-      - id: height
-        type: u2
-      - id: flags
-        type: u1
-      - id: background_color_index
-        type: u1
-      - id: pixel_aspect_ratio
-        type: u1
-    instances:
-      global_color_table_flag:
-        value: flags & 0x80
-  global_color_table:
-    seq:
-      - id: colors
-        type: color_table_entry
-        repeat: expr
-        repeat-expr: 2 << (logical_screen_descriptor.flags & 0x7)
-  color_table_entry:
+    type: seq
+    repeat: expr
     seq:
       - id: red
         type: u1
@@ -50,35 +30,47 @@ types:
         type: u1
       - id: blue
         type: u1
-  image:
+    repeat_expr: (1 << ((packed_fields & 0x70) >> 4))
+  - id: images
+    type: seq
+    repeat: until
+    until: _io.eof()
     seq:
-      - id: descriptor
-        type: image_descriptor
-      - id: data
-        type: image_data
-  image_descriptor:
-    seq:
-      - id: left
-        type: u2
-      - id: top
-        type: u2
-      - id: width
-        type: u2
-      - id: height
-        type: u2
-      - id: flags
+      - id: image_separator
         type: u1
-  image_data:
-    seq:
-      - id: min_code_size
+        value: 44
+      - id: image_left_position
+        type: u2
+      - id: image_top_position
+        type: u2
+      - id: image_width
+        type: u2
+      - id: image_height
+        type: u2
+      - id: image_packed_fields
         type: u1
-      - id: sub_blocks
-        type: sub_block
+      - id: local_color_table
+        type: seq
+        repeat_expr: (1 << ((image_packed_fields & 0x1f) + 1))
+        seq:
+          - id: red
+            type: u1
+          - id: green
+            type: u1
+          - id: blue
+            type: u1
+        if: image_packed_fields & 0x80 != 0
+      - id: image_data
+        type: seq
         repeat: until
-        until: _ == 0x00
-  sub_block:
-    seq:
-      - id: length
-        type: u1
-      - id: data
-        size: length
+        until: sub_block_size == 0
+        seq:
+          - id: sub_block_size
+            type: u1
+          - id: sub_block_data
+            type: str
+            size: sub_block_size
+            encoding: none
+  - id: trailer
+    type: u1
+    value: 59

@@ -1,32 +1,61 @@
-domain dns {
-  include "integer.ddl";
-  include "string.ddl";
-
-  type Header = struct {
+format dns {
+  header: {
     id: uint16,
-    flags: uint16,
-    qdcount: uint16,
-    ancount: uint16,
-    nscount: uint16,
-    arcount: uint16,
-  };
+    qr: bool,
+    opcode: uint4,
+    aa: bool,
+    tc: bool,
+    rd: bool,
+    ra: bool,
+    z: uint3,
+    rcode: uint4
+  },
+  question: {
+    qname: domain_name,
+    qtype: uint16,
+    qclass: uint16
+  },
+  answer: array(answer_section),
+  authority: array(authority_section),
+  additional: array(additional_section)
+}
 
-  type Question = struct {
-    domain: Domain,
-    type: uint16,
-    class: uint16,
-  };
+format domain_name {
+  label: array(label_section)
+}
 
-  type Domain = seqof label: String, separator: uint8(0);
+format label_section {
+  length: uint8,
+  data: bytes(length)
+}
 
-  type Answer = struct {
-    domain: uint16, // reference to Question.domain
-    type: uint16,
-    class: uint16,
-    ttl: uint32,
-    rdlength: uint16,
-    rdata: bytes,
-  };
+format answer_section {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes(rdlength)
+}
 
-  protocol DNS = seqof header: Header, questions: Question+, answers: Answer*;
+format authority_section {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes(rdlength)
+}
+
+format additional_section {
+  name: domain_name,
+  type: uint16,
+  class: uint16,
+  ttl: uint32,
+  rdlength: uint16,
+  rdata: bytes(rdlength)
+}
+
+format bytes(size: uint16) {
+  data: array(uint8, size)
 }

@@ -1,40 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/sqlite3-db"
-           xmlns="http://example.org/sqlite3-db"
-           elementFormDefault="qualified">
-
-  <xs:element name="sqlite3-db-gemini-1">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/sqlite3" targetNamespace="http://example.org/sqlite3" elementFormDefault="qualified" dfdl:lengthKind="implicit">
+  <xs:element name="sqlite3Database">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="explicit" dfdl:length="100"/>
-        <xs:element name="data" type="DataType" dfdl:separator="," dfdl:occursCountKind="implicit"/>
+        <xs:element name="fileHeader" type="tns:fileHeaderType"/>
+        <xs:element name="pages" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="pageHeader" type="tns:pageHeaderType"/>
+              <xs:element name="cellData" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="cellHeader" type="tns:cellHeaderType"/>
+                    <xs:element name="cellPayload" type="xs:hexBinary" dfdl:length="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="freeList" type="tns:freeListType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="implicit"/>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="HeaderType">
+  <xs:complexType name="fileHeaderType">
     <xs:sequence>
-      <xs:element name="field1" type="xs:string" dfdl:length="10"/>
-      <xs:element name="field2" type="xs:integer" dfdl:length="5"/>
-      <xs:element name="field3" type="xs:date" dfdl:length="10"/>
+      <xs:element name="magicNumber" type="xs:string" dfdl:length="16"/>
+      <xs:element name="pageSize" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="writeVersion" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="readVersion" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="reservedSpace" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="maxEmbeddedPageCount" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="textEncoding" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="userVersion" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="incrementalVacuumMode" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="applicationId" type="xs:hexBinary" dfdl:length="4"/>
+      <xs:element name="versionValidFor" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="pageCounter" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DataType">
+  <xs:complexType name="pageHeaderType">
     <xs:sequence>
-      <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+      <xs:element name="pageNumber" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="pageType" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="freeBlockCount" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="cellCount" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="rightmostChildPage" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary" dfdl:encoding="bigEndian" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="RecordType">
+  <xs:complexType name="cellHeaderType">
     <xs:sequence>
-      <xs:element name="id" type="xs:integer" dfdl:length="5"/>
-      <xs:element name="name" type="xs:string" dfdl:length="50"/>
-      <xs:element name="value" type="xs:decimal" dfdl:length="10" dfdl:textNumberPattern="9999999999"/>
+      <xs:element name="payloadSize" type="xs:unsignedShort" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="bigEndian"/>
+      <xs:element name="headerSize" type="xs:unsignedByte" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="rowId" type="xs:long" dfdl:length="8" dfdl:representation="binary" dfdl:encoding="bigEndian" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
-
+  <xs:complexType name="freeListType">
+    <xs:sequence>
+      <!--Complex freelist structure omitted for brevity-->
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

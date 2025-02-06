@@ -1,12 +1,7 @@
-module SQLite3DB;
+module SQLiteDB;
 
-import spicy;
-import zeek;
-
-type SQLite3Magic = bytes &size=16;
-
-type SQLite3Header = unit {
-    magic: SQLite3Magic;
+type SQLiteDBHeader = unit {
+    header_string: bytes &size=16 &check=eq(header_string, b"SQLite format 3\000");
     page_size: uint16;
     write_version: uint8;
     read_version: uint8;
@@ -15,33 +10,44 @@ type SQLite3Header = unit {
     min_payload_fraction: uint8;
     leaf_payload_fraction: uint8;
     file_change_counter: uint32;
-    db_size_in_pages: uint32;
-    first_freelist_page: uint32;
-    freelist_page_count: uint32;
+    database_size_pages: uint32;
+    first_freelist_trunk_page: uint32;
+    total_freelist_pages: uint32;
     schema_cookie: uint32;
-    schema_format_number: uint32;
-    default_page_cache_size: uint32;
-    largest_btree_root_page: uint32;
-    text_encoding: uint32;
+    schema_format_number: uint32 &check=(schema_format_number in {1, 2, 3, 4});
+    default_cache_size: int32;
+    largest_root_btree_page_number: uint32;
+    text_encoding: uint32 &check=(text_encoding in {1, 2, 3});
     user_version: uint32;
     incremental_vacuum_mode: uint32;
     application_id: uint32;
     reserved: bytes &size=20;
     version_valid_for: uint32;
     sqlite_version_number: uint32;
+
+    on %done {
+        print fmt("SQLite Database Header:");
+        print fmt("  Header String: %s", header_string);
+        print fmt("  Page Size: %d", page_size);
+        print fmt("  Write Version: %d", write_version);
+        print fmt("  Read Version: %d", read_version);
+        print fmt("  Reserved Space: %d", reserved_space);
+        print fmt("  Max Payload Fraction: %d", max_payload_fraction);
+        print fmt("  Min Payload Fraction: %d", min_payload_fraction);
+        print fmt("  Leaf Payload Fraction: %d", leaf_payload_fraction);
+        print fmt("  File Change Counter: %d", file_change_counter);
+        print fmt("  Database Size in Pages: %d", database_size_pages);
+        print fmt("  First Freelist Trunk Page: %d", first_freelist_trunk_page);
+        print fmt("  Total Freelist Pages: %d", total_freelist_pages);
+        print fmt("  Schema Cookie: %d", schema_cookie);
+        print fmt("  Schema Format Number: %d", schema_format_number);
+        print fmt("  Default Page Cache Size: %d", default_cache_size);
+        print fmt("  Largest Root B-Tree Page Number: %d", largest_root_btree_page_number);
+        print fmt("  Text Encoding: %d", text_encoding);
+        print fmt("  User Version: %d", user_version);
+        print fmt("  Incremental Vacuum Mode: %d", incremental_vacuum_mode);
+        print fmt("  Application ID: %d", application_id);
+        print fmt("  Version Valid-for Number: %d", version_valid_for);
+        print fmt("  SQLite Version Number: %d", sqlite_version_number);
+    }
 };
-
-public type SQLite3 = unit {
-    header: SQLite3Header;
-} &validate=(self.header.magic == "\x53\x51\x4C\x69\x74\x65\x20\x66\x6F\x72\x6D\x61\x74\x20\x33\x00");
-
-public event sqlite3_db_header(header: SQLite3Header);
-
-on %init {
-    zeek_print("SQLite3 Spicy Parser Initialized");
-}
-
-hook sqlite3_db_header(header: SQLite3Header) {
-    print fmt("SQLite3 Database Header Parsed: page_size=%d, file_change_counter=%d",
-              header.page_size, header.file_change_counter);
-}

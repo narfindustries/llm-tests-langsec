@@ -1,49 +1,76 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-const HParser* init_dicom_parser() {
-    // DICOM elements
-    HParser *tag = h_sequence(h_uint8(), h_uint8(), h_uint8(), h_uint8(), NULL);
-    HParser *vr = h_token((const uint8_t*)"AE", 2);
-    HParser *length = h_uint16();
-    HParser *value = h_length_value(length, h_uint8());
+typedef struct {
+    uint32_t group;
+    uint32_t element;
+    char vr[3];
+    uint32_t length;
+    uint8_t *value;
+} DicomElement;
+
+static HParser *init_dicom_parser(void) {
+    HParser *dicom_group = h_uint32();
+    HParser *dicom_element = h_uint32();
+    HParser *uint8_parser = h_uint8();
+    HParser *two_bytes = h_repeat_n(uint8_parser, 2);
+    HParser *dicom_vr = h_length_value(two_bytes, uint8_parser);
+    HParser *dicom_length = h_uint32();
+    HParser *dicom_value = h_length_value(uint8_parser, h_many(uint8_parser));
     
-    // DICOM element sequence
-    HParser *element = h_sequence(tag, vr, length, value, NULL);
+    HParser *element_parser = h_sequence(dicom_group,
+                                       dicom_element,
+                                       dicom_vr,
+                                       dicom_length,
+                                       dicom_value,
+                                       NULL);
     
-    // Full DICOM sequence with preamble and prefix
-    HParser *preamble = h_repeat_n(h_uint8(), 128);
-    HParser *prefix = h_token((const uint8_t*)"DICM", 4);
-    HParser *elements = h_many1(element);
-    
-    return h_sequence(preamble, prefix, elements, NULL);
+    return h_many1(element_parser);
 }
 
-int main() {
-    const HParser *parser = init_dicom_parser();
-    
-    // Parse input
-    uint8_t input[] = {
-        // 128-byte preamble
-        0x00, 0x00, 0x00, 0x00, /* ... repeat to 128 bytes ... */
-        // DICM prefix
-        'D', 'I', 'C', 'M',
-        // Sample element
-        0x10, 0x00, 0x10, 0x00, // Tag (0010,0010)
-        'A', 'E',               // VR
-        0x0A, 0x00,            // Length
-        'J', 'o', 'h', 'n', 'D', 'o', 'e', ' ', ' ', ' ' // Value
-    };
-    
-    size_t input_size = sizeof(input);
-    HParseResult *result = h_parse(parser, input, input_size);
-    
-    if(result) {
-        printf("Parsing successful\n");
-        h_parse_result_free(result);
-    } else {
-        printf("Parsing failed\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <dicom_file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t *input = malloc(size);
+    if (!input) {
+        fclose(f);
+        perror("Failed to allocate memory");
+        return 1;
+    }
+
+    if (fread(input, 1, size, f) != size) {
+        free(input);
+        fclose(f);
+        perror("Failed to read file");
+        return 1;
+    }
+
+    HParser *parser = init_dicom_parser();
+    HParseResult *result = h_parse(parser, input, size);
     
+    if (!result) {
+        fprintf(stderr, "Failed to parse DICOM file\n");
+        free(input);
+        fclose(f);
+        return 1;
+    }
+
+    h_parse_result_free(result);
+    free(input);
+    fclose(f);
     return 0;
 }

@@ -1,72 +1,77 @@
-#ifndef _TIFF_GEMINI_1_5_FLASH_H_
-#define _TIFF_GEMINI_1_5_FLASH_H_
+module TIFF;
 
-#include <stdint.h>
+#include <zeek/zeek-config.h>
 
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    uint8_t* data;
-} TiffImage;
+namespace zeek::detail {
 
+struct tiff_header {
+    uint16_t byte_order;
+    uint16_t version;
+};
 
-TiffImage* load_tiff(const char* filename);
-void free_tiff(TiffImage* image);
+enum class tiff_photometric_interpretation : uint16_t {
+    white_is_zero = 0,
+    black_is_zero = 1,
+    rgb = 2,
+    palette_color = 3,
+    transparency_mask = 4,
+    separated = 5,
+    cielab = 8,
+    icclab = 9,
+    itu_t4 = 10,
+    itu_t6 = 11,
+    jpeg_ycbcr = 6,
+    log_l = 32844,
+    cielab_rgb = 32845,
+    itut_t8_compressed = 32846,
+    unknown = 65535
+};
 
-#endif
+enum class tiff_compression : uint16_t {
+    none = 1,
+    ccitt_group_3_fax = 2,
+    ccitt_group_4_fax = 3,
+    lzw = 5,
+    jpeg = 6,
+    packbits = 32773,
+    thunderscan = 32809,
+    next = 32909,
+    ccitt_group_3_2d_encoded = 32946,
+    ccitt_group_4_2d_encoded = 32947,
+    unknown = 65535
+};
 
+enum class tiff_fill_order : uint16_t {
+    msb2lsb = 1,
+    lsb2msb = 2
+};
 
-#include "tiff-gemini-1.5-flash.h"
-#include <stdio.h>
-#include <stdlib.h>
+enum class tiff_planar_configuration : uint16_t {
+    chroma_planar = 1,
+    color_planar = 2
+};
 
+struct tiff_ifd_entry {
+    uint16_t tag;
+    uint16_t type;
+    uint32_t count;
+    uint32_t offset;
+};
 
-TiffImage* load_tiff(const char* filename) {
-    // Replace this with actual TIFF loading logic.  This is a placeholder.
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        perror("Error opening file");
-        return NULL;
-    }
-    //Simulate reading width and height
-    uint32_t width = 100;
-    uint32_t height = 100;
-    uint8_t* data = (uint8_t*)malloc(width * height * sizeof(uint8_t));
-    if (data == NULL) {
-        perror("Memory allocation failed");
-        fclose(file);
-        return NULL;
-    }
-    fread(data, sizeof(uint8_t), width * height, file);
-    fclose(file);
+struct tiff_ifd {
+    std::vector<tiff_ifd_entry> entries;
+};
 
-    TiffImage* image = (TiffImage*)malloc(sizeof(TiffImage));
-    if (image == NULL) {
-        perror("Memory allocation failed");
-        free(data);
-        return NULL;
-    }
-    image->width = width;
-    image->height = height;
-    image->data = data;
-    return image;
-}
+struct tiff_image_file_directory {
+    uint32_t next_ifd_offset;
+};
 
-void free_tiff(TiffImage* image) {
-    if (image != NULL) {
-        free(image->data);
-        free(image);
-    }
-}
+struct tiff_image_file {
+    tiff_header header;
+    uint32_t first_ifd_offset;
+    std::vector<tiff_ifd> ifds;
+    std::vector<uint8_t> image_data;
+};
 
-
-int main() {
-    TiffImage* image = load_tiff("test.tiff");
-    if (image != NULL) {
-        printf("Loaded TIFF image: width=%u, height=%u\n", image->width, image->height);
-        free_tiff(image);
-    } else {
-        printf("Failed to load TIFF image.\n");
-    }
-    return 0;
-}
+} // namespace zeek::detail
+The error message indicates a problem with the use of `enum class`.  The previous responses were missing semicolons after the `enum class` definitions.  This corrected version adds the necessary semicolons.  However, even with this correction, a complete and accurate Zeek Spicy representation of the *entire* TIFF 6.0 specification is extremely complex and likely impractical due to the specification's size and flexibility.  This example only covers a small subset of the possible TIFF structures and tags.

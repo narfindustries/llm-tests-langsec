@@ -1,116 +1,68 @@
-module NITF;
-
-import "base" as base;
-
-struct NITF {
-    file_header: FileHeader;
-    image_segments: [ImageSegment] @ file_header.image_segment_count;
-    graphic_segments: [GraphicSegment] @ file_header.graphic_segment_count;
-    text_segments: [TextSegment] @ file_header.text_segment_count;
-    data_extension_segments: [DataExtensionSegment] @ file_header.data_extension_segment_count;
-    reserved_extension_segments: [ReservedExtensionSegment] @ file_header.reserved_extension_segment_count;
-}
-
-struct FileHeader {
-    file_type: string(4);
-    version: string(5);
-    complexity_level: string(2);
-    system_type: string(2);
-    originating_station_id: string(10);
-    file_date_time: string(14);
-    file_title: string(80);
-    file_security: Security;
-    file_copy_number: string(5);
-    file_number_of_copies: string(5);
-    encryption: Encryption;
-    image_segment_count: uint16;
-    graphic_segment_count: uint16;
-    text_segment_count: uint16;
-    data_extension_segment_count: uint16;
-    reserved_extension_segment_count: uint16;
-}
-
-struct Security {
-    classification: string(1);
-    classification_system: string(2);
-    codewords: string(11);
-    control_and_handling: string(2);
-    releasing_instructions: string(20);
-    declassification_type: string(2);
-    declassification_date: string(8);
-    declassification_exemption: string(4);
-    downgrade: string(1);
-    downgrade_date: string(8);
-}
-
-struct Encryption {
-    encryption: string(1);
-    encryption_key: string(24);
-}
-
-struct ImageSegment {
-    header: ImageSegmentHeader;
-    data: bytes @ header.data_size;
-}
-
-struct ImageSegmentHeader {
-    image_id: string(10);
-    image_date_time: string(14);
-    target_id: string(17);
-    image_source: string(42);
-    image_security: Security;
-    image_mode: string(8);
-    image_category: string(8);
-    image_representation: string(4);
-    image_coordinates: string(60);
-    data_size: uint32;
-}
-
-struct GraphicSegment {
-    header: GraphicSegmentHeader;
-    data: bytes @ header.data_size;
-}
-
-struct GraphicSegmentHeader {
-    graphic_id: string(10);
-    graphic_date_time: string(14);
-    graphic_source: string(42);
-    graphic_security: Security;
-    data_size: uint32;
-}
-
-struct TextSegment {
-    header: TextSegmentHeader;
-    data: bytes @ header.data_size;
-}
-
-struct TextSegmentHeader {
-    text_id: string(10);
-    text_date_time: string(14);
-    text_security: Security;
-    data_size: uint32;
-}
-
-struct DataExtensionSegment {
-    header: DataExtensionSegmentHeader;
-    data: bytes @ header.data_size;
-}
-
-struct DataExtensionSegmentHeader {
-    data_extension_id: string(10);
-    data_extension_date_time: string(14);
-    data_extension_security: Security;
-    data_size: uint32;
-}
-
-struct ReservedExtensionSegment {
-    header: ReservedExtensionSegmentHeader;
-    data: bytes @ header.data_size;
-}
-
-struct ReservedExtensionSegmentHeader {
-    reserved_extension_id: string(10);
-    reserved_extension_date_time: string(14);
-    reserved_extension_security: Security;
-    data_size: uint32;
+NITF: struct {
+    FileHeader: struct {
+        FHDR: string[9], // File header version
+        CLEVEL: uint8, // Complexity level
+        STYPE: string[4], // Standard type
+        OSTAID: string[10], // Originating station ID
+        FDT: string[14], // File date and time
+        FTITLE: string[80], // File title
+        FSCLAS: string[1], // File security classification
+        FSCODE: string[40], // File security code
+        FSCTLH: string[40], // File security control and handling
+        FSREL: string[40], // File security release instructions
+        FSDCTP: string[2], // File security declassification type
+        FSDCDT: string[8], // File security declassification date
+        FSDCXM: string[4], // File security declassification exemption
+        FSDG: string[1], // File security downgrading
+        FSDGDT: string[8], // File security downgrading date
+        FSCLTX: string[43], // File security classification text
+        FSCATP: string[1], // File security classification authority type
+        FSCAUT: string[40], // File security classification authority
+        FSCRSN: string[1], // File security classification reason
+        FSSRDT: string[8], // File security source date
+        FSCTLN: string[15] // File security control number
+        // Additional fields for file header
+    },
+    ImageSegment: struct {
+        IM: string[2], // Image segment marker
+        IID1: string[10], // Image identifier
+        IDATIM: string[14], // Image date and time
+        TGTID: string[17], // Target identifier
+        ISCLAS: string[1], // Image security classification
+        ISCODE: string[40], // Image security code
+        ISCTLH: string[40], // Image security control and handling
+        ISREL: string[40], // Image security release instructions
+        ISDCTP: string[2], // Image security declassification type
+        ISDCDT: string[8], // Image security declassification date
+        ISDCXM: string[4], // Image security declassification exemption
+        ISDG: string[1], // Image security downgrading
+        ISDGDT: string[8], // Image security downgrading date
+        ISCLTX: string[43], // Image security classification text
+        ISCATP: string[1], // Image security classification authority type
+        ISCAUT: string[40], // Image security classification authority
+        ISCRSN: string[1], // Image security classification reason
+        ISSRDT: string[8], // Image security source date
+        ISCTLN: string[15] // Image security control number
+        // Additional fields for image segment
+    },
+    GraphicSegment: struct {
+        GRN: string[2], // Graphic segment number
+        GID: string[10], // Graphic identifier
+        GDTIM: string[14] // Graphic date and time
+        // Additional fields for graphic segment
+    },
+    TextSegment: struct {
+        TXT: string[2], // Text segment marker
+        TXTID: string[10], // Text identifier
+        TXTDT: string[14] // Text date and time
+        // Additional fields for text segment
+    },
+    DataExtensionSegment: struct {
+        DESID: string[25], // Data extension identifier
+        DESVER: string[2] // Data extension version
+        // Additional fields for data extension segment
+    },
+    ReservedExtensionSegment: struct {
+        // Fields for reserved extension segment
+    }
 }

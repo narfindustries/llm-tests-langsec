@@ -1,0 +1,105 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.hl7.org/HL7/v2"
+           xmlns="http://www.hl7.org/HL7/v2">
+
+    <!-- Define basic HL7 v2.x data types -->
+    <xs:simpleType name="ST">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="TS">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="NM">
+        <xs:restriction base="xs:integer"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="ID">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="DT">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+
+    <!-- MSH Segment -->
+    <xs:element name="MSH">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:separatorPolicy="required">
+                <xs:element name="FieldSeparator" type="ST" dfdl:lengthKind="explicit" dfdl:length="1"/>
+                <xs:element name="EncodingCharacters" type="ST" dfdl:lengthKind="explicit" dfdl:length="4"/>
+                <xs:element name="SendingApplication" type="ST" minOccurs="0"/>
+                <xs:element name="SendingFacility" type="ST" minOccurs="0"/>
+                <xs:element name="ReceivingApplication" type="ST" minOccurs="0"/>
+                <xs:element name="ReceivingFacility" type="ST" minOccurs="0"/>
+                <xs:element name="DateTimeOfMessage" type="TS" minOccurs="0"/>
+                <xs:element name="Security" type="ST" minOccurs="0"/>
+                <xs:element name="MessageType" type="ST"/>
+                <xs:element name="MessageControlID" type="ST"/>
+                <xs:element name="ProcessingID" type="ST"/>
+                <xs:element name="VersionID" type="ST"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- PID Segment -->
+    <xs:element name="PID">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:separatorPolicy="required">
+                <xs:element name="SetID" type="NM" minOccurs="0"/>
+                <xs:element name="PatientID" type="ST" minOccurs="0"/>
+                <xs:element name="PatientIdentifierList" type="ST" minOccurs="0"/>
+                <xs:element name="PatientName" type="ST"/>
+                <xs:element name="MothersMaidenName" type="ST" minOccurs="0"/>
+                <xs:element name="DateTimeOfBirth" type="TS" minOccurs="0"/>
+                <xs:element name="Sex" type="ID" minOccurs="0"/>
+                <xs:element name="PatientAlias" type="ST" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- EVN Segment -->
+    <xs:element name="EVN">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:separatorPolicy="required">
+                <xs:element name="EventTypeCode" type="ST"/>
+                <xs:element name="RecordedDateTime" type="TS" minOccurs="0"/>
+                <xs:element name="DateTimePlannedEvent" type="TS" minOccurs="0"/>
+                <xs:element name="EventReasonCode" type="ST" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- PV1 Segment -->
+    <xs:element name="PV1">
+        <xs:complexType>
+            <xs:sequence dfdl:separator="|" dfdl:separatorPolicy="required">
+                <xs:element name="SetID" type="NM" minOccurs="0"/>
+                <xs:element name="PatientClass" type="ID"/>
+                <xs:element name="AssignedPatientLocation" type="ST" minOccurs="0"/>
+                <xs:element name="AdmissionType" type="ID" minOccurs="0"/>
+                <xs:element name="PreadmitNumber" type="ST" minOccurs="0"/>
+                <xs:element name="PriorPatientLocation" type="ST" minOccurs="0"/>
+                <xs:element name="AttendingDoctor" type="ST" minOccurs="0"/>
+                <xs:element name="ReferringDoctor" type="ST" minOccurs="0"/>
+                <xs:element name="ConsultingDoctor" type="ST" minOccurs="0"/>
+                <xs:element name="HospitalService" type="ST" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Message Structure -->
+    <xs:element name="HL7Message">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="MSH"/>
+                <xs:element ref="EVN" minOccurs="0"/>
+                <xs:element ref="PID"/>
+                <xs:element ref="PV1" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

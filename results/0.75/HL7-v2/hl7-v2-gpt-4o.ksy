@@ -1,26 +1,18 @@
 meta:
   id: hl7_v2
-  title: HL7 v2.x
+  title: "HL7 Version 2.x Message"
   file-extension: hl7
-  encoding: utf-8
-
-doc: |
-  HL7 version 2.x is a widely-used messaging standard for healthcare information exchange.
-  This Kaitai Struct specification attempts to parse basic HL7 v2.x messages.
+  license: CC0-1.0
+  endian: le
 
 seq:
   - id: segments
     type: segment
-    repeat: until
-    repeat-until: _.is_end_of_message
+    repeat: eos
 
 types:
   segment:
     seq:
-      - id: segment_id
-        size: 3
-        type: str
-        doc: "3-character segment identifier"
       - id: fields
         type: field
         repeat: until
@@ -29,16 +21,37 @@ types:
   field:
     seq:
       - id: value
-        type: str
-        terminator: 0x7C  # '|'
-        doc: "Field value, terminated by pipe character"
+        type: strz
+        encoding: ascii
+        terminator: 0x7C
+        include: true
 
     instances:
-      is_end_of_segment:
-        value: _parent.segment_id == "MSH" && value == "\r"
-        doc: "Detects end of a segment within a message"
+      is_end_of_field:
+        value: _io.pos >= _io.size or _io.read_u1 == 0x7C
+        pos: _io.pos
 
-instances:
-  is_end_of_message:
-    value: segments[-1].segment_id == "MSH" && segments[-1].fields[-1].value == "\r"
-    doc: "Detects end of the entire HL7 message"
+      is_end_of_segment:
+        value: _io.pos >= _io.size or _io.read_u1 == 0x0D
+        pos: _io.pos
+
+enums:
+  administrative_sex:
+    M: male
+    F: female
+    U: unknown
+
+  result_status:
+    F: final
+    C: corrected
+    P: preliminary
+
+  allergy_type:
+    DA: drug_allergy
+    FA: food_allergy
+    EA: environment_allergy
+
+  severity:
+    MI: mild
+    MO: moderate
+    SE: severe

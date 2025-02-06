@@ -1,89 +1,66 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Primitive parsers
-static HParser *whitespace;
-static HParser *crlf;
-static HParser *digit;
-static HParser *digits;
-static HParser *token;
-static HParser *quoted_string;
-static HParser *header_value;
+// Define parsers for various HTTP header components
+HParser *http_version, *method, *uri, *status_code, *reason_phrase;
+HParser *request_line, *status_line;
+HParser *header_field, *header_fields;
+HParser *http_message;
 
-// Core rules
-static HParser *request_line;
-static HParser *status_line;
-static HParser *header;
-static HParser *message_body;
-static HParser *http_message;
-
-// Helper function to build parsers
 void init_parsers() {
-    whitespace = h_many(h_ch(' '));
-    crlf = h_token("\r\n", 2);
-    digit = h_ch_range('0', '9');
-    digits = h_many1(digit);
-    token = h_many1(h_butnot(h_ch_range(0, 31), h_ch(' ')));
-    quoted_string = h_sequence(h_ch('"'), h_kleene(h_ch_range(32, 127)), h_ch('"'), NULL);
+    http_version = h_sequence(h_ch('H'), h_ch('T'), h_ch('T'), h_ch('P'), h_ch('/'), h_bits(4, false), h_ch('.'), h_bits(4, false), NULL);
 
-    header_value = h_sequence(
-        whitespace,
-        h_choice(
-            quoted_string,
-            token,
-            NULL
-        ),
-        whitespace,
-        NULL
-    );
+    method = h_choice(h_string("GET"), h_string("POST"), h_string("HEAD"), h_string("PUT"),
+                      h_string("DELETE"), h_string("CONNECT"), h_string("OPTIONS"), h_string("TRACE"), NULL);
 
-    request_line = h_sequence(
-        token, // Method
-        h_many1(h_ch(' ')),
-        token, // Request-URI
-        h_many1(h_ch(' ')),
-        token, // HTTP-Version
-        crlf,
-        NULL
-    );
+    uri = h_many1(h_not_char(' '));
 
-    status_line = h_sequence(
-        token, // HTTP-Version
-        h_many1(h_ch(' ')),
-        digits, // Status-Code
-        h_many1(h_ch(' ')),
-        token, // Reason-Phrase
-        crlf,
-        NULL
-    );
+    status_code = h_bits(8, false);
 
-    header = h_sequence(
-        token, // field-name
-        h_token(": ", 2),
-        header_value, // field-value
-        crlf,
-        NULL
-    );
+    reason_phrase = h_many(h_not_char('\r'));
 
-    message_body = h_greedy(h_any(), NULL);
+    request_line = h_sequence(method, h_ch(' '), uri, h_ch(' '), http_version, h_ch('\r'), h_ch('\n'), NULL);
 
-    http_message = h_sequence(
-        h_choice(request_line, status_line, NULL),
-        h_many(header),
-        crlf,
-        message_body,
-        NULL
-    );
+    status_line = h_sequence(http_version, h_ch(' '), status_code, h_ch(' '), reason_phrase, h_ch('\r'), h_ch('\n'), NULL);
+
+    header_field = h_sequence(h_many1(h_not_char(':')), h_ch(':'), h_ch(' '), h_many(h_not_char('\r')), h_ch('\r'), h_ch('\n'), NULL);
+
+    header_fields = h_many(header_field);
+
+    http_message = h_sequence(h_choice(request_line, status_line, NULL), header_fields, h_many1(h_ch('\r')), h_many1(h_ch('\n')), NULL);
 }
 
 int main(int argc, char *argv[]) {
-    init_parsers();
-    HParseResult *result = h_parse(http_message, (const uint8_t *)argv[1], strlen(argv[1]));
-    if (result) {
-        printf("Parse successful!\n");
-        h_pprint(stdout, result->ast, 0, 4);
-    } else {
-        printf("Parse failed!\n");
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+        return 1;
     }
+
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t *data = malloc(fsize);
+    fread(data, 1, fsize, f);
+
+    fclose(f);
+
+    init_parsers();
+
+    HParseResult *result = h_parse(http_message, data, fsize);
+    if (result) {
+        printf("Parsed successfully.\n");
+    } else {
+        printf("Failed to parse.\n");
+    }
+
+    free(data);
     return 0;
 }

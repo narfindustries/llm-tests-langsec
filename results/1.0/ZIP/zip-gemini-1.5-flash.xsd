@@ -1,46 +1,87 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/zipgemini"
-           xmlns="http://example.org/zipgemini"
+           targetNamespace="http://example.org/zip"
+           xmlns="http://example.org/zip"
            elementFormDefault="qualified">
 
-  <xs:element name="zipGemini">
+  <xs:element name="zipFile">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:lengthKind="implicit"/>
-        <xs:element name="data" type="DataType" dfdl:lengthKind="explicit" dfdl:length="1024"/>
-        <xs:element name="footer" type="FooterType" dfdl:lengthKind="implicit"/>
+        <xs:element name="localFileHeaders" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="signature" type="unsignedInt4">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:textStandard value="FixedWidth"/>
+                    <dfdl:length value="4" units="bytes"/>
+                    <dfdl:representation value="binary"/>
+                    <dfdl:occursCount value="1"/>
+                    <dfdl:assert test="xs:hexBinary('504B0304') = xs:hexBinary(.)"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="versionNeededToExtract" type="unsignedInt2"/>
+              <xs:element name="generalPurposeBitFlag" type="unsignedInt2"/>
+              <xs:element name="compressionMethod" type="unsignedInt2"/>
+              <xs:element name="lastModifiedTime" type="unsignedInt2"/>
+              <xs:element name="lastModifiedDate" type="unsignedInt2"/>
+              <xs:element name="crc32" type="unsignedInt4"/>
+              <xs:element name="compressedSize" type="unsignedInt4"/>
+              <xs:element name="uncompressedSize" type="unsignedInt4"/>
+              <xs:element name="filenameLength" type="unsignedInt2"/>
+              <xs:element name="extraFieldLength" type="unsignedInt2"/>
+              <xs:element name="filename" type="xs:string">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:length kind="expression" value="xs:integer(./filenameLength)"/>
+                    <dfdl:textStandard value="UTF-8"/>
+                    <dfdl:representation value="text"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="extraField" type="xs:base64Binary">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:length kind="expression" value="xs:integer(./extraFieldLength)"/>
+                    <dfdl:representation value="binary"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              <xs:element name="fileData" type="xs:base64Binary">
+                <xs:annotation>
+                  <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+                    <dfdl:length kind="expression" value="xs:integer(./compressedSize)"/>
+                    <dfdl:representation value="binary"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="centralDirectoryEntries" minOccurs="0" maxOccurs="unbounded">
+          <!-- Central Directory Entries would be defined similarly to LocalFileHeaders -->
+        </xs:element>
+        <xs:element name="endOfCentralDirectoryRecord">
+          <!-- End of Central Directory Record would be defined here -->
+        </xs:element>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
     </xs:complexType>
   </xs:element>
 
+  <xs:simpleType name="unsignedInt2">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="unsignedInt4">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="4294967295"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="id" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=","/>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="DataType">
-    <xs:sequence>
-      <xs:element name="record" type="RecordType" maxOccurs="unbounded" dfdl:occursCountKind="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="RecordType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="5"/>
-      <xs:element name="field2" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="FooterType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:integer" dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
 
 </xs:schema>

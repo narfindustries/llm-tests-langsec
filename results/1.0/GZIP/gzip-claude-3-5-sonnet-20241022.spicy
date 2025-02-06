@@ -1,36 +1,70 @@
-%include zeek;
-
 module GZIP;
 
-import spicy;
-
-public type GzipHeader = unit {
-    magic1: uint8 &requires(magic1 == 0x1f);
-    magic2: uint8 &requires(magic2 == 0x8b);
-    cm: uint8;
-    flg: uint8;
+type GzipArchive = unit {
+    id1: uint8 &requires=(self.id1 == 0x1f);
+    id2: uint8 &requires=(self.id2 == 0x8b);
+    compression_method: uint8;
+    flags: uint8;
     mtime: uint32;
     xfl: uint8;
     os: uint8;
-    
-    on cm {
-        if ( self.cm != 8 )
-            self.set_error("Unknown compression method");
+
+    var has_extra: bool;
+    var has_name: bool;
+    var has_comment: bool;
+    var has_hcrc: bool;
+
+    on flags {
+        self.has_extra = (($$ & 0x04) != 0);
+        self.has_name = (($$ & 0x08) != 0);
+        self.has_comment = (($$ & 0x10) != 0);
+        self.has_hcrc = (($$ & 0x02) != 0);
     }
 
-    switch ( self.flg ) {
-        0x00 -> : void;
-        * -> : void { self.set_error("Unsupported flags"); }
-    }
+    : Extra if (self.has_extra);
+    : FileName if (self.has_name);
+    : Comment if (self.has_comment);
+    : HeaderCRC if (self.has_hcrc);
+
+    compressed_data: bytes &eod;
+    crc32: uint32;
+    isize: uint32;
 };
 
-public type GzipFile = unit {
-    header: GzipHeader;
-    data: bytes &eod;
-
-    on %done {
-        zeek::confirm_protocol();
-    }
+type Extra = unit {
+    xlen: uint16;
+    data: bytes &size=self.xlen;
 };
 
-on GZIP::GzipFile -> event gzip_file($file_id: string, $header: GzipHeader, $data: bytes);
+type FileName = unit {
+    name: bytes &until=b"\x00";
+};
+
+type Comment = unit {
+    comment: bytes &until=b"\x00";
+};
+
+type HeaderCRC = unit {
+    crc16: uint16;
+};
+
+const CM_DEFLATE = 8;
+
+const OS_FAT = 0;
+const OS_AMIGA = 1;
+const OS_VMS = 2;
+const OS_UNIX = 3;
+const OS_VM_CMS = 4;
+const OS_ATARI_TOS = 5;
+const OS_HPFS = 6;
+const OS_MACINTOSH = 7;
+const OS_Z_SYSTEM = 8;
+const OS_CP_M = 9;
+const OS_TOPS_20 = 10;
+const OS_NTFS = 11;
+const OS_QDOS = 12;
+const OS_ACORN_RISCOS = 13;
+const OS_UNKNOWN = 255;
+
+const XFL_MAX_COMPRESSION = 2;
+const XFL_FASTEST_COMPRESSION = 4;

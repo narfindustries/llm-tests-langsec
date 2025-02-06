@@ -1,80 +1,96 @@
 #include <hammer/hammer.h>
 #include <hammer/glue.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Bitcoin transaction parser using Hammer parsing library
-
-typedef struct {
-    char* txid;
-    uint64_t amount;
-    char* sender;
-    char* recipient;
-    uint64_t timestamp;
-} BitcoinTransaction;
-
-static HParser* bitcoin_transaction_parser() {
-    // Transaction ID: 64 hex characters
-    HParser* txid = h_repeat_n(h_choice(
-        h_ch_range('0', '9'),
-        h_ch_range('a', 'f'),
-        h_ch_range('A', 'F')
-    ), 64);
-
-    // Amount: positive integer
-    HParser* amount = h_uint64();
-
-    // Sender and recipient: alphanumeric strings
-    HParser* address = h_many1(h_choice(
-        h_ch_range('0', '9'),
-        h_ch_range('a', 'z'),
-        h_ch_range('A', 'Z')
-    ));
-
-    // Timestamp: Unix epoch time
-    HParser* timestamp = h_uint64();
-
-    // Full transaction structure
-    HParser* transaction = h_sequence(
-        h_whitespace_before(txid),
-        h_whitespace_before(amount),
-        h_whitespace_before(address),  // sender
-        h_whitespace_before(address),  // recipient
-        h_whitespace_before(timestamp),
+static HParser* parse_varint() {
+    return h_choice(
+        h_uint8(),
+        h_uint16(),
+        h_uint32(),
+        h_uint64(),
         NULL
     );
-
-    return transaction;
 }
 
-int main(int argc, char** argv) {
-    // Initialize Hammer parser
-    HParserBackend backend = HParserBackend_Packrat;
-    h_init(&backend);
+static HParser* parse_tx_input() {
+    return h_sequence(
+        h_repeat_n(h_uint8(), 32),  // Previous transaction hash
+        h_uint32(),                 // Previous output index
+        parse_varint(),             // ScriptSig length
+        h_many(h_uint8()),          // ScriptSig
+        h_uint32(),                 // Sequence number
+        NULL
+    );
+}
 
-    // Create transaction parser
-    HParser* parser = bitcoin_transaction_parser();
+static HParser* parse_tx_output() {
+    return h_sequence(
+        h_int64(),         // Amount
+        parse_varint(),    // ScriptPubKey length
+        h_many(h_uint8()), // ScriptPubKey
+        NULL
+    );
+}
 
-    // Example transaction input
-    const char* input = "abcd1234... 1000000 sender_addr recipient_addr 1634567890";
-    
-    // Parse transaction
-    HParseResult* result = h_parse(parser, (const uint8_t*)input, strlen(input));
+static HParser* parse_bitcoin_transaction() {
+    return h_sequence(
+        h_uint32(),        // Version
+        parse_varint(),    // Input count
+        h_many(parse_tx_input()),  // Inputs
+        parse_varint(),    // Output count
+        h_many(parse_tx_output()),  // Outputs
+        h_uint32(),        // Locktime
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <transaction_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (bytes_read != file_size) {
+        perror("File read error");
+        free(buffer);
+        return 1;
+    }
+
+    HParser* parser = parse_bitcoin_transaction();
+    HParseResult* result = h_parse(parser, buffer, file_size);
 
     if (result && result->ast) {
-        // Extract and print transaction details
-        BitcoinTransaction tx = {0};
-        // TODO: Implement AST traversal and transaction extraction
-        
         printf("Transaction parsed successfully\n");
     } else {
         printf("Transaction parsing failed\n");
     }
 
-    // Cleanup
     h_parse_result_free(result);
-    h_destroy(parser);
+    h_parser_free(parser);
+    free(buffer);
 
     return 0;
 }

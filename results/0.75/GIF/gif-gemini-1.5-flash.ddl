@@ -1,40 +1,81 @@
-module GIF.GifGemini1 where
+data GIF = GIF {
+  signature :: [UInt8]{6},
+  logicalScreenDescriptor :: LogicalScreenDescriptor,
+  globalColorTable :: Maybe (Array UInt8),
+  extensions :: [ExtensionBlock],
+  images :: [ImageBlock],
+  trailer :: UInt8
+}
 
-import Daedalus.Type.AST
+data LogicalScreenDescriptor = LogicalScreenDescriptor {
+  width :: UInt16,
+  height :: UInt16,
+  packedFields :: PackedFields
+}
 
--- Data types for GIF image
+data PackedFields = PackedFields {
+  globalColorTableFlag :: Bool,
+  colorResolution :: UInt8,
+  sortFlag :: Bool,
+  sizeOfGlobalColorTable :: UInt8
+}
 
-data Color = Color { red :: Word8, green :: Word8, blue :: Word8 }
+data ImageBlock = ImageBlock {
+  imageDescriptor :: ImageDescriptor,
+  localColorTable :: Maybe (Array UInt8),
+  imageData :: [UInt8]
+}
 
-data Image = Image { width :: Word16, height :: Word16, colors :: [Color], pixels :: [Word8] }
+data ImageDescriptor = ImageDescriptor {
+  imageSeparator :: UInt8,
+  leftPosition :: UInt16,
+  topPosition :: UInt16,
+  width :: UInt16,
+  height :: UInt16,
+  packedFields :: ImagePackedFields
+}
 
--- Parsing function for GIF image
+data ImagePackedFields = ImagePackedFields {
+  localColorTableFlag :: Bool,
+  interlaceFlag :: Bool,
+  sortFlag :: Bool,
+  sizeOfLocalColorTable :: UInt8
+}
 
-parseGIF :: forall m . Monad m => Parser m Image
+data ExtensionBlock = GraphicControlExtension | CommentExtension | PlainTextExtension | ApplicationExtension
 
-parseGIF = do
-  width <- word16
-  height <- word16
-  numColors <- word8
-  colors <- replicateM numColors (Color <$> word8 <*> word8 <*> word8)
-  pixels <- replicateM (fromIntegral width * fromIntegral height) word8
-  return $ Image width height colors pixels
+data GraphicControlExtension = GraphicControlExtension {
+  blockIdentifier :: UInt8,
+  blockSize :: UInt8,
+  packedFields :: GraphicControlPackedFields,
+  delayTime :: UInt16,
+  transparentColorIndex :: UInt8,
+  terminator :: UInt8
+}
 
+data GraphicControlPackedFields = GraphicControlPackedFields {
+  reserved :: UInt8,
+  disposalMethod :: UInt8,
+  userInputFlag :: Bool,
+  transparentColorFlag :: Bool
+}
 
--- Serialization function for GIF image
+data CommentExtension = CommentExtension {
+  blockIdentifier :: UInt8,
+  commentData :: [UInt8],
+  terminator :: UInt8
+}
 
-serializeGIF :: Image -> [Word8]
+data PlainTextExtension = PlainTextExtension {
+  blockIdentifier :: UInt8,
+  plainTextData :: [UInt8],
+  terminator :: UInt8
+}
 
-serializeGIF image =
-  word16ToBytes (width image) ++
-  word16ToBytes (height image) ++
-  [fromIntegral $ length $ colors image] ++
-  concatMap colorToBytes (colors image) ++
-  pixels image
-
-word16ToBytes :: Word16 -> [Word8]
-word16ToBytes w = [fromIntegral (w `shiftR` 8), fromIntegral (w .&. 0xFF)]
-
-colorToBytes :: Color -> [Word8]
-colorToBytes (Color r g b) = [r, g, b]
-
+data ApplicationExtension = ApplicationExtension {
+  blockIdentifier :: UInt8,
+  applicationIdentifier :: [UInt8]{8},
+  applicationAuthenticationCode :: [UInt8]{3},
+  applicationData :: [UInt8],
+  terminator :: UInt8
+}

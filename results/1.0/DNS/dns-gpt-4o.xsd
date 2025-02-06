@@ -1,70 +1,119 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema" 
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
-        targetNamespace="http://example.org/dns"
-        xmlns:tns="http://example.org/dns"
-        elementFormDefault="qualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/DNS"
+           xmlns:tns="http://example.org/DNS"
+           elementFormDefault="qualified">
 
-    <annotation>
-        <appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format representation="binary" lengthKind="explicit" length="8" encoding="utf-8"/>
-        </appinfo>
-    </annotation>
+  <!-- Define global format -->
+  <dfdl:defineFormat name="GlobalFormat" byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit"/>
 
-    <element name="DNSMessage">
-        <complexType>
-            <sequence>
-                <element name="Header" type="tns:HeaderType" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-                <element name="Question" type="tns:QuestionType" minOccurs="0" maxOccurs="unbounded"/>
-                <element name="Answer" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
-                <element name="Authority" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
-                <element name="Additional" type="tns:ResourceRecordType" minOccurs="0" maxOccurs="unbounded"/>
-            </sequence>
-        </complexType>
-    </element>
+  <!-- DNS Message -->
+  <xs:element name="DNSMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Header" type="tns:HeaderType" dfdl:formatRef="tns:GlobalFormat"/>
+        <xs:element name="Question" type="tns:QuestionType" maxOccurs="unbounded" dfdl:occursCount="{ ../../Header/QDCOUNT }" dfdl:formatRef="tns:GlobalFormat"/>
+        <xs:element name="Answer" type="tns:ResourceRecordType" maxOccurs="unbounded" dfdl:occursCount="{ ../../Header/ANCOUNT }" dfdl:formatRef="tns:GlobalFormat"/>
+        <xs:element name="Authority" type="tns:ResourceRecordType" maxOccurs="unbounded" dfdl:occursCount="{ ../../Header/NSCOUNT }" dfdl:formatRef="tns:GlobalFormat"/>
+        <xs:element name="Additional" type="tns:ResourceRecordType" maxOccurs="unbounded" dfdl:occursCount="{ ../../Header/ARCOUNT }" dfdl:formatRef="tns:GlobalFormat"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-    <complexType name="HeaderType">
-        <sequence>
-            <element name="ID" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="QR" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
-            <element name="Opcode" type="byte" dfdl:lengthKind="explicit" dfdl:length="{4}"/>
-            <element name="AA" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
-            <element name="TC" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
-            <element name="RD" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
-            <element name="RA" type="byte" dfdl:lengthKind="explicit" dfdl:length="{1}"/>
-            <element name="Z" type="byte" dfdl:lengthKind="explicit" dfdl:length="{3}"/>
-            <element name="RCode" type="byte" dfdl:lengthKind="explicit" dfdl:length="{4}"/>
-            <element name="QDCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="ANCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="NSCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="ARCount" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-        </sequence>
-    </complexType>
+  <!-- Header -->
+  <xs:complexType name="HeaderType">
+    <xs:sequence>
+      <xs:element name="ID" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthUnits="bits"/>
+      <xs:element name="Flags" type="tns:FlagsType"/>
+      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthUnits="bits"/>
+      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthUnits="bits"/>
+      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthUnits="bits"/>
+      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:length="16" dfdl:lengthUnits="bits"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="QuestionType">
-        <sequence>
-            <element name="QName" type="tns:DomainNameType"/>
-            <element name="QType" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="QClass" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-        </sequence>
-    </complexType>
+  <!-- Flags -->
+  <xs:complexType name="FlagsType">
+    <xs:sequence>
+      <xs:element name="QR" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+      <xs:element name="Opcode" type="tns:OpcodeType" dfdl:length="4" dfdl:lengthUnits="bits"/>
+      <xs:element name="AA" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+      <xs:element name="TC" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+      <xs:element name="RD" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+      <xs:element name="RA" type="xs:boolean" dfdl:length="1" dfdl:lengthUnits="bits"/>
+      <xs:element name="Z" type="xs:boolean" dfdl:length="3" dfdl:lengthUnits="bits" dfdl:inputValueCalc="{ 0 }"/>
+      <xs:element name="RCODE" type="tns:RCodeType" dfdl:length="4" dfdl:lengthUnits="bits"/>
+    </xs:sequence>
+  </xs:complexType>
 
-    <complexType name="ResourceRecordType">
-        <sequence>
-            <element name="Name" type="tns:DomainNameType"/>
-            <element name="Type" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="Class" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="TTL" type="unsignedInt" dfdl:lengthKind="explicit" dfdl:length="{32}"/>
-            <element name="RDLength" type="unsignedShort" dfdl:lengthKind="explicit" dfdl:length="{16}"/>
-            <element name="RData" type="hexBinary" dfdl:occursCountKind="expression" dfdl:occursCount="{../RDLength}"/>
-        </sequence>
-    </complexType>
+  <!-- Opcode -->
+  <xs:simpleType name="OpcodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-    <simpleType name="DomainNameType">
-        <restriction base="string">
-            <dfdl:lengthKind value="delimited"/>
-            <dfdl:terminator value="\x00"/>
-        </restriction>
-    </simpleType>
+  <!-- RCODE -->
+  <xs:simpleType name="RCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-</schema>
+  <!-- Question -->
+  <xs:complexType name="QuestionType">
+    <xs:sequence>
+      <xs:element name="QNAME" type="tns:DomainNameType"/>
+      <xs:element name="QTYPE" type="tns:QTypeType"/>
+      <xs:element name="QCLASS" type="tns:QClassType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Domain Name -->
+  <xs:simpleType name="DomainNameType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- QTYPE -->
+  <xs:simpleType name="QTypeType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- QCLASS -->
+  <xs:simpleType name="QClassType">
+    <xs:restriction base="xs:unsignedShort">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Resource Record -->
+  <xs:complexType name="ResourceRecordType">
+    <xs:sequence>
+      <xs:element name="NAME" type="tns:DomainNameType"/>
+      <xs:element name="TYPE" type="tns:QTypeType"/>
+      <xs:element name="CLASS" type="tns:QClassType"/>
+      <xs:element name="TTL" type="xs:unsignedInt"/>
+      <xs:element name="RDLENGTH" type="xs:unsignedShort"/>
+      <xs:element name="RDATA" type="xs:hexBinary" dfdl:length="{ ..../RDLENGTH }" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

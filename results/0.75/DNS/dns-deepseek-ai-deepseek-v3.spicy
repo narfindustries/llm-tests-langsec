@@ -1,0 +1,46 @@
+module DNS;
+
+import spicy;
+
+public type Header = unit {
+    id: uint16;
+    QR: uint1;
+    OPCODE: uint4;
+    AA: uint1;
+    TC: uint1;
+    RD: uint1;
+    RA: uint1;
+    Z: uint3;
+    RCODE: uint4;
+    qdcount: uint16;
+    ancount: uint16;
+    nscount: uint16;
+    arcount: uint16;
+};
+
+public type Question = unit {
+    qname: bytes &until=b"\x00";
+    qtype: uint16;
+    qclass: uint16;
+};
+
+public type ResourceRecord = unit {
+    name: bytes &until=b"\x00";
+    type: uint16;
+    class: uint16;
+    ttl: uint32;
+    rdlength: uint16;
+    rdata: bytes &size=rdlength;
+};
+
+public type Message = unit {
+    header: Header;
+    questions: Question[] &size=header.qdcount;
+    answers: ResourceRecord[] &size=header.ancount;
+    authorities: ResourceRecord[] &size=header.nscount;
+    additionals: ResourceRecord[] &size=header.arcount;
+};
+
+on Message::%done {
+    print self;
+}

@@ -1,34 +1,61 @@
-domain NITF {
-  doc "NITF (National Image Transmission Format) metadata"
-
-  type NITFHEADER {
-    doc "NITF file header"
-    uint8[4] file_id; // "NITF"
-    uint8[2] version; // e.g., "02"
-    uint8[6] control;
-    uint8[9] file_date;
-    uint8[3] file_title;
-    uint8[2] file_security;
-    uint8[1] file_marking;
-    uint8[4] file_describe;
-    uint8[5] file_class;
-    uint8[2] file_releas;
-    uint8[20] file_ctlh;
-    uint8[25] file_headers;
-  }
-
-  type NITF_META {
-    doc "NITF metadata"
-    NITFHEADER header;
-    uint8[2] meta_version; // e.g., "01"
-    uint8[8] meta_data;
-  }
-
-  type NITF_FILE {
-    doc "NITF file structure"
-    NITFHEADER file_header;
-    meta: NITF_META;
-  }
-
-  root NITF_FILE;
+type FILE_HEADER = struct {
+  FILEHDRID: string(4) = "NITF",
+  FILEVER: string(6) = "02.10",
+  COMPLEXITYLV: uint8,
+  STYP: string(4),
+  ORGNM: string(25),
+  ORGPNO: string(20),
+  FSC: enum { "U", "C", "S", "T" },
+  RELEASING: string(40),
+  FTITLE: string(80),
+  FSCSCLAS: enum { "USA", "USM", "NATO" }
 }
+
+type IMAGE_HEADER = struct {
+  IMID: string(25),
+  IDATIM: string(14),
+  IMAG: enum { "U", "C", "S", "T" },
+  IMRELEAS: string(40),
+  ITITLE: string(80),
+  ICOMP: enum { "NC", "BICUBIC", "JPEG" },
+  IPT: enum { "INT8", "UINT8", "INT16", "UINT16" }
+}
+
+type IMAGE_DATA = struct {
+  IDT: enum { "MONO", "RGB", "MULTI" },
+  IPSZ: string(10),
+  IBIT: uint8
+}
+
+type DATA_EXTENSION_SEGMENT = struct {
+  DESID: string(25),
+  DESC: enum { "U", "C", "S", "T" },
+  DERELEAS: string(40),
+  DESDATA: bytes
+}
+
+type TEXT_SEGMENT = struct {
+  TSID: string(25),
+  TSC: enum { "U", "C", "S", "T" },
+  TSRELEAS: string(40),
+  TSDATA: string
+}
+
+type NITF_FILE = struct {
+  HS: FILE_HEADER,
+  IH: IMAGE_HEADER,
+  ID: IMAGE_DATA,
+  DES: optional(DATA_EXTENSION_SEGMENT),
+  TS: optional(TEXT_SEGMENT)
+}
+
+type NITF_FILE_REPEAT = struct {
+  HS: FILE_HEADER,
+  IH: IMAGE_HEADER,
+  ID: IMAGE_DATA,
+  DES: optional(DATA_EXTENSION_SEGMENT),
+  TS: optional(TEXT_SEGMENT),
+  NEXT: optional(NITF_FILE_REPEAT)
+}
+
+root type NITF_FILE_REPEAT

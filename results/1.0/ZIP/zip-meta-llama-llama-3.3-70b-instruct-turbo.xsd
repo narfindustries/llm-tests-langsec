@@ -1,44 +1,111 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ZIP"
-           xmlns="http://example.com/ZIP"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="zip-file">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formatrefs>
-          <dfdl:format ref="zip-format"/>
-        </dfdl:formatrefs>
-      </xs:appinfo>
-    </xs:annotation>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="define">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="local-file-header" type="local-file-headerType" maxOccurs="unbounded"/>
+        <xs:element name="format" type="dfdl:FormatType"/>
+        <xs:element name="element" type="dfdl:ElementType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="defineType" type="dfdl:DefineTypeType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="name" type="xs:string" use="required"/>
+      <xs:attribute name="type" type="xs:string" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="FormatType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="optional"/>
+    <xs:attribute name="encoding" type="xs:string" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="ElementType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:ElementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="optional"/>
+    <xs:attribute name="occurs" type="xs:string" use="optional" default="1"/>
+  </xs:complexType>
+  <xs:complexType name="DefineTypeType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:ElementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:element name="ZIP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LocalFileHeader" type="LocalFileHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="DataDescriptor" type="DataDescriptorType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="CentralDirectoryHeader" type="CentralDirectoryHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="EndOfCentralDirectoryRecord" type="EndOfCentralDirectoryRecordType"/>
+        <xs:element name="FileData" type="FileDataType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="local-file-headerType">
+  <xs:complexType name="LocalFileHeaderType">
     <xs:sequence>
-      <xs:element name="local-file-header-signature" type="xs:hexBinary" dfdl:length="4" dfdl:byteOrder="big"/>
-      <xs:element name="version-needed-to-extract" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="general-purpose-bit-flag" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="compression-method" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="last-modification-time" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="last-modification-date" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="crc-32" type="xs:int" dfdl:byteOrder="little"/>
-      <xs:element name="compressed-size" type="xs:int" dfdl:byteOrder="little"/>
-      <xs:element name="uncompressed-size" type="xs:int" dfdl:byteOrder="little"/>
-      <xs:element name="file-name-length" type="xs:short" dfdl:byteOrder="little"/>
-      <xs:element name="extra-field-length" type="xs:short" dfdl:byteOrder="little"/>
+      <xs:element name="Signature" type="xs:unsignedInt"/>
+      <xs:element name="VersionNeededToExtract" type="xs:unsignedShort"/>
+      <xs:element name="GeneralPurposeBitFlag" type="xs:unsignedShort"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedShort"/>
+      <xs:element name="LastModificationTime" type="xs:unsignedShort"/>
+      <xs:element name="LastModificationDate" type="xs:unsignedShort"/>
+      <xs:element name="CRC32" type="xs:unsignedInt"/>
+      <xs:element name="CompressedSize" type="xs:unsignedInt"/>
+      <xs:element name="UncompressedSize" type="xs:unsignedInt"/>
+      <xs:element name="FilenameLength" type="xs:unsignedShort"/>
+      <xs:element name="ExtraFieldLength" type="xs:unsignedShort"/>
+      <xs:element name="Filename" type="xs:string"/>
+      <xs:element name="ExtraField" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
-
-  <dfdl:format name="zip-format" ref="zip-binary-format"/>
-
-  <dfdl:binaryFormat name="zip-binary-format" encoding="iso-8859-1" byteOrder="big" distribution="http://www.ogf.org/dfdl/dfdl-1.0/distribution/standard"/>
+  <xs:complexType name="DataDescriptorType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:unsignedInt"/>
+      <xs:element name="CRC32" type="xs:unsignedInt"/>
+      <xs:element name="CompressedSize" type="xs:unsignedInt"/>
+      <xs:element name="UncompressedSize" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CentralDirectoryHeaderType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:unsignedInt"/>
+      <xs:element name="VersionMadeBy" type="xs:unsignedShort"/>
+      <xs:element name="VersionNeededToExtract" type="xs:unsignedShort"/>
+      <xs:element name="GeneralPurposeBitFlag" type="xs:unsignedShort"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedShort"/>
+      <xs:element name="LastModificationTime" type="xs:unsignedShort"/>
+      <xs:element name="LastModificationDate" type="xs:unsignedShort"/>
+      <xs:element name="CRC32" type="xs:unsignedInt"/>
+      <xs:element name="CompressedSize" type="xs:unsignedInt"/>
+      <xs:element name="UncompressedSize" type="xs:unsignedInt"/>
+      <xs:element name="FilenameLength" type="xs:unsignedShort"/>
+      <xs:element name="ExtraFieldLength" type="xs:unsignedShort"/>
+      <xs:element name="FileCommentLength" type="xs:unsignedShort"/>
+      <xs:element name="DiskNumberStart" type="xs:unsignedShort"/>
+      <xs:element name="InternalFileAttributes" type="xs:unsignedShort"/>
+      <xs:element name="ExternalFileAttributes" type="xs:unsignedInt"/>
+      <xs:element name="RelativeOffsetOfLocalHeader" type="xs:unsignedInt"/>
+      <xs:element name="Filename" type="xs:string"/>
+      <xs:element name="ExtraField" type="xs:hexBinary"/>
+      <xs:element name="FileComment" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EndOfCentralDirectoryRecordType">
+    <xs:sequence>
+      <xs:element name="Signature" type="xs:unsignedInt"/>
+      <xs:element name="NumberOfThisDisk" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfTheDiskWhereTheCentralDirectoryStarts" type="xs:unsignedShort"/>
+      <xs:element name="NumberOfEntriesInCentralDirectoryOnThisDisk" type="xs:unsignedShort"/>
+      <xs:element name="TotalNumberOfEntriesInCentralDirectory" type="xs:unsignedShort"/>
+      <xs:element name="SizeOfCentralDirectory" type="xs:unsignedInt"/>
+      <xs:element name="OffsetOfStartOfCentralDirectoryWithRespectToStartingDiskNumber" type="xs:unsignedInt"/>
+      <xs:element name="ZipfileCommentLength" type="xs:unsignedShort"/>
+      <xs:element name="ZipfileComment" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="FileDataType">
+    <xs:sequence>
+      <xs:element name="FileData" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

@@ -1,25 +1,55 @@
 module GZIP;
 
-import spicy;
-
 public type GZIP = unit {
-    magic1: uint8 &requires = 0x1f;
-    magic2: uint8 &requires = 0x8b;
-    cm: uint8 &requires = 0x08;
-    flags: uint8;
+    id1: uint8 &requires=(self.id1 == 0x1f);
+    id2: uint8 &requires=(self.id2 == 0x8b);
+    cm: uint8;
+    flg: uint8;
     mtime: uint32;
     xfl: uint8;
     os: uint8;
-    
-    on %done {
-        print self;
+
+    var has_extra: bool;
+    var has_name: bool;
+    var has_comment: bool;
+    var has_hcrc: bool;
+
+    on flg {
+        self.has_extra = (($$) & 0x04) != 0;
+        self.has_name = (($$) & 0x08) != 0;
+        self.has_comment = (($$) & 0x10) != 0;
+        self.has_hcrc = (($$) & 0x02) != 0;
     }
+
+    extra_length: uint16 if (self.has_extra);
+    extra_field: bytes &size=self.extra_length if (self.has_extra);
+    fname: bytes &until=b"\x00" if (self.has_name);
+    fcomment: bytes &until=b"\x00" if (self.has_comment);
+    hcrc16: uint16 if (self.has_hcrc);
+    
+    compressed_data: bytes &eod;
+    crc32: uint32;
+    isize: uint32;
 };
 
-type Flags = enum {
-    FTEXT = 0x01,
-    FHCRC = 0x02,
-    FEXTRA = 0x04,
-    FNAME = 0x08,
-    FCOMMENT = 0x10
+type CompressionMethod = enum {
+    DEFLATE = 8
+};
+
+type OperatingSystem = enum {
+    FAT = 0,
+    AMIGA = 1,
+    VMS = 2,
+    UNIX = 3,
+    VM_CMS = 4,
+    ATARI_TOS = 5,
+    HPFS = 6,
+    MACINTOSH = 7,
+    Z_SYSTEM = 8,
+    CP_M = 9,
+    TOPS_20 = 10,
+    NTFS = 11,
+    QDOS = 12,
+    ACORN_RISCOS = 13,
+    UNKNOWN = 255
 };

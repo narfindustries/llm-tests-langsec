@@ -2,51 +2,54 @@ module TLS;
 
 import spicy;
 
-type ProtocolVersion = unit {
+public type Version = unit {
     major: uint8;
     minor: uint8;
 };
 
-type Random = unit {
-    gmt_unix_time: uint32;
+public type Random = unit {
+    gmt_unix_time: bytes &size=4;
     random_bytes: bytes &size=28;
 };
 
-type SessionID = unit {
+public type SessionID = unit {
     length: uint8;
     session_id: bytes &size=this.length;
 };
 
-type CipherSuites = unit {
+public type CipherSuites = unit {
     length: uint16;
-    suites: uint16[] &size=(this.length / 2);
+    cipher_suites: bytes &size=this.length;
 };
 
-type CompressionMethods = unit {
+public type CompressionMethods = unit {
     length: uint8;
-    methods: uint8[] &size=this.length;
+    methods: bytes &size=this.length;
 };
 
-type Extension = unit {
-    type: uint16;
-    length: uint16;
-    data: bytes &size=this.length;
+public type Extension = unit {
+    extension_type: uint16;
+    extension_length: uint16;
+    extension_data: bytes &size=this.extension_length;
 };
 
-type Extensions = unit {
+public type Extensions = unit {
     length: uint16;
-    extensions: Extension[] &eod;
+    extensions: Extension[] &size=this.length;
 };
 
 public type ClientHello = unit {
-    version: ProtocolVersion;
+    legacy_version: Version;
     random: Random;
     session_id: SessionID;
     cipher_suites: CipherSuites;
     compression_methods: CompressionMethods;
-    extensions: Extensions &optional;
+    extensions: Extensions;
 };
 
-event zeek_init() &priority=-5 {
-    print "Zeek module for parsing TLS Client Hello loaded.";
-}
+public type TLSRecord = unit {
+    content_type: uint8;
+    version: Version;
+    length: uint16;
+    handshake_protocol: ClientHello &size=this.length;
+};

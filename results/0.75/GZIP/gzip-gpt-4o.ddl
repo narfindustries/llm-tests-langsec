@@ -1,53 +1,68 @@
-definition Gzip {
-  // GZIP file format as per RFC 1952
-  struct GzipFile {
-    Header header;
+enum uint8 CompressionMethod {
+    DEFLATE = 0x08
+}
+
+bitfield uint8 Flag {
+    FTEXT = 0x01,
+    FHCRC = 0x02,
+    FEXTRA = 0x04,
+    FNAME = 0x08,
+    FCOMMENT = 0x10
+}
+
+enum uint8 OperatingSystem {
+    FAT = 0x00,
+    Amiga = 0x01,
+    VMS = 0x02,
+    Unix = 0x03,
+    VM_CMS = 0x04,
+    Atari_TOS = 0x05,
+    HPFS = 0x06,
+    Macintosh = 0x07,
+    Z_System = 0x08,
+    CPM = 0x09,
+    TOPS_20 = 0x0A,
+    NTFS = 0x0B,
+    QDOS = 0x0C,
+    Acorn_RISCOS = 0x0D,
+    Unknown = 0xFF
+}
+
+struct Gzip {
+    uint8 id1 = 0x1F;
+    uint8 id2 = 0x8B;
+    CompressionMethod cm;
+    Flag flg;
+    uint32 mtime;
+    uint8 xfl;
+    OperatingSystem os;
+
+    if (flg & Flag.FEXTRA) {
+        ExtraField extra;
+    }
+
+    if (flg & Flag.FNAME) {
+        null_terminated_string fname;
+    }
+
+    if (flg & Flag.FCOMMENT) {
+        null_terminated_string fcomment;
+    }
+
+    if (flg & Flag.FHCRC) {
+        uint16 header_crc16;
+    }
+
     CompressedData compressed_data;
     uint32 crc32;
     uint32 isize;
-  }
+}
 
-  struct Header {
-    uint8 id1; // ID1 should be 0x1f
-    uint8 id2; // ID2 should be 0x8b
-    uint8 compression_method; // Compression method (8 = deflate)
-    Flags flags;
-    uint32 mtime; // Modification time
-    uint8 xflags; // Extra flags
-    uint8 os; // Operating system
-    if (flags.fextra) {
-      ExtraField extra;
-    }
-    if (flags.fname) {
-      NullTerminatedString original_filename;
-    }
-    if (flags.fcomment) {
-      NullTerminatedString comment;
-    }
-    if (flags.fhcrc) {
-      uint16 header_crc16;
-    }
-  }
+struct ExtraField {
+    uint16 xlen;
+    uint8[xlen] extra_data;
+}
 
-  struct Flags {
-    uint8 reserved:3;
-    uint8 fhcrc:1; // Header CRC16 present
-    uint8 fextra:1; // Extra field present
-    uint8 fname:1; // Original file name present
-    uint8 fcomment:1; // Comment present
-    uint8 ftext:1; // File is ASCII text
-  }
-
-  struct ExtraField {
-    uint16 xlen; // Length of extra field
-    bytes[xlen] extra_data;
-  }
-
-  struct CompressedData {
-    bytes[] data; // Compressed data stream
-  }
-
-  struct NullTerminatedString {
-    char[] str until(terminator: 0);
-  }
+struct CompressedData {
+    byte[] data;
 }

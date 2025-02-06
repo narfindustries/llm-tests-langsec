@@ -1,1 +1,78 @@
-GPT API Error: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/HL7v2"
+           xmlns:ex="http://example.com/HL7v2">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format representation="text" separatorSuppressionPolicy="never" lengthKind="delimited" encoding="ASCII" />
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="HL7Message" type="ex:HL7Message"/>
+
+    <xs:complexType name="HL7Message">
+        <xs:sequence>
+            <xs:element name="MSH" type="ex:MSHSegment" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="PID" type="ex:PIDSegment" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="ORC" type="ex:ORCSegment" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MSHSegment">
+        <xs:sequence>
+            <xs:element name="fieldSeparator" type="xs:string" dfdl:length="1"/>
+            <xs:element name="encodingCharacters" type="xs:string" dfdl:length="4"/>
+            <xs:element name="sendingApplication" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="sendingFacility" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="receivingApplication" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="receivingFacility" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="dateTimeOfMessage" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="security" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="messageType" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="messageControlID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="processingID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="versionID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PIDSegment">
+        <xs:sequence>
+            <xs:element name="setIDPID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientIdentifierList" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="alternatePatientID" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientName" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="mothersMaidenName" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="dateOfBirth" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="sex" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientAlias" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="race" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientAddress" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="countyCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="phoneNumberHome" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="phoneNumberBusiness" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="primaryLanguage" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="maritalStatus" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="religion" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="patientAccountNumber" type="xs:string" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ORCSegment">
+        <xs:sequence>
+            <xs:element name="orderControl" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="placerOrderNumber" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="fillerOrderNumber" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="placerGroupNumber" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="orderStatus" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="responseFlag" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="quantityTiming" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="parentOrder" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="dateTimeOfTransaction" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="enteredBy" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="verifiedBy" type="xs:string" dfdl:lengthKind="delimited" dfdl:separator="^"/>
+            <xs:element name="orderingProvider" type="xs:string" dfdl:lengthKind="delimited"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

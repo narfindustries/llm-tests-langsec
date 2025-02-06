@@ -1,82 +1,54 @@
-module DICOM {
-    type FileHeader {
-        magic: [4]u8,
-        version: u16,
-        encoding: u8
-    }
-
-    type PatientInfo {
-        id: String,
+type Dicom = {
+    header: {
+        preamble: Array<Byte, 128>,
+        magic_number: Array<Byte, 4>,
+        transfer_syntax: Enum<TransferSyntax> {
+            ImplicitVRLittleEndian,
+            ExplicitVRLittleEndian, 
+            ExplicitVRBigEndian
+        },
+        implementation_version: String
+    },
+    patient: {
         name: String,
-        birthDate: String,
-        gender: String
-    }
-
-    type ImageMetadata {
-        width: u32,
-        height: u32,
-        bitDepth: u8,
-        colorSpace: String
-    }
-
-    type DicomImage {
-        header: FileHeader,
-        patient: PatientInfo,
-        image: ImageMetadata,
-        pixelData: [*]u8
-    }
-
-    fn validateDicomHeader(header: FileHeader) -> Bool {
-        header.magic == [0x44, 0x49, 0x43, 0x4D] && 
-        header.version <= 3 && 
-        header.encoding <= 2
-    }
-
-    fn parsePatientInfo(data: String) -> Option<PatientInfo> {
-        // Simplified parsing logic
-        if data.length > 0 {
-            Some(PatientInfo {
-                id: data.split(",")[0],
-                name: data.split(",")[1],
-                birthDate: data.split(",")[2],
-                gender: data.split(",")[3]
-            })
-        } else {
-            None
-        }
-    }
-
-    fn loadDicomImage(rawData: [*]u8) -> Option<DicomImage> {
-        let headerSize = 7;
-        if rawData.length < headerSize {
-            return None;
-        }
-
-        let header = FileHeader {
-            magic: [rawData[0], rawData[1], rawData[2], rawData[3]],
-            version: (rawData[4] as u16) | ((rawData[5] as u16) << 8),
-            encoding: rawData[6]
-        };
-
-        if !validateDicomHeader(header) {
-            return None;
-        }
-
-        Some(DicomImage {
-            header: header,
-            patient: PatientInfo {
-                id: "",
-                name: "",
-                birthDate: "",
-                gender: ""
-            },
-            image: ImageMetadata {
-                width: 0,
-                height: 0,
-                bitDepth: 8,
-                colorSpace: "RGB"
-            },
-            pixelData: rawData[headerSize..]
-        })
+        id: String,
+        birth_date: Date,
+        sex: Enum<Sex> {
+            Male,
+            Female,
+            Other
+        },
+        age: Optional<UInt8>,
+        weight: Optional<Float32>,
+        height: Optional<Float32>
+    },
+    study: {
+        instance_uid: UUID,
+        date: Date,
+        time: Time,
+        accession_number: Optional<String>,
+        referring_physician: Optional<String>, 
+        description: Optional<String>,
+        study_id: Optional<String>
+    },
+    series: {
+        modality: Enum<Modality> {
+            CT, MR, US, NM, PET,
+            CR, DX, MG, RF, XA, RG
+        },
+        series_number: UInt16,
+        description: Optional<String>,
+        date: Date,
+        time: Time
+    },
+    image: {
+        sop_class_uid: UUID,
+        image_type: Enum<ImageType> {
+            Original,
+            Derived,
+            Secondary
+        },
+        instance_number: UInt32,
+        pixel_data: Array<Byte>
     }
 }

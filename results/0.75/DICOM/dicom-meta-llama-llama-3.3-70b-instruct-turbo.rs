@@ -1,7 +1,7 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{length_data, many0},
+    combinator::{map, map_opt},
+    multi::many0,
     number::complete::{be_u16, be_u32},
     sequence::tuple,
     IResult,
@@ -9,7 +9,8 @@ use nom::{
 use std::{
     env,
     fs::File,
-    io::{BufReader, Read},
+    io::{Read},
+    path::Path,
 };
 
 #[derive(Debug, PartialEq)]
@@ -43,87 +44,93 @@ enum VR {
     UN,
     UR,
     US,
-    UT,
+    UX,
 }
 
-#[derive(Debug)]
-struct Element {
+#[derive(Debug, PartialEq)]
+struct DataElement {
     tag: (u16, u16),
     vr: VR,
-    length: u32,
     value: Vec<u8>,
 }
 
+impl DataElement {
+    fn new(tag: (u16, u16), vr: VR, value: Vec<u8>) -> Self {
+        DataElement { tag, vr, value }
+    }
+}
+
 fn parse_vr(input: &[u8]) -> IResult<&[u8], VR> {
-    let (input, vr) = take(2u8)(input)?;
-    match vr {
-        b"AE" => Ok((input, VR::AE)),
-        b"AS" => Ok((input, VR::AS)),
-        b"AT" => Ok((input, VR::AT)),
-        b"CS" => Ok((input, VR::CS)),
-        b"DA" => Ok((input, VR::DA)),
-        b"DS" => Ok((input, VR::DS)),
-        b"DT" => Ok((input, VR::DT)),
-        b"FL" => Ok((input, VR::FL)),
-        b"FD" => Ok((input, VR::FD)),
-        b"IS" => Ok((input, VR::IS)),
-        b"LO" => Ok((input, VR::LO)),
-        b"LT" => Ok((input, VR::LT)),
-        b"OB" => Ok((input, VR::OB)),
-        b"OD" => Ok((input, VR::OD)),
-        b"OF" => Ok((input, VR::OF)),
-        b"OL" => Ok((input, VR::OL)),
-        b"OW" => Ok((input, VR::OW)),
-        b"PN" => Ok((input, VR::PN)),
-        b"SH" => Ok((input, VR::SH)),
-        b"SL" => Ok((input, VR::SL)),
-        b"SQ" => Ok((input, VR::SQ)),
-        b"SS" => Ok((input, VR::SS)),
-        b"ST" => Ok((input, VR::ST)),
-        b"TM" => Ok((input, VR::TM)),
-        b"UI" => Ok((input, VR::UI)),
-        b"UL" => Ok((input, VR::UL)),
-        b"UN" => Ok((input, VR::UN)),
-        b"UR" => Ok((input, VR::UR)),
-        b"US" => Ok((input, VR::US)),
-        b"UT" => Ok((input, VR::UT)),
-        _ => Err(nom::Err::Error(nom::error::ErrorKind::AlphaNumeric)),
-    }
+    map_opt(
+        take(2usize),
+        |vr: &[u8]| match std::str::from_utf8(vr) {
+            Ok("AE") => Some(VR::AE),
+            Ok("AS") => Some(VR::AS),
+            Ok("AT") => Some(VR::AT),
+            Ok("CS") => Some(VR::CS),
+            Ok("DA") => Some(VR::DA),
+            Ok("DS") => Some(VR::DS),
+            Ok("DT") => Some(VR::DT),
+            Ok("FL") => Some(VR::FL),
+            Ok("FD") => Some(VR::FD),
+            Ok("IS") => Some(VR::IS),
+            Ok("LO") => Some(VR::LO),
+            Ok("LT") => Some(VR::LT),
+            Ok("OB") => Some(VR::OB),
+            Ok("OD") => Some(VR::OD),
+            Ok("OF") => Some(VR::OF),
+            Ok("OL") => Some(VR::OL),
+            Ok("OW") => Some(VR::OW),
+            Ok("PN") => Some(VR::PN),
+            Ok("SH") => Some(VR::SH),
+            Ok("SL") => Some(VR::SL),
+            Ok("SQ") => Some(VR::SQ),
+            Ok("SS") => Some(VR::SS),
+            Ok("ST") => Some(VR::ST),
+            Ok("TM") => Some(VR::TM),
+            Ok("UI") => Some(VR::UI),
+            Ok("UL") => Some(VR::UL),
+            Ok("UN") => Some(VR::UN),
+            Ok("UR") => Some(VR::UR),
+            Ok("US") => Some(VR::US),
+            Ok("UX") => Some(VR::UX),
+            _ => None,
+        },
+    )(input)
 }
 
-fn parse_tag(input: &[u8]) -> IResult<&[u8], (u16, u16)> {
-    let (input, group) = be_u16(input)?;
-    let (input, element) = be_u16(input)?;
-    Ok((input, (group, element)))
-}
-
-fn parse_length(input: &[u8]) -> IResult<&[u8], u32> {
-    let (input, length) = be_u32(input)?;
-    Ok((input, length))
-}
-
-fn parse_element(input: &[u8]) -> IResult<&[u8], Element> {
-    let (input, tag) = parse_tag(input)?;
+fn parse_data_element(input: &[u8]) -> IResult<&[u8], DataElement> {
+    let (input, tag) = tuple((be_u16, be_u16))(input)?;
     let (input, vr) = parse_vr(input)?;
-    let (input, length) = parse_length(input)?;
-    let (input, value) = take(length as usize)(input)?;
-    Ok((input, Element { tag, vr, length, value }))
+    let (_input, _value_length) = be_u32(input)?;
+    let (input, value) = take(4usize)(input)?;
+    Ok((input, DataElement::new(tag, vr, value.to_vec())))
 }
 
-fn parse_file(input: &[u8]) -> IResult<&[u8], Vec<Element>> {
-    let (input, _) = tag("\x08\x00\x00\x00\x08\x00\x00\x00")(input)?;
-    many0(parse_element)(input)
+fn parse_dicom(input: &[u8]) -> IResult<&[u8], Vec<DataElement>> {
+    let (input, _) = tag("\x44\x49\x43\x4d")(input)?;
+    many0(parse_data_element)(input)
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    let file_path = &args[1];
-    let file = File::open(file_path).unwrap();
-    let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).unwrap();
-    let (_, elements) = parse_file(&buffer).unwrap();
-    for element in elements {
-        println!("{:?}", element);
+    if args.len() != 2 {
+        panic!("Usage: {} <dicom_file>", args[0]);
     }
+    let path = Path::new(&args[1]);
+    let mut file = File::open(path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    let result = parse_dicom(&buffer);
+    match result {
+        Ok((_, data_elements)) => {
+            for data_element in data_elements {
+                println!("{:?}", data_element);
+            }
+        }
+        Err(err) => {
+            println!("Error parsing DICOM file: {:?}", err);
+        }
+    }
+    Ok(())
 }

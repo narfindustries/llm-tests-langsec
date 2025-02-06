@@ -1,84 +1,167 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static HParser* init_parser() {
-    // Core SQL components
-    HParser* whitespace = h_whitespace(h_many);
-    HParser* identifier = h_sequence(h_ch_range('a', 'z'), h_many(h_choice(h_ch_range('a', 'z'), h_ch_range('0', '9'), h_ch('_'), NULL)), NULL);
-    HParser* number = h_many1(h_ch_range('0', '9'));
-    HParser* string_literal = h_sequence(h_ch('\''), h_many(h_choice(h_ch_range('a', 'z'), h_ch_range('A', 'Z'), h_ch_range('0', '9'), h_ch(' '), NULL)), h_ch('\''), NULL);
-    
-    // SQL keywords
-    HParser* create = h_token("CREATE", 6);
-    HParser* table = h_token("TABLE", 5);
-    HParser* insert = h_token("INSERT", 6);
-    HParser* into = h_token("INTO", 4);
-    HParser* values = h_token("VALUES", 6);
-    HParser* select = h_token("SELECT", 6);
-    HParser* from = h_token("FROM", 4);
-    HParser* where = h_token("WHERE", 5);
-    
-    // Column definition
-    HParser* column_type = h_choice(h_token("INTEGER", 7), h_token("TEXT", 4), h_token("REAL", 4), NULL);
-    HParser* column_def = h_sequence(identifier, whitespace, column_type, NULL);
-    HParser* column_list = h_sepBy(column_def, h_sequence(h_ch(','), whitespace, NULL));
-    
-    // Value expressions
-    HParser* value = h_choice(number, string_literal, NULL);
-    HParser* value_list = h_sepBy(value, h_sequence(h_ch(','), whitespace, NULL));
-    
-    // Comparison operators
-    HParser* operator = h_choice(h_ch('='), h_token(">=", 2), h_token("<=", 2), h_token("<>", 2), h_ch('<'), h_ch('>'), NULL);
-    
-    // Condition
-    HParser* condition = h_sequence(identifier, whitespace, operator, whitespace, value, NULL);
-    
-    // CREATE TABLE statement
-    HParser* create_stmt = h_sequence(create, whitespace, table, whitespace, 
-                                    identifier, whitespace,
-                                    h_ch('('), whitespace,
-                                    column_list, whitespace,
-                                    h_ch(')'), whitespace,
-                                    h_ch(';'), NULL);
-    
-    // INSERT statement
-    HParser* insert_stmt = h_sequence(insert, whitespace, into, whitespace,
-                                    identifier, whitespace,
-                                    h_ch('('), whitespace,
-                                    h_sepBy(identifier, h_sequence(h_ch(','), whitespace, NULL)), whitespace,
-                                    h_ch(')'), whitespace,
-                                    values, whitespace,
-                                    h_ch('('), whitespace,
-                                    value_list, whitespace,
-                                    h_ch(')'), whitespace,
-                                    h_ch(';'), NULL);
-    
-    // SELECT statement
-    HParser* select_stmt = h_sequence(select, whitespace,
-                                    h_choice(h_ch('*'), h_sepBy(identifier, h_sequence(h_ch(','), whitespace, NULL)), NULL), whitespace,
-                                    from, whitespace,
-                                    identifier, whitespace,
-                                    h_optional(h_sequence(where, whitespace, condition, NULL)),
-                                    h_ch(';'), NULL);
-    
-    // Complete SQL parser
-    return h_choice(create_stmt, insert_stmt, select_stmt, NULL);
+// Forward declarations
+HParser* sqlite_header();
+HParser* page_parser();
+HParser* btree_page();
+HParser* freelist_page();
+HParser* overflow_page();
+HParser* cell_parser();
+HParser* varint_parser();
+HParser* record_parser();
+
+// Varint parser
+HParser* varint_parser() {
+    return h_many1(h_bits(8, false));
 }
 
-H_RULE(sql_parser, init_parser());
+// Record format parser
+HParser* record_parser() {
+    return h_sequence(
+        varint_parser(),  // header length
+        h_optional(varint_parser()),  // optional row ID
+        h_many1(h_choice(h_int_range(h_uint8(), 0, 11),  // Serial types 0-11
+                        varint_parser(),                  // BLOB and TEXT types
+                        NULL))
+    );
+}
 
-int main() {
-    HParser* parser = init_parser();
-    
-    const char* input = "CREATE TABLE users (id INTEGER, name TEXT, age INTEGER);";
-    HParseResult* result = h_parse(parser, (const uint8_t*)input, strlen(input));
-    
-    if(result) {
-        printf("Parsing successful\n");
+// Cell parser
+HParser* cell_parser() {
+    return h_sequence(
+        varint_parser(),  // payload size
+        varint_parser(),  // row ID
+        record_parser(),  // payload
+        NULL
+    );
+}
+
+// B-tree page parser
+HParser* btree_page() {
+    return h_sequence(
+        h_int_range(h_uint8(), 2, 13),  // page type
+        h_uint16(),  // first freeblock offset
+        h_uint16(),  // number of cells
+        h_uint16(),  // cell content offset
+        h_uint8(),   // fragmented free bytes
+        h_optional(h_uint32()),  // right child page number (for interior pages)
+        h_many1(cell_parser()),  // cells
+        NULL
+    );
+}
+
+// Freelist page parser
+HParser* freelist_page() {
+    return h_sequence(
+        h_uint32(),  // next trunk page
+        h_uint32(),  // leaf count
+        h_many1(h_uint32()),  // page numbers
+        NULL
+    );
+}
+
+// Overflow page parser
+HParser* overflow_page() {
+    return h_sequence(
+        h_uint32(),  // next page number
+        h_many1(h_uint8()),  // content
+        NULL
+    );
+}
+
+// Page parser
+HParser* page_parser() {
+    return h_choice(
+        btree_page(),
+        freelist_page(),
+        overflow_page(),
+        NULL
+    );
+}
+
+// SQLite header parser
+HParser* sqlite_header() {
+    return h_sequence(
+        h_token((const uint8_t*)"SQLite format 3\000", 16),  // Magic string
+        h_uint16(),  // page size
+        h_uint8(),   // file format write version
+        h_uint8(),   // file format read version
+        h_uint8(),   // reserved space
+        h_uint8(),   // maximum embedded payload fraction
+        h_uint8(),   // minimum embedded payload fraction
+        h_uint8(),   // leaf payload fraction
+        h_uint32(),  // file change counter
+        h_uint32(),  // database size in pages
+        h_uint32(),  // first freelist trunk page
+        h_uint32(),  // number of freelist pages
+        h_uint32(),  // schema cookie
+        h_uint32(),  // schema format number
+        h_uint32(),  // default page cache size
+        h_uint32(),  // largest root b-tree page
+        h_int_range(h_uint32(), 1, 3),  // text encoding
+        h_uint32(),  // user version
+        h_uint32(),  // incremental vacuum mode
+        h_uint32(),  // application ID
+        h_token((const uint8_t*)"\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000", 20),  // reserved
+        h_uint32(),  // version valid for number
+        h_uint32(),  // SQLite version number
+        NULL
+    );
+}
+
+// Complete SQLite database parser
+HParser* sqlite_database() {
+    return h_sequence(
+        sqlite_header(),
+        h_many1(page_parser()),
+        NULL
+    );
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(buffer, 1, file_size, file) != file_size) {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(file);
+        return 1;
+    }
+
+    HParser* parser = sqlite_database();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+
+    if (result) {
+        printf("Successfully parsed SQLite database\n");
         h_parse_result_free(result);
     } else {
-        printf("Parsing failed\n");
+        printf("Failed to parse SQLite database\n");
     }
-    
+
+    free(buffer);
+    fclose(file);
     return 0;
 }

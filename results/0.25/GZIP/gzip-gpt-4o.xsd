@@ -1,44 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gzip"
-           xmlns:tns="http://example.com/gzip"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+            targetNamespace="http://example.com/gzip"
+            xmlns="http://example.com/gzip"
+            elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:defaultFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <xsd:annotation>
+        <xsd:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:format byteOrder="bigEndian" encoding="utf-8" lengthKind="explicit" alignmentUnits="bytes"/>
+        </xsd:appinfo>
+    </xsd:annotation>
 
-  <dfdl:format name="defaultFormat"
-               byteOrder="bigEndian"
-               encoding="utf-8"
-               lengthKind="explicit"
-               lengthUnits="bytes"
-               occursCountKind="expression"
-               occursCount="1"/>
+    <xsd:element name="gzip">
+        <xsd:complexType>
+            <xsd:sequence dfdl:sequenceKind="ordered">
+                <xsd:element name="ID1" type="xsd:unsignedByte" dfdl:inputValueCalc="{0x1F}"/>
+                <xsd:element name="ID2" type="xsd:unsignedByte" dfdl:inputValueCalc="{0x8B}"/>
+                <xsd:element name="CM" type="xsd:unsignedByte" dfdl:inputValueCalc="{0x08}"/>
+                <xsd:element name="FLG" type="xsd:unsignedByte"/>
+                <xsd:element name="MTIME" type="xsd:unsignedInt"/>
+                <xsd:element name="XFL" type="xsd:unsignedByte"/>
+                <xsd:element name="OS" type="xsd:unsignedByte"/>
+                
+                <xsd:element name="extraField" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ (FLG &amp; 0x04) != 0 }">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="XLEN" type="xsd:unsignedShort"/>
+                            <xsd:element name="extraFieldData" type="xsd:byte" dfdl:lengthKind="explicit" dfdl:length="{../XLEN}"/>
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:element name="gzip" type="tns:GzipType"/>
+                <xsd:element name="originalFileName" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ (FLG &amp; 0x08) != 0 }">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="name" type="xsd:string" dfdl:lengthKind="delimited" dfdl:terminator="%ES;"/>
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-  <xs:complexType name="GzipType">
-    <xs:sequence>
-      <xs:element name="id1" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="id2" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="compressionMethod" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="flags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="modificationTime" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="extraFlags" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="osType" type="xs:unsignedByte" dfdl:length="1"/>
-      <xs:element name="extraField" type="xs:hexBinary" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:initiator="0x00"/>
-      <xs:element name="fileName" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
-      <xs:element name="comment" type="xs:string" minOccurs="0" maxOccurs="1" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
-      <xs:element name="crc16" type="xs:unsignedShort" minOccurs="0" maxOccurs="1" dfdl:length="2"/>
-      <xs:element name="compressedData" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="0x00"/>
-      <xs:element name="crc32" type="xs:unsignedInt" dfdl:length="4"/>
-      <xs:element name="isize" type="xs:unsignedInt" dfdl:length="4"/>
-    </xs:sequence>
-  </xs:complexType>
+                <xsd:element name="fileComment" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ (FLG &amp; 0x10) != 0 }">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="comment" type="xsd:string" dfdl:lengthKind="delimited" dfdl:terminator="%ES;"/>
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
 
-</xs:schema>
+                <xsd:element name="headerCRC16" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{ (FLG &amp; 0x02) != 0 }">
+                    <xsd:complexType>
+                        <xsd:sequence>
+                            <xsd:element name="crc" type="xsd:unsignedShort"/>
+                        </xsd:sequence>
+                    </xsd:complexType>
+                </xsd:element>
+
+                <xsd:element name="compressedData" type="xsd:byte" dfdl:lengthKind="implicit" dfdl:occursCountKind="implicit"/>
+
+                <xsd:element name="CRC32" type="xsd:unsignedInt"/>
+                <xsd:element name="ISIZE" type="xsd:unsignedInt"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+</xsd:schema>

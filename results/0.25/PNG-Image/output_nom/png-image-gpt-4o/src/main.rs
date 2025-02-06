@@ -1,14 +1,14 @@
-use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, verify},
-    multi::many0,
-    number::complete::{be_u32, be_u8},
-    sequence::{preceded, tuple},
-    IResult,
-};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use nom::{
+    IResult,
+    number::complete::be_u32,
+    bytes::complete::{tag, take},
+    combinator::map_res,
+    multi::many0,
+    sequence::tuple,
+};
 use std::env;
 
 #[derive(Debug)]
@@ -26,41 +26,29 @@ struct PngImage {
 }
 
 fn parse_png_signature(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    map(tag(&[0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1A, b'\n']), |sig: &[u8]| {
-        sig.to_vec()
-    })(input)
+    let (input, signature) = tag(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])(input)?;
+    Ok((input, signature.to_vec()))
 }
 
 fn parse_chunk(input: &[u8]) -> IResult<&[u8], PngChunk> {
     let (input, length) = be_u32(input)?;
-    let (input, chunk_type) = map_res(take(4usize), |bytes: &[u8]| {
-        std::str::from_utf8(bytes).map(|s| s.to_string())
-    })(input)?;
-    let (input, data) = take(length)(input)?;
+    let (input, chunk_type) = map_res(take(4usize), |bytes: &[u8]| std::str::from_utf8(bytes).map(|s| s.to_string()))(input)?;
+    let (input, data) = take(length as usize)(input)?;
     let (input, crc) = be_u32(input)?;
 
-    Ok((
-        input,
-        PngChunk {
-            length,
-            chunk_type,
-            data: data.to_vec(),
-            crc,
-        },
-    ))
+    Ok((input, PngChunk {
+        length,
+        chunk_type,
+        data: data.to_vec(),
+        crc,
+    }))
 }
 
 fn parse_png(input: &[u8]) -> IResult<&[u8], PngImage> {
     let (input, signature) = parse_png_signature(input)?;
     let (input, chunks) = many0(parse_chunk)(input)?;
 
-    Ok((
-        input,
-        PngImage {
-            signature,
-            chunks,
-        },
-    ))
+    Ok((input, PngImage { signature, chunks }))
 }
 
 fn main() {
@@ -71,16 +59,27 @@ fn main() {
     }
 
     let path = Path::new(&args[1]);
-    let mut file = File::open(&path).expect("Could not open file");
+    let mut file = match File::open(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            std::process::exit(1);
+        }
+    };
+
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Could not read file");
+    if let Err(err) = file.read_to_end(&mut buffer) {
+        eprintln!("Error reading file: {}", err);
+        std::process::exit(1);
+    }
 
     match parse_png(&buffer) {
-        Ok((_, png)) => {
-            println!("{:#?}", png);
+        Ok((_, png_image)) => {
+            println!("{:?}", png_image);
         }
-        Err(e) => {
-            eprintln!("Failed to parse PNG file: {:?}", e);
+        Err(err) => {
+            eprintln!("Error parsing PNG: {:?}", err);
+            std::process::exit(1);
         }
     }
 }

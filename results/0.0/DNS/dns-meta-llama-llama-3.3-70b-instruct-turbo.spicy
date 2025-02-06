@@ -1,126 +1,68 @@
-# DNS Protocol Parser
+module DNS;
 
-# Define the DNS header
-type DnsHeader = record {
+type uint4 = uint16;
+type uint16 = uint16;
+type uint32 = uint32;
+type uint3 = uint16;
+
+type Header = struct {
   id: uint16,
-  flags: uint16,
+  qr: bool,
+  opcode: uint4,
+  aa: bool,
+  tc: bool,
+  rd: bool,
+  ra: bool,
+  z: uint3,
+  rcode: uint4,
   qdcount: uint16,
   ancount: uint16,
   nscount: uint16,
   arcount: uint16,
 };
 
-# Define the DNS question
-type DnsQuestion = record {
-  name: bytestring,
-  type: uint16,
-  class: uint16,
+type Question = struct {
+  qname: DomainName,
+  qtype: uint16,
+  qclass: uint16,
 };
 
-# Define the DNS answer
-type DnsAnswer = record {
-  name: uint16,
+type RR = struct {
+  name: DomainName,
   type: uint16,
   class: uint16,
   ttl: uint32,
   rdlength: uint16,
-  rdata: bytestring,
+  rdata: bytestring &length = rdlength,
 };
 
-# Define the DNS parser
-type DnsParser = sequence {
-  header: DnsHeader,
-  questions: array of DnsQuestion,
-  answers: array of DnsAnswer,
-  authorities: array of DnsAnswer,
-  additionals: array of DnsAnswer,
+type DNSMessage = struct {
+  header: Header,
+  questions: Question[header.qdcount],
+  answers: RR[header.ancount],
+  authorities: RR[header.nscount],
+  additionals: RR[header.arcount],
 };
 
-# Define the DNS parser logic
-parser DnsParser() {
-  # Parse the DNS header
-  header: DnsHeader = parse DnsHeader();
+type DomainName = bytestring;
 
-  # Parse the DNS questions
-  questions: array of DnsQuestion = array();
-  for (i = 0; i < header.qdcount; i++) {
-    question: DnsQuestion = parse DnsQuestion();
-    questions += question;
+function decompress_domain_name(s: bytestring): string {
+  var result = "";
+  var pos = 0;
+  while pos < length(s) {
+    var len = s[pos];
+    pos += 1;
+    if len == 0 {
+      break;
+    } else if len >= 192 {
+      var offset = (s[pos] << 8) | s[pos + 1];
+      pos += 2;
+      result += decompress_domain_name(s[offset:]);
+      break;
+    } else {
+      result += string(s[pos:pos + len]) + ".";
+      pos += len;
+    }
   }
-
-  # Parse the DNS answers
-  answers: array of DnsAnswer = array();
-  for (i = 0; i < header.ancount; i++) {
-    answer: DnsAnswer = parse DnsAnswer();
-    answers += answer;
-  }
-
-  # Parse the DNS authorities
-  authorities: array of DnsAnswer = array();
-  for (i = 0; i < header.nscount; i++) {
-    authority: DnsAnswer = parse DnsAnswer();
-    authorities += authority;
-  }
-
-  # Parse the DNS additionals
-  additionals: array of DnsAnswer = array();
-  for (i = 0; i < header.arcount; i++) {
-    additional: DnsAnswer = parse DnsAnswer();
-    additionals += additional;
-  }
-
-  # Return the parsed DNS data
-  return {
-    header: header,
-    questions: questions,
-    answers: answers,
-    authorities: authorities,
-    additionals: additionals,
-  };
-};
-
-# Define the DnsQuestion parser logic
-parser DnsQuestion() {
-  # Parse the domain name
-  name: bytestring = parse bytestring();
-
-  # Parse the query type and class
-  type: uint16 = parse uint16();
-  class: uint16 = parse uint16();
-
-  # Return the parsed DNS question
-  return {
-    name: name,
-    type: type,
-    class: class,
-  };
-};
-
-# Define the DnsAnswer parser logic
-parser DnsAnswer() {
-  # Parse the domain name
-  name: uint16 = parse uint16();
-
-  # Parse the answer type and class
-  type: uint16 = parse uint16();
-  class: uint16 = parse uint16();
-
-  # Parse the time to live
-  ttl: uint32 = parse uint32();
-
-  # Parse the resource data length
-  rdlength: uint16 = parse uint16();
-
-  # Parse the resource data
-  rdata: bytestring = parse bytestring(rdlength);
-
-  # Return the parsed DNS answer
-  return {
-    name: name,
-    type: type,
-    class: class,
-    ttl: ttl,
-    rdlength: rdlength,
-    rdata: rdata,
-  };
-};
+  return result[:-1];
+}

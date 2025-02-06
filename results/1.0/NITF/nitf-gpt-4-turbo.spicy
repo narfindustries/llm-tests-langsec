@@ -1,65 +1,95 @@
 module NITF;
 
-public type FILEHEADER = unit {
-    fhdr:               bytes &size=9;
-    fver:               bytes &size=2;
-    clevel:             bytes &size=2;
-    stype:              bytes &size=4;
-    ostat:              bytes &size=10;
-    title:              bytes &size=80;
-    fsclas:             bytes &size=1;
-    fsclasect:          bytes &size=2;
-    fscod:              bytes &size=40;
-    fsctlh:             bytes &size=40;
-    fsrel:              bytes &size=40;
-    fsdctp:             bytes &size=2;
-    fsdcdt:             bytes &size=8;
-    fsdcxm:             bytes &size=4;
-    fsdg:               bytes &size=1;
-    fsdgdt:             bytes &size=8;
-    fscltx:             bytes &size=43;
-    fscatp:             bytes &size=1;
-    fscaut:             bytes &size=40;
-    fscrsn:             bytes &size=1;
-    fssrdt:             bytes &size=8;
-    fsctln:             bytes &size<=15;
+import spicy;
 
-    on %done {
-        print self;
-    }
+public type FileHeader = unit {
+    fileType: /[A-Z]{6}/;
+    fileVersion: /[0-9]{2}/;
+    complexFlag: /[CR]/;
+    systemType: /[A-Z]{4}/;
+    originationDateAndTime: /[0-9]{14}/;
+    fileTitle: /[ -~]{80}/;
+    securityClass: /[A-Z]/;
+    textCode: /[ -~]{40}/;
+    messageCopyNum: /[0-9]{2}/;
+    messageNumCopies: /[0-9]{2}/;
+    originationName: /[ -~]{18}/;
+    phoneNum: /[ -~]{18}/;
+    fileLength: bytes &size=12;
+    fileHeaderLength: bytes &size=6;
+    numImageSegments: bytes &size=3;
+    numGraphicsSegments: bytes &size=3;
+    numTextSegments: bytes &size=3;
+    numDataExtSegments: bytes &size=3;
+    numReservedExtSegments: bytes &size=3;
+    overflowHeaderType: /[A-Z]{6}/;
+    dataOverflowOffset: bytes &size=6;
 };
 
-public type IMAGEDATA = unit {
-    im:                  bytes &size=2;
-    iid1:                bytes &size=10;
-    idatl:               bytes &size=14;
-    target:              bytes &size=17;
-    iid2:                bytes &size=80;
-    isclas:              bytes &size=1;
-    isclasect:           bytes &size=2;
-    iscod:               bytes &size=11;
-    isctlh:              bytes &size=2;
-    isrel:               bytes &size=20;
-    isdctp:              bytes &size=2;
-    isdcdt:              bytes &size=8;
-    isdcxm:              bytes &size=1;
-    isdg:                bytes &size=1;
-    isdgdt:              bytes &size=8;
-    iscltx:              bytes &size=43;
-    iscatp:              bytes &size=1;
-    iscaut:              bytes &size=40;
-    iscrsn:              bytes &size=1;
-    issrdt:              bytes &size=8;
-    isctln:              bytes &size=15;
-    
-    row_data:            bytes &eod;
-
-    on %done {
-        print self;
-    }
+public type ImageSegment = unit {
+    imageSubHeader: ImageSubHeader;
+    imageData: bytes &size=((self.imageSubHeader.imageLength).to_uint());
 };
 
-public type NITFRecord = unit {
-    file_header: FILEHEADER;
-    image_section: IMAGEDATA;
+public type ImageSubHeader = unit {
+    iid1: /[A-Z0-9]{10}/;
+    idat: /[0-9]{14}/;
+    tgtid: /[A-Z0-9]{17}/;
+    iid2: /[ -~]{80}/;
+    imageSecurityClass: /[A-Z]/;
+    imageCode: /[ -~]{40}/;
+    encryp: /[0-9]/;
+    fbnd: /[A-Z0-9]{40}/;
+    nbands: /[0-9]{1,2}/;
+    multispect: /[0-9]{1}/;
+    rows: /[0-9]{9}/;
+    cols: /[0-9]{9}/;
+    compression: /[A-Z]/;
+    compressionRate: /[ -~]{4}/;
+    imageLength: bytes &size=10;
+};
+
+public type GraphicSegment = unit {
+    subHeader: GraphicSubHeader;
+    graphicData: bytes &size=((self.subHeader.graphicLength).to_uint());
+};
+
+public type GraphicSubHeader = unit {
+    sidentifier: /[A-Z0-9]{10}/;
+    sname: /[ -~]{20}/;
+    securityClass: /[A-Z]/;
+    encryption: /[0-9]/;
+    graphicLength: bytes &size=10;
+};
+
+public type TextSegment = unit {
+    textSubHeader: TextSubHeader;
+    textData: bytes &size=((self.textSubHeader.textLength).to_uint());
+};
+
+public type TextSubHeader = unit {
+    textClass: /[A-Z]/;
+    dateAndTime: /[0-9]{14}/;
+    headerLength: bytes &size=4;
+    textLength: bytes &size=5;
+};
+
+public type DataExtSegment = unit {
+    desSubheader: DESSubHeader;
+    data: bytes &size=((self.desSubheader.dataLength).to_uint());
+};
+
+public type DESSubHeader = unit {
+    desClass: /[A-Z]/;
+    desType: /[A-Z]{25}/;
+    dataLength: bytes &size=10;
+};
+
+public type NITFFile = unit {
+    header: FileHeader;
+    imageSegments: ImageSegment[] &size=((self.header.numImageSegments).to_uint());
+    graphicSegments: GraphicSegment[] &size=((self.header.numGraphicsSegments).to_uint());
+    textSegments: TextSegment[] &size=((self.header.numTextSegments).to_uint());
+    dataExtSegments: DataExtSegment[] &size=((self.header.numDataExtSegments).to_uint());
+    reservedExtSegments: DataExtSegment[] &size=((self.header.numReservedExtSegments).to_uint());
 };

@@ -1,69 +1,116 @@
 module Modbus;
 
-import spicy;
-
-public type ModbusHeader = unit {
+public type MBAP = unit {
     transaction_id: uint16;
     protocol_id: uint16;
     length: uint16;
     unit_id: uint8;
+};
+
+type PDU = unit {
     function_code: uint8;
     
-    on %done {
-        self.length = self.length;
-    }
-};
-
-public type ModbusRequest = unit {
-    header: ModbusHeader;
-    
-    switch ( self.header.function_code ) {
+    switch ( self.function_code ) {
         0x01, 0x02, 0x03, 0x04 -> read_request: ReadRequest;
-        0x05, 0x06 -> single_write: SingleWrite;
-        0x0F, 0x10 -> multiple_write: MultipleWrite;
-        * -> unknown: bytes &eod;
-    };
-};
-
-public type ModbusResponse = unit {
-    header: ModbusHeader;
-    
-    switch ( self.header.function_code ) {
-        0x01, 0x02, 0x03, 0x04 -> read_response: ReadResponse;
-        0x05, 0x06 -> single_write: SingleWrite;
-        0x0F, 0x10 -> multiple_write_response: MultipleWriteResponse;
-        0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x8F, 0x90 -> error: ErrorResponse;
+        0x05, 0x06 -> write_single: WriteSingle;
+        0x0F, 0x10 -> write_multiple: WriteMultiple;
+        0x14 -> read_file: ReadFileRecord;
+        0x15 -> write_file: WriteFileRecord;
+        0x16 -> mask_write: MaskWriteRegister;
+        0x17 -> read_write: ReadWriteMultiple;
+        0x18 -> read_fifo: ReadFIFOQueue;
+        0x2B -> encap: EncapsulatedInterface;
+        0x81 -> error: ErrorResponse;
+        0x82 -> error: ErrorResponse;
+        0x83 -> error: ErrorResponse;
+        0x84 -> error: ErrorResponse;
+        0x85 -> error: ErrorResponse;
+        0x86 -> error: ErrorResponse;
+        0x88 -> error: ErrorResponse;
+        0x8A -> error: ErrorResponse;
+        0x8B -> error: ErrorResponse;
         * -> unknown: bytes &eod;
     };
 };
 
 type ReadRequest = unit {
-    start_address: uint16;
+    starting_address: uint16;
     quantity: uint16;
 };
 
 type ReadResponse = unit {
     byte_count: uint8;
-    values: bytes &size=self.byte_count;
+    data: bytes &size=self.byte_count;
 };
 
-type SingleWrite = unit {
-    address: uint16;
-    value: uint16;
+type WriteSingle = unit {
+    output_address: uint16;
+    output_value: uint16;
 };
 
-type MultipleWrite = unit {
-    start_address: uint16;
+type WriteMultiple = unit {
+    starting_address: uint16;
     quantity: uint16;
     byte_count: uint8;
-    values: bytes &size=self.byte_count;
+    data: bytes &size=self.byte_count;
 };
 
-type MultipleWriteResponse = unit {
-    start_address: uint16;
+type WriteMultipleResponse = unit {
+    starting_address: uint16;
     quantity: uint16;
+};
+
+type ReadFileRecord = unit {
+    byte_count: uint8;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
+};
+
+type WriteFileRecord = unit {
+    byte_count: uint8;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
+    record_data: bytes &size=self.record_length;
+};
+
+type MaskWriteRegister = unit {
+    reference_address: uint16;
+    and_mask: uint16;
+    or_mask: uint16;
+};
+
+type ReadWriteMultiple = unit {
+    read_starting_address: uint16;
+    read_quantity: uint16;
+    write_starting_address: uint16;
+    write_quantity: uint16;
+    write_byte_count: uint8;
+    write_data: bytes &size=self.write_byte_count;
+};
+
+type ReadFIFOQueue = unit {
+    fifo_pointer_address: uint16;
+};
+
+type EncapsulatedInterface = unit {
+    mei_type: uint8;
+    data: bytes &eod;
 };
 
 type ErrorResponse = unit {
     exception_code: uint8;
+};
+
+type DiagnosticRequest = unit {
+    sub_function: uint16;
+    data: bytes &eod;
+};
+
+public type ModbusPacket = unit {
+    mbap: MBAP;
+    pdu: PDU;
 };

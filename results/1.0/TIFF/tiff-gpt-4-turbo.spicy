@@ -1,45 +1,32 @@
 module TIFF;
 
-public type ImageFileDirectoryEntry = unit {
-    tag: uint16;
-    type: uint16;
-    length: uint32;
-    valueOffset: bytes &size=4;
+import spicy;
 
-    on %done {
-        if (self.type == 2) {  # ASCII type
-            print self.valueOffset;
-        }
-    }
+type Word = uint16;
+type DWord = uint32;
+
+type Tag = unit {
+    identifier: Word;
+    dataType: Word;
+    dataCount: DWord;
+    valueOffset: DWord;
 };
 
-public type ImageFileDirectory = unit {
-    entries: ImageFileDirectoryEntry[] &eod;
+type IFD = unit {
+    numTags: Word;
+    tags: Tag[] &size=cast<uint16>(numTags);
+    nextIFDOffset: DWord;
 };
 
-public type TIFFHeader = unit {
-    byteOrder: uint16;
-    magicNumber: uint16;
-    offsetIFD: uint32;
-
-    on %init {
-        if (self.byteOrder != 0x4949 && self.byteOrder != 0x4D4D) {
-            throw Error("Unsupported byte order.");
-        }
-
-        if (self.magicNumber != 42) {
-            throw Error("Invalid TIFF magic number; expecting 42.");
-        }
-    }
-
-    on %done {
-        if (self.offsetIFD != 0) {
-            self.$context.connect(self.offsetIFD, ImageFileDirectory);
-        }
-    }
+type FileHeader = unit {
+    byteOrder: bytes &size=2;
+    magicNumber: Word;
+    IFDOffset: DWord;
 };
 
-public type TIFFFile = unit {
-    header: TIFFHeader;
-    directories: ImageFileDirectory[] &until($$.eof());
+type TIFFFile = unit {
+    header: FileHeader;
+    ifds: IFD[] &until=($$.header.IFDOffset == 0);
 };
+
+public type File = TIFFFile;

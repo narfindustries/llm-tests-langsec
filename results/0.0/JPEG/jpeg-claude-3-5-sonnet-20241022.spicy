@@ -1,53 +1,114 @@
 module JPEG;
 
 public type JPEG = unit {
-    var is_valid: bool = false;
-    
-    : SOIMarker;
-    : AppSegments[];
-    : SOFSegment;
-    : SOSSegment;
-    : ImageData;
-    : EOIMarker;
-
-    on %done { self.is_valid = true; }
+    soi: SOIMarker;
+    segments: Segment[];
+    eoi: EOIMarker;
 };
 
 type SOIMarker = unit {
     marker: bytes &size=2 &requires=($$ == b"\xFF\xD8");
 };
 
-type AppSegments = unit {
-    marker: bytes &size=2 &requires=(($$ & b"\xFF\x00") == b"\xFF\x00");
-    length: uint16 &requires=($$ >= 2);
-    data: bytes &size=(self.length - 2);
-} &requires=(self.marker[0] == 0xFF);
-
-type SOFSegment = unit {
-    marker: bytes &size=2 &requires=($$ == b"\xFF\xC0");
-    length: uint16;
-    precision: uint8;
-    height: uint16;
-    width: uint16;
-    components: uint8;
-    component_data: bytes &size=(self.length - 8);
-};
-
-type SOSSegment = unit {
-    marker: bytes &size=2 &requires=($$ == b"\xFF\xDA");
-    length: uint16;
-    components: uint8;
-    scan_data: bytes &size=(self.length - 3);
-};
-
-type ImageData = unit {
-    data: bytes &eod;
-} &requires=(self.data[-2:] == b"\xFF\xD9");
-
 type EOIMarker = unit {
     marker: bytes &size=2 &requires=($$ == b"\xFF\xD9");
 };
 
-public function is_valid(data: JPEG): bool {
-    return data.is_valid;
-}
+type Segment = unit {
+    marker: uint8 &requires=($$ == 0xFF);
+    segment_type: uint8;
+    data: SegmentData;
+};
+
+type SegmentData = unit {
+    switch(self.segment_type) {
+        0xC0..0xC3, 0xC5..0xC7, 0xC9..0xCF -> sof: SOFSegment;
+        0xC4 -> dht: DHTSegment;
+        0xDB -> dqt: DQTSegment;
+        0xDA -> sos: SOSSegment;
+        0xDD -> dri: DRISegment;
+        0xE0..0xEF -> app: APPSegment;
+        0xFE -> com: COMSegment;
+    };
+};
+
+type SOFSegment = unit {
+    length: uint16;
+    precision: uint8;
+    height: uint16;
+    width: uint16;
+    num_components: uint8;
+    components: Component[num_components];
+};
+
+type Component = unit {
+    id: uint8;
+    sampling_factors: uint8;
+    qtable_selector: uint8;
+};
+
+type DHTSegment = unit {
+    length: uint16;
+    tables: DHTable[] &until($input.offset() >= self.length - 2);
+};
+
+type DHTable = unit {
+    info: uint8;
+    counts: bytes &size=16;
+    values: bytes &size=self.get_values_size();
+
+    function get_values_size(): uint64 {
+        local size: uint64 = 0;
+        for ( i in 0..15 )
+            size += self.counts[i];
+        return size;
+    }
+};
+
+type DQTSegment = unit {
+    length: uint16;
+    tables: DQTable[] &until($input.offset() >= self.length - 2);
+};
+
+type DQTable = unit {
+    info: uint8;
+    elements: bytes &size=(info >> 4 == 0 ? 64 : 128);
+};
+
+type SOSSegment = unit {
+    length: uint16;
+    num_components: uint8;
+    components: SOSComponent[num_components];
+    spectral_start: uint8;
+    spectral_end: uint8;
+    successive_approx: uint8;
+    entropy_data: bytes &eod;
+};
+
+type SOSComponent = unit {
+    id: uint8;
+    huffman_selector: uint8;
+};
+
+type DRISegment = unit {
+    length: uint16;
+    interval: uint16;
+};
+
+type APPSegment = unit {
+    length: uint16;
+    data: bytes &size=(length - 2);
+};
+
+type COMSegment = unit {
+    length: uint16;
+    data: bytes &size=(length - 2);
+};
+
+on JPEG::SOFSegment -> event jpeg_sof($input, self.precision, self.height, self.width, self.num_components);
+on JPEG::DHTSegment -> event jpeg_dht($input, self.length);
+on JPEG::DQTSegment -> event jpeg_dqt($input, self.length);
+on JPEG::SOSSegment -> event jpeg_sos($input, self.length, self.num_components);
+on JPEG::DRISegment -> event jpeg_dri($input, self.interval);
+on JPEG::APPSegment -> event jpeg_app($input, self.length);
+on JPEG::COMSegment -> event jpeg_com($input, self.length);

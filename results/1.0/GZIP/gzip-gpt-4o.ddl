@@ -1,21 +1,35 @@
-GZIP : struct {
-    header : struct {
-        id1 : ubyte : assert(id1 == 0x1f); // ID1 should be 0x1f
-        id2 : ubyte : assert(id2 == 0x8b); // ID2 should be 0x8b
-        compressionMethod : ubyte : assert(compressionMethod == 0x08); // DEFLATE method
-        flags : ubyte;
-        modTime : uint32;
-        extraFlags : ubyte;
-        os : ubyte;
-        extra : if (flags & 0x04 != 0) then struct {
-            xlen : uint16;
-            data : bytes(xlen);
-        };
-        name : if (flags & 0x08 != 0) then c_string;
-        comment : if (flags & 0x10 != 0) then c_string;
-        hcrc : if (flags & 0x02 != 0) then uint16;
-    };
-    compressed_data : bytes;
-    crc32 : uint32;
-    isize : uint32;
-};
+root = STRUCT {
+    header : Header,
+    compressedData : BINARY,
+    crc32 : u32,
+    isize : u32
+}
+
+Header = STRUCT {
+    id1 : u8 { assert(this == 0x1f); },
+    id2 : u8 { assert(this == 0x8b); },
+    compressionMethod : u8 { assert(this == 0x08); },
+    flags : Flags,
+    modificationTime : u32,
+    extraFlags : u8,
+    operatingSystem : u8,
+    extraField : ExtraField IF (flags.extra == 1),
+    originalFilename : CString IF (flags.name == 1),
+    fileComment : CString IF (flags.comment == 1),
+    headerCRC : u16 IF (flags.crc == 1)
+}
+
+Flags = BITFIELD {
+    text : u8:1,
+    crc : u8:1,
+    extra : u8:1,
+    name : u8:1,
+    comment : u8:1,
+    reserved : u8:3
+}
+
+ExtraField = STRUCT {
+    subfieldID : u16,
+    subfieldLength : u16,
+    subfieldData : BINARY[subfieldLength]
+}

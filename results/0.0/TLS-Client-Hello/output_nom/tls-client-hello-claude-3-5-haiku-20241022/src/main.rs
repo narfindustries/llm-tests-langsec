@@ -1,65 +1,85 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, length_count, length_data},
-    number::complete::{be_u8, be_u16, be_u32},
-    sequence::{pair, tuple},
+    bytes::complete::{take, tag},
+    combinator::map,
+    multi::{length_count, length_data},
+    number::complete::{be_u8, be_u16, be_u24},
+    sequence::{tuple, preceded},
     IResult,
+    error::ErrorKind,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct ClientHello {
-    version: u16,
-    random: [u8; 32],
-    session_id: Vec<u8>,
-    cipher_suites: Vec<u16>,
-    compression_methods: Vec<u8>,
-    extensions: Option<Vec<Extension>>,
-}
+struct CipherSuite(u16);
 
 #[derive(Debug)]
 struct Extension {
     ext_type: u16,
-    ext_data: Vec<u8>,
+    data: Vec<u8>,
 }
 
-fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
-    let (input, _) = tag(&[0x16])(input)?; // Handshake type
-    let (input, _) = tag(&[0x03, 0x01])(input)?; // Protocol version
-    let (input, _length) = be_u16(input)?;
+#[derive(Debug)]
+struct ClientHello {
+    legacy_version: u16,
+    random: [u8; 32],
+    legacy_session_id: Vec<u8>,
+    cipher_suites: Vec<CipherSuite>,
+    legacy_compression_methods: Vec<u8>,
+    extensions: Vec<Extension>,
+}
 
-    let (input, _handshake_type) = tag(&[0x01])(input)?; // ClientHello
-    let (input, _handshake_length) = take(3usize)(input)?;
-
-    let (input, version) = be_u16(input)?;
+fn parse_random(input: &[u8]) -> IResult<&[u8], [u8; 32]> {
     let (input, random) = take(32usize)(input)?;
-    let (input, session_id) = length_data(be_u8)(input)?;
-    let (input, cipher_suites) = length_count(be_u16, be_u16)(input)?;
-    let (input, compression_methods) = length_count(be_u8, be_u8)(input)?;
+    Ok((input, random.try_into().unwrap()))
+}
 
-    let (input, extensions) = opt(length_count(be_u16, parse_extension))(input)?;
-
-    Ok((input, ClientHello {
-        version,
-        random: random.try_into().unwrap(),
-        session_id: session_id.to_vec(),
-        cipher_suites,
-        compression_methods,
-        extensions,
-    }))
+fn parse_cipher_suites(input: &[u8]) -> IResult<&[u8], Vec<CipherSuite>> {
+    length_count(
+        be_u16,
+        map(be_u16, |suite| CipherSuite(suite))
+    )(input)
 }
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
-    let (input, ext_type) = be_u16(input)?;
-    let (input, ext_data) = length_data(be_u16)(input)?;
+    map(
+        tuple((
+            be_u16,
+            length_data(be_u16::<&[u8], nom::error::Error<&[u8]>>)
+        )),
+        |(ext_type, data)| Extension {
+            ext_type,
+            data: data.to_vec(),
+        }
+    )(input)
+}
 
-    Ok((input, Extension {
-        ext_type,
-        ext_data: ext_data.to_vec(),
-    }))
+fn parse_client_hello(input: &[u8]) -> IResult<&[u8], ClientHello> {
+    preceded(
+        tag(&[0x01]), // Handshake type: ClientHello
+        map(
+            tuple((
+                be_u24,               // Length
+                be_u16,               // Legacy version
+                parse_random,          // Random
+                length_count(be_u8, be_u8), // Legacy session ID
+                parse_cipher_suites,   // Cipher suites
+                length_count(be_u8, be_u8), // Legacy compression methods
+                length_count(be_u16, parse_extension) // Extensions
+            )),
+            |(_, legacy_version, random, legacy_session_id, 
+              cipher_suites, legacy_compression_methods, extensions)| 
+            ClientHello {
+                legacy_version,
+                random,
+                legacy_session_id,
+                cipher_suites,
+                legacy_compression_methods,
+                extensions,
+            }
+        )
+    )(input)
 }
 
 fn main() -> std::io::Result<()> {
@@ -77,10 +97,10 @@ fn main() -> std::io::Result<()> {
         Ok((_, client_hello)) => {
             println!("Parsed ClientHello: {:?}", client_hello);
             Ok(())
-        }
+        },
         Err(e) => {
             eprintln!("Parsing error: {:?}", e);
-            std::process::exit(1);
+            std::process::exit(1)
         }
     }
 }

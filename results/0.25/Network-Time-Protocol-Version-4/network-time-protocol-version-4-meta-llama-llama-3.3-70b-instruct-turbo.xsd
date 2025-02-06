@@ -1,47 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/Network-Time-Protocol-Version-4"
-           xmlns:tns="http://example.com/Network-Time-Protocol-Version-4"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/ntp" 
+           xmlns="http://example.com/ntp" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.ttf"/>
-
-  <xs:element name="ntpPacket" type="tns:ntpPacketType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1">
-    <xs:annotation>
-      <xs:documentation>NTP Packet</xs:documentation>
-    </xs:annotation>
-  </xs:element>
-
+  <xs:element name="ntpPacket" type="ntpPacketType"/>
   <xs:complexType name="ntpPacketType">
     <xs:sequence>
-      <xs:element name="header" type="tns:headerType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
-      <xs:element name="timestamp" type="tns:timestampType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1"/>
+      <xs:element name="leapIndicator" type="xs:unsignedShort"/>
+      <xs:element name="versionNumber" type="xs:unsignedShort"/>
+      <xs:element name="mode" type="xs:unsignedShort"/>
+      <xs:element name="poll" type="xs:unsignedByte"/>
+      <xs:element name="precision" type="xs:byte"/>
+      <xs:element name="rootDelay" type="xs:unsignedInt"/>
+      <xs:element name="rootDispersion" type="xs:unsignedInt"/>
+      <xs:element name="refId" type="xs:unsignedInt"/>
+      <xs:element name="refTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="originTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="receiveTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="transmitTimestamp" type="xs:unsignedLong"/>
+      <xs:element name="extensions" type="extensionType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="extensionType">
     <xs:sequence>
-      <xs:element name="leap" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="2"/>
-      <xs:element name="version" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="3"/>
-      <xs:element name="mode" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="3"/>
-      <xs:element name="poll" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="8"/>
-      <xs:element name="precision" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="8"/>
-      <xs:element name="delay" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="16"/>
-      <xs:element name="dispersion" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="16"/>
-      <xs:element name="identifier" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-      <xs:element name="referenceTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-      <xs:element name="originateTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-      <xs:element name="receiveTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-      <xs:element name="transmitTimestamp" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
+      <xs:element name="extensionFieldType" type="xs:unsignedShort"/>
+      <xs:element name="extensionFieldLength" type="xs:unsignedShort"/>
+      <xs:element name="extensionFieldData" type="xs:hexBinary"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="timestampType">
-    <xs:sequence>
-      <xs:element name="seconds" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-      <xs:element name="fraction" type="xs:integer" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:length="32"/>
-    </xs:sequence>
-  </xs:complexType>
-
+  <xs:annotation>
+    <xs:appinfo>
+      <dfdl:format>
+        <dfdl:element name="ntpPacket" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="48">
+          <dfdl:element name="leapIndicator" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="2"/>
+          <dfdl:element name="versionNumber" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="3"/>
+          <dfdl:element name="mode" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="3"/>
+          <dfdl:element name="poll" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="8"/>
+          <dfdl:element name="precision" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="8"/>
+          <dfdl:element name="rootDelay" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="32"/>
+          <dfdl:element name="rootDispersion" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="32"/>
+          <dfdl:element name="refId" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="32"/>
+          <dfdl:element name="refTimestamp" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="64"/>
+          <dfdl:element name="originTimestamp" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="64"/>
+          <dfdl:element name="receiveTimestamp" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="64"/>
+          <dfdl:element name="transmitTimestamp" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="64"/>
+          <dfdl:element name="extensions" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:occurs="0..*">
+            <dfdl:element name="extensionFieldType" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="16"/>
+            <dfdl:element name="extensionFieldLength" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="16"/>
+            <dfdl:element name="extensionFieldData" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:length="32"/>
+          </dfdl:element>
+        </dfdl:element>
+      </dfdl:format>
+    </xs:appinfo>
+  </xs:annotation>
 </xs:schema>

@@ -1,0 +1,99 @@
+module GIF;
+
+public type GIF_Header = unit {
+    signature: bytes &size=3;
+    version: bytes &size=3;
+};
+
+public type Logical_Screen_Descriptor = unit {
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+    background_color_index: uint8;
+    pixel_aspect_ratio: uint8;
+};
+
+public type Color_Table_Entry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+public type Global_Color_Table = unit {
+    entries: Color_Table_Entry[] &size=(1 << ((logical_screen_descriptor.packed_fields & 0x07) + 1));
+};
+
+public type Image_Descriptor = unit {
+    separator: uint8;
+    left_position: uint16;
+    top_position: uint16;
+    width: uint16;
+    height: uint16;
+    packed_fields: uint8;
+};
+
+public type Local_Color_Table = unit {
+    entries: Color_Table_Entry[] &size=(1 << ((image_descriptor.packed_fields & 0x07) + 1));
+};
+
+public type Image_Data = unit {
+    lzw_min_code_size: uint8;
+    sub_blocks: bytes[] &until($$ == b"\x00");
+};
+
+public type Graphic_Control_Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    packed_fields: uint8;
+    delay_time: uint16;
+    transparent_color_index: uint8;
+    terminator: uint8;
+};
+
+public type Plain_Text_Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    text_grid_left: uint16;
+    text_grid_top: uint16;
+    text_grid_width: uint16;
+    text_grid_height: uint16;
+    char_cell_width: uint8;
+    char_cell_height: uint8;
+    text_fg_color_index: uint8;
+    text_bg_color_index: uint8;
+    text_data: bytes[] &until($$ == b"\x00");
+    terminator: uint8;
+};
+
+public type Application_Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    block_size: uint8;
+    app_identifier: bytes &size=8;
+    app_auth_code: bytes &size=3;
+    app_data: bytes[] &until($$ == b"\x00");
+    terminator: uint8;
+};
+
+public type Comment_Extension = unit {
+    introducer: uint8;
+    label: uint8;
+    comment_data: bytes[] &until($$ == b"\x00");
+    terminator: uint8;
+};
+
+public type GIF_File = unit {
+    header: GIF_Header;
+    logical_screen_descriptor: Logical_Screen_Descriptor;
+    global_color_table: Global_Color_Table &if(logical_screen_descriptor.packed_fields & 0x80);
+    image_descriptor: Image_Descriptor;
+    local_color_table: Local_Color_Table &if(image_descriptor.packed_fields & 0x80);
+    image_data: Image_Data;
+    graphic_control_extension: Graphic_Control_Extension &optional;
+    plain_text_extension: Plain_Text_Extension &optional;
+    application_extension: Application_Extension &optional;
+    comment_extension: Comment_Extension &optional;
+    trailer: uint8;
+};

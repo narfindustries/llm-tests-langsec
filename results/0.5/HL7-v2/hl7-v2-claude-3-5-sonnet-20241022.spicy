@@ -1,52 +1,132 @@
 module HL7;
 
 public type Message = unit {
-    : MsgStart;
-    segments: Segment[] &eod;
-};
-
-type MsgStart = unit {
-    : /\x0b/;
+    segments: Segment[];
 };
 
 type Segment = unit {
-    segment_type: bytes &until=b"|";
-    fields: Field[] &until=b"\r";
-    : /\r\n?/;
-
-    on %done {
-        if ( self.segment_type == b"MSH" ) {
-            self.fields.push_back(Field(b"|"));
-        }
-    }
+    segment_id: bytes &until=b"|";
+    fields: Field[];
+    : /\r|\n/;
 };
 
 type Field = unit {
-    : RepeatField[] &until=b"|";
-    : /\|/;
-};
-
-type RepeatField = unit {
-    components: Component[] &until=b"~";
-    : /~?/;
+    content: bytes &until=b"|";
 };
 
 type Component = unit {
-    subcomponents: SubComponent[] &until=b"^";
-    : /\^?/;
+    data: bytes &until=b"^";
 };
 
 type SubComponent = unit {
-    value: bytes &until=/[\|\^~&\r]/;
+    data: bytes &until=b"&";
 };
 
-public function parse_HL7%(data: bytes%) : Message
-    { return Message(data); }
+public type MSH = unit {
+    id: bytes &until=b"|";
+    encoding_chars: bytes &size=4;
+    sending_app: Field;
+    sending_facility: Field;
+    receiving_app: Field;
+    receiving_facility: Field;
+    datetime: Field;
+    security: Field;
+    msg_type: Field;
+    msg_control_id: Field;
+    processing_id: Field;
+    version_id: Field;
+    sequence_number: Field;
+    continuation_pointer: Field;
+    accept_ack_type: Field;
+    application_ack_type: Field;
+    country_code: Field;
+    character_set: Field;
+    principal_language: Field;
+};
 
-on Message::%done {
-    print "HL7 Message parsed";
-}
+public type PID = unit {
+    id: bytes &until=b"|";
+    set_id: Field;
+    patient_id: Field;
+    patient_id_list: Field;
+    alternate_patient_id: Field;
+    patient_name: Field;
+    mother_maiden_name: Field;
+    birth_date: Field;
+    sex: Field;
+    patient_alias: Field;
+    race: Field;
+    address: Field;
+    county_code: Field;
+    phone_home: Field;
+    phone_business: Field;
+    primary_language: Field;
+    marital_status: Field;
+    religion: Field;
+    patient_account_num: Field;
+    ssn: Field;
+    drivers_license: Field;
+    mothers_id: Field;
+    ethnic_group: Field;
+    birth_place: Field;
+    multiple_birth: Field;
+    birth_order: Field;
+    citizenship: Field;
+    veterans_status: Field;
+    nationality: Field;
+    death_date: Field;
+    death_indicator: Field;
+};
 
-on Segment::%done {
-    print "Segment Type:", self.segment_type;
-}
+public type PV1 = unit {
+    id: bytes &until=b"|";
+    set_id: Field;
+    patient_class: Field;
+    assigned_location: Field;
+    admission_type: Field;
+    preadmit_number: Field;
+    prior_location: Field;
+    attending_doctor: Field;
+    referring_doctor: Field;
+    consulting_doctor: Field;
+    hospital_service: Field;
+    temporary_location: Field;
+    preadmit_test_indicator: Field;
+    readmission_indicator: Field;
+    admit_source: Field;
+    ambulatory_status: Field;
+    vip_indicator: Field;
+    admitting_doctor: Field;
+    patient_type: Field;
+    visit_number: Field;
+    financial_class: Field;
+    charge_price_indicator: Field;
+    courtesy_code: Field;
+    credit_rating: Field;
+    contract_code: Field;
+    contract_effective_date: Field;
+    contract_amount: Field;
+    contract_period: Field;
+    interest_code: Field;
+    transfer_bad_debt_code: Field;
+    transfer_bad_debt_date: Field;
+    bad_debt_agency_code: Field;
+    bad_debt_transfer_amount: Field;
+    bad_debt_recovery_amount: Field;
+    delete_account_indicator: Field;
+    delete_account_date: Field;
+    discharge_disposition: Field;
+    discharged_to_location: Field;
+    diet_type: Field;
+    servicing_facility: Field;
+    bed_status: Field;
+    account_status: Field;
+    pending_location: Field;
+    prior_temporary_location: Field;
+    admit_datetime: Field;
+    discharge_datetime: Field;
+    current_patient_balance: Field;
+    total_charges: Field;
+    total_adjustments: Field;
+    total_payments: Field;
+};

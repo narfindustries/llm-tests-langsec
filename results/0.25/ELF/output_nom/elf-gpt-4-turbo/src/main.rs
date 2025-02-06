@@ -9,75 +9,55 @@ use std::io::{self, Read};
 
 #[derive(Debug)]
 struct ElfHeader {
-    magic: [u8; 4],
-    class: u8,
-    data: u8,
-    version: u8,
-    os_abi: u8,
-    abi_version: u8,
-    pad: [u8; 7],
+    e_ident: Vec<u8>,
     e_type: u16,
-    machine: u16,
+    e_machine: u16,
     e_version: u32,
-    entry_point: u64,
-    ph_off: u64,
-    sh_off: u64,
-    flags: u32,
-    eh_size: u16,
-    ph_ent_size: u16,
-    ph_num: u16,
-    sh_ent_size: u16,
-    sh_num: u16,
-    sh_str_idx: u16,
+    e_entry: u64,
+    e_phoff: u64,
+    e_shoff: u64,
+    e_flags: u32,
+    e_ehsize: u16,
+    e_phentsize: u16,
+    e_phnum: u16,
+    e_shentsize: u16,
+    e_shnum: u16,
+    e_shstrndx: u16,
 }
 
 fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
-    let (input, magic) = tag(b"\x7FELF")(input)?;
-    let (input, class) = le_u8(input)?;
-    let (input, data) = le_u8(input)?;
-    let (input, version) = le_u8(input)?;
-    let (input, os_abi) = le_u8(input)?;
-    let (input, abi_version) = le_u8(input)?;
-    let (input, pad) = take(7usize)(input)?;
+    let (input, e_ident) = take(16usize)(input)?;
     let (input, e_type) = le_u16(input)?;
-    let (input, machine) = le_u16(input)?;
+    let (input, e_machine) = le_u16(input)?;
     let (input, e_version) = le_u32(input)?;
-    let (input, entry_point) = le_u64(input)?;
-    let (input, ph_off) = le_u64(input)?;
-    let (input, sh_off) = le_u64(input)?;
-    let (input, flags) = le_u32(input)?;
-    let (input, eh_size) = le_u16(input)?;
-    let (input, ph_ent_size) = le_u16(input)?;
-    let (input, ph_num) = le_u16(input)?;
-    let (input, sh_ent_size) = le_u16(input)?;
-    let (input, sh_num) = le_u16(input)?;
-    let (input, sh_str_idx) = le_u16(input)?;
+    let (input, e_entry) = le_u64(input)?;
+    let (input, e_phoff) = le_u64(input)?;
+    let (input, e_shoff) = le_u64(input)?;
+    let (input, e_flags) = le_u32(input)?;
+    let (input, e_ehsize) = le_u16(input)?;
+    let (input, e_phentsize) = le_u16(input)?;
+    let (input, e_phnum) = le_u16(input)?;
+    let (input, e_shentsize) = le_u16(input)?;
+    let (input, e_shnum) = le_u16(input)?;
+    let (input, e_shstrndx) = le_u16(input)?;
 
     Ok((
         input,
         ElfHeader {
-            magic: [magic[0], magic[1], magic[2], magic[3]],
-            class,
-            data,
-            version,
-            os_abi,
-            abi_version,
-            pad: [
-                pad[0], pad[1], pad[2], pad[3], pad[4], pad[5], pad[6],
-            ],
+            e_ident: e_ident.to_vec(),
             e_type,
-            machine,
+            e_machine,
             e_version,
-            entry_point,
-            ph_off,
-            sh_off,
-            flags,
-            eh_size,
-            ph_ent_size,
-            ph_num,
-            sh_ent_size,
-            sh_num,
-            sh_str_idx,
+            e_entry,
+            e_phoff,
+            e_shoff,
+            e_flags,
+            e_ehsize,
+            e_phentsize,
+            e_phnum,
+            e_shentsize,
+            e_shnum,
+            e_shstrndx,
         },
     ))
 }
@@ -87,7 +67,7 @@ fn main() -> io::Result<()> {
     if args.len() != 2 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Usage: elf_parser <file_path>",
+            "Usage: elf_parser <ELF_FILE>",
         ));
     }
 
@@ -96,8 +76,8 @@ fn main() -> io::Result<()> {
     file.read_to_end(&mut buffer)?;
 
     match parse_elf_header(&buffer) {
-        Ok((_, header)) => {
-            println!("{:?}", header);
+        Ok((_, elf_header)) => {
+            println!("{:#?}", elf_header);
         }
         Err(e) => {
             println!("Failed to parse ELF header: {:?}", e);

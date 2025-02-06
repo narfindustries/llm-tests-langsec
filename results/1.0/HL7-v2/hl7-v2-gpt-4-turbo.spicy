@@ -1,40 +1,107 @@
 module HL7;
 
-public type MSHSegment = unit {
-    fieldSep: bytes &size=1;
-    encodingChars: bytes &size=4;
-    sendingApplication: bytes &eod;
-    sendingFacility: bytes &eod;
-    receivingApplication: bytes &eod;
-    receivingFacility: bytes &eod;
-    date: bytes &eod;
-    security: bytes &eod;
-    messageType: bytes &eod;
-    messageControlId: bytes &eod;
-    processingId: bytes &eod;
-    versionId: bytes &eod;
-    sequenceNumber: bytes &eod;
-    continuationPointer: bytes &eod;
-    acceptAckType: bytes &eod;
-    applicationAckType: bytes &eod;
-    countryCode: bytes &eod;
-    characterSet: bytes &eod;
-    
-    on %done {
-        print self;
-    }
+public type MSH = unit {
+    fieldSeparator:      bytes &size=1;
+    encodingCharacters:  bytes &size=4;
+    sendingApplication:  /[^|]*/;
+    sendingFacility:     /[^|]*/;
+    receivingApplication:/[^|]*/;
+    receivingFacility:   /[^|]*/;
+    dateTime:            /[^|]*/;
+    security:            /[^|]*/;
+    messageType:         /[^|]*/;
+    messageControlID:    /[^|]*/;
+    processingID:        /[^|]*/;
+    versionID:           /[^|]*/;
+    sequence:            /[^|]*/;
+    continuationPointer: /[^|]*/;
+    acceptAckType:       /[^|]*/;
+    applicationAckType:  /[^|]*/;
+    countryCode:         /[^|]*/;
+    characterSet:        /[^|]*/;
+    principalLanguage:   /[^|]*/;
 };
 
-public type Segment = unit {
-    id: bytes &size=3;
-    fields: bytes &eod;
+public type PID = unit {
+    setID:                 bytes &size=1;
+    patientID:             /[^|]*/;
+    patientIdentifierList: /[^|]*/;
+    altPatientID:          /[^|]*/;
+    patientName:           /[^|]*/;
+    mothersMaidenName:     /[^|]*/;
+    dob:                   /[^|]*/;
+    sex:                   /[^|]*/;
+    patientAlias:          /[^|]*/;
+    race:                  /[^|]*/;
+    address:               /[^|]*/;
+    countyCode:            /[^|]*/;
+    homePhone:             /[^|]*/;
+    businessPhone:         /[^|]*/;
+    primaryLanguage:       /[^|]*/;
+    maritalStatus:         /[^|]*/;
+    religion:              /[^|]*/;
+    accountNumber:         /[^|]*/;
+    ssn:                   /[^|]*/;
+    driversLicense:        /[^|]*/;
+    mothersID:             /[^|]*/;
+    ethnicGroup:           /[^|]*/;
+    birthPlace:            /[^|]*/;
+    multipleBirthInd:      /[^|]*/;
+    birthOrder:            /[^|]*/;
+    citizenship:           /[^|]*/;
+    vetStatus:             /[^|]*/;
+    nationality:           /[^|]*/;
+    deathDateAndTime:      /[^|]*/;
+    deathIndicator:        /[^|]*/;
 };
 
-public type Message = unit {
-    segments: Segment[] &until=($$ == b"\x1c\r");
+public type EVN = unit {
+    eventTypeCode:        /[^|]*/;
+    dateTime:             /[^|]*/;
+    plannedEventDateTime: /[^|]*/;
+    eventReasonCode:      /[^|]*/;
+    operatorID:           /[^|]*/;
+    eventOccurred:        /[^|]*/;
+};
+
+public type PV1 = unit {
+    setID:                bytes &size=1;
+    patientClass:         /[^|]*/;
+    assignedLocation:     /[^|]*/;
+    admissionType:         /[^|]*/;
+    preadmitNumber:       /[^|]*/;
+    priorLocation:        /[^|]*/;
+    attendingDoc:         /[^|]*/;
+    referringDoc:         /[^|]*/;
+    consultingDoc:        /[^|]*/;
+    hospitalService:      /[^|]*/;
+    tempLocation:         /[^|]*/;
+    admittedFrom:         /[^|]*/;
+    admissionReason:      /[^|]*/;
+    ambulatoryStatus:     /[^|]*/;
+    vipIndicator:         /[^|]*/;
+    admitSource:          /[^|]*/;
+    readmissionIndicator: /[^|]*/;
+    dietType:             /[^|]*/;
+    servicing:            /[^|]*/;
+    bedStatus:            /[^|]*/;
+    accountStatus:        /[^|]*/;
+    pendingLocation:      /[^|]*/;
+    priorTempLocation:    /[^|]*/;
+    admitDateTime:        /[^|]*/;
+    dischargeDateTime:    /[^|]*/;
+    currentPatientBalance:/[^|]*/;
+    totalCharges:         /[^|]*/;
+    totalAdjustments:     /[^|]*/;
+    totalPayments:        /[^|]*/;
+    alternateVisitID:     /[^|]*/;
+    visitIndicator:       /[^|]*/;
+    otherProvider:        /[^|]*/;
 };
 
 public type HL7Message = unit {
-    msh: MSHSegment;
-    message: Message;
+    header:         MSH;
+    pid_segment:    PID;
+    evn_segment:    EVN;
+    pv1_segment:    PV1;
 };

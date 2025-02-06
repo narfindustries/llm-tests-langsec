@@ -1,69 +1,137 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:fn="http://www.w3.org/2005/xpath-functions"
-           targetNamespace="http://example.com/bitcoin-transactions"
-           xmlns:tns="http://example.com/bitcoin-transactions">
+           targetNamespace="http://bitcoin.org/transaction">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
+    <xs:appinfo source="http://bitcoin.org/bitcoin.pdf">
       <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        leadingSkip="0"
-        trailingSkip="0"
-        textNumberRep="standard"
-        textNumberPattern="#"
-        textZonedSignStyle="implicit"
-        escapeSchemeRef=""
-        representation="binary"
-        binaryNumberRep="binary"
-        byteOrder="bigEndian"
-        bitOrder="mostSignificantBitFirst"/>
+        alignment="1" 
+        alignmentUnits="bytes" 
+        byteOrder="littleEndian" 
+        encoding="binary"
+        representation="binary"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="BitcoinTransaction" dfdl:lengthKind="implicit">
+  <xs:element name="BitcoinTransaction">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="Version" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary"/>
-        <xs:element name="InputCount" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:representation="binary"/>
-        <xs:element name="Inputs" dfdl:lengthKind="implicit">
+      <xs:sequence dfdl:byteOrder="littleEndian">
+        <xs:element name="Version" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element lengthKind="explicit" length="4"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="InputCount" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element lengthKind="explicit" length="4"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="Inputs">
           <xs:complexType>
-            <xs:sequence dfdl:occursCountKind="expression" dfdl:occursCount="{ ../InputCount }">
-              <xs:element name="Input">
+            <xs:sequence>
+              <xs:element name="Input" maxOccurs="unbounded">
                 <xs:complexType>
                   <xs:sequence>
-                    <xs:element name="TransactionHash" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="32" dfdl:representation="binary"/>
-                    <xs:element name="OutputIndex" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary"/>
-                    <xs:element name="ScriptLength" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:representation="binary"/>
-                    <xs:element name="ScriptSignature" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ScriptLength }" dfdl:representation="binary"/>
-                    <xs:element name="SequenceNumber" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary"/>
+                    <xs:element name="PreviousTransactionHash" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="32"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="PreviousOutputIndex" type="xs:unsignedInt">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="4"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ScriptSigLength" type="xs:unsignedInt">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="4"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ScriptSig" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="{ ../ScriptSigLength }"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="SequenceNumber" type="xs:unsignedInt">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="4"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
                   </xs:sequence>
                 </xs:complexType>
               </xs:element>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="OutputCount" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:representation="binary"/>
-        <xs:element name="Outputs" dfdl:lengthKind="implicit">
+        
+        <xs:element name="OutputCount" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element lengthKind="explicit" length="4"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        
+        <xs:element name="Outputs">
           <xs:complexType>
-            <xs:sequence dfdl:occursCountKind="expression" dfdl:occursCount="{ ../OutputCount }">
-              <xs:element name="Output">
+            <xs:sequence>
+              <xs:element name="Output" maxOccurs="unbounded">
                 <xs:complexType>
                   <xs:sequence>
-                    <xs:element name="Amount" type="xs:long" dfdl:lengthKind="explicit" dfdl:length="8" dfdl:representation="binary"/>
-                    <xs:element name="ScriptLength" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:representation="binary"/>
-                    <xs:element name="ScriptPubKey" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../ScriptLength }" dfdl:representation="binary"/>
+                    <xs:element name="Value" type="xs:long">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="8"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ScriptPubKeyLength" type="xs:unsignedInt">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="4"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="ScriptPubKey" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="{ ../ScriptPubKeyLength }"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
                   </xs:sequence>
                 </xs:complexType>
               </xs:element>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="LockTime" type="xs:int" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary"/>
+        
+        <xs:element name="Locktime" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element lengthKind="explicit" length="4"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
 </xs:schema>

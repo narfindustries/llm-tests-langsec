@@ -1,71 +1,83 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::map_res,
-    error::ErrorKind,
     multi::many0,
-    number::complete::{be_u16, be_u8},
-    sequence::{pair, preceded, tuple},
+    number::complete::be_u16,
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
-use std::env;
 
 #[derive(Debug)]
-struct JpegSegment {
-    marker: u16,
-    length: Option<u16>,
-    data: Vec<u8>,
+enum Marker {
+    SOI,
+    APPn(u8),
+    DQT,
+    SOF(u8),
+    DHT,
+    SOS,
+    EOI,
+    DRI,
+    RSTn(u8),
+    COM,
+    Unknown(u8),
 }
 
-fn parse_marker(input: &[u8]) -> IResult<&[u8], u16> {
-    preceded(tag(&[0xFF]), be_u8)(input).and_then(|(next_input, marker)| {
-        if marker == 0x00 || marker == 0xFF {
-            Err(nom::Err::Error((next_input, ErrorKind::Tag)))
+fn parse_marker(input: &[u8]) -> IResult<&[u8], Marker> {
+    let (input, marker) = be_u16(input)?;
+    let marker_type = match marker {
+        0xFFD8 => Marker::SOI,
+        0xFFE0..=0xFFEF => Marker::APPn((marker & 0xFF) as u8),
+        0xFFDB => Marker::DQT,
+        0xFFC0..=0xFFC3 => Marker::SOF((marker & 0xF) as u8),
+        0xFFC4 => Marker::DHT,
+        0xFFDA => Marker::SOS,
+        0xFFD9 => Marker::EOI,
+        0xFFDD => Marker::DRI,
+        0xFFD0..=0xFFD7 => Marker::RSTn((marker & 0xF) as u8),
+        0xFFFE => Marker::COM,
+        _ => Marker::Unknown((marker & 0xFF) as u8),
+    };
+    Ok((input, marker_type))
+}
+
+fn parse_segment(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, length) = be_u16(input)?;
+    let (input, data) = take(length - 2)(input)?;
+    Ok((input, data.to_vec()))
+}
+
+fn parse_jpeg(input: &[u8]) -> IResult<&[u8], Vec<(Marker, Vec<u8>)>> {
+    let (input, _) = tag([0xFF, 0xD8])(input)?; // SOI
+    many0(|input| {
+        let (input, marker) = parse_marker(input)?;
+        let (input, data) = if let Marker::EOI = marker {
+            (input, vec![])
         } else {
-            Ok((next_input, 0xFF00 | marker as u16))
-        }
-    })
-}
-
-fn parse_segment(input: &[u8]) -> IResult<&[u8], JpegSegment> {
-    let (input, marker) = parse_marker(input)?;
-    if marker == 0xFFD8 || marker == 0xFFD9 {
-        // SOI or EOI markers have no length or data
-        Ok((input, JpegSegment { marker, length: None, data: vec![] }))
-    } else {
-        let (input, length) = be_u16(input)?;
-        let (input, data) = take(length - 2)(input)?;
-        Ok((input, JpegSegment { marker, length: Some(length), data: data.to_vec() }))
-    }
-}
-
-fn parse_jpeg(input: &[u8]) -> IResult<&[u8], Vec<JpegSegment>> {
-    many0(parse_segment)(input)
+            parse_segment(input)?
+        };
+        Ok((input, (marker, data)))
+    })(input)
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <file>", args[0]);
+        return;
     }
 
-    let input_path = Path::new(&args[1]);
-    let mut file = File::open(&input_path).expect("Failed to open input file");
+    let filename = &args[1];
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read input file");
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_jpeg(&buffer) {
         Ok((_, segments)) => {
-            for segment in segments {
-                println!("{:?}", segment);
+            for (marker, data) in segments {
+                println!("{:?}: {} bytes", marker, data.len());
             }
         }
-        Err(e) => {
-            eprintln!("Failed to parse JPEG: {:?}", e);
-            std::process::exit(1);
-        }
+        Err(e) => eprintln!("Failed to parse JPEG: {:?}", e),
     }
 }

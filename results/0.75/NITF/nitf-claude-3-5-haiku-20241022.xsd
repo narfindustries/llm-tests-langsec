@@ -1,40 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://www.example.org/nitf"
-           xmlns:nitf="http://www.example.org/nitf"
-           elementFormDefault="qualified">
+           targetNamespace="http://example.com/nitf">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format separator="" initiator="" terminator=""
-                  leadingSkip="0" trailingSkip="0"
-                  textStringJustification="left"
-                  textStringPadCharacter=" "
-                  textTrimKind="none"
-                  textPadKind="none"
-                  encoding="UTF-8"
-                  representation="text"
-                  occursCountKind="parsed"
-                  escapeSchemeRef=""
-                  byteOrder="bigEndian"/>
+      <dfdl:format 
+        lengthKind="delimited" 
+        encoding="ASCII" 
+        alignment="1" 
+        alignmentUnits="bytes"
+        occursCountKind="parsed"
+        sequenceKind="ordered"
+        initiatedContent="no"
+        leadingSkip="0"
+        trailingSkip="0"
+        textBidi="no"
+        floating="no"
+        encodingErrorPolicy="replace"
+        initiator=""
+        terminator=""/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="nitf" dfdl:lengthKind="implicit">
+  <xs:element name="NITF">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" dfdl:lengthKind="implicit">
+      <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+        <xs:element name="FileHeader">
           <xs:complexType>
-            <xs:sequence>
-              <xs:element name="title" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
-              <xs:element name="date" type="xs:date" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="FHDR" type="xs:string" dfdl:length="4" fixed="NITF" dfdl:trailingSkip="0"/>
+              <xs:element name="FVER" type="xs:string" dfdl:length="5" dfdl:trailingSkip="0"/>
+              <xs:element name="CLEVEL" type="xs:integer" dfdl:length="2" dfdl:trailingSkip="0"/>
+              <xs:element name="STYPE" type="xs:string" dfdl:length="1" dfdl:trailingSkip="0"/>
+              <xs:element name="OSTAID" type="xs:string" dfdl:length="10" minOccurs="0" dfdl:trailingSkip="0"/>
+              <xs:element name="FDT" type="xs:string" dfdl:length="14" dfdl:trailingSkip="0"/>
+              <xs:element name="FTITLE" type="xs:string" dfdl:length="80" minOccurs="0" dfdl:trailingSkip="0"/>
+              <xs:element name="SecurityGroup">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="FSCLAS" type="xs:string" dfdl:length="1" dfdl:trailingSkip="0"/>
+                    <xs:element name="FSCLSY" type="xs:string" dfdl:length="2" minOccurs="0" dfdl:trailingSkip="0"/>
+                    <xs:element name="FSCODE" type="xs:string" dfdl:length="11" minOccurs="0" dfdl:trailingSkip="0"/>
+                    <xs:element name="FSCTLH" type="xs:string" dfdl:length="2" minOccurs="0" dfdl:trailingSkip="0"/>
+                    <xs:element name="FSREL" type="xs:string" dfdl:length="20" minOccurs="0" dfdl:trailingSkip="0"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="content" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\n"/>
+        <xs:element name="ImageSegments" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+              <xs:element name="ImageSubheader">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                    <xs:element name="IM" type="xs:string" dfdl:length="2" fixed="IM" dfdl:trailingSkip="0"/>
+                    <xs:element name="ISORCE" type="xs:string" dfdl:length="42" minOccurs="0" dfdl:trailingSkip="0"/>
+                    <xs:element name="NROWS" type="xs:integer" dfdl:length="8" dfdl:trailingSkip="0"/>
+                    <xs:element name="NCOLS" type="xs:integer" dfdl:length="8" dfdl:trailingSkip="0"/>
+                    <xs:element name="PVTYPE" type="xs:string" dfdl:length="3" dfdl:trailingSkip="0"/>
+                    <xs:element name="ImageSecurityGroup">
+                      <xs:complexType>
+                        <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0">
+                          <xs:element name="ISCLAS" type="xs:string" dfdl:length="1" dfdl:trailingSkip="0"/>
+                          <xs:element name="ISCLSY" type="xs:string" dfdl:length="2" minOccurs="0" dfdl:trailingSkip="0"/>
+                          <xs:element name="ISCODE" type="xs:string" dfdl:length="11" minOccurs="0" dfdl:trailingSkip="0"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" type="xs:hexBinary" dfdl:encoding="ISO-8859-1" dfdl:trailingSkip="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

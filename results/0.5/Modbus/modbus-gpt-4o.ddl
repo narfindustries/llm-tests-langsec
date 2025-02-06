@@ -1,67 +1,57 @@
-@format little-endian
-ModbusMessage {
-    transaction_id: u16;
-    protocol_id: u16;
-    length: u16;
-    unit_id: u8;
-    function_code: u8;
-    data: switch (function_code) {
-        0x01 => ReadCoilsRequest,
-        0x02 => ReadDiscreteInputsRequest,
-        0x03 => ReadHoldingRegistersRequest,
-        0x04 => ReadInputRegistersRequest,
-        0x05 => WriteSingleCoilRequest,
-        0x06 => WriteSingleRegisterRequest,
-        0x0F => WriteMultipleCoilsRequest,
-        0x10 => WriteMultipleRegistersRequest,
-        _: RawData
-    };
-}
+struct ModbusProtocol {
 
-ReadCoilsRequest {
-    starting_address: u16;
-    quantity_of_coils: u16;
-}
+    // Modbus Application Data Unit (ADU) for Modbus RTU
+    struct ModbusRTUFrame {
+        uint8 address; // Slave address (1-247), 0 for broadcast
+        ModbusPDU pdu; // Protocol Data Unit
+        uint16 crc; // CRC for error-checking
+    }
 
-ReadDiscreteInputsRequest {
-    starting_address: u16;
-    quantity_of_inputs: u16;
-}
+    // Modbus Application Data Unit (ADU) for Modbus TCP
+    struct ModbusTCPFrame {
+        uint16 transactionIdentifier; // Transaction ID (0-65535)
+        uint16 protocolIdentifier; // Protocol ID, always 0 for Modbus
+        uint16 length; // Remaining length of the frame (6-260)
+        uint8 unitIdentifier; // Unit ID (0-255)
+        ModbusPDU pdu; // Protocol Data Unit
+    }
 
-ReadHoldingRegistersRequest {
-    starting_address: u16;
-    quantity_of_registers: u16;
-}
+    // Modbus Protocol Data Unit (PDU)
+    struct ModbusPDU {
+        uint8 functionCode; // Function code (1-255)
+        DataField data; // Data specific to the function
+    }
 
-ReadInputRegistersRequest {
-    starting_address: u16;
-    quantity_of_registers: u16;
-}
+    // Data Field based on Function Code
+    union DataField {
+        ReadRequestData readRequest if (parent.functionCode in [1, 2, 3, 4]);
+        WriteSingleRequestData writeSingleRequest if (parent.functionCode in [5, 6]);
+        WriteMultipleRequestData writeMultipleRequest if (parent.functionCode in [15, 16]);
+        RawData rawData;
+    }
 
-WriteSingleCoilRequest {
-    output_address: u16;
-    output_value: u16;
-}
+    // Read Request Data Structure
+    struct ReadRequestData {
+        uint16 startAddress; // Starting address
+        uint16 quantity; // Quantity of items to read
+    }
 
-WriteSingleRegisterRequest {
-    register_address: u16;
-    register_value: u16;
-}
+    // Write Single Request Data Structure
+    struct WriteSingleRequestData {
+        uint16 address; // Address to write
+        uint16 value; // Value to write
+    }
 
-WriteMultipleCoilsRequest {
-    starting_address: u16;
-    quantity_of_outputs: u16;
-    byte_count: u8;
-    output_values: u8[byte_count];
-}
+    // Write Multiple Request Data Structure
+    struct WriteMultipleRequestData {
+        uint16 startAddress; // Starting address
+        uint16 quantity; // Quantity of items to write
+        uint8 byteCount; // Number of data bytes
+        bytes data[byteCount]; // Data to write
+    }
 
-WriteMultipleRegistersRequest {
-    starting_address: u16;
-    quantity_of_registers: u16;
-    byte_count: u8;
-    register_values: u8[byte_count];
-}
-
-RawData {
-    bytes: u8[];
+    // Raw Data Structure for unsupported function codes
+    struct RawData {
+        bytes rawData[]; // Raw data
+    }
 }

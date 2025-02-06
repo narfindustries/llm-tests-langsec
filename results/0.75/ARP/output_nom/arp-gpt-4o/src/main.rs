@@ -1,57 +1,55 @@
-use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::env;
 use nom::{
     IResult,
-    number::complete::{be_u16, be_u8},
-    bytes::complete::take
+    number::complete::{be_u8, be_u16},
+    bytes::complete::take,
 };
 
 #[derive(Debug)]
-struct ArpPacket {
-    htype: u16,
-    ptype: u16,
-    hlen: u8,
-    plen: u8,
-    oper: u16,
-    sha: Vec<u8>,
-    spa: Vec<u8>,
-    tha: Vec<u8>,
-    tpa: Vec<u8>,
+pub struct ArpPacket {
+    hardware_type: u16,
+    protocol_type: u16,
+    hardware_len: u8,
+    protocol_len: u8,
+    operation: u16,
+    sender_hardware_addr: Vec<u8>,
+    sender_protocol_addr: Vec<u8>,
+    target_hardware_addr: Vec<u8>,
+    target_protocol_addr: Vec<u8>,
 }
 
 fn parse_arp(input: &[u8]) -> IResult<&[u8], ArpPacket> {
-    let (input, htype) = be_u16(input)?;
-    let (input, ptype) = be_u16(input)?;
-    let (input, hlen) = be_u8(input)?;
-    let (input, plen) = be_u8(input)?;
-    let (input, oper) = be_u16(input)?;
-    
-    let sha_len = hlen as usize;
-    let spa_len = plen as usize;
-    let (input, sha) = take(sha_len)(input)?;
-    let (input, spa) = take(spa_len)(input)?;
-    let (input, tha) = take(sha_len)(input)?;
-    let (input, tpa) = take(spa_len)(input)?;
+    let (input, hardware_type) = be_u16(input)?;
+    let (input, protocol_type) = be_u16(input)?;
+    let (input, hardware_len) = be_u8(input)?;
+    let (input, protocol_len) = be_u8(input)?;
+    let (input, operation) = be_u16(input)?;
+
+    let (input, sender_hardware_addr) = take(hardware_len)(input)?;
+    let (input, sender_protocol_addr) = take(protocol_len)(input)?;
+    let (input, target_hardware_addr) = take(hardware_len)(input)?;
+    let (input, target_protocol_addr) = take(protocol_len)(input)?;
 
     Ok((input, ArpPacket {
-        htype,
-        ptype,
-        hlen,
-        plen,
-        oper,
-        sha: sha.to_vec(),
-        spa: spa.to_vec(),
-        tha: tha.to_vec(),
-        tpa: tpa.to_vec(),
+        hardware_type,
+        protocol_type,
+        hardware_len,
+        protocol_len,
+        operation,
+        sender_hardware_addr: sender_hardware_addr.to_vec(),
+        sender_protocol_addr: sender_protocol_addr.to_vec(),
+        target_hardware_addr: target_hardware_addr.to_vec(),
+        target_protocol_addr: target_protocol_addr.to_vec(),
     }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input file>", args[0]);
-        std::process::exit(1);
+        eprintln!("Usage: {} <binary file>", args[0]);
+        return;
     }
 
     let filename = &args[1];
@@ -60,11 +58,7 @@ fn main() {
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match parse_arp(&buffer) {
-        Ok((_, packet)) => {
-            println!("{:?}", packet);
-        }
-        Err(err) => {
-            eprintln!("Failed to parse ARP packet: {:?}", err);
-        }
+        Ok((_, arp_packet)) => println!("{:?}", arp_packet),
+        Err(err) => eprintln!("Failed to parse ARP packet: {:?}", err),
     }
 }

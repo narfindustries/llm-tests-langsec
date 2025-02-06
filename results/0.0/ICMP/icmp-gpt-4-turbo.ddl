@@ -1,39 +1,57 @@
-module ICMP {
-  type ICMPMessage = struct {
-    type       : UInt8;
-    code       : UInt8;
-    checksum   : UInt16;
-    restOfHeader : UInt32;
-    data       : Bytes &size=(this.len - 8);
-  } &size=this.len;
+ICMP : type = struct {
+  type : uint8;
+  code : uint8;
+  checksum : uint16;
+  restOfHeader : bytes &length=4;
+}
 
-  type EchoReply = ICMPMessage &when(this.type == 0);
-  type DestinationUnreachable = ICMPMessage &when(this.type == 3);
-  type SourceQuench = ICMPMessage &when(this.type == 4);
-  type Redirect = ICMPMessage &when(this.type == 5);
-  type Echo = ICMPMessage &when(this.type == 8);
-  type TimeExceeded = ICMPMessage &when(this.type == 11);
-  type ParameterProblem = ICMPMessage &when(this.type == 12);
-  type Timestamp = ICMPMessage &when(this.type == 13);
-  type TimestampReply = ICMPMessage &when(this.type == 14);
-  type InformationRequest = ICMPMessage &when(this.type == 15);
-  type InformationReply = ICMPMessage &when(this.type == 16);
-  type AddressMaskRequest = ICMPMessage &when(this.type == 17);
-  type AddressMaskReply = ICMPMessage &when(this.type == 18);
+ICMPMessage : type = switch (ICMP.type) {
+  0 => EchoReply : ICMP_Echo;
+  3 => DestinationUnreachable : ICMP_DestinationUnreachable;
+  4 => SourceQuench : ICMP;
+  5 => Redirect : ICMP_Redirect;
+  8 => Echo : ICMP_Echo;
+  11 => TimeExceeded : ICMP;
+  12 => ParameterProblem : ICMP_ParameterProblem;
+  13 => Timestamp : ICMP_Timestamp;
+  14 => TimestampReply : ICMP_Timestamp;
+  15 => InformationRequest : ICMP_Information;
+  16 => InformationReply : ICMP_Information;
+}
 
-  type ICMPDatagram = union {
-    echoReply : EchoReply;
-    destinationUnreachable : DestinationUnreachable;
-    sourceQuench : SourceQuench;
-    redirect : Redirect;
-    echo : Echo;
-    timeExceeded : TimeExceeded;
-    parameterProblem : ParameterProblem;
-    timestamp : Timestamp;
-    timestampReply : TimestampReply;
-    informationRequest : InformationRequest;
-    informationReply : InformationReply;
-    addressMaskRequest : AddressMaskRequest;
-    addressMaskReply : AddressMaskReply;
-  };
+ICMP_Echo : type = struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  data : bytes;
+}
+
+ICMP_DestinationUnreachable : type = struct {
+  unused : uint16 &length=2;
+  nextHopMTU : uint16;
+  data : bytes;
+}
+
+ICMP_Redirect : type = struct {
+  gatewayInternetAddress : uint32;
+  data : bytes;
+}
+
+ICMP_ParameterProblem : type = struct {
+  pointer : uint8;
+  unused : uint8 &length=3;
+  data : bytes;
+}
+
+ICMP_Timestamp : type = struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  originateTimestamp : uint32;
+  receiveTimestamp : uint32;
+  transmitTimestamp : uint32;
+}
+
+ICMP_Information : type = struct {
+  identifier : uint16;
+  sequenceNumber : uint16;
+  data : bytes;
 }

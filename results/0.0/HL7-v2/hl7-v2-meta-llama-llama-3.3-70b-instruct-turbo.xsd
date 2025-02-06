@@ -1,164 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HL7-v2"
-           xmlns:tns="http://example.com/HL7-v2"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="HL7-v2-xml.xsd"/>
-
-  <xs:element name="HL7-v2-message">
+           targetNamespace="http://example.com/HL7v2"
+           xmlns="http://example.com/HL7v2"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:element name="HL7v2">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:HL7-v2-format"/>
+        <dfdl:format ref="HL7v2Format"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="tns:MSH" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="tns:EVN" minOccurs="0" maxOccurs="1"/>
-        <xs:element ref="tns:PID" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="tns:PV1" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="tns:OBR" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element ref="tns:OBX" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="MSH" dfdl:lengthKind="delimited" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="PID" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="PV1" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="OBR" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="OBX" dfdl:lengthKind="delimited" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="MSH">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:MSH-format"/>
+        <dfdl:format ref="MSHFormat"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="FieldSeparator" type="xs:string" fixed="|"/>
-        <xs:element name="EncodingCharacters" type="xs:string" fixed="^~\&"/>
-        <xs:element name="SendingFacility" type="xs:string"/>
-        <xs:element name="SendingApplication" type="xs:string"/>
-        <xs:element name="MessageDateTime" type="xs:string"/>
-        <xs:element name="Security" type="xs:string" minOccurs="0"/>
-        <xs:element name="MessageType" type="xs:string"/>
-        <xs:element name="MessageControlID" type="xs:string"/>
-        <xs:element name="ProcessingID" type="xs:string"/>
-        <xs:element name="VersionID" type="xs:string"/>
-        <xs:element name="SequenceNumber" type="xs:string" minOccurs="0"/>
-        <xs:element name="ContinuationPointer" type="xs:string" minOccurs="0"/>
-        <xs:element name="AcceptAcknowledgmentType" type="xs:string" minOccurs="0"/>
-        <xs:element name="ApplicationAcknowledgmentType" type="xs:string" minOccurs="0"/>
-        <xs:element name="CountryCode" type="xs:string" minOccurs="0"/>
-        <xs:element name="CharacterSet" type="xs:string" minOccurs="0"/>
-        <xs:element name="PrincipalLanguageOfMessage" type="xs:string" minOccurs="0"/>
+        <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="SendingApplication" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="SendingFacility" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ReceivingApplication" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ReceivingFacility" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="DateTimeOfMessage" type="xs:string" dfdl:length="14" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Security" type="xs:string" dfdl:length="40" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MessageType" type="xs:string" dfdl:length="6" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="MessageControlID" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ProcessingID" type="xs:string" dfdl:length="3" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="VersionID" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="EVN">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="tns:EVN-format"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="EventType" type="xs:string"/>
-        <xs:element name="EventDateTime" type="xs:string"/>
-        <xs:element name="EventFacility" type="xs:string" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
   <xs:element name="PID">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:PID-format"/>
+        <dfdl:format ref="PIDFormat"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="PatientID" type="xs:string"/>
-        <xs:element name="PatientName" type="xs:string"/>
-        <xs:element name="DateOfBirth" type="xs:string"/>
-        <xs:element name="Sex" type="xs:string"/>
-        <xs:element name="PatientAddress" type="xs:string" minOccurs="0"/>
+        <xs:element name="SetIDPatientID" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="PatientID" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="PatientIDIdentifier" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AlternatePatientID" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PatientName" type="xs:string" dfdl:length="50" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="MothersMaidenName" type="xs:string" dfdl:length="50" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DateOfBirth" type="xs:string" dfdl:length="8" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Sex" type="xs:string" dfdl:length="1" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PatientAlias" type="xs:string" dfdl:length="50" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Race" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PatientAddress" type="xs:string" dfdl:length="100" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="PV1">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:PV1-format"/>
+        <dfdl:format ref="PV1Format"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="VisitNumber" type="xs:string"/>
-        <xs:element name="PatientClass" type="xs:string"/>
-        <xs:element name="VisitDateTime" type="xs:string"/>
-        <xs:element name="AdmittingDoctor" type="xs:string" minOccurs="0"/>
+        <xs:element name="SetIDPatientVisit" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="VisitNumber" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="PatientClass" type="xs:string" dfdl:length="1" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="VisitReason" type="xs:string" dfdl:length="50" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AdmissionType" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="VisitMode" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DischargeDisposition" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="OBR">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:OBR-format"/>
+        <dfdl:format ref="OBRFormat"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="ObservationRequestID" type="xs:string"/>
-        <xs:element name="ObservationPriority" type="xs:string"/>
-        <xs:element name="ObservationDateTime" type="xs:string"/>
-        <xs:element name="ObservationType" type="xs:string"/>
+        <xs:element name="SetIDObservationRequest" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="PlacerOrderNumber" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="FillerOrderNumber" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="UniversalServiceIdentifier" type="xs:string" dfdl:length="50" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="Priority" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="RequestedDateTime" type="xs:string" dfdl:length="14" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
   <xs:element name="OBX">
     <xs:annotation>
       <xs:appinfo>
-        <dfdl:format ref="tns:OBX-format"/>
+        <dfdl:format ref="OBXFormat"/>
       </xs:appinfo>
     </xs:annotation>
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="ObservationResultID" type="xs:string"/>
-        <xs:element name="ObservationResultStatus" type="xs:string"/>
-        <xs:element name="ObservationResultValue" type="xs:string"/>
-        <xs:element name="ObservationUnits" type="xs:string" minOccurs="0"/>
+        <xs:element name="SetIDObservationResult" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ObservationResultID" type="xs:string" dfdl:length="20" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ObservationResultStatus" type="xs:string" dfdl:length="1" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="ObservationValue" type="xs:string" dfdl:length="50" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Units" type="xs:string" dfdl:length="20" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ReferenceRange" type="xs:string" dfdl:length="50" minOccurs="0" maxOccurs="1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
   <xs:annotation>
     <xs:appinfo>
-      <dfdl:format ref="tns:HL7-v2-format"/>
+      <dfdl:format xml:lang="en">
+        <dfdl:property name="lengthKind" type="xs:string" value="delimited"/>
+        <dfdl:property name="encoding" type="xs:string" value="UTF-8"/>
+      </dfdl:format>
     </xs:appinfo>
   </xs:annotation>
-
-  <xs:notation name="HL7-v2-format" public="http://www.example.com/HL7-v2-format"
-               system="http://www.example.com/HL7-v2-format-system"/>
-
-  <xs:notation name="MSH-format" public="http://www.example.com/MSH-format"
-               system="http://www.example.com/MSH-format-system"/>
-
-  <xs:notation name="EVN-format" public="http://www.example.com/EVN-format"
-               system="http://www.example.com/EVN-format-system"/>
-
-  <xs:notation name="PID-format" public="http://www.example.com/PID-format"
-               system="http://www.example.com/PID-format-system"/>
-
-  <xs:notation name="PV1-format" public="http://www.example.com/PV1-format"
-               system="http://www.example.com/PV1-format-system"/>
-
-  <xs:notation name="OBR-format" public="http://www.example.com/OBR-format"
-               system="http://www.example.com/OBR-format-system"/>
-
-  <xs:notation name="OBX-format" public="http://www.example.com/OBX-format"
-               system="http://www.example.com/OBX-format-system"/>
-
 </xs:schema>

@@ -1,11 +1,12 @@
 meta:
   id: hl7_v2
-  title: HL7 Version 2 Message
+  title: Health Level 7 (HL7) Version 2
+  application: Health Information Systems
   file-extension: hl7
-  endian: be
-  license: CC0-1.0
+  xref:
+    wikidata: Q1475216
 doc: |
-  Health Level Seven (HL7) is a set of international standards for transfer of clinical and administrative data between software applications used by various healthcare providers.
+  HL7 Version 2.x messages are used in clinical information systems to send and receive patient information. They are composed of segments, each containing fields, components, and sub-components.
 
 seq:
   - id: segments
@@ -19,198 +20,41 @@ types:
         type: str
         size: 3
         encoding: ASCII
-    instances:
-      message_header:
-        pos: 0
-        type: msh
-        if: segment_type == "MSH"
-      patient_identification:
-        pos: 0
-        type: pid
-        if: segment_type == "PID"
-      patient_visit:
-        pos: 0
-        type: pv1
-        if: segment_type == "PV1"
+      - id: fields
+        type: field
+        repeat: until
+        repeat-until: _.is_field_separator
+        repeat-until-eos: true
 
-  msh:
+  field:
     seq:
-      - id: field_separator
-        type: str
-        size: 1
-        encoding: ASCII
-      - id: encoding_characters
-        type: str
-        size: 4
-        encoding: ASCII
-      - id: sending_application
-        type: str
-        size: 180
-        encoding: ASCII
-        terminator: 0x7C
-      - id: sending_facility
-        type: str
-        size: 180
-        encoding: ASCII
-        terminator: 0x7C
-      - id: receiving_application
-        type: str
-        size: 180
-        encoding: ASCII
-        terminator: 0x7C
-      - id: receiving_facility
-        type: str
-        size: 180
-        encoding: ASCII
-        terminator: 0x7C
-      - id: date_time_of_message
-        type: str
-        size: 26
-        encoding: ASCII
-        terminator: 0x7C
-      - id: security
-        type: str
-        size: 40
-        encoding: ASCII
-        terminator: 0x7C
-      - id: message_type
-        type: str
-        size: 7
-        encoding: ASCII
-        terminator: 0x7C
-      - id: message_control_id
-        type: str
-        size: 199
-        encoding: ASCII
-        terminator: 0x7C
-      - id: processing_id
-        type: str
-        size: 3
-        encoding: ASCII
-        terminator: 0x7C
-      - id: version_id
-        type: str
-        size: 60
-        encoding: ASCII
-        terminator: 0x7C
+      - id: components
+        type: component
+        repeat: until
+        repeat-until: _.is_component_separator
+        repeat-until-eos: true
 
-  pid:
+  component:
     seq:
-      - id: set_id
-        type: str
-        size: 4
-        encoding: ASCII
-        terminator: 0x7C
-      - id: patient_id
-        type: str
-        size: 20
-        encoding: ASCII
-        terminator: 0x7C
-      - id: patient_identifier_list
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: alternate_patient_id
-        type: str
-        size: 20
-        encoding: ASCII
-        terminator: 0x7C
-      - id: patient_name
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: mother_maiden_name
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: date_of_birth
-        type: str
-        size: 8
-        encoding: ASCII
-        terminator: 0x7C
-      - id: sex
-        type: str
-        size: 1
-        encoding: ASCII
-        terminator: 0x7C
-      - id: patient_address
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: phone_number_home
-        type: str
-        size: 40
-        encoding: ASCII
-        terminator: 0x7C
-      - id: phone_number_business
-        type: str
-        size: 40
-        encoding: ASCII
-        terminator: 0x7C
+      - id: sub_components
+        type: sub_component
+        repeat: until
+        repeat-until: _.is_sub_component_separator
+        repeat-until-eos: true
 
-  pv1:
+  sub_component:
     seq:
-      - id: set_id
+      - id: value
         type: str
-        size: 4
         encoding: ASCII
-        terminator: 0x7C
-      - id: patient_class
-        type: str
-        size: 1
-        encoding: ASCII
-        terminator: 0x7C
-      - id: assigned_patient_location
-        type: str
-        size: 80
-        encoding: ASCII
-        terminator: 0x7C
-      - id: admission_type
-        type: str
-        size: 2
-        encoding: ASCII
-        terminator: 0x7C
-      - id: preadmit_number
-        type: str
-        size: 20
-        encoding: ASCII
-        terminator: 0x7C
-      - id: prior_patient_location
-        type: str
-        size: 80
-        encoding: ASCII
-        terminator: 0x7C
-      - id: attending_doctor
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: referring_doctor
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: consulting_doctor
-        type: str
-        size: 250
-        encoding: ASCII
-        terminator: 0x7C
-      - id: hospital_service
-        type: str
-        size: 3
-        encoding: ASCII
-        terminator: 0x7C
-      - id: admission_date
-        type: str
-        size: 26
-        encoding: ASCII
-        terminator: 0x7C
-      - id: discharge_date
-        type: str
-        size: 26
-        encoding: ASCII
-        terminator: 0x7C
+        terminator: 0x26
+        include: false
+        eos-error: false
+
+instances:
+  is_field_separator:
+    value: "(_io.pos + 1 < _io.size and (_io.read_bytes(1) == b'\r' or _io.read_bytes(1) == b'\n' or _io.read_bytes(1) == b'|'))"
+  is_component_separator:
+    value: "(_io.pos + 1 < _io.size and _io.read_bytes(1) == b'^')"
+  is_sub_component_separator:
+    value: "(_io.pos + 1 < _io.size and _io.read_bytes(1) == b'&')"

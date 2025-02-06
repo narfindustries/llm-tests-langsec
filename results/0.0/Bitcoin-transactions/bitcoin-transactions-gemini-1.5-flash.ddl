@@ -1,14 +1,31 @@
--- This is a placeholder.  The error message indicates a problem with the
--- Daedalus compilation process, not the Daedalus code itself.  A valid
--- Daedalus specification requires knowing the intended functionality.
---  The provided error message only shows a compilation failure, not a
---  specification problem.  To provide a valid Daedalus specification,
---  please provide the intended functionality and data structures.
+module BitcoinTransaction
 
-module Placeholder where
+import std.integer
 
-import Daedalus.AST
+record TxIn {
+  prev_out : TxOutPoint;
+  scriptSig : bytes;
+  sequence : uint32;
+}
 
--- Replace this with your actual Daedalus code.
-main :: Daedalus.AST.Program
-main = undefined
+record TxOutPoint {
+  hash : bytes[32];
+  index : uint32;
+}
+
+record TxOut {
+  value : uint64;
+  scriptPubKey : bytes;
+}
+
+record BitcoinTransaction {
+  version : int32;
+  inputs : [TxIn];
+  outputs : [TxOut];
+  locktime : uint32;
+  witness : Optional [Witness];
+}
+
+record Witness {
+  stack : [[bytes]];
+}

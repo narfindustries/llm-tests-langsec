@@ -1,46 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/tlsClientHello"
-           xmlns="http://example.org/tlsClientHello"
-           elementFormDefault="qualified">
-
-  <xs:element name="tlsClientHello">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/tls_client_hello" elementFormDefault="qualified" xmlns:tns="http://example.org/tls_client_hello">
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+  <xs:element name="ClientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="record" type="RecordType" maxOccurs="unbounded"/>
+        <xs:element name="client_version" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="random" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="32"/>
+        <xs:element name="session_id" type="xs:hexBinary" minOccurs="0" maxOccurs="1" dfdl:lengthKind="explicit" dfdl:length="32"/>
+        <xs:element name="cipher_suites" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        <xs:element name="compression_methods" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="1"/>
+        <xs:element name="extensions" type="xs:hexBinary"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:format ref="format1"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
-
-  <xs:complexType name="RecordType">
-    <xs:sequence>
-      <xs:element name="field1" type="xs:string"/>
-      <xs:element name="field2" type="xs:integer"/>
-      </xs:sequence>
-  </xs:complexType>
-
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="format1">
-          <dfdl:textStandardEncoding>UTF-8</dfdl:textStandardEncoding>
-          <dfdl:separator length="1" occurs="1">
-            <dfdl:text separator="\n"/>
-          </dfdl:separator>
-          <dfdl:lengthKind>delimited</dfdl:lengthKind>
-          <dfdl:lengthUnits>bytes</dfdl:lengthUnits>
-          <dfdl:encoding>UTF-8</dfdl:encoding>
-          <dfdl:byteOrder>bigEndian</dfdl:byteOrder>
-          <dfdl:occurs>unbounded</dfdl:occurs>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
-
 </xs:schema>

@@ -2,53 +2,53 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// HL7 v2.x message segments
-HParser *hl7_msh;
-HParser *hl7_evn;
-HParser *hl7_pid;
-HParser *hl7_pvx;
-HParser *hl7_obx;
-HParser *hl7_msg;
+// Define parsers for basic HL7 data types
+HParser *hl7_alphanumeric;
+HParser *hl7_numeric;
+HParser *hl7_field_separator;
+HParser *hl7_component_separator;
+HParser *hl7_repetition_separator;
+HParser *hl7_escape_character;
+HParser *hl7_subcomponent_separator;
 
-// HL7 field separator and encoding characters
-static const uint8_t HL7_FIELD_SEP = '|';
-static const uint8_t HL7_COMP_SEP = '^';
-static const uint8_t HL7_REP_SEP = '~';
-static const uint8_t HL7_ESCAPE_CHAR = '\\';
-static const uint8_t HL7_SUBCOMP_SEP = '&';
+// Define parsers for specific fields
+HParser *hl7_pid_3;
+HParser *hl7_pid_5;
 
-// HL7 data types
-HParser *hl7_field;
-HParser *hl7_component;
-HParser *hl7_repeated;
-HParser *hl7_subcomponent;
+// Define parsers for segments
+HParser *hl7_pid_segment;
 
-void init_hl7_parsers() {
-    hl7_field = h_ch(HL7_FIELD_SEP);
-    hl7_component = h_ch(HL7_COMP_SEP);
-    hl7_repeated = h_ch(HL7_REP_SEP);
-    hl7_subcomponent = h_ch(HL7_SUBCOMP_SEP);
+// Define a parser for an HL7 message
+HParser *hl7_message;
 
-    hl7_msh = h_sequence(h_ch('M'), h_ch('S'), h_ch('H'), hl7_field, NULL);
-    hl7_evn = h_sequence(h_ch('E'), h_ch('V'), h_ch('N'), hl7_field, NULL);
-    hl7_pid = h_sequence(h_ch('P'), h_ch('I'), h_ch('D'), hl7_field, NULL);
-    hl7_pvx = h_sequence(h_ch('P'), h_ch('V'), h_ch('X'), hl7_field, NULL);
-    hl7_obx = h_sequence(h_ch('O'), h_ch('B'), h_ch('X'), hl7_field, NULL);
-
-    hl7_msg = h_choice(hl7_msh, hl7_evn, hl7_pid, hl7_pvx, hl7_obx, NULL);
-}
-
-int parse_hl7(const uint8_t *input, size_t length) {
-    HParseResult *result = h_parse(hl7_msg, input, length);
-    if (result) {
-        printf("HL7 message parsed successfully.\n");
-        h_pprint(stdout, result->ast, 0, 4);
-        h_parse_result_free(result);
-        return 0;
-    } else {
-        printf("Failed to parse HL7 message.\n");
-        return 1;
+// Function to read file into memory
+char *read_file(const char *filename, size_t *length) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Unable to open file");
+        return NULL;
     }
+
+    fseek(f, 0, SEEK_END);
+    *length = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char *data = malloc(*length);
+    if (!data) {
+        perror("Unable to allocate memory");
+        fclose(f);
+        return NULL;
+    }
+
+    if (fread(data, 1, *length, f) != *length) {
+        perror("Unable to read file");
+        free(data);
+        fclose(f);
+        return NULL;
+    }
+
+    fclose(f);
+    return data;
 }
 
 int main(int argc, char *argv[]) {
@@ -57,29 +57,48 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "rb");
-    if (!file) {
-        perror("Failed to open file");
-        return 1;
-    }
+    // Initialize parsers
+    hl7_alphanumeric = h_token((const uint8_t *)"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 62);
+    hl7_numeric = h_token((const uint8_t *)"0123456789", 10);
+    hl7_field_separator = h_ch('|');
+    hl7_component_separator = h_ch('^');
+    hl7_repetition_separator = h_ch('~');
+    hl7_escape_character = h_ch('\\');
+    hl7_subcomponent_separator = h_ch('&');
 
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    hl7_pid_3 = h_sequence(hl7_alphanumeric, hl7_component_separator, hl7_alphanumeric, NULL);
+    hl7_pid_5 = h_sequence(hl7_alphanumeric, hl7_component_separator, hl7_alphanumeric, hl7_component_separator, hl7_alphanumeric, NULL);
 
-    uint8_t *data = malloc(length);
+    hl7_pid_segment = h_sequence(
+        h_token((const uint8_t *)"PID", 3),
+        hl7_field_separator,
+        hl7_numeric, // PID-1: Set ID - PID
+        hl7_field_separator,
+        hl7_pid_3, // PID-3: Patient Identifier List
+        hl7_field_separator,
+        hl7_pid_5, // PID-5: Patient Name
+        NULL
+    );
+
+    hl7_message = h_sequence(
+        hl7_pid_segment,
+        NULL
+    );
+
+    size_t length;
+    char *data = read_file(argv[1], &length);
     if (!data) {
-        perror("Failed to allocate memory");
-        fclose(file);
         return 1;
     }
 
-    fread(data, 1, length, file);
-    fclose(file);
+    HParseResult *result = h_parse(hl7_message, (const uint8_t *)data, length);
+    if (result) {
+        printf("Parse successful!\n");
+        h_pprint(stdout, result->ast, 0, 4);
+    } else {
+        printf("Parse failed.\n");
+    }
 
-    init_hl7_parsers();
-    int result = parse_hl7(data, length);
     free(data);
-
-    return result;
+    return 0;
 }

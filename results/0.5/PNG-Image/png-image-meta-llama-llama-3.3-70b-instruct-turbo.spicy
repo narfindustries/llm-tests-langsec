@@ -1,47 +1,133 @@
-@header {
-    type: "PNG-Image"
-}
+module PNG_Image;
 
-@onerow {
-    magic: /"\x89PNG\r\n\x1a\n"/
-}
+type png_magic = byte[8] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+type png_chunk_type = byte[4] = { 0x49, 0x48, 0x44, 0x52 };
+type png_chunk_length = uint32 = 0;
+type png_chunk_data = byte = 0;
+type png_chunk = record {
+  length = png_chunk_length;
+  type = png_chunk_type;
+  data = png_chunk_data;
+  crc = uint32 = 0;
+};
 
-@onread {
-    if (!magic) {
-        @abort "Invalid PNG image"
-    }
+type png_ihdr = record {
+  width = uint32 = 0;
+  height = uint32 = 0;
+  bit_depth = byte = 0;
+  color_type = byte = 0;
+  compression_method = byte = 0;
+  filter_method = byte = 0;
+  interlace_method = byte = 0;
+};
 
-    ihdr: $uint32_BE
-    width: $uint32_BE
-    height: $uint32_BE
-    bit_depth: $uint8
-    color_type: $uint8
-    compression_method: $uint8
-    filter_method: $uint8
-    interlace_method: $uint8
+type png_plte = record {
+  palette_entries = byte = 0;
+};
 
-    if (compression_method != 0) {
-        @abort "Unsupported compression method"
-    }
+type png_idat = record {
+  compressed_image_data = byte = 0;
+};
 
-    if (filter_method != 0) {
-        @abort "Unsupported filter method"
-    }
+type png_iend = record {
+};
 
-    if (interlace_method != 0 && interlace_method != 1) {
-        @abort "Unsupported interlace method"
-    }
+type png_chrm = record {
+  white_point_x = uint32 = 0;
+  white_point_y = uint32 = 0;
+  red_x = uint32 = 0;
+  red_y = uint32 = 0;
+  green_x = uint32 = 0;
+  green_y = uint32 = 0;
+  blue_x = uint32 = 0;
+  blue_y = uint32 = 0;
+};
 
-    crc: $uint32_BE
+type png_gama = record {
+  gamma_value = uint32 = 0;
+};
 
-    while (!@eof) {
-        chunk_type: $string(4)
-        chunk_length: $uint32_BE
-        chunk_data: $bytes(chunk_length)
-        chunk_crc: $uint32_BE
+type png_iccp = record {
+  profile_name = string = "";
+  compressed_profile = byte = 0;
+};
 
-        if (chunk_type == "IEND") {
-            break
-        }
-    }
-}
+type png_sbit = record {
+  significant_bits = byte = 0;
+};
+
+type png_srgb = record {
+  rendering_intent = byte = 0;
+};
+
+type png_text = record {
+  keyword = string = "";
+  text_data = string = "";
+};
+
+type png_time = record {
+  year = uint16 = 0;
+  month = byte = 0;
+  day = byte = 0;
+  hour = byte = 0;
+  minute = byte = 0;
+  second = byte = 0;
+};
+
+type png_bkgd = record {
+  background_color = byte = 0;
+};
+
+type png_hist = record {
+  histogram = uint16 = 0;
+};
+
+type png_phys = record {
+  pixels_per_unit_x = uint32 = 0;
+  pixels_per_unit_y = uint32 = 0;
+  unit = byte = 0;
+};
+
+type png_scal = record {
+  unit = byte = 0;
+  width = uint32 = 0;
+  height = uint32 = 0;
+};
+
+type png_trns = record {
+  transparency = byte = 0;
+};
+
+type png_image = record {
+  magic = png_magic;
+  chunks = png_chunk;
+};
+
+let png_image_parser = record {
+  magic = png_magic;
+  chunks = png_chunk;
+  chunk = record {
+    length = png_chunk_length;
+    type = png_chunk_type;
+    data = 
+      case png_chunk_type of 
+        "IHDR" => png_ihdr
+        "PLTE" => png_plte
+        "IDAT" => png_idat
+        "IEND" => png_iend
+        "cHRM" => png_chrm
+        "gAMA" => png_gama
+        "iCCP" => png_iccp
+        "sBIT" => png_sbit
+        "sRGB" => png_srgb
+        "tEXt" => png_text
+        "tIME" => png_time
+        "bKGD" => png_bkgd
+        "hIST" => png_hist
+        "pHYs" => png_phys
+        "sCAL" => png_scal
+        "tRNS" => png_trns
+      ;
+    crc = uint32 = 0;
+  };
+};

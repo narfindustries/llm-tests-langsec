@@ -1,0 +1,80 @@
+module TIFF;
+
+public type FileHeader = unit {
+    ByteOrder: bytes &size=2;
+    Version: uint16;
+    IFDOffset: uint32;
+};
+
+public type IFDEntry = unit {
+    Tag: uint16;
+    Type: uint16;
+    Count: uint32;
+    ValueOffset: bytes &size=4;
+};
+
+public type IFD = unit {
+    NumEntries: uint16;
+    Entries: IFDEntry[] &until=($$.NumEntries == 0);
+    NextIFDOffset: uint32;
+};
+
+public type TIFF = unit {
+    Header: FileHeader;
+    IFDs: IFD[] &until=($$.NextIFDOffset == 0);
+};
+
+on TIFF::FileHeader::%done {
+    if ( self.ByteOrder == "II" ) {
+        self.byte_order = "LittleEndian";
+    } else if ( self.ByteOrder == "MM" ) {
+        self.byte_order = "BigEndian";
+    } else {
+        self.byte_order = "Unknown";
+    }
+}
+
+on TIFF::IFDEntry::%done {
+    switch ( self.Tag ) {
+        case 256: self.TagName = "ImageWidth"; 
+        case 257: self.TagName = "ImageLength"; 
+        case 258: self.TagName = "BitsPerSample"; 
+        case 259: self.TagName = "Compression"; 
+        case 262: self.TagName = "PhotometricInterpretation"; 
+        case 273: self.TagName = "StripOffsets"; 
+        case 277: self.TagName = "SamplesPerPixel"; 
+        case 278: self.TagName = "RowsPerStrip"; 
+        case 279: self.TagName = "StripByteCounts"; 
+        case 282: self.TagName = "XResolution"; 
+        case 283: self.TagName = "YResolution"; 
+        case 296: self.TagName = "ResolutionUnit"; 
+        case 284: self.TagName = "PlanarConfiguration"; 
+        case 290: self.TagName = "GrayResponseUnit"; 
+        case 320: self.TagName = "ColorMap"; 
+        case 338: self.TagName = "ExtraSamples"; 
+        case 339: self.TagName = "SampleFormat"; 
+        case 306: self.TagName = "DateTime"; 
+        case 315: self.TagName = "Artist"; 
+        case 316: self.TagName = "HostComputer"; 
+        case 305: self.TagName = "Software"; 
+        case 33432: self.TagName = "Copyright"; 
+        case 34665: self.TagName = "Exif IFD"; 
+        case 34853: self.TagName = "GPS IFD"; 
+        case 274: self.TagName = "Orientation"; 
+        case 266: self.TagName = "FillOrder"; 
+        case 269: self.TagName = "DocumentName"; 
+        default: self.TagName = "Unknown"; 
+    }
+}
+
+on TIFF::IFD::%done {
+    if ( self.NextIFDOffset == 0 ) {
+        self.is_last = true;
+    } else {
+        self.is_last = false;
+    }
+}
+
+on TIFF::%done {
+    print "TIFF file parsed successfully";
+}

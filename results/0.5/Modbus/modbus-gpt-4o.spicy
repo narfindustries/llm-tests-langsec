@@ -1,62 +1,81 @@
 module Modbus;
 
-public type ModbusRequest = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
-    function_code: uint8;
-    data: bytes &size = length - 2;
-};
-
-public type ModbusResponse = unit {
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
-    function_code: uint8;
-    data: bytes &size = length - 2;
-};
-
 public type ModbusMessage = unit {
-    request: ModbusRequest | &if (self.is_request());
-    response: ModbusResponse | &if (!self.is_request());
-
-    on %init {
-        if (request.function_code == 0 || response.function_code == 0)
-            error("Invalid function code");
-    }
-
-    function is_request(): bool {
-        return context().direction == connection::ORIG;
-    }
+    transaction_id: uint16;
+    protocol_id: uint16 &check(protocol_id == 0x0000);
+    length: uint16;
+    unit_id: uint8;
+    function_code: FunctionCode;
+    data: bytes &size=length - 1;
 };
 
-public type ModbusProtocol = unit {
-    message: ModbusMessage;
+public enum FunctionCode : uint8 {
+    ReadCoils = 0x01,
+    ReadDiscreteInputs = 0x02,
+    ReadHoldingRegisters = 0x03,
+    ReadInputRegisters = 0x04,
+    WriteSingleCoil = 0x05,
+    WriteSingleRegister = 0x06,
+    WriteMultipleCoils = 0x0F,
+    WriteMultipleRegisters = 0x10,
+    ReadWriteMultipleRegisters = 0x17,
+    EncapsulatedInterfaceTransport = 0x2B
 };
 
-public module ModbusAnalyzer = plugin {
-    hook Plugin::Configuration() {
-        enable_analyzer("Modbus");
-    }
-
-    event connection_state_remove(c: connection) &priority=5 {
-        if (c$service == "modbus") {
-            print fmt("Modbus connection finished: %s", c$id);
-        }
-    }
+public type ReadCoilsRequest = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
 };
 
-public export {
-    redef enum Analyzer::Tag += {
-        ANLYZR_MODBUS
-    };
-}
+public type ReadDiscreteInputsRequest = unit {
+    starting_address: uint16;
+    quantity_of_inputs: uint16;
+};
 
-public type ModbusAnalyzer = Analyzer {
-    .tag = ANLYZR_MODBUS,
-    .name = "Modbus",
-    .parser = ModbusProtocol,
-    .ports = { 502/tcp }
+public type ReadHoldingRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+public type ReadInputRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+};
+
+public type WriteSingleCoilRequest = unit {
+    address: uint16;
+    value: uint16;
+};
+
+public type WriteSingleRegisterRequest = unit {
+    address: uint16;
+    value: uint16;
+};
+
+public type WriteMultipleCoilsRequest = unit {
+    starting_address: uint16;
+    quantity_of_coils: uint16;
+    byte_count: uint8;
+    coil_values: bytes &size=byte_count;
+};
+
+public type WriteMultipleRegistersRequest = unit {
+    starting_address: uint16;
+    quantity_of_registers: uint16;
+    byte_count: uint8;
+    register_values: bytes &size=byte_count;
+};
+
+public type ReadWriteMultipleRegistersRequest = unit {
+    read_starting_address: uint16;
+    read_quantity_of_registers: uint16;
+    write_starting_address: uint16;
+    write_quantity_of_registers: uint16;
+    write_byte_count: uint8;
+    write_register_values: bytes &size=write_byte_count;
+};
+
+public type EncapsulatedInterfaceTransportRequest = unit {
+    mei_type: uint8;
+    data: bytes &restof;
 };

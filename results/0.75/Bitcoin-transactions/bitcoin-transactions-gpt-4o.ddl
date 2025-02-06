@@ -1,26 +1,33 @@
-namespace BitcoinTransactions
+Define BitcoinTransaction 
+As Record
+    transaction_version    : UInt32
+    input_count            : VarInt
+    inputs                 : BitcoinInput[input_count]
+    output_count           : VarInt
+    outputs                : BitcoinOutput[output_count]
+    lock_time              : UInt32
+End Record
 
-type BitcoinTransactionHeader = struct {
-    version: uint32;
-    inputCount: varint;
-    inputs: Input[inputCount];
-    outputCount: varint;
-    outputs: Output[outputCount];
-    lockTime: uint32;
-}
+Define BitcoinInput 
+As Record
+    previous_transaction_hash : Bytes(32)
+    output_index              : UInt32
+    script_sig_length         : VarInt
+    script_sig                : Bytes(script_sig_length)
+    sequence                  : UInt32
+End Record
 
-type Input = struct {
-    previousTransactionHash: bytes(32);
-    previousTransactionIndex: uint32;
-    scriptLength: varint;
-    script: bytes(scriptLength);
-    sequence: uint32;
-}
+Define BitcoinOutput 
+As Record
+    value               : UInt64
+    script_pubkey_length: VarInt
+    script_pubkey       : Bytes(script_pubkey_length)
+End Record
 
-type Output = struct {
-    value: uint64;
-    scriptLength: varint;
-    script: bytes(scriptLength);
-}
-
-root = BitcoinTransactionHeader
+Define VarInt 
+As Choice
+    UInt8 When $ < 0xFD
+    UInt16 When $ == 0xFD
+    UInt32 When $ == 0xFE
+    UInt64 When $ == 0xFF
+End Choice

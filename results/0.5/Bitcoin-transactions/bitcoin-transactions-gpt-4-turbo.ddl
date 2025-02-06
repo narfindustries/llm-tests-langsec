@@ -1,41 +1,38 @@
-module Bitcoin.Transactions {
+data Transaction = struct {
+    version: s32;
+    input_count: VarInt;
+    inputs: array[input_count] of TxIn;
+    output_count: VarInt;
+    outputs: array[output_count] of TxOut;
+    lock_time: u32;
+};
 
-  import DAEDALUS::Bit;
-  import DAEDALUS::Num;
+data TxIn = struct {
+    previous_output: OutPoint;
+    script_length: VarInt;
+    script_sig: bytes[script_length];
+    sequence: u32;
+};
 
-  type uint32 = Num::uint32_le;
-  type uint64 = Num::uint64_le;
-  type var_int = Num::VarInt;
+data TxOut = struct {
+    value: u64;
+    script_length: VarInt;
+    script_pub_key: bytes[script_length];
+};
 
-  type tx_in = struct {
-    previous_output: struct {
-      hash: Bit::bytes<32>;
-      index: uint32;
-    };
-    script_length: var_int;
-    signature_script: Bit::bytes<self.script_length.value>;
-    sequence: uint32;
-  };
+data OutPoint = struct {
+    hash: bytes[32];
+    index: u32;
+};
 
-  type tx_out = struct {
-    value: uint64;
-    pk_script_length: var_int;
-    pk_script: Bit::bytes<self.pk_script_length.value>;
-  };
-
-  type transaction = struct {
-    version: uint32;
-    in_count: var_int;
-    inputs: array<tx_in, self.in_count.value>;
-    out_count: var_int;
-    outputs: array<tx_out, self.out_count.value>;
-    lock_time: uint32;
-  };
-
-  type bitcoin_transactions = struct {
-    count: var_int;
-    transactions: array<transaction, self.count.value>;
-  };
-
-  let main = bitcoin_transactions;
-}
+data VarInt = union {
+    u8:  u8;
+    u16: u16;
+    u32: u32;
+    u64: u64;
+} switch (peek u8) {
+    case 0xFF: u64;
+    case 0xFE: u32;
+    case 0xFD: u16;
+    default:   u8;
+};

@@ -1,18 +1,13 @@
 meta:
   id: dicom
-  endian: le
-  file-extension: dcm
   title: DICOM
-  application:
-    - Digital Imaging and Communications in Medicine
-  xref:
-    wikidata: Q211173
-  license: CC0-1.0
+  file-extension: dcm
+  endian: le
 
 seq:
   - id: preamble
     size: 128
-  - id: magic
+  - id: prefix
     contents: "DICM"
   - id: elements
     type: dicom_element
@@ -30,13 +25,49 @@ types:
         size: 2
       - id: reserved
         size: 2
-        if: vr == "OB" || vr == "OD" || vr == "OF" || vr == "OL" || vr == "OW" || vr == "SQ" || vr == "UC" || vr == "UR" || vr == "UT" || vr == "UN"
+        if: is_extended_length
       - id: value_length
         type: u4
-        if: vr == "OB" || vr == "OD" || vr == "OF" || vr == "OL" || vr == "OW" || vr == "SQ" || vr == "UC" || vr == "UR" || vr == "UT" || vr == "UN"
+        if: is_extended_length
       - id: value_length_short
         type: u2
-        if: not (vr == "OB" || vr == "OD" || vr == "OF" || vr == "OL" || vr == "OW" || vr == "SQ" || vr == "UC" || vr == "UR" || vr == "UT" || vr == "UN")
+        if: not is_extended_length
       - id: value
-        size: value_length if vr == "OB" || vr == "OD" || vr == "OF" || vr == "OL" || vr == "OW" || vr == "SQ" || vr == "UC" || vr == "UR" || vr == "UT" || vr == "UN"
-        size: value_length_short if not (vr == "OB" || vr == "OD" || vr == "OF" || vr == "OL" || vr == "OW" || vr == "SQ" || vr == "UC" || vr == "UR" || vr == "UT" || vr == "UN")
+        size: value_length if is_extended_length else value_length_short
+        type: bytes
+
+  is_extended_length:
+    doc: Checks if the VR requires an extended length
+    type: b1
+    instances:
+      value:
+        value: vr in ["OB", "OW", "OF", "SQ", "UT", "UN"]
+
+enums:
+  vr_enum:
+    AE: "AE"
+    AS: "AS"
+    AT: "AT"
+    DA: "DA"
+    DS: "DS"
+    DT: "DT"
+    FD: "FD"
+    FL: "FL"
+    IS: "IS"
+    LO: "LO"
+    LT: "LT"
+    OB: "OB"
+    OF: "OF"
+    OW: "OW"
+    PN: "PN"
+    SH: "SH"
+    SL: "SL"
+    SQ: "SQ"
+    SS: "SS"
+    ST: "ST"
+    TM: "TM"
+    UI: "UI"
+    UL: "UL"
+    US: "US"
+    UT: "UT"
+    UN: "UN"

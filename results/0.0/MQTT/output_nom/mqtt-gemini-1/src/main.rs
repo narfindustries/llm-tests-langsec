@@ -1,8 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take_while, take_while1},
-    combinator::{map, map_res, opt},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{preceded, tuple},
+    bytes::complete::{tag, take},
+    combinator::{map, map_res, opt, rest},
+    number::complete::{be_u16, be_u32},
+    sequence::tuple,
     IResult,
 };
 use std::env;
@@ -10,83 +10,58 @@ use std::fs::File;
 use std::io::Read;
 
 #[derive(Debug)]
-struct MqttPacket {
-    fixed_header: FixedHeader,
-    variable_header: Option<VariableHeader>,
-    payload: Option<Vec<u8>>,
+enum MqttPacketType {
+    Connect,
+    Connack,
+    Publish,
+    Puback,
+    Pubrec,
+    Pubrel,
+    Pubcomp,
+    Subscribe,
+    Suback,
+    Unsubscribe,
+    Unsuback,
+    Pingreq,
+    Pingresp,
+    Disconnect,
 }
 
-#[derive(Debug)]
-struct FixedHeader {
-    message_type: u8,
-    flags: u8,
-    remaining_length: u32,
-}
-
-#[derive(Debug)]
-struct VariableHeader {
-    // Add variable header fields as needed based on the MQTT specification
-    // Example:  packet_identifier: u16,
-}
-
-
-fn read_remaining_length(input: &[u8]) -> IResult<&[u8], u32> {
-    let mut multiplier: u32 = 1;
-    let mut value: u32 = 0;
-    let mut rest = input;
-
-    loop {
-        let (r, byte) = be_u8(rest)?;
-        value += (byte & 0x7F) as u32 * multiplier;
-        multiplier *= 128;
-        rest = r;
-        if byte < 0x80 {
-            break;
+impl From<u8> for MqttPacketType {
+    fn from(byte: u8) -> Self {
+        match byte {
+            1 => MqttPacketType::Connect,
+            2 => MqttPacketType::Connack,
+            3 => MqttPacketType::Publish,
+            4 => MqttPacketType::Puback,
+            5 => MqttPacketType::Pubrec,
+            6 => MqttPacketType::Pubrel,
+            7 => MqttPacketType::Pubcomp,
+            8 => MqttPacketType::Subscribe,
+            9 => MqttPacketType::Suback,
+            10 => MqttPacketType::Unsubscribe,
+            11 => MqttPacketType::Unsuback,
+            12 => MqttPacketType::Pingreq,
+            13 => MqttPacketType::Pingresp,
+            14 => MqttPacketType::Disconnect,
+            _ => panic!("Invalid MQTT packet type"),
         }
     }
-    Ok((rest, value))
-}
-
-fn parse_fixed_header(input: &[u8]) -> IResult<&[u8], FixedHeader> {
-    let (rest, (message_type, flags, remaining_length)) = tuple((be_u8, be_u8, read_remaining_length))(input)?;
-    Ok((rest, FixedHeader { message_type, flags, remaining_length }))
 }
 
 
-fn parse_variable_header(input: &[u8], message_type: u8) -> IResult<&[u8], Option<VariableHeader>> {
-    // Implement parsing of variable header based on message type
-    // This is a placeholder, you need to add the logic for each message type
-    match message_type {
-        //Example for PUBLISH
-        3 => {
-            let (rest, (topic_len, topic, packet_id)) = tuple((be_u16, take_while1(|c| c != 0), opt(be_u16)))(input)?;
-            let topic_str = std::str::from_utf8(topic).map_err(|e| nom::Err::Error(nom::error::Error::new(input, e)))?;
-            Ok((rest, Some(VariableHeader{packet_id: packet_id.unwrap_or(0)})))
-        },
-        _ => Ok((input, None)),
-    }
+fn mqtt_packet(input: &[u8]) -> IResult<&[u8], (MqttPacketType, Vec<u8>)> {
+    let (input, packet_type) = map(take(1u8), |b: &[u8]| MqttPacketType::from(b[0]))(input)?;
+    let (input, remaining_length) = be_u32(input)?;
+    let (input, payload) = take(remaining_length as usize)(input)?;
+    Ok((input, (packet_type, payload.to_vec())))
 }
 
-fn parse_payload(input: &[u8], remaining_length: u32) -> IResult<&[u8], Option<Vec<u8>>> {
-    if remaining_length > 0 {
-        let (rest, payload) = take_while(|_| true)(input)?;
-        Ok((rest, Some(payload.to_vec())))
-    } else {
-        Ok((input, None))
-    }
-}
-
-fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], MqttPacket> {
-    let (rest, fixed_header) = parse_fixed_header(input)?;
-    let (rest, variable_header) = parse_variable_header(rest, fixed_header.message_type)?;
-    let (rest, payload) = parse_payload(rest, fixed_header.remaining_length)?;
-    Ok((rest, MqttPacket { fixed_header, variable_header, payload }))
-}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <binary_file>", args[0]);
+        println!("Usage: {} <binary_file>", args[0]);
         return;
     }
 
@@ -95,8 +70,13 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).expect("Failed to read file");
 
-    match parse_mqtt_packet(&buffer) {
-        Ok((_, packet)) => println!("{:?}", packet),
-        Err(e) => eprintln!("Error parsing MQTT packet: {:?}", e),
+    match mqtt_packet(&buffer) {
+        Ok((_, (packet_type, payload))) => {
+            println!("Packet Type: {:?}", packet_type);
+            println!("Payload: {:?}", payload);
+            //Further parsing of payload based on packet type would go here.  This is highly complex and omitted for brevity.
+        }
+        Err(e) => println!("Error parsing MQTT packet: {:?}", e),
     }
 }
+

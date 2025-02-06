@@ -1,62 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.org/gemini"
-           xmlns="http://example.org/gemini"
+           targetNamespace="http://example.org/gzip"
+           xmlns="http://example.org/gzip"
            elementFormDefault="qualified">
 
-  <xs:element name="gemini">
+  <xs:element name="gzip">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="headerType"/>
-        <xs:element name="data" type="dataType" minOccurs="0" maxOccurs="unbounded"/>
-        <xs:element name="trailer" type="trailerType"/>
+        <xs:element name="header" type="gzipHeaderType"/>
+        <xs:element name="compressedData" type="xs:hexBinary"/>
+        <xs:element name="trailer" type="gzipTrailerType"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes" encoding="UTF-8"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:element>
 
-
-  <xs:complexType name="headerType">
+  <xs:complexType name="gzipHeaderType">
     <xs:sequence>
-      <xs:element name="id" type="xs:string"/>
-      <xs:element name="timestamp" type="xs:dateTime"/>
+      <xs:element name="id1" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="id2" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="cm" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="flg" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="mtime" type="unsignedInt" dfdl:length="4"/>
+      <xs:element name="xfl" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="os" type="unsignedByte" dfdl:length="1"/>
+      <xs:element name="optionalFields" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="extraField" minOccurs="0" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="xlen" type="unsignedShort" dfdl:length="2"/>
+                  <xs:element name="extraData" type="xs:hexBinary" dfdl:length="{xlen}"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="fileName" minOccurs="0" maxOccurs="1" type="dfdl:string" dfdl:terminator="##null"/>
+            <xs:element name="comment" minOccurs="0" maxOccurs="1" type="dfdl:string" dfdl:terminator="##null"/>
+            <xs:element name="headerCrc" type="unsignedShort" minOccurs="0" maxOccurs="1" dfdl:length="2"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
-    <xs:attribute name="type" type="xs:string" use="required"/>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:complexType>
 
-  <xs:complexType name="dataType">
+  <xs:complexType name="gzipTrailerType">
     <xs:sequence>
-      <xs:element name="field1" type="xs:string"/>
-      <xs:element name="field2" type="xs:integer"/>
-      <xs:element name="field3" type="xs:decimal"/>
+      <xs:element name="crc32" type="unsignedInt" dfdl:length="4"/>
+      <xs:element name="isize" type="unsignedInt" dfdl:length="4"/>
     </xs:sequence>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-      </xs:appinfo>
-    </xs:annotation>
   </xs:complexType>
 
-  <xs:complexType name="trailerType">
-    <xs:sequence>
-      <xs:element name="checksum" type="xs:string"/>
-    </xs:sequence>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:text lengthKind="delimited" lengthUnits="bytes"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:complexType>
+  <xs:simpleType name="unsignedByte">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+  <xs:simpleType name="unsignedShort">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+  <xs:simpleType name="unsignedInt">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
 
 </xs:schema>
+

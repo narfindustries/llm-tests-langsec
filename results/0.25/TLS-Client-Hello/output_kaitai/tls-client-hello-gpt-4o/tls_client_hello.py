@@ -15,20 +15,26 @@ class TlsClientHello(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.record_length = self._io.read_u2be()
-        self.message_type = self._io.read_u1()
-        self.version = TlsClientHello.Version(self._io, self, self._root)
-        self.random = TlsClientHello.Random(self._io, self, self._root)
-        self.session_id_length = self._io.read_u1()
-        self.session_id = self._io.read_bytes(self.session_id_length)
+        self.client_version = self._io.read_u2be()
+        self.random = self._io.read_bytes(32)
+        self.legacy_session_id = TlsClientHello.SessionId(self._io, self, self._root)
         self.cipher_suites_length = self._io.read_u2be()
-        self.cipher_suites = TlsClientHello.CipherSuites(self._io, self, self._root)
-        self.compression_methods_length = self._io.read_u1()
-        self.compression_methods = self._io.read_bytes(self.compression_methods_length)
+        self.cipher_suites = []
+        for i in range(self.cipher_suites_length // 2):
+            self.cipher_suites.append(self._io.read_u2be())
+
+        self.legacy_compression_methods_length = self._io.read_u1()
+        self.legacy_compression_methods = []
+        for i in range(self.legacy_compression_methods_length):
+            self.legacy_compression_methods.append(self._io.read_u1())
+
         self.extensions_length = self._io.read_u2be()
-        self.extensions = self._io.read_bytes(self.extensions_length)
+        self.extensions = []
+        for i in range(self.extensions_length):
+            self.extensions.append(TlsClientHello.Extension(self._io, self, self._root))
 
-    class Version(KaitaiStruct):
+
+    class SessionId(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -36,11 +42,11 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.major = self._io.read_u1()
-            self.minor = self._io.read_u1()
+            self.length = self._io.read_u1()
+            self.value = self._io.read_bytes(self.length)
 
 
-    class Random(KaitaiStruct):
+    class Extension(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -48,24 +54,9 @@ class TlsClientHello(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.gmt_unix_time = self._io.read_u4be()
-            self.random_bytes = self._io.read_bytes(28)
-
-
-    class CipherSuites(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.cipher_suites = []
-            i = 0
-            while not self._io.is_eof():
-                self.cipher_suites.append(self._io.read_u2be())
-                i += 1
-
+            self.type = self._io.read_u2be()
+            self.length = self._io.read_u2be()
+            self.data = self._io.read_bytes(self.length)
 
 
 

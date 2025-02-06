@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.example.org/nitf"
+           xmlns="http://www.example.org/nitf"
+           elementFormDefault="qualified">
+
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format ref="tns:GeneralFormat"/>
+        </xs:appinfo>
+    </xs:annotation>
+
+    <xs:element name="NITF">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="FileHeader" type="FileHeaderType"/>
+                <xs:element name="ImageSegments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="ImageSegmentHeader" type="ImageSegmentHeaderType"/>
+                            <xs:element name="ImageData" type="xs:hexBinary"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="GraphicSegments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="GraphicSegmentHeader" type="GraphicSegmentHeaderType"/>
+                            <xs:element name="GraphicData" type="xs:hexBinary"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="TextSegments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="TextSegmentHeader" type="TextSegmentHeaderType"/>
+                            <xs:element name="TextData" type="xs:string"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="DataExtensionSegments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="DataExtensionSegmentHeader" type="DataExtensionSegmentHeaderType"/>
+                            <xs:element name="DataExtensionData" type="xs:hexBinary"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="ReservedExtensionSegments" minOccurs="0" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="ReservedExtensionSegmentHeader" type="ReservedExtensionSegmentHeaderType"/>
+                            <xs:element name="ReservedExtensionData" type="xs:hexBinary"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="FileHeaderType">
+        <xs:sequence>
+            <xs:element name="FileProfileName" type="xs:string" dfdl:length="4"/>
+            <xs:element name="FileVersion" type="xs:string" dfdl:length="5"/>
+            <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="2"/>
+            <xs:element name="SystemType" type="xs:string" dfdl:length="4"/>
+            <xs:element name="OriginatingStationID" type="xs:string" dfdl:length="10"/>
+            <xs:element name="FileDateAndTime" type="xs:string" dfdl:length="14"/>
+            <xs:element name="FileTitle" type="xs:string" dfdl:length="80"/>
+            <xs:element name="SecurityClassification" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ClassificationSystem" type="xs:string" dfdl:length="2"/>
+            <xs:element name="Codewords" type="xs:string" dfdl:length="11"/>
+            <xs:element name="ControlAndHandling" type="xs:string" dfdl:length="2"/>
+            <xs:element name="DeclassificationType" type="xs:string" dfdl:length="2"/>
+            <xs:element name="DeclassificationDate" type="xs:string" dfdl:length="8"/>
+            <xs:element name="DeclassificationExemption" type="xs:string" dfdl:length="4"/>
+            <xs:element name="Downgrade" type="xs:string" dfdl:length="1"/>
+            <xs:element name="DowngradeDate" type="xs:string" dfdl:length="8"/>
+            <xs:element name="ClassificationText" type="xs:string" dfdl:length="43"/>
+            <xs:element name="ClassificationAuthorityType" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ClassificationAuthority" type="xs:string" dfdl:length="40"/>
+            <xs:element name="ClassificationReason" type="xs:string" dfdl:length="1"/>
+            <xs:element name="SecuritySourceDate" type="xs:string" dfdl:length="8"/>
+            <xs:element name="SecurityControlNumber" type="xs:string" dfdl:length="15"/>
+            <xs:element name="FileCopyNumber" type="xs:string" dfdl:length="5"/>
+            <xs:element name="FileNumberOfCopies" type="xs:string" dfdl:length="5"/>
+            <xs:element name="Encryption" type="xs:string" dfdl:length="1"/>
+            <xs:element name="FileBackgroundColor" type="xs:string" dfdl:length="3"/>
+            <xs:element name="OriginatorName" type="xs:string" dfdl:length="24"/>
+            <xs:element name="OriginatorPhone" type="xs:string" dfdl:length="18"/>
+            <xs:element name="FileLength" type="xs:long"/>
+            <xs:element name="HeaderLength" type="xs:long"/>
+            <xs:element name="NumberOfImageSegments" type="xs:long"/>
+            <xs:element name="NumberOfGraphicSegments" type="xs:long"/>
+            <xs:element name="NumberOfTextSegments" type="xs:long"/>
+            <xs:element name="NumberOfDataExtensionSegments" type="xs:long"/>
+            <xs:element name="NumberOfReservedExtensionSegments" type="xs:long"/>
+            <xs:element name="UserDefinedHeaderLength" type="xs:long"/>
+            <xs:element name="ExtendedHeaderLength" type="xs:long"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ImageSegmentHeaderType">
+        <xs:sequence>
+            <xs:element name="ImageIdentifier" type="xs:string" dfdl:length="10"/>
+            <xs:element name="ImageDateAndTime" type="xs:string" dfdl:length="14"/>
+            <xs:element name="TargetIdentifier" type="xs:string" dfdl:length="17"/>
+            <xs:element name="ImageTitle" type="xs:string" dfdl:length="80"/>
+            <xs:element name="ImageSecurityClassification" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ImageClassificationSystem" type="xs:string" dfdl:length="2"/>
+            <xs:element name="ImageCodewords" type="xs:string" dfdl:length="11"/>
+            <xs:element name="ImageControlAndHandling" type="xs:string" dfdl:length="2"/>
+            <xs:element name="ImageDeclassificationType" type="xs:string" dfdl:length="2"/>
+            <xs:element name="ImageDeclassificationDate" type="xs:string" dfdl:length="8"/>
+            <xs:element name="ImageDeclassificationExemption" type="xs:string" dfdl:length="4"/>
+            <xs:element name="ImageDowngrade" type="xs:string" dfdl:length="1"/>
+            <xs:element name="ImageDowngradeDate" type

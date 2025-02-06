@@ -1,38 +1,152 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/jpeg"
-    targetNamespace="http://example.com/jpeg">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:jpeg="http://example.com/jpeg"
+           targetNamespace="http://example.com/jpeg">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" alignmentUnits="bytes"
-                binaryNumberRep="binary"
-                byteOrder="bigEndian"
-                representation="binary"
-                occursCountKind="implicit"
-                lengthKind="implicit"
-                encoding="UTF-8"/>
+            <dfdl:format alignment="1" 
+                         lengthKind="implicit"
+                         byteOrder="bigEndian"
+                         representation="binary"
+                         binaryNumberRep="binary"
+                         encodingErrorPolicy="error"
+                         encoding="UTF-8"
+                         initiatedContent="no"
+                         leadingSkip="0"
+                         textBidi="no"
+                         floating="no"
+                         sequenceKind="ordered"
+                         separator=""
+                         separatorPolicy="required"
+                         separatorPosition="infix"
+                         occursCountKind="implicit"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="jpeg">
+    <xs:element name="jpeg" dfdl:lengthKind="implicit">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="segment" maxOccurs="unbounded">
+            <xs:sequence dfdl:sequenceKind="ordered">
+                <!-- Start of Image -->
+                <xs:element name="soi" type="jpeg:MarkerSegment" fixed="FFD8"/>
+                
+                <!-- Variable segments -->
+                <xs:element name="segments" minOccurs="0" maxOccurs="unbounded">
                     <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:lengthKind="explicit"/>
-                            <xs:element name="length" type="xs:unsignedShort" dfdl:lengthKind="implicit"/>
-                            <xs:element name="data" type="xs:hexBinary" 
-                                dfdl:lengthKind="explicit"
-                                dfdl:length="{ xs:unsignedInt(../length) - 2 }"/>
-                        </xs:sequence>
+                        <xs:choice>
+                            <xs:element name="app0" type="jpeg:APP0Segment"/>
+                            <xs:element name="app1" type="jpeg:APP1Segment"/>
+                            <xs:element name="dqt" type="jpeg:DQTSegment"/>
+                            <xs:element name="sof0" type="jpeg:SOF0Segment"/>
+                            <xs:element name="dht" type="jpeg:DHTSegment"/>
+                            <xs:element name="sos" type="jpeg:SOSSegment"/>
+                        </xs:choice>
                     </xs:complexType>
                 </xs:element>
+                
+                <!-- Image data -->
+                <xs:element name="imageData" type="xs:hexBinary" dfdl:lengthKind="endOfParent"/>
+                
+                <!-- End of Image -->
+                <xs:element name="eoi" type="jpeg:MarkerSegment" fixed="FFD9"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
+
+    <!-- Common marker segment type -->
+    <xs:complexType name="MarkerSegment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="2"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- APP0 (JFIF) Segment -->
+    <xs:complexType name="APP0Segment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFE0"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="identifier" type="xs:string" fixed="JFIF\0"/>
+            <xs:element name="version" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="2"/>
+            <xs:element name="units" type="xs:unsignedByte"/>
+            <xs:element name="xDensity" type="xs:unsignedShort"/>
+            <xs:element name="yDensity" type="xs:unsignedShort"/>
+            <xs:element name="thumbnailWidth" type="xs:unsignedByte"/>
+            <xs:element name="thumbnailHeight" type="xs:unsignedByte"/>
+            <xs:element name="thumbnailData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- APP1 (Exif) Segment -->
+    <xs:complexType name="APP1Segment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFE1"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="identifier" type="xs:string" fixed="Exif\0\0"/>
+            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Quantization Table Segment -->
+    <xs:complexType name="DQTSegment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFDB"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="tableInfo" type="xs:unsignedByte"/>
+            <xs:element name="tableData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Start of Frame Segment -->
+    <xs:complexType name="SOF0Segment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFC0"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="precision" type="xs:unsignedByte"/>
+            <xs:element name="height" type="xs:unsignedShort"/>
+            <xs:element name="width" type="xs:unsignedShort"/>
+            <xs:element name="numComponents" type="xs:unsignedByte"/>
+            <xs:element name="componentData" minOccurs="1" maxOccurs="4">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="id" type="xs:unsignedByte"/>
+                        <xs:element name="samplingFactors" type="xs:unsignedByte"/>
+                        <xs:element name="quantizationTableNumber" type="xs:unsignedByte"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Huffman Table Segment -->
+    <xs:complexType name="DHTSegment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFC4"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="tableInfo" type="xs:unsignedByte"/>
+            <xs:element name="lengths" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="16"/>
+            <xs:element name="values" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Start of Scan Segment -->
+    <xs:complexType name="SOSSegment">
+        <xs:sequence>
+            <xs:element name="marker" type="xs:hexBinary" fixed="FFDA"/>
+            <xs:element name="length" type="xs:unsignedShort"/>
+            <xs:element name="numComponents" type="xs:unsignedByte"/>
+            <xs:element name="componentSpec" minOccurs="1" maxOccurs="4">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="componentId" type="xs:unsignedByte"/>
+                        <xs:element name="huffmanTable" type="xs:unsignedByte"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="startOfSpectral" type="xs:unsignedByte"/>
+            <xs:element name="endOfSpectral" type="xs:unsignedByte"/>
+            <xs:element name="successiveApprox" type="xs:unsignedByte"/>
+        </xs:sequence>
+    </xs:complexType>
 
 </xs:schema>

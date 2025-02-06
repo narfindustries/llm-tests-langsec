@@ -1,77 +1,69 @@
 meta:
   id: dns_packet
-  title: DNS (Domain Name System) packet
+  title: DNS packet
   file-extension: dns
-  xref:
-    rfc: 1035
-  license: CC0-1.0
   endian: be
 
 seq:
-  - id: transaction_id
-    type: u2
-  - id: flags
-    type: packet_flags
-  - id: qdcount
-    type: u2
-    doc: Number of questions
-  - id: ancount
-    type: u2
-    doc: Number of answers
-  - id: nscount
-    type: u2
-    doc: Number of authority records
-  - id: arcount
-    type: u2
-    doc: Number of additional records
-  - id: questions
-    type: question
+  - id: header
+    type: packet_header
+  - id: queries
+    type: query
     repeat: expr
-    repeat-expr: qdcount
+    repeat-expr: header.qdcount
   - id: answers
     type: resource_record
     repeat: expr
-    repeat-expr: ancount
+    repeat-expr: header.ancount
   - id: authorities
     type: resource_record
     repeat: expr
-    repeat-expr: nscount
+    repeat-expr: header.nscount
   - id: additionals
     type: resource_record
     repeat: expr
-    repeat-expr: arcount
+    repeat-expr: header.arcount
 
 types:
-  packet_flags:
+  packet_header:
     seq:
-      - id: flag_response
-        type: b1
-      - id: opcode
-        type: b4
-      - id: flag_authoritative
-        type: b1
-      - id: flag_truncated
-        type: b1
-      - id: flag_recursion_desired
-        type: b1
-      - id: flag_recursion_available
-        type: b1
-      - id: reserved
-        type: b3
-      - id: flag_authentic_data
-        type: b1
-      - id: flag_checking_disabled
-        type: b1
-      - id: response_code
-        type: b4
+      - id: id
+        type: u2
+      - id: flags
+        type: u2
+      - id: qdcount
+        type: u2
+      - id: ancount
+        type: u2
+      - id: nscount
+        type: u2
+      - id: arcount
+        type: u2
+    instances:
+      qr:
+        value: (flags >> 15) & 1
+      opcode:
+        value: (flags >> 11) & 0xf
+      aa:
+        value: (flags >> 10) & 1
+      tc:
+        value: (flags >> 9) & 1
+      rd:
+        value: (flags >> 8) & 1
+      ra:
+        value: (flags >> 7) & 1
+      z:
+        value: (flags >> 4) & 7
+      rcode:
+        value: flags & 0xf
 
-  question:
+  query:
     seq:
       - id: name
         type: domain_name
       - id: type
         type: u2
-        enum: record_type
+        enum: type_type
       - id: class
         type: u2
         enum: class_type
@@ -82,7 +74,7 @@ types:
         type: domain_name
       - id: type
         type: u2
-        enum: record_type
+        enum: type_type
       - id: class
         type: u2
         enum: class_type
@@ -95,45 +87,43 @@ types:
         type:
           switch-on: type
           cases:
-            'record_type::a': rdata_a
-            'record_type::ns': domain_name
-            'record_type::cname': domain_name
-            'record_type::soa': rdata_soa
-            'record_type::ptr': domain_name
-            'record_type::mx': rdata_mx
-            'record_type::txt': rdata_txt
-            'record_type::aaaa': rdata_aaaa
-            'record_type::srv': rdata_srv
+            'type_type::a': rdata_a
+            'type_type::ns': domain_name
+            'type_type::cname': domain_name
+            'type_type::soa': rdata_soa
+            'type_type::ptr': domain_name
+            'type_type::mx': rdata_mx
+            'type_type::aaaa': rdata_aaaa
             _: raw_rdata
 
   domain_name:
     seq:
-      - id: name
+      - id: labels
         type: label
         repeat: until
-        repeat-until: _.length == 0
+        repeat-until: _.length == 0 or _.length >= 0xc0
     types:
       label:
         seq:
           - id: length
             type: u1
+          - id: pointer
+            type: u1
+            if: length >= 0xc0
           - id: data
             type: str
             size: length
             encoding: ascii
-            if: length < 0xc0
-          - id: pointer
-            type: u1
-            if: length >= 0xc0
+            if: length > 0 and length < 0xc0
 
   rdata_a:
     seq:
-      - id: ip_addr
+      - id: ip
         size: 4
 
   rdata_aaaa:
     seq:
-      - id: ip_addr
+      - id: ip
         size: 16
 
   rdata_mx:
@@ -160,50 +150,27 @@ types:
       - id: minimum
         type: u4
 
-  rdata_srv:
-    seq:
-      - id: priority
-        type: u2
-      - id: weight
-        type: u2
-      - id: port
-        type: u2
-      - id: target
-        type: domain_name
-
-  rdata_txt:
-    seq:
-      - id: texts
-        type: txt_record
-        repeat: eos
-    types:
-      txt_record:
-        seq:
-          - id: len
-            type: u1
-          - id: text
-            type: str
-            size: len
-            encoding: ascii
-
   raw_rdata:
     seq:
       - id: data
         size-eos: true
 
 enums:
-  record_type:
+  type_type:
     1: a
     2: ns
     5: cname
     6: soa
     12: ptr
+    13: hinfo
     15: mx
-    16: txt
     28: aaaa
-    33: srv
+    252: axfr
+    255: any
 
   class_type:
     1: in
+    2: cs
     3: ch
     4: hs
+    255: any

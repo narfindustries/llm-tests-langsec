@@ -1,62 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/sqlite3-db"
-           xmlns:tns="http://example.com/sqlite3-db"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/sqlite3" 
+           xmlns="http://example.com/sqlite3" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="sqlite3-db">
+  <xs:element name="sqlite3">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="tns:database" dfdl:occurs="1..1"/>
+        <xs:element name="fileHeader" type="fileHeaderType"/>
+        <xs:element name="page" type="pageType" maxOccurs="unbounded"/>
+        <xs:element name="pointerMap" type="pointerMapType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="freePageList" type="freePageListType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="masterJournalHeader" type="masterJournalHeaderType" minOccurs="0"/>
+        <xs:element name="masterJournalBlock" type="masterJournalBlockType" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="database">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:page" dfdl:occurs="1..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="page">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:header" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:cell" dfdl:occurs="0..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="page-type" type="xs:integer" dfdl:length="1"/>
-        <xs:element name="page-size" type="xs:integer" dfdl:length="2"/>
-        <xs:element name="checksum" type="xs:integer" dfdl:length="4"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="cell">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="payload-length" type="xs:integer" dfdl:length="2"/>
-        <xs:element name="payload" type="xs:hexBinary" dfdl:length="*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:simpleType name="integer">
-    <xs:restriction base="xs:integer"/>
+  <xs:complexType name="fileHeaderType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary"/>
+      <xs:element name="file_format_write_version" type="xs:unsignedByte"/>
+      <xs:element name="file_format_read_version" type="xs:unsignedByte"/>
+      <xs:element name="reserved_space" type="xs:unsignedByte"/>
+      <xs:element name="max_embedded_payload_fraction" type="xs:unsignedByte"/>
+      <xs:element name="min_embedded_payload_fraction" type="xs:unsignedByte"/>
+      <xs:element name="leaf_payload_fraction" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pageType">
+    <xs:sequence>
+      <xs:element name="pageType" type="pageTypeEnum"/>
+      <xs:element name="firstFreeblock" type="xs:unsignedInt"/>
+      <xs:element name="cellOffset" type="xs:unsignedShort"/>
+      <xs:element name="numCells" type="xs:unsignedShort"/>
+      <xs:element name="fragmentedFreeBytes" type="xs:unsignedByte"/>
+      <xs:element name="rightChild" type="xs:unsignedInt"/>
+      <xs:element name="cell" type="cellType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="pageTypeEnum">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+    </xs:restriction>
   </xs:simpleType>
-
-  <xs:simpleType name="hexBinary">
-    <xs:restriction base="xs:hexBinary"/>
+  <xs:complexType name="cellType">
+    <xs:sequence>
+      <xs:element name="payloadLength" type="xs:unsignedInt"/>
+      <xs:element name="rowid" type="xs:unsignedInt" minOccurs="0"/>
+      <xs:element name="payload" type="xs:hexBinary" maxOccurs="unbounded"/>
+      <xs:element name="overflowPage" type="xs:unsignedInt" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pointerMapType">
+    <xs:sequence>
+      <xs:element name="ptrmapPage" type="xs:unsignedInt"/>
+      <xs:element name="ptrmapType" type="ptrmapTypeEnum"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="ptrmapTypeEnum">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
   </xs:simpleType>
-
+  <xs:complexType name="freePageListType">
+    <xs:sequence>
+      <xs:element name="trunkPage" type="xs:unsignedInt"/>
+      <xs:element name="leftChild" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="masterJournalHeaderType">
+    <xs:sequence>
+      <xs:element name="magic" type="xs:hexBinary"/>
+      <xs:element name="version" type="xs:unsignedInt"/>
+      <xs:element name="masterJournalSize" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="masterJournalBlockType">
+    <xs:sequence>
+      <xs:element name="pageId" type="xs:unsignedInt"/>
+      <xs:element name="databasePage" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="fileHeader" type="fileHeaderType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="page" type="pageType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="pointerMap" type="pointerMapType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="freePageList" type="freePageListType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="masterJournalHeader" type="masterJournalHeaderType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
+  <xs:element name="masterJournalBlock" type="masterJournalBlockType">
+    <xs:annotation>
+      <xs:appinfo>
+        <dfdl:format ref="sqlite3"/>
+      </xs:appinfo>
+    </xs:annotation>
+  </xs:element>
 </xs:schema>

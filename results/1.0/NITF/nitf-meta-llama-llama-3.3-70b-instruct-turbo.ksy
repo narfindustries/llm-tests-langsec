@@ -1,42 +1,120 @@
 meta:
   id: nitf
-  title: NITF
-  file-extension: nitf
-  endianness: be
-  encoding: ASCII
+  endian: be
 seq:
-  - id: file-header
+  - id: file_header_length
+    type: u4
+  - id: file_header_version
+    type: u2
+  - id: file_type
     type: str
-    size: 4
-    enum: [NITF]
-  - id: file-version
+    encoding: ascii
+    size: 25
+    pad_byte: 0
+  - id: file_format
     type: str
-    size: 5
-  - id: file-type
+    encoding: ascii
+    size: 25
+    pad_byte: 0
+  - id: file_security_classification
+    type: u1
+  - id: file_control_number
     type: str
-    size: 2
-  - id: file-security-classification
+    encoding: ascii
+    size: 25
+    pad_byte: 0
+  - id: file_header_extension
+    type: file_header_extension
+    if: file_header_version >= 2
+  - id: image_header_length
+    type: u4
+  - id: image_id
     type: str
-    size: 1
-  - id: file-control
+    encoding: ascii
+    size: 25
+    pad_byte: 0
+  - id: image_date_and_time
     type: str
-    size: 2
+    encoding: ascii
+    size: 14
+    pad_byte: 0
+  - id: image_security_classification
+    type: u1
+  - id: image_title
+    type: str
+    encoding: ascii
+    size: 80
+    pad_byte: 0
+  - id: image_source
+    type: str
+    encoding: ascii
+    size: 42
+    pad_byte: 0
+  - id: image_coordinate_system
+    type: u1
+  - id: image_reference_point
+    type: u4
+    repeat: 3
+  - id: image_orientation
+    type: u4
+    repeat: 3
+  - id: image_header_extension
+    type: image_header_extension
+    if: file_header_version >= 2
+  - id: band_headers
+    type: band_header
+    repeat: expr
+    expr: file_header_length - 154
+  - id: image_data
+    type: u1
+    size: expr
+    expr: image_header_length - 512
 types:
-  FileHeader:
+  file_header_extension:
     seq:
-      - id: file-header
+      - id: extension_header_length
+        type: u4
+      - id: extension_id
         type: str
-        size: 4
-        enum: [NITF]
-      - id: file-version
+        encoding: ascii
+        size: 25
+        pad_byte: 0
+      - id: extension_data
+        type: u1
+        size: expr
+        expr: extension_header_length - 64
+  image_header_extension:
+    seq:
+      - id: extension_header_length
+        type: u4
+      - id: extension_id
         type: str
-        size: 5
-      - id: file-type
+        encoding: ascii
+        size: 25
+        pad_byte: 0
+      - id: extension_data
+        type: u1
+        size: expr
+        expr: extension_header_length - 64
+  band_header:
+    seq:
+      - id: band_header_length
+        type: u4
+      - id: band_id
         type: str
-        size: 2
-      - id: file-security-classification
-        type: str
-        size: 1
-      - id: file-control
-        type: str
-        size: 2
+        encoding: ascii
+        size: 25
+        pad_byte: 0
+      - id: band_number
+        type: u2
+      - id: band_representation
+        type: u1
+      - id: band_data_type
+        type: u1
+      - id: band_size
+        type: u4
+        repeat: 2
+      - id: band_data
+        type: u1
+        size: expr
+        expr: band_header_length - 128

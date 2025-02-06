@@ -1,99 +1,133 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/sqlite3-db-meta"
-           xmlns:tns="http://example.com/sqlite3-db-meta"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.xml"/>
-
-  <xs:element name="sqlite3-db-meta">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="tns:fixedLengthFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0" 
+           elementFormDefault="qualified" 
+           attributeFormDefault="unqualified" 
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0">
+  <xs:element name="definition" type="dfdl:definitionType">
+    <xs:complexType name="definitionType">
       <xs:sequence>
-        <xs:element name="database" type="tns:databaseType" maxOccurs="unbounded"/>
+        <xs:element name="format" type="xs:string" dfdl:ref="sqlite3-db"/>
+        <xs:element name="element" dfdl:ref="database-header" occurs="1..1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" dfdl:ref="magic" occurs="1..1" dfdl:length="16" dfdl:representation="text" dfdl:textEncoding="UTF-8" dfdl:textKind="fixed"/>
+              <xs:element name="element" dfdl:ref="page-size" occurs="1..1" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="uint16">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value >= 512 and value = 512 or value = 1024 or value = 2048 or value = 4096 or value = 8192 or value = 16384 or value = 32768 or value = 65536"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="write-version" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 1 or value = 2"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="read-version" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 1 or value = 2"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="reserved" occurs="1..1" dfdl:length="2"/>
+              <xs:element name="element" dfdl:ref="max-embedded-payload-fraction" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 64"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="min-embedded-payload-fraction" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 32"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="leaf-payload-fraction" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 32"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="file-change-time" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+              <xs:element name="element" dfdl:ref="file-change-time-nano" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+              <xs:element name="element" dfdl:ref="version-valid-for-number" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+              <xs:element name="element" dfdl:ref="sqlite-version-number" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+              <xs:element name="element" dfdl:ref="in-header-db-size" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="element" dfdl:ref="page" occurs="1..*">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" dfdl:ref="page-type" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                <xs:complexType>
+                  <xs:attribute name="dfdl:assert" type="xs:string" value="value = 0 or value = 1 or value = 2 or value = 3 or value = 4 or value = 5 or value = 6"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="first-freeblock" occurs="1..1" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="uint16"/>
+              <xs:element name="element" dfdl:ref="cell-content-area" occurs="1..1" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="uint16"/>
+              <xs:element name="element" dfdl:ref="num-cells" occurs="1..1" dfdl:length="2" dfdl:representation="binary" dfdl:binaryNumberRep="uint16"/>
+              <xs:element name="element" dfdl:ref="cells" occurs="1..*">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="element" dfdl:ref="cell" occurs="1..1">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="element" dfdl:ref="payload-length" occurs="1..1" dfdl:length="1..9" dfdl:representation="binary" dfdl:binaryNumberRep="varuint">
+                            <xs:complexType>
+                              <xs:attribute name="dfdl:assert" type="xs:string" value="value >= 0"/>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="element" dfdl:ref="header-length" occurs="1..1" dfdl:length="1..9" dfdl:representation="binary" dfdl:binaryNumberRep="varuint">
+                            <xs:complexType>
+                              <xs:attribute name="dfdl:assert" type="xs:string" value="value >= 0"/>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="element" dfdl:ref="num-columns" occurs="1..1" dfdl:length="1..9" dfdl:representation="binary" dfdl:binaryNumberRep="varuint">
+                            <xs:complexType>
+                              <xs:attribute name="dfdl:assert" type="xs:string" value="value >= 0"/>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="element" dfdl:ref="column-data" occurs="1..*">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="element" dfdl:ref="column" occurs="1..1">
+                                  <xs:complexType>
+                                    <xs:sequence>
+                                      <xs:element name="element" dfdl:ref="type" occurs="1..1" dfdl:length="1" dfdl:representation="binary" dfdl:binaryNumberRep="uint8">
+                                        <xs:complexType>
+                                          <xs:attribute name="dfdl:assert" type="xs:string" value="value = 0 or value = 1 or value = 2 or value = 3 or value = 4 or value = 5"/>
+                                        </xs:complexType>
+                                      </xs:element>
+                                      <xs:element name="element" dfdl:ref="value" occurs="1..1" dfdl:length="*"/>
+                                    </xs:sequence>
+                                  </xs:complexType>
+                                </xs:element>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="element" dfdl:ref="payload" occurs="1..1" dfdl:length="*"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" dfdl:ref="overflow-page-list" occurs="0..1">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="element" dfdl:ref="overflow-page" occurs="1..*">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="element" dfdl:ref="page-number" occurs="1..1" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="uint32"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="databaseType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string"/>
-      <xs:element name="page_size" type="xs:integer"/>
-      <xs:element name="file_format" type="xs:string"/>
-      <xs:element name="table" type="tns:tableType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="tableType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string"/>
-      <xs:element name="column" type="tns:columnType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="columnType">
-    <xs:sequence>
-      <xs:element name="name" type="xs:string"/>
-      <xs:element name="data_type" type="xs:string"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="fixedLengthFormat" type="tns:fixedLengthFormatType"/>
-
-  <xs:complexType name="fixedLengthFormatType">
-    <xs:sequence>
-      <xs:element name="record" type="tns:recordType" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="field" type="tns:fieldType" maxOccurs="unbounded"/>
-    </xs:sequence>
-    <xs:attribute name="separator" type="xs:string" fixed=","/>
-  </xs:complexType>
-
-  <xs:complexType name="fieldType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="type" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
-  <xs:element name="output_dfdl">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:outputFormat ref="tns:outputFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="record" type="tns:outputRecordType" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="outputRecordType">
-    <xs:sequence>
-      <xs:element name="field" type="tns:outputFieldType" maxOccurs="unbounded"/>
-    </xs:sequence>
-    <xs:attribute name="separator" type="xs:string" fixed=","/>
-  </xs:complexType>
-
-  <xs:complexType name="outputFieldType">
-    <xs:simpleContent>
-      <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string" use="required"/>
-        <xs:attribute name="type" type="xs:string" use="required"/>
-      </xs:extension>
-    </xs:simpleContent>
-  </xs:complexType>
-
 </xs:schema>

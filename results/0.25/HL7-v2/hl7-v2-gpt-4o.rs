@@ -1,9 +1,8 @@
 use nom::{
-    bytes::complete::{tag, take_until, take_while},
-    character::complete::{char, digit1, line_ending, not_line_ending},
-    combinator::{map_res, opt},
-    multi::{many0, separated_list0},
-    sequence::{delimited, preceded, terminated, tuple},
+    bytes::complete::{tag, take_until},
+    character::complete::char,
+    combinator::opt,
+    sequence::tuple,
     IResult,
 };
 use std::env;
@@ -11,36 +10,51 @@ use std::fs::File;
 use std::io::{self, Read};
 
 #[derive(Debug)]
-struct HL7Message {
-    segments: Vec<Segment>,
+struct MSH {
+    field_separator: char,
+    encoding_characters: String,
+    sending_application: String,
+    sending_facility: String,
+    receiving_application: String,
+    receiving_facility: String,
+    date_time_of_message: String,
+    security: Option<String>,
+    message_type: String,
+    message_control_id: String,
+    processing_id: String,
+    version_id: String,
 }
 
-#[derive(Debug)]
-struct Segment {
-    name: String,
-    fields: Vec<String>,
-}
+fn parse_msh(input: &str) -> IResult<&str, MSH> {
+    let (input, (field_separator, encoding_characters, sending_application, sending_facility, receiving_application, receiving_facility, date_time_of_message, security, message_type, message_control_id, processing_id, version_id)) = tuple((
+        char('|'),
+        take_until("|"),
+        take_until("|"),
+        take_until("|"),
+        take_until("|"),
+        take_until("|"),
+        take_until("|"),
+        opt(take_until("|")),
+        take_until("|"),
+        take_until("|"),
+        take_until("|"),
+        take_until("\r"),
+    ))(input)?;
 
-fn is_not_pipe(c: char) -> bool {
-    c != '|'
-}
-
-fn parse_field(input: &str) -> IResult<&str, String> {
-    map_res(take_while(is_not_pipe), |s: &str| Ok(s.to_string()))(input)
-}
-
-fn parse_segment(input: &str) -> IResult<&str, Segment> {
-    let (input, name) = map_res(take_while(|c: char| c.is_alphabetic()), |s: &str| {
-        Ok(s.to_string())
-    })(input)?;
-    let (input, fields) = separated_list0(char('|'), parse_field)(input)?;
-    let (input, _) = opt(line_ending)(input)?;
-    Ok((input, Segment { name, fields }))
-}
-
-fn parse_message(input: &str) -> IResult<&str, HL7Message> {
-    let (input, segments) = many0(parse_segment)(input)?;
-    Ok((input, HL7Message { segments }))
+    Ok((input, MSH {
+        field_separator,
+        encoding_characters: encoding_characters.to_string(),
+        sending_application: sending_application.to_string(),
+        sending_facility: sending_facility.to_string(),
+        receiving_application: receiving_application.to_string(),
+        receiving_facility: receiving_facility.to_string(),
+        date_time_of_message: date_time_of_message.to_string(),
+        security: security.map(|s| s.to_string()),
+        message_type: message_type.to_string(),
+        message_control_id: message_control_id.to_string(),
+        processing_id: processing_id.to_string(),
+        version_id: version_id.to_string(),
+    }))
 }
 
 fn main() -> io::Result<()> {
@@ -50,17 +64,14 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let mut file = File::open(&args[1])?;
+    let filename = &args[1];
+    let mut file = File::open(filename)?;
     let mut buffer = String::new();
     file.read_to_string(&mut buffer)?;
 
-    match parse_message(&buffer) {
-        Ok((_, message)) => {
-            println!("{:#?}", message);
-        }
-        Err(e) => {
-            eprintln!("Failed to parse HL7 message: {:?}", e);
-        }
+    match parse_msh(&buffer) {
+        Ok((_, msh)) => println!("{:?}", msh),
+        Err(e) => eprintln!("Failed to parse MSH segment: {:?}", e),
     }
 
     Ok(())

@@ -1,95 +1,246 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
            targetNamespace="http://example.com/mqtt"
-           xmlns:mqtt="http://example.com/mqtt">
+           xmlns:mqtt="http://example.com/mqtt"
+           xmlns:fn="http://www.w3.org/2005/xpath-functions"
+           elementFormDefault="qualified"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 ../dfdl.xsd">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format 
-        separator=""
-        initiator=""
-        terminator=""
-        encoding="UTF-8"
+      <dfdl:format
+        representation="binary"
         byteOrder="bigEndian"
         bitOrder="mostSignificantBitFirst"
-        representation="binary"
-        occursCountKind="parsed"
-        textNumberPattern="#0"
-        textNumberCheckPolicy="strict"
-        textZonedSignStyle="asciiStandardSign"
+        encoding="UTF-8"
+        lengthKind="delimited"
+        lengthUnits="bytes"
+        initiator=""
+        terminator=""
+        separatorSuppressionPolicy="anyEmpty"
         escapeSchemeRef=""
-        alignment="1"
-        alignmentUnits="bytes"/>
+        occursCountKind="parsed"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="MQTTMessage">
-    <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="FixedHeader" type="mqtt:FixedHeaderType"/>
-        <xs:element name="VariableHeader" type="mqtt:VariableHeaderType" minOccurs="0"/>
-        <xs:element name="Payload" type="mqtt:PayloadType" minOccurs="0"/>
-      </xs:sequence>
-    </xs:complexType>
+  <xs:element name="MQTTPacket" type="mqtt:MQTTPacketType" dfdl:lengthKind="implicit">
+    <xs:annotation>
+      <xs:appinfo source="http://www.ogf.org/dfdl/">
+        <dfdl:element lengthKind="implicit"/>
+      </xs:appinfo>
+    </xs:annotation>
   </xs:element>
+
+  <xs:complexType name="MQTTPacketType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="FixedHeader" type="mqtt:FixedHeaderType"/>
+      <xs:element name="VariableHeader" type="mqtt:VariableHeaderType"/>
+      <xs:element name="Payload" type="mqtt:PayloadType" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
 
   <xs:complexType name="FixedHeaderType">
     <xs:sequence dfdl:separator="">
-      <xs:element name="PacketType" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthBits="4"/>
-          </xs:appinfo>
-        </xs:annotation>
+      <xs:element name="PacketType">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedByte">
+            <xs:minInclusive value="1"/>
+            <xs:maxInclusive value="15"/>
+          </xs:restriction>
+        </xs:simpleType>
       </xs:element>
-      <xs:element name="Flags" type="xs:unsignedByte">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthBits="4"/>
-          </xs:appinfo>
-        </xs:annotation>
+      <xs:element name="Flags">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedByte">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="15"/>
+          </xs:restriction>
+        </xs:simpleType>
       </xs:element>
-      <xs:element name="RemainingLength" type="mqtt:VariableLengthInteger"/>
+      <xs:element name="RemainingLength" type="mqtt:VariableByteLengthType"/>
     </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="VariableHeaderType">
+    <xs:choice>
+      <xs:element name="ConnectHeader" type="mqtt:ConnectHeaderType"/>
+      <xs:element name="ConnackHeader" type="mqtt:ConnackHeaderType"/>
+      <xs:element name="PublishHeader" type="mqtt:PublishHeaderType"/>
+      <xs:element name="PubackHeader" type="mqtt:PubackHeaderType"/>
+      <xs:element name="PubrecHeader" type="mqtt:PubrecHeaderType"/>
+      <xs:element name="PubrelHeader" type="mqtt:PubrelHeaderType"/>
+      <xs:element name="PubcompHeader" type="mqtt:PubcompHeaderType"/>
+      <xs:element name="SubscribeHeader" type="mqtt:SubscribeHeaderType"/>
+      <xs:element name="SubackHeader" type="mqtt:SubackHeaderType"/>
+      <xs:element name="UnsubscribeHeader" type="mqtt:UnsubscribeHeaderType"/>
+      <xs:element name="UnsubackHeader" type="mqtt:UnsubackHeaderType"/>
+      <xs:element name="DisconnectHeader" type="mqtt:DisconnectHeaderType"/>
+      <xs:element name="AuthHeader" type="mqtt:AuthHeaderType"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="ConnectHeaderType">
     <xs:sequence dfdl:separator="">
-      <xs:element name="ProtocolName" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthBits="48" encoding="UTF-8"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="ProtocolName" type="mqtt:UTF8StringType"/>
       <xs:element name="ProtocolLevel" type="xs:unsignedByte"/>
-      <xs:element name="ConnectFlags" type="xs:unsignedByte" minOccurs="0"/>
-      <xs:element name="KeepAlive" type="xs:unsignedShort" minOccurs="0"/>
+      <xs:element name="ConnectFlags" type="mqtt:ConnectFlagsType"/>
+      <xs:element name="KeepAlive" type="xs:unsignedShort"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
     </xs:sequence>
   </xs:complexType>
+
+  <xs:complexType name="ConnectFlagsType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="UsernameFlag" type="xs:boolean"/>
+      <xs:element name="PasswordFlag" type="xs:boolean"/>
+      <xs:element name="WillRetainFlag" type="xs:boolean"/>
+      <xs:element name="WillQoS">
+        <xs:simpleType>
+          <xs:restriction base="xs:unsignedByte">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="2"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="WillFlag" type="xs:boolean"/>
+      <xs:element name="CleanStartFlag" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PropertiesType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PropertyLength" type="mqtt:VariableByteLengthType"/>
+      <xs:element name="PropertyList" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="PropertyIdentifier" type="xs:unsignedByte"/>
+            <xs:element name="PropertyValue" type="xs:anyType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UTF8StringType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="Length" type="xs:unsignedShort"/>
+      <xs:element name="StringData" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="VariableByteLengthType">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="268435455"/>
+    </xs:restriction>
+  </xs:simpleType>
 
   <xs:complexType name="PayloadType">
     <xs:sequence dfdl:separator="">
-      <xs:element name="ClientID" type="xs:string" minOccurs="0">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="delimited" lengthUnits="bytes"/>
-          </xs:appinfo>
-        </xs:annotation>
+      <xs:element name="RawPayload" type="xs:base64Binary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ConnackHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ConnectAcknowledgeFlags" type="xs:unsignedByte"/>
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PublishHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="TopicName" type="mqtt:UTF8StringType"/>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort" minOccurs="0"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PubackHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PubrecHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PubrelHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PubcompHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SubscribeHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+      <xs:element name="TopicFilters" minOccurs="1" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence dfdl:separator="">
+            <xs:element name="TopicFilter" type="mqtt:UTF8StringType"/>
+            <xs:element name="QoS" type="xs:unsignedByte"/>
+          </xs:sequence>
+        </xs:complexType>
       </xs:element>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="VariableLengthInteger">
+  <xs:complexType name="SubackHeaderType">
     <xs:sequence dfdl:separator="">
-      <xs:element name="EncodedByte" type="xs:unsignedByte" maxOccurs="4">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:element lengthKind="explicit" lengthBits="8"/>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+      <xs:element name="ReasonCodes" type="xs:unsignedByte" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UnsubscribeHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+      <xs:element name="TopicFilters" type="mqtt:UTF8StringType" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UnsubackHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+      <xs:element name="ReasonCodes" type="xs:unsignedByte" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DisconnectHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AuthHeaderType">
+    <xs:sequence dfdl:separator="">
+      <xs:element name="ReasonCode" type="xs:unsignedByte"/>
+      <xs:element name="Properties" type="mqtt:PropertiesType"/>
     </xs:sequence>
   </xs:complexType>
 

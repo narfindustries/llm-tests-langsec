@@ -1,80 +1,163 @@
-module MQTT {
-    type Byte = UInt8;
+type Byte = UInt8;
+type TwoByteInteger = UInt16;
+type FourByteInteger = UInt32;
 
-    type FixedHeader = struct {
-        message_type   : UInt4;
-        dup_flag       : UInt1;
-        qos_level      : UInt2;
-        retain         : UInt1;
-        remaining_length : RemainingLength;
-    };
+type VariableByteInteger = {
+  value : UInt32;
+} using {
+  local multiplier = 1;
+  local value = 0;
+  local encodedByte = 0;
+  do {
+    encodedByte = UInt8;
+    value += (encodedByte & 127) * multiplier;
+    multiplier *= 128;
+  } while (encodedByte & 128 != 0);
+  return value;
+};
 
-    type RemainingLength = struct {
-        more_follow : UInt1;
-        value       : UInt7;
-        next        : if more_follow == 1 { RemainingLength } else { () };
-    };
+type UTF8EncodedString = {
+  length : TwoByteInteger;
+  value : String;
+} using {
+  length = length(value);
+};
 
-    type ConnectFlags = struct {
-        reserved     : UInt1 = 0;
-        clean_session: UInt1;
-        will_flag    : UInt1;
-        will_qos     : UInt2;
-        will_retain  : UInt1;
-        password_flag: UInt1;
-        username_flag: UInt1;
-    };
+type BinaryData = {
+  length : TwoByteInteger;
+  value : [Byte];
+} using {
+  length = length(value);
+};
 
-    type ConnectPayload = struct {
-        client_identifier : UTF8String;
-        will_topic        : if parent(ConnectFlags).will_flag == 1 { UTF8String } else { () };
-        will_message      : if parent(ConnectFlags).will_flag == 1 { UTF8String } else { () };
-        username          : if parent(ConnectFlags).username_flag == 1 { UTF8String } else { () };
-        password          : if parent(ConnectFlags).password_flag == 1 { UTF8String } else { () };
-    };
+type MQTTControlPacket = {
+  packetType : Byte;
+  flags : Byte;
+  remainingLength : VariableByteInteger;
+  payload : MQTTControlPayload;
+} using {
+  packetType = packetType(payload);
+  flags = flags(payload);
+};
 
-    type Connect = struct {
-        fixed_header : FixedHeader;
-        protocol_name: UTF8String;
-        version      : UInt8;
-        connect_flags: ConnectFlags;
-        keep_alive   : UInt16;
-        payload      : ConnectPayload;
-    };
+type MQTTControlPayload = CONNECT | CONNACK | PUBLISH | PUBACK | PUBREC | PUBREL | PUBCOMP | SUBSCRIBE | SUBACK | UNSUBSCRIBE | UNSUBACK | PINGREQ | PINGRESP | DISCONNECT | AUTH;
 
-    type Publish = struct {
-        fixed_header : FixedHeader;
-        topic_name   : UTF8String;
-        packet_id    : if parent(FixedHeader).qos_level > 0 { UInt16 } else { () };
-        payload      : [Byte];
-    };
+type CONNECT = {
+  protocolName : UTF8EncodedString;
+  protocolLevel : Byte;
+  connectFlags : Byte;
+  keepAlive : TwoByteInteger;
+  properties : CONNECTProperties;
+  clientIdentifier : UTF8EncodedString;
+  willProperties : WillProperties;
+  willTopic : UTF8EncodedString;
+  willPayload : BinaryData;
+  username : UTF8EncodedString;
+  password : BinaryData;
+};
 
-    type SubscribeTopic = struct {
-        topic_filter : UTF8String;
-        qos          : UInt8;
-    };
+type CONNACK = {
+  acknowledgeFlags : Byte;
+  reasonCode : Byte;
+  properties : CONNACKProperties;
+};
 
-    type Subscribe = struct {
-        fixed_header : FixedHeader;
-        packet_id    : UInt16;
-        topics       : [SubscribeTopic];
-    };
+type PUBLISH = {
+  topicName : UTF8EncodedString;
+  packetIdentifier : TwoByteInteger;
+  properties : PUBLISHProperties;
+  payload : BinaryData;
+};
 
-    type Unsubscribe = struct {
-        fixed_header : FixedHeader;
-        packet_id    : UInt16;
-        topic_filters: [UTF8String];
-    };
+type PUBACK = {
+  packetIdentifier : TwoByteInteger;
+  reasonCode : Byte;
+  properties : PUBACKProperties;
+};
 
-    type Message = union {
-        connect    : if parent(FixedHeader).message_type == 1 { Connect } else { () };
-        publish    : if parent(FixedHeader).message_type == 3 { Publish } else { () };
-        subscribe  : if parent(FixedHeader).message_type == 8 { Subscribe } else { () };
-        unsubscribe: if parent(FixedHeader).message_type == 10 { Unsubscribe } else { () };
-    };
+type PUBREC = {
+  packetIdentifier : TwoByteInteger;
+  reasonCode : Byte;
+  properties : PUBRECProperties;
+};
 
-    type MQTT_Packet = struct {
-        fixed_header : FixedHeader;
-        message      : Message;
-    };
-}
+type PUBREL = {
+  packetIdentifier : TwoByteInteger;
+  reasonCode : Byte;
+  properties : PUBRELProperties;
+};
+
+type PUBCOMP = {
+  packetIdentifier : TwoByteInteger;
+  reasonCode : Byte;
+  properties : PUBCOMPProperties;
+};
+
+type SUBSCRIBE = {
+  packetIdentifier : TwoByteInteger;
+  properties : SUBSCRIBEProperties;
+  subscriptions : [Subscription];
+};
+
+type SUBACK = {
+  packetIdentifier : TwoByteInteger;
+  properties : SUBACKProperties;
+  returnCodes : [Byte];
+};
+
+type UNSUBSCRIBE = {
+  packetIdentifier : TwoByteInteger;
+  properties : UNSUBSCRIBEProperties;
+  topicFilters : [UTF8EncodedString];
+};
+
+type UNSUBACK = {
+  packetIdentifier : TwoByteInteger;
+  properties : UNSUBACKProperties;
+  reasonCodes : [Byte];
+};
+
+type PINGREQ = {};
+type PINGRESP = {};
+
+type DISCONNECT = {
+  reasonCode : Byte;
+  properties : DISCONNECTProperties;
+};
+
+type AUTH = {
+  reasonCode : Byte;
+  properties : AUTHProperties;
+};
+
+type CONNECTProperties = {
+  sessionExpiryInterval : FourByteInteger;
+  receiveMaximum : TwoByteInteger;
+  maximumPacketSize : FourByteInteger;
+  topicAliasMaximum : TwoByteInteger;
+  requestResponseInformation : Byte;
+  requestProblemInformation : Byte;
+  userProperties : [UserProperty];
+  authenticationMethod : UTF8EncodedString;
+  authenticationData : BinaryData;
+};
+
+type WillProperties = {
+  willDelayInterval : FourByteInteger;
+  payloadFormatIndicator : Byte;
+  messageExpiryInterval : FourByteInteger;
+  contentType : UTF8EncodedString;
+  responseTopic : UTF8EncodedString;
+  correlationData : BinaryData;
+  userProperties : [UserProperty];
+};
+
+type UserProperty = {
+  name : UTF8EncodedString;
+  value : UTF8EncodedString;
+};
+
+type Subscription = {
+  topicFilter : UTF8EncodedString;
+  options : Byte;
+};

@@ -1,54 +1,111 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-static HParser* init_gzip_parser(void) {
-    // Define parsers for GZIP header fields
-    HParser *id1 = h_ch(0x1f);
-    HParser *id2 = h_ch(0x8b);
-    HParser *cm = h_ch(0x08);  // Deflate compression method
-    HParser *flags = h_uint8();
-    HParser *mtime = h_uint32();
-    HParser *xfl = h_uint8();
-    HParser *os = h_uint8();
+static bool check_flag(const HParsedToken* p, void* user_data) {
+    uint8_t mask = (uint8_t)(uintptr_t)user_data;
+    uint8_t flags = (uint8_t)p->uint;
+    return (flags & mask) != 0;
+}
 
-    // Optional fields based on flags
-    HParser *xlen = h_uint16();
-    HParser *extra = h_many1(h_uint8());
-    HParser *fname = h_many1(h_ch_range(0x20, 0x7e));
-    HParser *fcomment = h_many1(h_ch_range(0x20, 0x7e));
-    HParser *crc16 = h_uint16();
+static HParser* build_gzip_parser(void) {
+    // Header fields
+    HParser* id1_p = h_ch(0x1F);
+    HParser* id2_p = h_ch(0x8B);
+    HParser* cm_p = h_uint8();
+    HParser* flg_p = h_uint8();
+    HParser* mtime_p = h_uint32();
+    HParser* xfl_p = h_uint8();
+    HParser* os_p = h_uint8();
+    
+    // Optional fields
+    HParser* xlen_p = h_uint16();
+    HParser* extra_field_p = h_length_value(xlen_p, h_uint8());
+    HParser* filename_p = h_many_until(h_uint8(), h_ch(0x00));
+    HParser* comment_p = h_many_until(h_uint8(), h_ch(0x00));
+    HParser* hcrc16_p = h_uint16();
+
+    // Flag checks
+    HParser* fextra_p = h_and(h_bits(4, 0x04), extra_field_p);
+    HParser* fname_p = h_and(h_bits(4, 0x08), filename_p);
+    HParser* fcomment_p = h_and(h_bits(4, 0x10), comment_p);
+    HParser* fhcrc_p = h_and(h_bits(4, 0x02), hcrc16_p);
+
+    // Optional fields sequence
+    HParser* optional_fields = h_sequence(
+        h_optional(fextra_p),
+        h_optional(fname_p),
+        h_optional(fcomment_p),
+        h_optional(fhcrc_p),
+        NULL
+    );
 
     // Compressed data and footer
-    HParser *compressed_data = h_many1(h_uint8());
-    HParser *crc32 = h_uint32();
-    HParser *isize = h_uint32();
+    HParser* compressed_data_p = h_many1(h_uint8());
+    HParser* crc32_p = h_uint32();
+    HParser* isize_p = h_uint32();
 
-    // Combine all parsers into the full GZIP format
+    // Complete GZIP format
     return h_sequence(
-        id1,
-        id2,
-        cm,
-        flags,
-        mtime,
-        xfl,
-        os,
-        h_optional(h_sequence(xlen, extra)),
-        h_optional(h_sequence(fname, h_ch(0x00))),
-        h_optional(h_sequence(fcomment, h_ch(0x00))),
-        h_optional(crc16),
-        compressed_data,
-        crc32,
-        isize,
+        id1_p,
+        id2_p,
+        cm_p,
+        flg_p,
+        mtime_p,
+        xfl_p,
+        os_p,
+        optional_fields,
+        compressed_data_p,
+        crc32_p,
+        isize_p,
         NULL
     );
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = init_gzip_parser();
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <gzip_file>\n", argv[0]);
         return 1;
     }
 
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t* input = malloc(size);
+    if (!input) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(input, 1, size, file) != size) {
+        perror("Failed to read file");
+        free(input);
+        fclose(file);
+        return 1;
+    }
+
+    HParser* gzip_parser = build_gzip_parser();
+    HParseResult* result = h_parse(gzip_parser, input, size);
+
+    if (!result) {
+        fprintf(stderr, "Failed to parse GZIP file\n");
+        free(input);
+        fclose(file);
+        return 1;
+    }
+
+    printf("Successfully parsed GZIP file\n");
+
+    h_parse_result_free(result);
+    free(input);
+    fclose(file);
     return 0;
 }

@@ -1,73 +1,82 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #include <arpa/inet.h>
-#include <string.h>
-#include <unistd.h>
 
-// Define NTP packet structure
+// Define NTPv4 data structures.  Note:  This is a simplified representation.
+//  RFC 5905 details are more complex (e.g., handling of leap seconds).
 typedef struct {
-    unsigned int li_vn_mode;
-    unsigned int stratum;
-    unsigned int poll;
-    unsigned int precision;
-    unsigned int rootDelay;
-    unsigned int rootDispersion;
-    unsigned int refId;
-    unsigned int refTm;
-    unsigned int origTm;
-    unsigned int recvTm;
-    unsigned int xmtTm;
-} ntp_packet;
+    uint8_t li : 2;
+    uint8_t vn : 3;
+    uint8_t mode : 3;
+} ntp_header_t;
+
+typedef struct {
+    uint8_t stratum;
+    int8_t poll;
+    int8_t precision;
+} ntp_system_t;
 
 
-int main() {
-    int sockfd;
-    struct sockaddr_in servaddr;
-    ntp_packet packet;
-    unsigned char buffer[48];
+typedef struct {
+    uint32_t root_delay;
+    uint32_t root_dispersion;
+    uint32_t ref_id;
+    uint64_t ref_timestamp;
+    uint64_t orig_timestamp;
+    uint64_t recv_timestamp;
+    uint64_t xmit_timestamp;
+} ntp_timing_t;
 
-    // Create socket
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("socket creation failed");
-        exit(EXIT_FAILURE);
+typedef struct {
+    ntp_header_t header;
+    ntp_system_t system;
+    ntp_timing_t timing;
+} ntp_packet_t;
+
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <ntp_binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Set server address
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("pool.ntp.org"); // Example NTP server
-    servaddr.sin_port = htons(123);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
-    // Initialize NTP packet
-    memset(&packet, 0, sizeof(packet));
-    packet.li_vn_mode = 0x1b; // Version 4, Client mode
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
+    unsigned char *buffer = (unsigned char *)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
 
-    // Convert packet to network byte order
-    packet.li_vn_mode = htonl(packet.li_vn_mode);
-    //Other fields can be filled if needed, but this is a minimal example.
-
-    // Copy packet to buffer
-    memcpy(buffer, &packet, sizeof(packet));
-
-    // Send packet
-    sendto(sockfd, buffer, sizeof(packet), 0, (const struct sockaddr*)&servaddr, sizeof(servaddr));
-
-    // Receive packet (optional)
-    recvfrom(sockfd, buffer, sizeof(packet), 0, NULL, NULL);
-
-    //Process received packet (optional)
-    memcpy(&packet, buffer, sizeof(packet));
-    packet.li_vn_mode = ntohl(packet.li_vn_mode);
-    //Further processing of received data as needed
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
 
-    // Close socket
-    close(sockfd);
+    //Hammer Parser (Illustrative - requires full Hammer implementation)
+    //This section would contain the actual Hammer parser using the combinators
+    //to parse the buffer according to the ntp_packet_t structure.  Error
+    //handling and detailed parsing logic are omitted for brevity.
 
+    ntp_packet_t ntp_data; //Replace with actual parsing using Hammer
+
+    //Example of accessing parsed data (replace with actual parsed values)
+    printf("Leap Indicator: %u\n", ntp_data.header.li);
+    printf("Version Number: %u\n", ntp_data.header.vn);
+    printf("Mode: %u\n", ntp_data.header.mode);
+    // ... access and print other fields ...
+
+
+    free(buffer);
     return 0;
 }

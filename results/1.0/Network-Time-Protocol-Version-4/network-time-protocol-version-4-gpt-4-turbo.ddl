@@ -1,29 +1,49 @@
-module Network.Time.Protocol.Version4 {
+grammar NTPv4;
 
-  import DAEDALUS;
+type Flags = packed struct {
+    uint2 leapIndicator;
+    uint3 versionNumber;
+    uint3 mode;
+};
 
-  record Header {
-    li         : UInt3;      // Leap indicator
-    vn         : UInt3;      // Version number
-    mode       : UInt4;      // Mode
-    stratum    : UInt8;      // Stratum level
-    poll       : UInt8;      // Poll interval
-    precision  : UInt8;      // Precision
-    rootDelay  : UInt32;     // Root delay
-    rootDispersion : UInt32; // Root dispersion
-    refId      : UInt32;     // Reference ID
-  }
+type RootDelay = packed struct {
+    uint16 seconds;
+    uint16 fraction;
+};
 
-  record Timestamp {
-    seconds    : UInt32;     // Seconds
-    fraction   : UInt32;     // Fraction of a second
-  }
+type RootDispersion = packed struct {
+    uint16 seconds;
+    uint16 fraction;
+};
 
-  type NtpMessage = struct {
-    header     : Header;
-    refTime    : Timestamp;  // Reference timestamp
-    origTime   : Timestamp;  // Origin timestamp
-    recvTime   : Timestamp;  // Receive timestamp
-    transTime  : Timestamp;  // Transmit timestamp
-  };
-}
+type Timestamp = packed struct {
+    uint32 seconds;
+    uint32 fraction;
+};
+
+type NTPHeader = packed struct {
+    Flags flags;
+    uint8 stratum;
+    int8 poll;
+    int8 precision;
+    RootDelay rootDelay;
+    RootDispersion rootDispersion;
+    uint32 referenceIdentifier;
+    Timestamp referenceTimestamp;
+    Timestamp originTimestamp;
+    Timestamp receiveTimestamp;
+    Timestamp transmitTimestamp;
+};
+
+type ExtensionField = packed struct {
+    uint16 fieldType;
+    uint16 length;
+    bytes value[length-4];
+};
+
+type NTPPacket = struct {
+    NTPHeader header;
+    ExtensionField[] extensions;
+    optional uint32 keyIdentifier;
+    optional bytes messageDigest[16];
+};

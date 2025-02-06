@@ -1,64 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-// Define Modbus PDU
-HParser *modbus_pdu_parser = h_sequence(
-    h_uint8(),  // Function code
-    h_length_value(
-        h_uint8(),  // Byte count
-        h_repeat_n(h_uint8(), h_bind_uint8(1))
-    ),
-    NULL
-);
+// Function to create parsers for Modbus fields
+HParser *create_parsers() {
+    // Define parsers for Modbus fields
+    HParser *slave_address = h_uint8();
+    HParser *function_code = h_uint8();
+    HParser *crc = h_int_range(h_uint16(), 0x0000, 0xFFFF);
+    HParser *transaction_id = h_int_range(h_uint16(), 0x0000, 0xFFFF);
+    HParser *protocol_id = h_int_range(h_uint16(), 0x0000, 0xFFFF);
+    HParser *length = h_int_range(h_uint16(), 0x0000, 0xFFFF);
+    HParser *unit_id = h_uint8();
 
-// Define Modbus ADU for TCP
-HParser *modbus_adu_tcp_parser = h_sequence(
-    h_uint16_be(),  // Transaction Identifier
-    h_uint16_be(),  // Protocol Identifier
-    h_uint16_be(),  // Length
-    h_uint8(),      // Unit Identifier
-    modbus_pdu_parser,
-    NULL
-);
+    // Define parser for Modbus RTU ADU
+    HParser *modbus_rtu_adu = h_sequence(slave_address, function_code, h_many1(h_uint8()), crc, NULL);
 
-// Define Modbus ADU for RTU
-HParser *modbus_adu_rtu_parser = h_sequence(
-    h_uint8(),      // Address
-    modbus_pdu_parser,
-    h_uint16_le(),  // CRC
-    NULL
-);
+    // Define parser for Modbus TCP ADU
+    HParser *modbus_tcp_adu = h_sequence(transaction_id, protocol_id, length, unit_id, function_code, h_many1(h_uint8()), NULL);
 
-// Error handling
-void handle_parse_error(HParseResult *result) {
-    if (!result) {
-        fprintf(stderr, "Parsing failed\n");
-        exit(EXIT_FAILURE);
-    }
+    // Define a choice parser to select between RTU and TCP
+    return h_choice(modbus_tcp_adu, modbus_rtu_adu, NULL);
 }
 
-int main(int argc, char **argv) {
-    // Example usage for TCP
-    uint8_t sample_tcp_adu[] = {
-        0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x11, 0x03, 0x00, 0x6B, 0x00, 0x03
-    };
+void parse_modbus_message(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    unsigned char *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate buffer");
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+    
+    fread(buffer, 1, file_size, file);
+    fclose(file);
 
-    HParseResult *result_tcp = h_parse(modbus_adu_tcp_parser, sample_tcp_adu, sizeof(sample_tcp_adu));
-    handle_parse_error(result_tcp);
-    h_parse_result_free(result_tcp);
+    HParser *modbus_adu = create_parsers();
+    HParseResult *result = h_parse(modbus_adu, buffer, file_size);
+    if (result) {
+        printf("Parsing successful!\n");
+        h_parse_result_free(result);
+    } else {
+        printf("Parsing failed.\n");
+    }
 
-    // Example usage for RTU
-    uint8_t sample_rtu_adu[] = {
-        0x11, 0x03, 0x00, 0x6B, 0x00, 0x03, 0x76, 0x87
-    };
+    h_parser_free(modbus_adu);
+    free(buffer);
+}
 
-    HParseResult *result_rtu = h_parse(modbus_adu_rtu_parser, sample_rtu_adu, sizeof(sample_rtu_adu));
-    handle_parse_error(result_rtu);
-    h_parse_result_free(result_rtu);
-
-    // Free parsers
-    h_parser_free(modbus_pdu_parser);
-    h_parser_free(modbus_adu_tcp_parser);
-    h_parser_free(modbus_adu_rtu_parser);
-
-    return 0;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    
+    parse_modbus_message(argv[1]);
+    return EXIT_SUCCESS;
 }

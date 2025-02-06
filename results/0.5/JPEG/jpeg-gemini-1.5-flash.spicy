@@ -1,39 +1,84 @@
-#include <base64.zeek>
+module JPEG;
 
-function jpeg_decode(data: string) : string {
-    local decoded_data: string;
-    local base64_decoded: string;
+type jpeg_marker = enum { SOI, APP0, APP1, APP2, APP3, APP4, APP5, APP6, APP7, APP8, APP9, APPA, APPB, APPC, APPD, APPE, APPF, DQT, DHT, SOF0, SOF1, SOF2, SOF3, SOF5, SOF6, SOF7, SOF9, SOF10, SOF11, SOF13, SOF14, SOF15, DRI, DHP, EXP, JPG, TEM, SOS, EOI, COM, RST0, RST1, RST2, RST3, RST4, RST5, RST6, RST7, DAC, DNL, DHP, EXP, JPG, TEM };
 
-    # Attempt to decode the base64 encoded JPEG data.
-    base64_decoded = base64_decode(data);
+type jpeg_app_data = vector<uint8>;
 
-    # Check for decoding errors.  If decoding fails, return an error message.
-    if (base64_decoded == "") {
-        return "Base64 decoding failed";
-    }
+type jpeg_dqt_data = struct {
+  precision: uint8;
+  quantization_table: vector<uint16>;
+};
 
-    #  Assume base64_decoded now contains raw JPEG bytes.  
-    #  Further processing (e.g., using external tools or libraries) would be needed here to actually decode the JPEG image.
-    #  This is a placeholder for that processing.  Replace this with actual JPEG decoding logic.
-    decoded_data = "JPEG data decoded (placeholder)";
+type jpeg_dht_data = struct {
+  tc: uint8;
+  th: uint8;
+  huffman_table: vector<uint8>;
+};
 
-    return decoded_data;
+type jpeg_sof_data = struct {
+  precision: uint8;
+  image_height: uint16;
+  image_width: uint16;
+  num_components: uint8;
+  components: vector<struct {
+    component_id: uint8;
+    h_sampling_factor: uint8;
+    v_sampling_factor: uint8;
+    quant_table_selector: uint8;
+  }>;
+};
+
+type jpeg_sos_data = struct {
+  num_components: uint8;
+  components: vector<struct {
+    component_id: uint8;
+    dc_entropy_table_selector: uint8;
+    ac_entropy_table_selector: uint8;
+  }>;
+  spectral_selection_start: uint8;
+  spectral_selection_end: uint8;
+  approx_high: uint8;
+  approx_low: uint8;
+};
+
+type jpeg_dri_data = struct {
+  restart_interval: uint16;
+};
+
+type jpeg_com_data = struct {
+  comment: string;
+};
+
+
+type jpeg_segment = struct {
+  marker: jpeg_marker;
+  length: uint16;
+  data: variable;
+};
+
+type jpeg_file = vector<jpeg_segment>;
+
+#Example usage (Illustrative -  requires actual parsing functions)
+global jpeg_file my_jpeg;
+
+# ... code to parse the JPEG file into my_jpeg ...
+
+for segment in my_jpeg {
+  if segment.marker == DQT {
+    #local jpeg_dqt_data dqt_data = parse_jpeg_dqt_data(segment.data);  //Requires implementation
+  } else if segment.marker == DHT {
+    #local jpeg_dht_data dht_data = parse_jpeg_dht_data(segment.data); //Requires implementation
+  } else if segment.marker == SOF0 {
+    #local jpeg_sof_data sof_data = parse_jpeg_sof_data(segment.data); //Requires implementation
+  } else if segment.marker == SOS {
+    #local jpeg_sos_data sos_data = parse_jpeg_sos_data(segment.data); //Requires implementation
+  } else if segment.marker == DRI {
+    #local jpeg_dri_data dri_data = parse_jpeg_dri_data(segment.data); //Requires implementation
+  } else if segment.marker == COM {
+    #local jpeg_com_data com_data = parse_jpeg_com_data(segment.data); //Requires implementation
+  } else if segment.marker in {APP0, APP1, APP2, APP3, APP4, APP5, APP6, APP7, APP8, APP9, APPA, APPB, APPC, APPD, APPE, APPF} {
+    #local jpeg_app_data app_data = segment.data; //Requires implementation
+  }
 }
 
-
-event zeek_spicy_jpeg_decode(data: string) {
-    local decoded_jpeg: string;
-
-    decoded_jpeg = jpeg_decode(data);
-
-    if (decoded_jpeg != "JPEG data decoded (placeholder)") {
-        print "Error decoding JPEG: " + decoded_jpeg;
-    } else {
-        print "Decoded JPEG data successfully (placeholder)";
-    }
-}
-
-# Example usage (replace with your actual base64 encoded JPEG data)
-zeek_spicy_jpeg_decode(base64_encode("This is not a JPEG, it's a placeholder"));
-
-
+end

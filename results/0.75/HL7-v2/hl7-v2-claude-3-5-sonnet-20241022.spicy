@@ -1,42 +1,124 @@
 module HL7;
 
 public type Message = unit {
-    segments: Segment[];
-} &until($input.length() == 0);
+    # MSH (Message Header)
+    field_separator: bytes &size=1;
+    encoding_chars: bytes &size=4;
+    sending_application: bytes &until=b"|";
+    sending_facility: bytes &until=b"|";
+    receiving_application: bytes &until=b"|";
+    receiving_facility: bytes &until=b"|";
+    datetime: bytes &until=b"|";
+    security: bytes &until=b"|";
+    message_type: bytes &until=b"|";
+    message_control_id: bytes &until=b"|";
+    processing_id: bytes &until=b"|";
+    version_id: bytes &until=b"|";
+    sequence_number: bytes &until=b"|";
+    continuation_pointer: bytes &until=b"|";
+    accept_ack_type: bytes &until=b"|";
+    application_ack_type: bytes &until=b"|";
+    country_code: bytes &until=b"|";
+    character_set: bytes &until=b"|";
+    principal_language: bytes &until=b"\r";
 
-type Segment = unit {
-    segment_type: bytes &until(b"|");
-    : bytes &consume(1);
-    fields: Field[] &until($input.length() == 0 || /[\r\n]/.match($input));
-    : bytes &consume-if(/[\r\n]/);
+    # EVN (Event Type)
+    event_type_code: bytes &until=b"|";
+    event_datetime: bytes &until=b"|";
+    planned_datetime: bytes &until=b"|";
+    event_reason: bytes &until=b"|";
+    operator_id: bytes &until=b"|";
+    event_occurred: bytes &until=b"\r";
 
-    on %done {
-        if ( self.segment_type == b"MSH" ) {
-            self.fields.insert(0, Field(b"MSH"));
-            self.fields.insert(1, Field(b"|"));
-        }
-    }
+    # PID (Patient Identification)
+    set_id: bytes &until=b"|";
+    patient_id: bytes &until=b"|";
+    patient_id_list: bytes &until=b"|";
+    alternate_id: bytes &until=b"|";
+    patient_name: bytes &until=b"|";
+    mother_maiden_name: bytes &until=b"|";
+    birth_datetime: bytes &until=b"|";
+    admin_sex: bytes &until=b"|";
+    patient_alias: bytes &until=b"|";
+    race: bytes &until=b"|";
+    patient_address: bytes &until=b"|";
+    county_code: bytes &until=b"|";
+    phone_home: bytes &until=b"|";
+    phone_business: bytes &until=b"|";
+    primary_language: bytes &until=b"|";
+    marital_status: bytes &until=b"|";
+    religion: bytes &until=b"|";
+    patient_account: bytes &until=b"|";
+    ssn: bytes &until=b"|";
+    drivers_license: bytes &until=b"\r";
+
+    # PV1 (Patient Visit)
+    pv1_set_id: bytes &until=b"|";
+    patient_class: bytes &until=b"|";
+    assigned_location: bytes &until=b"|";
+    admission_type: bytes &until=b"|";
+    preadmit_number: bytes &until=b"|";
+    prior_location: bytes &until=b"|";
+    attending_doctor: bytes &until=b"|";
+    referring_doctor: bytes &until=b"|";
+    consulting_doctor: bytes &until=b"|";
+    hospital_service: bytes &until=b"|";
+    temporary_location: bytes &until=b"|";
+    preadmit_test_indicator: bytes &until=b"|";
+    readmission_indicator: bytes &until=b"|";
+    admit_source: bytes &until=b"|";
+    ambulatory_status: bytes &until=b"|";
+    vip_indicator: bytes &until=b"|";
+    admitting_doctor: bytes &until=b"|";
+    patient_type: bytes &until=b"|";
+    visit_number: bytes &until=b"|";
+    financial_class: bytes &until=b"|";
+    charge_price_indicator: bytes &until=b"|";
+    courtesy_code: bytes &until=b"|";
+    credit_rating: bytes &until=b"|";
+    contract_code: bytes &until=b"|";
+    contract_effective_date: bytes &until=b"|";
+    contract_amount: bytes &until=b"|";
+    contract_period: bytes &until=b"|";
+    interest_code: bytes &until=b"|";
+    transfer_bad_debt_code: bytes &until=b"|";
+    transfer_bad_debt_date: bytes &until=b"|";
+    bad_debt_agency_code: bytes &until=b"|";
+    bad_debt_transfer_amount: bytes &until=b"|";
+    bad_debt_recovery_amount: bytes &until=b"|";
+    delete_account_indicator: bytes &until=b"|";
+    delete_account_date: bytes &until=b"|";
+    discharge_disposition: bytes &until=b"|";
+    discharged_location: bytes &until=b"|";
+    diet_type: bytes &until=b"|";
+    servicing_facility: bytes &until=b"|";
+    bed_status: bytes &until=b"|";
+    account_status: bytes &until=b"|";
+    pending_location: bytes &until=b"|";
+    prior_temporary_location: bytes &until=b"|";
+    admit_datetime: bytes &until=b"|";
+    discharge_datetime: bytes &until=b"|";
+    current_patient_balance: bytes &until=b"|";
+    total_charges: bytes &until=b"|";
+    total_adjustments: bytes &until=b"|";
+    total_payments: bytes &until=b"\r";
+
+    # OBX (Observation/Result)
+    obx_set_id: bytes &until=b"|";
+    value_type: bytes &until=b"|";
+    observation_identifier: bytes &until=b"|";
+    observation_sub_id: bytes &until=b"|";
+    observation_value: bytes &until=b"|";
+    units: bytes &until=b"|";
+    references_range: bytes &until=b"|";
+    abnormal_flags: bytes &until=b"|";
+    probability: bytes &until=b"|";
+    nature_of_abnormal_test: bytes &until=b"|";
+    observation_result_status: bytes &until=b"|";
+    effective_date: bytes &until=b"|";
+    user_defined_access_checks: bytes &until=b"|";
+    observation_datetime: bytes &until=b"|";
+    producer_id: bytes &until=b"|";
+    responsible_observer: bytes &until=b"|";
+    observation_method: bytes &until=b"\r";
 };
-
-type Field = unit {
-    value: bytes &until([b"|", b"\r", b"\n"]);
-    : bytes &consume-if(b"|");
-
-    on %done {
-        if ( |self.value| == 0 ) {
-            self.value = b"";
-        }
-    }
-};
-
-on Message::%done {
-    local segments = vector();
-    for ( seg in self.segments ) {
-        local fields = vector();
-        for ( f in seg.fields ) {
-            fields.push_back(f.value);
-        }
-        segments.push_back([seg.segment_type, fields]);
-    }
-    print fmt("HL7::message %s", segments);
-}

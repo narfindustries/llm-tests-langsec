@@ -1,80 +1,169 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
            targetNamespace="http://example.com/modbus"
-           xmlns:tns="http://example.com/modbus">
+           xmlns:mns="http://example.com/modbus"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           elementFormDefault="qualified"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0 dfdl.xsd"
+           xmlns="http://example.com/modbus">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:modbus-format"/>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0">
+      <dfdl:format
+        alignment="1"
+        alignmentUnits="bytes"
+        byteOrder="bigEndian"
+        encoding="UTF-8"
+        escapeScheme="none"
+        representation="binary"
+        bitOrder="mostSignificantBitFirst"
+        lengthKind="explicit"
+        lengthUnits="bytes"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <dfdl:defineFormat name="modbus-format">
-    <dfdl:format 
-      alignment="1" 
-      alignmentUnits="bytes"
-      binaryNumberRep="binary"
-      byteOrder="bigEndian"
-      encoding="UTF-8"
-      escapeScheme="none"
-      initiated="no"
-      representation="binary"
-      separatorPosition="prefix"
-      textNumberRep="standard"
-      separator=""
-      truncateSpecifiedLengthString="no"/>
-  </dfdl:defineFormat>
-
-  <xs:element name="ModbusFrame">
+  <xs:element name="ModbusFrame" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="SlaveAddress" type="tns:SlaveAddressType"/>
-        <xs:element name="FunctionCode" type="tns:FunctionCodeType"/>
-        <xs:element name="Data" type="tns:DataType"/>
-        <xs:element name="CRC" type="tns:CRCType"/>
+      <xs:sequence dfdl:separator="">
+        <xs:element name="ServerAddress" type="xs:unsignedByte"
+          dfdl:lengthKind="explicit" dfdl:length="1"
+          dfdl:range="0 247"/>
+        
+        <xs:element name="FunctionCode" type="xs:unsignedByte"
+          dfdl:lengthKind="explicit" dfdl:length="1">
+          <xs:simpleType>
+            <xs:restriction base="xs:unsignedByte">
+              <xs:enumeration value="1"/>
+              <xs:enumeration value="2"/>
+              <xs:enumeration value="3"/>
+              <xs:enumeration value="4"/>
+              <xs:enumeration value="5"/>
+              <xs:enumeration value="6"/>
+              <xs:enumeration value="15"/>
+              <xs:enumeration value="16"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+
+        <xs:element name="RequestData" dfdl:lengthKind="implicit">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="ReadCoilsRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfCoils" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 2000"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="ReadDiscreteInputsRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfInputs" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 2000"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="ReadHoldingRegistersRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 125"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="ReadInputRegistersRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 125"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="WriteSingleCoilRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="OutputAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="OutputValue" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:unsignedShort">
+                          <xs:enumeration value="0"/>
+                          <xs:enumeration value="65280"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="WriteSingleRegisterRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="RegisterAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="RegisterValue" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="WriteMultipleCoilsRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfCoils" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 1968"/>
+                    <xs:element name="ByteCount" type="xs:unsignedByte" 
+                      dfdl:lengthKind="explicit" dfdl:length="1"/>
+                    <xs:element name="CoilValues" type="xs:hexBinary" 
+                      dfdl:lengthKind="explicit" dfdl:length="{ ../ByteCount }"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              
+              <xs:element name="WriteMultipleRegistersRequest" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="StartingAddress" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"/>
+                    <xs:element name="QuantityOfRegisters" type="xs:unsignedShort" 
+                      dfdl:lengthKind="explicit" dfdl:length="2"
+                      dfdl:range="1 123"/>
+                    <xs:element name="ByteCount" type="xs:unsignedByte" 
+                      dfdl:lengthKind="explicit" dfdl:length="1"/>
+                    <xs:element name="RegisterValues" type="xs:hexBinary" 
+                      dfdl:lengthKind="explicit" dfdl:length="{ ../ByteCount }"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="CRC" type="xs:unsignedShort" 
+          dfdl:lengthKind="explicit" dfdl:length="2"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:simpleType name="SlaveAddressType">
-    <xs:restriction base="xs:unsignedByte">
-      <dfdl:restriction base="xs:unsignedByte">
-        <dfdl:minInclusive value="0"/>
-        <dfdl:maxInclusive value="247"/>
-      </dfdl:restriction>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:simpleType name="FunctionCodeType">
-    <xs:restriction base="xs:unsignedByte">
-      <dfdl:restriction base="xs:unsignedByte">
-        <dfdl:enumeration value="1"/>   <!-- Read Coils -->
-        <dfdl:enumeration value="2"/>   <!-- Read Discrete Inputs -->
-        <dfdl:enumeration value="3"/>   <!-- Read Holding Registers -->
-        <dfdl:enumeration value="4"/>   <!-- Read Input Registers -->
-        <dfdl:enumeration value="5"/>   <!-- Write Single Coil -->
-        <dfdl:enumeration value="6"/>   <!-- Write Single Register -->
-        <dfdl:enumeration value="15"/>  <!-- Write Multiple Coils -->
-        <dfdl:enumeration value="16"/>  <!-- Write Multiple Registers -->
-      </dfdl:restriction>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:complexType name="DataType">
-    <xs:sequence>
-      <xs:element name="Payload" type="xs:hexBinary" 
-        dfdl:lengthKind="implicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:simpleType name="CRCType">
-    <xs:restriction base="xs:unsignedShort">
-      <dfdl:restriction base="xs:unsignedShort">
-        <dfdl:minInclusive value="0"/>
-        <dfdl:maxInclusive value="65535"/>
-      </dfdl:restriction>
-    </xs:restriction>
-  </xs:simpleType>
-
 </xs:schema>

@@ -1,37 +1,64 @@
-module GZIP;
+module gzip;
 
 import spicy;
 
-public type Compressor = unit {
-    magic: bytes(2) &requires { self == b"\x1f\x8b" };
-    compression_method: uint8 &requires { self == 8 };
-    flags: uint8;
+public type Gzip = struct {
+    magic: bytes &size=2 &validate=($$.data()[0] == 0x1f && $$.data()[1] == 0x8b);
+    compression_method: uint8 &validate=(self.compression_method == 0x08);
+    flags: Flags;
     mtime: uint32;
     extra_flags: uint8;
-    os: uint8;
-
-    extra_data: optional bytes if (flags & 0x04) {
-        length: uint16;
-        data: bytes(length);
-    };
-
-    original_filename: optional string if (flags & 0x08) {
-        value: bytes &until(b"\x00");
-    };
-
-    comment: optional string if (flags & 0x10) {
-        value: bytes &until(b"\x00");
-    };
-
-    header_crc: optional uint16 if (flags & 0x02);
-
+    os: OperatingSystem;
+    extra_length: optional<uint16>;
+    extra_data: optional<bytes>;
+    filename: optional<bytes>;
+    comment: optional<bytes>;
+    header_crc: optional<uint16>;
     compressed_data: bytes;
     crc32: uint32;
     uncompressed_size: uint32;
 
-    on %done {
-        print "GZIP file parsed successfully";
+    on %init {
+        if ( self.flags.extra ) {
+            self.extra_length = self.input().read<uint16>();
+            self.extra_data = self.input().read(self.extra_length);
+        }
+        if ( self.flags.filename ) {
+            self.filename = self.input().read_until(b"\x00");
+        }
+        if ( self.flags.comment ) {
+            self.comment = self.input().read_until(b"\x00");
+        }
+        if ( self.flags.header_crc ) {
+            self.header_crc = self.input().read<uint16>();
+        }
     }
 };
 
-public type GZIP = Compressor;
+type Flags = struct {
+    text: bool;
+    header_crc: bool;
+    extra: bool;
+    filename: bool;
+    comment: bool;
+    encrypted: bool;
+    reserved: uint2;
+} &bitfield;
+
+enum OperatingSystem {
+    FAT = 0,
+    AMIGA = 1,
+    VMS = 2,
+    UNIX = 3,
+    VMSCMS = 4,
+    ATARI = 5,
+    HPFS = 6,
+    MACINTOSH = 7,
+    ZSYSTEM = 8,
+    CPM = 9,
+    TOPS20 = 10,
+    NTFS = 11,
+    QDOS = 12,
+    RISCOS = 13,
+    UNKNOWN = 255
+};

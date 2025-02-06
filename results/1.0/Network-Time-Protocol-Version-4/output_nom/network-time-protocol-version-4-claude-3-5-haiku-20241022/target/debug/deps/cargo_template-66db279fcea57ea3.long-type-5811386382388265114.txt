@@ -1,0 +1,1 @@
+(impl FnMut((&[u8], usize)) -> Result<((&[u8], usize), (_, _, _)), nom::Err<_>>, fn((&[u8], usize)) -> Result<((&[u8], usize), u8), nom::Err<_>> {nom::number::streaming::be_u8::<(&[u8], usize), _>}, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], u8), nom::Err<nom::error::Error<&'a [u8]>>>, for<'a> fn(&'a [u8]) -> Result<(&'a [u8], u8), nom::Err<nom::error::Error<&'a [u8]>>>)

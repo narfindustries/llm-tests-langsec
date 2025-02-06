@@ -1,17 +1,42 @@
-#ifndef DNS_GEMINI_1_5_FLASH_SPICY
-#define DNS_GEMINI_1_5_FLASH_SPICY
+module DNS;
 
-event zeek_dns_query(id, qtype, qname) {
-    if (qtype == "A") {
-        print "DNS A query for ", qname;
-    }
+#define DNS_HEADER_LEN 12
+
+struct dns_header {
+  2:ushort id;
+  1:bool qr;
+  4:uint8 opcode;
+  1:bool aa;
+  1:bool tc;
+  1:bool rd;
+  1:bool ra;
+  3:uint8 z;
+  4:uint8 rcode;
+  2:ushort qdcount;
+  2:ushort ancount;
+  2:ushort nscount;
+  2:ushort arcount;
 }
 
-
-event zeek_dns_response(id, qtype, qname, rdata) {
-    if (qtype == "A") {
-        print "DNS A response for ", qname, ":", rdata;
-    }
+struct dns_question {
+  string qname;
+  2:ushort qtype;
+  2:ushort qclass;
 }
 
-#endif
+struct dns_resource_record {
+  string name;
+  2:ushort type;
+  2:ushort class;
+  4:uint32 ttl;
+  2:ushort rdlength;
+  bytes rdata;
+}
+
+record dns {
+  dns_header header;
+  count(header.qdcount): dns_question questions[];
+  count(header.ancount): dns_resource_record answers[];
+  count(header.nscount): dns_resource_record authority[];
+  count(header.arcount): dns_resource_record additional[];
+}

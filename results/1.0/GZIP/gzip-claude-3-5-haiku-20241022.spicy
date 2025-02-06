@@ -1,44 +1,62 @@
-module GZIP;
+module gzip;
 
-import spicy;
-
-public type Compression = enum {
-    STORED = 0,
-    COMPRESSED = 1,
-    PACKED = 2,
-    LZWED = 3,
-};
-
-public type Header = unit {
-    magic: bytes(2) &requires(self.magic == b"\x1f\x8b");
-    compression: uint8 &requires(self.compression == 8);
-    flags: uint8;
+public type Gzip = unit {
+    magic: bytes(2) &check(|magic| == 2 && magic[0] == 0x1f && magic[1] == 0x8b);
+    method: uint8 &check(method == 8);
+    flags: Flags;
     mtime: uint32;
     extra_flags: uint8;
-    os: uint8;
+    os_type: uint8;
 
-    fn is_valid_compression() : bool {
-        return self.compression == 8;
+    extra_fields: optional<ExtraFields>(flags.fextra);
+    filename: optional<FileName>(flags.fname);
+    comment: optional<Comment>(flags.fcomment);
+    header_crc: optional<HdrCRC>(flags.fhcrc);
+
+    compressed_data: bytes;
+
+    trailer: Trailer;
+};
+
+type Flags = unit {
+    flags: uint8 {
+        ftext:     0x01,
+        fhcrc:     0x02,
+        fextra:    0x04,
+        fname:     0x08,
+        fcomment:  0x10,
+        reserved1: 0x20,
+        reserved2: 0x40,
+        reserved3: 0x80
+    };
+};
+
+type ExtraFields = unit(present: bool) {
+    @if ( present ) {
+        extra_len: uint16;
+        extra_data: bytes(extra_len);
     }
 };
 
-public type GzipFile = unit {
-    header: Header;
-    payload: bytes &size=(0 - self.header.flags);
-    footer: Footer;
+type FileName = unit(present: bool) {
+    @if ( present ) {
+        name: bytes &until-including=b"\x00";
+    }
 };
 
-public type Footer = unit {
+type Comment = unit(present: bool) {
+    @if ( present ) {
+        text: bytes &until-including=b"\x00";
+    }
+};
+
+type HdrCRC = unit(present: bool) {
+    @if ( present ) {
+        crc: uint16;
+    }
+};
+
+type Trailer = unit {
     crc32: uint32;
-    size: uint32;
-};
-
-public type Flags = unit {
-    text: bool;
-    header_crc: bool;
-    extra: bool;
-    name: bool;
-    comment: bool;
-    reserved1: bool;
-    reserved2: bool;
+    orig_size: uint32;
 };

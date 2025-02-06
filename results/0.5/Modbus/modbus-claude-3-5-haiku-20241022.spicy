@@ -1,37 +1,66 @@
 module Modbus;
 
-import spicy;
-
-public type Message = unit {
-    function is_request: bool = { return $$.transaction_id < 32768; }
-    function is_response: bool = { return $$.transaction_id >= 32768; }
-
-    transaction_id: uint16;
-    protocol_id: uint16;
-    length: uint16;
-    unit_id: uint8;
-    function_code: uint8;
-
-    payload: bytes &length=(length - 2);
-
-    on %init {
-        if ( protocol_id != 0 )
-            throw "Invalid Modbus protocol identifier";
-    }
+public type ModbusADU = unit {
+    server_address: uint8;
+    fc: uint8;
+    data: Data(fc) &optional;
+    crc: uint16;
 };
 
-public type Request = unit {
-    message: Message;
-    
-    conditions {
-        message.is_request();
-    }
+type Data = unit(fc: uint8) {
+    switch (fc) {
+        0x01 -> read_coils_request: ReadCoilsRequest;
+        0x02 -> read_discrete_inputs_request: ReadDiscreteInputsRequest;
+        0x03 -> read_holding_registers_request: ReadHoldingRegistersRequest;
+        0x04 -> read_input_registers_request: ReadInputRegistersRequest;
+        0x05 -> write_single_coil_request: WriteSingleCoilRequest;
+        0x06 -> write_single_register_request: WriteSingleRegisterRequest;
+        0x0F -> write_multiple_coils_request: WriteMultipleCoilsRequest;
+        0x10 -> write_multiple_registers_request: WriteMultipleRegistersRequest;
+        * -> unknown: bytes;
+    };
 };
 
-public type Response = unit {
-    message: Message;
-    
-    conditions {
-        message.is_response();
-    }
+type ReadCoilsRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type ReadDiscreteInputsRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type ReadHoldingRegistersRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type ReadInputRegistersRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+};
+
+type WriteSingleCoilRequest = unit {
+    output_address: uint16;
+    output_value: uint16;
+};
+
+type WriteSingleRegisterRequest = unit {
+    register_address: uint16;
+    register_value: uint16;
+};
+
+type WriteMultipleCoilsRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    coil_values: bytes;
+};
+
+type WriteMultipleRegistersRequest = unit {
+    start_address: uint16;
+    quantity: uint16;
+    byte_count: uint8;
+    register_values: bytes;
 };

@@ -1,271 +1,262 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_opt, map_res, opt, verify},
-    error::{Error, ErrorKind},
-    multi::{length_data, take_while_m_n},
-    number::complete::{be_u16, be_u32, be_u8},
-    sequence::{delimited, preceded, tuple},
+    bytes::complete::{take, take_while_m_n},
+    combinator::{map},
+    error::{context, Error},
+    multi::{many1},
+    number::complete::{be_u16, be_u32},
+    sequence::{tuple},
     IResult,
 };
 use std::{
-    collections::HashMap,
     fs::File,
-    io::{self, Read},
-    str,
+    io::{Read, stdin},
+    path::Path,
 };
 
 #[derive(Debug, PartialEq)]
-enum DnsType {
+enum QType {
     A,
     NS,
+    MD,
+    MF,
     CNAME,
     SOA,
+    MB,
+    MG,
+    MR,
+    NULL,
+    WKS,
     PTR,
+    HINFO,
+    MINFO,
     MX,
     TXT,
-    AAAA,
-    SRV,
+    ANY,
+    AXFR,
     Other(u16),
 }
 
-impl DnsType {
-    fn from_u16(value: u16) -> Self {
-        match value {
-            1 => DnsType::A,
-            2 => DnsType::NS,
-            5 => DnsType::CNAME,
-            6 => DnsType::SOA,
-            12 => DnsType::PTR,
-            15 => DnsType::MX,
-            16 => DnsType::TXT,
-            28 => DnsType::AAAA,
-            33 => DnsType::SRV,
-            _ => DnsType::Other(value),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
-enum DnsClass {
+enum QClass {
     IN,
     CS,
     CH,
     HS,
+    ANY,
     Other(u16),
 }
 
-impl DnsClass {
-    fn from_u16(value: u16) -> Self {
-        match value {
-            1 => DnsClass::IN,
-            2 => DnsClass::CS,
-            3 => DnsClass::CH,
-            4 => DnsClass::HS,
-            _ => DnsClass::Other(value),
-        }
-    }
+#[derive(Debug, PartialEq)]
+enum RCode {
+    NOERROR,
+    FORMERR,
+    SERVFAIL,
+    NXDOMAIN,
+    NOTIMP,
+    REFUSED,
+    Other(u8),
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct DnsMessage {
+#[derive(Debug, PartialEq)]
+struct Header {
     id: u16,
-    flags: u16,
+    qr: bool,
+    opcode: u8,
+    aa: bool,
+    tc: bool,
+    rd: bool,
+    ra: bool,
+    z: u8,
+    rcode: RCode,
     qdcount: u16,
     ancount: u16,
     nscount: u16,
     arcount: u16,
-    questions: Vec<DnsQuestion>,
-    answers: Vec<DnsAnswer>,
-    nameservers: Vec<DnsAnswer>,
-    additional_records: Vec<DnsAnswer>,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct DnsQuestion {
+impl Header {
+    fn parse(input: &[u8]) -> IResult<&[u8], Header> {
+        context(
+            "header",
+            tuple((
+                be_u16,
+                map(be_u16, |x| (x >> 15) != 0),
+                map(be_u16, |x| ((x >> 11) & 0x0f) as u8),
+                map(be_u16, |x| (x >> 10) & 0x01 != 0),
+                map(be_u16, |x| (x >> 9) & 0x01 != 0),
+                map(be_u16, |x| (x >> 8) & 0x01 != 0),
+                map(be_u16, |x| (x >> 7) & 0x01 != 0),
+                map(be_u16, |x| (x & 0x70) >> 4 as u8),
+                map(be_u16, |x| match x & 0x0f {
+                    0 => RCode::NOERROR,
+                    1 => RCode::FORMERR,
+                    2 => RCode::SERVFAIL,
+                    3 => RCode::NXDOMAIN,
+                    4 => RCode::NOTIMP,
+                    5 => RCode::REFUSED,
+                    _ => RCode::Other((x & 0x0f) as u8),
+                }),
+                be_u16,
+                be_u16,
+                be_u16,
+                be_u16,
+            )),
+        )(input)
+        .map(|(input, (id, qr, opcode, aa, tc, rd, ra, z, rcode, qdcount, ancount, nscount, arcount))| {
+            (
+                input,
+                Header {
+                    id,
+                    qr,
+                    opcode,
+                    aa,
+                    tc,
+                    rd,
+                    ra,
+                    z: z.try_into().unwrap(),
+                    rcode,
+                    qdcount,
+                    ancount,
+                    nscount,
+                    arcount,
+                },
+            )
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Question {
     qname: String,
-    qtype: DnsType,
-    qclass: DnsClass,
+    qtype: QType,
+    qclass: QClass,
 }
 
-#[derive(Debug, Default, PartialEq)]
-struct DnsAnswer {
+impl Question {
+    fn parse(input: &[u8]) -> IResult<&[u8], Question> {
+        context(
+            "question",
+            tuple((
+                map(take_while_m_n(1, 255, |x| x != 0), |x| String::from_utf8_lossy(x).into_owned()),
+                map(be_u16, |x| match x {
+                    1 => QType::A,
+                    2 => QType::NS,
+                    3 => QType::MD,
+                    4 => QType::MF,
+                    5 => QType::CNAME,
+                    6 => QType::SOA,
+                    7 => QType::MB,
+                    8 => QType::MG,
+                    9 => QType::MR,
+                    10 => QType::NULL,
+                    11 => QType::WKS,
+                    12 => QType::PTR,
+                    13 => QType::HINFO,
+                    14 => QType::MINFO,
+                    15 => QType::MX,
+                    16 => QType::TXT,
+                    255 => QType::ANY,
+                    252 => QType::AXFR,
+                    _ => QType::Other(x),
+                }),
+                map(be_u16, |x| match x {
+                    1 => QClass::IN,
+                    2 => QClass::CS,
+                    3 => QClass::CH,
+                    4 => QClass::HS,
+                    255 => QClass::ANY,
+                    _ => QClass::Other(x),
+                }),
+            )),
+        )(input)
+        .map(|(input, (qname, qtype, qclass))| (input, Question { qname, qtype, qclass }))
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct ResourceRecord {
     name: String,
-    type_: DnsType,
-    class: DnsClass,
+    rtype: QType,
+    rclass: QClass,
     ttl: u32,
     rdlength: u16,
-    rdata: String,
+    rdata: Vec<u8>,
 }
 
-fn parse_dns(input: &[u8]) -> IResult<&[u8], DnsMessage> {
-    let (input, id) = be_u16(input)?;
-    let (input, flags) = be_u16(input)?;
-    let (input, qdcount) = be_u16(input)?;
-    let (input, ancount) = be_u16(input)?;
-    let (input, nscount) = be_u16(input)?;
-    let (input, arcount) = be_u16(input)?;
-
-    let (input, questions) = map(
-        take_while_m_n(qdcount as usize, qdcount as usize, |i| parse_question(i).is_ok()),
-        |input| input.into_iter().map(|i| parse_question(i).unwrap().1).collect(),
-    )(input)?;
-
-    let (input, answers) = map(
-        take_while_m_n(ancount as usize, ancount as usize, |i| parse_answer(i).is_ok()),
-        |input| input.into_iter().map(|i| parse_answer(i).unwrap().1).collect(),
-    )(input)?;
-
-    let (input, nameservers) = map(
-        take_while_m_n(nscount as usize, nscount as usize, |i| parse_answer(i).is_ok()),
-        |input| input.into_iter().map(|i| parse_answer(i).unwrap().1).collect(),
-    )(input)?;
-
-    let (input, additional_records) = map(
-        take_while_m_n(arcount as usize, arcount as usize, |i| parse_answer(i).is_ok()),
-        |input| input.into_iter().map(|i| parse_answer(i).unwrap().1).collect(),
-    )(input)?;
-
-    let dns_message = DnsMessage {
-        id,
-        flags,
-        qdcount,
-        ancount,
-        nscount,
-        arcount,
-        questions,
-        answers,
-        nameservers,
-        additional_records,
-    };
-
-    Ok((input, dns_message))
-}
-
-fn parse_question(input: &[u8]) -> IResult<&[u8], DnsQuestion> {
-    let (input, qname) = parse_domain_name(input)?;
-    let (input, qtype) = map(be_u16, DnsType::from_u16)(input)?;
-    let (input, qclass) = map(be_u16, DnsClass::from_u16)(input)?;
-
-    let dns_question = DnsQuestion {
-        qname,
-        qtype,
-        qclass,
-    };
-
-    Ok((input, dns_question))
-}
-
-fn parse_answer(input: &[u8]) -> IResult<&[u8], DnsAnswer> {
-    let (input, name) = parse_domain_name(input)?;
-    let (input, type_) = map(be_u16, DnsType::from_u16)(input)?;
-    let (input, class) = map(be_u16, DnsClass::from_u16)(input)?;
-    let (input, ttl) = be_u32(input)?;
-    let (input, rdlength) = be_u16(input)?;
-    let (input, rdata) = take(rdlength as usize)(input)?;
-
-    let rdata_str = str::from_utf8(rdata).unwrap_or("");
-
-    let dns_answer = DnsAnswer {
-        name,
-        type_,
-        class,
-        ttl,
-        rdlength,
-        rdata: rdata_str.to_string(),
-    };
-
-    Ok((input, dns_answer))
-}
-
-fn parse_domain_name(input: &[u8]) -> IResult<&[u8], String> {
-    let mut domain_name = Vec::new();
-
-    let mut input = input;
-
-    loop {
-        let (i, len) = be_u8(input)?;
-        input = i;
-
-        if len == 0 {
-            break;
-        }
-
-        let (i, label) = take(len as usize)(input)?;
-        input = i;
-
-        domain_name.push(str::from_utf8(&label).unwrap_or(""));
+impl ResourceRecord {
+    fn parse(input: &[u8]) -> IResult<&[u8], ResourceRecord> {
+        context(
+            "resource record",
+            tuple((
+                map(take_while_m_n(1, 255, |x| x != 0), |x| String::from_utf8_lossy(x).into_owned()),
+                map(be_u16, |x| match x {
+                    1 => QType::A,
+                    2 => QType::NS,
+                    3 => QType::MD,
+                    4 => QType::MF,
+                    5 => QType::CNAME,
+                    6 => QType::SOA,
+                    7 => QType::MB,
+                    8 => QType::MG,
+                    9 => QType::MR,
+                    10 => QType::NULL,
+                    11 => QType::WKS,
+                    12 => QType::PTR,
+                    13 => QType::HINFO,
+                    14 => QType::MINFO,
+                    15 => QType::MX,
+                    16 => QType::TXT,
+                    255 => QType::ANY,
+                    252 => QType::AXFR,
+                    _ => QType::Other(x),
+                }),
+                map(be_u16, |x| match x {
+                    1 => QClass::IN,
+                    2 => QClass::CS,
+                    3 => QClass::CH,
+                    4 => QClass::HS,
+                    255 => QClass::ANY,
+                    _ => QClass::Other(x),
+                }),
+                be_u32,
+                be_u16,
+                take,
+            )),
+        )(input)
+        .map(|(input, (name, rtype, rclass, ttl, rdlength, rdata))| {
+            (
+                input,
+                ResourceRecord {
+                    name,
+                    rtype,
+                    rclass,
+                    ttl,
+                    rdlength,
+                    rdata,
+                },
+            )
+        })
     }
-
-    let domain_name = domain_name.join(".");
-
-    Ok((input, domain_name))
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+fn main() {
+    let mut file: Box<dyn Read> = match std::env::args().nth(1) {
+        Some(path) => Box::new(File::open(Path::new(&path)).unwrap()),
+        None => Box::new(stdin()),
+    };
 
-    if args.len() != 2 {
-        println!("Usage: {} <input_file>", args[0]);
-        return Ok(());
-    }
-
-    let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.read_to_end(&mut buffer).unwrap();
 
-    let result = parse_dns(&buffer);
+    let header = Header::parse(&buffer).unwrap().1;
+    let questions = many1(Question::parse)(&buffer[12..]).unwrap().1;
+    let answers = many1(ResourceRecord::parse)(&buffer[12 + questions.len() * 10..]).unwrap().1;
+    let authorities = many1(ResourceRecord::parse)(&buffer[12 + questions.len() * 10 + answers.len() * 10..]).unwrap().1;
+    let additionals = many1(ResourceRecord::parse)(&buffer[12 + questions.len() * 10 + answers.len() * 10 + authorities.len() * 10..]).unwrap().1;
 
-    match result {
-        Ok((_, dns_message)) => {
-            println!("DNS Message:");
-            println!("  ID: {}", dns_message.id);
-            println!("  Flags: {}", dns_message.flags);
-            println!("  QDCount: {}", dns_message.qdcount);
-            println!("  ANCount: {}", dns_message.ancount);
-            println!("  NSCount: {}", dns_message.nscount);
-            println!("  ARCount: {}", dns_message.arcount);
-
-            for (i, question) in dns_message.questions.iter().enumerate() {
-                println!("Question #{}:", i + 1);
-                println!("  QName: {}", question.qname);
-                println!("  QType: {:?}", question.qtype);
-                println!("  QClass: {:?}", question.qclass);
-            }
-
-            for (i, answer) in dns_message.answers.iter().enumerate() {
-                println!("Answer #{}:", i + 1);
-                println!("  Name: {}", answer.name);
-                println!("  Type: {:?}", answer.type_);
-                println!("  Class: {:?}", answer.class);
-                println!("  TTL: {}", answer.ttl);
-                println!("  RDLength: {}", answer.rdlength);
-                println!("  RData: {}", answer.rdata);
-            }
-
-            for (i, nameserver) in dns_message.nameservers.iter().enumerate() {
-                println!("Nameserver #{}:", i + 1);
-                println!("  Name: {}", nameserver.name);
-                println!("  Type: {:?}", nameserver.type_);
-                println!("  Class: {:?}", nameserver.class);
-                println!("  TTL: {}", nameserver.ttl);
-                println!("  RDLength: {}", nameserver.rdlength);
-                println!("  RData: {}", nameserver.rdata);
-            }
-
-            for (i, additional_record) in dns_message.additional_records.iter().enumerate() {
-                println!("Additional Record #{}:", i + 1);
-                println!("  Name: {}", additional_record.name);
-                println!("  Type: {:?}", additional_record.type_);
-                println!("  Class: {:?}", additional_record.class);
-                println!("  TTL: {}", additional_record.ttl);
-                println!("  RDLength: {}", additional_record.rdlength);
-                println!("  RData: {}", additional_record.rdata);
-            }
-        }
-        Err(err) => {
-            eprintln!("Error parsing DNS message: {}", err);
-        }
-    }
-
-    Ok(())
+    println!("{:?}", header);
+    println!("{:?}", questions);
+    println!("{:?}", answers);
+    println!("{:?}", authorities);
+    println!("{:?}", additionals);
 }

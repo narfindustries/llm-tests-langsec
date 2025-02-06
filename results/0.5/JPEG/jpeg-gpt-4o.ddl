@@ -1,46 +1,107 @@
-// Daedalus specification for JPEG file format
-
-define JPEG {
-    // JPEG files start with a Start Of Image (SOI) marker
-    soi: u16be == 0xFFD8;
-
-    // JPEG segments
-    segments: Segment[];
-
-    // End Of Image (EOI) marker
-    eoi: u16be == 0xFFD9;
+enum Marker : uint16 {
+    SOI = 0xFFD8
+    APP0 = 0xFFE0
+    APP1 = 0xFFE1
+    COM = 0xFFFE
+    DQT = 0xFFDB
+    SOF0 = 0xFFC0
+    DHT = 0xFFC4
+    SOS = 0xFFDA
+    EOI = 0xFFD9
+    DRI = 0xFFDD
+    RST0 = 0xFFD0
+    RST1 = 0xFFD1
+    RST2 = 0xFFD2
+    RST3 = 0xFFD3
+    RST4 = 0xFFD4
+    RST5 = 0xFFD5
+    RST6 = 0xFFD6
+    RST7 = 0xFFD7
+    SOF2 = 0xFFC2
 }
 
-define Segment {
-    // Each segment starts with a marker
-    marker: u16be;
-
-    // Length of the segment (excluding the marker itself)
-    length: u16be;
-
-    // Segment data
-    data: bytes[length - 2];
+struct JPEG {
+    SOI soi
+    Segment[] segments
+    EOI eoi
 }
 
-// JPEG segments can have different markers, some of the common ones include:
-// - 0xFFE0 to 0xFFEF: APP0 to APP15 (Application-specific segments)
-// - 0xFFDB: DQT (Define Quantization Table)
-// - 0xFFC0: SOF0 (Start Of Frame, Baseline DCT)
-// - 0xFFC4: DHT (Define Huffman Table)
-// - 0xFFDA: SOS (Start Of Scan)
-
-enum SegmentType : u16be {
-    SOF0 = 0xFFC0,
-    DHT = 0xFFC4,
-    DQT = 0xFFDB,
-    SOS = 0xFFDA,
-    EOI = 0xFFD9,
-    APP0 = 0xFFE0,
-    APP15 = 0xFFEF
+struct SOI {
+    Marker marker = Marker::SOI
 }
 
-define Segment {
-    marker: SegmentType;
-    length: u16be;
-    data: bytes[length - 2];
+struct EOI {
+    Marker marker = Marker::EOI
+}
+
+struct Segment {
+    Marker marker
+    uint16 length
+    uint8[length - 2] data
+}
+
+struct APP0Segment {
+    uint8 identifier[5] // e.g., "JFIF\0"
+    uint16 version
+    uint8 units
+    uint16 xDensity
+    uint16 yDensity
+    uint8 xThumbnail
+    uint8 yThumbnail
+    uint8[xThumbnail * yThumbnail * 3] thumbnailData
+}
+
+struct APP1Segment {
+    uint8 identifier[6] // e.g., "Exif\0\0"
+}
+
+struct COMSegment {
+    uint8[length - 2] comment
+}
+
+struct DQTSegment {
+    struct QuantizationTable {
+        uint8 info // Precision and identifier
+        uint8[64] tableData
+    }
+    QuantizationTable[] tables
+}
+
+struct SOF0Segment {
+    uint8 samplePrecision
+    uint16 imageHeight
+    uint16 imageWidth
+    uint8 numComponents
+    struct Component {
+        uint8 componentId
+        uint8 samplingFactors
+        uint8 quantizationTableId
+    }
+    Component[numComponents] components
+}
+
+struct DHTSegment {
+    struct HuffmanTable {
+        uint8 info // Table class and identifier
+        uint8[16] numCodes // Number of codes for each length
+        uint8[] values // Values associated with codes
+    }
+    HuffmanTable[] tables
+}
+
+struct SOSSegment {
+    uint8 numComponents
+    struct ScanComponent {
+        uint8 componentId
+        uint8 huffmanTableIds // DC table id and AC table id
+    }
+    ScanComponent[numComponents] components
+    uint8 startSpectralSelection
+    uint8 endSpectralSelection
+    uint8 approxBitPosition
+    uint8[] compressedData // Until EOI or next marker
+}
+
+struct DRISegment {
+    uint16 restartInterval
 }

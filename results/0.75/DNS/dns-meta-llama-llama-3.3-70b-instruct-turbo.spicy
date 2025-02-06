@@ -1,41 +1,71 @@
-# DNS Protocol Specification
+module DNS;
 
-type DNSMessage = record {
-  id: uint16,
-  flags: uint16,
-  qdcount: uint16,
-  ancount: uint16,
-  nscount: uint16,
-  arcount: uint16,
-} & byte[flags & 0xff00 == 0x0100 ? 4 : 0];
+type dns_header = record 
+  id: uint16;
+  qr: bool;
+  opcode: uint16;
+  aa: bool;
+  tc: bool;
+  rd: bool;
+  ra: bool;
+  z: uint16;
+  rcode: uint16;
+  qdcount: uint16;
+  ancount: uint16;
+  nscount: uint16;
+  arcount: uint16;
 
-type DNSQuestion = record {
-  name: bytestring & length == (next.uint8 + 1),
-  type: uint16,
-  class: uint16,
-};
+type dns_name = vector of byte;
 
-type DNSAnswer = record {
-  name: uint16,
-  type: uint16,
-  class: uint16,
-  ttl: uint32,
-  rdlength: uint16,
-  rdata: bytestring & length == rdlength,
-};
+type dns_question = record 
+  name: dns_name;
+  type: uint16;
+  class: uint16;
 
-type DNSHeader = record {
-  message: DNSMessage,
-};
+type dns_answer = record 
+  name: dns_name;
+  type: uint16;
+  class: uint16;
+  ttl: uint32;
+  rdlength: uint16;
+  rdata: vector of byte;
 
-type DNSBody = record {
-  questions: array of DNSQuestion & length == message.qdcount,
-  answers: array of DNSAnswer & length == message.ancount,
-  authority: array of DNSAnswer & length == message.nscount,
-  additional: array of DNSAnswer & length == message.arcount,
-};
+type dns_authority = record 
+  name: dns_name;
+  type: uint16;
+  class: uint16;
+  ttl: uint32;
+  rdlength: uint16;
+  rdata: vector of byte;
 
-type DNS = record {
-  header: DNSHeader,
-  body: DNSBody,
-};
+type dns_additional = record 
+  name: dns_name;
+  type: uint16;
+  class: uint16;
+  ttl: uint32;
+  rdlength: uint16;
+  rdata: vector of byte;
+
+type dns_message = record 
+  header: dns_header;
+  questions: vector of dns_question;
+  answers: vector of dns_answer;
+  authorities: vector of dns_authority;
+  additionals: vector of dns_additional;
+
+let dns_spec = dns_message;
+
+let dns_parser = parser(dns_spec) {
+  header: dns_header;
+  questions: vector of dns_question;
+  answers: vector of dns_answer;
+  authorities: vector of dns_authority;
+  additionals: vector of dns_additional;
+}
+
+let dns_name_parser = parser(dns_name) {
+  repeat {
+    label_length: byte;
+    label: vector of byte & label_length;
+  } until label_length == 0;
+}

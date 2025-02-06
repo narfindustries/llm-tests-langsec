@@ -1,203 +1,217 @@
 use nom::{
-    bytes::complete::{take, take_till},
-    combinator::{map, map_res, opt},
-    error::ErrorKind,
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u32, be_u8},
+    bytes::complete::{take},
+    combinator::{map},
+    number::complete::{be_u16, be_u32, be_u64, be_u8},
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::{BufReader, Read};
+use std::{env, fs};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
+enum LeapIndicator {
+    NoWarning,
+    LastMinuteHas61Seconds,
+    LastMinuteHas59Seconds,
+    AlarmCondition,
+}
+
+impl From<u8> for LeapIndicator {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => LeapIndicator::NoWarning,
+            1 => LeapIndicator::LastMinuteHas61Seconds,
+            2 => LeapIndicator::LastMinuteHas59Seconds,
+            3 => LeapIndicator::AlarmCondition,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 enum Mode {
+    Reserved,
     SymmetricActive,
     SymmetricPassive,
     Client,
     Server,
     Broadcast,
-    Control,
-    Private,
-    Unknown(u8),
+    ReservedForNTPControlMessages,
+    ReservedForPrivateUse,
 }
 
-impl Mode {
-    fn from_byte(byte: u8) -> Mode {
-        match byte {
+impl From<u8> for Mode {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Mode::Reserved,
             1 => Mode::SymmetricActive,
             2 => Mode::SymmetricPassive,
             3 => Mode::Client,
             4 => Mode::Server,
             5 => Mode::Broadcast,
-            6 => Mode::Control,
-            7 => Mode::Private,
-            _ => Mode::Unknown(byte),
+            6 => Mode::ReservedForNTPControlMessages,
+            7 => Mode::ReservedForPrivateUse,
+            _ => unreachable!(),
         }
     }
 }
 
-#[derive(Debug)]
-enum Poll {
-    Min = -6,
-    Sec1 = -5,
-    Sec2 = -4,
-    Sec4 = -3,
-    Sec8 = -2,
-    Sec16 = -1,
-    Zero = 0,
-    Sec1_ = 1,
-    Sec2_ = 2,
-    Sec4_ = 3,
-    Sec8_ = 4,
-    Sec16_ = 5,
-    Sec32 = 6,
-    Sec64 = 7,
-    Sec128 = 8,
-    Sec256 = 9,
-    Unknown(u8),
-}
-
-impl Poll {
-    fn from_byte(byte: u8) -> Poll {
-        match byte {
-            0 => Poll::Min,
-            1 => Poll::Sec1,
-            2 => Poll::Sec2,
-            3 => Poll::Sec4,
-            4 => Poll::Sec8,
-            5 => Poll::Sec16,
-            6 => Poll::Zero,
-            7 => Poll::Sec1_,
-            8 => Poll::Sec2_,
-            9 => Poll::Sec4_,
-            10 => Poll::Sec8_,
-            11 => Poll::Sec16_,
-            12 => Poll::Sec32,
-            13 => Poll::Sec64,
-            14 => Poll::Sec128,
-            15 => Poll::Sec256,
-            _ => Poll::Unknown(byte),
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Precision {
-    Neg rifles = -6,
-    NegSec rif fares = -5,
-    NegSec rifr fares = -4,
-    NegSec rifr rem fares = -3,
-    NegSec rifr rem equals fares = -2,
-    Neg rifr rem equals Sub seconds fares = -1,
-    Zero,
-    MicroSec,
-    MilliSec,
-    Sec,
-    DecaSec,
-    CentiSec,
-    DeciSec,
-    Unknown(u8),
-}
-
-impl Precision {
-    fn from_byte(byte: u8) -> Precision {
-        match byte {
-            0 => Precision::Neg_rifles,
-            1 => Precision::NegSec_rif_fares,
-            2 => Precision::NegSec_rifr_fares,
-            3 => Precision::NegSec_rifr_rem_fares,
-            4 => Precision::NegSec_rifr_rem_equals_fares,
-            5 => Precision::Neg_rifr_rem_equals_Sub_seconds_fares,
-            6 => Precision::Zero,
-            7 => Precision::MicroSec,
-            8 => Precision::MilliSec,
-            9 => Precision::Sec,
-            10 => Precision::DecaSec,
-            11 => Precision::CentiSec,
-            12 => Precision::DeciSec,
-            _ => Precision::Unknown(byte),
-        }
-    }
-}
-
-#[derive(Debug)]
-struct NtpHeader {
-    leap: u8,
-    version: u8,
+#[derive(Debug, PartialEq)]
+struct NTPHeader {
+    leap_indicator: LeapIndicator,
+    version_number: u8,
     mode: Mode,
-    poll: Poll,
-    precision: Precision,
-    delay: u32,
-    dispersion: u32,
-    identifier: u32,
-    reference_timestamp: (u32, u32),
-    originate_timestamp: (u32, u32),
-    receive_timestamp: (u32, u32),
-    transmit_timestamp: (u32, u32),
+    poll: u8,
+    precision: i8,
+    root_delay: u32,
+    root_dispersion: u32,
+    reference_clock_identifier: u32,
+    reference_timestamp: u64,
+    origin_timestamp: u64,
+    receive_timestamp: u64,
+    transmit_timestamp: u64,
 }
 
-fn parse_ntp_header(input: &[u8]) -> IResult<&[u8], NtpHeader> {
-    let (input, leap) = map(be_u8, |b| b >> 6)(input)?;
-    let (input, version) = be_u8(input)?;
-    let (input, mode) = map(be_u8, Mode::from_byte)(input)?;
-    let (input, poll) = map(be_u8, Poll::from_byte)(input)?;
-    let (input, precision) = map(be_u8, Precision::from_byte)(input)?;
-    let (input, delay) = be_u32(input)?;
-    let (input, dispersion) = be_u32(input)?;
-    let (input, identifier) = be_u32(input)?;
-    let (input, reference_timestamp) = map(
-        tuple((be_u32, be_u32)),
-        |(sec, frac)| (sec, frac),
-    )(input)?;
-    let (input, originate_timestamp) = map(
-        tuple((be_u32, be_u32)),
-        |(sec, frac)| (sec, frac),
-    )(input)?;
-    let (input, receive_timestamp) = map(
-        tuple((be_u32, be_u32)),
-        |(sec, frac)| (sec, frac),
-    )(input)?;
-    let (input, transmit_timestamp) = map(
-        tuple((be_u32, be_u32)),
-        |(sec, frac)| (sec, frac),
-    )(input)?;
+fn parse_leap_indicator(input: &[u8]) -> IResult<&[u8], LeapIndicator> {
+    map(be_u8, |x| LeapIndicator::from(x >> 6 & 0x3))(input)
+}
+
+fn parse_version_number(input: &[u8]) -> IResult<&[u8], u8> {
+    map(be_u8, |x| x >> 3 & 0x7)(input)
+}
+
+fn parse_mode(input: &[u8]) -> IResult<&[u8], Mode> {
+    map(be_u8, |x| Mode::from(x & 0x7))(input)
+}
+
+fn parse_poll(input: &[u8]) -> IResult<&[u8], u8> {
+    be_u8(input)
+}
+
+fn parse_precision(input: &[u8]) -> IResult<&[u8], i8> {
+    map(be_u8, |x| x as i8)(input)
+}
+
+fn parse_root_delay(input: &[u8]) -> IResult<&[u8], u32> {
+    be_u32(input)
+}
+
+fn parse_root_dispersion(input: &[u8]) -> IResult<&[u8], u32> {
+    be_u32(input)
+}
+
+fn parse_reference_clock_identifier(input: &[u8]) -> IResult<&[u8], u32> {
+    be_u32(input)
+}
+
+fn parse_reference_timestamp(input: &[u8]) -> IResult<&[u8], u64> {
+    be_u64(input)
+}
+
+fn parse_origin_timestamp(input: &[u8]) -> IResult<&[u8], u64> {
+    be_u64(input)
+}
+
+fn parse_receive_timestamp(input: &[u8]) -> IResult<&[u8], u64> {
+    be_u64(input)
+}
+
+fn parse_transmit_timestamp(input: &[u8]) -> IResult<&[u8], u64> {
+    be_u64(input)
+}
+
+fn parse_ntp_header(input: &[u8]) -> IResult<&[u8], NTPHeader> {
+    let (input, leap_indicator) = parse_leap_indicator(input)?;
+    let (input, version_number) = parse_version_number(input)?;
+    let (input, mode) = parse_mode(input)?;
+    let (input, poll) = parse_poll(input)?;
+    let (input, precision) = parse_precision(input)?;
+    let (input, root_delay) = parse_root_delay(input)?;
+    let (input, root_dispersion) = parse_root_dispersion(input)?;
+    let (input, reference_clock_identifier) = parse_reference_clock_identifier(input)?;
+    let (input, reference_timestamp) = parse_reference_timestamp(input)?;
+    let (input, origin_timestamp) = parse_origin_timestamp(input)?;
+    let (input, receive_timestamp) = parse_receive_timestamp(input)?;
+    let (input, transmit_timestamp) = parse_transmit_timestamp(input)?;
 
     Ok((
         input,
-        NtpHeader {
-            leap,
-            version,
+        NTPHeader {
+            leap_indicator,
+            version_number,
             mode,
             poll,
             precision,
-            delay,
-            dispersion,
-            identifier,
+            root_delay,
+            root_dispersion,
+            reference_clock_identifier,
             reference_timestamp,
-            originate_timestamp,
+            origin_timestamp,
             receive_timestamp,
             transmit_timestamp,
         },
     ))
 }
 
-fn main() -> std::io::Result<()> {
+#[derive(Debug, PartialEq)]
+struct ExtensionField {
+    field_type: u16,
+    field_length: u16,
+    field_data: Vec<u8>,
+}
+
+fn parse_extension_field(input: &[u8]) -> IResult<&[u8], ExtensionField> {
+    let (input, field_type) = be_u16(input)?;
+    let (input, field_length) = be_u16(input)?;
+    let (input, field_data) = take(field_length as usize)(input)?;
+
+    Ok((
+        input,
+        ExtensionField {
+            field_type,
+            field_length,
+            field_data: field_data.to_vec(),
+        },
+    ))
+}
+
+fn parse_ntp_packet(input: &[u8]) -> IResult<&[u8], (NTPHeader, Vec<ExtensionField>)> {
+    let (input, header) = parse_ntp_header(input)?;
+    let mut extensions = Vec::new();
+    let mut remaining = input;
+    while remaining.len() >= 4 {
+        let (rest, extension) = parse_extension_field(remaining)?;
+        extensions.push(extension);
+        remaining = rest;
+    }
+
+    Ok((remaining, (header, extensions)))
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <file>", args[0]);
-        return Ok(());
+        println!("Usage: {} <input_file>", args[0]);
+        return;
     }
 
-    let file = File::open(&args[1])?;
-    let mut reader = BufReader::new(file);
-    let mut input = Vec::new();
-    reader.read_to_end(&mut input)?;
+    let input_file = &args[1];
+    let input_data = match fs::read(input_file) {
+        Ok(data) => data,
+        Err(err) => {
+            println!("Error reading file: {}", err);
+            return;
+        }
+    };
 
-    match parse_ntp_header(&input) {
-        Ok((_, ntp_header)) => println!("{:?}", ntp_header),
-        Err(err) => println!("Error: {:?}", err),
+    match parse_ntp_packet(&input_data) {
+        Ok((remaining, (header, extensions))) => {
+            println!("Header: {:?}", header);
+            println!("Extensions: {:?}", extensions);
+            if !remaining.is_empty() {
+                println!("Warning: remaining data after parsing packet");
+            }
+        }
+        Err(err) => {
+            println!("Error parsing packet: {:?}", err);
+        }
     }
-
-    Ok(())
 }

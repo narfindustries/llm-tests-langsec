@@ -1,0 +1,98 @@
+module DICOM;
+
+public type Tag = tuple<uint16, uint16>;
+
+public type VR =
+    "AE" |
+    "AS" |
+    "AT" |
+    "CS" |
+    "DA" |
+    "DS" |
+    "DT" |
+    "FL" |
+    "FD" |
+    "IS" |
+    "LO" |
+    "LT" |
+    "OB" |
+    "OD" |
+    "OF" |
+    "OW" |
+    "PN" |
+    "SH" |
+    "SL" |
+    "SQ" |
+    "SS" |
+    "ST" |
+    "TM" |
+    "UI" |
+    "UL" |
+    "UN" |
+    "US" |
+    "UT";
+
+public type Value = case $context.vr of {
+    "AE" -> ae: bytes &size=16;
+    "AS" -> as: bytes &size=4;
+    "AT" -> at: uint32;
+    "CS" -> cs: bytes &size=16;
+    "DA" -> da: bytes &size=8;
+    "DS" -> ds: bytes &size=16;
+    "DT" -> dt: bytes &size=26;
+    "FL" -> fl: float32;
+    "FD" -> fd: float64;
+    "IS" -> is: bytes &size=12;
+    "LO" -> lo: bytes &size=64;
+    "LT" -> lt: bytes &size=10240;
+    "OB" -> ob: bytes &size=1;
+    "OD" -> od: bytes &size=8;
+    "OF" -> of: bytes &size=4;
+    "OW" -> ow: bytes &size=2;
+    "PN" -> pn: bytes &size=64;
+    "SH" -> sh: bytes &size=16;
+    "SL" -> sl: int32;
+    "SQ" -> sq: sequence<Element>;
+    "SS" -> ss: int16;
+    "ST" -> st: bytes &size=1024;
+    "TM" -> tm: bytes &size=16;
+    "UI" -> ui: bytes &size=64;
+    "UL" -> ul: uint32;
+    "UN" -> un: bytes &size=1;
+    "US" -> us: uint16;
+    "UT" -> ut: bytes &size=10240;
+};
+
+public type Element = tuple<
+    tag: Tag,
+    vr: VR,
+    value: Value
+>;
+
+public type FileMetaInformation = tuple<
+    preamble: bytes &size=128,
+    prefix: bytes &size=4,
+    fileMetaInformationVersion: Element,
+    mediaStorageSOPClassUID: Element,
+    mediaStorageSOPInstanceUID: Element,
+    transferSyntaxUID: Element,
+    implementationClassUID: Element,
+    implementationVersionName: Element,
+    sourceApplicationEntityTitle: Element,
+    sendingApplicationEntityTitle: Element,
+    receivingApplicationEntityTitle: Element,
+    privateInformationCreatorUID: Element,
+    privateInformation: Element,
+    fileSetID: Element
+>;
+
+public type DataSet = sequence<Element>;
+
+public type DICOMFile = tuple<
+    meta: FileMetaInformation,
+    data: DataSet
+>;
+
+on DICOMFile::%done {
+    # Handle the parsed DICOM file here
+}

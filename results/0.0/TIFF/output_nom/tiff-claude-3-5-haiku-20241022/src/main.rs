@@ -1,23 +1,50 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, opt},
-    multi::{count, many0},
-    number::complete::{le_u16, le_u32},
-    sequence::{tuple, preceded},
+    bytes::complete::take,
+    combinator::opt,
+    multi::count,
+    number::complete::{le_u16, le_u32, be_u16, be_u32},
     IResult,
 };
 use std::env;
 use std::fs::File;
 use std::io::Read;
 
+#[derive(Debug, Clone)]
+enum ByteOrder {
+    LittleEndian,
+    BigEndian,
+}
+
 #[derive(Debug)]
 struct TiffHeader {
-    byte_order: u16,
-    version: u16,
+    byte_order: ByteOrder,
+    magic_number: u16,
     ifd_offset: u32,
 }
 
 #[derive(Debug)]
+struct Rational {
+    numerator: u32,
+    denominator: u32,
+}
+
+#[derive(Debug)]
+enum TagValue {
+    Byte(u8),
+    Ascii(String),
+    Short(u16),
+    Long(u32),
+    Rational(Rational),
+    SByte(i8),
+    Undefined(Vec<u8>),
+    SShort(i16),
+    SLong(i32),
+    SRational(Rational),
+    Float(f32),
+    Double(f64),
+}
+
+#[derive(Debug, Clone)]
 struct IFDEntry {
     tag: u16,
     field_type: u16,
@@ -25,48 +52,79 @@ struct IFDEntry {
     value_or_offset: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ImageFileDirectory {
     entries: Vec<IFDEntry>,
     next_ifd_offset: Option<u32>,
 }
 
-fn parse_tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader> {
-    map(
-        tuple((
-            le_u16,
-            le_u16,
-            le_u32
-        )),
-        |(byte_order, version, ifd_offset)| TiffHeader {
-            byte_order,
-            version,
-            ifd_offset,
-        }
-    )(input)
+fn parse_byte_order<'a>(input: &'a [u8]) -> IResult<&'a [u8], ByteOrder> {
+    let (input, order_bytes) = take(2usize)(input)?;
+    match order_bytes {
+        b"II" => Ok((input, ByteOrder::LittleEndian)),
+        b"MM" => Ok((input, ByteOrder::BigEndian)),
+        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
+    }
 }
 
-fn parse_ifd_entry(input: &[u8]) -> IResult<&[u8], IFDEntry> {
-    map(
-        tuple((
-            le_u16,
-            le_u16,
-            le_u32,
-            le_u32
-        )),
-        |(tag, field_type, count, value_or_offset)| IFDEntry {
-            tag,
-            field_type,
-            count,
-            value_or_offset,
-        }
-    )(input)
+fn parse_tiff_header<'a>(input: &'a [u8]) -> IResult<&'a [u8], TiffHeader> {
+    let (input, byte_order) = parse_byte_order(input)?;
+    let (input, magic_number) = match byte_order {
+        ByteOrder::LittleEndian => le_u16(input)?,
+        ByteOrder::BigEndian => be_u16(input)?,
+    };
+    let (input, ifd_offset) = match byte_order {
+        ByteOrder::LittleEndian => le_u32(input)?,
+        ByteOrder::BigEndian => be_u32(input)?,
+    };
+
+    Ok((input, TiffHeader {
+        byte_order,
+        magic_number,
+        ifd_offset,
+    }))
 }
 
-fn parse_image_file_directory(input: &[u8]) -> IResult<&[u8], ImageFileDirectory> {
-    let (input, num_entries) = le_u16(input)?;
-    let (input, entries) = count(parse_ifd_entry, num_entries as usize)(input)?;
-    let (input, next_ifd_offset) = opt(le_u32)(input)?;
+fn parse_ifd_entry<'a>(input: &'a [u8], byte_order: &ByteOrder) -> IResult<&'a [u8], IFDEntry> {
+    let parse_u16 = match byte_order {
+        ByteOrder::LittleEndian => le_u16,
+        ByteOrder::BigEndian => be_u16,
+    };
+    let parse_u32 = match byte_order {
+        ByteOrder::LittleEndian => le_u32,
+        ByteOrder::BigEndian => be_u32,
+    };
+
+    let (input, tag) = parse_u16(input)?;
+    let (input, field_type) = parse_u16(input)?;
+    let (input, count) = parse_u32(input)?;
+    let (input, value_or_offset) = parse_u32(input)?;
+
+    Ok((input, IFDEntry {
+        tag,
+        field_type,
+        count,
+        value_or_offset,
+    }))
+}
+
+fn parse_ifd<'a>(input: &'a [u8], byte_order: &ByteOrder) -> IResult<&'a [u8], ImageFileDirectory> {
+    let parse_u16 = match byte_order {
+        ByteOrder::LittleEndian => le_u16,
+        ByteOrder::BigEndian => be_u16,
+    };
+    let parse_u32 = match byte_order {
+        ByteOrder::LittleEndian => le_u32,
+        ByteOrder::BigEndian => be_u32,
+    };
+
+    let (input, entry_count) = parse_u16(input)?;
+    let (input, entries) = count(
+        |i| parse_ifd_entry(i, byte_order),
+        entry_count as usize
+    )(input)?;
+
+    let (input, next_ifd_offset) = opt(parse_u32)(input)?;
 
     Ok((input, ImageFileDirectory {
         entries,
@@ -74,25 +132,23 @@ fn parse_image_file_directory(input: &[u8]) -> IResult<&[u8], ImageFileDirectory
     }))
 }
 
-fn parse_tiff(input: &[u8]) -> IResult<&[u8], (TiffHeader, Vec<ImageFileDirectory>)> {
+fn parse_tiff<'a>(input: &'a [u8]) -> IResult<&'a [u8], (TiffHeader, Vec<ImageFileDirectory>)> {
     let (input, header) = parse_tiff_header(input)?;
-    let (input, _) = take(header.ifd_offset - 8)(input)?;
-
-    let mut ifds = Vec::new();
-    let mut current_input = input;
+    
+    let mut current_input = &input[header.ifd_offset as usize..];
+    let mut directories = Vec::new();
 
     loop {
-        let (remaining, ifd) = parse_image_file_directory(current_input)?;
-        ifds.push(ifd);
+        let (remaining, directory) = parse_ifd(current_input, &header.byte_order)?;
+        directories.push(directory);
 
-        if let Some(next_offset) = ifds.last().unwrap().next_ifd_offset {
-            current_input = &current_input[next_offset as usize..];
-        } else {
-            break;
+        match directory.next_ifd_offset {
+            Some(offset) => current_input = &input[offset as usize..],
+            None => break,
         }
     }
 
-    Ok((current_input, (header, ifds)))
+    Ok((input, (header, directories)))
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -107,16 +163,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     file.read_to_end(&mut buffer)?;
 
     match parse_tiff(&buffer) {
-        Ok((_, (header, ifds))) => {
+        Ok((_, (header, directories))) => {
             println!("TIFF Header: {:?}", header);
-            for (i, ifd) in ifds.iter().enumerate() {
-                println!("IFD {}: {:?}", i, ifd);
+            for (idx, dir) in directories.iter().enumerate() {
+                println!("Directory {}: {:?}", idx, dir);
             }
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("Parsing error: {:?}", e);
-            std::process::exit(1);
-        }
+        },
+        Err(e) => eprintln!("Parsing error: {:?}", e),
     }
+
+    Ok(())
 }

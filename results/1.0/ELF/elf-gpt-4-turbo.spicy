@@ -1,60 +1,55 @@
 module ELF;
 
-public type ELFHeader = unit {
-    magic:      bytes &size=4;
-    class:      uint8;
-    data:       uint8;
-    version:    uint8;
-    osABI:      uint8;
-    abiVersion: uint8;
-    pad:        bytes &size=7;
-    type:       uint16;
-    machine:    uint16;
-    fileVersion: uint32;
-    entry:      uint64;
-    phoff:      uint64;
-    shoff:      uint64;
-    flags:      uint32;
-    ehsize:     uint16;
-    phentsize:  uint16;
-    phnum:      uint16;
-    shentsize:  uint16;
-    shnum:      uint16;
-    shstrndx:   uint16;
+public type ElfHeader = unit {
+    magic:      bytes &size=4;          // Magic number (\x7FELF)
+    ei_class:   uint8;                 // Class (32/64-bit)
+    ei_data:    uint8;                 // Data encoding
+    ei_version: uint8;                 // ELF header version
+    osabi:      uint8;                 // OS/ABI identification
+    abiversion: uint8;                 // ABI version
+    pad:        bytes &size=7;         // Padding (should be ignored)
 
-    on %init {
-        if (self.magic != b"\x7FELF") {
-            throw "Not a valid ELF file.";
-        }
-    }
+    e_type:      uint16;              // Object file type
+    e_machine:   uint16;              // Machine type
+    e_version:   uint32;              // Object file version
+    e_entry:     uint64;              // Entry point address
+    e_phoff:     uint64;              // Program header offset
+    e_shoff:     uint64;              // Section header offset
+    e_flags:     uint32;              // Processor-specific flags
+    e_ehsize:    uint16;              // ELF header size
+    e_phentsize: uint16;              // Program header entry size
+    e_phnum:     uint16;              // Number of program header entries
+    e_shentsize: uint16;              // Section header entry size
+    e_shnum:     uint16;              // Number of section header entries
+    e_shstrndx:  uint16;              // Section header string table index
 };
 
 public type ProgramHeader = unit {
-    type:   uint32;
-    flags:  uint32;
-    offset: uint64;
-    vaddr:  uint64;
-    paddr:  uint64;
-    filesz: uint64;
-    memsz:  uint64;
-    align:  uint64;
+    p_type:    uint32;               // Segment type
+    p_flags:   uint32;               // Segment flags
+    p_offset:  uint64;               // Segment file offset
+    p_vaddr:   uint64;               // Virtual address in memory
+    p_paddr:   uint64;               // Reserved
+    p_filesz:  uint64;               // Size of segment in the file
+    p_memsz:   uint64;               // Size of segment in memory
+    p_align:   uint64;               // Segment alignment
 };
 
 public type SectionHeader = unit {
-    name:      uint32;
-    type:      uint32;
-    flags:     uint64;
-    addr:      uint64;
-    offset:    uint64;
-    size:      uint64;
-    link:      uint32;
-    info:      uint32;
-    addralign: uint64;
-    entsize:   uint64;
+    sh_name:      uint32;           // Section name (index into string table)
+    sh_type:      uint32;           // Section type
+    sh_flags:     uint64;           // Section flags
+    sh_addr:      uint64;           // Section virtual addr at execution
+    sh_offset:    uint64;           // Section file offset
+    sh_size:      uint64;           // Section size in bytes
+    sh_link:      uint32;           // Link to another section
+    sh_info:      uint32;           // Additional section information
+    sh_addralign: uint64;           // Section alignment
+    sh_entsize:   uint64;           // Entry size if section holds table
 };
 
 public type ELFFile = unit {
-    header: ELFHeader;
-    programHeaders: ProgramHeader[] &size=header.phnum;
-    sectionHeaders: SectionHeader[] &size=header.shnum;
+    header: ElfHeader;
+    program_headers: ProgramHeader[] &size=header.e_phnum;
+    section_headers: SectionHeader[] &size=header.e_shnum;
 };

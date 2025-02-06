@@ -1,67 +1,71 @@
-#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+module PNG-Image;
 
-#include <stdint.h>
-#include <stdbool.h>
+type png_signature = record { bytes sig:8; };
 
-// Define data structures as needed based on your PNG image data
+type png_chunk_header = record { uint32 length; bytes type:4; };
 
-// Example: Assuming a simple structure for pixel data
-typedef struct {
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
-    uint8_t alpha;
-} Pixel;
+type png_ihdr = record { uint32 width; uint32 height; uint8 bit_depth; uint8 color_type; uint8 compression_method; uint8 filter_method; uint8 interlace_method; };
 
-typedef struct {
-    uint32_t width;
-    uint32_t height;
-    Pixel* pixels;
-} PNGImage;
+type png_plte = record { uint8 rgb_palette{0..}; };
 
+type png_idat = record { bytes compressed_data{0..}; };
 
-// Function to load PNG image data (replace with actual implementation)
-bool load_png_image(const char* filename, PNGImage* image);
+type png_iend = record {};
 
+type png_trns = record { uint8 alpha_values{0..}; uint16 grayscale_trns; uint16 rgb_trns; };
 
-// Function to process the PNG image (replace with actual image processing logic)
-bool process_png_image(PNGImage* image);
+type png_chrm = record { uint32 white_point_x; uint32 white_point_y; uint32 red_x; uint32 red_y; uint32 green_x; uint32 green_y; uint32 blue_x; uint32 blue_y; };
 
+type png_gama = record { uint32 gamma; };
 
-// Function to save the processed PNG image (replace with actual implementation)
-bool save_png_image(const char* filename, const PNGImage* image);
+type png_iccp = record { bytes profile_name; bytes compressed_profile_data; };
 
+type png_sbit = record { uint8 significant_bits; };
 
-// Main function for processing
-int main(int argc, char** argv) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <png_filename>\n", argv[0]);
-        return 1;
-    }
+type png_srgb = record { uint8 rendering_intent; };
 
-    PNGImage image;
-    if (!load_png_image(argv[1], &image)) {
-        fprintf(stderr, "Failed to load PNG image: %s\n", argv[1]);
-        return 1;
-    }
+type png_bkgd = record { uint16 palette_index; uint16 grayscale; uint16 rgb; };
 
-    if (!process_png_image(&image)) {
-        fprintf(stderr, "Failed to process PNG image\n");
-        return 1;
-    }
+type png_hist = record { uint16 frequency{0..}; };
 
-    if (!save_png_image("output.png", &image)) {
-        fprintf(stderr, "Failed to save PNG image\n");
-        return 1;
-    }
+type png_phys = record { uint32 pixels_per_unit_x; uint32 pixels_per_unit_y; uint8 unit_specifier; };
 
+type png_text = record { bytes keyword; bytes text_data; };
 
-    // Free allocated memory for image data.  Crucial to avoid leaks!
-    free(image.pixels);
+type png_ztxt = record { bytes keyword; bytes compressed_text_data; };
 
-    return 0;
-}
+type png_itxt = record { bytes keyword; bytes compressed_text_data; bytes lang_tag; bytes translated_keyword; };
 
-#endif // PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+type png_offs = record { int32 x_offset; int32 y_offset; uint8 unit_specifier; };
+
+type png_pcal = record { bytes purpose; uint32 time_stamp; bytes units; uint32 sample_value; uint32 equation_length; bytes equation; };
+
+type png_scal = record { uint32 unit_specifier; uint32 width; uint32 height; };
+
+type png_time = record { uint16 year; uint8 month; uint8 day; uint8 hour; uint8 minute; uint8 second; };
+
+type png_chunk = oneof {
+	png_ihdr;
+	png_plte;
+	png_idat;
+	png_iend;
+	png_trns;
+	png_chrm;
+	png_gama;
+	png_iccp;
+	png_sbit;
+	png_srgb;
+	png_bkgd;
+	png_hist;
+	png_phys;
+	png_text;
+	png_ztxt;
+	png_itxt;
+	png_offs;
+	png_pcal;
+	png_scal;
+	png_time;
+};
+
+type png_file = record { png_signature signature; png_chunk chunks{0..}; };
 

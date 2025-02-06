@@ -1,55 +1,46 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/modbus"
            xmlns:tns="http://example.com/modbus">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:ModbusFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <!-- Define Modbus TCP/IP Frame -->
+    <xs:element name="ModbusTCPFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="bigEndian"/>
+                <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="bigEndian" dfdl:initiator="'\x00\x00'"/>
+                <xs:element name="LengthField" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="bigEndian"/>
+                <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+                <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+                <xs:element name="DataField" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ xs:unsignedShort(../LengthField) - 2 }"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:simpleType name="UInt16">
-    <xs:restriction base="xs:unsignedShort">
-      <xs:maxInclusive value="65535"/>
-    </xs:restriction>
-  </xs:simpleType>
+    <!-- Define Modbus RTU Frame -->
+    <xs:element name="ModbusRTUFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="AddressField" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+                <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+                <xs:element name="DataField" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="CRC"/>
+                <xs:element name="ErrorCheckField" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary" dfdl:byteOrder="bigEndian"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-  <xs:complexType name="Header">
-    <xs:sequence>
-      <xs:element name="TransactionId" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="ProtocolId" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="Length" type="tns:UInt16" dfdl:length="2" dfdl:lengthKind="explicit"/>
-      <xs:element name="UnitId" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="ModbusPDU">
-    <xs:sequence>
-      <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-      <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator=";"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="ModbusADU">
-    <xs:sequence>
-      <xs:element name="ModbusHeader" type="tns:Header"/>
-      <xs:element name="ModbusPDU" type="tns:ModbusPDU"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="ModbusMessage" type="tns:ModbusADU"/>
-
-  <xs:element name="ModbusFormat">
-    <xs:complexType>
-      <xs:attributeGroup ref="dfdl:format"/>
-      <xs:attribute name="byteOrder" type="xs:string" use="required" fixed="bigEndian"/>
-      <xs:attribute name="bitOrder" type="xs:string" use="required" fixed="mostSignificantBitFirst"/>
-      <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
-      <xs:attribute name="lengthKind" type="xs:string" use="required" fixed="explicit"/>
-      <xs:attribute name="encoding" type="xs:string" use="required" fixed="ISO-8859-1"/>
-    </xs:complexType>
-  </xs:element>
+    <!-- Define Modbus ASCII Frame -->
+    <xs:element name="ModbusASCIIFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="StartDelimiter" type="xs:string" dfdl:length="1" dfdl:initiator="':'"/>
+                <xs:element name="AddressField" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left" dfdl:textPadKind="none" dfdl:textBidi="no"/>
+                <xs:element name="FunctionCode" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left" dfdl:textPadKind="none" dfdl:textBidi="no"/>
+                <xs:element name="DataField" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="LRC"/>
+                <xs:element name="ErrorCheckField" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left" dfdl:textPadKind="none" dfdl:textBidi="no"/>
+                <xs:element name="EndDelimiter" type="xs:string" dfdl:length="2" dfdl:textStringJustification="left" dfdl:textPadKind="none" dfdl:textBidi="no"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

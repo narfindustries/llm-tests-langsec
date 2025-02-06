@@ -3,7 +3,6 @@
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from enum import Enum
-import zlib
 
 
 if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
@@ -11,11 +10,16 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class Gzip(KaitaiStruct):
 
-    class CompressionMethods(Enum):
+    class Compression(Enum):
         store = 0
         deflate = 8
 
-    class OperatingSystems(Enum):
+    class ExtraFlags(Enum):
+        none = 0
+        maximum_compression = 2
+        fastest_compression = 4
+
+    class Os(Enum):
         fat = 0
         amiga = 1
         vms = 2
@@ -31,13 +35,6 @@ class Gzip(KaitaiStruct):
         qdos = 12
         acorn_riscos = 13
         unknown = 255
-
-    class Flags(Enum):
-        text = 1
-        header_crc = 2
-        extra = 4
-        name = 8
-        comment = 16
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -45,32 +42,37 @@ class Gzip(KaitaiStruct):
         self._read()
 
     def _read(self):
-        self.magic = self._io.read_bytes(2)
-        if not self.magic == b"\x1F\x8B":
-            raise kaitaistruct.ValidationNotEqualError(b"\x1F\x8B", self.magic, self._io, u"/seq/0")
-        self.compression_method = KaitaiStream.resolve_enum(Gzip.CompressionMethods, self._io.read_u1())
-        self.flags = self._io.read_u1()
-        self.modification_time = self._io.read_u4le()
-        self.extra_flags = self._io.read_u1()
-        self.operating_system = KaitaiStream.resolve_enum(Gzip.OperatingSystems, self._io.read_u1())
-        if (self.flags & Gzip.Flags.extra.value) != 0:
-            self.extra_fields = Gzip.ExtraField(self._io, self, self._root)
+        self.magic1 = self._io.read_bytes(1)
+        if not self.magic1 == b"\x1F":
+            raise kaitaistruct.ValidationNotEqualError(b"\x1F", self.magic1, self._io, u"/seq/0")
+        self.magic2 = self._io.read_bytes(1)
+        if not self.magic2 == b"\x8B":
+            raise kaitaistruct.ValidationNotEqualError(b"\x8B", self.magic2, self._io, u"/seq/1")
+        self.compression_method = KaitaiStream.resolve_enum(Gzip.Compression, self._io.read_u1())
+        self.flags = Gzip.Flags(self._io, self, self._root)
+        self.mtime = self._io.read_u4le()
+        self.extra_flags = KaitaiStream.resolve_enum(Gzip.ExtraFlags, self._io.read_u1())
+        self.os = KaitaiStream.resolve_enum(Gzip.Os, self._io.read_u1())
+        if self.flags.extra:
+            self.extra_length = self._io.read_u2le()
 
-        if (self.flags & Gzip.Flags.name.value) != 0:
-            self.name = (self._io.read_bytes_term(0, False, True, True)).decode(u"utf-8")
+        if self.flags.extra:
+            self.extra = self._io.read_bytes(self.extra_length)
 
-        if (self.flags & Gzip.Flags.comment.value) != 0:
-            self.comment = (self._io.read_bytes_term(0, False, True, True)).decode(u"utf-8")
+        if self.flags.name:
+            self.name = (self._io.read_bytes_term(0, False, True, True)).decode(u"ASCII")
 
-        if (self.flags & Gzip.Flags.header_crc.value) != 0:
+        if self.flags.comment:
+            self.comment = (self._io.read_bytes_term(0, False, True, True)).decode(u"ASCII")
+
+        if self.flags.header_crc:
             self.header_crc16 = self._io.read_u2le()
 
-        if self.compression_method == Gzip.CompressionMethods.deflate:
-            self._raw_compressed_data = self._io.read_bytes_full()
-            self.compressed_data = zlib.decompress(self._raw_compressed_data)
+        self.compressed_data = self._io.read_bytes(((self._io.size() - self._io.pos()) - 8))
+        self.crc32 = self._io.read_u4le()
+        self.isize = self._io.read_u4le()
 
-
-    class ExtraField(KaitaiStruct):
+    class Flags(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
             self._io = _io
             self._parent = _parent
@@ -78,26 +80,12 @@ class Gzip(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.len_total = self._io.read_u2le()
-            self.entries = []
-            i = 0
-            while not self._io.is_eof():
-                self.entries.append(Gzip.ExtraFieldEntry(self._io, self, self._root))
-                i += 1
-
-
-
-    class ExtraFieldEntry(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.id = self._io.read_u2le()
-            self.len = self._io.read_u2le()
-            self.data = self._io.read_bytes(self.len)
+            self.reserved = self._io.read_bits_int_le(3)
+            self.comment = self._io.read_bits_int_le(1) != 0
+            self.name = self._io.read_bits_int_le(1) != 0
+            self.extra = self._io.read_bits_int_le(1) != 0
+            self.header_crc = self._io.read_bits_int_le(1) != 0
+            self.text = self._io.read_bits_int_le(1) != 0
 
 
 

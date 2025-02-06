@@ -1,77 +1,126 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/ns/local"
-    xmlns:mbx="http://example.com/ns/modbus"
-    targetNamespace="http://example.com/ns/modbus">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:modbus="http://example.com/modbus"
+           targetNamespace="http://example.com/modbus"
+           elementFormDefault="qualified">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
+            <dfdl:format alignment="1"
+                        alignmentUnits="bytes"
                         lengthKind="implicit"
                         occursCountKind="implicit"
+                        initiator=""
+                        terminator=""
+                        leadingSkip="0"
+                        trailingSkip="0"
+                        textTrimKind="none"
+                        encoding="utf-8"
+                        encodingErrorPolicy="replace"
+                        ignoreCase="no"
+                        initiatedContent="no"
                         representation="binary"
+                        byteOrder="bigEndian"
                         binaryNumberRep="binary"
-                        byteOrder="bigEndian"/>
+                        lengthUnits="bytes"
+                        textBidi="no"
+                        floating="no"
+                        sequenceKind="ordered"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="ModbusMessage">
+    <!-- Basic integer types with DFDL annotations -->
+    <xs:simpleType name="uint8" dfdl:lengthKind="explicit" dfdl:length="1" dfdl:alignmentUnits="bytes">
+        <xs:restriction base="xs:unsignedByte"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="uint16" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:alignmentUnits="bytes">
+        <xs:restriction base="xs:unsignedShort"/>
+    </xs:simpleType>
+
+    <xs:simpleType name="byteArray" dfdl:lengthKind="explicit" dfdl:length="{ ../byteCount }" dfdl:alignmentUnits="bytes">
+        <xs:restriction base="xs:hexBinary"/>
+    </xs:simpleType>
+
+    <!-- MBAP Header -->
+    <xs:complexType name="MBAPHeaderType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="transactionId" type="modbus:uint16"/>
+            <xs:element name="protocolId" type="modbus:uint16" fixed="0"/>
+            <xs:element name="length" type="modbus:uint16"/>
+            <xs:element name="unitId" type="modbus:uint8"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="MBAPHeader" type="modbus:MBAPHeaderType"/>
+
+    <!-- Function Code -->
+    <xs:element name="functionCode" type="modbus:uint8"/>
+
+    <!-- Exception Response -->
+    <xs:element name="exceptionCode" type="modbus:uint8"/>
+
+    <!-- Read Coils Request -->
+    <xs:complexType name="ReadCoilsRequestType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="startingAddress" type="modbus:uint16"/>
+            <xs:element name="quantityOfCoils" type="modbus:uint16"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="readCoilsRequest" type="modbus:ReadCoilsRequestType"/>
+
+    <!-- Read Coils Response -->
+    <xs:complexType name="ReadCoilsResponseType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="byteCount" type="modbus:uint8"/>
+            <xs:element name="coilStatus" type="modbus:byteArray"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="readCoilsResponse" type="modbus:ReadCoilsResponseType"/>
+
+    <!-- Write Single Coil -->
+    <xs:complexType name="WriteSingleCoilType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="outputAddress" type="modbus:uint16"/>
+            <xs:element name="outputValue" type="modbus:uint16"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="writeSingleCoil" type="modbus:WriteSingleCoilType"/>
+
+    <!-- Write Multiple Coils Request -->
+    <xs:complexType name="WriteMultipleCoilsRequestType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="startingAddress" type="modbus:uint16"/>
+            <xs:element name="quantityOfOutputs" type="modbus:uint16"/>
+            <xs:element name="byteCount" type="modbus:uint8"/>
+            <xs:element name="outputsValue" type="modbus:byteArray"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="writeMultipleCoilsRequest" type="modbus:WriteMultipleCoilsRequestType"/>
+
+    <!-- Write Multiple Coils Response -->
+    <xs:complexType name="WriteMultipleCoilsResponseType">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+            <xs:element name="startingAddress" type="modbus:uint16"/>
+            <xs:element name="quantityOfOutputs" type="modbus:uint16"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="writeMultipleCoilsResponse" type="modbus:WriteMultipleCoilsResponseType"/>
+
+    <!-- Main Modbus Message -->
+    <xs:element name="modbusMessage">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="Header">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="TransactionID" type="xs:unsignedShort" 
-                                dfdl:lengthKind="explicit" dfdl:length="2"/>
-                            <xs:element name="ProtocolID" type="xs:unsignedShort" 
-                                dfdl:lengthKind="explicit" dfdl:length="2"/>
-                            <xs:element name="Length" type="xs:unsignedShort"
-                                dfdl:lengthKind="explicit" dfdl:length="2"/>
-                            <xs:element name="UnitID" type="xs:unsignedByte"
-                                dfdl:lengthKind="explicit" dfdl:length="1"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="FunctionCode" type="xs:unsignedByte"
-                    dfdl:lengthKind="explicit" dfdl:length="1"/>
-                <xs:element name="Data">
-                    <xs:complexType>
-                        <xs:choice>
-                            <xs:element name="ReadCoilsRequest">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="StartingAddress" type="xs:unsignedShort"
-                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
-                                        <xs:element name="QuantityOfCoils" type="xs:unsignedShort"
-                                            dfdl:lengthKind="explicit" dfdl:length="2"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ReadCoilsResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ByteCount" type="xs:unsignedByte"
-                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
-                                        <xs:element name="CoilStatus" type="xs:hexBinary"
-                                            dfdl:lengthKind="explicit" 
-                                            dfdl:lengthUnits="bytes"
-                                            dfdl:length="{ ../ByteCount }"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                            <xs:element name="ErrorResponse">
-                                <xs:complexType>
-                                    <xs:sequence>
-                                        <xs:element name="ExceptionCode" type="xs:unsignedByte"
-                                            dfdl:lengthKind="explicit" dfdl:length="1"/>
-                                    </xs:sequence>
-                                </xs:complexType>
-                            </xs:element>
-                        </xs:choice>
-                    </xs:complexType>
-                </xs:element>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:alignmentUnits="bytes">
+                <xs:element ref="modbus:MBAPHeader" minOccurs="0"/>
+                <xs:element ref="modbus:functionCode"/>
+                <xs:choice dfdl:choiceDispatchKey="{ xs:string(functionCode) }">
+                    <xs:element ref="modbus:exceptionCode"/>
+                    <xs:element ref="modbus:readCoilsRequest"/>
+                    <xs:element ref="modbus:readCoilsResponse"/>
+                    <xs:element ref="modbus:writeSingleCoil"/>
+                    <xs:element ref="modbus:writeMultipleCoilsRequest"/>
+                    <xs:element ref="modbus:writeMultipleCoilsResponse"/>
+                </xs:choice>
             </xs:sequence>
         </xs:complexType>
     </xs:element>

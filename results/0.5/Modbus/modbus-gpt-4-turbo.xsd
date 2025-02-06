@@ -1,26 +1,52 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/dfdl/modbus"
-           xmlns:tns="http://example.com/dfdl/modbus">
+           targetNamespace="http://example.com/modbus"
+           xmlns:tns="http://example.com/modbus">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:ModbusFormat"/>
+            <dfdl:defineFormat name="ModbusFormat">
+                <dfdl:format byteOrder="bigEndian" bitOrder="mostSignificantBitFirst"
+                             representation="binary"/>
+            </dfdl:defineFormat>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:complexType name="ModbusFormat">
-        <xs:sequence>
-            <xs:element name="transactionId" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="protocolId" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <xs:element name="unitId" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <xs:element name="functionCode" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="%LF;"/>
-        </xs:sequence>
-    </xs:complexType>
+    <xs:element name="ModbusTCPFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="TransactionIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+                <xs:element name="ProtocolIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+                <xs:element name="Length" type="xs:unsignedShort" dfdl:length="2"/>
+                <xs:element name="UnitIdentifier" type="xs:unsignedByte" dfdl:length="1"/>
+                <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1"/>
+                <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../Length - 2 }"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-    <xs:element name="ModbusMessage" type="tns:ModbusFormat"/>
+    <xs:element name="ModbusRTUFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Address" type="xs:unsignedByte" dfdl:length="1"/>
+                <xs:element name="FunctionCode" type="xs:unsignedByte" dfdl:length="1"/>
+                <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:terminator="CRC"/>
+                <xs:element name="CRC" type="xs:unsignedShort" dfdl:length="2"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="ModbusASCIIFrame">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Start" type="xs:string" dfdl:length="1" dfdl:initiator=":"/>
+                <xs:element name="Address" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:textNumberRep="standard"/>
+                <xs:element name="FunctionCode" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:textNumberRep="standard"/>
+                <xs:element name="Data" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="LRC"/>
+                <xs:element name="LRC" type="xs:string" dfdl:length="2" dfdl:encoding="US-ASCII" dfdl:textNumberRep="standard"/>
+                <xs:element name="End" type="xs:string" dfdl:length="2" dfdl:terminator="CR LF"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

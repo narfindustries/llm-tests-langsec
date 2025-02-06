@@ -1,57 +1,39 @@
-$schema: https://kaitai.io/schema/draft-04.yaml#
-id: zip-gemini-1
-endian: be
-
-seq:
-  - id: header
-    type: header_t
-  - id: central_directory
-    type: seq
-    repeat: expr
-    expr: header.cd_count
-    items:
-      type: central_directory_entry_t
-  - id: end_of_central_directory_record
-    type: end_of_central_directory_record_t
-
-
 types:
-  header_t:
+  zip_end_central_dir_record:
     seq:
       - id: signature
         type: u4
         enum:
-          0x04034b50: header
-      - id: disk_number
+          zip_end_central_dir_signature: 0x06054b50
+      - id: num_this_disk
         type: u2
-      - id: disk_start
+      - id: num_start_disk
         type: u2
-      - id: entries_this_disk
+      - id: central_dir_entries_on_this_disk
         type: u2
-      - id: entries_total
+      - id: central_dir_entries_total
         type: u2
-      - id: size_central_directory
+      - id: central_dir_size
         type: u4
-      - id: offset_central_directory
+      - id: central_dir_offset
         type: u4
-      - id: comment_len
+      - id: zip_comment_length
         type: u2
-      - id: comment
+      - id: zip_comment
         type: str
-        size: comment_len
+        size: zip_comment_length
 
-
-  central_directory_entry_t:
+  zip_central_dir_entry:
     seq:
       - id: signature
         type: u4
         enum:
-          0x02014b50: central_directory_entry
+          zip_central_dir_signature: 0x02014b50
       - id: version_made_by
         type: u2
-      - id: version_needed
+      - id: version_needed_to_extract
         type: u2
-      - id: flags
+      - id: general_purpose_bit_flag
         type: u2
       - id: compression_method
         type: u2
@@ -65,52 +47,87 @@ types:
         type: u4
       - id: uncompressed_size
         type: u4
-      - id: filename_len
+      - id: filename_length
         type: u2
-      - id: extra_field_len
+      - id: extra_field_length
         type: u2
-      - id: file_comment_len
+      - id: file_comment_length
         type: u2
       - id: disk_number_start
         type: u2
-      - id: internal_attributes
+      - id: internal_file_attributes
         type: u2
-      - id: external_attributes
+      - id: external_file_attributes
         type: u4
-      - id: local_header_offset
+      - id: relative_offset_local_header
         type: u4
       - id: filename
         type: str
-        size: filename_len
+        size: filename_length
       - id: extra_field
         type: bytes
-        size: extra_field_len
+        size: extra_field_length
       - id: file_comment
         type: str
-        size: file_comment_len
+        size: file_comment_length
 
-
-  end_of_central_directory_record_t:
+  zip_local_file_header:
     seq:
       - id: signature
         type: u4
         enum:
-          0x06054b50: end_of_central_directory_record
-      - id: disk_number
+          zip_local_file_header_signature: 0x04034b50
+      - id: version_needed_to_extract
         type: u2
-      - id: disk_number_with_cd
+      - id: general_purpose_bit_flag
         type: u2
-      - id: entries_this_disk
+      - id: compression_method
         type: u2
-      - id: entries_total
+      - id: last_mod_time
         type: u2
-      - id: size_central_directory
+      - id: last_mod_date
+        type: u2
+      - id: crc32
         type: u4
-      - id: offset_central_directory
+      - id: compressed_size
         type: u4
-      - id: comment_len
+      - id: uncompressed_size
+        type: u4
+      - id: filename_length
         type: u2
-      - id: comment
+      - id: extra_field_length
+        type: u2
+      - id: filename
         type: str
-        size: comment_len
+        size: filename_length
+      - id: extra_field
+        type: bytes
+        size: extra_field_length
+      - id: compressed_data
+        type: bytes
+        size: compressed_size
+
+  zip_data_descriptor:
+    seq:
+      - id: signature
+        type: u4
+        enum:
+          zip_data_descriptor_signature: 0x08074b50
+      - id: crc32
+        type: u4
+      - id: compressed_size
+        type: u4
+      - id: uncompressed_size
+        type: u4
+
+root:
+  seq:
+    - id: files
+      type: zip_local_file_header
+      repeat: eos
+    - id: central_directory
+      type: zip_central_dir_entry
+      repeat: eos
+    - id: end_of_central_directory_record
+      type: zip_end_central_dir_record
 

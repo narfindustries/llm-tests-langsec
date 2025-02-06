@@ -1,0 +1,86 @@
+module ELF;
+
+public type Header = unit {
+    e_ident: bytes &size=16;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+};
+
+public type ProgramHeader = unit {
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
+
+public type SectionHeader = unit {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
+};
+
+public type Symbol = unit {
+    st_name: uint32;
+    st_info: uint8;
+    st_other: uint8;
+    st_shndx: uint16;
+    st_value: uint64;
+    st_size: uint64;
+};
+
+public type Relocation = unit {
+    r_offset: uint64;
+    r_info: uint64;
+};
+
+public type RelocationAddend = unit {
+    r_offset: uint64;
+    r_info: uint64;
+    r_addend: int64;
+};
+
+public type Note = unit {
+    namesz: uint32;
+    descsz: uint32;
+    type: uint32;
+    name: bytes &size=this.namesz;
+    desc: bytes &size=this.descsz;
+};
+
+public type Dynamic = unit {
+    d_tag: int64;
+    d_un: uint64;
+};
+
+public type ELF = unit {
+    header: Header;
+    program_headers: ProgramHeader[] &size=this.header.e_phnum;
+    section_headers: SectionHeader[] &size=this.header.e_shnum;
+    symbols: Symbol[] &size=this.section_headers[this.header.e_shstrndx].sh_size / this.section_headers[this.header.e_shstrndx].sh_entsize;
+    relocations: Relocation[] &size=this.section_headers[this.header.e_shstrndx].sh_size / this.section_headers[this.header.e_shstrndx].sh_entsize;
+    relocations_addend: RelocationAddend[] &size=this.section_headers[this.header.e_shstrndx].sh_size / this.section_headers[this.header.e_shstrndx].sh_entsize;
+    notes: Note[] &size=this.section_headers[this.header.e_shstrndx].sh_size / this.section_headers[this.header.e_shstrndx].sh_entsize;
+    dynamics: Dynamic[] &size=this.section_headers[this.header.e_shstrndx].sh_size / this.section_headers[this.header.e_shstrndx].sh_entsize;
+};

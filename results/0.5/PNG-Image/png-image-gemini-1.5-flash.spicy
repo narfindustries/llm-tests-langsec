@@ -1,40 +1,92 @@
-#ifndef PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-#define PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
+module PNG;
 
-#include <stdint.h>
-#include <stdbool.h>
+type png_chunk_header = record {
+    length: uint32;
+    type: string[4];
+};
 
-// Define data structures as needed based on your PNG image processing requirements.  This is a placeholder.
-typedef struct {
-  uint32_t width;
-  uint32_t height;
-  uint8_t* data;
-} PNGImage;
+type png_ihdr = record {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
 
-// Function prototypes.  Replace with your actual functions.
-bool load_png(const char* filename, PNGImage* image);
-bool process_image(PNGImage* image);
-bool save_png(const char* filename, const PNGImage* image);
+type png_palette_entry = record {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
 
+type png_plte = record {
+    palette: vector[png_palette_entry];
+};
 
-// Main function.  This is a placeholder and needs to reflect your actual logic.
-bool png_image_gemini_1_5_flash(const char* input_filename, const char* output_filename) {
-  PNGImage image;
+type png_trns = record {
+    transparency_data: bytes;
+};
 
-  if (!load_png(input_filename, &image)) {
-    return false;
-  }
+type png_idat = record {
+    data: bytes;
+};
 
-  if (!process_image(&image)) {
-    return false;
-  }
+type png_chunk = record {
+    header: png_chunk_header;
+    data: bytes;
+    crc: uint32;
+};
 
-  if (!save_png(output_filename, &image)) {
-    return false;
-  }
+type png_file = record {
+    signature: bytes[8];
+    chunks: vector[png_chunk];
+};
 
-  return true;
+type png_gama = record {
+    gamma: uint32;
+};
+
+type png_chrm = record {
+    white_point_x: uint32;
+    white_point_y: uint32;
+    red_x: uint32;
+    red_y: uint32;
+    green_x: uint32;
+    green_y: uint32;
+    blue_x: uint32;
+    blue_y: uint32;
+};
+
+type png_text = record {
+    keyword: string;
+    text: string;
+};
+
+type png_iCCP = record {
+    profileName: string;
+    compressionMethod: uint8;
+    compressedProfile: bytes;
+};
+
+function parse_png(file_path: string): png_file {
+    local file_data = read_file(file_path);
+
+    if (len(file_data) < 8 || file_data[0:8] != "\x89PNG\r\n\x1a\n") {
+        return {};
+    }
+
+    local png = {signature=file_data[0:8], chunks=[]};
+    local offset = 8;
+    while (offset < len(file_data)) {
+        local chunk_header = parse_record(file_data[offset:offset+8], png_chunk_header);
+        local chunk_data = file_data[offset+8:offset+8+chunk_header.length];
+        local chunk_crc = parse_uint32(file_data[offset+8+chunk_header.length:offset+12+chunk_header.length]);
+        offset += 12 + chunk_header.length;
+
+        local chunk = record {header=chunk_header, data=chunk_data, crc=chunk_crc};
+        png.chunks += chunk;
+    }
+    return png;
 }
-
-#endif // PNG_IMAGE_GEMINI_1_5_FLASH_SPICY
-

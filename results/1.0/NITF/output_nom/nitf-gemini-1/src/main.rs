@@ -1,74 +1,94 @@
+use nom::{
+    bytes::complete::{tag, take_while1},
+    number::complete::{be_u16, be_u32},
+    sequence::{tuple, preceded},
+    IResult, Err, error::ErrorKind,
+};
 use std::env;
 use std::fs::File;
 use std::io::Read;
-use nom::{
-    bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, value},
-    number::complete::{be_u16, be_u32, be_u64},
-    sequence::{preceded, tuple},
-    IResult,
-};
+use std::str;
 
 #[derive(Debug)]
-struct NitfHeader {
-    file_header: FileHeader,
-    // Add other header structures as needed based on NITF specification
+struct NitfFileHeader {
+    file_header_length: u32,
+    // ... other fields ... Add more fields as needed
 }
-
 
 #[derive(Debug)]
-struct FileHeader {
-    id: String,
-    version: String,
-    // Add other fields as needed based on NITF specification
+struct NitfImageHeader {
+    image_number: u16,
+    image_width: u32,
+    image_height: u32,
+    // ... other fields ... Add more fields as needed
 }
 
-
-fn file_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
-    let (input, id) = map_res(take(2usize), std::str::from_utf8)(input)?;
-    let (input, version) = map_res(take(2usize), std::str::from_utf8)(input)?;
-
-    Ok((input,FileHeader {id: id.to_string(), version:version.to_string()}))
+fn parse_null_terminated_string(input: &[u8]) -> IResult<&[u8], String> {
+    let (rest, bytes) = take_while1(|b| b != 0)(input)?;
+    match str::from_utf8(bytes) {
+        Ok(s) => Ok((rest, s.to_string())),
+        Err(_) => Err(Err::Error(nom::error::Error{
+            input,
+            code: ErrorKind::NonNumeric, //Using a valid ErrorKind
+        })),
+    }
 }
 
+fn parse_nitf_file_header(input: &[u8]) -> IResult<&[u8], NitfFileHeader> {
+    let (rest, (version, file_header_length)) = tuple((
+        parse_null_terminated_string,
+        preceded(tag(b"NITF"), be_u32),
+    ))(input)?;
 
-fn nitf_header(input: &[u8]) -> IResult<&[u8], NitfHeader> {
-    let (input, file_header) = file_header(input)?;
-   Ok((input, NitfHeader { file_header }))
+    println!("NITF version: {}", version);
+    Ok((
+        rest,
+        NitfFileHeader {
+            file_header_length,
+            // ... other fields ...
+        },
+    ))
 }
 
+fn parse_nitf_image_header(input: &[u8]) -> IResult<&[u8], NitfImageHeader> {
+    let (rest, (image_number, image_width, image_height)) = tuple((be_u16, be_u32, be_u32))(input)?;
+    Ok((
+        rest,
+        NitfImageHeader {
+            image_number,
+            image_width,
+            image_height,
+            // ... other fields ...
+        },
+    ))
+}
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <NITF_file>", args[0]);
-        return;
+        return Ok(());
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Error opening file {}: {}", filename, err);
-            return;
-        }
-    };
-
+    let mut file = File::open(filename)?;
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            eprintln!("Error reading file: {}", err);
-            return;
-        }
-    };
+    file.read_to_end(&mut buffer)?;
 
-    match nitf_header(&buffer) {
-        Ok((_, header)) => println!("NITF Header: {:?}", header),
-        Err(err) => {
-            eprintln!("Error parsing NITF header: {:?}", err);
-
+    match parse_nitf_file_header(&buffer) {
+        Ok((rest, header)) => {
+            println!("File Header: {:?}", header);
+            // Process the remaining data (Image Header and image data)
+            match parse_nitf_image_header(rest) {
+                Ok((_, image_header)) => {
+                    println!("Image Header: {:?}", image_header);
+                    // ...Further processing for image data and TREs here...
+                }
+                Err(e) => eprintln!("Error parsing image header: {:?}", e),
+            }
         }
+        Err(e) => eprintln!("Error parsing file header: {:?}", e),
     }
-}
 
+    Ok(())
+}

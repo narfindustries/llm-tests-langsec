@@ -1,264 +1,246 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
     number::complete::{be_u16, be_u8},
-    sequence::{preceded, tuple},
     IResult,
-    multi::many0,
+    multi::count,
+    sequence::tuple,
 };
+use std::env;
+use std::fs;
 
-#[derive(Debug)]
-struct JFIFHeader {
-    identifier: [u8; 5],
-    version: u16,
-    units: u8,
-    x_density: u16,
-    y_density: u16,
-    thumb_width: u8,
-    thumb_height: u8,
-    thumb_data: Vec<u8>,
+#[derive(Debug, Clone)]
+struct JpegImage {
+    segments: Vec<Segment>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+enum Segment {
+    StartOfImage,
+    EndOfImage,
+    StartOfFrame0(FrameHeader),
+    StartOfFrame1(FrameHeader),
+    StartOfFrame2(FrameHeader),
+    StartOfFrame3(FrameHeader),
+    StartOfScan(ScanHeader),
+    DefineQuantizationTable(QuantizationTable),
+    DefineHuffmanTable(HuffmanTable),
+    DefineRestartInterval(u16),
+    Application(u8, Vec<u8>),
+    Comment(Vec<u8>),
+}
+
+#[derive(Debug, Clone)]
+struct FrameHeader {
+    precision: u8,
+    height: u16,
+    width: u16,
+    components: Vec<FrameComponent>,
+}
+
+#[derive(Debug, Clone)]
+struct FrameComponent {
+    id: u8,
+    h_sampling: u8,
+    v_sampling: u8,
+    quant_table_num: u8,
+}
+
+#[derive(Debug, Clone)]
+struct ScanHeader {
+    components: Vec<ScanComponent>,
+    start_spectral: u8,
+    end_spectral: u8,
+    approx: u8,
+}
+
+#[derive(Debug, Clone)]
+struct ScanComponent {
+    id: u8,
+    dc_ac_tables: u8,
+}
+
+#[derive(Debug, Clone)]
 struct QuantizationTable {
-    precision_and_id: u8,
-    table: Vec<u8>,
+    precision: u8,
+    id: u8,
+    values: Vec<u8>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct HuffmanTable {
-    class_and_id: u8,
+    class: u8,
+    id: u8,
     counts: Vec<u8>,
     values: Vec<u8>,
 }
 
-#[derive(Debug)]
-struct FrameComponent {
-    id: u8,
-    sampling_factors: u8,
-    qt_selector: u8,
-}
-
-#[derive(Debug)]
-struct Frame {
-    precision: u8,
-    height: u16,
-    width: u16,
-    num_components: u8,
-    components: Vec<FrameComponent>,
-}
-
-#[derive(Debug)]
-struct ScanComponent {
-    id: u8,
-    huffman_selectors: u8,
-}
-
-#[derive(Debug)]
-struct Scan {
-    num_components: u8,
-    components: Vec<ScanComponent>,
-    start_spectral: u8,
-    end_spectral: u8,
-    approx_high_low: u8,
-    image_data: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct JPEGSegment {
-    marker: u8,
-    length: u16,
-    data: Vec<u8>,
-}
-
-fn parse_jfif_header(input: &[u8]) -> IResult<&[u8], JFIFHeader> {
-    let (input, identifier) = take(5usize)(input)?;
-    let (input, version) = be_u16(input)?;
-    let (input, units) = be_u8(input)?;
-    let (input, x_density) = be_u16(input)?;
-    let (input, y_density) = be_u16(input)?;
-    let (input, thumb_width) = be_u8(input)?;
-    let (input, thumb_height) = be_u8(input)?;
-    let thumb_size = (thumb_width as usize) * (thumb_height as usize) * 3;
-    let (input, thumb_data) = take(thumb_size)(input)?;
-    
-    Ok((input, JFIFHeader {
-        identifier: identifier.try_into().unwrap(),
-        version,
-        units,
-        x_density,
-        y_density,
-        thumb_width,
-        thumb_height,
-        thumb_data: thumb_data.to_vec(),
-    }))
-}
-
-fn parse_quantization_table(input: &[u8]) -> IResult<&[u8], QuantizationTable> {
-    let (input, precision_and_id) = be_u8(input)?;
-    let precision = (precision_and_id >> 4) & 0x0F;
-    let table_size = if precision == 0 { 64 } else { 128 };
-    let (input, table) = take(table_size)(input)?;
-    
-    Ok((input, QuantizationTable {
-        precision_and_id,
-        table: table.to_vec(),
-    }))
-}
-
-fn parse_huffman_table(input: &[u8]) -> IResult<&[u8], HuffmanTable> {
-    let (input, class_and_id) = be_u8(input)?;
-    let (input, counts) = take(16usize)(input)?;
-    let num_values: usize = counts.iter().map(|&x| x as usize).sum();
-    let (input, values) = take(num_values)(input)?;
-    
-    Ok((input, HuffmanTable {
-        class_and_id,
-        counts: counts.to_vec(),
-        values: values.to_vec(),
-    }))
-}
-
 fn parse_frame_component(input: &[u8]) -> IResult<&[u8], FrameComponent> {
-    let (input, (id, sampling_factors, qt_selector)) = tuple((be_u8, be_u8, be_u8))(input)?;
-    
+    let (input, (id, sampling_factors, quant_table_num)) = tuple((be_u8, be_u8, be_u8))(input)?;
     Ok((input, FrameComponent {
         id,
-        sampling_factors,
-        qt_selector,
+        h_sampling: sampling_factors >> 4,
+        v_sampling: sampling_factors & 0x0F,
+        quant_table_num,
     }))
 }
 
-fn parse_frame(input: &[u8]) -> IResult<&[u8], Frame> {
-    let (input, precision) = be_u8(input)?;
-    let (input, height) = be_u16(input)?;
-    let (input, width) = be_u16(input)?;
-    let (input, num_components) = be_u8(input)?;
-    let mut components = Vec::new();
-    let mut remaining = input;
+fn parse_frame_header(input: &[u8]) -> IResult<&[u8], FrameHeader> {
+    let (input, _length) = be_u16(input)?;
+    let (input, (precision, height, width, num_components)) = 
+        tuple((be_u8, be_u16, be_u16, be_u8))(input)?;
+    let (input, components) = count(parse_frame_component, num_components as usize)(input)?;
     
-    for _ in 0..num_components {
-        let (new_input, component) = parse_frame_component(remaining)?;
-        components.push(component);
-        remaining = new_input;
-    }
-    
-    Ok((remaining, Frame {
+    Ok((input, FrameHeader {
         precision,
         height,
         width,
-        num_components,
         components,
     }))
 }
 
 fn parse_scan_component(input: &[u8]) -> IResult<&[u8], ScanComponent> {
-    let (input, (id, huffman_selectors)) = tuple((be_u8, be_u8))(input)?;
-    
+    let (input, (id, tables)) = tuple((be_u8, be_u8))(input)?;
     Ok((input, ScanComponent {
         id,
-        huffman_selectors,
+        dc_ac_tables: tables,
     }))
 }
 
-fn parse_scan(input: &[u8]) -> IResult<&[u8], Scan> {
+fn parse_scan_header(input: &[u8]) -> IResult<&[u8], ScanHeader> {
+    let (input, _length) = be_u16(input)?;
     let (input, num_components) = be_u8(input)?;
-    let mut components = Vec::new();
-    let mut remaining = input;
+    let (input, components) = count(parse_scan_component, num_components as usize)(input)?;
+    let (input, (start_spectral, end_spectral, approx)) = 
+        tuple((be_u8, be_u8, be_u8))(input)?;
     
-    for _ in 0..num_components {
-        let (new_input, component) = parse_scan_component(remaining)?;
-        components.push(component);
-        remaining = new_input;
-    }
-    
-    let (remaining, start_spectral) = be_u8(remaining)?;
-    let (remaining, end_spectral) = be_u8(remaining)?;
-    let (remaining, approx_high_low) = be_u8(remaining)?;
-    
-    Ok((remaining, Scan {
-        num_components,
+    Ok((input, ScanHeader {
         components,
         start_spectral,
         end_spectral,
-        approx_high_low,
-        image_data: remaining.to_vec(),
+        approx,
     }))
 }
 
-fn parse_segment(input: &[u8]) -> IResult<&[u8], JPEGSegment> {
+fn parse_quantization_table(input: &[u8]) -> IResult<&[u8], QuantizationTable> {
+    let (input, _length) = be_u16(input)?;
+    let (input, info) = be_u8(input)?;
+    let precision = info >> 4;
+    let id = info & 0x0F;
+    let table_size = if precision == 0 { 64 } else { 128 };
+    let (input, values) = count(be_u8, table_size)(input)?;
+    
+    Ok((input, QuantizationTable {
+        precision,
+        id,
+        values,
+    }))
+}
+
+fn parse_huffman_table(input: &[u8]) -> IResult<&[u8], HuffmanTable> {
+    let (input, _length) = be_u16(input)?;
+    let (input, info) = be_u8(input)?;
+    let class = info >> 4;
+    let id = info & 0x0F;
+    let (input, counts) = count(be_u8, 16)(input)?;
+    let num_values: usize = counts.iter().map(|&x| x as usize).sum();
+    let (input, values) = count(be_u8, num_values)(input)?;
+    
+    Ok((input, HuffmanTable {
+        class,
+        id,
+        counts,
+        values,
+    }))
+}
+
+fn parse_segment(input: &[u8]) -> IResult<&[u8], Segment> {
     let (input, _) = tag(&[0xFF])(input)?;
     let (input, marker) = be_u8(input)?;
-    let (input, length) = be_u16(input)?;
-    let (input, data) = take(length as usize - 2)(input)?;
     
-    Ok((input, JPEGSegment {
-        marker,
-        length,
-        data: data.to_vec(),
-    }))
+    match marker {
+        0xD8 => Ok((input, Segment::StartOfImage)),
+        0xD9 => Ok((input, Segment::EndOfImage)),
+        0xC0 => {
+            let (input, header) = parse_frame_header(input)?;
+            Ok((input, Segment::StartOfFrame0(header)))
+        },
+        0xC1 => {
+            let (input, header) = parse_frame_header(input)?;
+            Ok((input, Segment::StartOfFrame1(header)))
+        },
+        0xC2 => {
+            let (input, header) = parse_frame_header(input)?;
+            Ok((input, Segment::StartOfFrame2(header)))
+        },
+        0xC3 => {
+            let (input, header) = parse_frame_header(input)?;
+            Ok((input, Segment::StartOfFrame3(header)))
+        },
+        0xDA => {
+            let (input, header) = parse_scan_header(input)?;
+            Ok((input, Segment::StartOfScan(header)))
+        },
+        0xDB => {
+            let (input, table) = parse_quantization_table(input)?;
+            Ok((input, Segment::DefineQuantizationTable(table)))
+        },
+        0xC4 => {
+            let (input, table) = parse_huffman_table(input)?;
+            Ok((input, Segment::DefineHuffmanTable(table)))
+        },
+        0xDD => {
+            let (input, _length) = be_u16(input)?;
+            let (input, interval) = be_u16(input)?;
+            Ok((input, Segment::DefineRestartInterval(interval)))
+        },
+        0xE0..=0xEF => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length as usize - 2)(input)?;
+            Ok((input, Segment::Application(marker - 0xE0, data.to_vec())))
+        },
+        0xFE => {
+            let (input, length) = be_u16(input)?;
+            let (input, data) = take(length as usize - 2)(input)?;
+            Ok((input, Segment::Comment(data.to_vec())))
+        },
+        _ => Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag
+        ))),
+    }
+}
+
+fn parse_jpeg(input: &[u8]) -> IResult<&[u8], JpegImage> {
+    let mut segments = Vec::new();
+    let mut current_input = input;
+    
+    loop {
+        match parse_segment(current_input) {
+            Ok((remaining, segment)) => {
+                let is_end = matches!(segment, Segment::EndOfImage);
+                segments.push(segment);
+                if is_end {
+                    break;
+                }
+                current_input = remaining;
+            },
+            Err(e) => return Err(e),
+        }
+    }
+    
+    Ok((current_input, JpegImage { segments }))
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <jpeg_file>", args[0]);
-        return;
+        std::process::exit(1);
     }
 
-    let mut file = File::open(&args[1]).expect("Failed to open file");
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
-
-    let mut input = buffer.as_slice();
-    let mut segments = Vec::new();
-
-    while !input.is_empty() {
-        match parse_segment(input) {
-            Ok((remaining, segment)) => {
-                segments.push(segment);
-                input = remaining;
-            }
-            Err(e) => {
-                eprintln!("Error parsing JPEG: {:?}", e);
-                break;
-            }
-        }
-    }
-
-    println!("Found {} segments", segments.len());
-    for (i, segment) in segments.iter().enumerate() {
-        println!("Segment {}: Marker: 0x{:02X}, Length: {}", i, segment.marker, segment.length);
-        
-        match segment.marker {
-            0xE0 => {
-                if let Ok((_, header)) = parse_jfif_header(&segment.data) {
-                    println!("JFIF Header: {:?}", header);
-                }
-            }
-            0xDB => {
-                if let Ok((_, qt)) = parse_quantization_table(&segment.data) {
-                    println!("Quantization Table: {:?}", qt);
-                }
-            }
-            0xC4 => {
-                if let Ok((_, ht)) = parse_huffman_table(&segment.data) {
-                    println!("Huffman Table: {:?}", ht);
-                }
-            }
-            0xC0 => {
-                if let Ok((_, frame)) = parse_frame(&segment.data) {
-                    println!("Start of Frame: {:?}", frame);
-                }
-            }
-            0xDA => {
-                if let Ok((_, scan)) = parse_scan(&segment.data) {
-                    println!("Start of Scan: {:?}", scan);
-                }
-            }
-            _ => {}
-        }
+    let data = fs::read(&args[1]).expect("Failed to read file");
+    match parse_jpeg(&data) {
+        Ok((_, jpeg)) => println!("{:#?}", jpeg),
+        Err(e) => eprintln!("Failed to parse JPEG: {:?}", e),
     }
 }

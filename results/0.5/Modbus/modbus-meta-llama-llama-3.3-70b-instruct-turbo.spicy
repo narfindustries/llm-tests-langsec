@@ -1,90 +1,199 @@
-# Zeek Spicy specification for Modbus protocol
-
-@ifdef::.spicyModeratelyStrict
-
 module Modbus;
 
-fetch-client Modbus::Client {
-    conn: Modbus::Connection,
-    message: Modbus::Message,
-    is_orig: bool,
-};
+type Address = uint8;
+type FunctionCode = uint8;
+type SubFunction = uint8;
+type DataValue = uint16;
+type CoilStatus = uint16;
+type InputStatus = uint16;
+type RegisterValue = uint16;
 
-fetch-server Modbus::Server {
-    conn: Modbus::Connection,
-    message: Modbus::Message,
-    is_orig: bool,
-};
-
-type Modbus::Connection = record {
-    addr: addr,
-    port: port,
-    transport: transport,
-};
-
-type Modbus::Message = record {
-    transaction_id: uint16,
-    protocol_id: uint16,
-    length: uint16,
-    unit_id: uint8,
-    function_code: uint8,
-    data: bytestring,
-};
-
-# Standard Modbus Function Codes
-const ReadCoils                    : uint8 = 0x01;
-const ReadDiscreteInputs           : uint8 = 0x02;
-const ReadHoldingRegisters         : uint8 = 0x03;
-const ReadInputRegisters           : uint8 = 0x04;
-const WriteSingleCoil              : uint8 = 0x05;
-const WriteSingleRegister          : uint8 = 0x06;
-const ReadExceptionStatus          : uint8 = 0x07;
-const.Diagnostics                  : uint8 = 0x08;
-const Program                      : uint8 = 0x10;
-const Poll                         : uint8 = 0x11;
-const SendAwake                    : uint8 = 0x12;
-const imgUrl                       : uint8 = 0x2B;
-
-# skip reserved function codes 0x52-0x5F
-
-# skip reserved function codes 0xE0-0xE4
-
-# skip reserved function codes 0xE6-0xE9
-
-# skip reserved function codes 0xF2
-
-
-# Enum value for function code
-const FunctionCode: enum {
-    FC_ReadCoils = ReadCoils,
-    FC_ReadDiscreteInputs = ReadDiscreteInputs,
-    FC_ReadHoldingRegisters = ReadHoldingRegisters,
-    FC_ReadInputRegisters = ReadInputRegisters,
-    FC_WriteSingleCoil = WriteSingleCoil,
-    FC_WriteSingleRegister = WriteSingleRegister,
-    FC_ReadExceptionStatus = ReadExceptionStatus,
-    FC_Diagnostics = .Diagnostics,
-    FC_Program = Program,
-    FC_Poll = Poll,
-    FC_SendAwake = SendAwake,
-    FC_imgUrl = imgUrl,
-};
-
-event zeek::zeek_init() {
-    Modbus::register_protocol(Modbus::Client);
-    Modbus::register_protocol(Modbus::Server);
+type ModbusMessage = record {
+  address: Address;
+  function_code: FunctionCode;
+  data: DataField;
 }
 
-event connection_established(c: connection) {
-    if (c$id$resp_p == 170) {
-        # TCP connection, handle as Modbus over TCP
-        Modbus::start_protocol(Modbus::Client, c);
-    } else if (c$id$resp_p == 0/udp) {
-        # UDP connection, handle as Modbus over UDP
-        Modbus::start_protocol(Modbus::Server, c);
-    }
+type DataField = record {
+  sub_function: SubFunction;
+  data_values: DataValues;
 }
 
-event zeek_done() {
-    print("Modbus Spicy protocol finished");
+type DataValues = record {
+  values: vector[DataValue];
 }
+
+type ReadCoilStatus = record {
+  starting_address: uint16;
+  quantity_of_coils: uint16;
+}
+
+type ReadInputStatus = record {
+  starting_address: uint16;
+  quantity_of_inputs: uint16;
+}
+
+type ReadHoldingRegisters = record {
+  starting_address: uint16;
+  quantity_of_registers: uint16;
+}
+
+type ReadInputRegisters = record {
+  starting_address: uint16;
+  quantity_of_registers: uint16;
+}
+
+type WriteSingleCoil = record {
+  output_address: uint16;
+  output_value: uint16;
+}
+
+type WriteSingleRegister = record {
+  register_address: uint16;
+  register_value: uint16;
+}
+
+type WriteMultipleCoils = record {
+  starting_address: uint16;
+  quantity_of_coils: uint16;
+  coil_values: vector[uint16];
+}
+
+type WriteMultipleRegisters = record {
+  starting_address: uint16;
+  quantity_of_registers: uint16;
+  register_values: vector[uint16];
+}
+
+type ReportSlaveID = record {
+  slave_id: uint8;
+  run_indicator_status: uint8;
+}
+
+type ReadFileRecord = record {
+  file_number: uint16;
+  record_number: uint16;
+  record_length: uint16;
+}
+
+type WriteFileRecord = record {
+  file_number: uint16;
+  record_number: uint16;
+  record_data: vector[uint16];
+}
+
+type MaskWriteRegister = record {
+  register_address: uint16;
+  and_mask: uint16;
+  or_mask: uint16;
+}
+
+type ReadWriteMultipleRegisters = record {
+  read_starting_address: uint16;
+  quantity_of_registers_to_read: uint16;
+  write_starting_address: uint16;
+  quantity_of_registers_to_write: uint16;
+  write_register_values: vector[uint16];
+}
+
+type ReadFIFOQueue = record {
+  fifo_pointer_address: uint16;
+}
+
+type EncapsulatedInterfaceTransport = record {
+  protocol_id: uint16;
+  protocol_data: vector[uint8];
+}
+
+let modbus_message = ModbusMessage(
+  address = 0x01,
+  function_code = 0x01,
+  data = DataField(
+    sub_function = 0x01,
+    data_values = DataValues(
+      values = vector[uint16](0x0001)
+    )
+  )
+);
+
+let read_coil_status = ReadCoilStatus(
+  starting_address = 0x0000,
+  quantity_of_coils = 0x0001
+);
+
+let read_input_status = ReadInputStatus(
+  starting_address = 0x0000,
+  quantity_of_inputs = 0x0001
+);
+
+let read_holding_registers = ReadHoldingRegisters(
+  starting_address = 0x0000,
+  quantity_of_registers = 0x0001
+);
+
+let read_input_registers = ReadInputRegisters(
+  starting_address = 0x0000,
+  quantity_of_registers = 0x0001
+);
+
+let write_single_coil = WriteSingleCoil(
+  output_address = 0x0000,
+  output_value = 0x0001
+);
+
+let write_single_register = WriteSingleRegister(
+  register_address = 0x0000,
+  register_value = 0x0001
+);
+
+let write_multiple_coils = WriteMultipleCoils(
+  starting_address = 0x0000,
+  quantity_of_coils = 0x0001,
+  coil_values = vector[uint16](0x0001)
+);
+
+let write_multiple_registers = WriteMultipleRegisters(
+  starting_address = 0x0000,
+  quantity_of_registers = 0x0001,
+  register_values = vector[uint16](0x0001)
+);
+
+let report_slave_id = ReportSlaveID(
+  slave_id = 0x01,
+  run_indicator_status = 0x01
+);
+
+let read_file_record = ReadFileRecord(
+  file_number = 0x0001,
+  record_number = 0x0001,
+  record_length = 0x0001
+);
+
+let write_file_record = WriteFileRecord(
+  file_number = 0x0001,
+  record_number = 0x0001,
+  record_data = vector[uint16](0x0001)
+);
+
+let mask_write_register = MaskWriteRegister(
+  register_address = 0x0000,
+  and_mask = 0x0001,
+  or_mask = 0x0001
+);
+
+let read_write_multiple_registers = ReadWriteMultipleRegisters(
+  read_starting_address = 0x0000,
+  quantity_of_registers_to_read = 0x0001,
+  write_starting_address = 0x0000,
+  quantity_of_registers_to_write = 0x0001,
+  write_register_values = vector[uint16](0x0001)
+);
+
+let read_fifo_queue = ReadFIFOQueue(
+  fifo_pointer_address = 0x0000
+);
+
+let encapsulated_interface_transport = EncapsulatedInterfaceTransport(
+  protocol_id = 0x0001,
+  protocol_data = vector[uint8](0x01)
+);

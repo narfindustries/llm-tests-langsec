@@ -1,99 +1,116 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Basic predefined parsers from Hammer
-static HParser *uint8 = h_uint8();
-static HParser *uint16le = h_uint16_le();
-static HParser *uint16be = h_uint16_be();
-static HParser *uint32le = h_uint32_le();
-static HParser *uint32be = h_uint32_be();
+// Definitions for TIFF field types
+#define BYTE      1
+#define ASCII     2
+#define SHORT     3
+#define LONG      4
+#define RATIONAL  5
 
-// TIFF data type definitions
-typedef struct {
-    uint16_t tag;
-    uint16_t type;
-    uint32_t length;
-    uint32_t value_offset;
-} IFDEntry;
+// TIFF tag identifiers
+#define ImageWidth                256
+#define ImageLength               257
+#define BitsPerSample             258
+#define Compression               259
+#define PhotometricInterpretation 262
+#define StripOffsets              273
+#define SamplesPerPixel           277
+#define RowsPerStrip              278
+#define StripByteCounts           279
+#define XResolution               282
+#define YResolution               283
+#define PlanarConfiguration       284
 
-typedef struct {
-    uint16_t magic;
-    uint32_t ifd_offset;
-} TIFFHeader;
+// Prototype definitions for parsers
+static HParser *build_tiff_parser();
 
-typedef struct {
-    uint32_t entries;
-    IFDEntry *ifd_entry;
-    uint32_t next_ifd;
-} IFD;
-
-// Parser definition for IFDEntry
-static HParser *ifd_entry_parser() {
-    return h_struct(
-        (HMember) { .name = "tag",       .parser = uint16le },
-        (HMember) { .name = "type",      .parser = uint16le },
-        (HMember) { .name = "length",    .parser = uint32le },
-        (HMember) { .name = "value_offset", .parser = uint32le },
-        NULL
-    );
+// Parser implementations
+static HParser *parse_byte() {
+    return h_uint8();
 }
 
-// Parser definition for IFD
-static HParser *ifd_parser() {
-    return h_sequence(
-        h_length_value(h_bind(uint32le, h_length_value(h_bind(uint32le, ifd_entry_parser()))),
-            "entries"),
-        h_bind(uint32le, ifd_entry_parser()),
-        (HParser) {.bit_offset= h_length_value(h_bind(uint32le, ifd_entry_parser()))},
-        (HParser) {.bit_offset = .eof = true},
-        NULL
-    );
+static HParser *parse_short() {
+    return h_uint16();
 }
 
-// Parser for TIFF Header
-static HParser *tiff_header_parser() {
-    return h_struct(
-        (HMember) { .name = "magic",    .parser = uint16be },
-        (HMember) { .name = "ifd_offset", .parser = uint32le },
-        NULL
-    );
+static HParser *parse_long() {
+    return h_uint32();
 }
 
-// Combining into a complete TIFF parser
-static HParser *tiff_parser() {
-    return h_sequence(
-        tiff_header_parser(),
-        h_seek(h_indirect(ifd_parser(), "ifd_offset")),
-        NULL
-    );
+static HParser *parse_rational() {
+    return h_sequence(parse_long(), parse_long(), NULL);
+}
+
+static HParser *parse_ascii() {
+    return h_many1(h_ch_range(0x20, 0x7E));  // Printable ASCII characters plus space
+}
+
+static HParser *parse_ifd_entry() {
+    return h_sequence(parse_short(),  // Tag
+                      parse_short(),  // Type
+                      parse_long(),   // Length
+                      h_choice(parse_byte(), parse_ascii(), parse_short(), parse_long(), parse_rational(), NULL),
+                      NULL);
+}
+
+static HParser *parse_ifd() {
+    return h_sequence(parse_short(),
+                      h_many1(parse_ifd_entry()),
+                      parse_long(),
+                      NULL);
+}
+
+static HParser *parse_tiff_header() {
+    return h_sequence(h_uint16(),  // Byte order (II or MM)
+                      h_uint16(),  // Fixed value 0x002A
+                      parse_long(), // Offset to the first IFD
+                      NULL);
+}
+
+static HParser *build_tiff_parser() {
+    return h_sequence(parse_tiff_header(), parse_ifd(), NULL);
 }
 
 int main(int argc, char *argv[]) {
-    HParseResult *result;
-    HParser *tiffP = tiff_parser();
-
-    // Mimicking file reading for demonstration: Normally use h_parse_file
-    const uint8_t tiff_data[] = {
-        0x4D, 0x4D, 0x00, 0x2A, // Big-endian magic and marker
-        0x00, 0x00, 0x00, 0x08, // Offset to first IFD
-        // First IFD (at least one entry, then next IFD offset)
-        0x01, 0x00, 0x00, 0x01, // 1 entry 
-        0x01, 0x02, // Tag, for instance, 0x0102 (ImageWidth)
-        0x00, 0x03, // Type: SHORT (3)
-        0x00, 0x00, 0x00, 0x01, // Length: 1 
-        0x00, 0x00, 0x00, 0x48, // Value offset (where the data for ImageWidth starts)
-        0x00, 0x00, 0x00, 0x00  // No more IFDs
-    };
-
-    result = h_parse(tiffP, tiff_data, sizeof(tiff_data));
-    if (result) {
-        printf("TIFF parsing successful.\n");
-        h_pprint(stdout, result->ast, 0, 1);  // Pretty print parse tree
-        h_parse_result_free(result);
-    } else {
-        fprintf(stderr, "Failed to parse TIFF data.\n");
+    if (argc != 2) {
+        printf("Usage: %s <TIFF file>\n", argv[0]);
+        return 1;
     }
 
-    h_parser_free(tiffP);
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t sz = ftell(fp);
+    rewind(fp);
+
+    char *buffer = malloc(sz);
+    if (!buffer) {
+        fclose(fp);
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+
+    fread(buffer, 1, sz, fp);
+    fclose(fp);
+
+    HParser *tiff_parser = build_tiff_parser();
+    HParseResult *result = h_parse(tiff_parser, (const uint8_t *)buffer, sz);
+    if (result) {
+        printf("TIFF parsing successful.\n");
+        h_pprint(stdout, result->ast, 0, 0);
+    } else {
+        fprintf(stderr, "TIFF parsing failed.\n");
+    }
+
+    h_parse_result_free(result);
+    h_parser_cleanup(tiff_parser);
+    free(buffer);
+
     return 0;
 }

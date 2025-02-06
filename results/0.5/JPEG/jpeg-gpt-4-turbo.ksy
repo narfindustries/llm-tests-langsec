@@ -2,12 +2,12 @@ meta:
   id: jpeg
   file-extension: jpg
   endian: be
-  title: JPEG (Joint Photographic Experts Group) image
+  title: JPEG (ISO/IEC 10918)
   license: CC0-1.0
-  encoding: ASCII
+  ks-version: 0.9
 
 doc: |
-  JPEG is a commonly used method of lossy compression for digital images, particularly for those images produced by digital photography. JPEG's compression algorithm is at its best on photographs and paintings of realistic scenes with smooth variations of tone and color.
+  JPEG (Joint Photographic Experts Group) image, which is a commonly used method of lossy compression for digital images.
 
 seq:
   - id: segments
@@ -17,56 +17,157 @@ seq:
 types:
   segment:
     seq:
-      - id: magic
-        contents: [0xff]
       - id: marker
-        enum: marker_enum
-        type: u1
-      - id: length
         type: u2
-        if: marker != marker_enum::soi and marker != marker_enum::eoi
-      - id: data
-        size: length - 2
-        if: length > 2
+      - id: body
+        type:
+          switch-on: marker
+          cases:
+            0xffd8: soi
+            0xffe0: appn
+            0xffe1: appn
+            0xffe2: appn
+            0xffe3: appn
+            0xffe4: appn
+            0xffe5: appn
+            0xffe6: appn
+            0xffe7: appn
+            0xffe8: appn
+            0xffe9: appn
+            0xffea: appn
+            0xffeb: appn
+            0xffec: appn
+            0xffed: appn
+            0xffee: appn
+            0xffef: appn
+            0xffdb: dqt
+            0xffc0: sofn
+            0xffc1: sofn
+            0xffc2: sofn
+            0xffc3: sofn
+            0xffc4: dht
+            0xffda: sos
+            0xffd9: eoi
+            0xfffe: com
+            0xffdd: dri
+        size-eos: true
 
-enums:
-  marker_enum:
-    0xd8: soi
-    0xc0: sof0
-    0xc2: sof2
-    0xc4: dht
-    0xdb: dqt
-    0xdd: dri
-    0xda: sos
-    0xfe: com
-    0xd9: eoi
-    0xe0: app0
-    0xe1: app1
-    0xe2: app2
-    0xe3: app3
-    0xe4: app4
-    0xe5: app5
-    0xe6: app6
-    0xe7: app7
-    0xe8: app8
-    0xe9: app9
-    0xea: appa
-    0xeb: appb
-    0xec: appc
-    0xed: appd
-    0xee: appe
-    0xef: appf
-    0xf0: jpg0
-    0xf1: jpg1
-    0xf2: jpg2
-    0xf3: jpg3
-    0xf4: jpg4
-    0xf5: jpg5
-    0xf6: jpg6
-    0xf7: jpg7
-    0xf8: jpg8
-    0xf9: jpg9
-    0xfa: jpga
-    0xfb: jpgb
-    0xfc: jpgc
-    0xfd: jpgd
+    types:
+      soi:
+        doc: Start of Image
+
+      appn:
+        seq:
+          - id: len
+            type: u2
+          - id: data
+            size: len - 2
+
+      dqt:
+        seq:
+          - id: len
+            type: u2
+          - id: qt
+            type: quantization_table
+            repeat: expr
+            repeat-expr: (len - 2) / 65
+
+      sofn:
+        seq:
+          - id: len
+            type: u2
+          - id: precision
+            type: u1
+          - id: height
+            type: u2
+          - id: width
+            type: u2
+          - id: num_components
+            type: u1
+          - id: components
+            type: frame_component
+            repeat: expr
+            repeat-expr: num_components
+
+      dht:
+        seq:
+          - id: len
+            type: u2
+          - id: huffman_tables
+            type: huffman_table
+            repeat: expr
+            repeat-expr: (len - 2) / 17
+
+      sos:
+        seq:
+          - id: len
+            type: u2
+          - id: num_components
+            type: u1
+          - id: components
+            type: scan_component
+            repeat: expr
+            repeat-expr: num_components
+          - id: spectral_selection_start
+            type: u1
+          - id: spectral_selection_end
+            type: u1
+          - id: successive_approximation
+            type: u1
+
+      eoi:
+        doc: End of Image
+
+      com:
+        seq:
+          - id: len
+            type: u2
+          - id: comment
+            type: str
+            encoding: ASCII
+            size: len - 2
+
+      dri:
+        seq:
+          - id: len
+            type: u2
+          - id: restart_interval
+            type: u2
+
+  quantization_table:
+    seq:
+      - id: table_info
+        type: u1
+      - id: table
+        type: u1
+        repeat: expr
+        repeat-expr: 64
+
+  frame_component:
+    seq:
+      - id: component_id
+        type: u1
+      - id: sampling_factors
+        type: u1
+      - id: quant_table_id
+        type: u1
+
+  huffman_table:
+    seq:
+      - id: table_info
+        type: u1
+      - id: lengths
+        type: u1
+        repeat: expr
+        repeat-expr: 16
+      - id: values
+        type: u1
+        repeat: expr
+        repeat-expr: sum(_.lengths)
+
+  scan_component:
+    seq:
+      - id: component_id
+        type: u1
+      - id: huffman_table
+        type: u1

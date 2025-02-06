@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/mqtt"
+           xmlns:mqtt="http://example.com/mqtt"
+           elementFormDefault="qualified">
+
+  <!-- Define the MQTT Packet Type -->
+  <xs:simpleType name="PacketType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="1" />
+      <xs:enumeration value="2" />
+      <xs:enumeration value="3" />
+      <xs:enumeration value="4" />
+      <xs:enumeration value="5" />
+      <xs:enumeration value="6" />
+      <xs:enumeration value="7" />
+      <xs:enumeration value="8" />
+      <xs:enumeration value="9" />
+      <xs:enumeration value="10" />
+      <xs:enumeration value="11" />
+      <xs:enumeration value="12" />
+      <xs:enumeration value="13" />
+      <xs:enumeration value="14" />
+      <xs:enumeration value="15" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Define the MQTT Flags -->
+  <xs:complexType name="Flags">
+    <xs:sequence>
+      <xs:element name="DUP" type="xs:boolean" dfdl:length="1" />
+      <xs:element name="QoS" type="xs:unsignedByte" dfdl:length="2" />
+      <xs:element name="RETAIN" type="xs:boolean" dfdl:length="1" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the MQTT Fixed Header -->
+  <xs:complexType name="FixedHeader">
+    <xs:sequence>
+      <xs:element name="PacketType" type="mqtt:PacketType" dfdl:length="4" />
+      <xs:element name="Flags" type="mqtt:Flags" dfdl:length="4" />
+      <xs:element name="RemainingLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the MQTT Variable Header -->
+  <xs:complexType name="VariableHeader">
+    <xs:sequence>
+      <xs:element name="PacketIdentifier" type="xs:unsignedShort" dfdl:length="16" minOccurs="0" />
+      <xs:element name="PropertiesLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="Properties" type="mqtt:Properties" dfdl:lengthKind="explicit" minOccurs="0" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the MQTT Properties -->
+  <xs:complexType name="Properties">
+    <xs:sequence>
+      <xs:element name="PayloadFormatIndicator" type="xs:unsignedByte" dfdl:length="1" minOccurs="0" />
+      <xs:element name="MessageExpiryInterval" type="xs:unsignedInt" dfdl:length="4" minOccurs="0" />
+      <xs:element name="ContentType" type="xs:string" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="ResponseTopic" type="xs:string" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="CorrelationData" type="xs:hexBinary" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="SubscriptionIdentifier" type="xs:unsignedInt" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="SessionExpiryInterval" type="xs:unsignedInt" dfdl:length="4" minOccurs="0" />
+      <xs:element name="AssignedClientIdentifier" type="xs:string" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="ServerKeepAlive" type="xs:unsignedShort" dfdl:length="2" minOccurs="0" />
+      <xs:element name="AuthenticationMethod" type="xs:string" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="AuthenticationData" type="xs:hexBinary" dfdl:lengthKind="explicit" minOccurs="0" />
+      <xs:element name="RequestProblemInformation" type

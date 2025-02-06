@@ -8,65 +8,71 @@ seq:
     contents: [0x1f, 0x8b]
   - id: compression_method
     type: u1
-    enum: compression_methods
+    enum: compression
   - id: flags
-    type: u1
-  - id: modification_time
+    type: flags
+  - id: mtime
     type: u4
   - id: extra_flags
     type: u1
   - id: operating_system
     type: u1
-    enum: operating_systems
-  - id: extra_fields
+    enum: os
+  - id: extra_field
     type: extra_field
-    if: flags & flags_enum::extra.to_i != 0
+    if: flags.extra
   - id: name
     type: strz
-    encoding: utf-8
-    if: flags & flags_enum::name.to_i != 0
+    encoding: iso-8859-1
+    if: flags.name
   - id: comment
     type: strz
-    encoding: utf-8
-    if: flags & flags_enum::comment.to_i != 0
+    encoding: iso-8859-1
+    if: flags.comment
   - id: header_crc16
     type: u2
-    if: flags & flags_enum::header_crc.to_i != 0
+    if: flags.hcrc
   - id: compressed_data
     size-eos: true
-    if: not _io.eof
+    consume: false
+  - id: footer
+    type: footer
 
 types:
+  flags:
+    seq:
+      - id: reserved
+        type: b3
+      - id: comment
+        type: b1
+      - id: name
+        type: b1
+      - id: extra
+        type: b1
+      - id: hcrc
+        type: b1
+      - id: text
+        type: b1
+
   extra_field:
     seq:
-      - id: len_subfields
+      - id: xlen
         type: u2
-      - id: subfields
-        type: subfield
-        repeat: eos
+      - id: extra_data
+        size: xlen
 
-  subfield:
+  footer:
     seq:
-      - id: id
-        type: u2
-      - id: len_data
-        type: u2
-      - id: data
-        size: len_data
+      - id: crc32
+        type: u4
+      - id: isize
+        type: u4
 
 enums:
-  compression_methods:
-    0: store
-    1: compress
-    2: pack
-    3: lzh
-    4: reserved_4
-    5: reserved_5
-    6: reserved_6
-    7: reserved_7
+  compression:
     8: deflate
 
-  operating_systems:
+  os:
     0: fat
     1: amiga
     2: vms
@@ -82,10 +88,3 @@ enums:
     12: qdos
     13: acorn_riscos
     255: unknown
-
-  flags_enum:
-    1: text
-    2: header_crc
-    4: extra
-    8: name
-    16: comment

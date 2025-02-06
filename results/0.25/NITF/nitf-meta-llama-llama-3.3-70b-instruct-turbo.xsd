@@ -1,65 +1,261 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/nitf"
-           xmlns="http://example.com/nitf"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:element name="nitf">
+  <xs:element name="definition">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="nist" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
-        <xs:element ref="head" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
-        <xs:element ref="body" dfdl:occursCount="1..1" dfdl:compressionThreshold="1000000"/>
+        <xs:element name="format" type="dfdl:formatType"/>
+        <xs:element name="type" type="dfdl:typeType" maxOccurs="unbounded"/>
       </xs:sequence>
+      <xs:attribute name="xmlns" type="xs:string" fixed="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <xs:attribute name="xmlns:ex" type="xs:string" fixed="http://example.com"/>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="nist">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="fileHeader" type="fileHeaderType" dfdl:occursCount="1..1" dfdl:alignment="4" dfdl:alignmentUnits="bytes" dfdl:compressionThreshold="1000000"/>
-        <xs:element name="fileTailer" type="fileTailerType" dfdl:occursCount="1..1" dfdl:alignment="4" dfdl:alignmentUnits="bytes" dfdl:compressionThreshold="1000000"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="fileHeaderType">
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="fileHeaderId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
-      <xs:element name="fileSecurityClassification" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
-      <xs:element name="fileControlNumber" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="25" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
     </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="encoding" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
   </xs:complexType>
-
-  <xs:complexType name="fileTailerType">
+  <xs:complexType name="elementType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="length" type="xs:string" use="optional"/>
+    <xs:attribute name="occurs" type="xs:string" use="optional" default="1..1"/>
+    <xs:attribute name="initiatedContent" type="xs:string" use="optional"/>
+    <xs:attribute name="pattern" type="xs:string" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="typeType">
     <xs:sequence>
-      <xs:element name="fileTailerId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
-      <xs:element name="fileLength" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:length="4" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
     </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
   </xs:complexType>
-
-  <xs:element name="head">
+  <xs:element name="definition">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="headerData" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="0x0A" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="body">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="record" type="recordType" dfdl:occursCount="1..*" dfdl:compressionThreshold="1000000"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="recordType">
-    <xs:sequence>
-      <xs:element name="recordId" type="xs:unsignedShort" dfdl:lengthKind="explicit" dfdl:length="2" dfdl:representation="binary" dfdl:compressionThreshold="1000000"/>
-      <xs:element name="recordData" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="0x0A" dfdl:encoding="ASCII" dfdl:compressionThreshold="1000000"/>
-    </xs:sequence>
-  </xs:complexType>
-
-</xs:schema>
+        <xs:element name="format" type="dfdl:formatType">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileHeader"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="4"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="initiatedContent" type="xs:string" use="optional" value="NITF"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileFormatVersion"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="5"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="initiatedContent" type="xs:string" use="optional" value="02.10"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="SystemAcquisition"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="25"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileSecurity"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="80"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileInfo"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="80"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileTime"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="12"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileTitle"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="80"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileSecurityClassification"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="1"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[UCST]"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileCopyNumber"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="integer"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="5"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="FileNumberOfCopies"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="integer"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="5"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageSegment"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="ImageSegmentType"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="0..*"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="GraphicSegment"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="GraphicSegmentType"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="0..*"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="TextSegment"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="TextSegmentType"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="0..*"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="Trailer"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="4"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="initiatedContent" type="xs:string" use="optional" value="NIFF"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="name" type="xs:string" use="required" value="NITF"/>
+            <xs:attribute name="encoding" type="xs:string" use="required" value="US-ASCII"/>
+            <xs:attribute name="representation" type="xs:string" use="required" value="text"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="type" type="dfdl:typeType">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageIdentifier"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="25"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageDateAndTime"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="12"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[0-9]{4}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{2}"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageSecurityClassification"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="1"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[UCST]"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageTitle"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="80"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageRepresentation"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="2"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[BAM]"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageCompression"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="2"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[NLJ]"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImagePixelType"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="2"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[USF]"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImagePixelSize"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="integer"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="2"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageDimensions"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="string"/>
+                  <xs:attribute name="length" type="xs:string" use="optional" value="10"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                  <xs:attribute name="pattern" type="xs:string" use="optional" value="[0-9]+x[0-9]+"/>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string" use="required" value="ImageData"/>
+                  <xs:attribute name="type" type="xs:string" use="required" value="binary"/>
+                  <xs:attribute name="occurs" type="xs:string" use="optional" value="1..1"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="name" type="xs:string" use="required" value="ImageSegmentType"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="type" type="dfdl:typeType">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" type="dfdl:elementType">
+                <xs:complexType>
+                  <xs:attribute name="name" type="xs:string

@@ -2,6 +2,7 @@ meta:
   id: gif
   file-extension: gif
   endian: le
+
 seq:
   - id: header
     type: header
@@ -9,70 +10,79 @@ seq:
     type: logical_screen_descriptor
   - id: global_color_table
     type: color_table
-    if: logical_screen_descriptor.global_color_table_flag
-    size: logical_screen_descriptor.global_color_table_size * 3
+    if: logical_screen_descriptor.packed_fields.global_color_table_flag
   - id: blocks
     type: block
     repeat: until
     repeat-until: _.block_type == block_type::trailer
+
 types:
   header:
     seq:
       - id: signature
-        contents: [0x47, 0x49, 0x46]
+        contents: "GIF"
       - id: version
         type: str
         size: 3
-        encoding: ascii
+        valid:
+          - '"87a"'
+          - '"89a"'
+
   logical_screen_descriptor:
     seq:
-      - id: canvas_width
+      - id: width
         type: u2
-      - id: canvas_height
+      - id: height
         type: u2
-      - id: flags
-        type: u1
+      - id: packed_fields
+        type: packed_screen_descriptor
       - id: background_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
-    instances:
-      global_color_table_flag:
-        value: (flags & 0b10000000) != 0
-      color_resolution:
-        value: (flags & 0b01110000) >> 4
-      global_color_table_size:
-        value: 2 << (flags & 0b00000111)
+
+  packed_screen_descriptor:
+    seq:
+      - id: global_color_table_flag
+        type: b1
+      - id: color_resolution
+        type: b3
+      - id: sort_flag
+        type: b1
+      - id: global_color_table_size
+        type: b3
+
   color_table:
     seq:
       - id: entries
         type: rgb
         repeat: expr
-        repeat-expr: _parent.size / 3
+        repeat-expr: 2 << _parent.packed_fields.global_color_table_size
+
   rgb:
     seq:
-      - id: r
+      - id: red
         type: u1
-      - id: g
+      - id: green
         type: u1
-      - id: b
+      - id: blue
         type: u1
+
   block:
     seq:
       - id: block_type
         type: u1
         enum: block_type
-      - id: block_data
+      - id: contents
         type:
           switch-on: block_type
           cases:
             'block_type::image_descriptor': image_descriptor
             'block_type::extension': extension
             'block_type::trailer': trailer
+
   image_descriptor:
     seq:
-      - id: separator
-        contents: [0x2C]
       - id: left
         type: u2
       - id: top
@@ -81,60 +91,110 @@ types:
         type: u2
       - id: height
         type: u2
-      - id: flags
-        type: u1
+      - id: packed_fields
+        type: packed_image_descriptor
       - id: local_color_table
         type: color_table
-        if: local_color_table_flag
-        size: local_color_table_size * 3
-      - id: image_data
-        type: image_data
-    instances:
-      local_color_table_flag:
-        value: (flags & 0b10000000) != 0
-      interlace_flag:
-        value: (flags & 0b01000000) != 0
-      local_color_table_size:
-        value: 2 << (flags & 0b00000111)
-  image_data:
-    seq:
+        if: packed_fields.local_color_table_flag
       - id: lzw_min_code_size
         type: u1
-      - id: sub_blocks
-        type: sub_block
+      - id: image_data
+        type: image_data
+
+  packed_image_descriptor:
+    seq:
+      - id: local_color_table_flag
+        type: b1
+      - id: interlace_flag
+        type: b1
+      - id: sort_flag
+        type: b1
+      - id: local_color_table_size
+        type: b3
+
+  image_data:
+    seq:
+      - id: blocks
+        type: data_block
         repeat: until
-        repeat-until: _.length == 0
+        repeat-until: _.block_size == 0
+
+  data_block:
+    seq:
+      - id: block_size
+        type: u1
+      - id: data
+        size: block_size
+        if: block_size > 0
+
   extension:
     seq:
       - id: extension_type
         type: u1
         enum: extension_type
-      - id: extension_data
+      - id: contents
         type:
           switch-on: extension_type
           cases:
             'extension_type::graphic_control': graphic_control_extension
             'extension_type::comment': comment_extension
+            'extension_type::plain_text': plain_text_extension
             'extension_type::application': application_extension
-            _: unknown_extension
+
   graphic_control_extension:
     seq:
       - id: block_size
-        contents: [0x04]
-      - id: flags
-        type: u1
+        contents: [4]
+      - id: packed_fields
+        type: packed_graphic_control
       - id: delay_time
         type: u2
       - id: transparent_color_index
         type: u1
-      - id: block_terminator
-        contents: [0x00]
+
+  packed_graphic_control:
+    seq:
+      - id: reserved
+        type: b3
+      - id: disposal_method
+        type: b3
+      - id: user_input_flag
+        type: b1
+      - id: transparent_color_flag
+        type: b1
+
   comment_extension:
     seq:
-      - id: sub_blocks
-        type: sub_block
+      - id: blocks
+        type: data_block
         repeat: until
-        repeat-until: _.length == 0
+        repeat-until: _.block_size == 0
+
+  plain_text_extension:
+    seq:
+      - id: block_size
+        type: u1
+      - id: text_grid_left_pos
+        type: u2
+      - id: text_grid_top_pos
+        type: u2
+      - id: text_grid_width
+        type: u2
+      - id: text_grid_height
+        type: u2
+      - id: cell_width
+        type: u1
+      - id: cell_height
+        type: u1
+      - id: foreground_color_index
+        type: u1
+      - id: background_color_index
+        type: u1
+      - id: data
+        type: data_block
+        repeat: until
+        repeat-until: _.block_size == 0
+
   application_extension:
     seq:
       - id: block_size
@@ -142,40 +202,27 @@ types:
       - id: identifier
         type: str
         size: 8
-        encoding: ascii
-      - id: authentication_code
+      - id: auth_code
         type: str
         size: 3
-        encoding: ascii
-      - id: sub_blocks
-        type: sub_block
-        repeat: until
-        repeat-until: _.length == 0
-  unknown_extension:
-    seq:
-      - id: sub_blocks
-        type: sub_block
-        repeat: until
-        repeat-until: _.length == 0
-  sub_block:
-    seq:
-      - id: length
-        type: u1
       - id: data
-        type: u1
-        repeat: expr
-        repeat-expr: length
-        if: length > 0
+        type: data_block
+        repeat: until
+        repeat-until: _.block_size == 0
+
   trailer:
     seq:
       - id: trailer_marker
-        contents: [0x3B]
+        contents: [0x3b]
+
 enums:
   block_type:
-    0x2C: image_descriptor
+    0x2c: image_descriptor
     0x21: extension
-    0x3B: trailer
+    0x3b: trailer
+
   extension_type:
-    0xF9: graphic_control
-    0xFE: comment
-    0xFF: application
+    0xf9: graphic_control
+    0xfe: comment
+    0x01: plain_text
+    0xff: application

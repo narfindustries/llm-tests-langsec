@@ -1,35 +1,27 @@
-module GZIP {
+GzipFile := struct {
+  id1: uint8 = 0x1f; // ID1, fixed value 0x1f
+  id2: uint8 = 0x8b; // ID2, fixed value 0x8b
+  cm: uint8;  // Compression Method, 8 = deflate
+  flg: uint8; // Flags
+  mtime: uint32; // Modification time
+  xfl: uint8;  // Extra flags
+  os: uint8;   // Operating system
 
-  import DAEDALUS::BitManip;
-  import DAEDALUS::Core;
+  fextra: ExtraField if (flg & 0x04) != 0;
+  fname: CString if (flg & 0x08) != 0;
+  fcomment: CString if (flg & 0x10) != 0;
+  fhcrc: uint16 if (flg & 0x02) != 0;
 
-  struct GzipFile {
-    magic       : U16be = 0x1f8b; // GZIP magic header
-    compression : U8;             // Compression method (8 = deflate)
-    flags       : U8;             // Flags
-    mtime       : U32le;          // Modification time
-    xfl         : U8;             // Extra flags
-    os          : U8;             // Operating system
+  compressed_data: bytes;
+  crc32: uint32; // CRC-32 checksum
+  isize: uint32;  // Input size
+};
 
-    extra       : Maybe<ExtraField> = if flags & 0x04 != 0 then Just extraField else Nothing;
-    fname       : Maybe<DAEDALUS::String> = if flags & 0x08 != 0 then Just zeroTerminatedString else Nothing;
-    fcomment    : Maybe<DAEDALUS::String> = if flags & 0x10 != 0 then Just zeroTerminatedString else Nothing;
-    crc16       : Maybe<U16le> = if flags & 0x02 != 0 then Just U16le else Nothing;
+ExtraField := struct {
+  xlen: uint16;
+  xdata: bytes[xlen];
+};
 
-    compressedData : DAEDALUS::Bytes;
-    crc32          : U32le; // CRC-32 checksum
-    isize          : U32le; // Input size modulo 2^32
-  }
-
-  struct ExtraField {
-    xlen   : U16le;
-    xfield : DAEDALUS::Array<U8>(xlen);
-  }
-
-  let zeroTerminatedString : DAEDALUS::String = {
-    let str = DAEDALUS::takeWhile(U8, \x -> x != 0);
-    let _   = U8; // consume the zero byte
-    str
-  };
-
-}
+CString := struct {
+  data: bytes until \0;
+};

@@ -1,168 +1,198 @@
-use nom::branch::alt;
-use nom::bytes::complete::{tag, take};
-use nom::combinator::map;
-use nom::error::ErrorKind;
-use nom::multi::take_while_m_n;
-use nom::number::complete::{be_u16, be_u32, be_u8};
-use nom::sequence::tuple;
-use nom::{Finish, IResult};
-use std::env;
-use std::fs::File;
-use std::io::Read;
+use nom::{
+    bytes::complete::{take, take_till},
+    IResult,
+};
+use std::{
+    env, fs::File, io::Read, path::Path,
+};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 enum IcmpType {
     EchoReply,
     DestinationUnreachable,
     SourceQuench,
     Redirect,
     EchoRequest,
+    RouterAdvertisement,
+    RouterSolicitation,
     TimeExceeded,
     ParameterProblem,
     TimestampRequest,
     TimestampReply,
-    InfoRequest,
-    InfoReply,
-    AddressRequest,
-    AddressReply,
-    Unknown(u8),
+    InformationRequest,
+    InformationReply,
+    Unassigned(u8),
 }
 
-impl IcmpType {
-    fn from_u8(n: u8) -> Self {
-        match n {
-            0 => IcmpType::EchoReply,
-            1 => IcmpType::DestinationUnreachable,
-            2 => IcmpType::SourceQuench,
-            3 => IcmpType::Redirect,
-            4 => IcmpType::EchoRequest,
-            5 => IcmpType::TimeExceeded,
-            6 => IcmpType::ParameterProblem,
-            7 => IcmpType::TimestampRequest,
-            8 => IcmpType::TimestampReply,
-            9 => IcmpType::InfoRequest,
-            10 => IcmpType::InfoReply,
-            11 => IcmpType::AddressRequest,
-            12 => IcmpType::AddressReply,
-            _ => IcmpType::Unknown(n),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 enum IcmpCode {
-    NetworkUnreachable,
+    NetUnreachable,
     HostUnreachable,
     ProtocolUnreachable,
     PortUnreachable,
-    FragmentationNeeded,
+    FragmentationNeededAndDontFragmentWasSet,
     SourceRouteFailed,
-    DestinationNetworkUnknown,
-    DestinationHostUnknown,
-    SourceHostIsolated,
-    NetworkAdministrativelyProhibited,
-    HostAdministrativelyProhibited,
-    NetworkUnreachableForToS,
-    HostUnreachableForToS,
-    CommunicationAdministrativelyProhibited,
-    HostPrecedenceViolation,
-    PrecedenceCutoffInEffect,
-    Unknown(u8),
+    RedirectForNetwork,
+    RedirectForHost,
+    RedirectForTypeOfServiceAndNetwork,
+    RedirectForTypeOfServiceAndHost,
+    TimeToLiveExceededInTransit,
+    FragmentReassemblyTimeExceeded,
+    PointerIndicatesTheError,
+    MissingARequiredOption,
+    Unassigned(u8),
 }
 
-impl IcmpCode {
-    fn from_u8(n: u8, icmp_type: IcmpType) -> Self {
-        match icmp_type {
-            IcmpType::DestinationUnreachable => match n {
-                0 => IcmpCode::NetworkUnreachable,
-                1 => IcmpCode::HostUnreachable,
-                2 => IcmpCode::ProtocolUnreachable,
-                3 => IcmpCode::PortUnreachable,
-                4 => IcmpCode::FragmentationNeeded,
-                5 => IcmpCode::SourceRouteFailed,
-                6 => IcmpCode::DestinationNetworkUnknown,
-                7 => IcmpCode::DestinationHostUnknown,
-                8 => IcmpCode::SourceHostIsolated,
-                9 => IcmpCode::NetworkAdministrativelyProhibited,
-                10 => IcmpCode::HostAdministrativelyProhibited,
-                11 => IcmpCode::NetworkUnreachableForToS,
-                12 => IcmpCode::HostUnreachableForToS,
-                13 => IcmpCode::CommunicationAdministrativelyProhibited,
-                14 => IcmpCode::HostPrecedenceViolation,
-                15 => IcmpCode::PrecedenceCutoffInEffect,
-                _ => IcmpCode::Unknown(n),
-            },
-            _ => IcmpCode::Unknown(n),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct IcmpHeader {
-    icmp_type: IcmpType,
-    icmp_code: IcmpCode,
+    ty: IcmpType,
+    code: IcmpCode,
     checksum: u16,
     identifier: u16,
     sequence_number: u16,
 }
 
-fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
-    let (input, (icmp_type, icmp_code, checksum)) = tuple((be_u8, be_u8, be_u16))(input)?;
-    let (input, (identifier, sequence_number)) = tuple((be_u16, be_u16))(input)?;
-    Ok((
-        input,
-        IcmpHeader {
-            icmp_type: IcmpType::from_u8(icmp_type),
-            icmp_code: IcmpCode::from_u8(icmp_code, IcmpType::from_u8(icmp_type)),
-            checksum,
-            identifier,
-            sequence_number,
+#[derive(Debug)]
+enum IcmpMessage {
+    EchoRequest {
+        header: IcmpHeader,
+        data: Vec<u8>,
+    },
+    EchoReply {
+        header: IcmpHeader,
+        data: Vec<u8>,
+    },
+    DestinationUnreachable {
+        header: IcmpHeader,
+        unused: u32,
+        internet_header: Vec<u8>,
+    },
+    TimeExceeded {
+        header: IcmpHeader,
+        unused: u32,
+        internet_header: Vec<u8>,
+    },
+}
+
+fn parse_icmp_type(input: &[u8]) -> IResult<&[u8], IcmpType> {
+    let (input, ty) = take(1usize)(input)?;
+    match ty[0] {
+        0 => Ok((input, IcmpType::EchoReply)),
+        3 => Ok((input, IcmpType::DestinationUnreachable)),
+        4 => Ok((input, IcmpType::SourceQuench)),
+        5 => Ok((input, IcmpType::Redirect)),
+        8 => Ok((input, IcmpType::EchoRequest)),
+        9 => Ok((input, IcmpType::RouterAdvertisement)),
+        10 => Ok((input, IcmpType::RouterSolicitation)),
+        11 => Ok((input, IcmpType::TimeExceeded)),
+        12 => Ok((input, IcmpType::ParameterProblem)),
+        13 => Ok((input, IcmpType::TimestampRequest)),
+        14 => Ok((input, IcmpType::TimestampReply)),
+        15 => Ok((input, IcmpType::InformationRequest)),
+        16 => Ok((input, IcmpType::InformationReply)),
+        _ => Ok((input, IcmpType::Unassigned(ty[0]))),
+    }
+}
+
+fn parse_icmp_code(input: &[u8], ty: IcmpType) -> IResult<&[u8], IcmpCode> {
+    let (input, code) = take(1usize)(input)?;
+    match ty {
+        IcmpType::DestinationUnreachable => match code[0] {
+            0 => Ok((input, IcmpCode::NetUnreachable)),
+            1 => Ok((input, IcmpCode::HostUnreachable)),
+            2 => Ok((input, IcmpCode::ProtocolUnreachable)),
+            3 => Ok((input, IcmpCode::PortUnreachable)),
+            4 => Ok((input, IcmpCode::FragmentationNeededAndDontFragmentWasSet)),
+            5 => Ok((input, IcmpCode::SourceRouteFailed)),
+            _ => Ok((input, IcmpCode::Unassigned(code[0]))),
         },
-    ))
+        IcmpType::Redirect => match code[0] {
+            0 => Ok((input, IcmpCode::RedirectForNetwork)),
+            1 => Ok((input, IcmpCode::RedirectForHost)),
+            2 => Ok((input, IcmpCode::RedirectForTypeOfServiceAndNetwork)),
+            3 => Ok((input, IcmpCode::RedirectForTypeOfServiceAndHost)),
+            _ => Ok((input, IcmpCode::Unassigned(code[0]))),
+        },
+        IcmpType::TimeExceeded => match code[0] {
+            0 => Ok((input, IcmpCode::TimeToLiveExceededInTransit)),
+            1 => Ok((input, IcmpCode::FragmentReassemblyTimeExceeded)),
+            _ => Ok((input, IcmpCode::Unassigned(code[0]))),
+        },
+        IcmpType::ParameterProblem => match code[0] {
+            0 => Ok((input, IcmpCode::PointerIndicatesTheError)),
+            1 => Ok((input, IcmpCode::MissingARequiredOption)),
+            _ => Ok((input, IcmpCode::Unassigned(code[0]))),
+        },
+        _ => Ok((input, IcmpCode::Unassigned(code[0]))),
+    }
 }
 
-fn parse_icmp_distance(input: &[u8]) -> IResult<&[u8], u32> {
-    let (input, data) = take(4u8)(input)?;
-    Ok((input, u32::from_be_bytes(data.try_into().unwrap())))
+fn parse_icmp_header(input: &[u8]) -> IResult<&[u8], IcmpHeader> {
+    let (input, ty) = parse_icmp_type(input)?;
+    let (input, code) = parse_icmp_code(input, ty)?;
+    let (input, checksum) = take(2usize)(input)?;
+    let checksum = u16::from_be_bytes([checksum[0], checksum[1]]);
+    let (input, identifier) = take(2usize)(input)?;
+    let identifier = u16::from_be_bytes([identifier[0], identifier[1]]);
+    let (input, sequence_number) = take(2usize)(input)?;
+    let sequence_number = u16::from_be_bytes([sequence_number[0], sequence_number[1]]);
+    Ok((input, IcmpHeader {
+        ty,
+        code,
+        checksum,
+        identifier,
+        sequence_number,
+    }))
 }
 
-fn parse_icmp_gateway(input: &[u8]) -> IResult<&[u8], [u8; 4]> {
-    let (input, data) = take(4u8)(input)?;
-    Ok((input, data.try_into().unwrap()))
-}
-
-fn parse_icmp_pointer(input: &[u8]) -> IResult<&[u8], u8> {
-    let (input, data) = be_u8(input)?;
-    Ok((input, data))
-}
-
-fn parse_icmp_header_and_data(input: &[u8]) -> IResult<&[u8], (IcmpHeader, Vec<u8>)> {
-    let (input, icmp_header) = parse_icmp_header(input)?;
-    let (input, data) = take_while_m_n(0, 1024, |x| x != 0)(input)?;
-    Ok((input, (icmp_header, data.iter().cloned().collect())))
+fn parse_icmp_message(input: &[u8]) -> IResult<&[u8], IcmpMessage> {
+    let (input, header) = parse_icmp_header(input)?;
+    match header.ty {
+        IcmpType::EchoRequest | IcmpType::EchoReply => {
+            let (input, data) = take_till(|_| false)(input)?;
+            Ok((input, IcmpMessage::EchoRequest { header, data: data.to_vec() }))
+        }
+        IcmpType::DestinationUnreachable => {
+            let (input, unused) = take(4usize)(input)?;
+            let unused = u32::from_be_bytes([unused[0], unused[1], unused[2], unused[3]]);
+            let (input, internet_header) = take_till(|_| false)(input)?;
+            Ok((input, IcmpMessage::DestinationUnreachable {
+                header,
+                unused,
+                internet_header: internet_header.to_vec(),
+            }))
+        }
+        IcmpType::TimeExceeded => {
+            let (input, unused) = take(4usize)(input)?;
+            let unused = u32::from_be_bytes([unused[0], unused[1], unused[2], unused[3]]);
+            let (input, internet_header) = take_till(|_| false)(input)?;
+            Ok((input, IcmpMessage::TimeExceeded {
+                header,
+                unused,
+                internet_header: internet_header.to_vec(),
+            }))
+        }
+        _ => Ok((input, IcmpMessage::EchoRequest { header, data: vec![] })),
+    }
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
+        println!("Usage: {} <filename>", args[0]);
         return;
     }
-
-    let mut file = File::open(&args[1]).expect("Failed to open file");
-    let mut input = Vec::new();
-    file.read_to_end(&mut input).expect("Failed to read file");
-
-    match parse_icmp_header_and_data(&input) {
-        Ok((remaining, (icmp_header, data))) => {
-            println!("ICMP Header: {:?}", icmp_header);
-            println!("Data: {:?}", data);
-            if !remaining.is_empty() {
-                println!("Unparsed Data: {:?}", remaining);
-            }
-        }
-        Err(err) => {
-            eprintln!("Error parsing ICMP packet: {:?}", err);
-        }
+    let filename = &args[1];
+    let path = Path::new(filename);
+    let display = path.display();
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("Couldn't open {}: {}", display, why),
+        Ok(file) => file,
+    };
+    let mut data = vec![];
+    file.read_to_end(&mut data).unwrap();
+    match parse_icmp_message(&data) {
+        Ok((_, msg)) => println!("{:?}", msg),
+        Err(err) => println!("{:?}", err),
     }
 }

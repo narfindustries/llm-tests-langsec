@@ -1,64 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/modbus" elementFormDefault="qualified" xmlns:tns="http://example.org/modbus">
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:dfdlVersion>1.0</dfdl:dfdlVersion>
-      <dfdl:textStandard>US-ASCII</dfdl:textStandard>
-    </xs:appinfo>
-  </xs:annotation>
-  <xs:element name="modbusGemini">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/modbus"
+           xmlns="http://example.org/modbus"
+           elementFormDefault="qualified"
+           dfdl:textDefault="false">
+
+  <xs:element name="ModbusPDU">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="tns:headerType">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:length kind="implicit" lengthUnits="bytes"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="data" type="tns:dataType">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:length kind="implicit" lengthUnits="bytes"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
+        <xs:element name="FunctionCode" type="unsignedByte" dfdl:length="1"/>
+        <xs:element name="Data" type="ModbusData" minOccurs="0" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:complexType name="headerType">
-    <xs:sequence>
-      <xs:element name="length" type="xs:unsignedInt">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length lengthKind="explicit" value="2"/>
-            <dfdl:representation>binary</dfdl:representation>
-            <dfdl:binaryNumberRep>bigEndian</dfdl:binaryNumberRep>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="identifier" type="xs:string">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length lengthKind="explicit" value="2"/>
-            <dfdl:encoding>ascii</dfdl:encoding>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
 
-    </xs:sequence>
-  </xs:complexType>
-  <xs:complexType name="dataType">
+  <xs:complexType name="ModbusData">
     <xs:sequence>
-      <xs:element name="value" type="xs:int" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:length lengthKind="explicit" value="2"/>
-            <dfdl:representation>binary</dfdl:representation>
-            <dfdl:binaryNumberRep>bigEndian</dfdl:binaryNumberRep>
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
+      <xs:element name="DataElement" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="2"/>
     </xs:sequence>
   </xs:complexType>
+
+  <xs:simpleType name="unsignedByte">
+    <xs:restriction base="xs:unsignedByte"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="unsignedShort">
+    <xs:restriction base="xs:unsignedShort"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="unsignedInt">
+    <xs:restriction base="xs:unsignedInt"/>
+  </xs:simpleType>
+
+
+  <!-- Example Function Code Specific Data Structures (Expand as needed) -->
+  <xs:element name="ReadCoilsRequest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="StartingAddress" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="Quantity" type="unsignedShort" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ReadCoilsResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ByteCount" type="unsignedByte" dfdl:length="1"/>
+        <xs:element name="CoilData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ByteCount}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ReadHoldingRegistersRequest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="StartingAddress" type="unsignedShort" dfdl:length="2"/>
+        <xs:element name="Quantity" type="unsignedShort" dfdl:length="2"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ReadHoldingRegistersResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ByteCount" type="unsignedByte" dfdl:length="1"/>
+        <xs:element name="RegisterData" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ByteCount}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Add more function code specific structures here -->
+
 </xs:schema>

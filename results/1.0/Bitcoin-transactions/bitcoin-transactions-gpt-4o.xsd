@@ -1,66 +1,137 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           elementFormDefault="qualified"
-           targetNamespace="http://example.org/BitcoinTransactions"
-           xmlns="http://example.org/BitcoinTransactions">
+           targetNamespace="http://example.org/bitcoin-transaction"
+           xmlns:tns="http://example.org/bitcoin-transaction"
+           elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="littleEndian" lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-  <xs:include schemaLocation="daffodil-config.xsd"/>
-
-  <xs:element name="BitcoinTransactions">
-    <xs:complexType>
-      <xs:sequence dfdl:lengthKind="implicit">
-        <xs:element name="transaction" minOccurs="1" maxOccurs="unbounded">
+  <!-- VarInt type -->
+  <xs:complexType name="VarInt">
+    <xs:sequence>
+      <xs:choice>
+        <xs:element name="singleByte" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes"/>
+        <xs:element name="twoByte">
           <xs:complexType>
-            <xs:sequence dfdl:lengthKind="explicit" dfdl:encoding="utf-8">
-              <xs:element name="transactionID" type="xs:string">
-                <xs:annotation>
-                  <xs:appinfo source="http://www.ogf.org/dfdl/">
-                    <dfdl:lengthKind value="delimited"/>
-                    <dfdl:terminator value=":"/>
-                  </xs:appinfo>
-                </xs:annotation>
-              </xs:element>
-              <xs:element name="timestamp" type="xs:dateTime">
-                <xs:annotation>
-                  <xs:appinfo source="http://www.ogf.org/dfdl/">
-                    <dfdl:lengthKind value="explicit"/>
-                    <dfdl:length value="20"/>
-                    <dfdl:calendarPattern value="yyyy-MM-dd'T'HH:mm:ss"/>
-                    <dfdl:endianness value="little"/>
-                  </xs:appinfo>
-                </xs:annotation>
-              </xs:element>
-              <xs:element name="sender" type="xs:string">
-                <xs:annotation>
-                  <xs:appinfo source="http://www.ogf.org/dfdl/">
-                    <dfdl:lengthKind value="delimited"/>
-                    <dfdl:terminator value=":"/>
-                  </xs:appinfo>
-                </xs:annotation>
-              </xs:element>
-              <xs:element name="recipient" type="xs:string">
-                <xs:annotation>
-                  <xs:appinfo source="http://www.ogf.org/dfdl/">
-                    <dfdl:lengthKind value="delimited"/>
-                    <dfdl:terminator value=":"/>
-                  </xs:appinfo>
-                </xs:annotation>
-              </xs:element>
-              <xs:element name="amount" type="xs:decimal">
-                <xs:annotation>
-                  <xs:appinfo source="http://www.ogf.org/dfdl/">
-                    <dfdl:lengthKind value="explicit"/>
-                    <dfdl:length value="10"/>
-                    <dfdl:textNumberRep value="standard"/>
-                  </xs:appinfo>
-                </xs:annotation>
+            <xs:sequence>
+              <xs:element name="prefix" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:outputValueCalc="'fd'"/>
+              <xs:element name="value" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="fourByte">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="prefix" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:outputValueCalc="'fe'"/>
+              <xs:element name="value" type="xs:unsignedInt" dfdl:byteOrder="littleEndian"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="eightByte">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="prefix" type="xs:unsignedByte" dfdl:length="1" dfdl:lengthUnits="bytes" dfdl:outputValueCalc="'ff'"/>
+              <xs:element name="value" type="xs:unsignedLong" dfdl:byteOrder="littleEndian"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Define the main transaction element -->
+  <xs:element name="Transaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="version" type="xs:int">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element length="4" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="inputCount" type="tns:VarInt"/>
+        <xs:element name="inputs">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="input" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="previousTransactionHash" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element length="32" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="previousTxoutIndex" type="xs:int">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element length="4" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="scriptLength" type="tns:VarInt"/>
+                    <xs:element name="scriptSignature" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="{ ../scriptLength }" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="sequence" type="xs:unsignedInt">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element length="4" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
               </xs:element>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
+        <xs:element name="outputCount" type="tns:VarInt"/>
+        <xs:element name="outputs">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="output" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="value" type="xs:long">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element length="8" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                    <xs:element name="scriptLength" type="tns:VarInt"/>
+                    <xs:element name="scriptPubKey" type="xs:hexBinary">
+                      <xs:annotation>
+                        <xs:appinfo>
+                          <dfdl:element lengthKind="explicit" length="{ ../scriptLength }" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                      </xs:annotation>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="locktime" type="xs:unsignedInt">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:element length="4" lengthUnits="bytes"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

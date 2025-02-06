@@ -1,0 +1,198 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/">
+
+  <!-- Define PNG Signature -->
+  <xs:element name="PNGSignature">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="xs:hexBinary" dfdl:length="8" dfdl:initiator="\x89PNG\r\n\x1a\n"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define Chunk Structure -->
+  <xs:element name="Chunk">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Length" type="xs:unsignedInt"/>
+        <xs:element name="ChunkType" type="xs:string" dfdl:length="4"/>
+        <xs:element name="ChunkData" dfdl:length="{../Length}"/>
+        <xs:element name="CRC" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define IHDR Chunk -->
+  <xs:element name="IHDR">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Width" type="xs:unsignedInt"/>
+        <xs:element name="Height" type="xs:unsignedInt"/>
+        <xs:element name="BitDepth" type="xs:unsignedByte"/>
+        <xs:element name="ColorType" type="xs:unsignedByte"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+        <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define PLTE Chunk -->
+  <xs:element name="PLTE">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Entries" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define IDAT Chunk -->
+  <xs:element name="IDAT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CompressedData" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define IEND Chunk -->
+  <xs:element name="IEND">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define tRNS Chunk -->
+  <xs:element name="tRNS">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="TransparencyData" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define gAMA Chunk -->
+  <xs:element name="gAMA">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="GammaValue" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define cHRM Chunk -->
+  <xs:element name="cHRM">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="WhitePointX" type="xs:unsignedInt"/>
+        <xs:element name="WhitePointY" type="xs:unsignedInt"/>
+        <xs:element name="RedX" type="xs:unsignedInt"/>
+        <xs:element name="RedY" type="xs:unsignedInt"/>
+        <xs:element name="GreenX" type="xs:unsignedInt"/>
+        <xs:element name="GreenY" type="xs:unsignedInt"/>
+        <xs:element name="BlueX" type="xs:unsignedInt"/>
+        <xs:element name="BlueY" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define sRGB Chunk -->
+  <xs:element name="sRGB">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="RenderingIntent" type="xs:unsignedByte"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define iCCP Chunk -->
+  <xs:element name="iCCP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ProfileName" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="CompressedProfile" type="xs:hexBinary" dfdl:length="{../Length - dfdl:length(../ProfileName) - 1}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define tEXt Chunk -->
+  <xs:element name="tEXt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Keyword" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="Text" type="xs:string" dfdl:terminator="\x00"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define zTXt Chunk -->
+  <xs:element name="zTXt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Keyword" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="CompressedText" type="xs:hexBinary" dfdl:length="{../Length - dfdl:length(../Keyword) - 1}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define iTXt Chunk -->
+  <xs:element name="iTXt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Keyword" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="CompressionFlag" type="xs:unsignedByte"/>
+        <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+        <xs:element name="LanguageTag" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="TranslatedKeyword" type="xs:string" dfdl:terminator="\x00"/>
+        <xs:element name="Text" type="xs:string" dfdl:length="{../Length - dfdl:length(../Keyword) - dfdl:length(../LanguageTag) - dfdl:length(../TranslatedKeyword) - 3}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define bKGD Chunk -->
+  <xs:element name="bKGD">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="BackgroundColor" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define pHYs Chunk -->
+  <xs:element name="pHYs">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PixelsPerUnitX" type="xs:unsignedInt"/>
+        <xs:element name="PixelsPerUnitY" type="xs:unsignedInt"/>
+        <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define sBIT Chunk -->
+  <xs:element name="sBIT">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SignificantBits" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define hIST Chunk -->
+  <xs:element name="hIST">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Frequencies" type="xs:unsignedShort" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- Define tIME Chunk -->
+  <xs:element name="tIME">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Year" type="xs:unsignedShort"/>
+        <xs:element name="Month" type="xs:unsignedByte"/>
+        <xs:element name="Day" type="xs:unsignedByte"/>
+        <xs:element name="Hour" type="xs:unsignedByte

@@ -1,19 +1,15 @@
-#ifndef TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
-#define TLS_CLIENT_HELLO_GEMINI_1_5_FLASH_SPICY
+module TLS;
 
-#include <zeek/analyzer/protocol/tls.zeek>
+type tls_client_hello_msg {
+	uint16 client_version;
+	bytes random;
+	bytes session_id;
+	vector<uint16> cipher_suites;
+	vector<uint8> compression_methods;
+	vector<tls_extension> extensions;
+};
 
-event tls_client_hello_gemini_1_5_flash(tls_client_hello_record record)
-{
-    if (record.handshake_type == TLS_HANDSHAKE_TYPE_CLIENT_HELLO) {
-        // Check for Gemini-1.5 specific features in the ClientHello message
-        // Example: Check for a specific extension or cipher suite
-        // Replace this with actual Gemini-1.5 specific checks
-        if (record.extensions contains "gemini-1.5-extension") {
-            // Log or process the event
-            print record;
-        }
-    }
-}
-
-#endif
+type tls_extension {
+    uint16 extension_type;
+    bytes extension_data;
+};

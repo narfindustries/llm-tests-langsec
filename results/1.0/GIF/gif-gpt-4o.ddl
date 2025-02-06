@@ -1,98 +1,114 @@
-Root {
-    width: uint16;
-    height: uint16;
-    globalColorTableFlag: bool;
-    colorResolution: uint3;
-    sortFlag: bool;
-    sizeOfGlobalColorTable: uint3;
-    backgroundColorIndex: uint8;
-    pixelAspectRatio: uint8;
-    globalColorTable: if(globalColorTableFlag) [Size]Color;
-    blocks: *Block;
+enum ExtensionLabel : uint8
+{
+    GraphicControlExtension = 0xF9,
+    CommentExtension = 0xFE,
+    PlainTextExtension = 0x01,
+    ApplicationExtension = 0xFF
 }
 
-Color {
-    red: uint8;
-    green: uint8;
-    blue: uint8;
+type UInt16 = uint16;
+
+struct Header
+{
+    magic : bstring(3) = "GIF";
+    version : bstring(3) = "89a";
 }
 
-Block {
-    block_type: uint8 {
-        0x2C -> ImageBlock,
-        0x21 -> ExtensionBlock,
-        0x3B -> TrailerBlock,
+struct LogicalScreenDescriptor
+{
+    width : UInt16;
+    height : UInt16;
+    packedFields : PackedFields;
+    backgroundColorIndex : uint8;
+    pixelAspectRatio : uint8;
+}
+
+bitfield PackedFields : uint8
+{
+    globalColorTableFlag : bool @ 0 : 1;
+    colorResolution : uint8 @ 1 : 3;
+    sortFlag : bool @ 4 : 1;
+    sizeOfGlobalColorTable : uint8 @ 5 : 3;
+}
+
+struct ColorTableEntry
+{
+    red : uint8;
+    green : uint8;
+    blue : uint8;
+}
+
+struct ImageDescriptor
+{
+    imageSeparator : uint8 = 0x2C;
+    leftPosition : UInt16;
+    topPosition : UInt16;
+    width : UInt16;
+    height : UInt16;
+    packedFields : ImagePackedFields;
+}
+
+bitfield ImagePackedFields : uint8
+{
+    localColorTableFlag : bool @ 0 : 1;
+    interlaceFlag : bool @ 1 : 1;
+    sortFlag : bool @ 2 : 1;
+    reserved : uint8 @ 3 : 2;
+    sizeOfLocalColorTable : uint8 @ 5 : 3;
+}
+
+struct LZWImageData
+{
+    lzwMinimumCodeSize : uint8;
+    data : DataSubBlocks;
+}
+
+struct DataSubBlock
+{
+    blockSize : uint8;
+    data : bstring(blockSize);
+}
+
+struct DataSubBlocks
+{
+    blocks : sequence of DataSubBlock until ($last.blockSize == 0);
+}
+
+struct Trailer
+{
+    trailer : uint8 = 0x3B;
+}
+
+struct Extension
+{
+    extensionIntroducer : uint8 = 0x21;
+    label : ExtensionLabel;
+    blockSize : uint8;
+    data : bstring(blockSize);
+    subBlocks : DataSubBlocks;
+}
+
+struct GIFData
+{
+    extensionOrImage : uint8;
+    switch (extensionOrImage)
+    {
+        case 0x21 : extension : Extension;
+        case 0x2C : image : ImageDescriptorImageData;
     }
 }
 
-ImageBlock {
-    imageLeft: uint16;
-    imageTop: uint16;
-    imageWidth: uint16;
-    imageHeight: uint16;
-    localColorTableFlag: bool;
-    interlaceFlag: bool;
-    sortFlag: bool;
-    reserved: uint2;
-    sizeOfLocalColorTable: uint3;
-    localColorTable: if(localColorTableFlag) [Size]Color;
-    lzwMinCodeSize: uint8;
-    imageData: CompressedData;
+struct ImageDescriptorImageData
+{
+    descriptor : ImageDescriptor;
+    imageData : LZWImageData;
 }
 
-CompressedData {
-    subBlocks: *SubBlock;
-}
-
-SubBlock {
-    size: uint8;
-    data: [size]byte;
-}
-
-ExtensionBlock {
-    extensionLabel: uint8 {
-        0xF9 -> GraphicControlExtension,
-        0xFE -> CommentExtension,
-        0x01 -> PlainTextExtension,
-        0xFF -> ApplicationExtension,
-    }
-}
-
-GraphicControlExtension {
-    blockSize: uint8 = 4;
-    reserved: uint3;
-    disposalMethod: uint3;
-    userInputFlag: bool;
-    transparentColorFlag: bool;
-    delayTime: uint16;
-    transparentColorIndex: uint8;
-    blockTerminator: uint8 = 0;
-}
-
-CommentExtension {
-    commentData: CompressedData;
-}
-
-PlainTextExtension {
-    blockSize: uint8 = 12;
-    textGridLeft: uint16;
-    textGridTop: uint16;
-    textGridWidth: uint16;
-    textGridHeight: uint16;
-    characterCellWidth: uint8;
-    characterCellHeight: uint8;
-    textForegroundColorIndex: uint8;
-    textBackgroundColorIndex: uint8;
-    plainTextData: CompressedData;
-}
-
-ApplicationExtension {
-    blockSize: uint8 = 11;
-    applicationIdentifier: [8]char;
-    applicationAuthCode: [3]char;
-    applicationData: CompressedData;
-}
-
-TrailerBlock {
-    trailer: uint8 = 0x3B;
+struct GIFFile
+{
+    header : Header;
+    logicalScreenDescriptor : LogicalScreenDescriptor;
+    globalColorTable : sequence of ColorTableEntry if (logicalScreenDescriptor.packedFields.globalColorTableFlag);
+    data : sequence of GIFData;
+    trailer : Trailer;
 }

@@ -1,38 +1,59 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/icmp"
-           xmlns:tns="http://example.com/icmp">
+           xmlns:icmp="http://example.com/icmp">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:defaultFormat"/>
-        </xs:appinfo>
-    </xs:annotation>
-
-    <xs:complexType name="ICMPMessage">
-        <xs:sequence>
-            <xs:element name="type" type="xs:byte" dfdl:length="1" />
-            <xs:element name="code" type="xs:byte" dfdl:length="1" />
-            <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" />
-            <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:initiator="fixed" minOccurs="0" />
-            <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:initiator="fixed" minOccurs="0" />
-            <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" />
-        </xs:sequence>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="ICMPFormat">
+        <dfdl:format byteOrder="bigEndian"
+                     bitOrder="mostSignificantBitFirst"
+                     alignment="1"
+                     representation="binary"
+                     lengthKind="implicit"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+  
+  <xs:element name="ICMPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+        <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="binary"/>
+        <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="binary"/>
+        <xs:element name="RestOfHeader" type="icmp:RestOfHeaderType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:encoding="hexBinary"/>
+      </xs:sequence>
     </xs:complexType>
-
-    <xs:element name="ICMPMessage" type="tns:ICMPMessage"/>
-
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="defaultFormat">
-                <dfdl:format byteOrder="bigEndian"
-                             encoding="ASCII"
-                             binaryNumberRep="binary"
-                             bitOrder="mostSignificantBitFirst"
-                             lengthKind="explicit" />
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
+  </xs:element>
+  
+  <xs:complexType name="RestOfHeaderType">
+    <xs:choice>
+      <xs:element name="EchoHeader" type="icmp:EchoHeaderType" dfdl:choiceBranchKey="8"/>
+      <xs:element name="EchoReplyHeader" type="icmp:EchoHeaderType" dfdl:choiceBranchKey="0"/>
+      <xs:element name="DestinationUnreachableHeader" type="icmp:UnusedHeaderType" dfdl:choiceBranchKey="3"/>
+      <xs:element name="SourceQuenchHeader" type="icmp:UnusedHeaderType" dfdl:choiceBranchKey="4"/>
+      <xs:element name="RedirectMessageHeader" type="icmp:RedirectHeaderType" dfdl:choiceBranchKey="5"/>
+    </xs:choice>
+  </xs:complexType>
+  
+  <xs:complexType name="EchoHeaderType">
+    <xs:sequence>
+      <xs:element name="Identifier" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:element name="SequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="UnusedHeaderType">
+    <xs:sequence>
+      <xs:element name="Unused" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="RedirectHeaderType">
+    <xs:sequence>
+      <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

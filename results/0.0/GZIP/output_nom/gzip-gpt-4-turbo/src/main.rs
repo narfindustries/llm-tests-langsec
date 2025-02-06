@@ -1,97 +1,94 @@
 use nom::{
     bytes::complete::{tag, take},
+    combinator::{cond, map, map_res},
     number::complete::{le_u16, le_u32, le_u8},
-    sequence::tuple,
+    sequence::{preceded, tuple},
     IResult,
 };
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
+use std::{
+    fs::File,
+    io::{self, Read},
+    path::PathBuf,
+};
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Opt {
+    #[clap(parse(from_os_str))]
+    input_file: PathBuf,
+}
 
 #[derive(Debug)]
 struct GzipHeader {
     id1: u8,
     id2: u8,
-    compression_method: u8,
-    flags: u8,
+    cm: u8,
+    flg: u8,
     mtime: u32,
-    extra_flags: u8,
+    xfl: u8,
     os: u8,
     extra: Option<Vec<u8>>,
-    original_filename: Option<String>,
-    comment: Option<String>,
-    crc16: Option<u16>,
+    fname: Option<String>,
+    fcomment: Option<String>,
+    fhcrc: Option<u16>,
 }
 
 fn parse_gzip_header(input: &[u8]) -> IResult<&[u8], GzipHeader> {
-    let (input, (id1, id2, compression_method, flags, mtime, extra_flags, os)) =
-        tuple((le_u8, le_u8, le_u8, le_u8, le_u32, le_u8, le_u8))(input)?;
-
-    if id1 != 0x1f || id2 != 0x8b {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag)));
-    }
-
-    let (mut input, extra) = if flags & 0x04 != 0 {
-        let (i, extra_len) = le_u16(input)?;
-        let (i, extra_data) = take(extra_len)(i)?;
-        (i, Some(extra_data.to_vec()))
-    } else {
-        (input, None)
-    };
-
-    let (input, original_filename) = if flags & 0x08 != 0 {
-        let (i, filename) = nom::character::complete::c_string(input)?;
-        (i, Some(filename.to_owned()))
-    } else {
-        (input, None)
-    };
-
-    let (input, comment) = if flags & 0x10 != 0 {
-        let (i, comment_str) = nom::character::complete::c_string(input)?;
-        (i, Some(comment_str.to_owned()))
-    } else {
-        (input, None)
-    };
-
-    let (input, crc16) = if flags & 0x02 != 0 {
-        let (i, crc) = le_u16(input)?;
-        (i, Some(crc))
-    } else {
-        (input, None)
-    };
-
-    Ok((
-        input,
-        GzipHeader {
-            id1,
-            id2,
-            compression_method,
-            flags,
+    map(
+        tuple((
+            tag([0x1f, 0x8b]), // ID1 and ID2
+            le_u8,             // CM
+            le_u8,             // FLG
+            le_u32,            // MTIME
+            le_u8,             // XFL
+            le_u8,             // OS
+            preceded(le_u8, parse_optional_fields),
+        )),
+        |(id, cm, flg, mtime, xfl, os, (extra, fname, fcomment, fhcrc))| GzipHeader {
+            id1: id[0],
+            id2: id[1],
+            cm,
+            flg,
             mtime,
-            extra_flags,
+            xfl,
             os,
             extra,
-            original_filename,
-            comment,
-            crc16,
+            fname,
+            fcomment,
+            fhcrc,
         },
-    ))
+    )(input)
+}
+
+fn parse_optional_fields(flg: u8, input: &[u8]) -> IResult<&[u8], (Option<Vec<u8>>, Option<String>, Option<String>, Option<u16>)> {
+    let (input, extra) = cond(flg & 0b100 != 0, parse_extra_field)(input)?;
+    let (input, fname) = cond(flg & 0b1000 != 0, map_res(parse_zero_terminated_string, String::from_utf8))(input)?;
+    let (input, fcomment) = cond(flg & 0b10000 != 0, map_res(parse_zero_terminated_string, String::from_utf8))(input)?;
+    let (input, fhcrc) = cond(flg & 0b10 != 0, le_u16)(input)?;
+    Ok((input, (extra, fname, fcomment, fhcrc)))
+}
+
+fn parse_extra_field(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let (input, len) = le_u16(input)?;
+    take(len)(input)
+}
+
+fn parse_zero_terminated_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+    let pos = input.iter().position(|&r| r == 0).unwrap_or(input.len());
+    let (next_input, result) = input.split_at(pos + 1);
+    Ok((next_input, result[..pos].to_vec()))
 }
 
 fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
-    }
-
-    let mut file = File::open(&args[1])?;
+    let opt = Opt::parse();
+    let mut file = File::open(opt.input_file)?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
     match parse_gzip_header(&buffer) {
         Ok((_, header)) => {
-            println!("{:#?}", header);
+            println!("{:?}", header);
         }
         Err(e) => {
             eprintln!("Failed to parse GZIP header: {:?}", e);

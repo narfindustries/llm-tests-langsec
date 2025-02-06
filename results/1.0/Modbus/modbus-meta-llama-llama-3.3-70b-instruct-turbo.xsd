@@ -1,122 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:modbus="http://example.com/modbus"
-           targetNamespace="http://example.com/modbus"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.dtd"/>
-
-  <xs:element name="modbus-message">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element dfdl:ref="modbus-message">
-          <dfdl:representation>
-            <dfdl:binary suffixInterval="0..1" byteOrder="bigEndian" escaped="false"/>
-          </dfdl:representation>
-        </dfdl:element>
-      </xs:appinfo>
-    </xs:annotation>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+  targetNamespace="http://www.example.org/Modbus"
+  xmlns="http://www.example.org/Modbus"
+  elementFormDefault="qualified"
+>
+  <xs:element name="ModbusMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="transaction-id" type="xs:unsignedShort" dfdl:occursCount="1">
+        <xs:element name="AddressField" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:element dfdl:ref="transaction-id">
-                <dfdl:representation>
-                  <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="2"/>
-                </dfdl:representation>
-              </dfdl:element>
+              <xsd:assertion test="$value le 247" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="protocol-id" type="xs:unsignedShort" dfdl:occursCount="1">
+        <xs:element name="FunctionCode" type="xs:unsignedByte">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:element dfdl:ref="protocol-id">
-                <dfdl:representation>
-                  <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="2"/>
-                </dfdl:representation>
-              </dfdl:element>
+              <xsd:assertion test="$value ge 1 and $value le 127" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="length" type="xs:unsignedShort" dfdl:occursCount="1">
+        <xs:element name="Data" type="ModbusData" minOccurs="0" maxOccurs="1">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:element dfdl:ref="length">
-                <dfdl:representation>
-                  <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="2"/>
-                </dfdl:representation>
-              </dfdl:element>
+              <xsd:assertion test="../FunctionCode = 1 or ../FunctionCode = 2 or ../FunctionCode = 5 or ../FunctionCode = 15" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
-        <xs:element name="unit-id" type="xs:unsignedByte" dfdl:occursCount="1">
+        <xs:element name="Exception" type="ModbusException" minOccurs="0" maxOccurs="1">
           <xs:annotation>
             <xs:appinfo>
-              <dfdl:element dfdl:ref="unit-id">
-                <dfdl:representation>
-                  <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="1"/>
-                </dfdl:representation>
-              </dfdl:element>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="function" type="xs:unsignedByte" dfdl:occursCount="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="function">
-                <dfdl:representation>
-                  <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="1"/>
-                </dfdl:representation>
-              </dfdl:element>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="data" type="modbus:data-type" dfdl:occursCount="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:element dfdl:ref="data">
-                <dfdl:_representation>
-                  <dfdl:sequence>
-                    <dfdl:element dfdl:ref="data" occursCount="0..*">
-                      <dfdl:representation>
-                        <dfdl:binary byteOrder="bigEndian" lengthKind="implicit"/>
-                      </dfdl:representation>
-                    </dfdl:element>
-                  </dfdl:sequence>
-                </dfdl:representation>
-              </dfdl:element>
+              <xsd:assertion test="../FunctionCode ge 128" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
             </xs:appinfo>
           </xs:annotation>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="data-type">
+  <xs:complexType name="ModbusData">
     <xs:sequence>
-      <xs:element name="register" type="xs:unsignedShort" dfdl:occursCount="1">
+      <xs:element name="ReferenceType" type="xs:unsignedShort">
         <xs:annotation>
           <xs:appinfo>
-            <dfdl:element dfdl:ref="register">
-              <dfdl:representation>
-                <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="2"/>
-              </dfdl:representation>
-            </dfdl:element>
+            <xsd:assertion test="$value = 0 or $value = 256 or $value = 768 or $value = 1024" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
           </xs:appinfo>
         </xs:annotation>
       </xs:element>
-      <xs:element name="register-count" type="xs:unsignedShort" dfdl:occursCount="1">
+      <xs:element name="ReferenceNumber" type="xs:unsignedShort">
         <xs:annotation>
           <xs:appinfo>
-            <dfdl:element dfdl:ref="register-count">
-              <dfdl:representation>
-                <dfdl:binary byteOrder="bigEndian" lengthKind="explicit" length="2"/>
-              </dfdl:representation>
-            </dfdl:element>
+            <xsd:assertion test="$value ge 0 and $value le 65535" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="BitWordCount" type="xs:unsignedShort">
+        <xs:annotation>
+          <xs:appinfo>
+            <xsd:assertion test="$value ge 1 and $value le 2000" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ByteCount" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xsd:assertion test="$value ge 1 and $value le 255" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="DataField" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <xsd:assertion test="string-length($value) = ../ByteCount * 2" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ModbusException">
+    <xs:sequence>
+      <xs:element name="ExceptionCode" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <xsd:assertion test="$value ge 1 and $value le 11" xmlns:xsd="http://www.w3.org/2001/XMLSchema"/>
           </xs:appinfo>
         </xs:annotation>
       </xs:element>

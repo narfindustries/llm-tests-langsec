@@ -1,73 +1,314 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HTTP-1.1"
-           xmlns:ex="http://example.com/HTTP-1.1"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http.xsd"/>
-
-  <xs:element name="httpRequest">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="ex:requestLine" dfdl:OccursCount="1..1"/>
-        <xs:element ref="ex:headers" dfdl:OccursCount="0..1"/>
-        <xs:element ref="ex:body" dfdl:OccursCount="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           blockDefault="#all"
+           finalDefault=""
+           id="http-1.1-schema">
+  <xs:element name="httpMessage" type="httpMessageType"/>
+  <xs:complexType name="httpMessageType">
+    <xs:sequence>
+      <xs:element ref="requestLine" minOccurs="0" maxOccurs="1"/>
+      <xs:element ref="statusLine" minOccurs="0" maxOccurs="1"/>
+      <xs:element ref="headers" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element ref="entityBody" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
   <xs:element name="requestLine">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="method" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
-        <xs:element name="requestUri" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
-        <xs:element name="httpVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
+        <xs:element name="method" type="xs:string"/>
+        <xs:element name="requestUri" type="xs:string"/>
+        <xs:element name="httpVersion" type="xs:string" fixed="HTTP/1.1"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="headers">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" minOccurs="0" maxOccurs="unbounded">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="name" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=":"/>
-              <xs:element name="value" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="body" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n\r\n">
-    <xs:complexType mixed="true">
-      <xs:sequence>
-        <xs:element name="content" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="response">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="ex:statusLine" dfdl:OccursCount="1..1"/>
-        <xs:element ref="ex:headers" dfdl:OccursCount="0..1"/>
-        <xs:element ref="ex:body" dfdl:OccursCount="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
   <xs:element name="statusLine">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="httpVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
-        <xs:element name="statusCode" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter=" "/>
-        <xs:element name="reasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:delimiter="\r\n"/>
+        <xs:element name="httpVersion" type="xs:string" fixed="HTTP/1.1"/>
+        <xs:element name="statusCode" type="xs:integer"/>
+        <xs:element name="reasonPhrase" type="xs:string"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
+  <xs:element name="headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="headerName" type="xs:string"/>
+        <xs:element name="headerValue" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="entityBody">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="entityHeader" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="body" type="xs:base64Binary" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="entityHeader">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="headerName" type="xs:string"/>
+        <xs:element name="headerValue" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="accept">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="mediaRange" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="acceptCharset">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="charset" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="acceptEncoding">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="contentCoding" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="acceptLanguage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="languageRange" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="authorization">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="authScheme" type="xs:string"/>
+        <xs:element name="credentials" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="cacheControl">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="cacheDirective" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="connection">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="connectionToken" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentEncoding">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="contentCoding" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentLanguage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="languageRange" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentLength">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="length" type="xs:integer"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentLocation">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="absoluteUri" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentMd5">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="md5Digest" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentRange">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="byteRangeRespSpec" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="contentType">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="mediaType" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="date">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="httpDate" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="expect">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="expectation" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="from">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="mailbox" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="host">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="host" type="xs:string"/>
+        <xs:element name="port" type="xs:integer" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ifMatch">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="entityTag" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ifModifiedSince">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="httpDate" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ifNoneMatch">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="entityTag" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ifRange">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="entityTag" type="xs:string"/>
+        <xs:element name="httpDate" type="xs:string" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="ifUnmodifiedSince">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="httpDate" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="maxForwards">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="maxForwards" type="xs:integer"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="proxyAuthorization">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="authScheme" type="xs:string"/>
+        <xs:element name="credentials" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="range">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="byteRangeSpec" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="referer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="absoluteUri" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="te">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transferExtension" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="trailer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="fieldName" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="transferEncoding">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="transferCoding" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="upgrade">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="protocol" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="userAgent">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="product" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="vary">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="fieldName" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="via">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="protocol" type="xs:string"/>
+        <xs:element name="receivedBy" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="warning">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="warnCode" type="xs:integer"/>
+        <xs:element name="warnAgent" type="xs:string"/>
+        <xs:element name="warnText" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

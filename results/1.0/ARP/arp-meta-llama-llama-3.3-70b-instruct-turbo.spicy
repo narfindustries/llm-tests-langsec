@@ -1,48 +1,54 @@
-# ARP (Address Resolution Protocol) Spicy specification
-
-# Module and type definition
 module ARP;
 
-type ARP_Packet = record {
-  # Hardware type (16 bits)
-  hw_type:        uint16;
-  # Protocol type (16 bits)
-  proto_type:     uint16;
-  # Hardware address length (8 bits)
-  hw_addr_len:    uint8;
-  # Protocol address length (8 bits)
-  proto_addr_len: uint8;
-  # Operation (16 bits)
-  op:             uint16;
-  # Sender hardware address (variable length)
-  sender_hw_addr: bytestring &length = hw_addr_len;
-  # Sender protocol address (variable length)
-  sender_proto_addr: bytestring &length = proto_addr_len;
-  # Target hardware address (variable length)
-  target_hw_addr: bytestring &length = hw_addr_len;
-  # Target protocol address (variable length)
-  target_proto_addr: bytestring &length = proto_addr_len;
+type ARP_HTYPE = enum {
+  Ethernet_10mb = 1,
+  Experimental_Ethernet_3mb = 2,
+  Amateur_Radio_AX25 = 3,
+  Proteon_ProNET_Token_Ring = 4,
+  Chaos = 5,
+  IEEE_802_Networks = 6,
+  Arcnet = 7,
+  Hyperchannel = 8,
+  Lanstar = 9,
+  Autonet_Short_Address = 10,
+  LocalTalk = 11,
+  LocalNet = 12,
+  Ultra_Link = 13,
+  SMDS = 14,
+  Frame_Relay = 15,
+  ATM = 16,
+  HDLC = 17,
+  Fibre_Channel = 18,
+  ATM_2 = 19,
+  Serial_Line = 20
 };
 
-#-Type alias
-type ARP_Frame = ARP_Packet;
+type ARP_PTYPE = enum {
+  IPv4 = 0x0800,
+  ARP = 0x0806,
+  IPv6 = 0x086DD
+};
 
-# Event definition
-event arp_request (
-  $msg: ARP_Packet
-);
+type ARP_Operation = enum {
+  Request = 1,
+  Reply = 2,
+  Request_Reverse = 3,
+  Reply_Reverse = 4,
+  DRARP_Request = 5,
+  DRARP_Reply = 6,
+  DRARP_Error = 7,
+  InARP_Request = 8,
+  InARP_Reply = 9
+};
 
-event arp_reply (
-  $msg: ARP_Packet
-);
-
-event unknown_arp_op (
-  $msg: ARP_Packet
-);
-
-# Parsing logic
-parser parser_arp = ARP_Packet() <<
-  {
-    #-parser returns parsed packets of type ARP_Frame
-    return ARP_Frame();
-  };
+type ARP = struct {
+  htype: ARP_HTYPE;
+  ptype: ARP_PTYPE;
+  hlen: uint8;
+  plen: uint8;
+  op: ARP_Operation;
+  sha: bytestring(hlen);
+  spa: bytestring(plen);
+  tha: bytestring(hlen);
+  tpa: bytestring(plen);
+};

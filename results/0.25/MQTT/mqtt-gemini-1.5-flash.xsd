@@ -1,34 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/mqtt" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.org/mqtt"
+           xmlns="http://example.org/mqtt"
+           elementFormDefault="qualified">
 
-  <xs:element name="mqtt_gemini_1">
+  <xs:annotation>
+    <xs:documentation>DFDL schema for MQTT v5.0.  Note: This is a highly simplified representation and does not cover all edge cases or optional fields completely due to the complexity of the MQTT specification. Consult the official MQTT specification for exhaustive details.  This schema also makes significant assumptions about data types for brevity.  The `lengthKind` attribute has been removed from `RemainingLength` as it caused an error.  This version also addresses potential issues with the `dfdl` namespace prefix.</xs:documentation>
+  </xs:annotation>
+
+  <xs:element name="MQTTPacket">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="header" type="HeaderType" dfdl:occursCountKind="exactlyOne"/>
-        <xs:element name="payload" type="PayloadType" dfdl:occursCountKind="exactlyOne"/>
+        <xs:element name="PacketType" type="xs:byte"/>
+        <xs:element name="RemainingLength" type="xs:unsignedInt"/>  <!-- lengthKind removed -->
+        <xs:choice>
+          <xs:element ref="Connect"/>
+          <xs:element ref="Connack"/>
+          <!-- Add other packet types here -->
+        </xs:choice>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="exactlyOne"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeaderType">
-    <xs:sequence>
-      <xs:element name="message_id" type="xs:unsignedInt" dfdl:length="4" dfdl:representation="binary"/>
-      <xs:element name="timestamp" type="xs:dateTime" dfdl:length="16" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="Connect">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ProtocolName" type="xs:string" dfdl:length="4" dfdl:encoding="UTF-8"/>
+        <xs:element name="ProtocolVersion" type="xs:byte"/>
+        <xs:element name="ConnectFlags" type="xs:byte"/>
+        <xs:element name="Keepalive" type="xs:unsignedShort"/>
+        <xs:element name="ClientId" type="xs:string" dfdl:encoding="UTF-8"/>
+        <xs:element minOccurs="0" name="WillProperties" type="Properties"/>
+        <xs:element minOccurs="0" name="WillTopic" type="xs:string" dfdl:encoding="UTF-8"/>
+        <xs:element minOccurs="0" name="WillMessage" type="xs:hexBinary"/>
+        <xs:element minOccurs="0" name="Username" type="xs:string" dfdl:encoding="UTF-8"/>
+        <xs:element minOccurs="0" name="Password" type="xs:hexBinary"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="PayloadType">
-    <xs:sequence>
-      <xs:element name="sensor_data" type="SensorDataType" dfdl:occursCountKind="exactlyOne"/>
-      <xs:element name="status" type="xs:string" dfdl:length="1" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
+  <xs:element name="Connack">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SessionPresent" type="xs:boolean"/>
+        <xs:element name="ConnackReturnCode" type="xs:unsignedShort"/>
+        <xs:element minOccurs="0" name="Properties" type="Properties"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
-  <xs:complexType name="SensorDataType">
+
+  <xs:complexType name="Properties">
     <xs:sequence>
-      <xs:element name="temperature" type="xs:float" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="ieee754"/>
-      <xs:element name="humidity" type="xs:float" dfdl:length="4" dfdl:representation="binary" dfdl:binaryNumberRep="ieee754"/>
+      <xs:element maxOccurs="unbounded" name="Property">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="PropertyId" type="xs:unsignedShort"/>
+            <xs:element name="PropertyValue" type="xs:anyType"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
 

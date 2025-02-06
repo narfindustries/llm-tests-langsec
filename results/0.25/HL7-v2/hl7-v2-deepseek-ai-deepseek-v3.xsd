@@ -1,0 +1,122 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.hl7.org/v2" xmlns="http://www.hl7.org/v2" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="tns:HL7Format"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="HL7MessageType">
+    <xs:sequence>
+      <xs:element name="MSH" type="MSHSegmentType"/>
+      <xs:element name="Segments" type="SegmentListType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MSHSegmentType">
+    <xs:sequence>
+      <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1" dfdl:initiator="MSH"/>
+      <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4"/>
+      <xs:element name="SendingApplication" type="HDType" minOccurs="0"/>
+      <xs:element name="SendingFacility" type="HDType" minOccurs="0"/>
+      <xs:element name="ReceivingApplication" type="HDType" minOccurs="0"/>
+      <xs:element name="ReceivingFacility" type="HDType" minOccurs="0"/>
+      <xs:element name="DateTimeOfMessage" type="DTMType" minOccurs="0"/>
+      <xs:element name="Security" type="xs:string" minOccurs="0"/>
+      <xs:element name="MessageType" type="MSGType"/>
+      <xs:element name="MessageControlID" type="xs:string"/>
+      <xs:element name="ProcessingID" type="PTType"/>
+      <xs:element name="VersionID" type="VIDType"/>
+      <xs:element name="SequenceNumber" type="xs:string" minOccurs="0"/>
+      <xs:element name="ContinuationPointer" type="xs:string" minOccurs="0"/>
+      <xs:element name="AcceptAcknowledgmentType" type="IDType" minOccurs="0"/>
+      <xs:element name="ApplicationAcknowledgmentType" type="IDType" minOccurs="0"/>
+      <xs:element name="CountryCode" type="xs:string" minOccurs="0"/>
+      <xs:element name="CharacterSet" type="xs:string" minOccurs="0"/>
+      <xs:element name="PrincipalLanguageOfMessage" type="CEType" minOccurs="0"/>
+      <xs:element name="AlternateCharacterSetHandlingScheme" type="IDType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentListType">
+    <xs:sequence>
+      <xs:choice maxOccurs="unbounded">
+        <xs:element name="PID" type="PIDSegmentType" minOccurs="0"/>
+        <xs:element name="PV1" type="PV1SegmentType" minOccurs="0"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PIDSegmentType">
+    <xs:sequence>
+      <xs:element name="SetID" type="SIType" minOccurs="0"/>
+      <xs:element name="PatientID" type="CXType" minOccurs="0"/>
+      <xs:element name="PatientIdentifierList" type="CXType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="PatientName" type="XPNType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="MotherMaidenName" type="XPNType" minOccurs="0"/>
+      <xs:element name="DateTimeOfBirth" type="DTMType" minOccurs="0"/>
+      <xs:element name="Sex" type="ISType" minOccurs="0"/>
+      <xs:element name="PatientAlias" type="XPNType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Race" type="CEType" minOccurs="0"/>
+      <xs:element name="PatientAddress" type="XADType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="CountyCode" type="ISType" minOccurs="0"/>
+      <xs:element name="PhoneNumberHome" type="XTNType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="PhoneNumberBusiness" type="XTNType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="PrimaryLanguage" type="CEType" minOccurs="0"/>
+      <xs:element name="MaritalStatus" type="CEType" minOccurs="0"/>
+      <xs:element name="Religion" type="CEType" minOccurs="0"/>
+      <xs:element name="PatientAccountNumber" type="CXType" minOccurs="0"/>
+      <xs:element name="SSNNumber" type="STType" minOccurs="0"/>
+      <xs:element name="DriverLicenseNumber" type="DLNType" minOccurs="0"/>
+      <xs:element name="MothersIdentifier" type="CXType" minOccurs="0"/>
+      <xs:element name="EthnicGroup" type="CEType" minOccurs="0"/>
+      <xs:element name="BirthPlace" type="STType" minOccurs="0"/>
+      <xs:element name="MultipleBirthIndicator" type="IDType" minOccurs="0"/>
+      <xs:element name="BirthOrder" type="NMType" minOccurs="0"/>
+      <xs:element name="Citizenship" type="CEType" minOccurs="0"/>
+      <xs:element name="VeteransMilitaryStatus" type="CEType" minOccurs="0"/>
+      <xs:element name="Nationality" type="CEType" minOccurs="0"/>
+      <xs:element name="PatientDeathDateTime" type="DTMType" minOccurs="0"/>
+      <xs:element name="PatientDeathIndicator" type="IDType" minOccurs="0"/>
+      <xs:element name="IdentityUnknownIndicator" type="IDType" minOccurs="0"/>
+      <xs:element name="IdentityReliabilityCode" type="ISType" minOccurs="0"/>
+      <xs:element name="LastUpdateDateTime" type="DTMType" minOccurs="0"/>
+      <xs:element name="LastUpdateFacility" type="HDType" minOccurs="0"/>
+      <xs:element name="SpeciesCode" type="CEType" minOccurs="0"/>
+      <xs:element name="BreedCode" type="CEType" minOccurs="0"/>
+      <xs:element name="Strain" type="STType" minOccurs="0"/>
+      <xs:element name="ProductionClassCode" type="CEType" minOccurs="0"/>
+      <xs:element name="TribalCitizenship" type="CEType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HDType">
+    <xs:sequence>
+      <xs:element name="NamespaceID" type="ISType" minOccurs="0"/>
+      <xs:element name="UniversalID" type="STType" minOccurs="0"/>
+      <xs:element name="UniversalIDType" type="IDType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DTMType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="format" type="xs:string" fixed="YYYYMMDDHHMMSS"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="XPNType">
+    <xs:sequence>
+      <xs:element name="FamilyName" type="FNType" minOccurs="0"/>
+      <xs:element name="GivenName" type="STType" minOccurs="0"/>
+      <xs:element name="SecondAndFurtherGivenNamesOrInitialsThereof" type="STType" minOccurs="0"/>
+      <xs:element name="Suffix" type="STType" minOccurs="0"/>
+      <xs:element name="Prefix" type="STType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FNType">
+    <xs:sequence>
+      <xs:element name="Surname" type="STType" minOccurs="0"/>
+      <xs:element name="OwnS

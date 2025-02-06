@@ -1,62 +1,104 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+module DNS {
+  import std.bitops;
 
-module DNS.Gemini where
+  record Header {
+    uint16 id;
+    uint16 flags;
+    uint16 qdcount;
+    uint16 ancount;
+    uint16 nscount;
+    uint16 arcount;
+  }
 
-import Daedalus.TH
-import Daedalus.Type.AST
-import Daedalus.PP
+  record Question {
+    bytes name;
+    uint16 type;
+    uint16 class;
+  }
 
-import Data.Maybe (fromMaybe)
-import Data.List (intercalate)
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import Data.Word (Word8, Word16, Word32)
-import Data.Int (Int32)
-import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
+  record ResourceRecord {
+    bytes name;
+    uint16 type;
+    uint16 class;
+    uint32 ttl;
+    uint16 rdlength;
+    bytes rdata;
+  }
 
--- | A Gemini DNS record
-data GeminiRecord = GeminiRecord
-  { geminiURL :: ByteString
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  record DNSMessage {
+    Header header;
+    array[qdcount] Question questions;
+    array[ancount] ResourceRecord answers;
+    array[nscount] ResourceRecord authority;
+    array[arcount] ResourceRecord additional;
+  }
 
--- | Daedalus type for Gemini DNS records
-$(makeDaedalus ''GeminiRecord)
+  function parseDomainName(bytes data) -> string {
+    string name = "";
+    int pos = 0;
+    while (pos < data.length) {
+      int len = data[pos];
+      if (len == 0) break;
+      name += data.slice(pos + 1, pos + len + 1).decode("ascii") + ".";
+      pos += len + 1;
+    }
+    return name.trimEnd(".");
+  }
 
--- | Parser for Gemini DNS records
-geminiRecordParser :: Parser GeminiRecord
-geminiRecordParser = do
-  url <- some byteString
-  return $ GeminiRecord url
+  record RDATA_A {
+    uint32 address;
+  }
 
--- | Example usage (not directly related to the error, but shows how to use the parser)
-main :: IO ()
-main = do
-  let exampleRecord = GeminiRecord "gemini://example.com"
-  let encodedRecord = encode exampleRecord
-  let decodedRecord = decode encodedRecord
-  print encodedRecord
-  print decodedRecord
+  record RDATA_AAAA {
+    uint128 address;
+  }
 
--- Helper functions for encoding and decoding (implementation omitted for brevity)
-encode :: GeminiRecord -> ByteString
-encode = undefined
+  record RDATA_NS {
+    bytes nameserver;
+  }
 
-decode :: ByteString -> Maybe GeminiRecord
-decode = undefined
+  record RDATA_MX {
+    uint16 preference;
+    bytes exchange;
+  }
 
+  record RDATA_CNAME {
+    bytes canonicalName;
+  }
+
+  record RDATA_TXT {
+    bytes text; 
+  }
+
+  record RDATA_SOA {
+    bytes mname;
+    bytes rname;
+    uint32 serial;
+    uint32 refresh;
+    uint32 retry;
+    uint32 expire;
+    uint32 minimum;
+  }
+
+  function parseDNS(bytes data) -> DNSMessage {
+    DNSMessage message = data.parse(DNSMessage);
+    for (q in message.questions) {
+      q.name = parseDomainName(q.name);
+    }
+    for (a in message.answers) {
+      a.name = parseDomainName(a.name);
+      switch (a.type) {
+        case 1: a.rdata = a.rdata.parse(RDATA_A); break;
+        case 28: a.rdata = a.rdata.parse(RDATA_AAAA); break;
+        case 2: a.rdata = a.rdata.parse(RDATA_NS); break;
+        case 15: a.rdata = a.rdata.parse(RDATA_MX); break;
+        case 5: a.rdata = a.rdata.parse(RDATA_CNAME); break;
+        case 16: a.rdata = a.rdata.parse(RDATA_TXT); break;
+        case 6: a.rdata = a.rdata.parse(RDATA_SOA); break;
+        default: break;
+      }
+    }
+    //Process authority and additional records similarly if needed.
+    return message;
+  }
+}

@@ -1,58 +1,74 @@
-#define ICMP_TYPE 8
+module ICMP;
 
-#define ICMP_CODE 0
-
-type ICMPudget = record {
-    type: uint8 = ICMP_TYPE;
-    code: uint8 = ICMP_CODE;
-    checksum: uint16;
-    identifier: uint16;
-    sequence_number: uint16;
+type ICMPType = enum {
+  EchoReply = 0,
+  Reserved1 = 1,
+  Reserved2 = 2,
+  DestinationUnreachable = 3,
+  SourceQuench = 4,
+  Redirect = 5,
+  Reserved6 = 6,
+  Reserved7 = 7,
+  EchoRequest = 8,
+  Reserved9 = 9,
+  Reserved10 = 10,
+  TimeExceeded = 11,
+  ParameterProblem = 12,
+  Timestamp = 13,
+  TimestampReply = 14,
+  InformationRequest = 15,
+  InformationReply = 16,
+  Reserved17To32 = 17,
+  Reserved33To255 = 33
 };
 
-type ICMP_Packet = record {
-    type: uint8;
-    code: uint8;
-    checksum: uint16;
-    rest: bytestring;
+type ICMPCode = enum {
+  NetworkUnreachable = 0,
+  HostUnreachable = 1,
+  ProtocolUnreachable = 2,
+  PortUnreachable = 3,
+  FragmentationNeededAndDontFragmentWasSet = 4,
+  SourceRouteFailed = 5,
+  DestinationNetworkUnknown = 6,
+  DestinationHostUnknown = 7,
+  SourceHostIsolated = 8,
+  CommunicationWithDestinationNetworkIsAdministrativelyProhibited = 9,
+  CommunicationWithDestinationHostIsAdministrativelyProhibited = 10,
+  DestinationNetworkUnreachableForTypeOfService = 11,
+  DestinationHostUnreachableForTypeOfService = 12,
+  Reserved13To15 = 13,
+  TimeToLiveExceededInTransit = 0,
+  FragmentReassemblyTimeExceeded = 1,
+  PointerIndicatesTheError = 0,
+  MissingARequiredOption = 1,
+  BadLength = 2
 };
 
-type ICMP_Meta = record {
-    icmp_type: uint8;
-    icmp_code: uint8;
-    icmp_identifier: uint16;
-    icmp_sequence_number: uint16;
+type ICMPMessage = struct {
+  type: ICMPType;
+  code: uint8;
+  checksum: uint16;
+  identifier: uint16;
+  sequence_number: uint16;
+  gateway_address: uint32 &optional;
+  internet_header_and_64_bits_of_original_datagram: bytes &optional;
+  timestamp: uint32 &optional;
 };
 
-field parser(i: bytestring): ICMP_Packet = 
-    (
-        # Match the type
-        match(i[0:1], uint8) as t,
-        
-        # Match the code
-        match(i[1:2], uint8) as c,
-        
-        # Match the checksum
-        match(i[2:4], uint16) as cs,
-        
-        # Match the rest of the packet
-        match(i[4:], bytestring) as r,
-        
-        ICMP_Packet(
-            t,
-            c,
-            cs,
-            r
-        )
-    );
+type ICMP = vector(icmp_message: ICMPMessage);
 
-field parser_meta(i: bytestring): ICMP_Meta = 
-    (
-        match(i, ICMPudget) as m,
-        ICMP_Meta(
-            m.type,
-            m.code,
-            m.identifier,
-            m.sequence_number
-        )
-    );
+when ICMP.type == DestinationUnreachable {
+  ICMP.code = 0..12;
+}
+
+when ICMP.type == Redirect {
+  ICMP.code = 0..3;
+}
+
+when ICMP.type == TimeExceeded {
+  ICMP.code = 0..1;
+}
+
+when ICMP.type == ParameterProblem {
+  ICMP.code = 0..2;
+}

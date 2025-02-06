@@ -1,110 +1,318 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/jpeg"
-           xmlns:j="http://example.com/jpeg"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
-  <xs:element name="jpeg">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="jpgFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="SOI" type="j:SOIType" dfdl:occurs="1..1"/>
-        <xs:element name="APP0" type="j:APP0Type" dfdl:occurs="1..1"/>
-        <xs:element name="DQT" type="j:DQTType" dfdl:occurs="0..1" dfdl:optional="true"/>
-        <xs:element name="SOF0" type="j:SOF0Type" dfdl:occurs="1..1"/>
-        <xs:element name="DHT" type="j:DHTType" dfdl:occurs="0..1" dfdl:optional="true"/>
-        <xs:element name="DRI" type="j:DRIType" dfdl:occurs="0..1" dfdl:optional="true"/>
-        <xs:element name="SOS" type="j:SOSType" dfdl:occurs="1..1"/>
-        <xs:element name="EOI" type="j:EOIType" dfdl:occurs="1..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="SOIType">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" elementFormDefault="qualified">
+  <xs:element name="format" type="dfdl:formatType"/>
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFD8"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="label" type="xs:string" use="required"/>
+    <xs:attribute name="version" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="occurs" type="xs:string" use="optional"/>
+    <xs:attribute name="maxOccurs" type="xs:string" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="binaryIntegerType">
+    <xs:attribute name="length" type="xs:integer" use="required"/>
+    <xs:attribute name="byteOrder" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:integer" use="optional"/>
+  </xs:complexType>
+  <xs:element name="JPEG" type="dfdl:JPEGType"/>
+  <xs:complexType name="JPEGType">
+    <xs:sequence>
+      <xs:element name="marker" type="dfdl:markerType"/>
+      <xs:element name="markerLength" type="dfdl:markerLengthType"/>
+      <xs:choice>
+        <xs:element name="soi" type="dfdl:soiType"/>
+        <xs:element name="sof0" type="dfdl:sof0Type"/>
+        <xs:element name="sof2" type="dfdl:sof2Type"/>
+        <xs:element name="dht" type="dfdl:dhtType"/>
+        <xs:element name="dac" type="dfdl:dacType"/>
+        <xs:element name="dri" type="dfdl:driType"/>
+        <xs:element name="sos" type="dfdl:sosType"/>
+        <xs:element name="eoi" type="dfdl:eoiType"/>
+      </xs:choice>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="APP0Type">
+  <xs:complexType name="markerType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFE0"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="16"/>
-      <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:encoding="UTF-8" dfdl:outputValue="JFIF"/>
-      <xs:element name="version" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
-      <xs:element name="densityUnits" type="xs:unsignedByte" dfdl:outputValue="1"/>
-      <xs:element name="xDensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
-      <xs:element name="yDensity" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="1"/>
-      <xs:element name="thumbWidth" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="thumbHeight" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DQTType">
+  <xs:complexType name="markerLengthType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDB"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="132"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="tableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="tableData" type="xs:hexBinary" dfdl:length="64" dfdl:byteOrder="bigEndian" dfdl:outputValue="000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"/>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="SOF0Type">
+  <xs:complexType name="soiType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFC0"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="17"/>
-      <xs:element name="precision" type="xs:unsignedByte" dfdl:outputValue="8"/>
-      <xs:element name="imageHeight" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="256"/>
-      <xs:element name="imageWidth" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="256"/>
-      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:outputValue="3"/>
-      <xs:element name="componentId" type="xs:unsignedByte" dfdl:outputValue="1"/>
-      <xs:element name="samplingFactors" type="xs:unsignedByte" dfdl:outputValue="1"/>
-      <xs:element name="quantizationTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+          <xs:attribute name="value" type="xs:integer" use="required" value="65496"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+          <xs:attribute name="value" type="xs:integer" use="required" value="2"/>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DHTType">
+  <xs:complexType name="sof0Type">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFC4"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="162"/>
-      <xs:element name="tableClass" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="tableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="tableData" type="xs:hexBinary" dfdl:length="16" dfdl:byteOrder="bigEndian" dfdl:outputValue="00010011001010000111010010110001"/>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+          <xs:attribute name="value" type="xs:integer" use="required" value="65470"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="precision" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="imageHeight" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="imageWidth" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="numComponents" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="componentSpec" type="dfdl:componentSpecType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="DRIType">
+  <xs:complexType name="componentSpecType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDD"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="4"/>
-      <xs:element name="restartInterval" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="0"/>
+      <xs:element name="componentId" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="hSamplingFactor" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="vSamplingFactor" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="quantTableId" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="SOSType">
+  <xs:complexType name="sof2Type">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFDA"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:byteOrder="bigEndian" dfdl:outputValue="6"/>
-      <xs:element name="numberOfComponents" type="xs:unsignedByte" dfdl:outputValue="3"/>
-      <xs:element name="componentId" type="xs:unsignedByte" dfdl:outputValue="1"/>
-      <xs:element name="dcTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
-      <xs:element name="acTableId" type="xs:unsignedByte" dfdl:outputValue="0"/>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+          <xs:attribute name="value" type="xs:integer" use="required" value="65472"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="precision" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="imageHeight" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="imageWidth" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="numComponents" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="componentSpec" type="dfdl:componentSpecType" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="EOIType">
+  <xs:complexType name="dhtType">
     <xs:sequence>
-      <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="bigEndian" dfdl:outputValue="FFD9"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <dfdl:format name="jpgFormat" type="binary" byteOrder="bigEndian" encoding=" none" />
-</xs:schema>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+          <xs:attribute name="value" type="xs:integer" use="required" value="65475"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+        <xs:complexType>
+          <xs:attribute name="length" type="xs:integer" use="required" value="2"/>
+          <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+          <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="tableClass" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="dfdl:binaryIntegerType">
+              <xs:complexType>
+                <xs:attribute name="length" type="xs:integer" use="required" value="1"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="required" value="big"/>
+                <xs:attribute name="representation" type="xs:string" use="required" value="unsigned"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="tableId" type="dfdl:elementType">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryInteger" type="df

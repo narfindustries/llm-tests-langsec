@@ -1,19 +1,34 @@
-#ifndef BITCOIN_TRANSACTIONS_GEMINI_1_5_FLASH_SPICY
-#define BITCOIN_TRANSACTIONS_GEMINI_1_5_FLASH_SPICY
+module BitcoinTransactions;
 
-function bitcoin_transaction_parser(data: string) : record {
-	version: uint32;
-	inputs: vector of record {
-		prev_out_hash: string;
-		prev_out_index: uint32;
-		script_sig: string;
-		sequence: uint32;
-	};
-	outputs: vector of record {
-		value: uint64;
-		script_pubkey: string;
-	};
-	lock_time: uint32;
-}
+type bitcoin_transaction_input = record {
+    prevout_hash: bytes[32];
+    prevout_n: uint32;
+    scriptsig: bytes;
+    sequence: uint32;
+};
 
-#endif
+type bitcoin_transaction_output = record {
+    value: uint64;
+    pkscript: bytes;
+};
+
+type bitcoin_transaction = record {
+    version: int32;
+    vin: vector[bitcoin_transaction_input];
+    vout: vector[bitcoin_transaction_output];
+    locktime: uint32;
+    has_witness: bool;
+    witnesses: vector[vector[bytes]];
+};
+
+type bitcoin_block = record {
+    header: record {
+        version: int32;
+        prev_block_hash: bytes[32];
+        merkle_root: bytes[32];
+        timestamp: uint32;
+        bits: uint32;
+        nonce: uint32;
+    };
+    transactions: vector[bitcoin_transaction];
+};

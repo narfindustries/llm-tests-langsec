@@ -1,105 +1,116 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <hammer/hammer.h>
 
-// Helper functions for creating parsers
-static HParser *h_uint16_le() {
-    return h_le_u16();
+// Helper functions
+HParser* integer_bits(size_t n, bool signed_val) {
+    return h_bits(n, signed_val);
 }
 
-static HParser *h_uint32_le() {
-    return h_le_u32();
+HParser* color_entry() {
+    return h_sequence(h_uint8(), h_uint8(), h_uint8(), NULL);
 }
 
-// Header parser
-static HParser *gif_header() {
-    return h_sequence(h_string("GIF", 3), h_ch_range('7', '9'), h_ch('a'), NULL);
+HParser* color_table(int size) {
+    return h_repeat_n(color_entry(), size);
 }
 
-// Logical Screen Descriptor parser
-static HParser *logical_screen_descriptor() {
+HParser* gif_signature() {
+    return h_sequence(h_ch('G'), h_ch('I'), h_ch('F'), NULL);
+}
+
+HParser* gif_version() {
+    return h_choice(h_sequence(h_ch('8'), h_ch('7'), h_ch('a'), NULL),
+                    h_sequence(h_ch('8'), h_ch('9'), h_ch('a'), NULL), NULL);
+}
+
+HParser* logical_screen_descriptor() {
     return h_sequence(
-        h_uint16_le(),  // Width
-        h_uint16_le(),  // Height
-        h_bits(1, false),  // Global Color Table Flag
-        h_bits(3, false),  // Color Resolution
-        h_bits(1, false),  // Sorted
-        h_bits(3, false),  // Size of Global Color Table
-        h_uint8(),         // Background Color Index
-        h_uint8(),         // Pixel Aspect Ratio
-        NULL
-    );
+        h_uint16(),
+        h_uint16(),
+        integer_bits(1, false),
+        integer_bits(3, false),
+        integer_bits(1, false),
+        integer_bits(3, false),
+        h_uint8(),
+        h_uint8(),
+        NULL);
 }
 
-// Color table parser
-static HParser *color_table(int size) {
-    return h_repeat_n(h_sequence(h_uint8(), h_uint8(), h_uint8(), NULL), size);
-}
-
-// Graphics Control Extension parser
-static HParser *graphics_control_extension() {
+HParser* image_descriptor() {
     return h_sequence(
-        h_uint8(),  // Block Size
-        h_bits(3, false),  // Reserved
-        h_bits(3, false),  // Disposal Method
-        h_bits(1, false),  // User Input Flag
-        h_bits(1, false),  // Transparent Color Flag
-        h_uint16_le(),     // Delay Time
-        h_uint8(),         // Transparent Color Index
-        h_uint8(),         // Block Terminator
-        NULL
-    );
+        h_ch(','),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        h_uint16(),
+        integer_bits(1, false),
+        integer_bits(1, false),
+        integer_bits(1, false),
+        integer_bits(3, false),
+        NULL);
 }
 
-// Image Descriptor parser
-static HParser *image_descriptor() {
+HParser* extension_block() {
     return h_sequence(
-        h_uint16_le(),  // Left Position
-        h_uint16_le(),  // Top Position
-        h_uint16_le(),  // Width
-        h_uint16_le(),  // Height
-        h_bits(1, false),  // Local Color Table Flag
-        h_bits(1, false),  // Interlace Flag
-        h_bits(1, false),  // Sorted
-        h_bits(2, false),  // Reserved
-        h_bits(3, false),  // Size of Local Color Table
-        NULL
-    );
+        h_ch('!'),
+        h_uint8(),
+        h_length_value(h_uint8(), h_greedy()),
+        NULL);
 }
 
-// Image Data parser
-static HParser *image_data() {
+HParser* gif_data() {
+    return h_many(h_choice(image_descriptor(), extension_block(), NULL));
+}
+
+HParser* gif_parser() {
     return h_sequence(
-        h_uint8(), // LZW Minimum Code Size
-        h_indirect(),  // Data Blocks
-        NULL
-    );
-}
-
-// Block parser for different sections
-static HParser *block() {
-    return h_choice(
-        graphics_control_extension(),
-        h_sequence(h_ch(','), image_descriptor(), image_data(), NULL),  // Image Block
-        h_sequence(h_ch('!'), h_uint8(), h_many(h_uint8()), h_uint8(), NULL),  // Extension Block
-        NULL
-    );
-}
-
-// Full GIF parser
-static HParser *gif_parser() {
-    return h_sequence(
-        gif_header(),
+        gif_signature(),
+        gif_version(),
         logical_screen_descriptor(),
-        h_optional(color_table(256)),  // Optional Global Color Table 
-        h_many(block()),              // Multiple Blocks
-        h_ch(';'),                    // Trailer
-        NULL
-    );
+        h_optional(color_table(256)), // simplified assumed maximum color table
+        gif_data(),
+        h_ch(';'), // GIF trailer
+        NULL);
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = gif_parser();
-    // To be used with Hammer parser functions, e.g., h_parse(), that are not shown here
-    return EXIT_SUCCESS;
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return 1;
+    }
+
+    FILE* fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = malloc(size);
+    if (!buffer) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, size, fp);
+    fclose(fp);
+
+    HParser* parser = gif_parser();
+    HParseResult* result = h_parse(parser, buffer, size);
+    if (result) {
+        printf("GIF parsed successfully.\n");
+    } else {
+        printf("Failed to parse GIF.\n");
+    }
+
+    h_parse_result_free(result);
+    h_parser_free(parser);
+    free(buffer);
+
+    return 0;
 }

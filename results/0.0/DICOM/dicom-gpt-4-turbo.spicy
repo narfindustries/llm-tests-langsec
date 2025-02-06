@@ -1,53 +1,33 @@
 module DICOM;
 
-public type File = unit {
-    preamble: bytes &size=128;
-    prefix: string &size=4;
-    elements: Element(self)[];
+import spicy;
 
-    on %done {
-        print self;
-    }
+public type FileMetaInformation = unit {
+    preamble: bytes &size=128;
+    prefix: bytes &size=4;
+    groupLength: uint32;
+    fileMetaInfoVersion: bytes &size=2;
+    mediaStorageSOPClassUID: bytes &size=64;
+    mediaStorageSOPInstanceUID: bytes &size=64;
+    transferSyntaxUID: bytes &size=64;
+    implementationClassUID: bytes &size=64;
 };
 
-type Element = unit(parent: File) {
+public type DataElement = unit {
     tagGroup: uint16;
     tagElement: uint16;
-    vr: string &size=2;
-    length: uint16;
-    value: switch (self.vr) {
-        case "AE", "AS", "CS", "DA", "DS", "DT", "IS", "TM", "UI": ASCIIString(self.length);
-        case "US": UInt16Array(self.length);
-        case "UL": UInt32Array(self.length);
-        case "OB", "OW", "UN", "SQ": Bytes(self.length);
-        default: UnknownValue(self.length);
-    };
-
-    on %done {
-        if (self.tagGroup == 0x0002 && self.tagElement == 0x0010) {
-            local ts = cast(ASCIIString, self.value);
-            if (ts)
-                print fmt("Transfer Syntax: %s", ts.value);
-        }
-    }
+    vr: bytes &size=2;
+    length: uint32;
+    value: bytes &size=self.length;
 };
 
-type ASCIIString = unit(len: uint16) {
-    value: string &size=len;
+public type DataSet = unit {
+    elements: DataElement[] &eod;
 };
 
-type UInt16Array = unit(len: uint16) {
-    values: uint16[] &size=len/2;
+public type DICOMFile = unit {
+    meta: FileMetaInformation;
+    data: DataSet;
 };
 
-type UInt32Array = unit(len: uint16) {
-    values: uint32[] &size=len/4;
-};
-
-type Bytes = unit(len: uint16) {
-    data: bytes &size=len;
-};
-
-type UnknownValue = unit(len: uint16) {
-    data: bytes &size=len;
-};
+public type File = DICOMFile;

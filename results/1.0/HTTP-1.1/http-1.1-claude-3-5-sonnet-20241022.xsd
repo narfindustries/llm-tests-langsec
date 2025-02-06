@@ -1,58 +1,179 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:local="http://example.com/http"
-    targetNamespace="http://example.com/http">
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:http="http://example.com/http"
+           targetNamespace="http://example.com/http">
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" lengthKind="delimited" 
-                separator="" separatorPolicy="required" 
-                leadingSkip="0" trailingSkip="0"
-                documentFinalTerminatorCanBeMissing="yes"
-                encoding="UTF-8" byteOrder="bigEndian"
-                ignoreCase="no" initiator="" terminator=""
-                occursCountKind="implicit"
-                nilValueDelimiterPolicy="none"
-                textNumberRep="standard"
-                textStringJustification="left"
-                escapeSchemeRef=""/>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format alignment="8" alignmentUnits="bits"
+                   lengthKind="delimited" 
+                   encoding="UTF-8"
+                   initiator="" terminator=""
+                   separator="" separatorPolicy="required"
+                   leadingSkip="0" trailingSkip="0"
+                   textTrimKind="none"
+                   initiatedContent="no"
+                   floating="no"
+                   textBidi="no"
+                   textStringJustification="left"
+                   escapeSchemeRef=""
+                   encodingErrorPolicy="replace"
+                   sequenceKind="ordered"
+                   separatorSuppressionPolicy="never"
+                   ignoreCase="no"
+                   truncateSpecifiedLengthString="no"
+                   fillByte="%#r20;"
+                   representation="text"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-    <xs:element name="http">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="requestLine">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="method" type="xs:string" dfdl:terminator=" "/>
-                            <xs:element name="requestURI" type="xs:string" dfdl:terminator=" "/>
-                            <xs:element name="httpVersion" type="xs:string" dfdl:terminator="%NL;"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="headers" minOccurs="0" maxOccurs="unbounded">
-                    <xs:complexType>
-                        <xs:sequence>
-                            <xs:element name="name" type="xs:string" dfdl:terminator=": "/>
-                            <xs:element name="value" type="xs:string" dfdl:terminator="%NL;"/>
-                        </xs:sequence>
-                    </xs:complexType>
-                </xs:element>
-                <xs:element name="emptyLine" dfdl:terminator="%NL;" dfdl:initiator="%WSP*;"/>
-                <xs:element name="body" type="xs:string" minOccurs="0" maxOccurs="1"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+  <xs:element name="HTTPMessage" dfdl:occursCountKind="implicit">
+    <xs:complexType>
+      <xs:choice>
+        <xs:element ref="http:Request"/>
+        <xs:element ref="http:Response"/>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
 
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="defaults">
-                <dfdl:format ref="local:GeneralFormat"/>
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="http:RequestLine"/>
+        <xs:element ref="http:Headers"/>
+        <xs:element ref="http:Body" minOccurs="0" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Response">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="http:StatusLine"/>
+        <xs:element ref="http:Headers"/>
+        <xs:element ref="http:Body" minOccurs="0" dfdl:occursCountKind="implicit"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="RequestLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Method">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="OPTIONS"/>
+              <xs:enumeration value="GET"/>
+              <xs:enumeration value="HEAD"/>
+              <xs:enumeration value="POST"/>
+              <xs:enumeration value="PUT"/>
+              <xs:enumeration value="DELETE"/>
+              <xs:enumeration value="TRACE"/>
+              <xs:enumeration value="CONNECT"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="RequestURI" type="xs:string"/>
+        <xs:element name="HTTPVersion" type="xs:string" fixed="HTTP/1.1"/>
+        <xs:element name="CRLF" type="xs:string" fixed="&#13;&#10;"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="StatusLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HTTPVersion" type="xs:string" fixed="HTTP/1.1"/>
+        <xs:element name="StatusCode">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:pattern value="[1-5][0-9][0-9]"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="ReasonPhrase" type="xs:string"/>
+        <xs:element name="CRLF" type="xs:string" fixed="&#13;&#10;"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Headers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="http:Header" minOccurs="0" maxOccurs="unbounded" dfdl:occursCountKind="implicit"/>
+        <xs:element name="CRLF" type="xs:string" fixed="&#13;&#10;"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Name">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="Cache-Control"/>
+              <xs:enumeration value="Connection"/>
+              <xs:enumeration value="Date"/>
+              <xs:enumeration value="Pragma"/>
+              <xs:enumeration value="Transfer-Encoding"/>
+              <xs:enumeration value="Upgrade"/>
+              <xs:enumeration value="Via"/>
+              <xs:enumeration value="Warning"/>
+              <xs:enumeration value="Accept"/>
+              <xs:enumeration value="Accept-Charset"/>
+              <xs:enumeration value="Accept-Encoding"/>
+              <xs:enumeration value="Accept-Language"/>
+              <xs:enumeration value="Authorization"/>
+              <xs:enumeration value="Expect"/>
+              <xs:enumeration value="From"/>
+              <xs:enumeration value="Host"/>
+              <xs:enumeration value="If-Match"/>
+              <xs:enumeration value="If-Modified-Since"/>
+              <xs:enumeration value="If-None-Match"/>
+              <xs:enumeration value="If-Range"/>
+              <xs:enumeration value="If-Unmodified-Since"/>
+              <xs:enumeration value="Max-Forwards"/>
+              <xs:enumeration value="Proxy-Authorization"/>
+              <xs:enumeration value="Range"/>
+              <xs:enumeration value="Referer"/>
+              <xs:enumeration value="TE"/>
+              <xs:enumeration value="User-Agent"/>
+              <xs:enumeration value="Accept-Ranges"/>
+              <xs:enumeration value="Age"/>
+              <xs:enumeration value="ETag"/>
+              <xs:enumeration value="Location"/>
+              <xs:enumeration value="Proxy-Authenticate"/>
+              <xs:enumeration value="Retry-After"/>
+              <xs:enumeration value="Server"/>
+              <xs:enumeration value="Vary"/>
+              <xs:enumeration value="WWW-Authenticate"/>
+              <xs:enumeration value="Allow"/>
+              <xs:enumeration value="Content-Encoding"/>
+              <xs:enumeration value="Content-Language"/>
+              <xs:enumeration value="Content-Length"/>
+              <xs:enumeration value="Content-Location"/>
+              <xs:enumeration value="Content-MD5"/>
+              <xs:enumeration value="Content-Range"/>
+              <xs:enumeration value="Content-Type"/>
+              <xs:enumeration value="Expires"/>
+              <xs:enumeration value="Last-Modified"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="Value" type="xs:string"/>
+        <xs:element name="CRLF" type="xs:string" fixed="&#13;&#10;"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Body">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Content" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

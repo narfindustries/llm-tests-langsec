@@ -1,30 +1,30 @@
-GZIP = structure {
-    header: GZIPHeader;
-    compressed_data: bytes(header.compressed_size);
-    crc32: uint32;
-    isize: uint32;
+GZIP : STRUCT = {
+    id1            : U8  = 0x1F;
+    id2            : U8  = 0x8B;
+    compression    : U8  = 0x08;
+    flags          : Flags;
+    mtime          : U32;
+    xfl            : U8;
+    os             : U8;
+    extra          : ExtraField IF flags.fextra == 1;
+    original_name  : STRING('NULL_TERMINATED') IF flags.fname == 1;
+    comment        : STRING('NULL_TERMINATED') IF flags.fcomment == 1;
+    header_crc16   : U16 IF flags.fhcrc == 1;
+    compressed_data: BLOB;
+    crc32          : U32;
+    isize          : U32;
 }
 
-GZIPHeader = structure {
-    id1: uint8 { assert(id1 == 0x1f); }
-    id2: uint8 { assert(id2 == 0x8b); }
-    compression_method: uint8 { assert(compression_method == 0x08); }
-    flags: uint8;
-    mtime: uint32;
-    extra_flags: uint8;
-    os: uint8;
-    extra: optional if (flags & 0x04) != 0 {
-        length: uint16;
-        data: bytes(length);
-    }
-    filename: optional if (flags & 0x08) != 0 {
-        name: cstring;
-    }
-    comment: optional if (flags & 0x10) != 0 {
-        text: cstring;
-    }
-    header_crc16: optional if (flags & 0x02) != 0 {
-        crc16: uint16;
-    }
-    compressed_size: uint32;
+Flags : BITFIELD<U8> = {
+    ftext          : 1;
+    fhcrc          : 1;
+    fextra         : 1;
+    fname          : 1;
+    fcomment       : 1;
+    reserved       : 3;
+}
+
+ExtraField : STRUCT = {
+    xlen           : U16;
+    extra_data     : BLOB[xlen];
 }

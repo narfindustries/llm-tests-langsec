@@ -1,21 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/GZIP"
-           xmlns:tns="http://example.com/GZIP"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com/GZIP" 
+           xmlns="http://example.com/GZIP" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="gzip-meta-llama-llama-3.3-70b-instruct-turbo.xsd"/>
-
-  <xs:element name="GZIP" type="tns:GZIPType" dfdl:parseFormat="binary"/>
-  <xs:complexType name="GZIPType">
-    <xs:sequence>
-      <xs:element name="CompressionMethod" type="xs:unsignedByte" dfdl:alignment="1" dfdl:alignmentOffset="0" dfdl:outputPaddingKind="padded" dfdl:outputPaddingByte="0"/>
-      <xs:element name="Flags" type="xs:unsignedByte" dfdl:alignment="1" dfdl:alignmentOffset="0" dfdl:outputPaddingKind="padded" dfdl:outputPaddingByte="0"/>
-      <xs:element name="ModificationTime" type="xs:unsignedInt" dfdl:representation="binary" dfdl:byteOrder="big" dfdl:alignment="1" dfdl:alignmentOffset="0" dfdl:outputPaddingKind="padded" dfdl:outputPaddingByte="0"/>
-      <xs:element name="ExtraFlags" type="xs:unsignedByte" dfdl:alignment="1" dfdl:alignmentOffset="0" dfdl:outputPaddingKind="padded" dfdl:outputPaddingByte="0"/>
-      <xs:element name="OperatingSystem" type="xs:unsignedByte" dfdl:alignment="1" dfdl:alignmentOffset="0" dfdl:outputPaddingKind="padded" dfdl:outputPaddingByte="0"/>
-      <xs:element name="FileName" type="xs:string" dfdl:representation="text" dfdl:encoding="UTF-8" dfdl:separator جغرافеfelt paddingKind=" logical"/>
-      <xs:element name="Comment" type="xs:string" dfdl:representation="text" dfdl:encoding="UTF-8" dfdl:separator<|reserved_special_token_83|><|start_header_id|>xs:sequence>
-  </xs:complexType>
+  <xs:import namespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+             schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd"/>
+  <xs:element name="GZIP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID1" type="xs:unsignedByte" fixed="31"/>
+        <xs:element name="ID2" type="xs:unsignedByte" fixed="139"/>
+        <xs:element name="CM" type="xs:unsignedByte" fixed="8"/>
+        <xs:element name="FLAGS" type="xs:unsignedByte"/>
+        <xs:element name="MTIME" type="xs:unsignedInt"/>
+        <xs:element name="XFL" type="xs:unsignedByte"/>
+        <xs:element name="OS" type="xs:unsignedByte"/>
+        <xs:element name="EXTRA" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="EXTRA_LEN" type="xs:unsignedShort"/>
+              <xs:element name="EXTRA_DATA" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FNAME" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FNAME_DATA" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FCOMMENT" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FCOMMENT_DATA" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FHCR" minOccurs="0" maxOccurs="1" type="xs:unsignedShort"/>
+        <xs:element name="DEFLATE_DATA" type="xs:hexBinary" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="CRC32" type="xs:unsignedInt"/>
+        <xs:element name="ISIZE" type="xs:unsignedInt"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 </xs:schema>

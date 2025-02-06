@@ -1,67 +1,174 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"
-    xmlns:daf="urn:ogf:dfdl:2013:imp:daffodil.apache.org:2018:ext"
-    xmlns:arp="urn:arp:1.0"
-    targetNamespace="urn:arp:1.0">
-    
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:arp="http://example.com/arp"
+           targetNamespace="http://example.com/arp">
+
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format alignment="1" 
-                        lengthKind="implicit"
-                        representation="binary"
-                        binaryNumberRep="binary"
-                        byteOrder="bigEndian"
-                        occursCountKind="implicit"
-                        initiator="" 
-                        terminator=""
-                        leadingSkip="0"
-                        trailingSkip="0"
-                        textTrimKind="none"
-                        encoding="UTF-8"
-                        ignoreCase="no"/>
+            <dfdl:format representation="binary"
+                         byteOrder="bigEndian"
+                         binaryNumberRep="binary"
+                         lengthKind="implicit"
+                         encoding="UTF-8"
+                         encodingErrorPolicy="replace"
+                         leadingSkip="0"
+                         trailingSkip="0"
+                         initiatedContent="no"
+                         sequenceKind="ordered"
+                         lengthUnits="bytes"
+                         alignmentUnits="bytes"
+                         alignment="1"
+                         floating="no"
+                         textBidi="no"/>
         </xs:appinfo>
     </xs:annotation>
 
-    <xs:element name="arpPacket">
+    <xs:element name="ARP">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element name="hardwareType" type="xs:unsignedShort"/>
-                <xs:element name="protocolType" type="xs:unsignedShort"/>
-                <xs:element name="hardwareAddressLength" type="xs:unsignedByte"/>
-                <xs:element name="protocolAddressLength" type="xs:unsignedByte"/>
-                <xs:element name="operation" type="xs:unsignedShort"/>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:trailingSkip="0" dfdl:alignment="1">
+                <!-- Hardware Type -->
+                <xs:element name="hardwareType" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthKind="explicit" 
+                                        encoding="UTF-8" 
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <!-- Protocol Type -->
+                <xs:element name="protocolType" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthKind="explicit" 
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <!-- Hardware Address Length -->
+                <xs:element name="hardwareAddressLength" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthKind="explicit" 
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <!-- Protocol Address Length -->
+                <xs:element name="protocolAddressLength" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthKind="explicit" 
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <!-- Operation Code -->
+                <xs:element name="operationCode" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthKind="explicit" 
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+
+                <!-- Sender Hardware Address -->
                 <xs:element name="senderHardwareAddress">
-                    <xs:complexType>
-                        <xs:sequence dfdl:byteOrder="bigEndian">
-                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="6" minOccurs="6"/>
-                        </xs:sequence>
-                    </xs:complexType>
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element lengthKind="explicit" 
+                                        length="{ ../hardwareAddressLength }"
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary"/>
+                    </xs:simpleType>
                 </xs:element>
+
+                <!-- Sender Protocol Address -->
                 <xs:element name="senderProtocolAddress">
-                    <xs:complexType>
-                        <xs:sequence dfdl:byteOrder="bigEndian">
-                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="4" minOccurs="4"/>
-                        </xs:sequence>
-                    </xs:complexType>
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element lengthKind="explicit"
+                                        length="{ ../protocolAddressLength }"
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary"/>
+                    </xs:simpleType>
                 </xs:element>
+
+                <!-- Target Hardware Address -->
                 <xs:element name="targetHardwareAddress">
-                    <xs:complexType>
-                        <xs:sequence dfdl:byteOrder="bigEndian">
-                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="6" minOccurs="6"/>
-                        </xs:sequence>
-                    </xs:complexType>
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element lengthKind="explicit"
+                                        length="{ ../hardwareAddressLength }"
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary"/>
+                    </xs:simpleType>
                 </xs:element>
+
+                <!-- Target Protocol Address -->
                 <xs:element name="targetProtocolAddress">
-                    <xs:complexType>
-                        <xs:sequence dfdl:byteOrder="bigEndian">
-                            <xs:element name="byte" type="xs:unsignedByte" maxOccurs="4" minOccurs="4"/>
-                        </xs:sequence>
-                    </xs:complexType>
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element lengthKind="explicit"
+                                        length="{ ../protocolAddressLength }"
+                                        encoding="UTF-8"
+                                        encodingErrorPolicy="replace"
+                                        leadingSkip="0"
+                                        trailingSkip="0"
+                                        alignment="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                    <xs:simpleType>
+                        <xs:restriction base="xs:hexBinary"/>
+                    </xs:simpleType>
                 </xs:element>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
 </xs:schema>

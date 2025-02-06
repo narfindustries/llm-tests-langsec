@@ -2,65 +2,73 @@ meta:
   id: gzip
   file-extension: gz
   endian: le
-
 seq:
-  - id: magic
-    contents: [0x1f, 0x8b]
+  - id: magic1
+    contents: [0x1f]
+  - id: magic2
+    contents: [0x8b]
   - id: compression_method
     type: u1
-    enum: compression_methods
+    enum: compression
   - id: flags
-    type: u1
-  - id: modification_time
+    type: flags
+  - id: mtime
     type: u4
   - id: extra_flags
     type: u1
-  - id: operating_system
+    enum: extra_flags
+  - id: os
     type: u1
-    enum: operating_systems
-  - id: extra_fields
-    type: extra_field
-    if: flags & flags::extra.to_i != 0
+    enum: os
+  - id: extra_length
+    type: u2
+    if: flags.extra
+  - id: extra
+    size: extra_length
+    if: flags.extra
   - id: name
     type: strz
-    encoding: utf-8
-    if: flags & flags::name.to_i != 0
+    encoding: ASCII
+    if: flags.name
   - id: comment
     type: strz
-    encoding: utf-8
-    if: flags & flags::comment.to_i != 0
+    encoding: ASCII
+    if: flags.comment
   - id: header_crc16
     type: u2
-    if: flags & flags::header_crc.to_i != 0
+    if: flags.header_crc
   - id: compressed_data
-    size-eos: true
-    process: zlib
-    if: compression_method == compression_methods::deflate
-
+    size: _io.size - _io.pos - 8
+  - id: crc32
+    type: u4
+  - id: isize
+    type: u4
 types:
-  extra_field:
+  flags:
+    meta:
+      bit-endian: le
     seq:
-      - id: len_total
-        type: u2
-      - id: entries
-        type: extra_field_entry
-        repeat: eos
-
-  extra_field_entry:
-    seq:
-      - id: id
-        type: u2
-      - id: len
-        type: u2
-      - id: data
-        size: len
-
+      - id: reserved
+        type: b3
+      - id: comment
+        type: b1
+      - id: name
+        type: b1
+      - id: extra
+        type: b1
+      - id: header_crc
+        type: b1
+      - id: text
+        type: b1
 enums:
-  compression_methods:
+  compression:
     0: store
     8: deflate
-
-  operating_systems:
+  extra_flags:
+    0: none
+    2: maximum_compression
+    4: fastest_compression
+  os:
     0: fat
     1: amiga
     2: vms
@@ -76,10 +84,3 @@ enums:
     12: qdos
     13: acorn_riscos
     255: unknown
-
-  flags:
-    1: text
-    2: header_crc
-    4: extra
-    8: name
-    16: comment

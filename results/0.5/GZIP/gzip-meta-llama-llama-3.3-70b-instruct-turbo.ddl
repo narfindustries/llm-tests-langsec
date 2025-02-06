@@ -1,42 +1,30 @@
-domain gzip {
-  header gzip_header {
-    field magic: uint16 = 0x1f8b;
-    field compression_method: uint8 = 8;
-    field flags: uint8;
-    field modification_time: uint32;
-    field extra_flags: uint8;
-    field operating_system: uint8;
+format gzip {
+  id1: uint8 = 0x1f;
+  id2: uint8 = 0x8b;
+  cm: uint8 = 8;
+  flags: uint8;
+  mtime: uint32;
+  xfl: uint8;
+  os: uint8;
+
+  if (flags & 4) != 0 {
+    xlen: uint16;
+    extra: bytes[xlen];
   }
 
-  footer gzip_footer {
-    field crc32: uint32;
-    field input_size: uint32;
+  if (flags & 8) != 0 {
+    fname: string0;
   }
 
-  body gzip_body {
-    if (header.flags & 0x04) {
-      field extra_length: uint16;
-      field extra: bytes[extra_length];
-    }
-
-    if (header.flags & 0x08) {
-      field filename: string;
-      field zero_terminator: uint8 = 0;
-    }
-
-    if (header.flags & 0x10) {
-      field comment: string;
-      field zero_terminator: uint8 = 0;
-    }
-
-    if (header.flags & 0x02) {
-      field header_crc16: uint16;
-    }
-
-    field compressed_data: bytes;
+  if (flags & 16) != 0 {
+    fcomment: string0;
   }
 
-  grammar {
-    start: gzip_header gzip_body gzip_footer;
+  if (flags & 2) != 0 {
+    fhdr_crc: uint16;
   }
+
+  compressed: bytes[*];
+  crc32: uint32;
+  isize: uint32;
 }

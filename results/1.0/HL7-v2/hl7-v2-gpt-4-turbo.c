@@ -1,78 +1,107 @@
-Given the error provided and based on Hammer, a parser library written in C using combinatory parsing style, here’s a fixed and complete version of a C Hammer specification for parsing HL7 version 2.x messages. This version assumes the fundamental structure of HL7 messages and attempts to apply correct compilation standards.
-
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// Forward declarations for recursive rules
-static HParsedToken *parse_segment(HParser *p, const HParseResult *res);
+// HL7 Message Delimiters
+#define FIELD_SEPARATOR '|'
+#define COMPONENT_SEPARATOR '^'
+#define REPEAT_SEPARATOR '~'
+#define ESCAPE_CHARACTER '\\'
+#define SUBCOMPONENT_SEPARATOR '&'
+#define SEGMENT_TERMINATOR '\r'
 
-// Basic building blocks for HL7 messages
-static HParser *field_sep;
-static HParser *encoding_chars;
-static HParser *segment_name;
-static HParser *field;
-static HParser *component;
-static HParser *subcomponent;
-static HParser *repeat_field;
-static HParser *segment;
-static HParser *message;
+// Helper function prototypes
+HParser *hl7_field();
+HParser *hl7_component();
+HParser *optional_repetitions(HParser *p);
 
-void init_parsers() {
-    field_sep = h_ch('|');
-    encoding_chars = h_ch('^');
-    segment_name = h_token("MSH|PID|EVN", 3);
+// HL7 Segment Parsers
+HParser *segment_MSH();
+HParser *segment_PID();
+HParser *segment_OBR();
+HParser *segment_ORC();
+HParser *segment_OBX();
 
-    subcomponent = h_sequence(
-        h_many1(h_alpha()),
-        h_end_p()
-    );
+// Main HL7 Message Parser
+HParser *hl7_message();
 
-    component = h_sequence(
-        subcomponent,
-        h_many(h_sequence(h_ch('&'), subcomponent, NULL)),
-        h_end_p()
-    );
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <hl7_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    field = h_sequence(
-        component,
-        h_many(h_sequence(h_ch('~'), component, NULL)),
-        h_end_p()
-    );
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("File opening failed");
+        return EXIT_FAILURE;
+    }
 
-    segment = h_sequence(
-        segment_name,
-        h_many(field, NULL),
-        h_ch('\r'),
-        h_end_p()
-    );
+    fseek(fp, 0, SEEK_END);
+    size_t len = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    message = h_many1(segment);
-}
+    char *data = malloc(len + 1);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return EXIT_FAILURE;
+    }
 
-const HParsedToken *parse_segment(HParser *p, const HParseResult *res) {
-    // Process the segments
-    const HParsedToken *segment = h_act_flatten(res->ast, 0);
-    return segment;
-}
+    fread(data, 1, len, fp);
+    fclose(fp);
+    data[len] = '\0'; // Null-terminate the data for parsing
 
-int main(int argc, char *argv[]) {
-    init_parsers(); // Initialize parsers
-
-    // Example HL7 message to parse
-    char *input = "MSH|^~\\&|ADT|...|PID|...|EVN|...\r";
-
-    HParseResult *result = h_parse(message, (const uint8_t *)input, strlen(input));
+    HParser *parser = hl7_message();
+    HParseResult *result = h_parse(parser, (const uint8_t *)data, len);
     if (result) {
-        printf("Parsing succeeded!\n");
-        // Handle the parsed message
+        printf("HL7 message parsed successfully.\n");
     } else {
-        printf("Parsing failed!\n");
+        fprintf(stderr, "Failed to parse HL7 message.\n");
     }
 
     h_parse_result_free(result);
-    return 0;
+    free(data);
+
+    return EXIT_SUCCESS;
 }
 
-This sample assumes basic constructs of the HL7 version 2.x format, such as fields, components, and segments. Each segment begins with its name, followed by fields separated by '|' characters as defined. Error handling, memory management, and comprehensive HL7 definitions (like escape sequences and field repetitions) need further definition and implementation for a robust parser.
+HParser *hl7_field() {
+    return h_sepBy1(h_ch(ESCAPE_CHARACTER), h_ch(FIELD_SEPARATOR));
+}
 
-The original error indicates a GCC compilation issue, likely missing or undefined references in the linked Hammer library or misconfiguration in the build environment. Ensure that the Hammer library is properly installed and linked during compilation. Additionally, verify the structure of your specification fits the input you're parsing to prevent runtime errors.
+HParser *hl7_component() {
+    return h_sepBy1(h_any(), h_ch(ESCAPE_CHARACTER));
+}
+
+HParser *optional_repetitions(HParser *p) {
+    return h_optional(h_sepBy(p, h_ch(REPEAT_SEPARATOR)));
+}
+
+HParser *segment_MSH() {
+    return h_sequence(h_string("MSH", 3), h_ch(FIELD_SEPARATOR), hl7_field(), NULL);
+}
+
+HParser *segment_PID() {
+    return h_sequence(h_string("PID", 3), h_ch(FIELD_SEPARATOR), hl7_field(), NULL);
+}
+
+HParser *segment_OBR() {
+    return h_sequence(h_string("OBR", 3), h_ch(FIELD_SEPARATOR), hl7_field(), NULL);
+}
+
+HParser *segment_ORC() {
+    return h_sequence(h_string("ORC", 3), h_ch(FIELD_SEPARATOR), hl7_field(), NULL);
+}
+
+HParser *segment_OBX() {
+    return h_sequence(h_string("OBX", 3), h_ch(FIELD_SEPARATOR), hl7_field(), NULL);
+}
+
+HParser *hl7_message() {
+    return h_many(h_sequence(
+        h_choice(segment_MSH(), segment_PID(), segment_OBR(), segment_ORC(), segment_OBX(), NULL),
+        h_ch(SEGMENT_TERMINATOR),
+        NULL
+    ));
+}

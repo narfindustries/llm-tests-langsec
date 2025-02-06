@@ -1,55 +1,41 @@
 module NTP;
 
-import spicy;
-
 public type Packet = unit {
-    leap_indicator: bitfield(2) {
-        no_warning:  0;
-        last_minute_61_sec: 1;
-        last_minute_59_sec: 2;
-        alarm_clock_not_synchronized: 3;
-    };
+    control_bits: uint16;
     
-    version: bitfield(3) {
-        v1: 1;
-        v2: 2;
-        v3: 3;
-        v4: 4;
+    leap_indicator: bitfield(2) of control_bits {
+        no_warning = 0b00,
+        last_minute_61s = 0b01, 
+        last_minute_59s = 0b10,
+        clock_unsync = 0b11
     };
-    
-    mode: bitfield(3) {
-        symmetric_active: 1;
-        symmetric_passive: 2;
-        client: 3;
-        server: 4;
-        broadcast: 5;
-        reserved_control: 6;
-        reserved_private: 7;
+
+    version: bitfield(3) of control_bits {
+        v1 = 1,
+        v2 = 2,
+        v3 = 3,
+        v4 = 4
     };
-    
-    stratum: uint8 {
-        primary_reference: 0;
-        secondary_reference: range(1, 15);
-        secondary_server: range(16, 255);
+
+    mode: bitfield(3) of control_bits {
+        reserved = 0,
+        symmetric_active = 1,
+        symmetric_passive = 2,
+        client = 3,
+        server = 4,
+        broadcast = 5,
+        control = 6,
+        private_use = 7
     };
-    
+
+    stratum: uint8;
     poll_interval: int8;
     precision: int8;
-    
-    root_delay: bytes(4);
-    root_dispersion: bytes(4);
-    
-    reference_identifier: bytes(4);
-    reference_timestamp: bytes(8);
-    origin_timestamp: bytes(8);
-    receive_timestamp: bytes(8);
-    transmit_timestamp: bytes(8);
-    
-    on %init {
-        self.version.requires(self.version == 4);
-    }
-};
-
-public type Message = unit {
-    packet: Packet;
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: bytes(4);
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
 };

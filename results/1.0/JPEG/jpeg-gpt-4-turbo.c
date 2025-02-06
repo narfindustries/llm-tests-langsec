@@ -1,114 +1,135 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Defining JPEG markers
-#define SOI  0xD8
-#define EOI  0xD9
-#define SOS  0xDA
-#define APP0 0xE0
-#define DQT  0xDB
-#define SOF0 0xC0
-#define DHT  0xC4
-#define COM  0xFE
+// Define JPEG markers
+#define SOI_MARKER  0xFFD8
+#define EOI_MARKER  0xFFD9
+#define SOF0_MARKER 0xFFC0
+#define DHT_MARKER  0xFFC4
+#define DQT_MARKER  0xFFDB
+#define SOS_MARKER  0xFFDA
+#define DRI_MARKER  0xFFDD
 
-// Hammer Parsers
-static HParser *jpeg;
-static HParser *segment;
-static HParser *soi;
-static HParser *eoi;
-static HParser *sos;
-static HParser *app0;
-static HParser *dqt;
-static HParser *sof0;
-static HParser *dht;
-static HParser *com;
-static HParser *unknown_segment;
+// Define the parser for a JPEG file
+static HParser *jpeg_parser = NULL;
 
-// Parsing Functions
-static HParsedToken *act_return_type(const HParseResult *p, void *user_data) {
-    return H_MAKE_BYTES(p->bit_offset, p->bit_length);
+// Function declarations for parsing specific structures
+HParser *parse_marker() {
+    return h_uint16();
 }
 
-uint8_t read_marker(const uint8_t bytes[]) {
-    return bytes[0];
-}
-
-HParser *marker_parser(uint8_t marker) {
-    HParser *pm = h_bits(8, false);
-    return h_right(h_byte(), h_val_u8(marker));
-}
-
-HParser *undefined_length_data() {
-    return h_middle(h_bytes(2), h_many(h_any()), h_end_p());
-}
-
-HParser *defined_length_data() {
-    return h_middle(h_bytes(2), h_length_value(h_uint16_be(), h_uint8()), h_end_p());
-}
-
-void init_jpeg_parser() {
-    // Marker segments
-    soi = marker_parser(SOI);
-    eoi = marker_parser(EOI);
-    sos = h_sequence(marker_parser(SOS), undefined_length_data(), NULL);
-    app0 = h_sequence(marker_parser(APP0), defined_length_data(), NULL);
-    dqt = h_sequence(marker_parser(DQT), defined_length_data(), NULL);
-    sof0 = h_sequence(marker_parser(SOF0), defined_length_data(), NULL);
-    dht = h_sequence(marker_parser(DHT), defined_length_data(), NULL);
-    com = h_sequence(marker_parser(COM), defined_length_data(), NULL);
-    unknown_segment = h_sequence(h_not(h_choice(soi, eoi, sos, app0, dqt, sof0, dht, com, NULL)), defined_length_data(), NULL);
-
-    segment = h_choice(soi, eoi, sos, app0, dqt, sof0, dht, com, unknown_segment, NULL);
-    
-    jpeg = h_sequence(
-        soi, 
-        h_many(segment),
-        eoi,
-        h_end_p(),
+HParser *parse_frame_header() {
+    return h_sequence(
+        h_uint16(), // Length of the header
+        h_uint8(),  // Precision
+        h_uint16(), // Height
+        h_uint16(), // Width
+        h_uint8(),  // Number of components
         NULL
     );
 }
 
-int main(int argc, char **argv) {
-    size_t len;
-    uint8_t *input;
+HParser *parse_huffman_table() {
+    return h_length_value(
+        h_uint16(),
+        h_sequence(
+            h_bits(4, false),   // Table class
+            h_bits(4, false),   // Table ID
+            h_many1(h_uint8()), // Number of symbols for each code length
+            h_many1(h_uint8()), // Huffman Values
+            NULL
+        )
+    );
+}
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    
-    FILE *file = fopen(argv[1], "rb");
-    if (!file) {
-        perror("Failed to open file");
-        return EXIT_FAILURE;
-    }
+HParser *parse_quantization_table() {
+    return h_length_value(
+        h_uint16(),
+        h_sequence(
+            h_bits(4, false),   // Precision
+            h_bits(4, false),   // Table ID
+            h_many1(h_uint8()), // Quantization values
+            NULL
+        )
+    );
+}
 
-    // Read the whole file into memory
+HParser *parse_scan_header() {
+    return h_sequence(
+        h_uint16(), // Length
+        h_uint8(),  // Number of components in scan
+        h_many1(h_sequence( // Component-specific information
+            h_uint8(),        // Scan component selector
+            h_bits(4, false), // DC entropy coding table selector
+            h_bits(4, false), // AC entropy coding table selector
+            NULL
+        )),
+        h_uint8(),  // Start of spectral or predictor selection
+        h_uint8(),  // End of spectral selection
+        h_uint8(),  // Successive approximation bit position high
+        NULL
+    );
+}
+
+void init_jpeg_parser() {
+    jpeg_parser = h_sequence(
+        parse_marker(), // SOI
+        h_many(h_choice(
+            h_sequence(h_ch_range(0xFF, 0xFF), h_ch_range(0xC0, 0xFE), parse_frame_header(), NULL),
+            parse_huffman_table(),
+            parse_quantization_table(),
+            parse_scan_header(),
+            h_end_p(),
+            NULL
+        )),
+        parse_marker(), // EOI
+        NULL
+    );
+}
+
+int read_file(const char *filename, uint8_t **data, size_t *len) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) return 0;
     fseek(file, 0, SEEK_END);
-    len = ftell(file);
+    *len = ftell(file);
     fseek(file, 0, SEEK_SET);
-    input = malloc(len);
-    fread(input, 1, len, file);
+    *data = malloc(*len);
+    if (!*data){
+        fclose(file);
+        return 0;
+    }
+    fread(*data, 1, *len, file);
+    fclose(file);
+    return 1;
+}
 
-    // Initialize the JPEG parser
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <JPEG file>\n", argv[0]);
+        return 1;
+    }
+
+    uint8_t *data;
+    size_t data_len;
+    if (!read_file(argv[1], &data, &data_len)) {
+        fprintf(stderr, "Failed to read file %s\n", argv[1]);
+        return 1;
+    }
+
     init_jpeg_parser();
 
-    // Parse the JPEG
-    HParseResult *result = h_parse(jpeg, input, len);
+    HParseResult *result = h_parse(jpeg_parser, data, data_len);
     if (result) {
-        printf("JPEG parsed successfully!\n");
+        printf("JPEG parsed successfully. Size: %zu bytes\n", data_len);
+        h_pprint(stdout, result->ast, 0, 1);
     } else {
-        fprintf(stderr, "Failed to parse JPEG\n");
+        printf("Failed to parse JPEG.\n");
     }
 
-    // Cleanup
-    fclose(file);
-    free(input);
+    free(data);
     h_parse_result_free(result);
-    
-    return EXIT_SUCCESS;
+    h_parser_free(jpeg_parser);
+
+    return 0;
 }
-This complete code represents a JPEG parser using the Hammer parser combinator library in C. It is designed to parse standard JPEG structures and segments, handling different segments like SOI, EOI, SOS, etc., with actions to return different types based on the segment. It checks the input file and reads it, then applies the defined JPEG parsing logic.

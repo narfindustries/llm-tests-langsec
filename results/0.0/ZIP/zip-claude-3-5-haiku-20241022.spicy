@@ -1,11 +1,11 @@
-module ZIP;
+module Zip;
 
 import spicy;
 
-public type Header = unit {
-    signature: bytes(4) &requires($$=="PK\x03\x04");
-    version: uint16;
-    flags: uint16;
+public type LocalFileHeader = struct {
+    signature: uint32;
+    version_needed: uint16;
+    general_purpose_bit_flag: uint16;
     compression_method: uint16;
     last_mod_time: uint16;
     last_mod_date: uint16;
@@ -14,14 +14,82 @@ public type Header = unit {
     uncompressed_size: uint32;
     filename_length: uint16;
     extra_field_length: uint16;
-    filename: bytes(filename_length);
-    extra_field: bytes(extra_field_length) &optional;
-
-    on %done {
-        print fmt("ZIP File: %s", filename);
-    }
+    filename: bytes;
+    extra_field: bytes &optional;
+    file_data: bytes &optional;
+} &parse {
+    self.filename = bytes(self.filename_length);
+    self.extra_field = (self.extra_field_length > 0 ? bytes(self.extra_field_length) : b"");
+    self.file_data = (self.compressed_size > 0 ? bytes(self.compressed_size) : b"");
+} &validate {
+    self.signature == 0x04034b50
 };
 
-public type File = unit {
-    headers: Header[];
+public type CentralDirectoryFileHeader = struct {
+    signature: uint32;
+    version_made_by: uint16;
+    version_needed: uint16;
+    general_purpose_bit_flag: uint16;
+    compression_method: uint16;
+    last_mod_time: uint16;
+    last_mod_date: uint16;
+    crc32: uint32;
+    compressed_size: uint32;
+    uncompressed_size: uint32;
+    filename_length: uint16;
+    extra_field_length: uint16;
+    file_comment_length: uint16;
+    disk_number_start: uint16;
+    internal_file_attributes: uint16;
+    external_file_attributes: uint32;
+    local_header_offset: uint32;
+    filename: bytes;
+    extra_field: bytes &optional;
+    file_comment: bytes &optional;
+} &parse {
+    self.filename = bytes(self.filename_length);
+    self.extra_field = (self.extra_field_length > 0 ? bytes(self.extra_field_length) : b"");
+    self.file_comment = (self.file_comment_length > 0 ? bytes(self.file_comment_length) : b"");
+} &validate {
+    self.signature == 0x02014b50
 };
+
+public type EndOfCentralDirectory = struct {
+    signature: uint32;
+    number_of_this_disk: uint16;
+    disk_with_central_directory: uint16;
+    total_entries_on_disk: uint16;
+    total_entries_in_central_directory: uint16;
+    size_of_central_directory: uint32;
+    offset_of_central_directory: uint32;
+    zip_file_comment_length: uint16;
+    zip_file_comment: bytes &optional;
+} &parse {
+    self.zip_file_comment = (self.zip_file_comment_length > 0 ? bytes(self.zip_file_comment_length) : b"");
+} &validate {
+    self.signature == 0x06054b50
+};
+
+public type Zip64EndOfCentralDirectory = struct {
+    signature: uint32;
+    size_of_record: uint64;
+    version_made_by: uint16;
+    version_needed: uint16;
+    number_of_this_disk: uint32;
+    disk_with_central_directory: uint32;
+    total_entries_on_disk: uint64;
+    total_entries_in_central_directory: uint64;
+    size_of_central_directory: uint64;
+    offset_of_central_directory: uint64;
+} &validate {
+    self.signature == 0x06064b50
+};
+
+public type ZipFile = struct {
+    local_file_headers: vector<LocalFileHeader>;
+    central_directory_headers: vector<CentralDirectoryFileHeader>;
+    end_of_central_directory: EndOfCentralDirectory;
+    zip64_end_of_central_directory: Zip64EndOfCentralDirectory &optional;
+};
+
+public type Parser = spicy::Parser<ZipFile>;

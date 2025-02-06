@@ -1,59 +1,100 @@
-meta:
-  id: bitcoin-transactions
-  file-extension: dat
-  endian: le
 seq:
-  - id: transaction_count
-    type: u32
-  - id: transactions
+  - id: transaction
     type: transaction
-    repeat: expr
-    repeat-expr: transaction_count
+
 types:
   transaction:
     seq:
       - id: version
-        type: u32
-      - id: tx_in_count
-        type: uvarint
-      - id: tx_ins
-        type: tx_in
-        repeat: expr
-        repeat-expr: tx_in_count
-      - id: tx_out_count
-        type: uvarint
-      - id: tx_outs
-        type: tx_out
-        repeat: expr
-        repeat-expr: tx_out_count
+        type: uint32le
+      - id: num_inputs
+        type: varint
+      - id: inputs
+        type: input
+        repeat: num_inputs
+      - id: num_outputs
+        type: varint
+      - id: outputs
+        type: output
+        repeat: num_outputs
       - id: lock_time
-        type: u32
-    types:
-      tx_in:
-        seq:
-          - id: prev_out
-            type: prev_out
-          - id: script_length
-            type: uvarint
-          - id: script_sig
-            type: str
-            size: script_length
-          - id: sequence
-            type: u32
-        types:
-          prev_out:
-            seq:
-              - id: tx_id
-                type: bytes
-                size: 32
-              - id: out_idx
-                type: u32
-      tx_out:
-        seq:
-          - id: value
-            type: u64
-          - id: pk_script_length
-            type: uvarint
-          - id: pk_script
-            type: str
-            size: pk_script_length
+        type: uint32le
+
+  input:
+    seq:
+      - id: prev_txid
+        type: bytes
+        size: 32
+      - id: prev_out_idx
+        type: uint32le
+      - id: script_len
+        type: varint
+      - id: script
+        type: bytes
+        size: expr
+        expr: script_len.value
+      - id: sequence
+        type: uint32le
+
+  output:
+    seq:
+      - id: value
+        type: uint64le
+      - id: script_len
+        type: varint
+      - id: script
+        type: bytes
+        size: expr
+        expr: script_len.value
+
+  varint:
+    seq:
+      - id: first_byte
+        type: uint8
+      - id: value
+        type:
+          switch-on: first_byte
+          cases:
+            - when: "<= 0xfd"
+              type: uint8
+            - when: "== 0xfd"
+              type: uint16le
+            - when: "== 0xfe"
+              type: uint32le
+            - when: "== 0xff"
+              type: uint64le
+
+  bytes:
+    seq:
+      - id: data
+        type: uint8
+        repeat: expr
+
+  fixed_size_bytes:
+    params:
+      size: int
+    seq:
+      - id: data
+        type: uint8
+        repeat: expr
+        expr: size
+
+  uint32le:
+    type: fixed_size_bytes
+    params:
+      size: 4
+
+  uint64le:
+    type: fixed_size_bytes
+    params:
+      size: 8
+
+  uint16le:
+    type: fixed_size_bytes
+    params:
+      size: 2
+
+  uint8:
+    type: fixed_size_bytes
+    params:
+      size: 1

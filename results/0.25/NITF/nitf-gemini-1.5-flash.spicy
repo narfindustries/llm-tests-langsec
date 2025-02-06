@@ -1,33 +1,51 @@
-#ifndef NITF_GEMINI_1_5_FLASH_SPICY
-#define NITF_GEMINI_1_5_FLASH_SPICY
+module NITF;
 
-event nitf_gemini_1_5_flash_event(uint64 timestamp, string payload) {
-    # This event is triggered when a NITF Gemini 1.5 flash is detected.
-    # The payload contains the raw data of the flash.
-    # Further processing may be required to extract meaningful information.
-}
+type NITF_File = record {
+  file_header: NITF_FileHeader;
+  image_headers: vector of NITF_ImageHeader;
+  extended_headers: vector of NITF_ExtendedHeader;
+};
 
-function process_nitf_gemini_1_5_flash(string filename) : bool {
-    # This function processes a NITF Gemini 1.5 flash file.
-    # It returns true if the processing was successful, false otherwise.
-    local file f;
-    local string data;
+type NITF_FileHeader = record {
+  file_id: string;
+  header_length: uint32;
+  security_classification: string;
+  security_handling: string;
+  image_offsets: vector of uint32;
+  image_lengths: vector of uint32;
+  flags: uint32;
+  // ... other file header fields ...
+};
 
-    if (open(f, filename, "r") == -1) {
-        print("Error opening file: " + filename);
-        return false;
-    }
+type NITF_ImageHeader = record {
+  image_id: string;
+  image_width: uint32;
+  image_height: uint32;
+  num_bands: uint32;
+  compression_type: string;
+  pixel_data_type: string;
+  geospatial_info: NITF_GeospatialInfo;
+  sensor_info: NITF_SensorInfo;
+  // ... other image header fields ...
+};
 
-    data = f.read();
-    f.close();
+type NITF_GeospatialInfo = record {
+  coordinate_system: string;
+  projection: string;
+  coordinates: vector of double;
+  // ... other geospatial fields ...
+};
 
-    if (data == "") {
-        print("Error: File is empty: " + filename);
-        return false;
-    }
+type NITF_SensorInfo = record {
+  sensor_id: string;
+  sensor_type: string;
+  sensor_parameters: vector of string;
+  // ... other sensor fields ...
+};
 
-    nitf_gemini_1_5_flash_event(current_time(), data);
-    return true;
-}
-
-#endif
+type NITF_ExtendedHeader = record {
+  header_id: string;
+  header_length: uint32;
+  header_data: bytes;
+  // ... other extended header fields ...
+};

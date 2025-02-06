@@ -2,37 +2,95 @@ module TIFF;
 
 import spicy;
 
-public type File = unit {
-    header: Header;
-    entries: Entries;
+public type Header = struct {
+    byte_order: uint16,
+    magic_number: uint16,
+    ifd_offset: uint32
+} &byteorder=(self.byte_order == 0x4949 ? spicy::ByteOrder::Little : spicy::ByteOrder::Big);
 
-    var byte_order: bool;
+public type IFDEntry = struct {
+    tag: uint16,
+    field_type: uint16,
+    field_count: uint32,
+    field_value: uint32
+} &size=12;
 
-    on %init {
-        self.byte_order = false;
-    }
+public type ImageFileDirectory = struct {
+    num_entries: uint16,
+    entries: vector<IFDEntry> &count=self.num_entries,
+    next_ifd_offset: uint32
 };
 
-type Header = unit {
-    magic: bytes(2) &requires($$=="II" || $$=="MM");
-    version: uint16 &requires($$==42);
-
-    var is_little_endian: bool;
-
-    on %init {
-        self.is_little_endian = (self.magic == "II");
-    }
+public type ColorMap = struct {
+    red_values: vector<uint16>,
+    green_values: vector<uint16>,
+    blue_values: vector<uint16>
 };
 
-type Entries = unit {
-    num_entries: uint16(self.is_little_endian);
-    ifd_entries: IFDEntry[self.num_entries];
-    next_ifd: uint32(self.is_little_endian) &optional;
+enum Compression {
+    NoCompression = 1,
+    CCITT_G3 = 2,
+    CCITT_G4 = 3,
+    LZW = 4,
+    JPEG = 5,
+    PackBits = 32773
 };
 
-type IFDEntry = unit {
-    tag: uint16(self.is_little_endian);
-    type_field: uint16(self.is_little_endian);
-    count: uint32(self.is_little_endian);
-    value_or_offset: uint32(self.is_little_endian);
+enum PhotometricInterpretation {
+    WhiteIsZero = 0,
+    BlackIsZero = 1,
+    RGB = 2,
+    PaletteColor = 3,
+    TransparencyMask = 4,
+    CMYK = 5,
+    YCbCr = 6,
+    CIELab = 8
 };
+
+enum Orientation {
+    TopLeft = 1,
+    TopRight = 2,
+    BottomRight = 3,
+    BottomLeft = 4,
+    LeftTop = 5,
+    RightTop = 6,
+    RightBottom = 7,
+    LeftBottom = 8
+};
+
+enum NewSubfileType {
+    ReducedResolution = 0x01,
+    MultiPage = 0x02,
+    TransparencyMask = 0x04
+};
+
+public type TIFFMetadata = struct {
+    image_width: optional<uint32>,
+    image_length: optional<uint32>,
+    bits_per_sample: optional<uint16>,
+    compression: optional<Compression>,
+    photometric_interpretation: optional<PhotometricInterpretation>,
+    orientation: optional<Orientation>,
+    samples_per_pixel: optional<uint16>,
+    rows_per_strip: optional<uint32>,
+    strip_byte_counts: optional<vector<uint32>>,
+    x_resolution: optional<float>,
+    y_resolution: optional<float>,
+    planar_configuration: optional<uint16>,
+    resolution_unit: optional<uint16>,
+    software: optional<string>,
+    datetime: optional<string>,
+    artist: optional<string>,
+    image_description: optional<string>,
+    color_map: optional<ColorMap>
+};
+
+public type TIFF = struct {
+    header: Header,
+    ifds: vector<ImageFileDirectory>,
+    metadata: TIFFMetadata
+} &parse_mode=spicy::ParseMode::Incremental;
+
+public type TIFFFile = struct {
+    file: TIFF
+} &parse_mode=spicy::ParseMode::Incremental;

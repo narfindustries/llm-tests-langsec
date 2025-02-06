@@ -1,7 +1,13 @@
 module SQLite;
 
-type SQLiteHeader = unit {
-    magic: bytes &size=16;  # "SQLite format 3\0"
+import spicy;
+
+type HeaderString = unit {
+    magic: bytes &size=16;
+};
+
+type DatabaseHeader = unit {
+    headerString: HeaderString;
     pageSize: uint16;
     writeVersion: uint8;
     readVersion: uint8;
@@ -10,32 +16,45 @@ type SQLiteHeader = unit {
     minPayloadFrac: uint8;
     leafPayloadFrac: uint8;
     changeCounter: uint32;
-    inHeaderDBSize: uint32;
-    startOfFreelist: uint32;
-    numFreelistPages: uint32;
+    dbSizePages: uint32;
+    firstFreelistTrunkPage: uint32;
+    totalFreelistPages: uint32;
     schemaCookie: uint32;
     schemaFormat: uint32;
-    defaultPageCacheSize: uint32;
-    largestRootPage: uint32;
-    textEncoding: uint32;
+    defaultCacheSize: uint32;
+    largestRootBTreePage: uint32;
+    dbTextEncoding: uint32;
     userVersion: uint32;
-    incrementalVacuumMode: uint32;
-    applicationId: uint32;
+    vacuumMode: uint32;
+    applicationID: uint32;
     reserved: bytes &size=20;
     versionValidFor: uint32;
     sqliteVersion: uint32;
 };
 
-type Record = unit {
-    header: SQLiteHeader;
-    pages: Page(self.header.pageSize)[] &eod;
+type PageHeader = unit {
+    pageType: uint8;
+    firstFreeblock: uint16;
+    numCells: uint16;
+    cellContentOffset: uint16;
+    numFragmentedFreeBytes: uint8;
 };
 
-type Page = unit(pageSize: uint32) {
-    data: bytes &size=pageSize;
+type CellPointer = unit {
+    offset: uint16;
 };
 
-public type SQLiteFile = unit {
-    header: SQLiteHeader;
-    records: Record[];
+type BTreePage = unit {
+    header: PageHeader;
+    cellPointers: vector<CellPointer> &size=this.header.numCells;
+    // Additional fields would be needed here to parse the cells based on the page type
+};
+
+type DatabaseFile = unit {
+    header: DatabaseHeader;
+    pages: vector<BTreePage> &eod;
+};
+
+public type SQLiteDB = unit {
+    dbFile: DatabaseFile;
 };

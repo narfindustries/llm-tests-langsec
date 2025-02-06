@@ -1,35 +1,67 @@
-module ICMP {
-    // Define the ICMP header structure
-    struct ICMPHeader {
-        type: uint8;         // ICMP message type
-        code: uint8;         // ICMP message code
-        checksum: uint16;    // ICMP checksum
-        restOfHeader: uint32; // Rest of the header, varies by type and code
-    }
+ICMP : record {
+    type : uint8;
+    code : uint8;
+    checksum : uint16;
+    header : union {
+        when (type == 0 || type == 8) : EchoHeader,
+        when (type == 3) : DestinationUnreachableHeader,
+        when (type == 4) : SourceQuenchHeader,
+        when (type == 5) : RedirectHeader,
+        when (type == 11) : TimeExceededHeader,
+        when (type == 12) : ParameterProblemHeader,
+        when (type == 13 || type == 14) : TimestampHeader,
+        when (type == 15 || type == 16) : InformationHeader,
+        when (type == 17 || type == 18) : AddressMaskHeader,
+        default : UnknownHeader
+    };
+    data : bytes;
+};
 
-    // Define a union for different ICMP message types
-    union ICMPMessage {
-        case (header.type == 0) EchoReply;
-        case (header.type == 8) EchoRequest;
-        // Add more cases for other ICMP message types if needed
-    }
+EchoHeader : record {
+    identifier : uint16;
+    sequence_number : uint16;
+};
 
-    // Structure for ICMP Echo Request/Reply messages
-    struct EchoRequest {
-        identifier: uint16;  // Identifier
-        sequenceNumber: uint16; // Sequence number
-        payload: bytes;      // Payload data
-    }
+DestinationUnreachableHeader : record {
+    unused : uint32;
+};
 
-    struct EchoReply {
-        identifier: uint16;  // Identifier
-        sequenceNumber: uint16; // Sequence number
-        payload: bytes;      // Payload data
-    }
+SourceQuenchHeader : record {
+    unused : uint32;
+};
 
-    // Main ICMP packet structure
-    struct ICMPPacket {
-        header: ICMPHeader;
-        message: ICMPMessage;
-    }
-}
+RedirectHeader : record {
+    gateway_internet_address : uint32;
+};
+
+TimeExceededHeader : record {
+    unused : uint32;
+};
+
+ParameterProblemHeader : record {
+    pointer : uint8;
+    unused : uint24;
+};
+
+TimestampHeader : record {
+    identifier : uint16;
+    sequence_number : uint16;
+    originate_timestamp : uint32;
+    receive_timestamp : uint32;
+    transmit_timestamp : uint32;
+};
+
+InformationHeader : record {
+    identifier : uint16;
+    sequence_number : uint16;
+};
+
+AddressMaskHeader : record {
+    identifier : uint16;
+    sequence_number : uint16;
+    address_mask : uint32;
+};
+
+UnknownHeader : record {
+    rest_of_header : uint32;
+};

@@ -1,41 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/gif"
-           xmlns:tns="http://example.com/gif"
-           elementFormDefault="qualified"
-           dfdl:format="http://www.ogf.org/dfdl/dfdl-1.0/format.xsd">
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/gif" xmlns:tns="http://example.com/gif" elementFormDefault="qualified">
+    <annotation>
+        <appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" encoding="ascii"/>
+        </appinfo>
+    </annotation>
 
-  <dfdl:format ref="tns:gifFormat"/>
+    <element name="GIF">
+        <complexType>
+            <sequence>
+                <element name="Header">
+                    <complexType>
+                        <sequence>
+                            <element name="Signature" type="string" dfdl:length="3" dfdl:lengthKind="explicit" fixed="GIF"/>
+                            <element name="Version" type="string" dfdl:length="3" dfdl:lengthKind="explicit" fixed="89a"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="LogicalScreenDescriptor">
+                    <complexType>
+                        <sequence>
+                            <element name="LogicalScreenWidth" type="unsignedShort"/>
+                            <element name="LogicalScreenHeight" type="unsignedShort"/>
+                            <element name="PackedFields">
+                                <complexType>
+                                    <sequence>
+                                        <element name="GlobalColorTableFlag" type="boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                                        <element name="ColorResolution" type="unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                                        <element name="SortFlag" type="boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                                        <element name="SizeOfGlobalColorTable" type="unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                            <element name="BackgroundColorIndex" type="unsignedByte"/>
+                            <element name="PixelAspectRatio" type="unsignedByte"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="GlobalColorTable" minOccurs="0" maxOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ 2 ** (PackedFields/SizeOfGlobalColorTable + 1) }">
+                    <complexType>
+                        <sequence>
+                            <element name="ColorTableEntry" type="tns:ColorTableEntry" maxOccurs="unbounded"/>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="DataBlocks" maxOccurs="unbounded">
+                    <complexType>
+                        <choice>
+                            <element name="ImageDescriptor" type="tns:ImageDescriptor"/>
+                            <element name="Extension" type="tns:Extension"/>
+                        </choice>
+                    </complexType>
+                </element>
+                <element name="Trailer" type="unsignedByte" fixed="59"/>
+            </sequence>
+        </complexType>
+    </element>
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format ref="tns:gifFormat"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <complexType name="ColorTableEntry">
+        <sequence>
+            <element name="Red" type="unsignedByte"/>
+            <element name="Green" type="unsignedByte"/>
+            <element name="Blue" type="unsignedByte"/>
+        </sequence>
+    </complexType>
 
-  <xs:complexType name="GIFHeader">
-    <xs:sequence>
-      <xs:element name="signature" type="xs:string" dfdl:length="3" dfdl:lengthUnits="bytes" dfdl:encoding="ascii"/>
-      <xs:element name="version" type="xs:string" dfdl:length="3" dfdl:lengthUnits="bytes" dfdl:encoding="ascii"/>
-      <xs:element name="logicalScreenWidth" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="logicalScreenHeight" type="xs:unsignedShort" dfdl:byteOrder="littleEndian"/>
-      <xs:element name="packedFields" type="xs:unsignedByte"/>
-      <xs:element name="backgroundColorIndex" type="xs:unsignedByte"/>
-      <xs:element name="pixelAspectRatio" type="xs:unsignedByte"/>
-    </xs:sequence>
-  </xs:complexType>
+    <complexType name="ImageDescriptor">
+        <sequence>
+            <element name="ImageSeparator" type="unsignedByte" fixed="44"/>
+            <element name="ImageLeftPosition" type="unsignedShort"/>
+            <element name="ImageTopPosition" type="unsignedShort"/>
+            <element name="ImageWidth" type="unsignedShort"/>
+            <element name="ImageHeight" type="unsignedShort"/>
+            <element name="PackedFields">
+                <complexType>
+                    <sequence>
+                        <element name="LocalColorTableFlag" type="boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                        <element name="InterlaceFlag" type="boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                        <element name="SortFlag" type="boolean" dfdl:length="1" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                        <element name="Reserved" type="unsignedByte" dfdl:length="2" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                        <element name="SizeOfLocalColorTable" type="unsignedByte" dfdl:length="3" dfdl:lengthKind="explicit" dfdl:bitOrder="leastSignificantBitFirst"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="LocalColorTable" minOccurs="0" maxOccurs="1" dfdl:occursCountKind="expression" dfdl:occursCount="{ 2 ** (PackedFields/SizeOfLocalColorTable + 1) }">
+                <complexType>
+                    <sequence>
+                        <element name="ColorTableEntry" type="tns:ColorTableEntry" maxOccurs="unbounded"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="LZWMinimumCodeSize" type="unsignedByte"/>
+            <element name="ImageDataBlocks" maxOccurs="unbounded">
+                <complexType>
+                    <sequence>
+                        <element name="BlockSize" type="unsignedByte"/>
+                        <element name="ImageData" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../BlockSize }"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="BlockTerminator" type="unsignedByte" fixed="0"/>
+        </sequence>
+    </complexType>
 
-  <xs:element name="GIF" type="tns:GIFHeader"/>
-
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:defineFormat name="gifFormat">
-        <dfdl:byteOrder value="littleEndian"/>
-        <dfdl:encoding value="ascii"/>
-        <dfdl:lengthKind value="explicit"/>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
-
-</xs:schema>
+    <complexType name="Extension">
+        <sequence>
+            <element name="ExtensionIntroducer" type="unsignedByte" fixed="33"/>
+            <element name="ExtensionLabel" type="unsignedByte"/>
+            <element name="ExtensionDataBlocks" maxOccurs="unbounded">
+                <complexType>
+                    <sequence>
+                        <element name="BlockSize" type="unsignedByte"/>
+                        <element name="ExtensionData" type="hexBinary" dfdl:lengthKind="explicit" dfdl:length="{ ../BlockSize }"/>
+                    </sequence>
+                </complexType>
+            </element>
+            <element name="BlockTerminator" type="unsignedByte" fixed="0"/>
+        </sequence>
+    </complexType>
+</schema>

@@ -1,7 +1,145 @@
-Would you mind clarifying something before I generate the code? The error suggests a problem with the previous DFDL schema generation, but I don't see the previous context or schema. Could you:
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/bitcoin"
+           xmlns:btc="http://example.com/bitcoin"
+           elementFormDefault="qualified">
 
-1. Confirm the specific Bitcoin transaction structure requirements
-2. Share any specific constraints or details from the previous attempt
-3. Indicate if you want me to regenerate the full DFDL XML schema from scratch
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format 
+        representation="binary"
+        encoding="UTF-8"
+        byteOrder="littleEndian"
+        lengthUnits="bytes"
+        lengthKind="explicit"
+        sequenceKind="ordered"
+        initiatedContent="no"
+        leadingSkip="0"
+        trailingSkip="0"
+        textBidi="no"
+        floating="no"
+        encodingErrorPolicy="replace"
+        alignment="1"
+        alignmentUnits="bytes"
+        occursCountKind="parsed"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-Without those details, I can provide a generalized Bitcoin transaction DFDL schema, but it might not match your exact needs. Could you provide more context about the specific requirements and the nature of the previous error?
+  <xs:simpleType name="VarInt">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="18446744073709551615"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="BitcoinTransaction">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Version" type="xs:unsignedInt" 
+                    dfdl:length="4"/>
+        
+        <xs:element name="InputCount" type="xs:integer"
+                    dfdl:lengthKind="delimited"/>
+        
+        <xs:element name="Inputs">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Input" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="PreviousTxHash" 
+                                type="xs:hexBinary" 
+                                dfdl:length="32"/>
+                    
+                    <xs:element name="PreviousOutputIndex" 
+                                type="xs:unsignedInt" 
+                                dfdl:length="4"/>
+                    
+                    <xs:element name="ScriptSigLength" type="xs:integer"
+                                dfdl:lengthKind="delimited"/>
+                    
+                    <xs:element name="ScriptSig" 
+                                type="xs:hexBinary" 
+                                dfdl:lengthKind="explicit"
+                                dfdl:length="{../ScriptSigLength}"/>
+                    
+                    <xs:element name="SequenceNumber" 
+                                type="xs:unsignedInt" 
+                                dfdl:length="4"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="OutputCount" type="xs:integer"
+                    dfdl:lengthKind="delimited"/>
+        
+        <xs:element name="Outputs">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Output" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Amount" 
+                                type="xs:long" 
+                                dfdl:length="8"/>
+                    
+                    <xs:element name="ScriptPubKeyLength" type="xs:integer"
+                                dfdl:lengthKind="delimited"/>
+                    
+                    <xs:element name="ScriptPubKey" 
+                                type="xs:hexBinary" 
+                                dfdl:lengthKind="explicit"
+                                dfdl:length="{../ScriptPubKeyLength}"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        
+        <xs:element name="Locktime" 
+                    type="xs:unsignedInt" 
+                    dfdl:length="4"/>
+        
+        <xs:element name="WitnessData" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="WitnessCount" type="xs:integer"
+                          dfdl:lengthKind="delimited"/>
+              
+              <xs:element name="Witnesses">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Witness" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="WitnessItemCount" type="xs:integer"
+                                      dfdl:lengthKind="delimited"/>
+                          
+                          <xs:element name="WitnessItems">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="WitnessItem" 
+                                            type="xs:hexBinary" 
+                                            maxOccurs="unbounded"
+                                            dfdl:lengthKind="delimited"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

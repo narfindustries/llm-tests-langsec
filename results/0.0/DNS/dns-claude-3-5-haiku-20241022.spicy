@@ -2,149 +2,59 @@ module DNS;
 
 import spicy;
 
-public type Message = unit {
-    header: Header;
-    queries: list<Query>;
-    answers: list<Answer>;
-    authorities: list<Authority>;
-    additional: list<Additional>;
-
-    var query_count: uint16;
-    var answer_count: uint16;
-    var authority_count: uint16;
-    var additional_count: uint16;
-
-    parse {
-        self.header = $$.header;
-        self.query_count = self.header.qdcount;
-        self.answer_count = self.header.ancount;
-        self.authority_count = self.header.nscount;
-        self.additional_count = self.header.arcount;
-
-        self.queries = [];
-        for ( i in 0..self.query_count-1 )
-            self.queries.push_back(self.parse_query());
-
-        self.answers = [];
-        for ( i in 0..self.answer_count-1 )
-            self.answers.push_back(self.parse_answer());
-
-        self.authorities = [];
-        for ( i in 0..self.authority_count-1 )
-            self.authorities.push_back(self.parse_authority());
-
-        self.additional = [];
-        for ( i in 0..self.additional_count-1 )
-            self.additional.push_back(self.parse_additional());
-    }
-
-    function parse_query() : Query {
-        return $$.parse<Query>();
-    }
-
-    function parse_answer() : Answer {
-        return $$.parse<Answer>();
-    }
-
-    function parse_authority() : Authority {
-        return $$.parse<Authority>();
-    }
-
-    function parse_additional() : Additional {
-        return $$.parse<Additional>();
-    }
-};
-
-public type Header = unit {
-    id: uint16;
+public type Header = struct {
+    transaction_id: uint16;
     flags: Flags;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
-};
+    question_count: uint16;
+    answer_count: uint16;
+    authority_count: uint16;
+    additional_count: uint16;
+} &byteorder=spicy::ByteOrder::Network;
 
-public type Flags = unit {
+public type Flags = struct {
     qr: bool;
-    opcode: uint8[4];
+    opcode: uint4;
     aa: bool;
     tc: bool;
     rd: bool;
     ra: bool;
-    z: uint8[3];
-    rcode: uint8[4];
+    z: uint3;
+    rcode: uint4;
+} &bit-order = spicy::BitOrder::MSB;
 
-    parse {
-        local bits = self.input.read(2);
-        self.qr = (bits[0] & 0x80) != 0;
-        self.opcode = [(bits[0] & 0x78) >> 3];
-        self.aa = (bits[0] & 0x04) != 0;
-        self.tc = (bits[0] & 0x02) != 0;
-        self.rd = (bits[0] & 0x01) != 0;
-        self.ra = (bits[1] & 0x80) != 0;
-        self.z = [(bits[1] & 0x70) >> 4];
-        self.rcode = [(bits[1] & 0x0F)];
-    }
+public type DomainName = struct {
+    labels: vector<Label>;
 };
 
-public type Query = unit {
-    name: Name;
+public type Label = struct {
+    length: uint8;
+    name: bytes &size=(self.length < 64 ? self.length : 0);
+    pointer: optional<uint16>;
+};
+
+public type Question = struct {
+    name: DomainName;
     qtype: uint16;
     qclass: uint16;
 };
 
-public type Name = unit {
-    labels: list<Label>;
-
-    parse {
-        self.labels = [];
-        while ( true ) {
-            local len = self.input.read(1)[0];
-            if ( len == 0 )
-                break;
-
-            if ( (len & 0xC0) == 0xC0 ) {
-                local offset = ((len & 0x3F) << 8) | self.input.read(1)[0];
-                break;
-            }
-
-            local label = self.parse_label(len);
-            self.labels.push_back(label);
-        }
-    }
-
-    function parse_label(len: uint8) : Label {
-        return Label(value=self.input.read(len).decode());
-    }
-};
-
-public type Label = unit {
-    value: string;
-};
-
-public type Answer = unit {
-    name: Name;
+public type ResourceRecord = struct {
+    name: DomainName;
     type: uint16;
     class: uint16;
     ttl: uint32;
     rdlength: uint16;
-    rdata: bytes;
+    rdata: bytes &size=self.rdlength;
 };
 
-public type Authority = unit {
-    name: Name;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes;
+public type DNSMessage = struct {
+    header: Header;
+    questions: vector<Question> &count=self.header.question_count;
+    answers: vector<ResourceRecord> &count=self.header.answer_count;
+    authorities: vector<ResourceRecord> &count=self.header.authority_count;
+    additionals: vector<ResourceRecord> &count=self.header.additional_count;
 };
 
-public type Additional = unit {
-    name: Name;
-    type: uint16;
-    class: uint16;
-    ttl: uint32;
-    rdlength: uint16;
-    rdata: bytes;
-};
+public function parse(data: bytes) : DNSMessage {
+    return parse_dns_message(data);
+}

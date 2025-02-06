@@ -1,39 +1,74 @@
 module ZIP;
 
-export {
-    public type File = unit {
-        magic: /[P|K][K|W][\x03|\x05|\x07][\x04|\x06|\x08]/;
-        files: FileEntry[] &eod;
-    };
+public type DOSDateTime = unit {
+    time: uint16;
+    date: uint16;
+};
 
-    type FileEntry = unit {
-        version_needed: uint16;
-        flags: uint16;
-        compression_method: uint16;
-        file_mod_time: uint16;
-        file_mod_date: uint16;
-        crc32: uint32;
-        compressed_size: uint32;
-        uncompressed_size: uint32;
-        file_name_len: uint16;
-        extra_field_len: uint16;
-        file_name: bytes &size=file_name_len;
-        extra_field: bytes &size=extra_field_len;
-        file_data: switch (self.compression_method) {
-            case 0 -> UncompressedData(self.compressed_size);
-            case 8 -> CompressedData(self.compressed_size);
-        };
-        
-        on %done {
-            print "Processed file entry: ", self.file_name;
-        }
-    };
+public type ExtraField = unit {
+    headerID: uint16;
+    dataSize: uint16;
+    data: bytes &size=dataSize;
+};
 
-    type UncompressedData = unit(size: uint32) {
-        data: bytes &size=size;
-    };
+public type LocalFileHeader = unit {
+    signature: uint32 = 0x04034b50;
+    versionNeededToExtract: uint16;
+    generalPurposeBitFlag: uint16;
+    compressionMethod: uint16;
+    modTime: DOSDateTime;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileName: bytes &size=fileNameLength;
+    extraFields: vector<ExtraField> &size=extraFieldLength;
+    fileData: bytes &size=(generalPurposeBitFlag & 0x0008) ? 0 : compressedSize; // DataDescriptor follows if bit 3 is set
+};
 
-    type CompressedData = unit(size: uint32) {
-        data: bytes &size=size;
-    };
-}
+public type FileDataDescriptor = unit {
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+};
+
+public type CentralDirFileHeader = unit {
+    signature: uint32 = 0x02014b50;
+    versionMadeBy: uint16;
+    versionNeededToExtract: uint16;
+    generalPurposeBitFlag: uint16;
+    compressionMethod: uint16;
+    modTime: DOSDateTime;
+    crc32: uint32;
+    compressedSize: uint32;
+    uncompressedSize: uint32;
+    fileNameLength: uint16;
+    extraFieldLength: uint16;
+    fileCommentLength: uint16;
+    diskNumberStart: uint16;
+    internalFileAttributes: uint16;
+    externalFileAttributes: uint32;
+    relativeOffsetOfLocalHeader: uint32;
+    fileName: bytes &size=fileNameLength;
+    extraFields: vector<ExtraField> &size=extraFieldLength;
+    fileComment: bytes &size=fileCommentLength;
+};
+
+public type EndOfCentralDirRecord = unit {
+    signature: uint32 = 0x06054b50;
+    numberOfThisDisk: uint16;
+    diskWhereCentralDirStarts: uint16;
+    numCentralDirRecordsOnThisDisk: uint16;
+    totalNumberOfCentralDirRecords: uint16;
+    sizeOfCentralDir: uint32;
+    offsetOfStartOfCentralDirectory: uint32;
+    ZIPFileCommentLength: uint16;
+    ZIPFileComment: bytes &size=ZIPFileCommentLength;
+};
+
+public type ZIPArchive = unit {
+    files: vector<LocalFileHeader>;
+    centralDirectory: vector<CentralDirFileHeader>;
+    endOfCentralDirectory: EndOfCentralDirRecord;
+};

@@ -1,20 +1,20 @@
-use std::env;
-use std::fs;
-use std::path::Path;
 use nom::{
-    IResult,
-    number::complete::{be_u16, be_u32, be_u64},
-    bytes::complete::{take, tag},
-    combinator::{map, map_res, all_consuming},
+    bytes::complete::take,
+    combinator::map,
+    number::complete::{le_u16, le_u32},
     sequence::tuple,
-    multi::count,
+    IResult,
 };
+use std::fs::File;
+use std::io::Read;
+use std::process;
+use std::str;
 
 #[derive(Debug)]
-struct ZipLocalFileHeader {
+struct LocalFileHeader {
     signature: u32,
-    version: u16,
-    flags: u16,
+    version_needed: u16,
+    general_purpose_bit_flag: u16,
     compression_method: u16,
     last_mod_time: u16,
     last_mod_date: u16,
@@ -23,15 +23,16 @@ struct ZipLocalFileHeader {
     uncompressed_size: u32,
     filename_length: u16,
     extra_field_length: u16,
+    filename: String,
+    extra_field: Vec<u8>,
 }
 
-
 #[derive(Debug)]
-struct ZipCentralDirectoryEntry {
+struct CentralDirectoryHeader {
     signature: u32,
     version_made_by: u16,
     version_needed: u16,
-    flags: u16,
+    general_purpose_bit_flag: u16,
     compression_method: u16,
     last_mod_time: u16,
     last_mod_date: u16,
@@ -44,94 +45,187 @@ struct ZipCentralDirectoryEntry {
     disk_number_start: u16,
     internal_file_attributes: u16,
     external_file_attributes: u32,
-    local_header_offset: u32,
+    relative_offset_local_header: u32,
+    filename: String,
+    extra_field: Vec<u8>,
+    file_comment: String,
 }
 
 #[derive(Debug)]
-struct ZipEndOfCentralDirectory {
+struct EndOfCentralDirectoryRecord {
     signature: u32,
     disk_number: u16,
-    start_disk: u16,
-    entries_this_disk: u16,
-    entries_total: u16,
-    size_central_directory: u32,
-    offset_central_directory: u32,
+    disk_number_with_cd: u16,
+    num_entries_on_disk: u16,
+    num_entries_total: u16,
+    size_of_cd: u32,
+    offset_of_cd: u32,
     comment_length: u16,
+    comment: String,
 }
 
-fn zip_local_file_header(input: &[u8]) -> IResult<&[u8], ZipLocalFileHeader> {
-    map(
-        tuple((
-            be_u32,
-            be_u16,
-            be_u16,
-            be_u16,
-            be_u16,
-            be_u16,
-            be_u32,
-            be_u32,
-            be_u32,
-            be_u16,
-            be_u16,
-        )),
-        |(signature, version, flags, compression_method, last_mod_time, last_mod_date, crc32, compressed_size, uncompressed_size, filename_length, extra_field_length)|
-            ZipLocalFileHeader {
-                signature,
-                version,
-                flags,
-                compression_method,
-                last_mod_time,
-                last_mod_date,
-                crc32,
-                compressed_size,
-                uncompressed_size,
-                filename_length,
-                extra_field_length,
-            },
-    )(input)
+fn read_zip_file(filename: &str) -> Result<Vec<u8>, std::io::Error> {
+    let mut file = File::open(filename)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    Ok(buffer)
 }
 
-
-fn zip_central_directory_entry(input: &[u8]) -> IResult<&[u8], ZipCentralDirectoryEntry> {
-    map(
-        tuple((
-            be_u32, be_u16, be_u16, be_u16, be_u16, be_u16, be_u16, be_u32, be_u32, be_u32, be_u16, be_u16, be_u16, be_u16, be_u16, be_u32, be_u32
-        )),
-        |(signature, version_made_by, version_needed, flags, compression_method, last_mod_time, last_mod_date, crc32, compressed_size, uncompressed_size, filename_length, extra_field_length, file_comment_length, disk_number_start, internal_file_attributes, external_file_attributes, local_header_offset)| ZipCentralDirectoryEntry {
-            signature, version_made_by, version_needed, flags, compression_method, last_mod_time, last_mod_date, crc32, compressed_size, uncompressed_size, filename_length, extra_field_length, file_comment_length, disk_number_start, internal_file_attributes, external_file_attributes, local_header_offset
-        }
-    )(input)
+fn parse_local_file_header(i: &[u8]) -> IResult<&[u8], LocalFileHeader> {
+    let (i, (signature, version_needed, general_purpose_bit_flag, compression_method, last_mod_time, last_mod_date, crc32, compressed_size, uncompressed_size, filename_length, extra_field_length, filename, extra_field)) = tuple((
+        le_u32,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u32,
+        le_u32,
+        le_u32,
+        le_u16,
+        le_u16,
+        map(take, |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned()),
+        take,
+    ))(i)?;
+    Ok((
+        i,
+        LocalFileHeader {
+            signature,
+            version_needed,
+            general_purpose_bit_flag,
+            compression_method,
+            last_mod_time,
+            last_mod_date,
+            crc32,
+            compressed_size,
+            uncompressed_size,
+            filename_length,
+            extra_field_length,
+            filename,
+            extra_field: extra_field.to_vec(),
+        },
+    ))
 }
 
-fn zip_end_of_central_directory(input: &[u8]) -> IResult<&[u8], ZipEndOfCentralDirectory> {
-    map(
-        tuple((
-            be_u32, be_u16, be_u16, be_u16, be_u16, be_u32, be_u32, be_u16,
-        )),
-        |(signature, disk_number, start_disk, entries_this_disk, entries_total, size_central_directory, offset_central_directory, comment_length)| ZipEndOfCentralDirectory {
-            signature, disk_number, start_disk, entries_this_disk, entries_total, size_central_directory, offset_central_directory, comment_length
-        }
-    )(input)
+fn parse_central_directory_header(i: &[u8]) -> IResult<&[u8], CentralDirectoryHeader> {
+    let (i, (signature, version_made_by, version_needed, general_purpose_bit_flag, compression_method, last_mod_time, last_mod_date, crc32, compressed_size, uncompressed_size, filename_length, extra_field_length, file_comment_length, disk_number_start, internal_file_attributes, external_file_attributes, relative_offset_local_header, filename, extra_field, file_comment)) = tuple((
+        le_u32,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u32,
+        le_u32,
+        le_u32,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u32,
+        le_u32,
+        map(take, |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned()),
+        take,
+        map(take, |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned()),
+    ))(i)?;
+    Ok((
+        i,
+        CentralDirectoryHeader {
+            signature,
+            version_made_by,
+            version_needed,
+            general_purpose_bit_flag,
+            compression_method,
+            last_mod_time,
+            last_mod_date,
+            crc32,
+            compressed_size,
+            uncompressed_size,
+            filename_length,
+            extra_field_length,
+            file_comment_length,
+            disk_number_start,
+            internal_file_attributes,
+            external_file_attributes,
+            relative_offset_local_header,
+            filename,
+            extra_field: extra_field.to_vec(),
+            file_comment,
+        },
+    ))
 }
 
+fn parse_end_of_central_directory_record(
+    i: &[u8],
+) -> IResult<&[u8], EndOfCentralDirectoryRecord> {
+    let (i, (signature, disk_number, disk_number_with_cd, num_entries_on_disk, num_entries_total, size_of_cd, offset_of_cd, comment_length, comment)) = tuple((
+        le_u32,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u16,
+        le_u32,
+        le_u32,
+        le_u16,
+        map(take, |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned()),
+    ))(i)?;
+    Ok((
+        i,
+        EndOfCentralDirectoryRecord {
+            signature,
+            disk_number,
+            disk_number_with_cd,
+            num_entries_on_disk,
+            num_entries_total,
+            size_of_cd,
+            offset_of_cd,
+            comment_length,
+            comment,
+        },
+    ))
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        println!("Usage: zip_parser <zip_file>");
-        return;
+        eprintln!("Usage: {} <zip_file>", args[0]);
+        process::exit(1);
     }
 
     let filename = &args[1];
-    let path = Path::new(filename);
-
-    match fs::read(path) {
-        Ok(bytes) => {
-            match all_consuming(zip_end_of_central_directory)(&bytes) {
-                Ok((_, eocd)) => println!("End of Central Directory: {:?}", eocd),
-                Err(e) => println!("Error parsing EOCD: {:?}", e),
+    match read_zip_file(filename) {
+        Ok(buffer) => {
+            match parse_local_file_header(&buffer) {
+                Ok((remaining, header)) => {
+                    println!("Local File Header: {:?}", header);
+                    match parse_central_directory_header(remaining) {
+                        Ok((remaining, header)) => {
+                            println!("Central Directory Header: {:?}", header);
+                            match parse_end_of_central_directory_record(remaining){
+                                Ok((_,header)) => println!("End of Central Directory Record: {:?}", header),
+                                Err(e) => {
+                                    eprintln!("Error parsing end of central directory record: {:?}", e);
+                                    process::exit(1);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error parsing central directory header: {:?}", e);
+                            process::exit(1);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error parsing local file header: {:?}", e);
+                    process::exit(1);
+                }
             }
-        },
-        Err(e) => println!("Error reading file: {}", e),
+        }
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
+            process::exit(1);
+        }
     }
 }

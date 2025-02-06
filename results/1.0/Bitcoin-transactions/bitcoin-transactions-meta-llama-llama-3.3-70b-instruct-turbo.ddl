@@ -1,35 +1,66 @@
-domain bitcoin_transactions {
-  sequence Transaction {
-    uint32_t transaction_version: 4;
-    varuint32_t num_inputs: 1;
-    sequence inputs: num_inputs {
-      bytes prev TxHash: 32;
-      uint32_t prev_index: 4;
-      bytes scriptSIG: *;
-      uint32_t sequence: 4;
-    }
-    varuint32_t num_outputs: 1;
-    sequence outputs: num_outputs {
-      uint64_t value: 8;
-      bytes scriptPubKey: *;
-    }
-    uint32_t lock_time: 4;
+define domain bitcoin
+
+define type uint8 = byte
+define type uint16 = bytes[2]
+define type uint32 = bytes[4]
+define type uint64 = bytes[8]
+
+define type BitcoinTransaction = 
+  sequence {
+    version: uint32 littleEndian,
+    txInCount: VarInt,
+    txIn: TxIn[txInCount.value],
+    txOutCount: VarInt,
+    txOut: TxOut[txOutCount.value],
+    lockTime: uint32 littleEndian
   }
 
-  sequence BlockHeader {
-    uint32_t block_version: 4;
-    bytes prev_block_hash: 32;
-    bytes merkle_root: 32;
-    uint32_t timestamp: 4;
-    uint32_t target: 4;
-    uint32_t nonce: 4;
+define type TxIn = 
+  sequence {
+    txid: bytes[32],
+    vout: uint32 littleEndian,
+    scriptSig: Script,
+    sequence: uint32 littleEndian
   }
 
-  sequence Block {
-    BlockHeader block_header: 1;
-    varuint32_t num_transactions: 1;
-    sequence transactions: num_transactions {
-      Transaction transaction: 1;
-    }
+define type TxOut = 
+  sequence {
+    value: uint64 littleEndian,
+    scriptPubKey: Script
   }
+
+define type Script = 
+  sequence {
+    opcodes: Opcode[0..],
+    data: bytes[0..]
+  }
+
+define type Opcode = 
+  sequence {
+    value: uint8
+  }
+
+define type VarInt = 
+  sequence {
+    value: uint64,
+    byteSequence: bytes[1..9]
+  }
+
+define function decodeVarInt(byteSequence: bytes[1..9]): uint64 = 
+  if (byteSequence[0] < 0xfd) {
+    return byteSequence[0]
+  } else if (byteSequence[0] == 0xfd) {
+    return (byteSequence[2] << 8) | byteSequence[1]
+  } else if (byteSequence[0] == 0xfe) {
+    return (byteSequence[4] << 24) | (byteSequence[3] << 16) | (byteSequence[2] << 8) | byteSequence[1]
+  } else {
+    return (byteSequence[8] << 56) | (byteSequence[7] << 48) | (byteSequence[6] << 40) | (byteSequence[5] << 32) | (byteSequence[4] << 24) | (byteSequence[3] << 16) | (byteSequence[2] << 8) | byteSequence[1]
+  }
+
+define constraint for BitcoinTransaction {
+  txInCount.value == length(txIn)
+}
+
+define constraint for BitcoinTransaction {
+  txOutCount.value == length(txOut)
 }

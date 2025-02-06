@@ -2,97 +2,59 @@ module MQTT;
 
 import spicy;
 
-type ConnectFlags = unit {
-    reserved: bit;
-    cleanSession: bool;
-    willFlag: bool;
-    willQoS: uint2;
-    willRetain: bool;
-    passwordFlag: bool;
-    usernameFlag: bool;
+public type PacketType = enum {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15
 };
 
-type ConnectPayload = unit {
-    clientID: bytes &eod;
-    willTopic: bytes &optional(willFlag());
-    willMessage: bytes &optional(willFlag());
-    username: bytes &optional(usernameFlag());
-    password: bytes &optional(passwordFlag());
+public type FixedHeader = unit {
+    packetType: PacketType;
+    flags: bitfield(4) {
+        dup: 0b1000;
+        qos: 0b0110;
+        retain: 0b0001;
+    };
+    remainingLength: uint16;
 };
 
-type Connect = unit {
-    protoName: bytes &size=4;
-    version: uint8;
-    flags: ConnectFlags;
-    keepAlive: uint16;
-    payload: ConnectPayload;
+public type Property = unit {
+    identifier: uint8;
+    value: bytes &size=1;
 };
 
-type ConnAckFlags = unit {
-    sessionPresent: bool;
-    reserved: bit &size=7;
+public type Properties = unit {
+    length: uint8;
+    properties: Property[] &eod;
 };
 
-type ConnAck = unit {
-    flags: ConnAckFlags;
-    returnCode: uint8;
+public type VariableHeader = unit {
+    packetIdentifier: uint16;
+    properties: Properties;
 };
 
-type Publish = unit {
-    dupFlag: bool;
-    qosLevel: uint2;
-    retain: bool;
-    topicName: bytes &eod;
-    message: bytes &size=remaining_bytes();
+public type Payload = unit {
+    content: bytes &size=1;
 };
-
-type SubscribeTopic = unit {
-    topicFilter: bytes &eod;
-    qos: uint8;
-};
-
-type Subscribe = unit {
-    packetID: uint16;
-    topics: SubscribeTopic[] &eod;
-};
-
-type SubAck = unit {
-    packetID: uint16;
-    returnCodes: uint8[] &eod;
-};
-
-type Unsubscribe = unit {
-    packetID: uint16;
-    topics: bytes[] &eod;
-};
-
-type UnsubAck = unit {
-    packetID: uint16;
-};
-
-type PingReq = unit {};
-
-type PingResp = unit {};
-
-type Disconnect = unit {};
 
 public type MQTTMessage = unit {
-    messageType: uint4;
-    dupFlag: bool;
-    qosLevel: uint2;
-    retain: bool;
-    remainingLength: uint32;
-    contents: switch (messageType) {
-        1 -> connect: Connect;
-        2 -> connAck: ConnAck;
-        3 -> publish: Publish;
-        8 -> subscribe: Subscribe;
-        9 -> subAck: SubAck;
-        10 -> unsubscribe: Unsubscribe;
-        11 -> unsubAck: UnsubAck;
-        12 -> pingReq: PingReq;
-        13 -> pingResp: PingResp;
-        14 -> disconnect: Disconnect;
-        default -> data: bytes &size=remainingLength;
-    };
-} &byte_order=big;
+    fixedHeader: FixedHeader;
+    variableHeader: VariableHeader;
+    payload: Payload;
+};
+
+public type File = unit {
+    messages: MQTTMessage[];
+};

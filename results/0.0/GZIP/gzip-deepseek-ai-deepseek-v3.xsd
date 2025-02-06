@@ -1,0 +1,47 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/gzip" xmlns:gzip="http://example.com/gzip" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="littleEndian" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="GZIPFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID1" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="ID2" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="CM" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="FLG" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="MTIME" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="XFL" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="OS" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="bigEndian"/>
+        <xs:element name="ExtraField" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="XLEN" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+              <xs:element name="ExtraData" type="xs:hexBinary" dfdl:length="{../XLEN}" dfdl:byteOrder="bigEndian"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FNAME" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="FileName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="FCOMMENT" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Comment" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="%NUL;"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="HCRC" minOccurs="0" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="CompressedData" type="xs:hexBinary" dfdl:lengthKind="implicit"/>
+        <xs:element name="CRC32" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="ISIZE" type="xs:unsignedInt" dfdl:length="4" dfdl:byteOrder="littleEndian"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

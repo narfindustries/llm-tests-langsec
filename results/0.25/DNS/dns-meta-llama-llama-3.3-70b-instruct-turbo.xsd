@@ -1,31 +1,286 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/DNS"
-           xmlns="http://example.com/DNS"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.XSD"/>
-
-  <xs:element name="DNSMessage" type="DNSMessageType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:byteOrder="bigEndian" dfdl:binaryNumberRep="unsigned" dfdl:binaryFloatRep="IEEE754"/>
-
-  <xs:complexType name="DNSMessageType">
+  <xs:element name="definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="format" type="dfdl:formatType"/>
+        <xs:element name="element" type="dfdl:elementType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="TransactionID" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
-      <xs:element name="Flags" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
-      <xs:element name="QDCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
-      <xs:element name="ANCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
-      <xs:element name="NSCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
-      <xs:element name="ARCOUNT" type="xs:unsignedShort" dfdl:representation="binary" dfdl:length="2"/>
+      <xs:element name="binaryFormat" type="dfdl:binaryFormatType"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:element name="DomainName" type="DomainNameType" dfdl:representation="binary" dfdl:encoding="ISO-8859-1" dfdl:byteOrder="bigEndian" dfdl:binaryNumberRep="unsigned" dfdl:binaryFloatRep="IEEE754"/>
-
-  <xs:complexType name="DomainNameType">
+  <xs:complexType name="binaryFormatType">
+    <xs:attribute name="byteOrder" type="xs:string" fixed="bigEndian"/>
+    <xs:attribute name="encoding" type="xs:string" fixed="binary"/>
+  </xs:complexType>
+  <xs:complexType name="elementType">
     <xs:sequence>
-      <xs:element name="Label" type="xs:string" dfdl:representation="text" dfdl:lengthKind="implicit" dfdl:terminator="." dfdl:encoding="ISO-8859-1" dfdl:maxLength="63" minOccurs="1" maxOccurs="unbounded"/>
+      <xs:element name="sequence" type="dfdl:sequenceType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="lengthKind" type="xs:string"/>
+    <xs:attribute name="binaryNumber" type="xs:boolean"/>
+    <xs:attribute name="binaryNumberRep" type="xs:string"/>
+    <xs:attribute name="occurs" type="xs:string"/>
+  </xs:complexType>
+  <xs:complexType name="sequenceType">
+    <xs:sequence>
+      <xs:element name="element" type="dfdl:elementType" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-</xs:schema>
+  <xs:element name="dnsMessage" type="dfdl:elementType"/>
+  <xs:complexType name="dnsMessageType">
+    <xs:sequence>
+      <xs:element name="header" type="dfdl:headerType"/>
+      <xs:element name="question" type="dfdl:questionType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="answer" type="dfdl:answerType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="authority" type="dfdl:authorityType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="additional" type="dfdl:additionalType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="headerType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:unsignedShort"/>
+      <xs:element name="qr" type="xs:unsignedByte"/>
+      <xs:element name="opcode" type="xs:unsignedByte"/>
+      <xs:element name="aa" type="xs:unsignedByte"/>
+      <xs:element name="tc" type="xs:unsignedByte"/>
+      <xs:element name="rd" type="xs:unsignedByte"/>
+      <xs:element name="ra" type="xs:unsignedByte"/>
+      <xs:element name="z" type="xs:unsignedByte"/>
+      <xs:element name="rcode" type="xs:unsignedByte"/>
+      <xs:element name="qdcount" type="xs:unsignedShort"/>
+      <xs:element name="ancount" type="xs:unsignedShort"/>
+      <xs:element name="nscount" type="xs:unsignedShort"/>
+      <xs:element name="arcount" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="questionType">
+    <xs:sequence>
+      <xs:element name="qname" type="dfdl:domainNameType"/>
+      <xs:element name="qtype" type="xs:unsignedShort"/>
+      <xs:element name="qclass" type="xs:unsignedShort"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="domainNameType">
+    <xs:sequence>
+      <xs:element name="label" type="dfdl:labelType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="labelType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedByte"/>
+      <xs:element name="labelValue" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="answerType">
+    <xs:sequence>
+      <xs:element name="name" type="dfdl:domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="authorityType">
+    <xs:sequence>
+      <xs:element name="name" type="dfdl:domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="additionalType">
+    <xs:sequence>
+      <xs:element name="name" type="dfdl:domainNameType"/>
+      <xs:element name="type" type="xs:unsignedShort"/>
+      <xs:element name="class" type="xs:unsignedShort"/>
+      <xs:element name="ttl" type="xs:unsignedInt"/>
+      <xs:element name="rdlength" type="xs:unsignedShort"/>
+      <xs:element name="rdata" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+  <dfdl:definition>
+    <dfdl:format>
+      <dfdl:binaryFormat byteOrder="bigEndian" encoding="binary"/>
+    </dfdl:format>
+    <dfdl:element name="dnsMessage">
+      <dfdl:sequence>
+        <dfdl:element name="header">
+          <dfdl:sequence>
+            <dfdl:element name="id" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="qr" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0 or value = 1</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="opcode" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 15</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="aa" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0 or value = 1</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="tc" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0 or value = 1</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="rd" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0 or value = 1</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="ra" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0 or value = 1</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="z" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value = 0</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="rcode" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 15</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="qdcount" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="ancount" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="nscount" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="arcount" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+          </dfdl:sequence>
+        </dfdl:element>
+        <dfdl:element name="question" occurs="qdcount">
+          <dfdl:sequence>
+            <dfdl:element name="qname" dfdl:lengthKind="implicit" dfdl:binaryNumber="false">
+              <dfdl:sequence occurs="*">
+                <dfdl:element name="label" dfdl:lengthKind="explicit" dfdl:binaryNumber="false">
+                  <dfdl:sequence>
+                    <dfdl:element name="length" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                      <dfdl:assert>
+                        <dfdl:expression>value >= 0 and value = 63</dfdl:expression>
+                      </dfdl:assert>
+                    </dfdl:element>
+                    <dfdl:element name="labelValue" dfdl:length="length" dfdl:binaryNumber="false"/>
+                  </dfdl:sequence>
+                </dfdl:element>
+                <dfdl:element name="nullLabel" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                  <dfdl:assert>
+                    <dfdl:expression>value = 0</dfdl:expression>
+                  </dfdl:assert>
+                </dfdl:element>
+              </dfdl:sequence>
+            </dfdl:element>
+            <dfdl:element name="qtype" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="qclass" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+          </dfdl:sequence>
+        </dfdl:element>
+        <dfdl:element name="answer" occurs="ancount">
+          <dfdl:sequence>
+            <dfdl:element name="name" dfdl:lengthKind="implicit" dfdl:binaryNumber="false">
+              <dfdl:sequence occurs="*">
+                <dfdl:element name="label" dfdl:lengthKind="explicit" dfdl:binaryNumber="false">
+                  <dfdl:sequence>
+                    <dfdl:element name="length" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                      <dfdl:assert>
+                        <dfdl:expression>value >= 0 and value = 63</dfdl:expression>
+                      </dfdl:assert>
+                    </dfdl:element>
+                    <dfdl:element name="labelValue" dfdl:length="length" dfdl:binaryNumber="false"/>
+                  </dfdl:sequence>
+                </dfdl:element>
+                <dfdl:element name="nullLabel" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                  <dfdl:assert>
+                    <dfdl:expression>value = 0</dfdl:expression>
+                  </dfdl:assert>
+                </dfdl:element>
+              </dfdl:sequence>
+            </dfdl:element>
+            <dfdl:element name="type" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="class" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="ttl" dfdl:length="4" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint32"/>
+            <dfdl:element name="rdlength" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="rdata" dfdl:length="rdlength" dfdl:binaryNumber="false"/>
+          </dfdl:sequence>
+        </dfdl:element>
+        <dfdl:element name="authority" occurs="nscount">
+          <dfdl:sequence>
+            <dfdl:element name="name" dfdl:lengthKind="implicit" dfdl:binaryNumber="false">
+              <dfdl:sequence occurs="*">
+                <dfdl:element name="label" dfdl:lengthKind="explicit" dfdl:binaryNumber="false">
+                  <dfdl:sequence>
+                    <dfdl:element name="length" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                      <dfdl:assert>
+                        <dfdl:expression>value >= 0 and value = 63</dfdl:expression>
+                      </dfdl:assert>
+                    </dfdl:element>
+                    <dfdl:element name="labelValue" dfdl:length="length" dfdl:binaryNumber="false"/>
+                  </dfdl:sequence>
+                </dfdl:element>
+                <dfdl:element name="nullLabel" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                  <dfdl:assert>
+                    <dfdl:expression>value = 0</dfdl:expression>
+                  </dfdl:assert>
+                </dfdl:element>
+              </dfdl:sequence>
+            </dfdl:element>
+            <dfdl:element name="type" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="class" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16">
+              <dfdl:assert>
+                <dfdl:expression>value >= 0 and value = 65535</dfdl:expression>
+              </dfdl:assert>
+            </dfdl:element>
+            <dfdl:element name="ttl" dfdl:length="4" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint32"/>
+            <dfdl:element name="rdlength" dfdl:length="2" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint16"/>
+            <dfdl:element name="rdata" dfdl:length="rdlength" dfdl:binaryNumber="false"/>
+          </dfdl:sequence>
+        </dfdl:element>
+        <dfdl:element name="additional" occurs="arcount">
+          <dfdl:sequence>
+            <dfdl:element name="name" dfdl:lengthKind="implicit" dfdl:binaryNumber="false">
+              <dfdl:sequence occurs="*">
+                <dfdl:element name="label" dfdl:lengthKind="explicit" dfdl:binaryNumber="false">
+                  <dfdl:sequence>
+                    <dfdl:element name="length" dfdl:length="1" dfdl:binaryNumber="true" dfdl:binaryNumberRep="uint8">
+                      <dfdl:assert>
+                        <dfdl:expression>value >= 0 and value = 63</dfdl:expression>
+                      </dfdl:assert>
+                    </dfdl:element>
+                    <dfdl:element name="labelValue" dfdl:length="length" dfdl:binaryNumber="false"/>
+                  </dfdl:sequence>
+                </dfdl

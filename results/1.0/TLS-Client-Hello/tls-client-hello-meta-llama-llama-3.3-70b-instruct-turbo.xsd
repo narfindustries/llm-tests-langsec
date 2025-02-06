@@ -1,68 +1,161 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/TLS-Client-Hello"
-           xmlns="http://example.com/TLS-Client-Hello"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://example.com" 
+           xmlns="http://example.com" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.xsd"/>
-
-  <xs:element name="tls-client-hello">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format xs:type=" GibraltaraversableFormat"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="clientHello">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="record-layer" type="record-layerType" dfdl:Occurs="1..1"/>
+        <xs:element name="legacyVersion" type="xs:unsignedShort"/>
+        <xs:element name="random" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:length kind="fixed" length="32"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="legacySessionIdLength" type="xs:unsignedByte"/>
+        <xs:element name="legacySessionId" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:length kind="prefixed" lengthType="unsignedByte" lengthField="legacySessionIdLength"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="cipherSuitesLength" type="xs:unsignedShort"/>
+        <xs:element name="cipherSuites" type="xs:hexBinary">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:length kind="expression" length="cipherSuitesLength * 2"/>
+              <dfdl:occursCount kind="expression" occursCount="cipherSuitesLength / 2"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="compressionMethodsLength" type="xs:unsignedByte"/>
+        <xs:element name="compressionMethods" type="xs:unsignedByte"/>
+        <xs:element name="extensionsLength" type="xs:unsignedShort"/>
+        <xs:element name="extensions" type="extensionType">
+          <xs:annotation>
+            <xs:appinfo>
+              <dfdl:length kind="expression" length="extensionsLength"/>
+              <dfdl:occursCount kind="expression" occursCount="extensionsLength / 6"/>
+            </xs:appinfo>
+          </xs:annotation>
+        </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="record-layerType">
+  <xs:complexType name="extensionType">
     <xs:sequence>
-      <xs:element name="content-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="handshake" type="handshakeType" dfdl:length="*"/>
+      <xs:element name="extensionType" type="xs:unsignedShort"/>
+      <xs:element name="extensionDataLength" type="xs:unsignedShort"/>
+      <xs:element name="extensionData" type="extensionDataType">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="extensionDataLength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="versionType">
+  <xs:complexType name="extensionDataType">
+    <xs:choice>
+      <xs:element name="supportedVersions" type="supportedVersionsType"/>
+      <xs:element name="keyShare" type="keyShareType"/>
+      <xs:element name="preSharedKey" type="preSharedKeyType"/>
+      <xs:element name="pskKeyExchangeModes" type="pskKeyExchangeModesType"/>
+      <xs:element name="earlyData" type="earlyDataType"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="supportedVersionsType">
     <xs:sequence>
-      <xs:element name="major" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="minor" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
+      <xs:element name="versionsLength" type="xs:unsignedShort"/>
+      <xs:element name="versions" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="versionsLength"/>
+            <dfdl:occursCount kind="expression" occursCount="versionsLength / 2"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="handshakeType">
+  <xs:complexType name="keyShareType">
     <xs:sequence>
-      <xs:element name="handshake-type" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8"/>
-      <xs:element name="length" type="xs:unsignedShort" dfdl:length="3" dfdl:encoding="utf-8"/>
-      <xs:element name="client-version" type="versionType" dfdl:length="2" dfdl:encoding="utf-8"/>
-      <xs:element name="random" type="xs:unsignedByte" dfdl:length="32" dfdl:encoding="utf-8"/>
-      <xs:element name="session-id" type="xs:unsignedByte" dfdl:length="*"/>
-      <xs:element name="cipher-suites" type="cipher-suitesType" dfdl:length="*"/>
-      <xs:element name="compression-methods" type="compression-methodsType" dfdl:length="*"/>
+      <xs:element name="clientSharesLength" type="xs:unsignedShort"/>
+      <xs:element name="clientShares" type="clientShare">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="clientSharesLength"/>
+            <dfdl:occursCount kind="expression" occursCount="clientSharesLength / 6"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="cipher-suitesType">
+  <xs:complexType name="clientShare">
     <xs:sequence>
-      <xs:element name="cipher-suite" type="xs:unsignedShort" dfdl:length="2" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
+      <xs:element name="group" type="xs:unsignedShort"/>
+      <xs:element name="keyExchangeLength" type="xs:unsignedShort"/>
+      <xs:element name="keyExchange" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="keyExchangeLength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="compression-methodsType">
+  <xs:complexType name="preSharedKeyType">
     <xs:sequence>
-      <xs:element name="compression-method" type="xs:unsignedByte" dfdl:length="1" dfdl:encoding="utf-8" dfdl:Occurs="1..*"/>
+      <xs:element name="identitiesLength" type="xs:unsignedShort"/>
+      <xs:element name="identities" type="identity">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="identitiesLength"/>
+            <dfdl:occursCount kind="expression" occursCount="identitiesLength / 6"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:defineFormat name="GibraltaraversableFormat" type="binary"/>
-    </xs:appinfo>
-  </xs:annotation>
+  <xs:complexType name="identity">
+    <xs:sequence>
+      <xs:element name="identityLength" type="xs:unsignedShort"/>
+      <xs:element name="identityData" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="identityLength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="obfuscatedTicketLength" type="xs:unsignedShort"/>
+      <xs:element name="obfuscatedTicket" type="xs:hexBinary">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="obfuscatedTicketLength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="pskKeyExchangeModesType">
+    <xs:sequence>
+      <xs:element name="keModesLength" type="xs:unsignedByte"/>
+      <xs:element name="keModes" type="xs:unsignedByte">
+        <xs:annotation>
+          <xs:appinfo>
+            <dfdl:length kind="expression" length="keModesLength"/>
+            <dfdl:occursCount kind="expression" occursCount="keModesLength"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="earlyDataType">
+    <xs:sequence>
+      <xs:element name="maxEarlyDataSize" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

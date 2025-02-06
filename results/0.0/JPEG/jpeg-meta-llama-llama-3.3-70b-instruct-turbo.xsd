@@ -4,142 +4,446 @@
            targetNamespace="http://example.com/jpeg"
            xmlns="http://example.com/jpeg"
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.dtd"/>
-
   <xs:element name="jpeg">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="soi" dfdl:occurs="1..1"/>
-        <xs:element ref="app0" dfdl:occurs="1..1"/>
-        <xs:element ref="dqt" dfdl:occurs="0..1"/>
-        <xs:element ref="sof0" dfdl:occurs="1..1"/>
-        <xs:element ref="dht" dfdl:occurs="0..1"/>
-        <xs:element ref="dri" dfdl:occurs="0..1"/>
-        <xs:element ref="sos" dfdl:occurs="1..1"/>
-        <xs:element ref="app1" dfdl:occurs="0..1"/>
-        <xs:element ref="com" dfdl:occurs="0..1"/>
-        <xs:element ref="eoi" dfdl:occurs="1..1"/>
+        <xs:element name="soi" type="soiType"/>
+        <xs:element name="app0" type="app0Type" minOccurs="0"/>
+        <xs:element name="dqt" type="dqtType" minOccurs="0"/>
+        <xs:element name="dht" type="dhtType" minOccurs="0"/>
+        <xs:element name="sof0" type="sof0Type"/>
+        <xs:element name="dri" type="driType" minOccurs="0"/>
+        <xs:element name="sos" type="sosType"/>
+        <xs:element name="scanData" type="scanDataType"/>
+        <xs:element name="eoi" type="eoiType"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
-  <xs:element name="soi">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="app0">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="version" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="units" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="x-density" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="y-density" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="thumbnail-x" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="thumbnail-y" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="dqt">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="precision" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="table-id" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="table" type="xs:hexBinary" dfdl:length="64" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="sof0">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="precision" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="height" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="width" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="num-components" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="component" type="xs:hexBinary" dfdl:length="3" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0" dfdl:occurs="3"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="dht">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="table-class" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="table-id" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="table" type="xs:hexBinary" dfdl:length="65" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="dri">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="restart-interval" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="sos">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="num-components" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="component" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0" dfdl:occurs="3"/>
-        <xs:element name="spectral-selection" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="successive-approximation" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="app1">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="identifier" type="xs:string" dfdl:length="5" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="version" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="units" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="x-density" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="y-density" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="thumbnail-x" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="thumbnail-y" type="xs:integer" dfdl:length="1" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="com">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="length" type="xs:integer" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-        <xs:element name="comment" type="xs:string" dfdl:length="variable" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="eoi">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="marker" type="xs:hexBinary" dfdl:length="2" dfdl:byteOrder="big" dfdl:encoding="utf-8" dfdl:outputNewLine="no" dfdl:outputPaddingBytes="0"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-</xs:schema>
+  <xs:complexType name="soiType">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="216"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="app0Type">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="224"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="16"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="identifier" type="xs:string" fixed="JFIF"/>
+      <xs:element name="version">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="densityUnits">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="xDensity">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="yDensity">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="thumbWidth">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="thumbHeight">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="dqtType">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="219"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="67"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="precision">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="8"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="tableNumber">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="quantizationTable" type="quantizationTableType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="quantizationTableType">
+    <xs:sequence>
+      <xs:element name="table" type="xs:unsignedByte" maxOccurs="64" minOccurs="64"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="dhtType">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="220"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="27"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="tableClass">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="destination">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="huffmanCodes" type="huffmanCodesType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="huffmanCodesType">
+    <xs:sequence>
+      <xs:element name="code" type="xs:unsignedByte" maxOccurs="16" minOccurs="16"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sof0Type">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="192"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="17"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="precision">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="8"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="height">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="256"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="width">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="256"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="numComponents">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="3"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="component" type="componentType" maxOccurs="3" minOccurs="3"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="componentType">
+    <xs:sequence>
+      <xs:element name="id">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="hsamp">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="2"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="vsamp">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="2"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="qtable">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="driType">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="221"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="4"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="restartInterval">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sosType">
+    <xs:sequence>
+      <xs:element name="marker">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="255"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="markerType">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="218"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="length">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedShort">
+              <xs:attribute name="value" type="xs:unsignedShort" fixed="12"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="numComponents">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="3"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="component" type="sosComponentType" maxOccurs="3" minOccurs="3"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="sosComponentType">
+    <xs:sequence>
+      <xs:element name="id">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="1"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="dcTable">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:unsignedByte">
+              <xs:attribute name="value" type="xs:unsignedByte" fixed="0"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="

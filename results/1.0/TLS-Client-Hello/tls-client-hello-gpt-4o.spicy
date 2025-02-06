@@ -1,29 +1,45 @@
-module TLSClientHello;
+module TLS;
 
-public type ClientHello = unit {
-    version: uint16;
-    random: Random;
-    session_id_length: uint8;
-    session_id: bytes &length=session_id_length;
-    cipher_suites_length: uint16;
-    cipher_suites: array of uint16 &length=cipher_suites_length / 2;
-    compression_methods_length: uint8;
-    compression_methods: array of uint8 &length=compression_methods_length;
-    extensions_length: uint16;
-    extensions: array of Extension &length=extensions_length;
+type ProtocolVersion = unit {
+    major: uint8;
+    minor: uint8;
 };
 
 type Random = unit {
-    gmt_unix_time: uint32;
-    random_bytes: bytes &length=28;
+    data: bytes &size=32;
+};
+
+type SessionID = unit {
+    length: uint8;
+    id: bytes &size=length;
+};
+
+type CipherSuites = unit {
+    length: uint16;
+    suites: bytes &size=length;
+};
+
+type CompressionMethods = unit {
+    length: uint8;
+    methods: bytes &size=length;
 };
 
 type Extension = unit {
-    extension_type: uint16;
-    extension_length: uint16;
-    extension_data: bytes &length=extension_length;
+    type_: uint16; # Renamed 'type' to 'type_' to avoid reserved keyword conflict
+    length: uint16;
+    data: bytes &size=length;
 };
 
-public function parse_client_hello(data: bytes) : ClientHello {
-    return (parse as ClientHello) data;
-}
+type Extensions = unit {
+    length: uint16;
+    extensions: vector<Extension> &length=length;
+};
+
+type ClientHello = unit {
+    version: ProtocolVersion;
+    random: Random;
+    legacy_session_id: SessionID;
+    cipher_suites: CipherSuites;
+    legacy_compression_methods: CompressionMethods;
+    extensions: Extensions;
+};

@@ -1,65 +1,66 @@
 types:
-  - id: dns_header
-    fields:
-      - id: transaction_id
-        type: u2
-      - id: flags
-        type: u2
-      - id: questions
-        type: u2
-      - id: answers
-        type: u2
-      - id: authority
-        type: u2
-      - id: additional
-        type: u2
-
-  - id: dns_question
-    fields:
-      - id: qname
-        type: str
-        encoding: UTF-8
-      - id: qtype
-        type: u2
-      - id: qclass
-        type: u2
-
-  - id: dns_resource_record
-    fields:
+  domain_name:
+    seq:
+      - id: length
+        type: u2le
+      - id: data
+        type: bytes
+        size: length
+  resource_record:
+    seq:
       - id: name
-        type: str
-        encoding: UTF-8
+        type: domain_name
       - id: type
-        type: u2
+        type: u2le
       - id: class
-        type: u2
+        type: u2le
       - id: ttl
-        type: u4
+        type: u4le
       - id: rdlength
-        type: u2
+        type: u2le
       - id: rdata
         type: bytes
         size: rdlength
-
-
-  - id: dns_packet
-    fields:
+  header:
+    seq:
+      - id: id
+        type: u2le
+      - id: flags
+        type: u2le
+      - id: qdcount
+        type: u2le
+      - id: ancount
+        type: u2le
+      - id: nscount
+        type: u2le
+      - id: arcount
+        type: u2le
+  question:
+    seq:
+      - id: qname
+        type: domain_name
+      - id: qtype
+        type: u2le
+      - id: qclass
+        type: u2le
+  dns_message:
+    seq:
       - id: header
-        type: dns_header
+        type: header
       - id: questions
-        type: seq
-        size: header.questions
-        type: dns_question
+        type: question
+        repeat: expr
+        repeat-expr: header.qdcount
       - id: answers
-        type: seq
-        size: header.answers
-        type: dns_resource_record
-      - id: authority
-        type: seq
-        size: header.authority
-        type: dns_resource_record
-      - id: additional
-        type: seq
-        size: header.additional
-        type: dns_resource_record
+        type: resource_record
+        repeat: expr
+        repeat-expr: header.ancount
+      - id: authorities
+        type: resource_record
+        repeat: expr
+        repeat-expr: header.nscount
+      - id: additionals
+        type: resource_record
+        repeat: expr
+        repeat-expr: header.arcount
 

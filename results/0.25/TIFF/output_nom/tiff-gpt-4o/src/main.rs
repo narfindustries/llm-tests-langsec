@@ -1,24 +1,17 @@
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::map_res,
-    number::complete::{le_u16, be_u16, le_u32, be_u32},
-    sequence::tuple,
+    bytes::complete::take,
+    number::complete::{le_u16, le_u32},
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
-
-#[derive(Debug)]
-enum Endian {
-    Little,
-    Big,
-}
+use std::path::Path;
 
 #[derive(Debug)]
 struct TiffHeader {
-    endian: Endian,
-    magic_number: u16,
+    byte_order: [u8; 2],
+    version: u16,
     ifd_offset: u32,
 }
 
@@ -30,63 +23,45 @@ struct IfdEntry {
     value_offset: u32,
 }
 
-#[derive(Debug)]
-struct Ifd {
-    entries: Vec<IfdEntry>,
-}
-
 fn parse_tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader> {
-    let (input, (endian_tag, magic_number, ifd_offset)) = tuple((
-        take(2usize),
-        map_res(take(2usize), |bytes: &[u8]| {
-            match bytes {
-                b"II" => Ok((Endian::Little, le_u16)),
-                b"MM" => Ok((Endian::Big, be_u16)),
-                _ => Err(()),
-            }
-        }),
-        map_res(take(4usize), |bytes: &[u8]| {
-            match bytes {
-                b"II" => Ok((Endian::Little, le_u32)),
-                b"MM" => Ok((Endian::Big, be_u32)),
-                _ => Err(()),
-            }
-        }),
-    ))(input)?;
-
-    let (endian, read_u16) = magic_number?;
-    let (endian, read_u32) = ifd_offset?;
-
-    let (input, magic_number) = read_u16(input)?;
-    let (input, ifd_offset) = read_u32(input)?;
-
-    Ok((input, TiffHeader { endian, magic_number, ifd_offset }))
+    let (input, byte_order) = take(2usize)(input)?;
+    let (input, version) = le_u16(input)?;
+    let (input, ifd_offset) = le_u32(input)?;
+    Ok((
+        input,
+        TiffHeader {
+            byte_order: [byte_order[0], byte_order[1]],
+            version,
+            ifd_offset,
+        },
+    ))
 }
 
-fn parse_ifd_entry(input: &[u8], endian: &Endian) -> IResult<&[u8], IfdEntry> {
-    let (input, (tag, field_type, count, value_offset)) = match endian {
-        Endian::Little => tuple((le_u16, le_u16, le_u32, le_u32))(input),
-        Endian::Big => tuple((be_u16, be_u16, be_u32, be_u32))(input),
-    }?;
-
-    Ok((input, IfdEntry { tag, field_type, count, value_offset }))
+fn parse_ifd_entry(input: &[u8]) -> IResult<&[u8], IfdEntry> {
+    let (input, tag) = le_u16(input)?;
+    let (input, field_type) = le_u16(input)?;
+    let (input, count) = le_u32(input)?;
+    let (input, value_offset) = le_u32(input)?;
+    Ok((
+        input,
+        IfdEntry {
+            tag,
+            field_type,
+            count,
+            value_offset,
+        },
+    ))
 }
 
-fn parse_ifd(input: &[u8], endian: &Endian) -> IResult<&[u8], Ifd> {
-    let (input, num_entries) = match endian {
-        Endian::Little => le_u16(input),
-        Endian::Big => be_u16(input),
-    }?;
-
+fn parse_ifd_entries(input: &[u8], count: u16) -> IResult<&[u8], Vec<IfdEntry>> {
     let mut entries = Vec::new();
     let mut input = input;
-    for _ in 0..num_entries {
-        let (new_input, entry) = parse_ifd_entry(input, endian)?;
+    for _ in 0..count {
+        let (new_input, entry) = parse_ifd_entry(input)?;
         entries.push(entry);
         input = new_input;
     }
-
-    Ok((input, Ifd { entries }))
+    Ok((input, entries))
 }
 
 fn main() {
@@ -96,15 +71,54 @@ fn main() {
         return;
     }
 
-    let filename = &args[1];
-    let mut file = File::open(filename).expect("Could not open file");
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            return;
+        }
+    };
+
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Could not read file");
+    if let Err(err) = file.read_to_end(&mut buffer) {
+        eprintln!("Error reading file: {}", err);
+        return;
+    }
 
-    let (_, tiff_header) = parse_tiff_header(&buffer).expect("Failed to parse TIFF header");
-    println!("{:?}", tiff_header);
+    let (_, header) = match parse_tiff_header(&buffer) {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("Error parsing TIFF header: {:?}", err);
+            return;
+        }
+    };
 
-    let ifd_offset = tiff_header.ifd_offset as usize;
-    let (_, ifd) = parse_ifd(&buffer[ifd_offset..], &tiff_header.endian).expect("Failed to parse IFD");
-    println!("{:?}", ifd);
+    println!("TIFF Header: {:?}", header);
+
+    let ifd_offset = header.ifd_offset as usize;
+    if ifd_offset >= buffer.len() {
+        eprintln!("Invalid IFD offset");
+        return;
+    }
+
+    let (_, entry_count) = match le_u16::<_, nom::error::Error<&[u8]>>(&buffer[ifd_offset..]) {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("Error parsing IFD entry count: {:?}", err);
+            return;
+        }
+    };
+
+    let (_, entries) = match parse_ifd_entries(&buffer[ifd_offset + 2..], entry_count) {
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("Error parsing IFD entries: {:?}", err);
+            return;
+        }
+    };
+
+    for entry in entries {
+        println!("IFD Entry: {:?}", entry);
+    }
 }

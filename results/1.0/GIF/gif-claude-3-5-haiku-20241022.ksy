@@ -2,6 +2,7 @@ meta:
   id: gif
   file-extension: gif
   endian: le
+
 seq:
   - id: header
     type: header
@@ -9,118 +10,217 @@ seq:
     type: logical_screen_descriptor
   - id: global_color_table
     type: color_table
-    if: logical_screen_descriptor.global_color_table_flag
-    size: logical_screen_descriptor.global_color_table_size * 3
+    if: logical_screen_descriptor.packed_screen_descriptor.global_color_table_flag
   - id: blocks
     type: block
-    repeat: until
-    repeat-until: _.block_type == block_type::trailer
+    repeat: eos
+
 types:
   header:
     seq:
       - id: signature
-        contents: ['GIF']
+        contents: [0x47, 0x49, 0x46]
       - id: version
         type: str
         size: 3
-        encoding: ascii
+        valid:
+          any-of: ['87a', '89a']
+
   logical_screen_descriptor:
     seq:
       - id: canvas_width
         type: u2
       - id: canvas_height
         type: u2
-      - id: flags
-        type: u1
-      - id: bg_color_index
+      - id: packed_screen_descriptor
+        type: packed_screen_descriptor
+      - id: background_color_index
         type: u1
       - id: pixel_aspect_ratio
         type: u1
+
+  packed_screen_descriptor:
+    seq:
+      - id: raw
+        type: u1
     instances:
       global_color_table_flag:
-        value: '(flags & 0b10000000) != 0'
+        value: (raw & 0b10000000) >> 7
+      color_resolution:
+        value: (raw & 0b01110000) >> 4
+      sort_flag:
+        value: (raw & 0b00001000) >> 3
       global_color_table_size:
-        value: 'flags & 0b00000111'
+        value: raw & 0b00000111
+
   color_table:
     seq:
       - id: entries
         type: rgb
         repeat: expr
-        repeat-expr: 256
+        repeat-expr: 2 ** (global_color_table_size + 1)
+    instances:
+      global_color_table_size:
+        value: _parent.logical_screen_descriptor.packed_screen_descriptor.global_color_table_size
+
   rgb:
     seq:
-      - id: r
+      - id: red
         type: u1
-      - id: g
+      - id: green
         type: u1
-      - id: b
+      - id: blue
         type: u1
+
   block:
     seq:
       - id: block_type
         type: u1
-        enum: block_type
     instances:
-      extension:
-        type: extension_block
-        if: block_type == block_type::extension
-      image_descriptor:
-        type: image_descriptor
-        if: block_type == block_type::image_descriptor
-  extension_block:
+      content:
+        type:
+          switch-on: block_type
+          cases:
+            0x2c: image_descriptor
+            0x21: extension
+            0x3b: trailer
+
+  trailer:
+    seq:
+      - id: end_of_file
+        contents: [0x3b]
+
+  extension:
     seq:
       - id: extension_type
         type: u1
-        enum: extension_type
-      - id: data
-        size-eos: true
+    instances:
+      content:
+        type:
+          switch-on: extension_type
+          cases:
+            0xf9: graphic_control_extension
+            0xff: application_extension
+            0xfe: comment_extension
+            0x01: plain_text_extension
+
+  graphic_control_extension:
+    seq:
+      - id: block_size
+        contents: [0x04]
+      - id: packed_fields
+        type: packed_graphic_control
+      - id: delay_time
+        type: u2
+      - id: transparent_color_index
+        type: u1
+      - id: block_terminator
+        contents: [0x00]
+
+  packed_graphic_control:
+    seq:
+      - id: raw
+        type: u1
+    instances:
+      disposal_method:
+        value: (raw & 0b00011100) >> 2
+      user_input_flag:
+        value: (raw & 0b00000010) >> 1
+      transparent_color_flag:
+        value: raw & 0b00000001
+
   image_descriptor:
     seq:
-      - id: left
+      - id: left_position
         type: u2
-      - id: top
+      - id: top_position
         type: u2
       - id: width
         type: u2
       - id: height
         type: u2
-      - id: flags
-        type: u1
+      - id: packed_fields
+        type: packed_image_descriptor
       - id: local_color_table
         type: color_table
-        if: local_color_table_flag
-        size: local_color_table_size * 3
-      - id: lzw_min_code_size
+        if: packed_fields.local_color_table_flag
+      - id: lzw_minimum_code_size
         type: u1
       - id: image_data
         type: image_data
+
+  packed_image_descriptor:
+    seq:
+      - id: raw
+        type: u1
     instances:
       local_color_table_flag:
-        value: '(flags & 0b10000000) != 0'
+        value: (raw & 0b10000000) >> 7
+      interlace_flag:
+        value: (raw & 0b01000000) >> 6
+      sort_flag:
+        value: (raw & 0b00100000) >> 5
       local_color_table_size:
-        value: 'flags & 0b00000111'
+        value: raw & 0b00000111
+
   image_data:
     seq:
-      - id: blocks
-        type: data_sub_block
+      - id: data_blocks
+        type: data_block
         repeat: until
-        repeat-until: _.block_terminator == 0
-  data_sub_block:
+        repeat-until: _.block_size == 0
+
+  data_block:
     seq:
       - id: block_size
         type: u1
-      - id: block_terminator
-        type: u1
-      - id: block_data
+      - id: data
         size: block_size
         if: block_size > 0
-enums:
-  block_type:
-    0x21: extension
-    0x2c: image_descriptor
-    0x3b: trailer
-  extension_type:
-    0xf9: graphic_control_extension
-    0xff: application_extension
-    0x01: plain_text_extension
-    0xfe: comment_extension
+
+  application_extension:
+    seq:
+      - id: block_size
+        type: u1
+      - id: identifier
+        type: str
+        size: 8
+      - id: authentication_code
+        type: str
+        size: 3
+      - id: data_blocks
+        type: data_block
+        repeat: until
+        repeat-until: _.block_size == 0
+
+  comment_extension:
+    seq:
+      - id: data_blocks
+        type: data_block
+        repeat: until
+        repeat-until: _.block_size == 0
+
+  plain_text_extension:
+    seq:
+      - id: block_size
+        type: u1
+      - id: text_grid_left_position
+        type: u2
+      - id: text_grid_top_position
+        type: u2
+      - id: text_grid_width
+        type: u2
+      - id: text_grid_height
+        type: u2
+      - id: cell_width
+        type: u1
+      - id: cell_height
+        type: u1
+      - id: foreground_color_index
+        type: u1
+      - id: background_color_index
+        type: u1
+      - id: data_blocks
+        type: data_block
+        repeat: until
+        repeat-until: _.block_size == 0

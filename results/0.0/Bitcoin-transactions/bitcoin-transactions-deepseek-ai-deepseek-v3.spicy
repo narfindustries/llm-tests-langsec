@@ -1,0 +1,32 @@
+module Bitcoin;
+
+public type Transaction = unit {
+    version: uint32 &byte-order=big-endian;
+    marker: uint8 &requires=0x00;
+    flag: uint8 &requires=0x01;
+    input_count: uint8;
+    inputs: Input[input_count];
+    output_count: uint8;
+    outputs: Output[output_count];
+    witness: optional Witness[input_count] &if=(input_count > 0);
+    lock_time: uint32 &byte-order=big-endian;
+};
+
+type Input = unit {
+    previous_txid: bytes &size=32;
+    previous_output_index: uint32 &byte-order=big-endian;
+    script_length: uint8;
+    script_sig: bytes &size=script_length;
+    sequence: uint32 &byte-order=big-endian;
+};
+
+type Output = unit {
+    value: uint64 &byte-order=big-endian;
+    script_length: uint8;
+    script_pubkey: bytes &size=script_length;
+};
+
+type Witness = unit {
+    witness_count: uint8;
+    witness_data: bytes[witness_count];
+};

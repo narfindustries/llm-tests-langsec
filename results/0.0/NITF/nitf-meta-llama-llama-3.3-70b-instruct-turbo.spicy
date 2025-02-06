@@ -1,45 +1,73 @@
-# NITF (National Image Transmission Format) meta file parser
+module NITF;
 
-# Define the NITF file header
-file NITF_META {
-    # File header
-    header: NITF_Header;
-
-    # File body
-    body: NITF_Body;
+type FileHeader = record {
+  fh: bytestring = "NITF";
+  fver: bytestring;
+  sys: bytestring;
+  clas: enum { U, C, S, T };
+  fcn: bytestring;
+  fn: bytestring;
+  ft: bytestring;
+  clsy: bytestring;
+  fco: uint16;
+  fscn: bytestring;
+  fdt: bytestring;
+  ftm: bytestring;
+  fhdl: uint32;
+  hexf: bool;
+  hexl: uint32;
 }
 
-# Define the NITF file header structure
-type NITF_Header {
-    # NITF file header fields
-    file_id: bytestring(25);
-    file_date: bytestring(10);
-    file_time: bytestring(8);
-    file_title: bytestring(80);
-    file_security: bytestring(80);
-    file_info: bytestring(255);
+type HeaderExtension = record {
+  hexf: bool;
+  hexl: uint32;
+  data: bytestring;
 }
 
-# Define the NITF file body structure
-type NITF_Body {
-    # NITF file body fields
-    image_data: bytestring;
+type ImageSegment = record {
+  iid: bytestring;
+  icl: enum { U, C, S, T };
+  icls: bytestring;
+  icp: enum { NC, BC, CC };
+  irep: enum { MON, COL, MUL };
+  ipt: enum { INT, FLT, DBL };
+  ipv: bytestring;
+  idim: record {
+    width: uint32;
+    height: uint32;
+  }
+  ioff: uint32;
+  idl: uint32;
+  data: bytestring;
 }
 
-# Define the NITF image data structure
-type NITF_Image_Data {
-    # NITF image data fields
-    image_id: bytestring(25);
-    image_date: bytestring(10);
-    image_time: bytestring(8);
-    image_data: bytestring;
+type GraphicSegment = record {
+  gid: bytestring;
+  gcl: enum { U, C, S, T };
+  gcls: bytestring;
+  gtp: enum { TXT, SYM, LIN };
+  gdt: bytestring;
 }
 
-# Define the NITF meta data structure
-type NITF_Meta {
-    # NITF meta data fields
-    meta_id: bytestring(25);
-    meta_date: bytestring(10);
-    meta_time: bytestring(8);
-    meta_data: bytestring;
+type TextSegment = record {
+  tid: bytestring;
+  tcl: enum { U, C, S, T };
+  tcls: bytestring;
+  tdt: bytestring;
 }
+
+type TrailerSegment = record {
+  tid: bytestring = "TRE";
+  trl: uint32;
+}
+
+type NITF = record {
+  file_header: FileHeader;
+  header_extension: optional HeaderExtension;
+  image_segments: array ImageSegment;
+  graphic_segments: array GraphicSegment;
+  text_segments: array TextSegment;
+  trailer: TrailerSegment;
+}
+
+let nitf_p = NITF;

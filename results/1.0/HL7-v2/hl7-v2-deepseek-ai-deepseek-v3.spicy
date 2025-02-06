@@ -1,0 +1,24 @@
+module HL7v2;
+
+public type MSH = unit {
+    field_separator:             bytes                 &chunked &until=b"^";
+    encoding_characters:         bytes &size=4         &chunked;
+    sending_application:         bytes                 &chunked &until=b"|";
+    sending_facility:            bytes                 &chunked &until=b"|";
+    receiving_application:       bytes                 &chunked &until=b"|";
+    receiving_facility:           bytes                 &chunked &until=b"|";
+    datetime_of_message:         bytes                 &chunked &until=b"|";
+    security:                    bytes                 &chunked &until=b"|";
+    message_type:                bytes                 &chunked &until=b"|";
+    message_control_id:          bytes                 &chunked &until=b"|";
+    processing_id:               bytes                 &chunked &until=b"|";
+    version_id:                  bytes                 &chunked &until=b"|";
+    sequence_number:             bytes                 &chunked &until=b"|";
+    continuation_pointer:        bytes                 &chunked &until=b"|";
+    accept_acknowledgement_type: bytes                 &chunked &until=b"|";
+    application_acknowledgement_type: bytes             &chunked &until=b"|";
+    country_code:                bytes                 &chunked &until=b"|";
+    character_set:                bytes                 &chunked &until=b"|";
+    principal_language_of_message: bytes                &chunked &until=b"|";
+    alternate_character_set_handling_scheme: bytes      &chunked &until=b"|";
+};

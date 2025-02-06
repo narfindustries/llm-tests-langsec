@@ -1,30 +1,64 @@
-module GIF.GifGemini1 where
+data GIF89a = GIF89a
+  { signature : String 6
+  , logicalScreenDescriptor : LogicalScreenDescriptor
+  , globalColorTable : Maybe GlobalColorTable
+  , images : [ImageDescriptor]
+  , trailer : Trailer
+  }
 
-import Daedalus.Maybe
-import Daedalus.Text
+data LogicalScreenDescriptor = LogicalScreenDescriptor
+  { width : Word16
+  , height : Word16
+  , packedFields : PackedFields
+  , backgroundColorIndex : Byte
+  , pixelAspectRatio : Byte
+  }
 
-data GifGemini1 = GifGemini1 {
-  header ::  Maybe (Array 3 Byte),
-  width :: Word32,
-  height :: Word32,
-  data :: Array 0 Byte
-}
+data PackedFields = PackedFields
+  { globalColorTableFlag : Bit
+  , colorResolution : Bits3
+  , sortFlag : Bit
+  , sizeOfGlobalColorTable : Bits3
+  }
 
-gifGemini1Parser :: Parser GifGemini1
-gifGemini1Parser = do
-  header' <- optional (bytes 3)
-  width' <- beWord32
-  height' <- beWord32
-  data' <- bytes 0
-  return GifGemini1 { header = header', width = width', height = height', data = data' }
+data GlobalColorTable = GlobalColorTable
+  { entries : [ColorEntry]
+  }
 
-instance  Show GifGemini1 where
-  show (GifGemini1 h w h' d) = "GifGemini1 { header = " ++ show h ++ ", width = " ++ show w ++ ", height = " ++ show h' ++ ", data = " ++ show d ++ " }"
+data ColorEntry = ColorEntry
+  { red : Byte
+  , green : Byte
+  , blue : Byte
+  }
 
--- Helper functions (if needed)
-beWord32 :: Parser Word32
-beWord32 = do
-  bs <- bytes 4
-  return $ runGet (getWord32be bs)
+data ImageDescriptor = ImageDescriptor
+  { imageSeparator : Byte
+  , imageLeftPosition : Word16
+  , imageTopPosition : Word16
+  , imageWidth : Word16
+  , imageHeight : Word16
+  , packedFields : PackedFieldsImage
+  , localColorTable : Maybe LocalColorTable
+  , imageData : [Byte]
+  }
 
+data PackedFieldsImage = PackedFieldsImage
+  { localColorTableFlag : Bit
+  , interlaceFlag : Bit
+  , sortFlag : Bit
+  , sizeOfLocalColorTable : Bits3
+  }
 
+data LocalColorTable = LocalColorTable
+  { entries : [ColorEntry]
+  }
+
+data Trailer = Trailer { trailer : Byte }
+
+data Bits3 = Bits3 Word8
+
+data Bit = Bit Bool
+
+data Word16 = Word16 Word16
+
+data Byte = Byte Word8

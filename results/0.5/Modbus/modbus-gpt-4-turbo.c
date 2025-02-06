@@ -1,87 +1,93 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Modbus function codes
-#define READ_COILS 0x01
-#define READ_DISCRETE_INPUTS 0x02
-#define READ_HOLDING_REGISTERS 0x03
-#define READ_INPUT_REGISTERS 0x04
-#define WRITE_SINGLE_COIL 0x05
-#define WRITE_SINGLE_REGISTER 0x06
-#define WRITE_MULTIPLE_COILS 0x0F
-#define WRITE_MULTIPLE_REGISTERS 0x10
+// Define Modbus TCP constants
+#define MODBUS_TCP_TRANSACTION_ID_SIZE 2
+#define MODBUS_TCP_PROTOCOL_ID_SIZE 2
+#define MODBUS_TCP_LENGTH_SIZE 2
+#define MODBUS_TCP_UNIT_ID_SIZE 1
+#define MODBUS_TCP_MIN_SIZE (MODBUS_TCP_TRANSACTION_ID_SIZE + MODBUS_TCP_PROTOCOL_ID_SIZE + MODBUS_TCP_LENGTH_SIZE + MODBUS_TCP_UNIT_ID_SIZE)
 
-// Modbus exception codes
-#define ILLEGAL_FUNCTION 0x01
-#define ILLEGAL_DATA_ADDRESS 0x02
-#define ILLEGAL_DATA_VALUE 0x03
-#define SERVER_DEVICE_FAILURE 0x04
-#define ACKNOWLEDGE 0x05
-#define SERVER_DEVICE_BUSY 0x06
-#define MEMORY_PARITY_ERROR 0x08
-#define GATEWAY_PATH_UNAVAILABLE 0x0A
-#define GATEWAY_TARGET_DEVICE_FAILED_TO_RESPOND 0x0B
+// Define Modbus RTU constants
+#define MODBUS_RTU_ADDRESS_SIZE 1
+#define MODBUS_RTU_CRC_SIZE 2
 
-static HParser *modbus_address;
-static HParser *modbus_value;
-static HParser *modbus_quantity;
-static HParser *modbus_exception_code;
+// Function codes
+enum ModbusFunctionCodes {
+    READ_COILS = 0x01,
+    READ_DISCRETE_INPUTS = 0x02,
+    READ_HOLDING_REGISTERS = 0x03,
+    READ_INPUT_REGISTERS = 0x04,
+    WRITE_SINGLE_COIL = 0x05,
+    WRITE_SINGLE_REGISTER = 0x06,
+    WRITE_MULTIPLE_COILS = 0x0F,
+    WRITE_MULTIPLE_REGISTERS = 0x10
+};
 
-static HParsedToken *act_identity(const HParseResult *p, void *user_data) {
-    return h_act_identity(p, user_data);
+// Parser for a Modbus TCP frame
+HParser *modbus_tcp_frame() {
+    HParser *p_transaction_id = h_uint16();
+    HParser *p_protocol_id = h_uint16();
+    HParser *p_length = h_uint16();
+    HParser *p_unit_id = h_uint8();
+    HParser *p_function_code = h_uint8();
+    HParser *p_data = h_bits(8, false);  // Placeholder for data parsing based on function code
+
+    return h_sequence(p_transaction_id, p_protocol_id, p_length, p_unit_id, p_function_code, p_data, NULL);
 }
 
-static void init_parsers() {
-    modbus_address = h_uint16();
-    modbus_value = h_uint16();
-    modbus_quantity = h_uint16();
-    modbus_exception_code = h_uint8();
-}
+// Parser for a Modbus RTU frame
+HParser *modbus_rtu_frame() {
+    HParser *p_address = h_uint8();
+    HParser *p_function_code = h_uint8();
+    HParser *p_data = h_bits(8, false);  // Placeholder for data parsing based on function code
+    HParser *p_crc = h_uint16();
 
-static HParser *modbus_request_pdu() {
-    H_RULE(function_code, h_uint8());
-    H_ARULE(read_coils, h_sequence(function_code, modbus_address, modbus_quantity, NULL));
-    H_ARULE(read_discrete_inputs, h_sequence(function_code, modbus_address, modbus_quantity, NULL));
-    H_ARULE(read_holding_registers, h_sequence(function_code, modbus_address, modbus_quantity, NULL));
-    H_ARULE(read_input_registers, h_sequence(function_code, modbus_address, modbus_quantity, NULL));
-    H_ARULE(write_single_coil, h_sequence(function_code, modbus_address, modbus_value, NULL));
-    H_ARULE(write_single_register, h_sequence(function_code, modbus_address, modbus_value, NULL));
-    H_ARULE(write_multiple_coils, h_sequence(function_code, modbus_address, modbus_quantity, h_many(modbus_value), NULL));
-    H_ARULE(write_multiple_registers, h_sequence(function_code, modbus_address, modbus_quantity, h_many(modbus_value), NULL));
-
-    H_RULE(modbus_request, h_choice(read_coils, read_discrete_inputs, read_holding_registers, read_input_registers,
-                                    write_single_coil, write_single_register, write_multiple_coils, write_multiple_registers, NULL));
-
-    return modbus_request;
-}
-
-static HParser *modbus_response_pdu() {
-    H_RULE(function_code, h_uint8());
-    H_RULE(exception, h_sequence(function_code, modbus_exception_code, NULL));
-    H_RULE(data, h_bytes(1));
-
-    H_RULE(response, h_choice(exception, h_sequence(function_code, data, NULL), NULL));
-
-    return response;
-}
-
-static HParser *modbus_adu() {
-    H_RULE(transaction_id, h_uint16());
-    H_RULE(protocol_id, h_uint16());
-    H_RULE(length, h_uint16());
-    H_RULE(unit_id, h_uint8());
-
-    H_RULE(request_adu, h_sequence(transaction_id, protocol_id, length, unit_id, modbus_request_pdu(), NULL));
-    H_RULE(response_adu, h_sequence(transaction_id, protocol_id, length, unit_id, modbus_response_pdu(), NULL));
-
-    return h_choice(request_adu, response_adu, NULL);
+    return h_sequence(p_address, p_function_code, p_data, p_crc, NULL);
 }
 
 int main(int argc, char *argv[]) {
-    HParser *modbus_parser;
-    init_parsers();
-    modbus_parser = modbus_adu();
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <modbus_binary_file>\n", argv[0]);
+        return 1;
+    }
 
-    // Compile and use the parser as needed
+    // Open the binary file
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Get the file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    // Read the file into memory
+    uint8_t *buffer = malloc(file_size);
+    if (buffer == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(file);
+        return 1;
+    }
+    fread(buffer, 1, file_size, file);
+
+    // Parse the buffer based on Modbus TCP or RTU
+    HParser *modbus_parser = (file_size > MODBUS_TCP_MIN_SIZE) ? modbus_tcp_frame() : modbus_rtu_frame();
+    HParseResult *result = h_parse(modbus_parser, buffer, file_size);
+
+    if (result == NULL) {
+        fprintf(stderr, "Failed to parse Modbus data\n");
+    } else {
+        printf("Modbus data parsed successfully\n");
+    }
+
+    // Clean up
+    h_parse_result_free(result);
+    free(buffer);
+    fclose(file);
+
     return 0;
 }

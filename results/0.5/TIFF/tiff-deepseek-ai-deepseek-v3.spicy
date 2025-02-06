@@ -1,0 +1,232 @@
+module TIFF;
+
+public type TiffHeader = unit {
+    byte_order:    bytes &size=2;
+    version:       uint16;
+    ifd_offset:    uint32;
+};
+
+public type IFDEntry = unit {
+    tag:          uint16;
+    field_type:   uint16;
+    count:        uint32;
+    value_offset: bytes &size=4;
+};
+
+public type IFD = unit {
+    num_entries: uint16;
+    entries:     IFDEntry[] &until($input.offset() + 12 * $num_entries >= $input.size());
+    next_ifd:    uint32;
+};
+
+public type TiffFile = unit {
+    header: TiffHeader;
+    ifds:   IFD[] &until($$.next_ifd == 0);
+};
+
+# Define field types
+type FieldType = enum {
+    BYTE      = 1,
+    ASCII     = 2,
+    SHORT     = 3,
+    LONG      = 4,
+    RATIONAL  = 5,
+    SBYTE     = 6,
+    UNDEFINED = 7,
+    SSHORT    = 8,
+    SLONG     = 9,
+    SRATIONAL = 10,
+    FLOAT     = 11,
+    DOUBLE    = 12,
+};
+
+# Define tags
+type Tag = enum {
+    NewSubfileType            = 254,
+    SubfileType               = 255,
+    ImageWidth                = 256,
+    ImageLength               = 257,
+    BitsPerSample             = 258,
+    Compression               = 259,
+    PhotometricInterpretation = 262,
+    Thresholding              = 263,
+    CellWidth                 = 264,
+    CellLength                = 265,
+    FillOrder                 = 266,
+    DocumentName              = 269,
+    ImageDescription          = 270,
+    Make                      = 271,
+    Model                     = 272,
+    StripOffsets              = 273,
+    Orientation               = 274,
+    SamplesPerPixel           = 277,
+    RowsPerStrip              = 278,
+    StripByteCounts           = 279,
+    MinSampleValue            = 280,
+    MaxSampleValue            = 281,
+    XResolution               = 282,
+    YResolution               = 283,
+    PlanarConfiguration       = 284,
+    PageName                  = 285,
+    XPosition                 = 286,
+    YPosition                 = 287,
+    FreeOffsets               = 288,
+    FreeByteCounts            = 289,
+    GrayResponseUnit          = 290,
+    GrayResponseCurve         = 291,
+    T4Options                 = 292,
+    T6Options                 = 293,
+    ResolutionUnit            = 296,
+    PageNumber                = 297,
+    TransferFunction          = 301,
+    Software                  = 305,
+    DateTime                  = 306,
+    Artist                    = 315,
+    HostComputer              = 316,
+    Predictor                 = 317,
+    WhitePoint                = 318,
+    PrimaryChromaticities     = 319,
+    ColorMap                  = 320,
+    HalftoneHints             = 321,
+    TileWidth                 = 322,
+    TileLength                = 323,
+    TileOffsets               = 324,
+    TileByteCounts            = 325,
+    InkSet                    = 332,
+    InkNames                  = 333,
+    NumberOfInks              = 334,
+    DotRange                  = 336,
+    TargetPrinter             = 337,
+    ExtraSamples              = 338,
+    SampleFormat              = 339,
+    SMinSampleValue           = 340,
+    SMaxSampleValue           = 341,
+    TransferRange             = 342,
+    JPEGProc                  = 512,
+    JPEGInterchangeFormat     = 513,
+    JPEGInterchangeFormatLngth= 514,
+    JPEGRestartInterval       = 515,
+    JPEGLosslessPredictors     = 517,
+    JPEGPointTransforms       = 518,
+    JPEGQTables               = 519,
+    JPEGDCTables              = 520,
+    JPEGACTables              = 521,
+    YCbCrCoefficients         = 529,
+    YCbCrSubSampling          = 530,
+    YCbCrPositioning          = 531,
+    ReferenceBlackWhite       = 532,
+    Copyright                 = 33432,
+};
+
+# Define compression types
+type Compression = enum {
+    NONE              = 1,
+    CCITT_T4          = 2,
+    CCITT_T6          = 3,
+    LZW               = 5,
+    JPEG              = 6,
+    PACKBITS          = 32773,
+    DEFLATE           = 32946,
+    ADOBE_DEFLATE     = 8,
+    IT8_CTPAD         = 32809,
+    IT8_LW            = 32810,
+    IT8_MC            = 32811,
+    IT8_BG            = 32812,
+    PIXAR_FILM        = 32896,
+    PIXAR_LOG         = 32897,
+    DCS               = 32908,
+    JBIG              = 34661,
+    SGILOG            = 34676,
+    SGILOG24          = 34677,
+    JPEG_2000         = 34712,
+};
+
+# Define photometric interpretation types
+type PhotometricInterpretation = enum {
+    WhiteIsZero       = 0,
+    BlackIsZero       = 1,
+    RGB               = 2,
+    PaletteColor      = 3,
+    TransparencyMask  = 4,
+    CMYK              = 5,
+    YCbCr             = 6,
+    CIELab            = 8,
+};
+
+# Define orientation types
+type Orientation = enum {
+    TopLeft           = 1,
+    TopRight          = 2,
+    BottomRight       = 3,
+    BottomLeft        = 4,
+    LeftTop           = 5,
+    RightTop          = 6,
+    RightBottom       = 7,
+    LeftBottom        = 8,
+};
+
+# Define planar configuration types
+type PlanarConfiguration = enum {
+    Chunky            = 1,
+    Planar            = 2,
+};
+
+# Define sample format types
+type SampleFormat = enum {
+    UnsignedInteger   = 1,
+    SignedInteger     = 2,
+    FloatingPoint     = 3,
+    Undefined         = 4,
+};
+
+# Define resolution unit types
+type ResolutionUnit = enum {
+    None              = 1,
+    Inch              = 2,
+    Centimeter        = 3,
+};
+
+# Define ink set types
+type InkSet = enum {
+    CMYK              = 1,
+    NotCMYK           = 2,
+};
+
+# Define predictor types
+type Predictor = enum {
+    None              = 1,
+    HorizontalDifferencing = 2,
+};
+
+# Define fill order types
+type FillOrder = enum {
+    MSBFirst          = 1,
+    LSBFirst          = 2,
+};
+
+# Define YCbCr positioning types
+type YCbCrPositioning = enum {
+    Centered          = 1,
+    CoSited           = 2,
+};
+
+# Define extra samples types
+type ExtraSamples = enum {
+    Unspecified       = 0,
+    AssociatedAlpha   = 1,
+    UnassociatedAlpha = 2,
+};
+
+# Define subfile types
+type SubfileType = enum {
+    FullResolution    = 1,
+    ReducedResolution = 2,
+    SinglePage        = 3,
+};
+
+# Define new subfile types
+type NewSubfileType = enum {
+    FullResolution    = 0,
+    ReducedResolution = 1,
+    SinglePage        = 2,
+};

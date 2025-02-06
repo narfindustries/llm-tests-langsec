@@ -1,36 +1,22 @@
 module Modbus;
 
-import spicy;
-
-public type Function = enum {
-    READ_COILS = 0x01,
-    READ_DISCRETE_INPUTS = 0x02,
-    READ_HOLDING_REGISTERS = 0x03,
-    READ_INPUT_REGISTERS = 0x04,
-    WRITE_SINGLE_COIL = 0x05,
-    WRITE_SINGLE_REGISTER = 0x06,
-    WRITE_MULTIPLE_COILS = 0x0F,
-    WRITE_MULTIPLE_REGISTERS = 0x10
-};
-
-type Header = unit {
+public type MBAP = unit {
     transaction_id: uint16;
     protocol_id: uint16;
     length: uint16;
     unit_id: uint8;
-};
+    function_code: uint8;
 
-type Request = unit {
-    function_code: uint8 &convert=Function($$);
     switch ( self.function_code ) {
-        Function::READ_COILS,
-        Function::READ_DISCRETE_INPUTS,
-        Function::READ_HOLDING_REGISTERS,
-        Function::READ_INPUT_REGISTERS -> read_request: ReadRequest;
-        Function::WRITE_SINGLE_COIL,
-        Function::WRITE_SINGLE_REGISTER -> write_single_request: WriteSingleRequest;
-        Function::WRITE_MULTIPLE_COILS,
-        Function::WRITE_MULTIPLE_REGISTERS -> write_multiple_request: WriteMultipleRequest;
+        0x01, 0x02, 0x03, 0x04 -> read_request: ReadRequest;
+        0x05, 0x06 -> write_single_request: WriteSingleRequest;
+        0x0F, 0x10 -> write_multiple_request: WriteMultipleRequest;
+        0x14 -> read_file_record: ReadFileRecord;
+        0x15 -> write_file_record: WriteFileRecord;
+        0x16 -> mask_write_register: MaskWriteRegister;
+        0x17 -> read_write_multiple_registers: ReadWriteMultipleRegisters;
+        0x2B -> device_identification: DeviceIdentification;
+        * -> error_response: ErrorResponse if (self.function_code & 0x80);
     };
 };
 
@@ -51,37 +37,56 @@ type WriteMultipleRequest = unit {
     values: bytes &size=self.byte_count;
 };
 
-type Response = unit {
-    function_code: uint8 &convert=Function($$);
-    switch ( self.function_code ) {
-        Function::READ_COILS,
-        Function::READ_DISCRETE_INPUTS,
-        Function::READ_HOLDING_REGISTERS,
-        Function::READ_INPUT_REGISTERS -> read_response: ReadResponse;
-        Function::WRITE_SINGLE_COIL,
-        Function::WRITE_SINGLE_REGISTER -> write_single_response: WriteSingleResponse;
-        Function::WRITE_MULTIPLE_COILS,
-        Function::WRITE_MULTIPLE_REGISTERS -> write_multiple_response: WriteMultipleResponse;
-    };
-};
-
-type ReadResponse = unit {
+type ReadFileRecord = unit {
     byte_count: uint8;
-    values: bytes &size=self.byte_count;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
 };
 
-type WriteSingleResponse = unit {
-    output_address: uint16;
-    output_value: uint16;
+type WriteFileRecord = unit {
+    byte_count: uint8;
+    reference_type: uint8;
+    file_number: uint16;
+    record_number: uint16;
+    record_length: uint16;
+    record_data: bytes &size=self.record_length;
 };
 
-type WriteMultipleResponse = unit {
-    starting_address: uint16;
-    quantity: uint16;
+type MaskWriteRegister = unit {
+    reference_address: uint16;
+    and_mask: uint16;
+    or_mask: uint16;
 };
 
-public type ModbusPacket = unit {
-    header: Header;
-    data: Request if (header.protocol_id == 0x0000)
-          else Response;
+type ReadWriteMultipleRegisters = unit {
+    read_starting_address: uint16;
+    read_quantity: uint16;
+    write_starting_address: uint16;
+    write_quantity: uint16;
+    write_byte_count: uint8;
+    write_values: bytes &size=self.write_byte_count;
+};
+
+type DeviceIdentification = unit {
+    mei_type: uint8;
+    read_device_id_code: uint8;
+    object_id: uint8;
+    conformity_level: uint8;
+    more_follows: uint8;
+    next_object_id: uint8;
+    number_of_objects: uint8;
+    object_list: bytes &size=(self.number_of_objects * 2);
+};
+
+type ErrorResponse = unit {
+    exception_code: uint8;
+};
+
+public type ModbusRTU = unit {
+    address: uint8;
+    function_code: uint8;
+    payload: bytes &size=self.function_code;
+    crc: uint16;
 };

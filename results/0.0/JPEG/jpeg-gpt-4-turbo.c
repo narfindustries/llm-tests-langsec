@@ -1,105 +1,141 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // JPEG Markers
-#define SOI 0xD8
-#define EOI 0xD9
-#define SOS 0xDA
-#define APP0 0xE0
-#define DQT 0xDB
-#define SOF0 0xC0
-#define DHT 0xC4
+#define SOI 0xFFD8
+#define EOI 0xFFD9
+#define SOF0 0xFFC0
+#define SOS 0xFFDA
+#define DQT 0xFFDB
+#define DHT 0xFFC4
+#define APP0 0xFFE0
+#define COM 0xFFFE
 
-// Helper to define a JPEG marker
-static HParser *jpeg_marker(uint8_t marker) {
-    return h_sequence(h_uint8(), h_ch(marker), NULL);
-}
+// Parser declarations
+HParser *byte;
+HParser *two_bytes;
+HParser *soi_parser;
+HParser *eoi_parser;
+HParser *sof0_parser;
+HParser *sos_parser;
+HParser *dqt_parser;
+HParser *dht_parser;
+HParser *app0_parser;
+HParser *com_parser;
+HParser *frame_component;
+HParser *scan_component;
 
-// Define Quantization Table (DQT)
-static HParser *quantization_table() {
-    return h_sequence(
-        jpeg_marker(DQT),
-        h_uint16(),
-        h_many1(h_sequence(h_bits(4, false), h_bits(4, false), h_blob(64), NULL)),
+void init_parsers() {
+    byte = h_uint8();
+    two_bytes = h_bits(16, false);
+
+    soi_parser = h_bits(16, false);
+    eoi_parser = h_bits(16, false);
+
+    frame_component = h_sequence(byte, byte, byte, NULL);
+    scan_component = h_sequence(byte, byte, NULL);
+
+    sof0_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        byte,      // Precision
+        two_bytes, // Height
+        two_bytes, // Width
+        h_length_value(byte, h_many(frame_component)), // Components
         NULL
     );
-}
 
-// Define Huffman Table (DHT)
-static HParser *huffman_table() {
-    return h_sequence(
-        jpeg_marker(DHT),
-        h_uint16(),
-        h_many1(h_sequence(h_bits(3, false), h_bits(1, false), h_bits(4, false), h_blob(16), h_greedy_bytes(), NULL)),
+    sos_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        h_length_value(byte, h_many(scan_component)), // Components
+        byte, // Start of spectral selection
+        byte, // End of spectral selection
+        byte, // Successive approximation
         NULL
     );
-}
 
-// Define Start of Frame (SOF0)
-static HParser *start_of_frame() {
-    return h_sequence(
-        jpeg_marker(SOF0),
-        h_uint16(),
-        h_uint8(),
-        h_uint16(),
-        h_uint16(),
-        h_uint8(),
-        h_many1(h_sequence(h_uint8(), h_uint8(), h_uint8(), NULL)),
+    dqt_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        h_many(h_sequence(byte, h_many1(byte), NULL)), // Quantization tables
         NULL
     );
-}
 
-// Define Start of Scan (SOS)
-static HParser *start_of_scan() {
-    return h_sequence(
-        jpeg_marker(SOS),
-        h_uint16(),
-        h_uint8(),
-        h_many1(h_sequence(h_uint8(), h_uint8(), NULL)),
-        h_uint8(),
-        h_uint8(),
-        h_uint8(),
+    dht_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        h_many(h_sequence(byte, h_many1(byte), h_many1(byte), NULL)), // Huffman tables
         NULL
     );
-}
 
-// Define Application Segment (APP0)
-static HParser *app0_segment() {
-    return h_sequence(
-        jpeg_marker(APP0),
-        h_uint16(),
-        h_string("JFIF", 5),
-        h_uint8(),
-        h_uint16(),
-        h_uint16(),
-        h_uint8(),
-        h_uint8(),
-        h_greedy_bytes(),
+    app0_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        h_many1(byte), // Data
         NULL
     );
-}
 
-// Define the structure of a JPEG file
-static HParser *jpeg_file() {
-    return h_sequence(
-        jpeg_marker(SOI),
-        h_many(h_choice(app0_segment(), quantization_table(), huffman_table(), start_of_frame(), NULL)),
-        start_of_scan(),
-        h_greedy_bytes(), // Image data
-        jpeg_marker(EOI),
+    com_parser = h_sequence(
+        h_bits(16, false),
+        two_bytes, // Length
+        h_many1(byte), // Comment data
         NULL
     );
 }
 
 int main(int argc, char **argv) {
-    HParser *parser = jpeg_file();
-    HParseResult *result = h_parse(parser, (const uint8_t *)input_data, input_length);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <jpeg_file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    if (fread(data, 1, size, file) != size) {
+        perror("Failed to read file");
+        free(data);
+        fclose(file);
+        return 1;
+    }
+
+    fclose(file);
+
+    init_parsers();
+
+    HParser *jpeg_parser = h_sequence(
+        soi_parser,
+        h_many(h_choice(sof0_parser, sos_parser, dqt_parser, dht_parser, app0_parser, com_parser, NULL)),
+        eoi_parser,
+        NULL
+    );
+
+    HParseResult *result = h_parse(jpeg_parser, data, size);
     if (result) {
         printf("JPEG parsed successfully.\n");
+        h_pprint(stdout, result->ast, 0, 0);
     } else {
         printf("Failed to parse JPEG.\n");
     }
+
     h_parse_result_free(result);
-    h_parser_free(parser);
+    free(data);
+
     return 0;
 }

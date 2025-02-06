@@ -1,59 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/ICMP"
-           xmlns:tns="http://example.com/ICMP"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/dfdl.dtd"/>
-
-  <xs:element name="icmp">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element dfdl:ref="tns:icmp-type"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="icmp-type">
-    <xs:sequence>
-      <xs:element name="type" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="code" type="xs:unsignedByte" dfdl:representation="binary"/>
-      <xs:element name="checksum" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="identifier" type="xs:unsignedShort" dfdl:representation="binary"/>
-      <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:representation="binary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="icmp-header">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element dfdl:ref="tns:icmp-header-type" dfdl:OccursCount="1..1"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="icmp-header-type">
-    <xs:sequence>
-      <xs:element name="type" type="xs:unsignedByte" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
-      <xs:element name="code" type="xs:unsignedByte" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
-      <xs:element name="checksum" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:element name="icmp-data">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:element dfdl:ref="tns:icmp-data-type" dfdl:OccursCount="1..1"/>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
-
-  <xs:complexType name="icmp-data-type">
-    <xs:sequence>
-      <xs:element name="identifier" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
-      <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:representation="binary" dfdl:OccursCount="1..1"/>
-    </xs:sequence>
-  </xs:complexType>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0" xmlns:ex="http://example.com">
+  <dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0" name="ICMPMessage" type="Bytes" representation="binary">
+    <dfdl:element name="type" type="uint8" occurs="1..1">
+      <dfdl:assert test=". = 0 or . = 3 or . = 4 or . = 5 or . = 8 or . = 9 or . = 10 or . = 11 or . = 12 or . = 13 or . = 14 or . = 15 or . = 16 or . = 17 or . = 18" message="Invalid ICMP message type"/>
+    </dfdl:element>
+    <dfdl:element name="code" type="uint8" occurs="1..1">
+      <dfdl:assert test=". = 0 or . = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 6 or . = 7 or . = 8 or . = 9 or . = 10 or . = 11 or . = 12 or . = 13 or . = 14 or . = 15" message="Invalid ICMP message code"/>
+      <dfdl:choice>
+        <dfdl:element name="destinationUnreachableCode" type="uint8" occurs="1..1">
+          <dfdl:assert test=". = 0 or . = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 6 or . = 7 or . = 8 or . = 9 or . = 10 or . = 11 or . = 12 or . = 13 or . = 14 or . = 15" message="Invalid Destination Unreachable code"/>
+          <dfdl:guard>
+            <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 3&#60;/dfdl:expression&#62;</dfdl:expression>
+          </dfdl:guard>
+        </dfdl:element>
+        <dfdl:element name="redirectCode" type="uint8" occurs="1..1">
+          <dfdl:assert test=". = 0 or . = 1 or . = 2 or . = 3" message="Invalid Redirect code"/>
+          <dfdl:guard>
+            <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 5&#60;/dfdl:expression&#62;</dfdl:expression>
+          </dfdl:guard>
+        </dfdl:element>
+        <dfdl:element name="timeExceededCode" type="uint8" occurs="1..1">
+          <dfdl:assert test=". = 0 or . = 1" message="Invalid Time Exceeded code"/>
+          <dfdl:guard>
+            <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 11&#60;/dfdl:expression&#62;</dfdl:expression>
+          </dfdl:guard>
+        </dfdl:element>
+        <dfdl:element name="parameterProblemCode" type="uint8" occurs="1..1">
+          <dfdl:assert test=". = 0 or . = 1 or . = 2" message="Invalid Parameter Problem code"/>
+          <dfdl:guard>
+            <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 12&#60;/dfdl:expression&#62;</dfdl:expression>
+          </dfdl:guard>
+        </dfdl:element>
+      </dfdl:choice>
+    </dfdl:element>
+    <dfdl:element name="checksum" type="uint16" occurs="1..1">
+      <dfdl:assert test=". &gt;= 0 and . &lt;= 65535" message="Invalid ICMP checksum"/>
+    </dfdl:element>
+    <dfdl:element name="identifier" type="uint16" occurs="1..1">
+      <dfdl:assert test=". &gt;= 0 and . &lt;= 65535" message="Invalid ICMP identifier"/>
+    </dfdl:element>
+    <dfdl:element name="sequenceNumber" type="uint16" occurs="1..1">
+      <dfdl:assert test=". &gt;= 0 and . &lt;= 65535" message="Invalid ICMP sequence number"/>
+    </dfdl:element>
+    <dfdl:choice>
+      <dfdl:element name="echoRequestData" type="Bytes" occurs="0..1">
+        <dfdl:assert test=".length() &gt;= 0 and .length() &lt;= 1024" message="Invalid Echo Request data"/>
+        <dfdl:guard>
+          <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 8&#60;/dfdl:expression&#62;</dfdl:expression>
+        </dfdl:guard>
+      </dfdl:element>
+      <dfdl:element name="destinationUnreachableData" type="Bytes" occurs="0..1">
+        <dfdl:assert test=".length() &gt;= 0 and .length() &lt;= 1024" message="Invalid Destination Unreachable data"/>
+        <dfdl:guard>
+          <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 3&#60;/dfdl:expression&#62;</dfdl:expression>
+        </dfdl:guard>
+      </dfdl:element>
+      <dfdl:element name="redirectData" type="Bytes" occurs="0..1">
+        <dfdl:assert test=".length() &gt;= 0 and .length() &lt;= 1024" message="Invalid Redirect data"/>
+        <dfdl:guard>
+          <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 5&#60;/dfdl:expression&#62;</dfdl:expression>
+        </dfdl:guard>
+      </dfdl:element>
+      <dfdl:element name="timeExceededData" type="Bytes" occurs="0..1">
+        <dfdl:assert test=".length() &gt;= 0 and .length() &lt;= 1024" message="Invalid Time Exceeded data"/>
+        <dfdl:guard>
+          <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 11&#60;/dfdl:expression&#62;</dfdl:expression>
+        </dfdl:guard>
+      </dfdl:element>
+      <dfdl:element name="parameterProblemData" type="Bytes" occurs="0..1">
+        <dfdl:assert test=".length() &gt;= 0 and .length() &lt;= 1024" message="Invalid Parameter Problem data"/>
+        <dfdl:guard>
+          <dfdl:expression>&#60;/dfdl:element&#62;&#10;&#9;&#9;&#60;dfdl:expression&#62;../type eq 12&#60;/dfdl:expression&#62;</dfdl:expression>
+        </dfdl:guard>
+      </dfdl:element>
+    </dfdl:choice>
+  </dfdl:format>
+</dfdl:definition>

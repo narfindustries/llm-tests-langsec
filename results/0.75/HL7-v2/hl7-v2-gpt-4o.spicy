@@ -1,24 +1,91 @@
-module HL7_v2;
+module HL7v2;
 
-export {
-    type HL7Message = unit {
-        segments: [HL7Segment] &until(eod());
-    };
+type HL7Message = unit {
+    segments: HL7Segment[] &requires (segments.size() > 0);
+};
 
-    type HL7Segment = unit {
-        id: string &length=3;
-        data: bytes &until(eol);
-    };
+type HL7Segment = unit {
+    name: bytes &length=3;
+    fields: bytes[] &until(eod);
 
-    const eol = /\r\n|\n|\r/;
+    on %init {
+        if ( self.name == "MSH"_b ) {
+            parse_msh(self.fields);
+        }
+        else if ( self.name == "PID"_b ) {
+            parse_pid(self.fields);
+        }
+        else if ( self.name == "OBR"_b ) {
+            parse_obr(self.fields);
+        }
+        else if ( self.name == "OBX"_b ) {
+            parse_obx(self.fields);
+        }
+        else if ( self.name == "IN1"_b ) {
+            parse_in1(self.fields);
+        }
+        # Add additional segments as needed
+    }
+};
+
+event parse_msh(fields: bytes[]) {
+    if ( fields.size() < 12 ) return;
+    local field_separator = fields[0];
+    local encoding_characters = fields[1];
+    local sending_application = fields[2];
+    local sending_facility = fields[3];
+    local receiving_application = fields[4];
+    local receiving_facility = fields[5];
+    local date_time_of_message = fields[6];
+    local security = fields[7];
+    local message_type = fields[8];
+    local message_control_id = fields[9];
+    local processing_id = fields[10];
+    local version_id = fields[11];
+    # Additional fields are optional and can be added
 }
 
-public type HL7_v2_Protocol = unit {
-    message: HL7Message;
-} &parsers = [
-    spicy::Parser(
-        name="hl7-v2",
-        ports=9937/tcp,
-        protocol=spicy::Transport::TCP
-    )
-];
+event parse_pid(fields: bytes[]) {
+    if ( fields.size() < 8 ) return;
+    local set_id = fields[0];
+    local patient_id = fields[1];
+    local patient_identifier_list = fields[2];
+    local alternate_patient_id = fields[3];
+    local patient_name = fields[4];
+    local mother_maiden_name = fields[5];
+    local date_time_of_birth = fields[6];
+    local administrative_sex = fields[7];
+    # Add more fields as needed
+}
+
+event parse_obr(fields: bytes[]) {
+    if ( fields.size() < 5 ) return;
+    local set_id = fields[0];
+    local placer_order_number = fields[1];
+    local filler_order_number = fields[2];
+    local universal_service_identifier = fields[3];
+    local priority = fields[4];
+    # Add more fields as needed
+}
+
+event parse_obx(fields: bytes[]) {
+    if ( fields.size() < 6 ) return;
+    local set_id = fields[0];
+    local value_type = fields[1];
+    local observation_identifier = fields[2];
+    local observation_sub_id = fields[3];
+    local observation_value = fields[4];
+    local units = fields[5];
+    # Add more fields as needed
+}
+
+event parse_in1(fields: bytes[]) {
+    if ( fields.size() < 4 ) return;
+    local set_id = fields[0];
+    local insurance_plan_id = fields[1];
+    local insurance_company_id = fields[2];
+    local insurance_company_name = fields[3];
+    # Add more fields as needed
+}
+
+public export { HL7Message };

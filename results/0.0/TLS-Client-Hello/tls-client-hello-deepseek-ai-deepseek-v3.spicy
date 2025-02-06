@@ -1,0 +1,57 @@
+module TLS;
+
+public type ClientHello = unit {
+    protocol_version: uint16;
+    random: bytes &size=32;
+    legacy_session_id: bytes &size=1;
+    cipher_suites: bytes &size=2;
+    legacy_compression_methods: bytes &size=1;
+    extensions: bytes &size=2;
+};
+
+public type Extension = unit {
+    extension_type: uint16;
+    extension_data: bytes &size=2;
+};
+
+public type SupportedVersions = unit {
+    versions: bytes &size=1;
+};
+
+public type KeyShare = unit {
+    key_exchange: bytes &size=2;
+};
+
+public type SignatureAlgorithms = unit {
+    algorithms: bytes &size=2;
+};
+
+public type SupportedGroups = unit {
+    groups: bytes &size=2;
+};
+
+public type PSKKeyExchangeModes = unit {
+    modes: bytes &size=1;
+};
+
+public type PreSharedKey = unit {
+    identities: bytes &size=2;
+    binders: bytes &size=2;
+};
+
+public type ServerName = unit {
+    name: bytes &size=2;
+};
+
+public type ALPN = unit {
+    protocols: bytes &size=2;
+};
+
+public type Extensions = unit {
+    extensions: Extension[] &until=$$.extensions[-1].extension_type == 0;
+};
+
+public type TLSClientHello = unit {
+    client_hello: ClientHello;
+    extensions: Extensions;
+};

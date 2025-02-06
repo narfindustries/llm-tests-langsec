@@ -1,75 +1,75 @@
 meta:
-  id: bitcoin-transactions
-  file-extension: dat
-  title: Bitcoin Transactions
-  license: MIT
-  author: Meta Llama 3
-  doc: https://en.bitcoin.it/wiki/Protocol_documentation
+  id: bitcoin_transactions
+  endian: le
+
 seq:
-  - id: transaction_count
-    type: uvarint
-  - id: transactions
-    type: transaction
+  - id: version
+    type: u4le
+  - id: input_count
+    type: varint
+  - id: inputs
+    type: transaction_input
     repeat: expr
-    repeat-expr: transaction_count
+    repeat-expr: input_count.value
+  - id: output_count
+    type: varint
+  - id: outputs
+    type: transaction_output
+    repeat: expr
+    repeat-expr: output_count.value
+  - id: lock_time
+    type: u4le
+
 types:
-  transaction:
+  transaction_input:
     seq:
-      - id: version
-        type: u4
-      - id: marker
-        type: u1
-        enum: [0x00]
-      - id: flag
-        type: u1
-        enum: [0x01]
-      - id: inputs
-        type: tx_in
-        repeat: expr
-        repeat-expr: varint
-      - id: outputs
-        type: tx_out
-        repeat: expr
-        repeat-expr: varint
-      - id: witness
-        type: witness
-        repeat: expr
-        repeat-expr: inputs.length
-      - id: lock_time
-        type: u4
-  tx_in:
-    seq:
-      - id: prev_out
-        type: outpoint
-      - id: script_length
-        type: varint
-      - id: script_sig
-        type: script
-      - id: sequence
-        type: u4
-  tx_out:
-    seq:
-      - id: value
-        type: u8
-      - id: pk_script_length
-        type: varint
-      - id: pk_script
-        type: script
-  outpoint:
-    seq:
-      - id: tx_hash
+      - id: previous_transaction_hash
         type: bytes
         size: 32
-      - id: index
-        type: u4
-  script:
+      - id: previous_transaction_index
+        type: u4le
+      - id: script_length
+        type: varint
+      - id: script
+        type: bytes
+        size: expr
+        size-expr: script_length.value
+      - id: sequence_number
+        type: u4le
+
+  transaction_output:
     seq:
-      - id: data
-        type: byte[]
-        size: script_length
-  witness:
+      - id: value
+        type: u8le
+      - id: script_length
+        type: varint
+      - id: script
+        type: bytes
+        size: expr
+        size-expr: script_length.value
+
+  varint:
     seq:
-      - id: items
-        type: byte[]
-        repeat: expr
-        repeat-expr: varint
+      - id: first_byte
+        type: u1
+    if first_byte < 253:
+      value: first_byte
+    elif first_byte == 253:
+      seq:
+        - id: value
+          type: u2le
+    elif first_byte == 254:
+      seq:
+        - id: value
+          type: u4le
+    else:
+      seq:
+        - id: value
+          type: u8le
+
+  bytes:
+    seq:
+      - id: value
+        type: byte
+        repeat: until
+        until: eos

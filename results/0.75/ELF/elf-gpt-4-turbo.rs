@@ -1,97 +1,158 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::take,
     number::complete::{le_u16, le_u32, le_u64},
     IResult,
 };
-use std::{env, fs::File, io::Read, path::Path};
+use std::{env, fs, io::Read};
 
 #[derive(Debug)]
 struct ElfHeader {
-    magic: [u8; 4],
-    class: u8,
-    data: u8,
-    version: u8,
-    os_abi: u8,
-    abi_version: u8,
-    padding: [u8; 7],
+    e_ident: Vec<u8>,
     e_type: u16,
-    machine: u16,
+    e_machine: u16,
     e_version: u32,
-    entry_point: u64,
-    ph_off: u64,
-    sh_off: u64,
-    flags: u32,
-    eh_size: u16,
-    ph_ent_size: u16,
-    ph_num: u16,
-    sh_ent_size: u16,
-    sh_num: u16,
-    sh_str_idx: u16,
+    e_entry: u64,
+    e_phoff: u64,
+    e_shoff: u64,
+    e_flags: u32,
+    e_ehsize: u16,
+    e_phentsize: u16,
+    e_phnum: u16,
+    e_shentsize: u16,
+    e_shnum: u16,
+    e_shstrndx: u16,
+}
+
+#[derive(Debug)]
+struct ProgramHeader {
+    p_type: u32,
+    p_flags: u32,
+    p_offset: u64,
+    p_vaddr: u64,
+    p_paddr: u64,
+    p_filesz: u64,
+    p_memsz: u64,
+    p_align: u64,
+}
+
+#[derive(Debug)]
+struct SectionHeader {
+    sh_name: u32,
+    sh_type: u32,
+    sh_flags: u64,
+    sh_addr: u64,
+    sh_offset: u64,
+    sh_size: u64,
+    sh_link: u32,
+    sh_info: u32,
+    sh_addralign: u64,
+    sh_entsize: u64,
 }
 
 fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
-    let (input, magic) = tag(b"\x7FELF")(input)?;
-    let (input, class) = le_u8(input)?;
-    let (input, data) = le_u8(input)?;
-    let (input, version) = le_u8(input)?;
-    let (input, os_abi) = le_u8(input)?;
-    let (input, abi_version) = le_u8(input)?;
-    let (input, padding) = take::<_, _, nom::error::Error<_>>(7usize)(input)?;
+    let (input, e_ident) = take(16usize)(input)?;
     let (input, e_type) = le_u16(input)?;
-    let (input, machine) = le_u16(input)?;
+    let (input, e_machine) = le_u16(input)?;
     let (input, e_version) = le_u32(input)?;
-    let (input, entry_point) = le_u64(input)?;
-    let (input, ph_off) = le_u64(input)?;
-    let (input, sh_off) = le_u64(input)?;
-    let (input, flags) = le_u32(input)?;
-    let (input, eh_size) = le_u16(input)?;
-    let (input, ph_ent_size) = le_u16(input)?;
-    let (input, ph_num) = le_u16(input)?;
-    let (input, sh_ent_size) = le_u16(input)?;
-    let (input, sh_num) = le_u16(input)?;
-    let (input, sh_str_idx) = le_u16(input)?;
+    let (input, e_entry) = le_u64(input)?;
+    let (input, e_phoff) = le_u64(input)?;
+    let (input, e_shoff) = le_u64(input)?;
+    let (input, e_flags) = le_u32(input)?;
+    let (input, e_ehsize) = le_u16(input)?;
+    let (input, e_phentsize) = le_u16(input)?;
+    let (input, e_phnum) = le_u16(input)?;
+    let (input, e_shentsize) = le_u16(input)?;
+    let (input, e_shnum) = le_u16(input)?;
+    let (input, e_shstrndx) = le_u16(input)?;
 
     Ok((
         input,
         ElfHeader {
-            magic: [magic[0], magic[1], magic[2], magic[3]],
-            class,
-            data,
-            version,
-            os_abi,
-            abi_version,
-            padding: [
-                padding[0], padding[1], padding[2], padding[3], padding[4], padding[5], padding[6],
-            ],
+            e_ident: e_ident.to_vec(),
             e_type,
-            machine,
+            e_machine,
             e_version,
-            entry_point,
-            ph_off,
-            sh_off,
-            flags,
-            eh_size,
-            ph_ent_size,
-            ph_num,
-            sh_ent_size,
-            sh_num,
-            sh_str_idx,
+            e_entry,
+            e_phoff,
+            e_shoff,
+            e_flags,
+            e_ehsize,
+            e_phentsize,
+            e_phnum,
+            e_shentsize,
+            e_shnum,
+            e_shstrndx,
         },
     ))
 }
 
-fn main() -> std::io::Result<()> {
+fn parse_program_header(input: &[u8]) -> IResult<&[u8], ProgramHeader> {
+    let (input, p_type) = le_u32(input)?;
+    let (input, p_flags) = le_u32(input)?;
+    let (input, p_offset) = le_u64(input)?;
+    let (input, p_vaddr) = le_u64(input)?;
+    let (input, p_paddr) = le_u64(input)?;
+    let (input, p_filesz) = le_u64(input)?;
+    let (input, p_memsz) = le_u64(input)?;
+    let (input, p_align) = le_u64(input)?;
+
+    Ok((
+        input,
+        ProgramHeader {
+            p_type,
+            p_flags,
+            p_offset,
+            p_vaddr,
+            p_paddr,
+            p_filesz,
+            p_memsz,
+            p_align,
+        },
+    ))
+}
+
+fn parse_section_header(input: &[u8]) -> IResult<&[u8], SectionHeader> {
+    let (input, sh_name) = le_u32(input)?;
+    let (input, sh_type) = le_u32(input)?;
+    let (input, sh_flags) = le_u64(input)?;
+    let (input, sh_addr) = le_u64(input)?;
+    let (input, sh_offset) = le_u64(input)?;
+    let (input, sh_size) = le_u64(input)?;
+    let (input, sh_link) = le_u32(input)?;
+    let (input, sh_info) = le_u32(input)?;
+    let (input, sh_addralign) = le_u64(input)?;
+    let (input, sh_entsize) = le_u64(input)?;
+
+    Ok((
+        input,
+        SectionHeader {
+            sh_name,
+            sh_type,
+            sh_flags,
+            sh_addr,
+            sh_offset,
+            sh_size,
+            sh_link,
+            sh_info,
+            sh_addralign,
+            sh_entsize,
+        },
+    ))
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let file_path = Path::new(&args[1]);
-    let mut file = File::open(file_path)?;
+    if args.len() < 2 {
+        return Err("Usage: elf_parser <ELF file>".into());
+    }
+
+    let mut file = fs::File::open(&args[1])?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
     match parse_elf_header(&buffer) {
-        Ok((_, elf_header)) => {
-            println!("{:?}", elf_header);
-        }
-        Err(e) => println!("Failed to parse ELF header: {:?}", e),
+        Ok((_, header)) => println!("Parsed ELF Header: {:?}", header),
+        Err(e) => println!("Error parsing ELF Header: {:?}", e),
     }
 
     Ok(())

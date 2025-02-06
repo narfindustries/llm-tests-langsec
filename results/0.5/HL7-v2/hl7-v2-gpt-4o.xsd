@@ -1,89 +1,81 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HL7/v2"
-           xmlns:tns="http://example.com/HL7/v2"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+           targetNamespace="http://example.org/hl7v2"
+           xmlns:tns="http://example.org/hl7v2"
+           elementFormDefault="qualified">
 
-    <xs:include schemaLocation="hl7-v2-base.xsd"/>
-
-    <dfdl:format ref="tns:HL7Format"/>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:defineFormat name="hl7Format">
+                <dfdl:format
+                    byteOrder="bigEndian"
+                    encoding="UTF-8"
+                    initiator=""
+                    terminator="%LF;%CR;%CR%LF;"
+                    separator="%WSP*;|"
+                    sequenceKind="ordered"
+                    textNumberRep="standard"
+                    textStandardDecimalSeparator="."
+                    textStandardGroupingSeparator=","
+                    textStandardExponentRep="E"
+                    lengthKind="delimited"
+                    occursCountKind="implicit"/>
+            </dfdl:defineFormat>
+        </xs:appinfo>
+    </xs:annotation>
 
     <xs:element name="HL7Message">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="MSH" type="tns:MSHType"/>
-                <xs:element name="PID" type="tns:PIDType" minOccurs="0"/>
-                <xs:element name="OBR" type="tns:OBRType" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element name="OBX" type="tns:OBXType" minOccurs="0" maxOccurs="unbounded"/>
-                <!-- Add additional HL7 segments as needed -->
+                <xs:element name="MSH" type="tns:MSHType" dfdl:ref="tns:hl7Format"/>
+                <xs:element name="PID" type="tns:PIDType" minOccurs="0" dfdl:ref="tns:hl7Format"/>
+                <xs:element name="OBR" type="tns:OBRType" minOccurs="0" maxOccurs="unbounded" dfdl:ref="tns:hl7Format"/>
+                <xs:element name="OBX" type="tns:OBXType" minOccurs="0" maxOccurs="unbounded" dfdl:ref="tns:hl7Format"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
+    <!-- Message Header (MSH) Segment -->
     <xs:complexType name="MSHType">
         <xs:sequence>
             <xs:element name="FieldSeparator" type="xs:string" dfdl:length="1"/>
             <xs:element name="EncodingCharacters" type="xs:string" dfdl:length="4"/>
-            <xs:element name="SendingApplication" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="SendingFacility" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ReceivingApplication" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ReceivingFacility" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="DateTimeOfMessage" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="Security" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
-            <xs:element name="MessageType" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="MessageControlID" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ProcessingID" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="VersionID" type="xs:string" dfdl:lengthKind="delimited"/>
+            <xs:element name="SendingApplication" type="xs:string"/>
+            <xs:element name="SendingFacility" type="xs:string"/>
+            <xs:element name="ReceivingApplication" type="xs:string"/>
+            <xs:element name="ReceivingFacility" type="xs:string"/>
+            <xs:element name="DateTimeOfMessage" type="xs:string"/>
+            <xs:element name="MessageType" type="xs:string"/>
         </xs:sequence>
     </xs:complexType>
 
+    <!-- Patient Identification (PID) Segment -->
     <xs:complexType name="PIDType">
         <xs:sequence>
-            <xs:element name="SetIDPID" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="PatientID" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="PatientIdentifierList" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="AlternatePatientID" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
-            <xs:element name="PatientName" type="xs:string" dfdl:lengthKind="delimited"/>
-            <!-- Add additional PID fields as needed -->
+            <xs:element name="PatientIdentifierList" type="xs:string"/>
+            <xs:element name="PatientName" type="xs:string"/>
+            <xs:element name="DateTimeOfBirth" type="xs:string"/>
+            <xs:element name="AdministrativeSex" type="xs:string"/>
         </xs:sequence>
     </xs:complexType>
 
+    <!-- Observation Request (OBR) Segment -->
     <xs:complexType name="OBRType">
         <xs:sequence>
-            <xs:element name="SetIDOBR" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="PlacerOrderNumber" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="FillerOrderNumber" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="UniversalServiceID" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="Priority" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
-            <xs:element name="RequestedDateTime" type="xs:string" dfdl:lengthKind="delimited"/>
-            <!-- Add additional OBR fields as needed -->
+            <xs:element name="UniversalServiceIdentifier" type="xs:string"/>
+            <xs:element name="ObservationDateTime" type="xs:string"/>
+            <xs:element name="DiagnosticServSectID" type="xs:string"/>
         </xs:sequence>
     </xs:complexType>
 
+    <!-- Observation/Result (OBX) Segment -->
     <xs:complexType name="OBXType">
         <xs:sequence>
-            <xs:element name="SetIDOBX" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ValueType" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ObservationIdentifier" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="ObservationValue" type="xs:string" dfdl:lengthKind="delimited"/>
-            <xs:element name="Units" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
-            <xs:element name="ReferencesRange" type="xs:string" dfdl:lengthKind="delimited" minOccurs="0"/>
-            <!-- Add additional OBX fields as needed -->
+            <xs:element name="ValueType" type="xs:string"/>
+            <xs:element name="ObservationIdentifier" type="xs:string"/>
+            <xs:element name="ObservationValue" type="xs:string"/>
+            <xs:element name="ObservationResultStatus" type="xs:string"/>
         </xs:sequence>
     </xs:complexType>
-
-    <dfdl:defineFormat name="HL7Format">
-        <dfdl:format lengthKind="delimited"
-                     initiator=""
-                     terminator="%NL;"
-                     separator="|"
-                     encoding="UTF-8"
-                     textNumberRep="standard"
-                     textStandardDecimalSeparator="."
-                     textStandardGroupingSeparator=","
-                     textNumberCheckPolicy="lax"/>
-    </dfdl:defineFormat>
 
 </xs:schema>

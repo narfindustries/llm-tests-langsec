@@ -1,125 +1,94 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define basic field types
-static HParser *adt;
-static HParser *msg_type;
-static HParser *msg_event;
-static HParser *msg_struct_id;
-static HParser *field_separator;
-static HParser *encoding_chars;
-static HParser *sending_app;
-static HParser *sending_fac;
-static HParser *receiving_app;
-static HParser *receiving_fac;
-static HParser *date_time;
-static HParser *security;
-static HParser *message_type;
-static HParser *message_control_id;
-static HParser *processing_id;
-static HParser *version_id;
-static HParser *segment;
-static HParser *segments;
+// Define parsers for basic HL7 data types
+HParser *hl7_alphanumeric;
+HParser *hl7_numeric;
+HParser *hl7_datetime;
 
-// HL7 message segments
-static HParser *msh_segment;
-static HParser *evn_segment;
-static HParser *pid_segment;
-static HParser *hl7_message;
+// Define parsers for HL7 fields
+HParser *msh_field;
+HParser *pid_field;
+HParser *orc_field;
+HParser *obr_field;
+HParser *obx_field;
 
-// Helper parsers
-static HParser *field;
-static HParser *component;
-static HParser *subcomponent;
+// Define parsers for HL7 segments
+HParser *msh_segment;
+HParser *pid_segment;
+HParser *orc_segment;
+HParser *obr_segment;
+HParser *obx_segment;
 
-// Initialize parsers for basic field types
-static void init_field_types() {
-    adt = h_token("ADT", 3);
-    msg_type = h_ch('A');
-    msg_event = h_ch('O');
-    msg_struct_id = h_sequence(h_ch('A'), h_ch('D'), h_ch('T'), NULL);
-    field_separator = h_ch('|');
-    encoding_chars = h_ch('^');
-    sending_app = h_token("APP", 3);
-    sending_fac = h_token("FAC", 3);
-    receiving_app = h_token("APP", 3);
-    receiving_fac = h_token("FAC", 3);
-    date_time = h_token("20231210", 8);
-    security = h_token("SEC", 3);
-    message_type = h_sequence(msg_type, h_ch('_'), msg_event, NULL);
-    message_control_id = h_token("123456", 6);
-    processing_id = h_token("P", 1);
-    version_id = h_token("2.5", 3);
-}
+// Define parser for an HL7 message
+HParser *hl7_message;
 
-// Initialize parsers for segments
-static void init_segments() {
-    msh_segment = h_sequence(
-        h_ch('M'), h_ch('S'), h_ch('H'),
-        field_separator,
-        encoding_chars,
-        field_separator,
-        sending_app,
-        field_separator,
-        sending_fac,
-        field_separator,
-        receiving_app,
-        field_separator,
-        receiving_fac,
-        field_separator,
-        date_time,
-        field_separator,
-        security,
-        field_separator,
-        message_type,
-        field_separator,
-        message_control_id,
-        field_separator,
-        processing_id,
-        field_separator,
-        version_id,
-        NULL
+void init_parsers() {
+    hl7_alphanumeric = h_token((const uint8_t *)"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 62);
+    hl7_numeric = h_token((const uint8_t *)"0123456789", 10);
+    hl7_datetime = h_sequence(
+        h_repeat_n(hl7_numeric, 4), h_ch('-'),
+        h_repeat_n(hl7_numeric, 2), h_ch('-'),
+        h_repeat_n(hl7_numeric, 2), h_ch('T'),
+        h_repeat_n(hl7_numeric, 2), h_ch(':'),
+        h_repeat_n(hl7_numeric, 2), h_ch(':'),
+        h_repeat_n(hl7_numeric, 2), NULL
     );
 
-    evn_segment = h_sequence(
-        h_ch('E'), h_ch('V'), h_ch('N'),
-        field_separator,
-        encoding_chars,
-        field_separator,
-        date_time,
-        field_separator,
-        NULL
-    );
+    msh_field = h_sequence(hl7_alphanumeric, NULL);
+    pid_field = h_sequence(hl7_alphanumeric, NULL);
+    orc_field = h_sequence(hl7_alphanumeric, NULL);
+    obr_field = h_sequence(hl7_alphanumeric, NULL);
+    obx_field = h_sequence(hl7_alphanumeric, NULL);
 
-    pid_segment = h_sequence(
-        h_ch('P'), h_ch('I'), h_ch('D'),
-        field_separator,
-        NULL
-    );
+    msh_segment = h_sequence(h_ch('M'), h_ch('S'), h_ch('H'), h_ch('|'), h_many(msh_field), h_ch('\r'), NULL);
+    pid_segment = h_sequence(h_ch('P'), h_ch('I'), h_ch('D'), h_ch('|'), h_many(pid_field), h_ch('\r'), NULL);
+    orc_segment = h_sequence(h_ch('O'), h_ch('R'), h_ch('C'), h_ch('|'), h_many(orc_field), h_ch('\r'), NULL);
+    obr_segment = h_sequence(h_ch('O'), h_ch('B'), h_ch('R'), h_ch('|'), h_many(obr_field), h_ch('\r'), NULL);
+    obx_segment = h_sequence(h_ch('O'), h_ch('B'), h_ch('X'), h_ch('|'), h_many(obx_field), h_ch('\r'), NULL);
 
-    segments = h_many(h_choice(msh_segment, evn_segment, pid_segment, NULL));
+    hl7_message = h_sequence(msh_segment, h_many(pid_segment), h_many(orc_segment), h_many(obr_segment), h_many(obx_segment), NULL);
 }
 
-// Initialize the HL7 message parser
-static void init_hl7_message() {
-    hl7_message = h_sequence(segments, NULL);
-}
-
-// Initialize all parsers
-static void init_parsers() {
-    init_field_types();
-    init_segments();
-    init_hl7_message();
-}
-
-int main(int argc, char **argv) {
-    init_parsers();
-    HParser *parser = hl7_message;
-    HParseResult *result = h_parse(parser, (const uint8_t *)"MSH|^~\\&|APP|FAC|APP|FAC|20231210|SEC|A_O|123456|P|2.5", 53);
-    if (result) {
-        printf("Parse successful!\n");
-    } else {
-        printf("Parse failed!\n");
+void parse_hl7_message(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        fprintf(stderr, "Failed to open file: %s\n", filename);
+        return;
     }
-    return 0;
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    uint8_t *data = malloc(length);
+    if (!data) {
+        fprintf(stderr, "Failed to allocate memory for file data\n");
+        fclose(file);
+        return;
+    }
+
+    fread(data, 1, length, file);
+    fclose(file);
+
+    HParseResult *result = h_parse(hl7_message, data, length);
+    if (result) {
+        printf("HL7 message parsed successfully.\n");
+    } else {
+        fprintf(stderr, "Failed to parse HL7 message.\n");
+    }
+
+    free(data);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <hl7_message_file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    init_parsers();
+    parse_hl7_message(argv[1]);
+    return EXIT_SUCCESS;
 }

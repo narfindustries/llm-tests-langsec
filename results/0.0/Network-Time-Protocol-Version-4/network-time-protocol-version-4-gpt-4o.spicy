@@ -1,46 +1,29 @@
 module NTP;
 
-public type NTPHeader = unit {
-    li_vn_mode: bitfield[8] {
-        li: uint8 &width=2;
-        vn: uint8 &width=3;
-        mode: uint8 &width=3;
-    };
-
+type NTP_Packet = unit {
+    li: uint8 &size=2;
+    vn: uint8 &size=3;
+    mode: uint8 &size=3;
     stratum: uint8;
     poll: int8;
     precision: int8;
-
-    root_delay: int32;
-    root_dispersion: int32;
-    reference_id: uint32;
-
+    root_delay: uint32;
+    root_dispersion: uint32;
+    reference_id: bytes &length=4;
     reference_timestamp: uint64;
     originate_timestamp: uint64;
     receive_timestamp: uint64;
     transmit_timestamp: uint64;
-};
-
-public type NTPMessage = unit {
-    header: NTPHeader;
+    authenticator: optional<Authenticator> &if=(mode == 3 || mode == 4);
 
     on %done {
-        if ( header.li_vn_mode.mode != 3 && header.li_vn_mode.mode != 4 ) {
-            print "Invalid NTP mode: ", header.li_vn_mode.mode;
-        }
+        # Convert root_delay and root_dispersion from NTP short format
+        root_delay = (root_delay >> 16) + ((root_delay & 0xFFFF) / 65536.0);
+        root_dispersion = (root_dispersion >> 16) + ((root_dispersion & 0xFFFF) / 65536.0);
     }
 };
 
-public module Parser = global {
-    export {
-        type NTPMessage = NTP::NTPMessage;
-    }
-
-    hook zeek_init() {
-        Spicy::register_protocol_analyzer(
-            NTP::Parser::NTPMessage,
-            "ntp",
-            /^(?:123)$/ # NTP typically uses port 123
-        );
-    }
-}
+type Authenticator = unit {
+    key_id: uint32;
+    message_digest: bytes &length=16;
+};

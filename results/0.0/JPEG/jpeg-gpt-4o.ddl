@@ -1,59 +1,92 @@
-module JPEG;
+Parser JPEG
 
-type JPEG = struct {
-    segments: list<Segment>;
-};
+// Start of Image Marker
+SOI = %xFF %xD8
 
-type Segment = struct {
-    marker: u16be;
-    length: u16be;
-    data: bytes(length - 2);
-};
+// Application-specific Markers
+APP0 = %xFF %xE0
+APP1 = %xFF %xE1
+APP2 = %xFF %xE2
+APPn = %xFF %xE0-FFEF
 
-let SOI = 0xFFD8;
-let EOI = 0xFFD9;
+// Comment Marker
+COM = %xFF %xFE
 
-let markers = {
-    0xFFE0: "APP0",
-    0xFFE1: "APP1",
-    0xFFDB: "DQT",
-    0xFFC0: "SOF0",
-    0xFFC4: "DHT",
-    0xFFDA: "SOS",
-    0xFFDD: "DRI",
-    0xFFFE: "COM"
-};
+// Define Quantization Table Marker
+DQT = %xFF %xDB
 
-let is_valid_marker(marker: u16be) = marker in markers;
+// Start of Frame Markers
+SOF0 = %xFF %xC0
+SOF2 = %xFF %xC2
+SOFn = %xFF %xC0-FFCF
 
-let is_segment_start(marker: u16be) = marker != SOI && marker != EOI && is_valid_marker(marker);
+// Define Huffman Table Marker
+DHT = %xFF %xC4
 
-let parse_segment = (data: bytes) -> Segment {
-    let marker = u16be(data[0..2]);
-    let length = u16be(data[2..4]);
-    let segment_data = data[4..length + 2];
-    return Segment { marker, length, segment_data };
-};
+// Start of Scan Marker
+SOS = %xFF %xDA
 
-let parse_segments = (data: bytes) -> list<Segment> {
-    let segments = [];
-    let offset = 0;
-    while offset < len(data) {
-        let marker = u16be(data[offset..offset+2]);
-        if is_segment_start(marker) {
-            let segment = parse_segment(data[offset..]);
-            segments.append(segment);
-            offset += segment.length + 2;
-        } else {
-            break;
-        }
-    }
-    return segments;
-};
+// End of Image Marker
+EOI = %xFF %xD9
 
-let parse_jpeg = (data: bytes) -> JPEG {
-    let segments = parse_segments(data[2..len(data)-2]);
-    return JPEG { segments };
-};
+// Define Restart Interval Marker
+DRI = %xFF %xDD
 
-let jpeg_parser = parse_jpeg;
+// Restart Markers
+RST0 = %xFF %xD0
+RST1 = %xFF %xD1
+RST2 = %xFF %xD2
+RST3 = %xFF %xD3
+RST4 = %xFF %xD4
+RST5 = %xFF %xD5
+RST6 = %xFF %xD6
+RST7 = %xFF %xD7
+
+// JPEG File Structure
+JPEGFile = SOI (Segment)* EOI
+
+Segment = APPn SegmentData
+        / COM SegmentData
+        / DQT SegmentData
+        / SOFn FrameHeader
+        / DHT HuffmanTable
+        / SOS ScanHeader
+        / DRI RestartInterval
+        / RSTn
+
+SegmentData = Length Data
+
+Length = UINT16
+
+Data = *BYTE
+
+FrameHeader = SOF0FrameHeader / SOF2FrameHeader
+
+SOF0FrameHeader = UINT8 // Sample precision
+                UINT16 // Number of lines
+                UINT16 // Number of samples per line
+                UINT8  // Number of components
+                ComponentSpec*
+
+SOF2FrameHeader = SOF0FrameHeader
+
+ComponentSpec = UINT8 // Component ID
+              UINT8 // Sampling factors
+              UINT8 // Quantization table number
+
+HuffmanTable = Length Data
+
+ScanHeader = UINT8 // Number of components
+           ScanComponentSpec*
+           UINT8 // Start of spectral selection
+           UINT8 // End of spectral selection
+           UINT8 // Successive approximation
+
+ScanComponentSpec = UINT8 // Component ID
+                  UINT8 // Huffman table selectors
+
+RestartInterval = Length UINT16
+
+BYTE = %x00-FF
+UINT8 = BYTE
+UINT16 = BYTE BYTE

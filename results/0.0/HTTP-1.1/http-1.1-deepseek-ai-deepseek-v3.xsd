@@ -1,0 +1,72 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.org/http-schema" targetNamespace="http://example.org/http-schema" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="HTTPFormat">
+        <dfdl:format separator="" initiator="" terminator="" encoding="UTF-8"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="HTTPMessage" dfdl:lengthKind="delimited">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:choice>
+          <xs:element name="Request" type="tns:HTTPRequest" dfdl:lengthKind="delimited"/>
+          <xs:element name="Response" type="tns:HTTPResponse" dfdl:lengthKind="delimited"/>
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="HTTPRequest">
+    <xs:sequence>
+      <xs:element name="Method" type="tns:HTTPMethod" dfdl:lengthKind="delimited"/>
+      <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="HTTPVersion" type="tns:HTTPVersion" dfdl:lengthKind="delimited"/>
+      <xs:element name="Headers" type="tns:HTTPHeaders" dfdl:lengthKind="delimited"/>
+      <xs:element name="Body" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HTTPResponse">
+    <xs:sequence>
+      <xs:element name="HTTPVersion" type="tns:HTTPVersion" dfdl:lengthKind="delimited"/>
+      <xs:element name="StatusCode" type="xs:int" dfdl:lengthKind="delimited"/>
+      <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="Headers" type="tns:HTTPHeaders" dfdl:lengthKind="delimited"/>
+      <xs:element name="Body" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="HTTPMethod">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="GET"/>
+      <xs:enumeration value="POST"/>
+      <xs:enumeration value="PUT"/>
+      <xs:enumeration value="DELETE"/>
+      <xs:enumeration value="HEAD"/>
+      <xs:enumeration value="OPTIONS"/>
+      <xs:enumeration value="TRACE"/>
+      <xs:enumeration value="CONNECT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="HTTPVersion">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="HTTP/\d\.\d"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="HTTPHeaders">
+    <xs:sequence>
+      <xs:element name="Header" type="tns:HTTPHeader" minOccurs="0" maxOccurs="unbounded" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HTTPHeader">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string" dfdl:lengthKind="delimited"/>
+      <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

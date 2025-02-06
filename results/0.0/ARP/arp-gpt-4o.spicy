@@ -1,52 +1,13 @@
 module ARP;
 
 public type ARPMessage = unit {
-    htype: uint16;  # Hardware type
-    ptype: uint16;  # Protocol type
-    hlen: uint8;    # Hardware address length
-    plen: uint8;    # Protocol address length
-    oper: uint16;   # Operation code
-    sha: bytes &length=hlen;  # Sender hardware address
-    spa: bytes &length=plen;  # Sender protocol address
-    tha: bytes &length=hlen;  # Target hardware address
-    tpa: bytes &length=plen;  # Target protocol address
+    htype: uint16;          # Hardware Type
+    ptype: uint16;          # Protocol Type
+    hlen: uint8;            # Hardware Address Length
+    plen: uint8;            # Protocol Address Length
+    oper: uint16;           # Operation
+    sha: bytes &size=self.hlen;  # Sender Hardware Address
+    spa: bytes &size=self.plen;  # Sender Protocol Address
+    tha: bytes &size=self.hlen;  # Target Hardware Address
+    tpa: bytes &size=self.plen;  # Target Protocol Address
 };
-
-public type ARP = unit {
-    message: ARPMessage;
-} &byte_order=bigendian;
-
-public export {
-    type Info = record {
-        htype: uint16;
-        ptype: uint16;
-        hlen: uint8;
-        plen: uint8;
-        oper: uint16;
-        sha: string;
-        spa: string;
-        tha: string;
-        tpa: string;
-    };
-}
-
-event arp_message(info: ARP::Info);
-
-public function parse_arp_message(data: bytes): ARP::Info {
-    local msg = ARP(data);
-    return Info(
-        htype = msg.message.htype,
-        ptype = msg.message.ptype,
-        hlen = msg.message.hlen,
-        plen = msg.message.plen,
-        oper = msg.message.oper,
-        sha = fmt("%s", msg.message.sha),
-        spa = fmt("%s", msg.message.spa),
-        tha = fmt("%s", msg.message.tha),
-        tpa = fmt("%s", msg.message.tpa)
-    );
-}
-
-hook Plugin::load() {
-    Spicy::register_protocol_analyzer(ARP, /arp/, parse_arp_message);
-}

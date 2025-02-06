@@ -1,72 +1,70 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/bitcoin-transactions"
-           xmlns="http://example.com/bitcoin-transactions"
-           elementFormDefault="qualified"
-           dfdl:formatRef="tns:BitcoinTransactionsFormat">
+           xmlns:dfdl="http://www.ogf.org/dfdl/"
+           targetNamespace="http://example.org/bitcoin"
+           xmlns:tns="http://example.org/bitcoin"
+           elementFormDefault="qualified">
 
-  <dfdl:format name="BitcoinTransactionsFormat"
-               byteOrder="bigEndian"
-               encoding="utf-8"
-               lengthKind="explicit"
-               lengthUnits="bytes"
-               alignmentUnits="bytes"
-               occursCountKind="expression"
-               occursCount="count" />
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="littleEndian" lengthKind="explicit" encoding="utf-8"/>
+    </xs:appinfo>
+  </xs:annotation>
 
-  <xs:element name="BitcoinTransactions">
+  <xs:element name="Transaction">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="TransactionCount" type="xs:int" dfdl:length="4" />
-        <xs:element name="Transactions" type="TransactionType" minOccurs="0" maxOccurs="unbounded">
-          <xs:annotation>
-            <xs:appinfo source="http://www.ogf.org/dfdl/">
-              <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
-            </xs:appinfo>
-          </xs:annotation>
+      <xs:sequence dfdl:sequenceKind="ordered">
+        <xs:element name="Version" type="xs:int" dfdl:length="4"/>
+        <xs:element name="InputCount" type="tns:VarInt"/>
+        <xs:element name="Inputs">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="Input" maxOccurs="unbounded" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{../InputCount}">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="PreviousTransactionHash" type="xs:hexBinary" dfdl:length="32"/>
+                    <xs:element name="PreviousTransactionOutputIndex" type="xs:int" dfdl:length="4"/>
+                    <xs:element name="ScriptLength" type="tns:VarInt"/>
+                    <xs:element name="SignatureScript" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../ScriptLength}"/>
+                    <xs:element name="Sequence" type="xs:unsignedInt" dfdl:length="4"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
         </xs:element>
+        <xs:element name="OutputCount" type="tns:VarInt"/>
+        <xs:element name="Outputs">
+          <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered">
+              <xs:element name="Output" maxOccurs="unbounded" minOccurs="0" dfdl:occursCountKind="expression" dfdl:occursCount="{../OutputCount}">
+                <xs:complexType>
+                  <xs:sequence dfdl:sequenceKind="ordered">
+                    <xs:element name="Value" type="xs:long" dfdl:length="8"/>
+                    <xs:element name="ScriptLength" type="tns:VarInt"/>
+                    <xs:element name="PublicKeyScript" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{../ScriptLength}"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="LockTime" type="xs:unsignedInt" dfdl:length="4"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="TransactionType">
-    <xs:sequence>
-      <xs:element name="TransactionID" type="xs:string" dfdl:length="64" />
-      <xs:element name="InputCount" type="xs:int" dfdl:length="4" />
-      <xs:element name="Inputs" type="InputType" minOccurs="0" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-      <xs:element name="OutputCount" type="xs:int" dfdl:length="4" />
-      <xs:element name="Outputs" type="OutputType" minOccurs="0" maxOccurs="unbounded">
-        <xs:annotation>
-          <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:sequence dfdl:separatorSuppressionPolicy="never" />
-          </xs:appinfo>
-        </xs:annotation>
-      </xs:element>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="InputType">
-    <xs:sequence>
-      <xs:element name="PreviousTransactionHash" type="xs:string" dfdl:length="64" />
-      <xs:element name="OutputIndex" type="xs:int" dfdl:length="4" />
-      <xs:element name="ScriptLength" type="xs:int" dfdl:length="4" />
-      <xs:element name="Script" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="&#x0A;" />
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="OutputType">
-    <xs:sequence>
-      <xs:element name="Value" type="xs:long" dfdl:length="8" />
-      <xs:element name="ScriptLength" type="xs:int" dfdl:length="4" />
-      <xs:element name="Script" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="&#x0A;" />
-    </xs:sequence>
-  </xs:complexType>
+  <xs:simpleType name="VarInt">
+    <xs:restriction base="xs:hexBinary">
+      <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+          <dfdl:discriminator test="{fn:length(.) eq 1 and xs:unsignedByte(.) lt 0xfd} or
+                                     {fn:length(.) eq 3 and xs:unsignedByte(.) eq 0xfd} or
+                                     {fn:length(.) eq 5 and xs:unsignedByte(.) eq 0xfe} or
+                                     {fn:length(.) eq 9 and xs:unsignedByte(.) eq 0xff}"/>
+        </xs:appinfo>
+      </xs:annotation>
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

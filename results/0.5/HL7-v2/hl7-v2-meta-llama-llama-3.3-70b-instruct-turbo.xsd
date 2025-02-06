@@ -1,353 +1,118 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HL7-v2"
-           xmlns="http://example.com/HL7-v2"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="HL7-v2-Common.xsd"/>
-
-  <xs:element name="HL7-v2-message">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formattingOption name="byteOrder" value="bigEndian"/>
-        <dfdl:formattingOption name="encoding" value="US-ASCII"/>
-        <dfdl:formattingOption name="ignoreCase" value="true"/>
-        <dfdl:formattingOption name="truncateOn MarinoId" value="false"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="MSH" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="EVN" minOccurs="0" maxOccurs="1"/>
-        <xs:element ref="PID" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="PV1" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="ORC" minOccurs="0" maxOccurs="1"/>
-        <xs:element ref="OBR" minOccurs="0" maxOccurs="1"/>
-        <xs:element ref="OBX" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="MSH">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formattingOption name="occursCount" value="1..1"/>
-        <dfdl:formattingOption name="initiatingDate" value="true"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="MSH-1" type="FieldSeparationCharacter" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="separator" value="true"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-2" type="EncodingCharacters" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-3" type="SendingFacility" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-4" type="SendingFacility" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-5" type="ReceivingFacility" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-6" type="ReceivingFacility" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-7" type="Date" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-8" type="Security" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-9" type="MessageType" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-10" type="MessageControlID" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-11" type="ProcessingID" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-12" type="VersionID" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-13" type="SequenceNumber" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-14" type="ContinuationPointer" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-15" type="AcceptAcknowledgementType" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-16" type="ApplicationAcknowledgementType" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-17" type="CountryCode" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="MSH-18" type="CharacterSet" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="EVN">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formattingOption name="occursCount" value="0..1"/>
-        <dfdl:formattingOption name="fieldWidth" value="5"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="EVN-1" type="EventTypeCode" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EVN-2" type="AbsolutePath" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EVN-3" type="AbsolutePath" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EVN-4" type="AbsolutePath" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EVN-5" type="AbsolutePath" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="EVN-6" type="AbsolutePath" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="PID">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:formattingOption name="occursCount" value="1..1"/>
-        <dfdl:formattingOption name="fieldWidth" value="5"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="PID-1" type="SetID" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-2" type="PatientID" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-3" type="PatientID" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-4" type="AlternatePatientID" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-5" type="PatientName" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-6" type="MotherSMaidenName" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-7" type="DateTimeOfBirth" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-8" type="Sex" minOccurs="1" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="1..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-9" type="PatientAlias" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-10" type="Race" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-11" type="PatientAddress" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="PID-12" type="CountyCode" minOccurs="0" maxOccurs="1">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:formattingOption name="occursCount" value="0..1"/>
-              <dfdl:formattingOption name="lengthKind" value="explicit"/>
-            </xs:appinfo>
+<dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+             dfdl:version="1.0" dfdl:encoding="UTF-8">
+  <dfdl:element name="HL7Message" dfdl:occurs="1">
+    <dfdl:element name="MSH" dfdl:occurs="1">
+      <dfdl:element name="FieldSeparator" dfdl:occurs="1" dfdl:length="1" dfdl:type="char"/>
+      <dfdl:element name="EncodingCharacters" dfdl:occurs="1" dfdl:length="4" dfdl:type="string"/>
+      <dfdl:element name="SendingFacility" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="SendingApplication" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="ReceivingFacility" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="ReceivingApplication" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="DateTimeOfMessage" dfdl:occurs="1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+      <dfdl:element name="Security" dfdl:occurs="0..1" dfdl:length="1..40" dfdl:type="string"/>
+      <dfdl:element name="MessageType" dfdl:occurs="1" dfdl:length="3" dfdl:type="string"/>
+      <dfdl:element name="MessageControlID" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="ProcessingID" dfdl:occurs="1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[P TD]"/>
+      <dfdl:element name="VersionID" dfdl:occurs="1" dfdl:length="5" dfdl:type="string" dfdl:pattern="2\.[0-9]"/>
+      <dfdl:element name="SequenceNumber" dfdl:occurs="0..1" dfdl:length="1..10" dfdl:type="string"/>
+      <dfdl:element name="ContinuationPointer" dfdl:occurs="0..1" dfdl:length="1..180" dfdl:type="string"/>
+      <dfdl:element name="AcceptAcknowledgmentType" dfdl:occurs="1" dfdl:length="2" dfdl:type="string" dfdl:pattern="AL|NE|ER"/>
+      <dfdl:element name="ApplicationAcknowledgmentType" dfdl:occurs="1" dfdl:length="2" dfdl:type="string" dfdl:pattern="AL|NE|ER"/>
+      <dfdl:element name="CountryCode" dfdl:occurs="1" dfdl:length="3" dfdl:type="string"/>
+      <dfdl:element name="CharacterSet" dfdl:occurs="1" dfdl:length="1..10" dfdl:type="string"/>
+    </dfdl:element>
+    <dfdl:element name="EVN" dfdl:occurs="0..1">
+      <dfdl:element name="EventTypeCode" dfdl:occurs="1" dfdl:length="3" dfdl:type="string"/>
+      <dfdl:element name="RecordedDateTime" dfdl:occurs="1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+      <dfdl:element name="DateTimePlannedEvent" dfdl:occurs="0..1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+      <dfdl:element name="EventReasonCode" dfdl:occurs="0..1" dfdl:length="1..10" dfdl:type="string"/>
+      <dfdl:element name="OperatorID" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="EventOccurredDateTime" dfdl:occurs="0..1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+    </dfdl:element>
+    <dfdl:element name="PID" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDPatientID" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientID" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientIDInternal" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="AlternatePatientID" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientName" dfdl:occurs="1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="MothersMaidenName" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="DateOfBirth" dfdl:occurs="1" dfdl:length="8" dfdl:type="string" dfdl:pattern="[0-9]{8}"/>
+      <dfdl:element name="Sex" dfdl:occurs="1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[M F U A N O]"/>
+      <dfdl:element name="PatientAlias" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="Race" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="PatientAddress" dfdl:occurs="0..1" dfdl:length="1..100" dfdl:type="string"/>
+      <dfdl:element name="CountryCode" dfdl:occurs="1" dfdl:length="3" dfdl:type="string"/>
+      <dfdl:element name="PhoneNumberHome" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PhoneNumberBusiness" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PrimaryLanguage" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="MaritalStatus" dfdl:occurs="0..1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[S M D W U]"/>
+      <dfdl:element name="Religion" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientAccountNumber" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="SSNNumberPatient" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="DriversLicenseNumberPatient" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="MothersIdentifier" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="EthnicGroup" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="BirthPlace" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="MultipleBirthIndicator" dfdl:occurs="0..1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[Y N]"/>
+      <dfdl:element name="BirthOrder" dfdl:occurs="0..1" dfdl:length="1..2" dfdl:type="string"/>
+      <dfdl:element name="Citizenship" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="VeteransMilitaryStatus" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="Nationality" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientDeathDateAndTime" dfdl:occurs="0..1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+      <dfdl:element name="DeathIndicator" dfdl:occurs="0..1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[Y N]"/>
+    </dfdl:element>
+    <dfdl:element name="PV1" dfdl:occurs="0..1">
+      <dfdl:element name="SetIDPatientVisit" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="VisitNumber" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PatientClass" dfdl:occurs="1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[I O E P R C N]"/>
+      <dfdl:element name="VisitNumber" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="FinancialClass" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="FinancialClassCode" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="FinancialClassEffectiveDate" dfdl:occurs="0..1" dfdl:length="8" dfdl:type="string" dfdl:pattern="[0-9]{8}"/>
+      <dfdl:element name="FinancialClassEndDate" dfdl:occurs="0..1" dfdl:length="8" dfdl:type="string" dfdl:pattern="[0-9]{8}"/>
+      <dfdl:element name="InsuranceCompanyID" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="InsuranceCompanyName" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="InsuranceCompanyAddress" dfdl:occurs="0..1" dfdl:length="1..100" dfdl:type="string"/>
+      <dfdl:element name="InsuranceCoContactPerson" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="InsuranceCoContactPersonPhoneNumber" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="VisitPriorityCode" dfdl:occurs="0..1" dfdl:length="1..2" dfdl:type="string"/>
+      <dfdl:element name="PreAdmitNumber" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PriorPendingLocation" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="AdmittingDoctor" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="AttendingDoctor" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="ReferringDoctor" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="ConsultingDoctor" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="HospitalService" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="TemporaryLocation" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PriorTemporaryLocation" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="VisitIndicator" dfdl:occurs="0..1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[Y N]"/>
+      <dfdl:element name="OtherHealthcareProvider" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="VisitNumberOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="VisitPriorityCodeOther" dfdl:occurs="0..1" dfdl:length="1..2" dfdl:type="string"/>
+      <dfdl:element name="PreAdmitNumberOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PriorPendingLocationOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="AdmittingDoctorOther" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="AttendingDoctorOther" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="ReferringDoctorOther" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="ConsultingDoctorOther" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="HospitalServiceOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="TemporaryLocationOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PriorTemporaryLocationOther" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+    </dfdl:element>
+    <dfdl:element name="ORC" dfdl:occurs="0..1">
+      <dfdl:element name="OrderControl" dfdl:occurs="1" dfdl:length="1..2" dfdl:type="string"/>
+      <dfdl:element name="PlacerOrderNumber" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="FillerOrderNumber" dfdl:occurs="1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="PlacerGroupNumber" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="OrderStatus" dfdl:occurs="1" dfdl:length="1..2" dfdl:type="string"/>
+      <dfdl:element name="ResponseFlag" dfdl:occurs="1" dfdl:length="1" dfdl:type="char" dfdl:pattern="[Y N]"/>
+      <dfdl:element name="QuantityTiming" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="ParentOrder" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="DateTimeOfTransaction" dfdl:occurs="1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-9]{14}"/>
+      <dfdl:element name="EnteredBy" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="VerifiedBy" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="OrderingProvider" dfdl:occurs="0..1" dfdl:length="1..50" dfdl:type="string"/>
+      <dfdl:element name="EnterersLocation" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="CallBackPhoneNumber" dfdl:occurs="0..1" dfdl:length="1..20" dfdl:type="string"/>
+      <dfdl:element name="OrderEffectiveDateAndTime" dfdl:occurs="0..1" dfdl:length="14" dfdl:type="string" dfdl:pattern="[0-

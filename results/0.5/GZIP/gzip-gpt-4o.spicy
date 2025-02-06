@@ -1,36 +1,38 @@
 module GZIP;
 
-import zeek;
+import spicy;
 
-type GZIPHeader = unit {
-    magic: uint16 &check_eq=0x8b1f;
-    compression_method: uint8 &check_eq=8;
-    flags: uint8;
+type GZIP = unit {
+    id1: uint8 &assert(id1 == 0x1F);
+    id2: uint8 &assert(id2 == 0x8B);
+    cm: uint8 &assert(cm == 0x08);
+    flg: Flags;
     mtime: uint32;
-    extra_flags: uint8;
+    xfl: uint8;
     os: uint8;
-    extra: bytes &length=extra_length &if=(flags & 0x04 != 0);
-    extra_length: uint16 &convert=|v| flags & 0x04 != 0 ? v : 0;
-    fname: bytes &terminated_with=0 &if=(flags & 0x08 != 0);
-    fcomment: bytes &terminated_with=0 &if=(flags & 0x10 != 0);
-    crc16: uint16 &if=(flags & 0x02 != 0);
-};
-
-type GZIPFooter = unit {
+    extra: ExtraField ? (flg.fextra);
+    fname: bstring ? (flg.fname) &until($input == 0x00);
+    fcomment: bstring ? (flg.fcomment) &until($input == 0x00);
+    hcrc: uint16 ? (flg.fhcrc);
+    compressed_data: bytes &rest_of_data;
     crc32: uint32;
     isize: uint32;
-};
 
-public type GZIPFile = unit {
-    header: GZIPHeader;
-    compressed_data: bytes &until=eof;
-    footer: GZIPFooter;
-};
-
-public module Parser = {
-    export {
-        type ParsedGZIP = unit {
-            gzip: GZIPFile;
-        };
+    on %done {
+        # Validate CRC32 and ISIZE if necessary
     }
-}
+};
+
+type Flags = bitfield8 {
+    ftext: bool @0;
+    fhcrc: bool @1;
+    fextra: bool @2;
+    fname: bool @3;
+    fcomment: bool @4;
+    reserved: bit<3> @5...7;
+};
+
+type ExtraField = unit {
+    len: uint16;
+    data: bytes &length=len;
+};

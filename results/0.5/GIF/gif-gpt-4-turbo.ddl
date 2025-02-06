@@ -1,91 +1,105 @@
-module GIF.GPT4Turbo {
+module GIF89a;
 
-  import DAEDALUS::Core;
+import std.bits;
+import std.seq;
 
-  struct RGB {
-    r : U8;
-    g : U8;
-    b : U8;
-  }
+type Color = struct {
+    Red   : U8;
+    Green : U8;
+    Blue  : U8;
+};
 
-  struct Header {
-    signature : String[3];
-    version : String[3];
-  }
+type LogicalScreenDescriptor = struct {
+    ScreenWidth        : U16;
+    ScreenHeight       : U16;
+    PackedFields       : U8;
+    BackgroundColorIndex : U8;
+    PixelAspectRatio   : U8;
 
-  struct LogicalScreenDescriptor {
-    logicalScreenWidth : U16;
-    logicalScreenHeight : U16;
-    packedFields : U8;
-    backgroundColorIndex : U8;
-    pixelAspectRatio : U8;
-  }
+    GlobalColorTableFlag() : Bool = (PackedFields >> 7) & 1 != 0;
+    ColorResolution() : U8 = (PackedFields >> 4) & 0b111;
+    SortFlag() : Bool = ((PackedFields >> 3) & 1) != 0;
+    SizeOfGlobalColorTable() : U8 = PackedFields & 0b111;
+};
 
-  struct ColorTableEntry {
-    red : U8;
-    green : U8;
-    blue : U8;
-  }
+type GlobalColorTable = array<Color>[|2^(parent.LogicalScreenDescriptor.SizeOfGlobalColorTable() + 1)|];
 
-  type ColorTable = [ColorTableEntry];
+type ImageDescriptor = struct {
+    ImageLeftPosition : U16;
+    ImageTopPosition  : U16;
+    ImageWidth        : U16;
+    ImageHeight       : U16;
+    PackedFields      : U8;
 
-  struct ImageDescriptor {
-    imageSeparator : U8;
-    imageLeftPosition : U16;
-    imageTopPosition : U16;
-    imageWidth : U16;
-    imageHeight : U16;
-    packedFields : U8;
-  }
+    LocalColorTableFlag() : Bool = (PackedFields >> 7) & 1 != 0;
+    InterlaceFlag() : Bool = (PackedFields >> 6) & 1 != 0;
+    SortFlag() : Bool = (PackedFields >> 5) & 1 != 0;
+    SizeOfLocalColorTable() : U8 = PackedFields & 0b111;
+};
 
-  struct GraphicControlExtension {
-    introducer : U8;
-    label : U8;
-    blockSize : U8;
-    packedFields : U8;
-    delayTime : U16;
-    transparentColorIndex : U8;
-    terminator : U8;
-  }
+type LocalColorTable = array<Color>[|2^(parent.ImageDescriptor.SizeOfLocalColorTable() + 1)|];
 
-  struct ApplicationExtension {
-    introducer : U8;
-    label : U8;
-    blockSize : U8;
-    applicationIdentifier : String[8];
-    applicationAuthCode : String[3];
-    data : [U8];
-  }
+type ImageData = struct {
+    LZWMinimumCodeSize : U8;
+    DataBlocks         : array<struct {BlockSize: U8; Data: bytes[BlockSize];}>[|until (DataBlocks[0].BlockSize == 0)|];
+};
 
-  struct CommentExtension {
-    introducer : U8;
-    label : U8;
-    blockSize : U8;
-    commentData : String;
-  }
+type GraphicControlExtension = struct {
+    BlockSize         : U8;
+    PackedFields      : U8;
+    DelayTime         : U16;
+    TransparentColorIndex : U8;
+    BlockTerminator   : U8;
+};
 
-  struct Block {
-    blockSize : U8;
-    blockData : [U8] @Length(blockSize);
-  }
+type CommentExtension = struct {
+    CommentData : array<struct {BlockSize: U8; Data: bytes[BlockSize];}>[|until (CommentData[0].BlockSize == 0)|];
+};
 
-  type SubBlocks = [Block];
+type PlainTextExtension = struct {
+    BlockSize          : U8;
+    TextGridLeftPosition : U16;
+    TextGridTopPosition  : U16;
+    TextGridWidth      : U16;
+    TextGridHeight     : U16;
+    CharacterCellWidth : U8;
+    CharacterCellHeight: U8;
+    TextForegroundColorIndex : U8;
+    TextBackgroundColorIndex : U8;
+    PlainTextData      : array<struct {BlockSize: U8; Data: bytes[BlockSize];}>[|until (PlainTextData[0].BlockSize == 0)|];
+};
 
-  struct Trailer {
-    trailer : U8;
-  }
+type ApplicationExtension = struct {
+    BlockSize         : U8;
+    ApplicationIdentifier : bytes[8];
+    ApplicationAuthenticationCode : bytes[3];
+    ApplicationData   : array<struct {BlockSize: U8; Data: bytes[BlockSize];}>[|until (ApplicationData[0].BlockSize == 0)|];
+};
 
-  struct GIFFile {
-    header : Header;
-    logicalScreenDescriptor : LogicalScreenDescriptor;
-    globalColorTable : ColorTable @If(logicalScreenDescriptor.packedFields & 0x80 != 0) @Length(2 ^ ((logicalScreenDescriptor.packedFields & 0x07) + 1));
-    blocks : [Variant [
-      GraphicControlExtension @Match(block -> block.introducer == 0x21 && block.label == 0xF9),
-      CommentExtension @Match(block -> block.introducer == 0x21 && block.label == 0xFE),
-      ApplicationExtension @Match(block -> block.introducer == 0x21 && block.label == 0xFF),
-      ImageDescriptor @Match(block -> block.imageSeparator == 0x2C),
-      SubBlocks @Match(block -> block.blockSize != 0)
-    ]];
-    trailer : Trailer;
-  }
+type Extension = struct {
+    Introducer : U8; // Always 0x21
+    Label      : U8;
+    Content    : switch (Label) {
+        case 0xF9 => GraphicControlExtension;
+        case 0xFE => CommentExtension;
+        case 0x01 => PlainTextExtension;
+        case 0xFF => ApplicationExtension;
+    };
+};
+
+type Block = switch (peek U8) {
+    case 0x2C => ImageDescriptor;
+    case 0x21 => Extension;
+};
+
+type GIFFile = struct {
+    Header                : bytes[6];
+    LogicalScreenDescriptor : LogicalScreenDescriptor;
+    GlobalColorTable      : GlobalColorTable if LogicalScreenDescriptor.GlobalColorTableFlag();
+    Blocks                : array<Block>[|until (peek U8 == 0x3B)|];
+    Trailer               : U8; // Always 0x3B
+};
+
+stream ParseGIF(input : bytes) : GIFFile {
+    return parse<GIFFile>(input);
 }

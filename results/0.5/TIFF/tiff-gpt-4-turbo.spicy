@@ -1,37 +1,33 @@
 module TIFF;
 
+public type Rational = unit {
+    numerator: uint32;
+    denominator: uint32;
+};
+
 public type IFDEntry = unit {
     tag: uint16;
-    type: uint16;
+    fieldType: uint16;
     count: uint32;
-    valueOffset: uint32;
+    valueOffset: bytes &size=4;
 };
 
 public type IFD = unit {
-    entries: IFDEntry[] &eod;
+    numEntries: uint16;
+    entries: IFDEntry[] &size=numEntries;
+    nextIFDOffset: uint32;
 };
 
 public type TIFFHeader = unit {
-    endian: uint16;
+    endian: bytes &size=2;
     magic: uint16;
-    offset: uint32;
+    ifdOffset: uint32;
 };
 
-public type File = unit {
+public type TIFFFile = unit {
     header: TIFFHeader;
-    ifd: IFD @offset=header.offset;
-
-    on %init {
-        if (self.header.endian == 0x4949) {
-            self.byte_order = LITTLE;
-        } else if (self.header.endian == 0x4D4D) {
-            self.byte_order = BIG;
-        } else {
-            throw Error("Invalid TIFF endian indicator.");
-        }
-
-        if (self.header.magic != 42) {
-            throw Error("Invalid TIFF magic number.");
-        }
-    };
+    ifd: IFD &at=header.ifdOffset;
+    on %done {
+        print self;
+    }
 };

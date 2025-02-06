@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://极www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://www.ogf.org/dfdl/"
+           xmlns="http://www.ogf.org/dfdl/"
+           elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format ref="GeneralFormat"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="NITF">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="FileHeader" type="FileHeaderType"/>
+        <xs:element name="ImageSegment" type="ImageSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="GraphicSegment" type="GraphicSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="TextSegment" type="TextSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="DataExtensionSegment" type="DataExtensionSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="ReservedExtensionSegment" type="ReservedExtensionSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="UserDefinedHeader" type="UserDefinedHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="ExtendedHeader" type="ExtendedHeaderType" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FileProfileName" type="xs:string" dfdl:length="4"/>
+      <xs:element name="FileVersion" type="xs:string" dfdl:length="5"/>
+      <xs:element name="ComplexityLevel" type="xs:string" dfdl:length="2"/>
+      <xs:element name="SystemType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="OriginStationID" type="xs:string" dfdl:length="10"/>
+      <xs:element name="FileDateTime" type="xs:string" dfdl:length="14"/>
+      <xs:element name="FileTitle" type="xs:string" dfdl:length="80"/>
+      <xs:element name="Classification" type="xs:string" dfdl:length="1"/>
+      <xs:element name="ClassificationSystem" type="xs:string" dfdl:length="2"/>
+      <xs:element name="Codewords极" type="xs:string" dfdl:length="11"/>
+      <xs:element name="ControlAndHandling" type="xs:string" dfdl:length="2"/>
+      <xs:element name="ReleasingInstructions" type="xs:string" dfdl:length="20"/>
+      <xs:element name="DeclassificationType" type="xs:string" dfdl:length="2"/>
+      <xs:element name="DeclassificationDate" type="xs:string" dfdl:length="8"/>
+      <xs:element name="DeclassificationExemption" type="xs:string" dfdl:length="4"/>
+      <xs:element name="Downgrade" type="xs:string" dfdl:length="1"/>
+      <xs:element name="DowngradeDate" type="xs:string" dfdl:length="8"/>
+      <xs:element name="ClassificationText" type="xs:string" dfdl:length="43"/>
+      <xs:element name="ClassificationAuthorityType" type="xs:string" dfdl:length="1"/>
+      <xs:element name="ClassificationAuthority" type="xs:string" dfdl:length="40"/>
+      <xs:element name="ClassificationReason" type="xs:string" dfdl:length="1"/>
+      <xs:element name="SourceDate" type="xs:string" dfdl:length="8"/>
+      <xs:element name="ControlNumber" type="xs:string" dfdl:length="15"/>
+      <xs:element name="CopyNumber" type="xs:string" dfdl:length="5"/>
+      <xs:element name="NumberOfCopies" type="xs:string" dfdl:length="5"/>
+      <xs:element name="FileSecurity" type="xs:string" dfdl:length="1"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageSegmentType">
+    <xs:sequence>
+      <xs:element name="ImageIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ImageDateTime" type="xs:string" dfdl:length="14"/>
+      <xs:element name="TargetIdentifier" type="xs:string" dfdl:length="17"/>
+      <xs:极element name="ImageTitle" type="xs:string" dfdl:length="80"/>
+      <xs:element name="ImageSecurity" type极="xs:string" dfdl:length="1"/>
+      <xs:element name="ImageCompression" type="xs:string" dfdl:length="2"/>
+      <xs:element name="ImageBand" type="xs:string" dfdl:length="1"/>
+      <xs:element name="ImageMode" type="xs:string" dfdl:length="1"/>
+      <xs:element name="NumberOfBlocksPerRow" type="xs:string" dfdl:length="4"/>
+      <xs:element name="NumberOfBlocksPerColumn" type="xs:string" dfdl:length="4"/>
+      <xs:element name="NumberOfPixelsPerBlockHorizontal" type="xs:string" dfdl:length="4"/>
+      <xs:element name="NumberOfPixelsPerBlockVertical" type="xs:string" dfdl:length="4"/>
+      <xs:element name="ImageDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ImageAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ImageLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ImageMagnification" type="xs:string" dfdl:length="4"/>
+      <xs:element name="ImageComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GraphicSegmentType">
+    <xs:sequence>
+      <xs:element name="GraphicIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="GraphicSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="GraphicDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="GraphicAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="GraphicLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="GraphicComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TextSegmentType">
+    <xs:sequence>
+      <xs:element name="TextIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="TextSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="TextDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="TextAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="TextLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="TextComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataExtensionSegmentType">
+    <xs:sequence>
+      <xs:element name="DataExtensionIdentifier" type="xs:string" dfdl:length极="10"/>
+      <xs:element name="DataExtensionSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="DataExtensionDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="DataExtensionAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="DataExtensionLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="DataExtensionComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReservedExtensionSegmentType">
+    <xs:sequence>
+      <xs:element name="ReservedExtensionIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ReservedExtensionSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="ReservedExtensionDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ReservedExtensionAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ReservedExtensionLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ReservedExtensionComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UserDefinedHeaderType">
+    <xs:sequence>
+      <xs:element name="UserDefinedHeaderIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="UserDefinedHeaderSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="UserDefinedHeaderDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="UserDefinedHeaderAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="UserDefinedHeaderLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="UserDefinedHeaderComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ExtendedHeaderType">
+    <xs:sequence>
+      <xs:element name="ExtendedHeaderIdentifier" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ExtendedHeaderSecurity" type="xs:string" dfdl:length="1"/>
+      <xs:element name="ExtendedHeaderDisplayLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ExtendedHeaderAttachmentLevel" type="xs:string" dfdl:length="3"/>
+      <xs:element name="ExtendedHeaderLocation" type="xs:string" dfdl:length="10"/>
+      <xs:element name="ExtendedHeaderComments" type="xs:string" dfdl:length="80"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GeneralFormat">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -2,30 +2,69 @@ module GZIP;
 
 import spicy;
 
-type GzipHeader = unit {
-    id1: uint8;
-    id2: uint8;
-    compressionMethod: uint8;
+public type GZIPHeader = unit {
+    id1: uint8 &requires=$$ == 0x1F;
+    id2: uint8 &requires=$$ == 0x8B;
+    compressionMethod: uint8 &requires=$$ == 8;  // Only deflate method is supported
     flags: uint8;
     mtime: uint32;
-    extraFlags: uint8;
+    xflags: uint8;
     os: uint8;
+    
+    # Optional fields based on flags
+    extra: optional<bytes> &size=self:extraLength() if self:hasFEXTRA();
+    fname: optional<spicy::NullTerminatedString> if self:hasFNAME();
+    fcomment: optional<spicy::NullTerminatedString> if self:hasFCOMMENT();
+    fhcrc: optional<uint16> if self:hasFHCRC();
 
+    # Helper methods to check the presence of optional fields
+    method hasFEXTRA(): bool {
+        return (self.flags & 0x04) != 0;
+    }
+
+    method hasFNAME(): bool {
+        return (self.flags & 0x08) != 0;
+    }
+
+    method hasFCOMMENT(): bool {
+        return (self.flags & 0x10) != 0;
+    }
+
+    method hasFHCRC(): bool {
+        return (self.flags & 0x02) != 0;
+    }
+
+    # Method to compute the length of the extra field if present
+    method extraLength(): uint16 {
+        if (self.hasFEXTRA()) {
+            # Placeholder for actual length computation
+            return parseExtraLength();
+        } else {
+            return 0;
+        }
+    }
+
+    # Parses the length of the extra field from the input
+    method parseExtraLength(): uint16 {
+        local length = self.parseBytes(2).to_uint16();
+        return length;
+    }
+
+    # Parses optional extra data based on header flags
     on %init {
-        if (self.id1 != 0x1F || self.id2 != 0x8B)
-            throw ParseError("Not a valid GZIP header.");
+        if (self.hasFEXTRA()) {
+            self.extra = self.parseBytes(self.extraLength());
+        }
     }
 };
 
-type GzipFooter = unit {
+public type GZIPFile = unit {
+    header: GZIPHeader;
+    compressedData: bytes &eod;
     crc32: uint32;
-    inputSize: uint32;
+    isize: uint32;
 };
 
-type GzipFile = unit {
-    header: GzipHeader;
-    data: bytes &eod;
-    footer: GzipFooter;
+public type GZIPStream = unit {
+    files: GZIPFile[] &eod;
 };
-
-public type File = GzipFile;

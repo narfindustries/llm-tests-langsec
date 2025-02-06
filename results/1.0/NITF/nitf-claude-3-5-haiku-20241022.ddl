@@ -1,177 +1,93 @@
-Here's the complete Daedalus specification, revised to address potential compilation issues:
+module NITF {
+    endian big;
 
-%NITF 2.1 Specification
-%Claude AI Generated Specification
-%Date: 2024-10-22
-
-type Nitf {
-    header: NitfHeader,
-    imageSegments: [ImageSegment],
-    graphicSegments: [GraphicSegment],
-    textSegments: [TextSegment],
-    dataExtSegments: [DataExtSegment]
-}
-
-type NitfHeader {
-    fileProfileName: string(9),
-    fileVersion: string(4),
-    securityClassification: string(1),
-    securityCategoryCode: string(3),
-    originStationId: string(10),
-    fileDateTime: string(14),
-    fileTitle: string(80),
-    securityGroup: SecurityGroup,
-    standardsIndicator: string(2),
-    originatorName: string(27),
-    phoneNumber: string(18)
-}
-
-type SecurityGroup {
-    securityClassification: string(1),
-    securityControlAndReleasingMarking: string(2),
-    securityDowngradeDate: string(8),
-    securityDowngradeEvent: string(40)
-}
-
-type ImageSegment {
-    imageSubheader: ImageSubheader,
-    imageData: bytes
-}
-
-type ImageSubheader {
-    imageLength: uint32,
-    imageWidth: uint32,
-    imageMode: string(1),
-    compressionType: string(2)
-}
-
-type GraphicSegment {
-    graphicSubheader: GraphicSubheader,
-    graphicData: bytes
-}
-
-type GraphicSubheader {
-    graphicStyle: string(2),
-    graphicColor: string(1)
-}
-
-type TextSegment {
-    textSubheader: TextSubheader,
-    textData: string
-}
-
-type TextSubheader {
-    textTitle: string(80),
-    textFormat: string(3)
-}
-
-type DataExtSegment {
-    dataExtSubheader: DataExtSubheader,
-    dataExtData: bytes
-}
-
-type DataExtSubheader {
-    dataExtType: string(2),
-    dataExtLength: uint32
-}
-
-parser NitfParser {
-    Nitf {
-        header: parseNitfHeader(),
-        imageSegments: parseImageSegments(),
-        graphicSegments: parseGraphicSegments(),
-        textSegments: parseTextSegments(),
-        dataExtSegments: parseDataExtSegments()
+    struct NITFFile {
+        file_header: FileHeader;
+        image_segments: ImageSegment[];
+        graphic_segments: GraphicSegment[];
+        text_segments: TextSegment[];
+        data_extension_segments: DataExtensionSegment[];
     }
-}
 
-func parseNitfHeader() -> NitfHeader {
-    NitfHeader {
-        fileProfileName: read_string(9),
-        fileVersion: read_string(4),
-        securityClassification: read_string(1),
-        securityCategoryCode: read_string(3),
-        originStationId: read_string(10),
-        fileDateTime: read_string(14),
-        fileTitle: read_string(80),
-        securityGroup: parseSecurityGroup(),
-        standardsIndicator: read_string(2),
-        originatorName: read_string(27),
-        phoneNumber: read_string(18)
+    struct FileHeader {
+        fver: char[5];
+        clevel: char[1];
+        stype: char[10];
+        orig_security: SecurityBlock;
+        deriv_security: SecurityBlock;
+        clsy: enum { TOP_SECRET, SECRET, CONFIDENTIAL, RESTRICTED, UNCLASSIFIED };
+        code: char[40];
+        fscop: char[5];
+        fscpys: char[5];
+        encryption: char[1];
+        background_color: BackgroundColor;
+        originator: char[24];
+        file_datetime: char[14];
+        file_title: char[80];
+        reserved: char[3];
     }
-}
 
-func parseSecurityGroup() -> SecurityGroup {
-    SecurityGroup {
-        securityClassification: read_string(1),
-        securityControlAndReleasingMarking: read_string(2),
-        securityDowngradeDate: read_string(8),
-        securityDowngradeEvent: read_string(40)
+    struct SecurityBlock {
+        country_code: char[2];
+        authority: char[11];
+        reason: char[2];
+        source: char[6];
+        date: char[8];
     }
-}
 
-func parseImageSegments() -> [ImageSegment] {
-    repeat {
-        ImageSegment {
-            imageSubheader: parseImageSubheader(),
-            imageData: read_bytes(imageSubheader.imageLength)
-        }
+    struct BackgroundColor {
+        r: u8;
+        g: u8;
+        b: u8;
     }
-}
 
-func parseImageSubheader() -> ImageSubheader {
-    ImageSubheader {
-        imageLength: read_uint32(),
-        imageWidth: read_uint32(),
-        imageMode: read_string(1),
-        compressionType: read_string(2)
+    struct ImageSegment {
+        image_subheader: ImageSubheader;
+        image_data: bytes;
     }
-}
 
-func parseGraphicSegments() -> [GraphicSegment] {
-    repeat {
-        GraphicSegment {
-            graphicSubheader: parseGraphicSubheader(),
-            graphicData: read_bytes(graphicSubheader.graphicStyle.length)
-        }
+    struct ImageSubheader {
+        icat: char[3];
+        isorce: char[42];
+        nrows: u32;
+        ncols: u32;
+        pvtype: char[3];
+        irep: char[8];
+        igeolo: char[60];
+        nicom: u8;
+        comments: char[80][] if nicom > 0;
+        ic: char[2];
+        comrat: char[4];
+        security: SecurityBlock;
     }
-}
 
-func parseGraphicSubheader() -> GraphicSubheader {
-    GraphicSubheader {
-        graphicStyle: read_string(2),
-        graphicColor: read_string(1)
+    struct GraphicSegment {
+        graphic_subheader: GraphicSubheader;
+        graphic_data: bytes;
     }
-}
 
-func parseTextSegments() -> [TextSegment] {
-    repeat {
-        TextSegment {
-            textSubheader: parseTextSubheader(),
-            textData: read_string(textSubheader.textTitle.length)
-        }
+    struct GraphicSubheader {
+        sy: char[10];
+        security: SecurityBlock;
     }
-}
 
-func parseTextSubheader() -> TextSubheader {
-    TextSubheader {
-        textTitle: read_string(80),
-        textFormat: read_string(3)
+    struct TextSegment {
+        text_subheader: TextSubheader;
+        text_data: bytes;
     }
-}
 
-func parseDataExtSegments() -> [DataExtSegment] {
-    repeat {
-        DataExtSegment {
-            dataExtSubheader: parseDataExtSubheader(),
-            dataExtData: read_bytes(dataExtSubheader.dataExtLength)
-        }
+    struct TextSubheader {
+        txt: char[3];
+        security: SecurityBlock;
     }
-}
 
-func parseDataExtSubheader() -> DataExtSubheader {
-    DataExtSubheader {
-        dataExtType: read_string(2),
-        dataExtLength: read_uint32()
+    struct DataExtensionSegment {
+        data_extension_subheader: DataExtensionSubheader;
+        extension_data: bytes;
+    }
+
+    struct DataExtensionSubheader {
+        desid: char[25];
+        security: SecurityBlock;
     }
 }

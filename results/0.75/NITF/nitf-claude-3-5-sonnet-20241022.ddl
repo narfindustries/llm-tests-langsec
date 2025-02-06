@@ -1,31 +1,242 @@
-def Main = [
-    def Version = "2.1"
-    def Type = "NITF"
-    def Header = {
-        FHDR: FWD 4 of "NITF";
-        FVER: FWD 5 of Version;
-        CLEVEL: !FWD 2;
-        STYPE: FWD 4 of Type;
-        OSTAID: !FWD 10;
-        FDT: !FWD 14;
-        FTITLE: !FWD 80;
-        FSCLAS: !FWD 1;
-        FSCLSY: !FWD 2;
-        HL: !UINT 6;
-        NUMI: !UINT 3
-    }
+def NITF = struct(
+  FileHeader,
+  ImageSegments: ImageSegment[],
+  GraphicsSegments: GraphicsSegment[],
+  TextSegments: TextSegment[],
+  DataExtSegments: DataExtSegment[],
+  ResExtSegments: ResExtSegment[]
+)
 
-    def ImageSegment = {
-        IM: FWD 2 of "IM";
-        IID1: !FWD 10;
-        IDATIM: !FWD 14;
-        TGTID: !FWD 17;
-        IID2: !FWD 80;
-        ISORCE: !FWD 42;
-        NROWS: !UINT 8;
-        NCOLS: !UINT 8
-    }
+def FileHeader = struct(
+  FHDR: bytes(4), 
+  FVER: bytes(5),
+  CLEVEL: uint16,
+  STYPE: bytes(4),
+  OSTAID: bytes(10),
+  FDT: bytes(14),
+  FTITLE: bytes(80),
+  FSCLAS: bytes(1),
+  FSCLSY: bytes(2),
+  FSCODE: bytes(11),
+  FSCTLH: bytes(2),
+  FSREL: bytes(20),
+  FSDCTP: bytes(2),
+  FSDCDT: bytes(8),
+  FSDCXM: bytes(4),
+  FSDG: bytes(1),
+  FSDGDT: bytes(8),
+  FSCLTX: bytes(43),
+  FSCATP: bytes(1),
+  FSCAUT: bytes(40),
+  FSCRSN: bytes(1),
+  FSSRDT: bytes(8),
+  FSCTLN: bytes(15),
+  FSCOP: bytes(5),
+  FSCPYS: bytes(5),
+  ENCRYP: uint8,
+  FBKGC: uint8[3],
+  ONAME: bytes(24),
+  OPHONE: bytes(18),
+  FL: uint32,
+  HL: uint16,
+  NUMI: uint16,
+  NUMS: uint16,
+  NUMX: uint16,
+  NUMT: uint16,
+  NUMDES: uint16,
+  NUMRES: uint16,
+  UDHDL: uint16,
+  UDHD: bytes(UDHDL) if UDHDL > 0,
+  XHDL: uint16,
+  XHD: bytes(XHDL) if XHDL > 0
+)
 
-    hdr: Header;
-    images: Many(ImageSegment, $hdr.NUMI)
-]
+def ImageSegment = struct(
+  IM: bytes(2),
+  IID1: bytes(10),
+  IDATIM: bytes(14),
+  TGTID: bytes(17),
+  IID2: bytes(80),
+  ISCLAS: bytes(1),
+  ISCLSY: bytes(2),
+  ISCODE: bytes(11),
+  ISCTLH: bytes(2),
+  ISREL: bytes(20),
+  ISDCTP: bytes(2),
+  ISDCDT: bytes(8),
+  ISDCXM: bytes(4),
+  ISDG: bytes(1),
+  ISDGDT: bytes(8),
+  ISCLTX: bytes(43),
+  ISCATP: bytes(1),
+  ISCAUT: bytes(40),
+  ISCRSN: bytes(1),
+  ISSRDT: bytes(8),
+  ISCTLN: bytes(15),
+  ENCRYP: uint8,
+  ISORCE: bytes(42),
+  NROWS: uint32,
+  NCOLS: uint32,
+  PVTYPE: bytes(3),
+  IREP: bytes(8),
+  ICAT: bytes(8),
+  ABPP: uint8,
+  PJUST: bytes(1),
+  ICORDS: bytes(1),
+  IGEOLO: bytes(60) if ICORDS != 0x20,
+  NICOM: uint8,
+  ICOM: bytes(80)[NICOM] if NICOM > 0,
+  IC: bytes(2),
+  COMRAT: bytes(4),
+  NBANDS: uint8,
+  ImageBands: ImageBand[NBANDS] if NBANDS > 0,
+  ISYNC: uint8,
+  IMODE: bytes(1),
+  NBPR: uint16,
+  NBPC: uint16,
+  NPPBH: uint16,
+  NPPBV: uint16,
+  NBPP: uint8,
+  IDLVL: uint16,
+  IALVL: uint16,
+  ILOC: uint16,
+  IMAG: bytes(4),
+  UDIDL: uint16,
+  UDID: bytes(UDIDL) if UDIDL > 0,
+  IXSHDL: uint16,
+  IXSHD: bytes(IXSHDL) if IXSHDL > 0,
+  ImageData: uint8[NROWS * NCOLS]
+)
+
+def ImageBand = struct(
+  IREPBAND: bytes(2),
+  ISUBCAT: bytes(6),
+  IFC: bytes(1),
+  IMFLT: bytes(3),
+  NLUTS: uint8,
+  LUTD: uint8[NLUTS * 256] if NLUTS > 0
+)
+
+def GraphicsSegment = struct(
+  SY: bytes(2),
+  SID: bytes(10),
+  SNAME: bytes(20),
+  SSCLAS: bytes(1),
+  SSCLSY: bytes(2),
+  SSCODE: bytes(11),
+  SSCTLH: bytes(2),
+  SSREL: bytes(20),
+  SSDCTP: bytes(2),
+  SSDCDT: bytes(8),
+  SSDCXM: bytes(4),
+  SSDG: bytes(1),
+  SSDGDT: bytes(8),
+  SSCLTX: bytes(43),
+  SSCATP: bytes(1),
+  SSCAUT: bytes(40),
+  SSCRSN: bytes(1),
+  SSSRDT: bytes(8),
+  SSCTLN: bytes(15),
+  ENCRYP: uint8,
+  SFMT: bytes(1),
+  SSTRUCT: bytes(13),
+  SDLVL: uint16,
+  SALVL: uint16,
+  SLOC: uint32,
+  SLOC2: uint32,
+  SCOLOR: bytes(1),
+  SNUM: uint16,
+  SROT: uint16,
+  NLIPS: uint16,
+  NPIXPL: uint16,
+  PIXPL: Point[NPIXPL]
+)
+
+def Point = struct(
+  X: uint16,
+  Y: uint16
+)
+
+def TextSegment = struct(
+  TE: bytes(2),
+  TEXTID: bytes(7),
+  TXTALVL: uint8,
+  TXTDT: bytes(14),
+  TXTITL: bytes(80),
+  TSCLAS: bytes(1),
+  TSCLSY: bytes(2),
+  TSCODE: bytes(11),
+  TSCTLH: bytes(2),
+  TSREL: bytes(20),
+  TSDCTP: bytes(2),
+  TSDCDT: bytes(8),
+  TSDCXM: bytes(4),
+  TSDG: bytes(1),
+  TSDGDT: bytes(8),
+  TSCLTX: bytes(43),
+  TSCATP: bytes(1),
+  TSCAUT: bytes(40),
+  TSCRSN: bytes(1),
+  TSSRDT: bytes(8),
+  TSCTLN: bytes(15),
+  ENCRYP: uint8,
+  TXTFMT: bytes(3),
+  TXSHDL: uint16,
+  TXSHD: bytes(TXSHDL) if TXSHDL > 0,
+  TXSOFL: uint32,
+  TXDATA: bytes(TXSOFL)
+)
+
+def DataExtSegment = struct(
+  DE: bytes(2),
+  DESTAG: bytes(25),
+  DESVER: uint8,
+  DESCLAS: bytes(1),
+  DESCLSY: bytes(2),
+  DESCODE: bytes(11),
+  DESCTLH: bytes(2),
+  DESREL: bytes(20),
+  DESDCTP: bytes(2),
+  DESDCDT: bytes(8),
+  DESDCXM: bytes(4),
+  DESDG: bytes(1),
+  DESDGDT: bytes(8),
+  DESCLTX: bytes(43),
+  DESCATP: bytes(1),
+  DESCAUT: bytes(40),
+  DESCRSN: bytes(1),
+  DESSRDT: bytes(8),
+  DESCTLN: bytes(15),
+  DESOFLW: uint8,
+  DESITEM: uint16,
+  DESSHL: uint16,
+  DESSHF: bytes(DESSHL) if DESSHL > 0,
+  DESDATA: bytes(DESOFLW)
+)
+
+def ResExtSegment = struct(
+  RE: bytes(2),
+  RESTAG: bytes(25),
+  RESVER: uint8,
+  RESCLAS: bytes(1),
+  RESCLSY: bytes(2),
+  RESCODE: bytes(11),
+  RESCTLH: bytes(2),
+  RESREL: bytes(20),
+  RESDCTP: bytes(2),
+  RESDCDT: bytes(8),
+  RESDCXM: bytes(4),
+  RESDG: bytes(1),
+  RESDGDT: bytes(8),
+  RESCLTX: bytes(43),
+  RESCATP: bytes(1),
+  RESCAUT: bytes(40),
+  RESCRSN: bytes(1),
+  RESSRDT: bytes(8),
+  RESCTLN: bytes(15),
+  ENCRYP: uint8,
+  RESTYPE: bytes(4),
+  RESSHL: uint16,
+  RESSHF: bytes(RESSHL) if RESSHL > 0,
+  RESDATA: bytes
+)

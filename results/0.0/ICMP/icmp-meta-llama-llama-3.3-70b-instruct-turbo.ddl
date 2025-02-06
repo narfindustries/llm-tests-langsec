@@ -1,190 +1,114 @@
-domain icmp {
-  import std.all;
+meta {
+  name: icmp
+  description: Internet Control Message Protocol
+}
 
-  type icmp_packet {
-    uint8 type;
-    uint8 code;
-    uint16 checksum;
-    uint32 rest_of_header;
-    bytes payload;
-  }
+type icmp_type = uint8 {
+  0 = echo_reply,
+  1 = unassigned,
+  2 = unassigned,
+  3 = destination_unreachable,
+  4 = source_quench,
+  5 = redirect,
+  6 = alternate_host_address,
+  7 = unassigned,
+  8 = echo_request,
+  9 = router_advertisement,
+  10 = router_solicitation,
+  11 = time_exceeded,
+  12 = parameter_problem,
+  13 = timestamp_request,
+  14 = timestamp_reply,
+  15 = information_request,
+  16 = information_reply,
+  17-32 = unassigned,
+  33-255 = reserved
+}
 
-  type icmp_echo_request {
-    extends icmp_packet;
-    constraint type == 8;
-    constraint code == 0;
-  }
+type icmp_code = uint8 {
+  0 = network_unreachable,
+  1 = host_unreachable,
+  2 = protocol_unreachable,
+  3 = port_unreachable,
+  4 = fragmentation_needed_and_dont_fragment_was_set,
+  5 = source_route_failed,
+  6-15 = unassigned
+}
 
-  type icmp_echo_reply {
-    extends icmp_packet;
-    constraint type == 0;
-    constraint code == 0;
-  }
-
-  type icmp_destination_unreachable {
-    extends icmp_packet;
-    constraint type == 3;
-  }
-
-  type icmp_source_quench {
-    extends icmp_packet;
-    constraint type == 4;
-  }
-
-  type icmp_redirect {
-    extends icmp_packet;
-    constraint type == 5;
-  }
-
-  type icmp_time_exceeded {
-    extends icmp_packet;
-    constraint type == 11;
-  }
-
-  type icmp_parameter_problem {
-    extends icmp_packet;
-    constraint type == 12;
-  }
-
-  type icmp_timestamp {
-    extends icmp_packet;
-    constraint type == 13;
-  }
-
-  type icmp_timestamp_reply {
-    extends icmp_packet;
-    constraint type == 14;
-  }
-
-  type icmp_info_request {
-    extends icmp_packet;
-    constraint type == 15;
-  }
-
-  type icmp_info_reply {
-    extends icmp_packet;
-    constraint type == 16;
-  }
-
-  type icmp_address_mask_request {
-    extends icmp_packet;
-    constraint type == 17;
-  }
-
-  type icmp_address_mask_reply {
-    extends icmp_packet;
-    constraint type == 18;
-  }
-
-  grammar icmp_packet {
-    type: uint8;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_echo_request {
-    type: uint8 = 8;
-    code: uint8 = 0;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_echo_reply {
-    type: uint8 = 0;
-    code: uint8 = 0;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_destination_unreachable {
-    type: uint8 = 3;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_source_quench {
-    type: uint8 = 4;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_redirect {
-    type: uint8 = 5;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_time_exceeded {
-    type: uint8 = 11;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_parameter_problem {
-    type: uint8 = 12;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_timestamp {
-    type: uint8 = 13;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_timestamp_reply {
-    type: uint8 = 14;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_info_request {
-    type: uint8 = 15;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_info_reply {
-    type: uint8 = 16;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_address_mask_request {
-    type: uint8 = 17;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
-  }
-
-  grammar icmp_address_mask_reply {
-    type: uint8 = 18;
-    code: uint8;
-    checksum: uint16;
-    rest_of_header: uint32;
-    payload: bytes;
+type icmp_message = struct {
+  type: icmp_type,
+  code: icmp_code,
+  checksum: uint16,
+  identifier: uint16,
+  sequence_number: uint16,
+  data: choice {
+    echo_reply: struct {
+      header: struct {
+        identifier: uint16,
+        sequence_number: uint16
+      },
+      data: bytes
+    },
+    echo_request: struct {
+      header: struct {
+        identifier: uint16,
+        sequence_number: uint16
+      },
+      data: bytes
+    },
+    destination_unreachable: struct {
+      unused: uint32,
+      internet_header: bytes
+    },
+    source_quench: struct {
+      unused: uint32,
+      internet_header: bytes
+    },
+    redirect: struct {
+      gateway_address: uint32,
+      internet_header: bytes
+    },
+    time_exceeded: struct {
+      unused: uint32,
+      internet_header: bytes
+    },
+    parameter_problem: struct {
+      pointer: uint8,
+      internet_header: bytes
+    },
+    timestamp_request: struct {
+      identifier: uint16,
+      sequence_number: uint16,
+      originate_timestamp: uint32,
+      receive_timestamp: uint32,
+      transmit_timestamp: uint32
+    },
+    timestamp_reply: struct {
+      identifier: uint16,
+      sequence_number: uint16,
+      originate_timestamp: uint32,
+      receive_timestamp: uint32,
+      transmit_timestamp: uint32
+    },
+    information_request: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    },
+    information_reply: struct {
+      identifier: uint16,
+      sequence_number: uint16
+    },
+    router_advertisement: struct {
+      num_addrs: uint8,
+      addr_entry_size: uint8,
+      lifetime: uint16,
+      addr_entries: array of struct {
+        address: uint32,
+        address_mask: uint32
+      }
+    },
+    router_solicitation: struct {
+      reserved: uint32
+    }
   }
 }

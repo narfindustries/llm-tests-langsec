@@ -1,20 +1,20 @@
 meta:
-  id: png-image-gemini-1
+  id: png
   endian: be
-
-seq:
-  - id: signature
-    type: u4
-    enum:
-      0x89504e47: png
-  - id: ihdr
-    type: ihdr
-  - id: idat
-    type: idat_list
-  - id: iend
-    type: iend
-
 types:
+  chunk:
+    seq:
+      - id: length
+        type: u4
+      - id: type
+        type: str
+        size: 4
+        encoding: ASCII
+      - id: data
+        type: bytes
+        size: length
+      - id: crc
+        type: u4
   ihdr:
     seq:
       - id: width
@@ -31,35 +31,40 @@ types:
         type: u1
       - id: interlace_method
         type: u1
-
-  idat_list:
-    type: seq
-    repeat: eos
-    contents:
-      - id: idat_chunk
-          type: idat
-
+  plte:
+    seq:
+      - id: palette
+        type: palette_entry
+        repeat: eos
+  palette_entry:
+    seq:
+      - id: red
+        type: u1
+      - id: green
+        type: u1
+      - id: blue
+        type: u1
   idat:
     seq:
-      - id: length
-        type: u4
-      - id: type
-        type: u4
       - id: data
         type: bytes
         size: length
-      - id: crc
-        type: u4
-
+  tRNS:
+    seq:
+      - id: transparency_data
+        type: bytes
+        size: length
   iend:
     seq:
-      - id: length
-        type: u4
-      - id: type
-        type: u4
-      - id: data
+      - id: null
+        type: void
+  png:
+    seq:
+      - id: signature
         type: bytes
-        size: 0
-      - id: crc
-        type: u4
+        size: 8
+        contents: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+      - id: chunks
+        type: chunk
+        repeat: eos
 

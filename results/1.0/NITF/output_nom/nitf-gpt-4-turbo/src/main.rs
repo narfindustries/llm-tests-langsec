@@ -1,94 +1,156 @@
 use nom::{
-    bytes::complete::{tag, take},
+    bytes::complete::take,
+    character::complete::char,
     combinator::{map_res, opt},
-    number::complete::{be_u16, be_u32, be_u64},
+    multi::count,
+    sequence::tuple,
     IResult,
 };
-use std::{env, fs::File, io::Read, str};
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
+use std::str;
 
-struct NitfHeader {
-    file_profile_name: String,
-    file_version: String,
-    complexity_level: String,
-    system_type: String,
-    origin_station_id: String,
-    file_date_time: String,
-    file_title: String,
-    file_classification: String,
-    message_copy_num: Option<String>,
-    message_num_copies: Option<String>,
+#[derive(Debug)]
+struct FileHeader {
+    fhdr: String,
+    fver: String,
+    clevel: String,
+    stype: String,
+    ostationid: String,
+    fdt: String,
+    ftitle: String,
+    fsclas: String,
+    fsclsys: String,
+    fscode: String,
+    fsctlh: String,
+    fsrel: String,
+    fscaut: String,
+    fsctln: String,
+    fsdwn: String,
+    fsdevt: String,
+    fsorig: String,
+    fsocom: String,
+    fssrdt: String,
+    fsctim: String,
+    fsprf: String,
+    fsoprg: String,
+    fsisdt: String,
+    fsctl: String,
+    fsisct: String,
+    fsrelx: String,
+    fsdctx: String,
+    fsdcxm: String,
+    fsdg: String,
+    fsdgdt: String,
+    fscltx: String,
+    fscatp: String,
+    fscautp: String,
+    fsctlnp: String,
+    fscrsn: String,
+    fsctara: String,
+    fssrct: String,
+    fsctb: String,
+    fstitl: String,
+    fsvinel: String,
+    fsclasxt: String,
+    fscomp: String,
+    fsctlng: String,
+    fencryp: String,
+    fstdid: String,
+    fostaid: String,
+    fditrd: String,
+    fopro: String,
 }
 
-struct Nitf {
-    header: NitfHeader,
+fn parse_string(input: &[u8], len: usize) -> IResult<&[u8], String> {
+    map_res(take(len), str::from_utf8)(input).map(|(next_input, result)| {
+        (next_input, result.trim().to_string())
+    })
 }
 
-impl Nitf {
-    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (input, header) = Nitf::parse_header(input)?;
-        Ok((input, Nitf { header }))
-    }
+fn parse_header(input: &[u8]) -> IResult<&[u8], FileHeader> {
+    let (input, (fhdr, fver, clevel, stype, ostationid, fdt, ftitle, fsclas,
+         fsclsys, fscode, fsctlh, fsrel, fscaut, fsctln, fsdwn, fsdevt, fsorig,
+         fsocom, fssrdt, fsctim, fsprf, fsoprg, fsisdt, fsctl, fsisct, fsrelx,
+         fsdctx, fsdcxm, fsdg, fsdgdt, fscltx, fscatp, fscautp, fsctlnp, fscrsn,
+         fsctara, fssrct, fsctb, fstitl, fsvinel, fsclasxt, fscomp, fsctlng,
+         fencryp, fstdid, fostaid, fditrd, fopro)) =
+        tuple((        
+            parse_string(2),
+            parse_string(5),
+            parse_string(3),
+            parse_string(4),
+            parse_string(10),
+            parse_string(14),
+            parse_string(80),
+            parse_string(1),
+            parse_string(2),
+            parse_string(11),
+            parse_string(2),
+            parse_string(20),
+            parse_string(20),
+            parse_string(6),
+            parse_string(6),
+            parse_string(40),
+            parse_string(27),
+            parse_string(8),
+            parse_string(1),
+            parse_string(40),
+            parse_string(40),
+            parse_string(1),
+            parse_string(8),
+            parse_string(15),
+            parse_string(5),
+            parse_string(40),
+            parse_string(1),
+            parse_string(1),
+            parse_string(8),
+            parse_string(1),
+            parse_string(43),
+            parse_string(1),
+            parse_string(8),
+            parse_string(15),
+            parse_string(1),
+            parse_string(3),
+            parse_string(40),
+            parse_string(40),
+            parse_string(120),
+            parse_string(6),
+            parse_string(2),
+            parse_string(1),
+            parse_string(10),
+            parse_string(14),
+            parse_string(80),
+            parse_string(5),
+            
+        ))(input)?;
 
-    fn parse_header(input: &[u8]) -> IResult<&[u8], NitfHeader> {
-        let (input, file_profile_name) = map_res(take(4usize), str::from_utf8)(input)?;
-        let (input, file_version) = map_res(take(5usize), str::from_utf8)(input)?;
-        let (input, complexity_level) = map_res(take(2usize), str::from_utf8)(input)?;
-        let (input, system_type) = map_res(take(4usize), str::from_utf8)(input)?;
-        let (input, origin_station_id) = map_res(take(10usize), str::from_utf8)(input)?;
-        let (input, file_date_time) = map_res(take(14usize), str::from_utf8)(input)?;
-        let (input, file_title) = map_res(take(80usize), str::from_utf8)(input)?;
-        let (input, file_classification) = map_res(take(2usize), str::from_utf8)(input)?;
-        let (input, message_copy_num) = opt(map_res(take(5usize), str::from_utf8))(input)?;
-        let (input, message_num_copies) = opt(map_res(take(5usize), str::from_utf8))(input)?;
-
-        Ok((
-            input,
-            NitfHeader {
-                file_profile_name: file_profile_name.to_string(),
-                file_version: file_version.to_string(),
-                complexity_level: complexity_level.to_string(),
-                system_type: system_type.to_string(),
-                origin_station_id: origin_station_id.to_string(),
-                file_date_time: file_date_time.to_string(),
-                file_title: file_title.to_string(),
-                file_classification: file_classification.to_string(),
-                message_copy_num: message_copy_num.map(|s| s.to_string()),
-                message_num_copies: message_num_copies.map(|s| s.to_string()),
-            },
-        ))
-    }
+    Ok((input, FileHeader {
+        fhdr, fver, clevel, stype, ostationid, fdt, ftitle, fsclas, fsclsys, fscode, fsctlh, fsrel, fscaut, fsctln, fsdwn,
+        fsdevt, fsorig, fsocom, fssrdt, fsctim, fsprf, fsoprg, fsisdt, fsctl, fsisct, fsrelx, fsdctx, fsdcxm, fsdg,
+        fsdgdt, fscltx, fscatp, fscautp, fsctlnp, fscrsn, fsctara, fssrct, fsctb, fstitl, fsvinel, fsclasxt, fscomp,
+        fsctlng, fencryp, fstdid, fostaid, fditrd, fopro
+    }))
 }
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        println!("Usage: {} <file>", args[0]);
-        return Ok(());
+    if args.len() < 2 {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "No file specified"));
     }
 
     let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match Nitf::parse(&buffer) {
-        Ok((_, nitf)) => {
-            println!("Parsed NITF successfully!");
-            println!("File Profile Name: {}", nitf.header.file_profile_name);
-            println!("File Version: {}", nitf.header.file_version);
-            println!("Complexity Level: {}", nitf.header.complexity_level);
-            println!("System Type: {}", nitf.header.system_type);
-            println!("Origin Station ID: {}", nitf.header.origin_station_id);
-            println!("File Date and Time: {}", nitf.header.file_date_time);
-            println!("File Title: {}", nitf.header.file_title);
-            println!("File Classification: {}", nitf.header.file_classification);
-            if let Some(copy_num) = nitf.header.message_copy_num {
-                println!("Message Copy Number: {}", copy_num);
-            }
-            if let Some(num_copies) = nitf.header.message_num_copies {
-                println!("Message Number of Copies: {}", num_copies);
-            }
+    match parse_header(&buffer[..]) {
+        Ok((_rest, header)) => {
+            println!("{:#?}", header);
+        },
+        Err(e) => {
+            println!("Failed to parse NITF file header: {:?}", e);
         }
-        Err(e) => println!("Error parsing NITF: {:?}", e),
     }
 
     Ok(())

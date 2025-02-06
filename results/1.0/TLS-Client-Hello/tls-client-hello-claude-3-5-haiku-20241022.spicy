@@ -3,37 +3,82 @@ module TLS;
 import spicy;
 
 public type ClientHello = unit {
-    record_type: uint8 = 0x01 always {
-        $$ == 0x01;
-    };
+    handshake_type: uint8 { validate(self == 1); }
 
-    length: uint16;
-    
-    protocol_version: uint16 {
-        validate($$ == 0x0303 || $$ == 0x0302 || $$ == 0x0301);
-    };
+    length: uint24;
+
+    legacy_version: uint16 { validate(self == 0x0303); }
 
     random: bytes(32);
 
     session_id_length: uint8;
-    session_id: bytes(session_id_length) if ( session_id_length > 0 );
+    session_id: bytes(session_id_length) optional;
 
     cipher_suites_length: uint16;
-    cipher_suites: uint16[cipher_suites_length/2];
+    cipher_suites: uint16[cipher_suites_length / 2];
 
     compression_methods_length: uint8;
     compression_methods: uint8[compression_methods_length];
 
     extensions_length: uint16;
-    extensions: Extensions;
+    extensions: Extensions(extensions_length);
 
-    type Extensions = unit {
-        extensions: Extension[];
-    };
+    type Extensions = unit(total_length: uint16) {
+        extensions: Extension[] while (self.___syn.pos() < total_length);
+    }
 
     type Extension = unit {
-        type_: uint16;
+        type: uint16;
         length: uint16;
-        data: bytes(length);
+        data: bytes(length) {
+            switch (type) {
+                0 => parse ServerNameExtension;
+                43 => parse SupportedVersionsExtension;
+                13 => parse SignatureAlgorithmsExtension;
+                10 => parse SupportedGroupsExtension;
+                51 => parse KeyShareExtension;
+                41 => parse PreSharedKeyExtension;
+                42 => parse EarlyDataExtension;
+                49 => parse PostHandshakeAuthExtension;
+            }
+        }
     }
-}
+
+    type ServerNameExtension = unit { 
+        names: bytes;
+    }
+
+    type SupportedVersionsExtension = unit { 
+        versions: uint16[];
+    }
+
+    type SignatureAlgorithmsExtension = unit { 
+        algorithms: uint16[];
+    }
+
+    type SupportedGroupsExtension = unit { 
+        groups: uint16[];
+    }
+
+    type KeyShareExtension = unit { 
+        key_shares: KeyShare[];
+    }
+
+    type KeyShare = unit {
+        group: uint16;
+        key_exchange: bytes;
+    }
+
+    type PreSharedKeyExtension = unit { 
+        identities: bytes;
+        binders: bytes;
+    }
+
+    type EarlyDataExtension = unit { 
+        max_early_data_size: uint32;
+    }
+
+    type PostHandshakeAuthExtension = unit {
+        padding: bytes(0);
+    }
+};

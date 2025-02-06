@@ -2,64 +2,113 @@ module HTTP;
 
 import spicy;
 
-type Headers = unit {
-    fields: HeaderEntry[] &eod;
+type Method = enum {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    CONNECT,
+    OPTIONS,
+    TRACE,
+    PATCH
 };
 
-type HeaderEntry = unit {
-    name: bytes &until=b":";
-    _: b":";
-    value: bytes &until=b"\r\n";
-    _: b"\r\n";
+type Version = unit {
+    major: uint8;
+    minor: uint8;
+} &byte-order=big;
+
+type StatusCode = enum {
+    Continue = 100,
+    SwitchingProtocols = 101,
+    OK = 200,
+    Created = 201,
+    Accepted = 202,
+    NonAuthoritativeInformation = 203,
+    NoContent = 204,
+    ResetContent = 205,
+    PartialContent = 206,
+    MultipleChoices = 300,
+    MovedPermanently = 301,
+    Found = 302,
+    SeeOther = 303,
+    NotModified = 304,
+    UseProxy = 305,
+    TemporaryRedirect = 307,
+    BadRequest = 400,
+    Unauthorized = 401,
+    PaymentRequired = 402,
+    Forbidden = 403,
+    NotFound = 404,
+    MethodNotAllowed = 405,
+    NotAcceptable = 406,
+    ProxyAuthenticationRequired = 407,
+    RequestTimeout = 408,
+    Conflict = 409,
+    Gone = 410,
+    LengthRequired = 411,
+    PreconditionFailed = 412,
+    RequestEntityTooLarge = 413,
+    RequestURITooLong = 414,
+    UnsupportedMediaType = 415,
+    RequestedRangeNotSatisfiable = 416,
+    ExpectationFailed = 417,
+    InternalServerError = 500,
+    NotImplemented = 501,
+    BadGateway = 502,
+    ServiceUnavailable = 503,
+    GatewayTimeout = 504,
+    HTTPVersionNotSupported = 505
+};
+
+type RequestLine = unit {
+    method: Method;
+    uri: spicy.Text;
+    version: Version;
+} &byte-order=big;
+
+type StatusLine = unit {
+    version: Version;
+    code: StatusCode;
+    reason: spicy.Text;
+} &byte-order=big;
+
+type Header = unit {
+    name: spicy.Text;
+    value: spicy.Text;
+};
+
+type Headers = unit {
+    entries: vector<Header>;
+};
+
+type MessageBody = unit {
+    content: bytes &size=0; // Dynamically sized based on Content-Length header or chunked transfer encoding
 };
 
 type Request = unit {
-    method: bytes &until=b" ";
-    _: b" ";
-    uri: bytes &until=b" ";
-    _: b" ";
-    version: bytes &until=b"\r\n";
-    _: b"\r\n";
+    requestLine: RequestLine;
     headers: Headers;
-    body: bytes &size=body_size();
-    
-    function body_size(): uint64 {
-        local content_length = b"0";
-        for (h in self.headers.fields) {
-            if (h.name == b"Content-Length") {
-                content_length = h.value;
-                break;
-            }
-        }
-        return to_uint(content_length);
-    }
+    body: optional<MessageBody>;
 };
 
 type Response = unit {
-    version: bytes &until=b" ";
-    _: b" ";
-    status_code: bytes &until=b" ";
-    _: b" ";
-    status_message: bytes &until=b"\r\n";
-    _: b"\r\n";
+    statusLine: StatusLine;
     headers: Headers;
-    body: bytes &size=body_size();
-    
-    function body_size(): uint64 {
-        local content_length = b"0";
-        for (h in self.headers.fields) {
-            if (h.name == b"Content-Length") {
-                content_length = h.value;
-                break;
-            }
-        }
-        return to_uint(content_length);
-    }
+    body: optional<MessageBody>;
 };
 
-public type HTTP_Protocol = unit {
-    conn: connection &requires=subtype<stream>;
-    is_orig: bool;
-    request: Request &requires=$conn.is_orig;
-    response: Response &requires=!$conn.is_orig;
+public type HTTPMessage = unit {
+    isRequest: bool;
+    request: optional<Request>;
+    response: optional<Response>;
+
+    on %init {
+        if (self.isRequest) {
+            self.request = Request();
+        } else {
+            self.response = Response();
+        }
+    }
 };

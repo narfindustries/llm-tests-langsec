@@ -1,11 +1,8 @@
 meta:
   id: tiff
-  title: TIFF (Tagged Image File Format)
+  title: TIFF
   file-extension: tiff
-  xref:
-    mime: image/tiff
-  license: CC0-1.0
-  endian: le
+  endian: be
 
 seq:
   - id: header
@@ -15,9 +12,10 @@ types:
   header:
     seq:
       - id: byte_order
-        contents: ['II', 'MM']
+        type: u2
+        enum: byte_order
       - id: version
-        contents: [42]
+        type: u2
       - id: ifd_offset
         type: u4
 
@@ -36,14 +34,52 @@ types:
     seq:
       - id: tag
         type: u2
+        enum: tag_type
       - id: field_type
         type: u2
+        enum: field_type
       - id: num_values
         type: u4
       - id: value_offset
         type: u4
 
 enums:
+  byte_order:
+    0x4949: le
+    0x4d4d: be
+
+  tag_type:
+    256: image_width
+    257: image_length
+    258: bits_per_sample
+    259: compression
+    262: photometric_interpretation
+    273: strip_offsets
+    277: samples_per_pixel
+    278: rows_per_strip
+    279: strip_byte_counts
+    282: x_resolution
+    283: y_resolution
+    284: planar_configuration
+    296: resolution_unit
+    305: software
+    306: date_time
+    315: artist
+    316: host_computer
+    320: color_map
+    322: tile_width
+    323: tile_length
+    324: tile_offsets
+    325: tile_byte_counts
+    330: sub_ifds
+    512: jpeg_proc
+    513: jpeg_interchange_format
+    514: jpeg_interchange_format_length
+    529: ycbcr_coefficients
+    530: ycbcr_sub_sampling
+    531: ycbcr_positioning
+    532: reference_black_white
+
   field_type:
     1: byte
     2: ascii
@@ -57,11 +93,3 @@ enums:
     10: srational
     11: float
     12: double
-
-instances:
-  ifds:
-    pos: header.ifd_offset
-    type: ifd
-    repeat: until
-    repeat-until: _.next_ifd_offset == 0
-    size-eos: true

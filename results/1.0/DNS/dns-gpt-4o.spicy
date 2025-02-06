@@ -1,56 +1,56 @@
 module DNS;
 
-public type DNSMessage = unit {
+type Header = bitfield : uint16 {
     id: uint16;
-    flags: uint16;
-    qdcount: uint16;
-    ancount: uint16;
-    nscount: uint16;
-    arcount: uint16;
 
-    queries: array[q each qdcount] of DNSQuery;
-    answers: array[a each ancount] of DNSRecord;
-    authorities: array[n each nscount] of DNSRecord;
-    additionals: array[r each arcount] of DNSRecord;
+    qr: bit<1>;       // Query/Response
+    opcode: bit<4>;   // Operation code
+    aa: bit<1>;       // Authoritative Answer
+    tc: bit<1>;       // Truncation
+    rd: bit<1>;       // Recursion Desired
+    ra: bit<1>;       // Recursion Available
+    z: bit<3>;        // Reserved
+    rcode: bit<4>;    // Response Code
+
+    qd_count: uint16; // Question Count
+    an_count: uint16; // Answer Record Count
+    ns_count: uint16; // Authority Record Count
+    ar_count: uint16; // Additional Record Count
 };
 
-type DNSQuery = unit {
-    qname: QueryName;
+public type Question = unit {
+    qname: vector of QuestionLabel &until(eod());
     qtype: uint16;
     qclass: uint16;
 };
 
-type QueryName = unit {
-    parts: array of QueryNameLabel;
-
-    : (parts.members != 0) & (parts.back().length == 0) {
-        length: uint8 { assert ($self$.length != 0, "Unexpected zero length for QNAME") };
-        name: bytes &length=length;
-
-        on set_name do {
-            // Ensure the parts array terminates with a zero-length label as per DNS standard.
-            if ( length == 0 ) {
-                break;
-            }
-        }
-    };
-};
-
-type QueryNameLabel = unit {
+public type QuestionLabel = unit {
     length: uint8;
-    label: bytes &length=length {
-        // Ensure this is a valid DNS label.
-        assert (length <= 63, "DNS label length exceeds 63 bytes");
-    };
+    label: bytes &length=length;
 };
 
-type DNSRecord = unit {
-    rname: QueryName;
-    rtype: uint16;
-    rclass: uint16;
+public type ResourceRecord = unit {
+    name: vector of ResourceLabel &until(eod());
+    type_: uint16;
+    class_: uint16;
     ttl: uint32;
     rdlength: uint16;
     rdata: bytes &length=rdlength;
 };
 
-public event dns_message(msg: DNSMessage);
+public type ResourceLabel = unit {
+    length: uint8;
+    label: bytes &length=length;
+};
+
+public type DNSMessage = unit {
+    header: Header;
+
+    questions: array of Question &size=header.qd_count;
+
+    answers: array of ResourceRecord &size=header.an_count;
+
+    authority: array of ResourceRecord &size=header.ns_count;
+
+    additional: array of ResourceRecord &size=header.ar_count;
+};

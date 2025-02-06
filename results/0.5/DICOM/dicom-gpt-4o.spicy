@@ -1,27 +1,27 @@
 module DICOM;
 
-import spicy;
-
-public type DICOM = unit {
-    preamble: bytes &length=128;
-    prefix: string &length=4 &check=|self.prefix == "DICM"|;
-
-    elements: repeat_until (eos) {
-        element: Element,
-    };
+type DICOMHeader = unit {
+    preamble: bytes[128];
+    prefix: bytes[4] &check=($$ == b"DICM");
 };
 
-type Element = unit {
-    tag_group: uint16;
-    tag_element: uint16;
-    vr: string &length=2;
-    length: uint32;
-    value: bytes &length=self.length;
-} &check=|self.valid_vr()|;
+type DICOMElement = unit {
+    tag: uint16;
+    element: uint16;
+    vr: bytes[2];
+    length: uint16;
+    value: bytes[length];
+};
 
-function valid_vr(self: Element): bool {
-    local valid_vrs = set("AE", "AS", "AT", "CS", "DA", "DS", "DT", "FL", "FD", "IS", "LO", 
-                          "LT", "OB", "OF", "OW", "PN", "SH", "SL", "SQ", "SS", "ST", "TM", 
-                          "UI", "UL", "UN", "US", "UT");
-    return self.vr in valid_vrs;
+type DICOMDataset = unit {
+    elements: DICOMElement[];
+};
+
+public type DICOMFile = unit {
+    header: DICOMHeader;
+    dataset: DICOMDataset;
+};
+
+public function parse_dicom(data: bytes) : DICOMFile {
+    return DICOMFile(data);
 }

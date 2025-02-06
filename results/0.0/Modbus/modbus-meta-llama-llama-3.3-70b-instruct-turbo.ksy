@@ -1,15 +1,9 @@
 meta:
   id: modbus
-  title: Modbus
-  endian: big
+  title: Modbus Protocol
+  endian: be
 seq:
-  - id: transaction_id
-    type: u2
-  - id: protocol_id
-    type: u2
-  - id: length
-    type: u2
-  - id: unit_id
+  - id: slave_id
     type: u1
   - id: function_code
     type: u1
@@ -17,77 +11,152 @@ seq:
     type:
       switch-on: function_code
       cases:
-        1: read_coils
-        2: read_discrete_inputs
-        3: read_holding_registers
-        4: read_input_registers
-        5: write_single_coil
-        6: write_single_register
-        15: write_multiple_coils
-        16: write_multiple_registers
-        '_': raw_data
+        1: coil_status_data
+        2: input_status_data
+        3: holding_registers_data
+        4: input_registers_data
+        5: single_coil_data
+        6: single_holding_register_data
+        15: multiple_coils_data
+        16: multiple_holding_registers_data
+        17: report_slave_id_data
+        20: file_record_data
+        21: file_record_data
+        22: mask_write_register_data
+        23: read_write_multiple_registers_data
+        24: fifo_queue_data
+        43: encapsulated_interface_transport_data
 types:
-  read_coils:
+  coil_status_data:
     seq:
-      - id: address
+      - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_coils
         type: u2
-  read_discrete_inputs:
+  input_status_data:
     seq:
-      - id: address
+      - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_inputs
         type: u2
-  read_holding_registers:
+  holding_registers_data:
     seq:
-      - id: address
+      - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_registers
         type: u2
-  read_input_registers:
+  input_registers_data:
     seq:
-      - id: address
+      - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_registers
         type: u2
-  write_single_coil:
+  single_coil_data:
     seq:
-      - id: address
+      - id: output_address
         type: u2
-      - id: value
+      - id: output_value
         type: u2
-  write_single_register:
+  single_holding_register_data:
     seq:
-      - id: address
+      - id: register_address
         type: u2
-      - id: value
+      - id: register_value
         type: u2
-  write_multiple_coils:
+  multiple_coils_data:
     seq:
-      - id: address
+      - id: starting_address
         type: u2
-      - id: quantity
+      - id: quantity_of_outputs
         type: u2
-      - id: byte_count
+      - id: output_values
+        type: bytes
+        size: ((quantity_of_outputs + 7) // 8)
+  multiple_holding_registers_data:
+    seq:
+      - id: starting_address
+        type: u2
+      - id: quantity_of_registers
+        type: u2
+      - id: register_values
+        type: u2
+        repeat: expr
+        repeat-expr: quantity_of_registers
+  report_slave_id_data:
+    seq:
+      - id: slave_id
         type: u1
-      - id: values
+      - id: run_indicator_status
         type: u1
-        repeat: byte_count
-  write_multiple_registers:
+      - id: additional_info
+        type: bytes
+        size: 2
+  file_record_data:
     seq:
-      - id: address
-        type: u2
-      - id: quantity
-        type: u2
-      - id: byte_count
+      - id: reference_type
         type: u1
-      - id: values
+      - id: file_number
         type: u2
-        repeat: byte_count / 2
-  raw_data:
-    type: u1
-    repeat: expr
+      - id: record_number
+        type: u2
+      - id: record_length
+        type: u2
+      - id: record_data
+        type: bytes
+        size: record_length
+  mask_write_register_data:
     seq:
-      - id: length
+      - id: register_address
+        type: u2
+      - id: and_mask
+        type: u2
+      - id: or_mask
+        type: u2
+  read_write_multiple_registers_data:
+    seq:
+      - id: starting_address
+        type: u2
+      - id: quantity_of_registers
+        type: u2
+      - id: write_starting_address
+        type: u2
+      - id: quantity_of_registers_to_write
+        type: u2
+      - id: write_register_values
+        type: u2
+        repeat: expr
+        repeat-expr: quantity_of_registers_to_write
+  fifo_queue_data:
+    seq:
+      - id: starting_address
+        type: u2
+      - id: quantity_of_registers
+        type: u2
+  encapsulated_interface_transport_data:
+    seq:
+      - id: mei_type
         type: u1
+      - id: mei_data
+        type: bytes
+        size: 2
+  exception_response:
+    seq:
+      - id: function_code
+        type: u1
+      - id: exception_code
+        type: u1
+        enum:
+          1: illegal_function
+          2: illegal_data_address
+          3: illegal_data_value
+          4: slave_device_failure
+          5: acknowledge
+          6: slave_device_busy
+          7: negative_acknowledge
+          8: memory_parity_error
+          10: gateway_path_unavailable
+          11: gateway_target_device_failed_to_respond
+  crc:
+    seq:
+      - id: crc
+        type: u2

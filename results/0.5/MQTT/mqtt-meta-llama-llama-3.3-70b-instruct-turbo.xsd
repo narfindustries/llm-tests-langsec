@@ -1,168 +1,236 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/MQTT"
-           xmlns:tns="http://example.com/MQTT"
-           elementFormDefault="qualified">
+<dfdl:format xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             xmlns:mqtt="http://mqtt.org/dfdl"
+             targetNamespace="http://mqtt.org/dfdl"
+             elementFormDefault="qualified"
+             lengthKind="delimited"
+             sequenceKind="ordered"
+             encoding="UTF-8">
 
-  <xs:include schemaLocation="MQTT-primitives.xsd"/>
+  <dfdl:element name="mqttMessage">
+    <dfdl:sequence>
+      <dfdl:element ref="mqtt:fixedHeader"/>
+      <dfdl:element ref="mqtt:variableHeader" occurs="0..1"/>
+      <dfdl:element ref="mqtt:payload" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:element name="MQTT">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:ControlPacket" dfdl:occurs="1..*"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <dfdl:element name="fixedHeader">
+    <dfdl:sequence>
+      <dfdl:element name="messageType" type="xs:byte"/>
+      <dfdl:element name="dup" type="xs:byte"/>
+      <dfdl:element name="qos" type="xs:byte"/>
+      <dfdl:element name="retain" type="xs:byte"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:element name="ControlPacket">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="FixedHeader" type="tns:FixedHeaderType" dfdl:occurs="1"/>
-        <xs:element name="VariableHeader" type="tns:VariableHeaderType" dfdl:occurs="0..1"/>
-        <xs:element name="Payload" type="tns:PayloadType" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <dfdl:element name="variableHeader">
+    <dfdl:choice>
+      <dfdl:element ref="mqtt:connect"/>
+      <dfdl:element ref="mqtt:connack"/>
+      <dfdl:element ref="mqtt:publish"/>
+      <dfdl:element ref="mqtt:puback"/>
+      <dfdl:element ref="mqtt:pubrec"/>
+      <dfdl:element ref="mqtt:pubrel"/>
+      <dfdl:element ref="mqtt:pubcomp"/>
+      <dfdl:element ref="mqtt:subscribe"/>
+      <dfdl:element ref="mqtt:suback"/>
+      <dfdl:element ref="mqtt:unsubscribe"/>
+      <dfdl:element ref="mqtt:unsuback"/>
+      <dfdl:element ref="mqtt:pingreq"/>
+      <dfdl:element ref="mqtt:pingresp"/>
+      <dfdl:element ref="mqtt:disconnect"/>
+      <dfdl:element ref="mqtt:auth"/>
+    </dfdl:choice>
+  </dfdl:element>
 
-  <xs:complexType name="FixedHeaderType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:sequence>
-      <xs:element name="MessageType" type="tns:MessageTypeType" dfdl:occurs="1"/>
-      <xs:element name="Flags" type="tns:FlagsType" dfdl:occurs="1"/>
-      <xs:element name="Reserved" type="tns:ReservedType" dfdl:occurs="1"/>
-      <xs:element name="QoS" type="tns:QoSType" dfdl:occurs="1"/>
-      <xs:element name="Dup" type="tns:DupType" dfdl:occurs="1"/>
-      <xs:element name="Retain" type="tns:RetainType" dfdl:occurs="1"/>
-      <xs:element name="RemainingLength" type="tns:RemainingLengthType" dfdl:occurs="1"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:element name="connect">
+    <dfdl:sequence>
+      <dfdl:element name="protocolName" type="xs:string" fixed="MQTT"/>
+      <dfdl:element name="protocolLevel" type="xs:byte" fixed="5"/>
+      <dfdl:element name="connectFlags" type="xs:byte"/>
+      <dfdl:element name="keepAlive" type="xs:unsignedShort"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+      <dfdl:element name="clientId" type="xs:string"/>
+      <dfdl:element name="willTopic" type="xs:string" occurs="0..1"/>
+      <dfdl:element name="willMessage" type="xs:hexBinary" occurs="0..1"/>
+      <dfdl:element name="username" type="xs:string" occurs="0..1"/>
+      <dfdl:element name="password" type="xs:hexBinary" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:complexType name="VariableHeaderType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:sequence>
-      <xs:element name="PacketIdentifier" type="tns:PacketIdentifierType" dfdl:occurs="0..1"/>
-      <xs:element name="Properties" type="tns:PropertiesType" dfdl:occurs="0..1"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:element name="connack">
+    <dfdl:sequence>
+      <dfdl:element name="sessionPresent" type="xs:byte"/>
+      <dfdl:element name="connectReasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:complexType name="PayloadType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:sequence>
-      <xs:element name="Data" type="xs:base64Binary" dfdl:occurs="1"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:element name="publish">
+    <dfdl:sequence>
+      <dfdl:element name="topicName" type="xs:string"/>
+      <dfdl:element name="packetId" type="xs:unsignedShort" occurs="0..1"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="MessageTypeType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="15"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="puback">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="FlagsType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="1"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="pubrec">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="ReservedType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="1"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="pubrel">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="QoSType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="2"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="pubcomp">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="DupType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="1"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="subscribe">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+      <dfdl:element name="subscriptions" type="mqtt:subscriptionsType"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="RetainType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="1"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="suback">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCodes" type="mqtt:reasonCodesType"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="RemainingLengthType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="unsubscribe">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+      <dfdl:element name="topicFilters" type="mqtt:topicFiltersType"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="PacketIdentifierType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="65535"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="unsuback">
+    <dfdl:sequence>
+      <dfdl:element name="packetId" type="xs:unsignedShort"/>
+      <dfdl:element name="reasonCodes" type="mqtt:reasonCodesType"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:complexType name="PropertiesType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:sequence>
-      <xs:element name="Property" type="tns:PropertyType" dfdl:occurs="0..*"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:element name="pingreq">
+    <dfdl:sequence/>
+  </dfdl:element>
 
-  <xs:complexType name="PropertyType">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:representation>binary</dfdl:representation>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:sequence>
-      <xs:element name="Identifier" type="tns:PropertyIdentifierType" dfdl:occurs="1"/>
-      <xs:element name="Value" type="tns:PropertyValueType" dfdl:occurs="1"/>
-    </xs:sequence>
-  </xs:complexType>
+  <dfdl:element name="pingresp">
+    <dfdl:sequence/>
+  </dfdl:element>
 
-  <xs:simpleType name="PropertyIdentifierType">
-    <xs:restriction base="xs:integer">
-      <xs:minInclusive value="0"/>
-      <xs:maxInclusive value="38"/>
-    </xs:restriction>
-  </xs:simpleType>
+  <dfdl:element name="disconnect">
+    <dfdl:sequence>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
 
-  <xs:simpleType name="PropertyValueType">
-    <xs:restriction base="xs:string">
-      <xs:maxLength value="1024"/>
-    </xs:restriction>
-  </xs:simpleType>
-</xs:schema>
+  <dfdl:element name="auth">
+    <dfdl:sequence>
+      <dfdl:element name="reasonCode" type="xs:byte"/>
+      <dfdl:element name="properties" type="mqtt:propertiesType" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="properties">
+    <dfdl:sequence>
+      <dfdl:element name="property" type="mqtt:propertyType" occurs="0..*"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="property">
+    <dfdl:sequence>
+      <dfdl:element name="identifier" type="xs:byte"/>
+      <dfdl:element name="value" type="xs:string"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="subscriptions">
+    <dfdl:sequence>
+      <dfdl:element name="subscription" type="mqtt:subscriptionType" occurs="0..*"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="subscription">
+    <dfdl:sequence>
+      <dfdl:element name="topicFilter" type="xs:string"/>
+      <dfdl:element name="qos" type="xs:byte"/>
+      <dfdl:element name="noLocal" type="xs:byte" occurs="0..1"/>
+      <dfdl:element name="retainAsPublished" type="xs:byte" occurs="0..1"/>
+      <dfdl:element name="retainHandling" type="xs:byte" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="reasonCodes">
+    <dfdl:sequence>
+      <dfdl:element name="reasonCode" type="xs:byte" occurs="0..*"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="topicFilters">
+    <dfdl:sequence>
+      <dfdl:element name="topicFilter" type="xs:string" occurs="0..*"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="payload">
+    <dfdl:choice>
+      <dfdl:element name="connectPayload" type="mqtt:connectPayloadType"/>
+      <dfdl:element name="publishPayload" type="xs:hexBinary"/>
+      <dfdl:element name="subscribePayload" type="mqtt:subscribePayloadType"/>
+      <dfdl:element name="unsubscribePayload" type="mqtt:unsubscribePayloadType"/>
+    </dfdl:choice>
+  </dfdl:element>
+
+  <dfdl:element name="connectPayload">
+    <dfdl:sequence>
+      <dfdl:element name="clientId" type="xs:string"/>
+      <dfdl:element name="willTopic" type="xs:string" occurs="0..1"/>
+      <dfdl:element name="willMessage" type="xs:hexBinary" occurs="0..1"/>
+      <dfdl:element name="username" type="xs:string" occurs="0..1"/>
+      <dfdl:element name="password" type="xs:hexBinary" occurs="0..1"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="subscribePayload">
+    <dfdl:sequence>
+      <dfdl:element name="subscriptions" type="mqtt:subscriptionsType"/>
+    </dfdl:sequence>
+  </dfdl:element>
+
+  <dfdl:element name="unsubscribePayload">
+    <dfdl:sequence>
+      <dfdl:element name="topicFilters" type="mqtt:topicFiltersType"/>
+    </dfdl:sequence>
+  </dfdl:element>
+</dfdl:format>

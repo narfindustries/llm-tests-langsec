@@ -1,49 +1,51 @@
 module NTP;
 
-import spicy;
-
 public type Packet = unit {
-    %byteorder = spicy::ByteOrder::Big;
+    control_bits: uint16 {
+        leap_indicator = $$ & 0b1100000000000000 >> 14: uint2 {
+            no_warning:          0b00,
+            last_minute_61_sec:  0b01,
+            last_minute_59_sec:  0b10,
+            clock_not_sync:      0b11
+        };
 
-    leap_indicator   : bitfield(2) {
-        no_warning    = 0,
-        last_minute_61_sec = 1,
-        last_minute_59_sec = 2,
-        alarm_condition = 3
+        version = $$ & 0b0011100000000000 >> 11: uint3 {
+            version_range: 1..4
+        };
+
+        mode = $$ & 0b0000011100000000 >> 8: uint3 {
+            reserved:         0,
+            symmetric_active: 1,
+            symmetric_passive: 2,
+            client:           3,
+            server:           4,
+            broadcast:        5,
+            control_message:  6,
+            private_use:      7
+        };
     };
 
-    version         : bitfield(3);
-    mode           : bitfield(3) {
-        reserved        = 0,
-        symmetric_active = 1,
-        symmetric_passive = 2,
-        client          = 3,
-        server          = 4,
-        broadcast       = 5,
-        ntp_control     = 6,
-        private         = 7
+    stratum: uint8 {
+        unspecified:        0,
+        primary_reference:  1,
+        secondary_reference: 2..255
     };
 
-    stratum        : uint8;
-    poll_interval  : int8;
-    precision     : int8;
+    poll_interval: int8 {
+        valid_range: -6..6
+    };
 
-    root_delay    : bytes(4);
-    root_dispersion : bytes(4);
-    reference_id   : bytes(4);
+    precision: int8;
+    root_delay: float32;
+    root_dispersion: float32;
+    reference_id: bytes(4);
+    reference_timestamp: uint64;
+    originate_timestamp: uint64;
+    receive_timestamp: uint64;
+    transmit_timestamp: uint64;
 
-    reference_time : bytes(8);
-    origin_time    : bytes(8);
-    receive_time   : bytes(8);
-    transmit_time  : bytes(8);
-
-    on %init {
-        self.version.width = 3;
-        self.mode.width = 3;
-        self.leap_indicator.width = 2;
-    }
+    optional_auth: optional unit {
+        key_identifier: uint32;
+        message_digest: bytes;
+    };
 };
-
-public function parse_packet(data: bytes) : Packet {
-    return Packet(data);
-}

@@ -1,49 +1,178 @@
-module HL7;
+module HL7v2;
 
 import spicy;
 
 public type Message = unit {
-    segments: list<Segment> &until($input.eof());
-
-    var segment_count: uint64 = 0;
-
-    on segments {
-        self.segment_count = |segments|;
-    }
+    header: MSH;
+    segments: list<Segment>;
 };
 
-public type Segment = unit {
-    name: bytes &size=3;
-    separator: bytes &size=1 = b"|";
-    fields: Fields;
-
-    var segment_type: bytes = name;
+type MSH = unit {
+    field_separator: bytes(size=1) = b"|";
+    encoding_characters: bytes(size=4) = b"^~\\&";
+    sending_application: bytes &until = b"|";
+    sending_facility: bytes &until = b"|";
+    receiving_application: bytes &until = b"|";
+    receiving_facility: bytes &until = b"|";
+    timestamp: bytes &until = b"|";
+    security: optional bytes &until = b"|";
+    message_type: bytes &until = b"|";
+    message_control_id: bytes &until = b"|";
+    processing_id: bytes &until = b"|";
+    version: bytes &until = b"|";
+    sequence_number: optional bytes &until = b"|";
+    continuation_pointer: optional bytes &until = b"|";
+    accept_acknowledgment_type: optional bytes &until = b"|";
+    application_acknowledgment_type: optional bytes &until = b"|";
+    country_code: optional bytes &until = b"|";
+    character_set: optional bytes &until = b"|";
+    principal_language: optional bytes &until = b"\r";
 };
 
-type Fields = unit {
-    fields: list<Field> &separator=b"|";
+type Segment = unit {
+    type: bytes &until = b"|";
+    data: bytes &until = b"\r";
 };
 
-type Field = unit {
-    value: bytes &convert=spicy::decode_utf8(value);
+type PID = unit {
+    set_id: optional bytes &until = b"|";
+    patient_id: bytes &until = b"|";
+    patient_name: bytes &until = b"|";
+    mother_maiden_name: optional bytes &until = b"|";
+    date_of_birth: optional bytes &until = b"|";
+    gender: bytes &until = b"|";
+    patient_alias: optional bytes &until = b"|";
+    race: optional bytes &until = b"|";
+    patient_address: optional bytes &until = b"|";
+    county_code: optional bytes &until = b"|";
+    phone_number: optional bytes &until = b"|";
+    language: optional bytes &until = b"|";
+    marital_status: optional bytes &until = b"|";
+    religion: optional bytes &until = b"|";
+    account_number: optional bytes &until = b"|";
+    ssn: optional bytes &until = b"|";
+    driver_license: optional bytes &until = b"|";
+    mothers_identifier: optional bytes &until = b"|";
+    ethnic_group: optional bytes &until = b"|";
+    birth_place: optional bytes &until = b"|";
+    multiple_birth_indicator: optional bytes &until = b"|";
+    birth_order: optional bytes &until = b"|";
+    citizenship: optional bytes &until = b"|";
+    veterans_military_status: optional bytes &until = b"|";
+    nationality: optional bytes &until = b"|";
+    patient_death_date: optional bytes &until = b"|";
+    patient_death_indicator: optional bytes &until = b"\r";
 };
 
-public type MSH = unit {
-    name: bytes &size=3 = b"MSH";
-    separator1: bytes &size=1 = b"|";
-    encoding_chars: bytes &size=4;
-    separator2: bytes &size=1 = b"|";
-    sending_app: bytes;
-    separator3: bytes &size=1 = b"|";
-    sending_facility: bytes;
-    separator4: bytes &size=1 = b"|";
-    receiving_app: bytes;
-    separator5: bytes &size=1 = b"|";
-    receiving_facility: bytes;
-    separator6: bytes &size=1 = b"|";
-    timestamp: bytes;
-    separator7: bytes &size=1 = b"|";
-    security: bytes;
-    separator8: bytes &size=1 = b"|";
-    message_type: bytes;
+type PV1 = unit {
+    set_id: optional bytes &until = b"|";
+    patient_class: bytes &until = b"|";
+    assigned_patient_location: optional bytes &until = b"|";
+    admission_type: optional bytes &until = b"|";
+    preadmit_number: optional bytes &until = b"|";
+    prior_patient_location: optional bytes &until = b"|";
+    attending_doctor: optional bytes &until = b"|";
+    referring_doctor: optional bytes &until = b"|";
+    consulting_doctor: optional bytes &until = b"|";
+    hospital_service: optional bytes &until = b"|";
+    temporary_location: optional bytes &until = b"|";
+    preadmit_test_indicator: optional bytes &until = b"|";
+    readmission_indicator: optional bytes &until = b"|";
+    admit_source: optional bytes &until = b"|";
+    ambulatory_status: optional bytes &until = b"|";
+    vip_indicator: optional bytes &until = b"|";
+    admitting_doctor: optional bytes &until = b"|";
+    patient_type: optional bytes &until = b"|";
+    visit_number: optional bytes &until = b"|";
+    financial_class: optional bytes &until = b"|";
+    charge_price_indicator: optional bytes &until = b"|";
+    courtesy_code: optional bytes &until = b"|";
+    credit_rating: optional bytes &until = b"|";
+    contract_code: optional bytes &until = b"|";
+    contract_effective_date: optional bytes &until = b"|";
+    contract_amount: optional bytes &until = b"|";
+    contract_period: optional bytes &until = b"|";
+    interest_code: optional bytes &until = b"|";
+    transfer_to_bad_debt_code: optional bytes &until = b"|";
+    transfer_to_bad_debt_date: optional bytes &until = b"|";
+    bad_debt_agency_code: optional bytes &until = b"|";
+    bad_debt_transfer_amount: optional bytes &until = b"|";
+    bad_debt_recovery_amount: optional bytes &until = b"|";
+    delete_account_indicator: optional bytes &until = b"|";
+    delete_account_date: optional bytes &until = b"|";
+    discharge_disposition: optional bytes &until = b"|";
+    discharged_to_location: optional bytes &until = b"|";
+    diet_type: optional bytes &until = b"|";
+    servicing_facility: optional bytes &until = b"|";
+    bed_status: optional bytes &until = b"|";
+    account_status: optional bytes &until = b"|";
+    pending_location: optional bytes &until = b"|";
+    prior_temporary_location: optional bytes &until = b"|";
+    admit_datetime: optional bytes &until = b"|";
+    discharge_datetime: optional bytes &until = b"|";
+    current_patient_balance: optional bytes &until = b"|";
+    total_charges: optional bytes &until = b"|";
+    total_adjustments: optional bytes &until = b"|";
+    total_payments: optional bytes &until = b"\r";
 };
+
+type OBR = unit {
+    set_id: optional bytes &until = b"|";
+    placer_order_number: optional bytes &until = b"|";
+    filler_order_number: optional bytes &until = b"|";
+    universal_service_id: bytes &until = b"|";
+    priority: optional bytes &until = b"|";
+    requested_datetime: optional bytes &until = b"|";
+    observation_datetime: optional bytes &until = b"|";
+    observation_end_datetime: optional bytes &until = b"|";
+    collection_volume: optional bytes &until = b"|";
+    collector_identifier: optional bytes &until = b"|";
+    specimen_action_code: optional bytes &until = b"|";
+    danger_code: optional bytes &until = b"|";
+    relevant_clinical_info: optional bytes &until = b"|";
+    specimen_received_datetime: optional bytes &until = b"|";
+    specimen_source: optional bytes &until = b"|";
+    ordering_provider: optional bytes &until = b"|";
+    order_callback_phone_number: optional bytes &until = b"|";
+    placer_field_1: optional bytes &until = b"|";
+    placer_field_2: optional bytes &until = b"|";
+    filler_field_1: optional bytes &until = b"|";
+    filler_field_2: optional bytes &until = b"|";
+    results_rpt_status_chng_datetime: optional bytes &until = b"|";
+    charge_to_practice: optional bytes &until = b"|";
+    diagnostic_service_section_id: optional bytes &until = b"|";
+    result_status: optional bytes &until = b"|";
+    parent_result: optional bytes &until = b"|";
+    quantity_timing: optional bytes &until = b"|";
+    result_copies_to: optional bytes &until = b"|";
+    parent: optional bytes &until = b"|";
+    transportation_mode: optional bytes &until = b"|";
+    reason_for_study: optional bytes &until = b"|";
+    principal_result_interpreter: optional bytes &until = b"|";
+    assistant_result_interpreter: optional bytes &until = b"|";
+    technician: optional bytes &until = b"|";
+    transcriptionist: optional bytes &until = b"|";
+    scheduled_datetime: optional bytes &until = b"\r";
+};
+
+type OBX = unit {
+    set_id: optional bytes &until = b"|";
+    value_type: bytes &until = b"|";
+    observation_identifier: bytes &until = b"|";
+    observation_sub_id: optional bytes &until = b"|";
+    observation_value: bytes &until = b"|";
+    units: optional bytes &until = b"|";
+    reference_range: optional bytes &until = b"|";
+    abnormal_flags: optional bytes &until = b"|";
+    probability: optional bytes &until = b"|";
+    nature_of_abnormal_test: optional bytes &until = b"|";
+    observation_result_status: optional bytes &until = b"|";
+    effective_date: optional bytes &until = b"|";
+    user_defined_access_checks: optional bytes &until = b"|";
+    observation_datetime: optional bytes &until = b"|";
+    producer_id: optional bytes &until = b"|";
+    responsible_observer: optional bytes &until = b"|";
+    observation_method: optional bytes &until = b"\r";
+};
+
+parser: type(Message);

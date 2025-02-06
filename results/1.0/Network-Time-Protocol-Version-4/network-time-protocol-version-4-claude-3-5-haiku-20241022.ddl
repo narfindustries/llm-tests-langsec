@@ -1,35 +1,46 @@
-module Network-Time-Protocol-Version-4
-
-type NTPPacket = {
-    leap_indicator: bit[2],
-    version_number: bit[3],
-    mode: bit[3],
-    stratum: bit[8],
-    poll_interval: bit[8],
-    precision: bit[8],
-    root_delay: bit[32],
-    root_dispersion: bit[32],
-    reference_id: bit[32],
-    reference_timestamp: bit[64],
-    originate_timestamp: bit[64],
-    receive_timestamp: bit[64],
-    transmit_timestamp: bit[64]
+type LeapIndicator = enum {
+    NoWarning = 0,
+    LastMinute61Seconds = 1,
+    LastMinute59Seconds = 2,
+    AlarmCondition = 3
 }
 
-parse ntp_packet = {
-    leap_indicator = take[2],
-    version_number = take[3],
-    mode = take[3],
-    stratum = take[8],
-    poll_interval = take[8],
-    precision = take[8],
-    root_delay = take[32],
-    root_dispersion = take[32],
-    reference_id = take[32],
-    reference_timestamp = take[64],
-    originate_timestamp = take[64],
-    receive_timestamp = take[64],
-    transmit_timestamp = take[64]
-} as NTPPacket
+type NTPMode = enum {
+    Reserved = 0,
+    SymmetricActive = 1,
+    SymmetricPassive = 2,
+    Client = 3,
+    Server = 4,
+    Broadcast = 5,
+    ControlMessage = 6,
+    PrivateUse = 7
+}
 
-main = ntp_packet
+type Stratum = uint8
+
+type NTPHeader = bits {
+    leap_indicator: LeapIndicator[2],
+    version: uint[3],
+    mode: NTPMode[3]
+}
+
+type NTPPacket = struct {
+    header: NTPHeader,
+    stratum: Stratum,
+    poll_interval: int8,
+    precision: int8,
+    root_delay: float32,
+    root_dispersion: float32,
+    reference_id: uint32,
+    reference_timestamp: float64,
+    originate_timestamp: float64,
+    receive_timestamp: float64,
+    transmit_timestamp: float64,
+    extensions: list(NTPExtension)?
+}
+
+type NTPExtension = struct {
+    type: uint16,
+    length: uint16,
+    data: list(uint8)
+}

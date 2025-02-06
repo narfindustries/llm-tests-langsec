@@ -1,77 +1,102 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-HParser *create_sqlite3_db_parser() {
-    // Define basic parsers
-    HParser *u8 = h_uint8();
-    HParser *u16 = h_uint16();
-    HParser *u32 = h_uint32();
-    HParser *u64 = h_uint64();
-    HParser *varint = h_varint();
+HParser *create_sqlite3_parser() {
+    // Define parsers for each field in the SQLite3 file format
+    HParser *header_string = h_token("SQLite format 3\000", 16);
+    HParser *page_size = h_uint16();
+    HParser *write_version = h_uint8();
+    HParser *read_version = h_uint8();
+    HParser *reserved_space = h_uint8();
+    HParser *max_payload_fraction = h_uint8();
+    HParser *min_payload_fraction = h_uint8();
+    HParser *leaf_payload_fraction = h_uint8();
+    HParser *file_change_counter = h_uint32();
+    HParser *database_size = h_uint32();
+    HParser *first_freelist_page = h_uint32();
+    HParser *total_freelist_pages = h_uint32();
+    HParser *schema_cookie = h_uint32();
+    HParser *schema_format_number = h_uint32();
+    HParser *default_cache_size = h_uint32();
+    HParser *largest_root_btree_page = h_uint32();
+    HParser *text_encoding = h_uint32();
+    HParser *user_version = h_uint32();
+    HParser *incremental_vacuum = h_uint32();
+    HParser *application_id = h_uint32();
+    HParser *reserved_for_expansion = h_repeat_n(h_uint8(), 20);
+    HParser *version_valid_for_number = h_uint32();
+    HParser *sqlite_version_number = h_uint32();
 
-    // Define SQLite3 file header
-    HParser *sqlite3_header = h_sequence(
-        h_token("SQLite format 3", 16),
-        h_endian(H_LITTLE_ENDIAN, h_sequence(
-            u16,  // Page size
-            u8,   // File format write version
-            u8,   // File format read version
-            u8,   // Reserved space at the end of each page
-            u8,   // Maximum embedded payload fraction
-            u8,   // Minimum embedded payload fraction
-            u8,   // Leaf payload fraction
-            u32,  // File change counter
-            u32,  // Size of the database file in pages
-            u32,  // Page number of the first freelist trunk page
-            u32,  // Total number of freelist pages
-            u32,  // Schema cookie
-            u32,  // Schema format number
-            u32,  // Default page cache size
-            u32,  // Largest root b-tree page number
-            u32,  // Text encoding
-            u32,  // User version
-            u32,  // Incremental vacuum mode
-            u32,  // Application ID
-            h_repeat_n(u8, 20), // Reserved for expansion
-            u32,  // Version-valid-for number
-            u32   // SQLite version number
-        )),
+    // Combine all parsers into a single parser for the SQLite3 header
+    HParser *sqlite3_parser = h_sequence(
+        header_string,
+        page_size,
+        write_version,
+        read_version,
+        reserved_space,
+        max_payload_fraction,
+        min_payload_fraction,
+        leaf_payload_fraction,
+        file_change_counter,
+        database_size,
+        first_freelist_page,
+        total_freelist_pages,
+        schema_cookie,
+        schema_format_number,
+        default_cache_size,
+        largest_root_btree_page,
+        text_encoding,
+        user_version,
+        incremental_vacuum,
+        application_id,
+        reserved_for_expansion,
+        version_valid_for_number,
+        sqlite_version_number,
         NULL
     );
 
-    // Define a parser for a single page
-    HParser *page = h_sequence(
-        h_choice(
-            h_token("\x00", 1), // Unused page
-            h_token("\x02", 1), // Interior index b-tree page
-            h_token("\x05", 1), // Interior table b-tree page
-            h_token("\x0A", 1), // Leaf index b-tree page
-            h_token("\x0D", 1)  // Leaf table b-tree page
-        ),
-        h_rest(), // Rest of the page content
-        NULL
-    );
-
-    // Define the main parser for the SQLite3 database
-    HParser *sqlite3_db_parser = h_sequence(
-        sqlite3_header,
-        h_many(page),
-        NULL
-    );
-
-    return sqlite3_db_parser;
+    return sqlite3_parser;
 }
 
-int main(int argc, char **argv) {
-    HParser *parser = create_sqlite3_db_parser();
-    if (!parser) {
-        fprintf(stderr, "Failed to create SQLite3 DB parser\n");
-        return 1;
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite3-db-file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    // Example usage of the parser
-    // This part would typically involve reading a file and parsing it
-    // For demonstration purposes, we will not implement file reading here
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file");
+        return EXIT_FAILURE;
+    }
 
-    h_parser_free(parser);
-    return 0;
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *data = (unsigned char *)malloc(file_size);
+    if (!data) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(data, 1, file_size, file);
+    fclose(file);
+
+    HParser *sqlite3_parser = create_sqlite3_parser();
+    HParseResult *result = h_parse(sqlite3_parser, data, file_size);
+
+    if (result) {
+        printf("SQLite3 file parsed successfully.\n");
+        h_parse_result_free(result);
+    } else {
+        fprintf(stderr, "Failed to parse SQLite3 file.\n");
+    }
+
+    free(data);
+    h_parser_free(sqlite3_parser);
+    return EXIT_SUCCESS;
 }

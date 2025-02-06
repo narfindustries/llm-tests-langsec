@@ -1,18 +1,17 @@
-types:
-  icmp_header:
-    seq:
-      type: u2
-    checksum:
-      type: u2
-    type:
-      type: u1
-    code:
-      type: u1
-  icmp_gemini_packet:
-    header:
-      type: icmp_header
-    data:
-      type: seq
-      size: 20
-
+type: struct
+endian: be
+fields:
+  - id: type
+    type: u1
+  - id: code
+    type: u1
+  - id: checksum
+    type: u2
+  - id: identifier
+    type: u2
+  - id: sequence_number
+    type: u2
+  - id: data
+    type: bytes
+    size: lambda: self._io.size() - self._io.pos()
 

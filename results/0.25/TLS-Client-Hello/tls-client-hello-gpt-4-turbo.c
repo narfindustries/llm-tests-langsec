@@ -1,60 +1,108 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic building blocks using Hammer
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16be();
-static HParser *uint24 = h_bits(24, false);
-static HParser *uint32 = h_uint32be();
+// Define parsers for basic types
+HParser *uint8;
+HParser *uint16;
+HParser *uint32;
 
-// Parser for ProtocolVersion structure
-static HParser *protocol_version() {
-    return h_sequence(uint8, uint8, NULL);
+// Function to create a parser for a byte sequence with a preceding length byte
+HParser *bytes_with_length_u8() {
+    return h_length_value(uint8, h_many(uint8));
 }
 
-// Parser for Random structure
-static HParser *random_bytes() {
-    return h_sequence(uint32, h_bytes(28), NULL);
+// Function to create a parser for a byte sequence with a preceding two-byte length
+HParser *bytes_with_length_u16() {
+    return h_length_value(uint16, h_many(uint8));
 }
 
-// Parser for SessionID
-static HParser *session_id() {
-    return h_length_value(uint8, h_uint8());
+// Parser for the Random field (32 bytes)
+HParser *random_bytes;
+
+// Parser for the Session ID (0-32 bytes)
+HParser *session_id;
+
+// Parser for the Cipher Suites list
+HParser *cipher_suites;
+
+// Parser for the Compression Methods (1 byte, but can be more in other contexts)
+HParser *compression_methods;
+
+// Parser for a single extension
+HParser *extension() {
+    return h_sequence(uint16, bytes_with_length_u16(), NULL);
 }
 
-// Parser for Cipher Suites
-static HParser *cipher_suites() {
-    return h_length_value(uint16, h_many1(uint16));
-}
+// Parser for the Extensions field
+HParser *extensions;
 
-// Parser for Compression Methods
-static HParser *compression_methods() {
-    return h_length_value(uint8, h_many1(uint8));
-}
+// Parser for the ClientHello message
+HParser *client_hello;
 
-// Parser for Extension
-static HParser *extension() {
-    return h_sequence(uint16, h_length_value(uint16, h_bytes(0)), NULL);
-}
-
-// Parser for Extensions
-static HParser *extensions() {
-    return h_length_value(uint16, h_many1(extension()));
-}
-
-// Parser for TLS Client Hello
-static HParser *tls_client_hello() {
-    return h_sequence(
-        protocol_version(),  // Version
-        random_bytes(),      // Random
-        session_id(),        // Session ID
-        cipher_suites(),     // Cipher Suites
-        compression_methods(), // Compression Methods
-        extensions(),        // Extensions
+void init_parsers() {
+    uint8 = h_uint8();
+    uint16 = h_bits(16, false);
+    uint32 = h_bits(32, false);
+    random_bytes = h_repeat_n(uint8, 32);
+    session_id = bytes_with_length_u8();
+    cipher_suites = bytes_with_length_u16();
+    compression_methods = bytes_with_length_u8();
+    extensions = bytes_with_length_u16();
+    client_hello = h_sequence(
+        uint16,          // legacy_version (TLS 1.2 fixed value)
+        random_bytes,    // random
+        session_id,      // session_id
+        cipher_suites,   // cipher_suites
+        compression_methods, // compression_methods
+        extensions,      // extensions
         NULL
     );
 }
 
 int main(int argc, char *argv[]) {
-    HParser *parser = tls_client_hello();
-    HParseResult *result = h_parse(parser, (const uint8_t *)"\x03\x03\x5a\x79\x6b\xcd\x5b\x90\x9d\x9b\x70\x17\x95\x99\x25\xe9\x0f\xaf\xf4\x07\x1a\x49\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file containing ClientHello>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    rewind(fp);
+
+    uint8_t *data = malloc(size);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(fp);
+        return 1;
+    }
+
+    if (fread(data, 1, size, fp) != size) {
+        perror("Failed to read file");
+        free(data);
+        fclose(fp);
+        return 1;
+    }
+    fclose(fp);
+
+    init_parsers();
+
+    HParseResult *result = h_parse(client_hello, data, size);
+    if (result) {
+        printf("ClientHello parsed successfully.\n");
+        h_pprint(stdout, result->ast, 0, 0);
+    } else {
+        printf("Failed to parse ClientHello.\n");
+    }
+
+    h_parse_result_free(result);
+    free(data);
+
+    return 0;
+}

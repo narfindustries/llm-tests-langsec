@@ -1,46 +1,130 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <hammer/hammer.h>
 
-typedef struct {
-    uint16_t transaction_id;
-    uint16_t protocol_id;
-    uint16_t length;
-    uint8_t unit_id;
-    uint8_t function_code;
-    uint8_t data[];
-} modbus_packet_t;
+HParser *create_modbus_parser();
 
-static HParser *modbus_packet_parser;
-
-static HParser *create_modbus_packet_parser() {
-    HParser *transaction_id = h_uint16();
-    HParser *protocol_id = h_uint16();
-    HParser *length = h_uint16();
-    HParser *unit_id = h_uint8();
-    HParser *function_code = h_uint8();
-    HParser *data = h_repeat(h_uint8(), h_left(length, h_uint16_val(2)));
-
-    return h_sequence(transaction_id, protocol_id, length, unit_id, function_code, data, NULL);
-}
-
-int main(int argc, char **argv) {
-    modbus_packet_parser = create_modbus_packet_parser();
-
-    // Example usage
-    const uint8_t example_data[] = {0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x11, 0x03, 0x00, 0x6B, 0x00, 0x03};
-    HParseResult *result = h_parse(modbus_packet_parser, example_data, sizeof(example_data));
-
-    if (result) {
-        modbus_packet_t *packet = (modbus_packet_t *)result->ast;
-        printf("Transaction ID: %u\n", packet->transaction_id);
-        printf("Protocol ID: %u\n", packet->protocol_id);
-        printf("Length: %u\n", packet->length);
-        printf("Unit ID: %u\n", packet->unit_id);
-        printf("Function Code: %u\n", packet->function_code);
-        h_parse_result_free(result);
-    } else {
-        fprintf(stderr, "Failed to parse Modbus packet\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file>\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
-    h_parser_free(modbus_packet_parser);
-    return 0;
+    FILE *file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return EXIT_FAILURE;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    unsigned char *buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return EXIT_FAILURE;
+    }
+
+    fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    HParser *parser = create_modbus_parser();
+    HParseResult *result = h_parse(parser, buffer, file_size);
+
+    if (result->ast) {
+        printf("Parsing successful!\n");
+    } else {
+        printf("Parsing failed!\n");
+    }
+
+    h_parse_result_free(result);
+    free(buffer);
+    return EXIT_SUCCESS;
+}
+
+HParser *create_modbus_parser() {
+    HParser *device_address_parser = h_uint8();
+    HParser *function_code_parser = h_uint8();
+
+    HParser *read_coils_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Coils
+        NULL
+    );
+
+    HParser *read_discrete_inputs_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Inputs
+        NULL
+    );
+
+    HParser *read_holding_registers_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Registers
+        NULL
+    );
+
+    HParser *read_input_registers_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Registers
+        NULL
+    );
+
+    HParser *write_single_coil_parser = h_sequence(
+        h_uint16(), // Coil Address
+        h_uint16(), // Coil Value
+        NULL
+    );
+
+    HParser *write_single_register_parser = h_sequence(
+        h_uint16(), // Register Address
+        h_uint16(), // Register Value
+        NULL
+    );
+
+    HParser *write_multiple_coils_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Coils
+        h_uint8(),  // Byte Count
+        h_repeat_n(h_uint8(), 1), // Coil Values (placeholder for actual count)
+        NULL
+    );
+
+    HParser *write_multiple_registers_parser = h_sequence(
+        h_uint16(), // Starting Address
+        h_uint16(), // Quantity of Registers
+        h_uint8(),  // Byte Count
+        h_repeat_n(h_uint8(), 1), // Register Values (placeholder for actual count)
+        NULL
+    );
+
+    HParser *exception_response_parser = h_sequence(
+        h_uint8(), // Exception Code
+        NULL
+    );
+
+    HParser *data_parser = h_choice(
+        read_coils_parser,
+        read_discrete_inputs_parser,
+        read_holding_registers_parser,
+        read_input_registers_parser,
+        write_single_coil_parser,
+        write_single_register_parser,
+        write_multiple_coils_parser,
+        write_multiple_registers_parser,
+        exception_response_parser,
+        NULL
+    );
+
+    HParser *crc_parser = h_uint16();
+
+    return h_sequence(
+        device_address_parser,
+        function_code_parser,
+        data_parser,
+        crc_parser,
+        NULL
+    );
 }

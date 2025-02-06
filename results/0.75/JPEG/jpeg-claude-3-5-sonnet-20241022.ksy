@@ -2,47 +2,77 @@ meta:
   id: jpeg
   file-extension: jpg
   endian: be
-
 seq:
   - id: segments
     type: segment
-    repeat: eos
-
+    repeat: until
+    repeat-until: _.marker == marker_type::eoi
 types:
   segment:
     seq:
-      - id: magic
+      - id: marker_start
         contents: [0xff]
       - id: marker
         type: u1
-      - id: length
-        type: u2
-        if: marker != 0xff and marker != 0x01 and marker != 0xd0 and marker != 0xd1 and marker != 0xd2 and marker != 0xd3 and marker != 0xd4 and marker != 0xd5 and marker != 0xd6 and marker != 0xd7
+        enum: marker_type
       - id: data
-        size: length - 2
-        if: marker != 0xff and marker != 0x01 and marker != 0xd0 and marker != 0xd1 and marker != 0xd2 and marker != 0xd3 and marker != 0xd4 and marker != 0xd5 and marker != 0xd6 and marker != 0xd7
         type:
           switch-on: marker
           cases:
-            0xe0: app0_segment
-            0xdb: dqt_segment
-            0xc0: sof0_segment
-            0xc4: dht_segment
-            0xda: sos_segment
-            _: raw_segment
-
-  app0_segment:
+            'marker_type::soi': segment_soi
+            'marker_type::eoi': segment_eoi
+            'marker_type::app0': segment_app0
+            'marker_type::app1': segment_appn
+            'marker_type::app2': segment_appn
+            'marker_type::app3': segment_appn
+            'marker_type::app4': segment_appn
+            'marker_type::app5': segment_appn
+            'marker_type::app6': segment_appn
+            'marker_type::app7': segment_appn
+            'marker_type::app8': segment_appn
+            'marker_type::app9': segment_appn
+            'marker_type::app10': segment_appn
+            'marker_type::app11': segment_appn
+            'marker_type::app12': segment_appn
+            'marker_type::app13': segment_appn
+            'marker_type::app14': segment_appn
+            'marker_type::app15': segment_appn
+            'marker_type::sof0': segment_sof
+            'marker_type::sof1': segment_sof
+            'marker_type::sof2': segment_sof
+            'marker_type::dht': segment_dht
+            'marker_type::dqt': segment_dqt
+            'marker_type::dri': segment_dri
+            'marker_type::sos': segment_sos
+            'marker_type::com': segment_com
+            _: segment_unknown
+  segment_soi: {}
+  segment_eoi: {}
+  segment_unknown:
     seq:
+      - id: length
+        type: u2
+      - id: data
+        size: length - 2
+  segment_appn:
+    seq:
+      - id: length
+        type: u2
+      - id: data
+        size: length - 2
+  segment_app0:
+    seq:
+      - id: length
+        type: u2
       - id: identifier
         type: str
         size: 5
-        encoding: ascii
-      - id: version_major
+        encoding: ASCII
+      - id: version
+        type: u2
+      - id: units
         type: u1
-      - id: version_minor
-        type: u1
-      - id: density_units
-        type: u1
+        enum: density_units
       - id: x_density
         type: u2
       - id: y_density
@@ -51,30 +81,12 @@ types:
         type: u1
       - id: thumbnail_height
         type: u1
-
-  dqt_segment:
+      - id: thumbnail_data
+        size: thumbnail_width * thumbnail_height * 3
+  segment_sof:
     seq:
-      - id: tables
-        type: dqt_table
-        repeat: eos
-
-  dqt_table:
-    seq:
-      - id: precision_and_id
-        type: u1
-      - id: values
-        type: u1
-        repeat: expr
-        repeat-expr: precision == 0 ? 64 : 128
-
-    instances:
-      precision:
-        value: (precision_and_id & 0xf0) >> 4
-      table_id:
-        value: precision_and_id & 0x0f
-
-  sof0_segment:
-    seq:
+      - id: length
+        type: u2
       - id: bits_per_sample
         type: u1
       - id: image_height
@@ -87,7 +99,6 @@ types:
         type: component
         repeat: expr
         repeat-expr: num_components
-
   component:
     seq:
       - id: component_id
@@ -96,13 +107,18 @@ types:
         type: u1
       - id: quantization_table_id
         type: u1
-
-  dht_segment:
+    instances:
+      sampling_factor_x:
+        value: (sampling_factors & 0xf0) >> 4
+      sampling_factor_y:
+        value: sampling_factors & 0x0f
+  segment_dht:
     seq:
+      - id: length
+        type: u2
       - id: tables
         type: huffman_table
         repeat: eos
-
   huffman_table:
     seq:
       - id: table_info
@@ -114,39 +130,115 @@ types:
       - id: values
         type: u1
         repeat: expr
-        repeat-expr: num_codes_sum
-
+        repeat-expr: length_of_values
     instances:
       table_class:
         value: (table_info & 0xf0) >> 4
       table_id:
         value: table_info & 0x0f
-      num_codes_sum:
-        value: num_codes[0] + num_codes[1] + num_codes[2] + num_codes[3] + num_codes[4] + num_codes[5] + num_codes[6] + num_codes[7] + num_codes[8] + num_codes[9] + num_codes[10] + num_codes[11] + num_codes[12] + num_codes[13] + num_codes[14] + num_codes[15]
-
-  sos_segment:
+      length_of_values:
+        value: num_codes[0] + num_codes[1] + num_codes[2] + num_codes[3] + 
+               num_codes[4] + num_codes[5] + num_codes[6] + num_codes[7] + 
+               num_codes[8] + num_codes[9] + num_codes[10] + num_codes[11] + 
+               num_codes[12] + num_codes[13] + num_codes[14] + num_codes[15]
+  segment_dqt:
     seq:
+      - id: length
+        type: u2
+      - id: tables
+        type: quantization_table
+        repeat: eos
+  quantization_table:
+    seq:
+      - id: table_info
+        type: u1
+      - id: values
+        type: u1
+        repeat: expr
+        repeat-expr: 64
+        if: precision == 0
+      - id: values_16
+        type: u2
+        repeat: expr
+        repeat-expr: 64
+        if: precision == 1
+    instances:
+      table_id:
+        value: table_info & 0x0f
+      precision:
+        value: (table_info & 0xf0) >> 4
+  segment_dri:
+    seq:
+      - id: length
+        type: u2
+      - id: restart_interval
+        type: u2
+  segment_sos:
+    seq:
+      - id: length
+        type: u2
       - id: num_components
         type: u1
       - id: components
-        type: sos_component
+        type: scan_component
         repeat: expr
         repeat-expr: num_components
-      - id: start_spectral
+      - id: start_spectral_selection
         type: u1
-      - id: end_spectral
+      - id: end_spectral_selection
         type: u1
-      - id: approx_bit_pos
+      - id: successive_approximation
         type: u1
-
-  sos_component:
+      - id: image_data
+        size-eos: true
+  scan_component:
     seq:
       - id: component_id
         type: u1
       - id: huffman_table_ids
         type: u1
-
-  raw_segment:
+    instances:
+      dc_table_id:
+        value: (huffman_table_ids & 0xf0) >> 4
+      ac_table_id:
+        value: huffman_table_ids & 0x0f
+  segment_com:
     seq:
-      - id: raw_data
-        size-eos: true
+      - id: length
+        type: u2
+      - id: comment
+        type: str
+        size: length - 2
+        encoding: ASCII
+enums:
+  marker_type:
+    0xd8: soi
+    0xd9: eoi
+    0xe0: app0
+    0xe1: app1
+    0xe2: app2
+    0xe3: app3
+    0xe4: app4
+    0xe5: app5
+    0xe6: app6
+    0xe7: app7
+    0xe8: app8
+    0xe9: app9
+    0xea: app10
+    0xeb: app11
+    0xec: app12
+    0xed: app13
+    0xee: app14
+    0xef: app15
+    0xc0: sof0
+    0xc1: sof1
+    0xc2: sof2
+    0xc4: dht
+    0xdb: dqt
+    0xdd: dri
+    0xda: sos
+    0xfe: com
+  density_units:
+    0: none
+    1: pixels_per_inch
+    2: pixels_per_cm

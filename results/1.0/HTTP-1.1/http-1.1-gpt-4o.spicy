@@ -1,77 +1,100 @@
 module HTTP;
 
-import spicy;
+type HTTPVersion = unit {
+    major: uint8;
+    dot:  literal; # Correcting by using a literal type
+    minor: uint8;
+};
 
-@export
-module HTTP {
+type Method = enum {
+    OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, CONNECT
+};
 
-    public type Request = unit {
-        method: bytes &size=method_len;
-        raw_path: bytes &size=raw_path_len;
-        version_http: bytes &size=version_http_len;
+type StatusCode = enum {
+    CONTINUE = 100,
+    SWITCHING_PROTOCOLS = 101,
+    OK = 200,
+    CREATED = 201,
+    ACCEPTED = 202,
+    NON_AUTHORITATIVE_INFORMATION = 203,
+    NO_CONTENT = 204,
+    RESET_CONTENT = 205,
+    PARTIAL_CONTENT = 206,
+    MULTIPLE_CHOICES = 300,
+    MOVED_PERMANENTLY = 301,
+    FOUND = 302,
+    SEE_OTHER = 303,
+    NOT_MODIFIED = 304,
+    USE_PROXY = 305,
+    TEMPORARY_REDIRECT = 307,
+    BAD_REQUEST = 400,
+    UNAUTHORIZED = 401,
+    PAYMENT_REQUIRED = 402,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+    METHOD_NOT_ALLOWED = 405,
+    NOT_ACCEPTABLE = 406,
+    PROXY_AUTHENTICATION_REQUIRED = 407,
+    REQUEST_TIMEOUT = 408,
+    CONFLICT = 409,
+    GONE = 410,
+    LENGTH_REQUIRED = 411,
+    PRECONDITION_FAILED = 412,
+    REQUEST_ENTITY_TOO_LARGE = 413,
+    REQUEST_URI_TOO_LONG = 414,
+    UNSUPPORTED_MEDIA_TYPE = 415,
+    REQUESTED_RANGE_NOT_SATISFIABLE = 416,
+    EXPECTATION_FAILED = 417,
+    INTERNAL_SERVER_ERROR = 500,
+    NOT_IMPLEMENTED = 501,
+    BAD_GATEWAY = 502,
+    SERVICE_UNAVAILABLE = 503,
+    GATEWAY_TIMEOUT = 504,
+    HTTP_VERSION_NOT_SUPPORTED = 505
+};
 
-        on %init {
-            method_len = find_first(hdr, " ") - 0;
-            raw_path_len = find_first(hdr, " ", method_len + 1) - (method_len + 1);
-            version_http_len = find_first(hdr, "\r\n", method_len + raw_path_len + 2) - (method_len + raw_path_len + 2);
-        }
+type Header = unit {
+    key: bytes &restof=":" &trim;
+    ":";
+    value: bytes &restof="\r\n" &trim;
+};
 
-        var method_len: uint64;
-        var raw_path_len: uint64;
-        var version_http_len: uint64;
+type RequestLine = unit {
+    method: Method;
+    " ";
+    uri: bytes &restof=" " &trim;
+    " ";
+    version: HTTPVersion;
+    "\r\n";
+};
 
-        on %done {
-            print(fmt("Method: %s", method));
-            print(fmt("Path: %s", raw_path));
-            print(fmt("Version: %s", version_http));
-        }
-    };
+type StatusLine = unit {
+    version: HTTPVersion;
+    " ";
+    status_code: StatusCode;
+    " ";
+    reason_phrase: bytes &restof="\r\n" &trim;
+    "\r\n";
+};
 
-    public type Header = unit {
-        headers: map[string, string] &restofdata;
+type MessageHeader = unit {
+    headers: sequence of Header &until="\r\n";
+};
 
-        on %restofdata {
-            local lines = split_string(be.headers_bytes, "\r\n", true);
-            for (line in lines) {
-                if ( line.empty() )
-                    break;
+type Request = unit {
+    request_line: RequestLine;
+    headers: MessageHeader;
+    "\r\n";
+    body: bytes &remainder;
+};
 
-                local name_value = split_string(line, ":", true);
-                if ( |name_value| >= 2 ) {
-                    local name = trim_sp(name_value[0]);
-                    local value = trim_sp(join(name_value[1+:], ":"));
-                    headers[name] = value;
-                }
-            }
-        }
+type Response = unit {
+    status_line: StatusLine;
+    headers: MessageHeader;
+    "\r\n";
+    body: bytes &remainder;
+};
 
-        var headers_bytes: bytes &restofdata;
-    };
-
-    public type Body = unit {
-        body_content: bytes &size=length &optional;
-        var length: uint64;
-    };
-
-    public type HTTPMessage = unit {
-        request: Request;
-        header: Header;
-        body: Body &depends=(header.headers["Content-Length"] ? (body.length = to_uint(header.headers["Content-Length"])) : false);
-    };
-
-    function to_uint(s: string): uint64 {
-        return to_integer(s) as uint64;
-    }
-
-    function trim_sp(s: string): string {
-        return ltrim_sp(rtrim_sp(s));
-    }
-
-    function ltrim_sp(s: string): string {
-        return sub_string(s, 0, find_first_not_of(s, " "));
-    }
-
-    function rtrim_sp(s: string): string {
-        return sub_string(s, find_last_not_of(s, " ") + 1);
-    }
-}
+public type HTTPMessage = unit {
+    body: (Request | Response);
+};

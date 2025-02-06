@@ -1,64 +1,81 @@
 meta:
-  id: network-time-protocol-version-4
+  id: ntp_packet
   title: Network Time Protocol Version 4
-  license: MIT
-  doc: |
-    Network Time Protocol (NTP) is a networking protocol for clock
-    synchronization between computer systems.
-
+  endian: be
 seq:
-  - id: flags
-    type: u1
-
-  - id: stratum
-    type: u1
-
+  - id: leap_indicator
+    type: u2
+  - id: version_number
+    type: u3
+  - id: mode
+    type: u3
   - id: poll
-    type: u1
-
+    type: u8
   - id: precision
-    type: u1
-
-  - id: delay
+    type: u8
+  - id: root_delay
     type: u4
-
-  - id: dispersion
+  - id: root_dispersion
     type: u4
-
-  - id: identifier
-    type: str
-    size: 4
-
-  - id: reference_timestamp
-    type: f8
-
-  - id: originate_timestamp
-    type: f8
-
+  - id: ref_id
+    type: u4
+  - id: ref_timestamp
+    type: u8
+  - id: origin_timestamp
+    type: u8
   - id: receive_timestamp
-    type: f8
-
+    type: u8
   - id: transmit_timestamp
-    type: f8
-
-  - id: extension
-    type: extension
-    repeat: expr => flags & (1 << 7) != 0
-
+    type: u8
+  - id: extension_fields
+    type: extension_field
+    repeat: expr
+    repeat_expr: extension_field.length > 0
 types:
-  extension:
+  extension_field:
     seq:
       - id: type
         type: u2
-
       - id: length
         type: u2
-
       - id: value
-        type: str
-        size: length
-
-    if: type == 0
-    then:
-      - id: sntp_version
-        type: u1
+        type: switch_on
+        cases:
+          - case: type == 0
+            type: reserved
+          - case: type == 1
+            type: mac
+          - case: type == 2
+            type: crypto_nak
+          - case: type == 3
+            type: autokey
+          - case: type == 4
+            type: nts
+          - case: type >= 5
+            type: reserved
+    types:
+      reserved:
+        seq:
+          - id: reserved_data
+            size: 4
+            type: u1
+      mac:
+        seq:
+          - id: mac_data
+            size: 20
+            type: u1
+      crypto_nak:
+        seq:
+          - id: crypto_nak_data
+            size: 20
+            type: u1
+      autokey:
+        seq:
+          - id: autokey_data
+            size: 20
+            type: u1
+      nts:
+        seq:
+          - id: nts_data
+            size: 20
+            type: u1

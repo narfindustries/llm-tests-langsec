@@ -1,96 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="urn:arp-schema"
-           xmlns:tns="urn:arp-schema"
-           elementFormDefault="qualified"
-           dfdl:format="true"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ dfdl.xsd">
-
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/arp" xmlns:tns="http://example.com/arp" elementFormDefault="qualified" attributeFormDefault="unqualified">
     <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:ARPFormat"/>
-        </xs:appinfo>
+        <xs:documentation>DFDL Schema for ARP Packet</xs:documentation>
     </xs:annotation>
 
-    <xs:complexType name="ARPHeader">
-        <xs:sequence>
-            <xs:element name="HardwareType" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:property name="byteOrder" value="bigEndian"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="ProtocolType" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:property name="byteOrder" value="bigEndian"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="HardwareSize" type="xs:unsignedByte"/>
-            <xs:element name="ProtocolSize" type="xs:unsignedByte"/>
-            <xs:element name="Operation" type="xs:unsignedShort">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:property name="byteOrder" value="bigEndian"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="SenderHardwareAddress" type="xs:hexBinary">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:lengthKind value="explicit"/>
-                        <dfdl:length value="{ ../HardwareSize * 8 }"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="SenderProtocolAddress" type="xs:hexBinary">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:lengthKind value="explicit"/>
-                        <dfdl:length value="{ ../ProtocolSize * 8 }"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="TargetHardwareAddress" type="xs:hexBinary">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:lengthKind value="explicit"/>
-                        <dfdl:length value="{ ../HardwareSize * 8 }"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-            <xs:element name="TargetProtocolAddress" type="xs:hexBinary">
-                <xs:annotation>
-                    <xs:appinfo>
-                        <dfdl:lengthKind value="explicit"/>
-                        <dfdl:length value="{ ../ProtocolSize * 8 }"/>
-                    </xs:appinfo>
-                </xs:annotation>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:element name="ARP" type="tns:ARPHeader">
-        <xs:annotation>
-            <xs:appinfo>
-                <dfdl:format ref="tns:ARPFormat"/>
-            </xs:appinfo>
-        </xs:annotation>
+    <xs:element name="ARPPacket">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="HardwareType" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format byteOrder="bigEndian" lengthKind="implicit" length="2"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ProtocolType" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format byteOrder="bigEndian" lengthKind="implicit" length="2"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="HardwareAddressLength" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="implicit" length="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ProtocolAddressLength" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="implicit" length="1"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Operation" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format byteOrder="bigEndian" lengthKind="implicit" length="2"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="SenderHardwareAddress" type="xs:hexBinary">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="explicit" length="{../HardwareAddressLength}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="SenderProtocolAddress" type="xs:hexBinary">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="explicit" length="{../ProtocolAddressLength}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="TargetHardwareAddress" type="xs:hexBinary">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="explicit" length="{../HardwareAddressLength}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="TargetProtocolAddress" type="xs:hexBinary">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:format lengthKind="explicit" length="{../ProtocolAddressLength}"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
     </xs:element>
-
-    <xs:annotation>
-        <xs:appinfo>
-            <dfdl:defineFormat name="ARPFormat">
-                <dfdl:format byteOrder="bigEndian"
-                             encoding="ascii"
-                             lengthKind="explicit"
-                             lengthUnits="bytes"
-                             initiator="0x0806"/>
-            </dfdl:defineFormat>
-        </xs:appinfo>
-    </xs:annotation>
 </xs:schema>

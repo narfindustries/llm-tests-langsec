@@ -2,39 +2,96 @@ module TIFF;
 
 import spicy;
 
-type TIFFHeader = unit {
-    magic: uint16 &validate=(magic == 0x4949 || magic == 0x4D4D),
-    version: uint16 &validate=(version == 42),
-    ifd_offset: uint32,
-};
+public type TIFF = unit {
+    magic: uint16 {
+        if ( self == 0x4949 ) 
+            : spicy::ByteOrder::LittleEndian;
+        else if ( self == 0x4D4D ) 
+            : spicy::ByteOrder::BigEndian;
+        else 
+            : error("Invalid byte order magic");
+    };
 
-type IFDEntry = unit {
-    tag: uint16,
-    type: uint16,
-    count: uint32,
-    value_offset: uint32,
-};
+    version: uint16 &check=(version == 42);
+    ifd_offset: uint32;
 
-type IFD = unit {
-    num_entries: uint16,
-    entries: array[num_entries] of IFDEntry,
-    next_ifd_offset: uint32,
-};
+    ifds: vector<IFD> &until($input.eod()) = parse_ifds(ifd_offset);
 
-public type TIFFFile = unit {
-    header: TIFFHeader,
-    ifds: array of IFD {
-        count = (self.header.ifd_offset != 0) ? 1 : 0,
-        until ($$ >= self.header.ifd_offset + self.header.ifd_offset)
-    } &length=(self.header.ifd_offset != 0) ? 1 : 0,
-};
-
-public module Parser = spicy::Parser for TIFFFile {
-    on %init {
-        print "TIFF parser initialized";
+    function parse_ifds(offset: uint32): vector<IFD> {
+        local ifds: vector<IFD>;
+        while ( offset != 0 ) {
+            local ifd = parse_at(offset, IFD);
+            ifds += ifd;
+            offset = ifd.next_ifd_offset;
+        }
+        return ifds;
     }
+};
+
+public type IFD = unit {
+    num_entries: uint16;
+    entries: vector<IFDEntry>(num_entries);
+    next_ifd_offset: uint32;
 
     on %done {
-        print "TIFF parsing completed";
+        for ( local entry in entries ) {
+            if ( entry.tag == TAGS::SUB_IFDS ) {
+                # Handle SubIFDs
+                local sub_ifd_offsets = parse_at(entry.value_offset, vector<uint32>(entry.count));
+                for ( local sub_offset in sub_ifd_offsets ) {
+                    parse_at(sub_offset, IFD);
+                }
+            }
+        }
     }
+};
+
+public type IFDEntry = unit {
+    tag: uint16;
+    type: uint16;
+    count: uint32;
+    value_offset: uint32;
+};
+
+# Define the constants for the TIFF tags.
+public const TAGS = enum {
+    IMAGE_WIDTH = 256,
+    IMAGE_LENGTH = 257,
+    BITS_PER_SAMPLE = 258,
+    COMPRESSION = 259,
+    PHOTOMETRIC_INTERPRETATION = 262,
+    STRIP_OFFSETS = 273,
+    SAMPLES_PER_PIXEL = 277,
+    ROWS_PER_STRIP = 278,
+    STRIP_BYTE_COUNTS = 279,
+    X_RESOLUTION = 282,
+    Y_RESOLUTION = 283,
+    RESOLUTION_UNIT = 296,
+    SOFTWARE = 305,
+    DATE_TIME = 306,
+    ARTIST = 315,
+    COLOR_MAP = 320,
+    TILE_WIDTH = 322,
+    TILE_LENGTH = 323,
+    TILE_OFFSETS = 324,
+    TILE_BYTE_COUNTS = 325,
+    SUB_IFDS = 330,
+    PREDICTOR = 317,
+    SAMPLE_FORMAT = 339
+};
+
+# Define the field types for TIFF.
+public const FIELD_TYPES = enum {
+    BYTE = 1,
+    ASCII = 2,
+    SHORT = 3,
+    LONG = 4,
+    RATIONAL = 5,
+    SBYTE = 6,
+    UNDEFINED = 7,
+    SSHORT = 8,
+    SLONG = 9,
+    SRATIONAL = 10,
+    FLOAT = 11,
+    DOUBLE = 12
 };

@@ -1,32 +1,68 @@
+The error message indicates that the DFDL namespace declaration is missing from the root `<xs:schema>` element.  I've added it below.  However,  a complete and accurate DFDL schema for the entire NITF standard is a massive undertaking beyond the scope of this interaction.  This remains a highly simplified example.  Real-world NITF processing requires a much more extensive and detailed schema reflecting the full complexity of MIL-STD-2500C.
+
+
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dfdl="http://www.ogf.org/dfdl/1.0/"
            targetNamespace="http://example.org/nitf"
            xmlns="http://example.org/nitf"
            elementFormDefault="qualified">
 
+  <xs:annotation>
+    <xs:documentation>Simplified DFDL schema for NITF.  This is NOT a complete representation of the standard. Consult MIL-STD-2500C for full details.</xs:documentation>
+  </xs:annotation>
+
+  <dfdl:defineSchema>
+    <dfdl:format ref="http://www.ogf.org/dfdl/1.0/binary"/>
+  </dfdl:defineSchema>
+
   <xs:element name="NITF">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="head" type="HeadType"/>
-        <xs:element name="body" type="BodyType"/>
+        <xs:element name="FileHeader" type="FileHeaderType"/>
+        <xs:element name="Subheaders" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:choice>
+              <xs:element name="ImageSubheader" type="ImageSubheaderType"/>
+              <xs:element name="XMLSubheader" type="xs:string" dfdl:lengthKind="unbounded"/>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ImageData" type="xs:base64Binary" minOccurs="0" dfdl:lengthKind="unbounded"/>
       </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occurs="1"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="HeadType">
+  <xs:complexType name="FileHeaderType">
     <xs:sequence>
-      <xs:element name="title" type="xs:string" dfdl:length="255"/>
-      <!-- Add other head elements as needed -->
+      <xs:element name="FileHeaderRecordLength" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="NITFVersion" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="8"/>
+      <xs:element name="SecurityClassification" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="ImageDataFile" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="1"/>
+      <xs:element name="NumberOfSubheaders" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="BodyType">
+  <xs:complexType name="ImageSubheaderType">
     <xs:sequence>
-      <xs:element name="bodyText" type="xs:string" dfdl:lengthKind="unbounded"/>
-      <!-- Add other body elements as needed -->
+      <xs:element name="ImageDimensions" type="ImageDimensionsType"/>
+      <xs:element name="BitsPerPixel" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="2"/>
+      <xs:element name="CompressionType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="PixelDataType" type="xs:string" dfdl:lengthKind="explicit" dfdl:length="20"/>
+      <xs:element name="GeographicCoordinates" type="GeographicCoordinatesType"/>
+    </xs:sequence>
+  </xs:complexType>
 
+  <xs:complexType name="ImageDimensionsType">
+    <xs:sequence>
+      <xs:element name="NumberOfRows" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+      <xs:element name="NumberOfCols" type="xs:integer" dfdl:lengthKind="explicit" dfdl:length="4"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="GeographicCoordinatesType">
+    <xs:sequence>
+      <!-- Add elements for various coordinate systems and parameters -->
     </xs:sequence>
   </xs:complexType>
 

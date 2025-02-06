@@ -1,36 +1,59 @@
-#version=2
+module GIF;
 
-event gif_gemini_event(uint64 ts, string src_ip, string dst_ip, uint16 src_port, uint16 dst_port, string payload) {
-    print string($ts) + " " + $src_ip + " " + $dst_ip + " " + $src_port + " " + $dst_port + " " + $payload
-}
+gif_header = record {
+    signature: string[4] = "GIF89a";
+    logical_screen_descriptor: record {
+        width: uint16;
+        height: uint16;
+        packed_fields: uint8;
+        background_color_index: uint8;
+        pixel_aspect_ratio: uint8;
+    };
+    global_color_table: optional[vector[uint24]];
+};
 
-redef record GIF_Gemini_Record {
-    uint64 ts;
-    string src_ip;
-    string dst_ip;
-    uint16 src_port;
-    uint16 dst_port;
-    string payload;
-}
+gif_image_descriptor = record {
+    image_left_position: uint16;
+    image_top_position: uint16;
+    image_width: uint16;
+    image_height: uint16;
+    packed_fields: uint8;
+    local_color_table: optional[vector[uint24]];
+    lzw_minimum_code_size: uint8;
+    compressed_image_data: bytes;
+};
 
-event process_gif_gemini_record(GIF_Gemini_Record rec) {
-    gif_gemini_event(rec.ts, rec.src_ip, rec.dst_ip, rec.src_port, rec.dst_port, rec.payload);
-}
+gif_extension_block = oneof {
+    plain_text_extension: record {
+        type: uint8 = 0x01;
+        data: bytes;
+    };
+    graphic_control_extension: record {
+        type: uint8 = 0x0F;
+        packed_fields: uint8;
+        delay_time: uint16;
+        transparent_color_index: uint8;
+        terminator: uint8 = 0x00;
+    };
+    comment_extension: record {
+        type: uint8 = 0xFE;
+        comment: bytes;
+    };
+    application_extension: record {
+        type: uint8 = 0xFF;
+        identifier: string[8];
+        authentication_code: string[3];
+        data: bytes;
+    };
+    unknown_extension: record {
+        type: uint8;
+        data: bytes;
+    };
+};
 
-
-script gif_gemini_analysis {
-    event zeek_conn_event(conn conn_record) {
-        if (conn_record.service == "http") {
-            GIF_Gemini_Record gif_gemini_record = GIF_Gemini_Record(
-                ts: conn_record.ts,
-                src_ip: conn_record.id.orig_h,
-                dst_ip: conn_record.id.resp_h,
-                src_port: conn_record.id.orig_p,
-                dst_port: conn_record.id.resp_p,
-                payload: "HTTP Connection Detected"
-            );
-            process_gif_gemini_record(gif_gemini_record);
-        }
-    }
-}
-
+gif = record {
+    header: gif_header;
+    images: vector[gif_image_descriptor];
+    extensions: vector[gif_extension_block];
+    trailer: uint8 = 0x3B;
+};

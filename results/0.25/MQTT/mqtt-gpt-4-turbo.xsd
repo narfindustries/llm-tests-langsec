@@ -1,76 +1,95 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
            targetNamespace="http://example.com/mqtt"
            xmlns:tns="http://example.com/mqtt">
 
-  <xs:include schemaLocation="DFDLAnnotations.xsd"/>
+  <!-- Define simple types for MQTT -->
+  <xs:simpleType name="MQTTString">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="65535"/>
+    </xs:restriction>
+  </xs:simpleType>
 
-  <xs:element name="MQTT" dfdl:lengthKind="delimited">
+  <xs:simpleType name="MQTTBinaryData">
+    <xs:restriction base="xs:hexBinary"/>
+  </xs:simpleType>
+
+  <!-- MQTT Message Types -->
+  <xs:simpleType name="MQTTMessageType">
+    <xs:restriction base="xs:int">
+      <xs:enumeration value="1"/> <!-- CONNECT -->
+      <xs:enumeration value="2"/> <!-- CONNACK -->
+      <xs:enumeration value="3"/> <!-- PUBLISH -->
+      <xs:enumeration value="4"/> <!-- PUBACK -->
+      <xs:enumeration value="5"/> <!-- PUBREC -->
+      <xs:enumeration value="6"/> <!-- PUBREL -->
+      <xs:enumeration value="7"/> <!-- PUBCOMP -->
+      <xs:enumeration value="8"/> <!-- SUBSCRIBE -->
+      <xs:enumeration value="9"/> <!-- SUBACK -->
+      <xs:enumeration value="10"/> <!-- UNSUBSCRIBE -->
+      <xs:enumeration value="11"/> <!-- UNSUBACK -->
+      <xs:enumeration value="12"/> <!-- PINGREQ -->
+      <xs:enumeration value="13"/> <!-- PINGRESP -->
+      <xs:enumeration value="14"/> <!-- DISCONNECT -->
+      <xs:enumeration value="15"/> <!-- AUTH -->
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- MQTT Fixed Header -->
+  <xs:complexType name="MQTTFixedHeader">
+    <xs:sequence>
+      <xs:element name="MessageType" type="tns:MQTTMessageType" dfdl:length="4" dfdl:lengthKind="explicit"/>
+      <xs:element name="DUP" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="QoS" type="xs:int" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Retain" type="xs:boolean" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="RemainingLength" type="xs:int" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- MQTT CONNECT Variable Header -->
+  <xs:complexType name="MQTTConnectVariableHeader">
+    <xs:sequence>
+      <xs:element name="ProtocolName" type="tns:MQTTString" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+      <xs:element name="ProtocolLevel" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="ConnectFlags" type="xs:int" dfdl:length="1" dfdl:lengthKind="explicit"/>
+      <xs:element name="KeepAlive" type="xs:int" dfdl:length="2" dfdl:lengthKind="explicit"/>
+      <xs:element name="Properties" type="tns:MQTTProperties" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- MQTT Properties -->
+  <xs:complexType name="MQTTProperties">
+    <xs:sequence>
+      <xs:element name="Property" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Identifier" type="xs:int" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+            <xs:element name="Value" type="xs:string" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- MQTT CONNECT Message -->
+  <xs:element name="MQTTConnectMessage">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="FixedHeader" type="tns:FixedHeaderType"/>
-        <xs:element name="VariableHeader" type="tns:VariableHeaderType" minOccurs="0"/>
-        <xs:element name="Payload" type="xs:hexBinary" dfdl:lengthKind="delimited" minOccurs="0"/>
+        <xs:element name="FixedHeader" type="tns:MQTTFixedHeader"/>
+        <xs:element name="VariableHeader" type="tns:MQTTConnectVariableHeader"/>
+        <xs:element name="Payload" type="tns:MQTTConnectPayload"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
 
-  <xs:complexType name="FixedHeaderType">
+  <!-- MQTT CONNECT Payload -->
+  <xs:complexType name="MQTTConnectPayload">
     <xs:sequence>
-      <xs:element name="MessageType" type="tns:MessageType"/>
-      <xs:element name="DUP" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="QoS" type="tns:QoSLevel"/>
-      <xs:element name="Retain" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="RemainingLength" type="xs:int" dfdl:lengthKind="prefixed" dfdl:prefixLengthType="xs:int" dfdl:prefixIncludesPrefixLength="true"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="VariableHeaderType">
-    <xs:choice>
-      <xs:element name="ConnectFlags" type="tns:ConnectFlagsType"/>
-      <xs:element name="TopicName" type="xs:string" dfdl:lengthKind="delimited"/>
-      <xs:element name="PacketIdentifier" type="xs:int" dfdl:length="2"/>
-    </xs:choice>
-  </xs:complexType>
-
-  <xs:simpleType name="MessageType">
-    <xs:restriction base="xs:int">
-      <xs:enumeration value="1"/>
-      <xs:enumeration value="2"/>
-      <xs:enumeration value="3"/>
-      <xs:enumeration value="4"/>
-      <xs:enumeration value="5"/>
-      <xs:enumeration value="6"/>
-      <xs:enumeration value="7"/>
-      <xs:enumeration value="8"/>
-      <xs:enumeration value="9"/>
-      <xs:enumeration value="10"/>
-      <xs:enumeration value="11"/>
-      <xs:enumeration value="12"/>
-      <xs:enumeration value="13"/>
-      <xs:enumeration value="14"/>
-      <xs:enumeration value="15"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:simpleType name="QoSLevel">
-    <xs:restriction base="xs:int">
-      <xs:enumeration value="0"/>
-      <xs:enumeration value="1"/>
-      <xs:enumeration value="2"/>
-    </xs:restriction>
-  </xs:simpleType>
-
-  <xs:complexType name="ConnectFlagsType">
-    <xs:sequence>
-      <xs:element name="UserNameFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="PasswordFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="WillRetain" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="WillQoS" type="tns:QoSLevel"/>
-      <xs:element name="WillFlag" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="CleanSession" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
-      <xs:element name="Reserved" type="xs:boolean" dfdl:length="1" dfdl:representation="binary"/>
+      <xs:element name="ClientIdentifier" type="tns:MQTTString" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+      <xs:element name="WillTopic" type="tns:MQTTString" minOccurs="0" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+      <xs:element name="WillMessage" type="tns:MQTTBinaryData" minOccurs="0" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+      <xs:element name="Username" type="tns:MQTTString" minOccurs="0" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
+      <xs:element name="Password" type="tns:MQTTBinaryData" minOccurs="0" dfdl:lengthKind="delimited" dfdl:encoding="variable-length-quantity"/>
     </xs:sequence>
   </xs:complexType>
 

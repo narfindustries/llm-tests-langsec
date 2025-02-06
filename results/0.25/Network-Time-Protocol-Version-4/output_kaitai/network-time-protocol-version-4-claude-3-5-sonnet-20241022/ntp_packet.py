@@ -10,26 +10,21 @@ if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
 
 class NtpPacket(KaitaiStruct):
 
-    class LeapIndicators(Enum):
+    class LeapIndicatorEnum(Enum):
         no_warning = 0
-        last_minute_61 = 1
-        last_minute_59 = 2
-        alarm = 3
+        last_minute_61_sec = 1
+        last_minute_59_sec = 2
+        alarm_condition = 3
 
-    class Modes(Enum):
+    class ModeEnum(Enum):
         reserved = 0
         symmetric_active = 1
         symmetric_passive = 2
         client = 3
         server = 4
         broadcast = 5
-        ntp_control = 6
-        private = 7
-
-    class StratumTypes(Enum):
-        unspecified_or_invalid = 0
-        primary_reference = 1
-        secondary_reference = 16
+        control_message = 6
+        private_use = 7
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
@@ -39,22 +34,46 @@ class NtpPacket(KaitaiStruct):
     def _read(self):
         self.li_vn_mode = self._io.read_u1()
         self.stratum = self._io.read_u1()
-        self.poll = self._io.read_u1()
+        self.poll = self._io.read_s1()
         self.precision = self._io.read_s1()
-        self.root_delay = self._io.read_s4be()
-        self.root_dispersion = self._io.read_u4be()
+        self.root_delay = NtpPacket.FixedPoint1616(self._io, self, self._root)
+        self.root_dispersion = NtpPacket.FixedPoint1616Unsigned(self._io, self, self._root)
         self.reference_id = self._io.read_u4be()
         self.reference_timestamp = NtpPacket.NtpTimestamp(self._io, self, self._root)
         self.origin_timestamp = NtpPacket.NtpTimestamp(self._io, self, self._root)
         self.receive_timestamp = NtpPacket.NtpTimestamp(self._io, self, self._root)
         self.transmit_timestamp = NtpPacket.NtpTimestamp(self._io, self, self._root)
-        if self._io.pos() < self._io.size():
+        if self._io.size() > 48:
             self.extension_fields = []
             i = 0
             while not self._io.is_eof():
                 self.extension_fields.append(NtpPacket.ExtensionField(self._io, self, self._root))
                 i += 1
 
+
+
+    class FixedPoint1616(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.integer_part = self._io.read_s2be()
+            self.fraction_part = self._io.read_u2be()
+
+
+    class FixedPoint1616Unsigned(KaitaiStruct):
+        def __init__(self, _io, _parent=None, _root=None):
+            self._io = _io
+            self._parent = _parent
+            self._root = _root if _root else self
+            self._read()
+
+        def _read(self):
+            self.integer_part = self._io.read_u2be()
+            self.fraction_part = self._io.read_u2be()
 
 
     class NtpTimestamp(KaitaiStruct):
@@ -77,9 +96,10 @@ class NtpPacket(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.type = self._io.read_u2be()
+            self.field_type = self._io.read_u2be()
             self.length = self._io.read_u2be()
             self.value = self._io.read_bytes((self.length - 4))
+            self.padding = self._io.read_bytes(((4 - (self._io.pos() % 4)) % 4))
 
 
     @property
@@ -87,7 +107,7 @@ class NtpPacket(KaitaiStruct):
         if hasattr(self, '_m_leap_indicator'):
             return self._m_leap_indicator
 
-        self._m_leap_indicator = ((self.li_vn_mode >> 6) & 3)
+        self._m_leap_indicator = KaitaiStream.resolve_enum(NtpPacket.LeapIndicatorEnum, ((self.li_vn_mode >> 6) & 3))
         return getattr(self, '_m_leap_indicator', None)
 
     @property
@@ -103,7 +123,7 @@ class NtpPacket(KaitaiStruct):
         if hasattr(self, '_m_mode'):
             return self._m_mode
 
-        self._m_mode = (self.li_vn_mode & 7)
+        self._m_mode = KaitaiStream.resolve_enum(NtpPacket.ModeEnum, (self.li_vn_mode & 7))
         return getattr(self, '_m_mode', None)
 
 

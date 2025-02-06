@@ -1,37 +1,52 @@
-module Modbus
+ModbusRTU = struct {
+    Address: uint8; // Slave address (1-247, 0 for broadcast)
+    FunctionCode: uint8; // Function code (e.g., 01 for Read Coils)
+    Data: bytes; // Data field, length varies by function
+    CRC: uint16; // Error check (Cyclic Redundancy Check)
 
-// Define a Modbus TCP frame
-struct ModbusTcpFrame {
-    transaction_id: u16, // Transaction Identifier
-    protocol_id: u16,    // Protocol Identifier (should be 0 for Modbus)
-    length: u16,         // Length of the following bytes
-    unit_id: u8,         // Unit Identifier
-    function_code: u8,   // Function Code
-    data: bytes[length - 2] // Data (length - 2 to exclude unit_id and function_code)
+    let DataLength = calculateDataLength(FunctionCode);
+
+    calculateDataLength = function(funcCode: uint8): uint16 {
+        switch (funcCode) {
+            case 0x01, 0x02, 0x03, 0x04:
+                return 4; // Starting address and quantity
+            case 0x05, 0x06:
+                return 4; // Address and value
+            case 0x0F, 0x10:
+                return 5 + (Data[4] as uint8); // Address, quantity, byte count, and values
+            default:
+                return Data.length; // Manufacturer-specific or other
+        }
+    }
 }
 
-// Define a Modbus RTU frame
-struct ModbusRtuFrame {
-    address: u8,         // Address of the device
-    function_code: u8,   // Function Code
-    data: bytes,         // Data
-    crc: u16             // CRC Checksum
+ModbusTCP = struct {
+    TransactionID: uint16; // Transaction Identifier
+    ProtocolID: uint16; // Protocol Identifier (always 0)
+    Length: uint16; // Length of remaining bytes
+    UnitID: uint8; // Unit Identifier (1-247, 0 for broadcast)
+    FunctionCode: uint8; // Function code (e.g., 01 for Read Coils)
+    Data: bytes; // Data field, length varies by function
+
+    let DataLength = Length - 2; // Subtract UnitID and FunctionCode
+
+    calculateDataLength = function(funcCode: uint8): uint16 {
+        switch (funcCode) {
+            case 0x01, 0x02, 0x03, 0x04:
+                return 4; // Starting address and quantity
+            case 0x05, 0x06:
+                return 4; // Address and value
+            case 0x0F, 0x10:
+                return 5 + (Data[4] as uint8); // Address, quantity, byte count, and values
+            default:
+                return Data.length; // Manufacturer-specific or other
+        }
+    }
 }
 
-// Define a Modbus ASCII frame
-struct ModbusAsciiFrame {
-    start: u8 = 0x3A,    // Start character ':'
-    data: bytes,         // Data (up to 253 characters)
-    lrc: u8              // Longitudinal Redundancy Check
-    end: u16 = 0x0D0A    // End characters CRLF
-}
-
-// Function to calculate CRC for RTU frame
-function calculate_crc(data: bytes): u16 {
-    // CRC calculation logic
-}
-
-// Function to calculate LRC for ASCII frame
-function calculate_lrc(data: bytes): u8 {
-    // LRC calculation logic
+ModbusExceptionResponse = struct {
+    Address: uint8; // Slave address
+    FunctionCode: uint8; // Function code with highest bit set
+    ExceptionCode: uint8; // Exception code (e.g., 01 for Illegal Function)
+    CRC: uint16; // Error check (Cyclic Redundancy Check)
 }

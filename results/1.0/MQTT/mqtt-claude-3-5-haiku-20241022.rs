@@ -1,117 +1,244 @@
-use nom::{
-    bits::{streaming::take as take_bits, complete::take as take_bits_complete},
-    bytes::streaming::{tag, take},
-    combinator::{map, opt, peek},
-    error::{ErrorKind, ParseError},
-    multi::{count, many0, many_m_n},
-    number::streaming::{be_u8, be_u16, be_u32},
-    sequence::{preceded, tuple},
-    IResult, Err,
-};
-use std::env;
 use std::fs::File;
 use std::io::Read;
+use nom::{
+    bytes::complete::{take},
+    combinator::{map, verify},
+    multi::count,
+    number::complete::{le_u8, le_u16},
+    sequence::preceded,
+    IResult,
+};
 
-#[derive(Debug, PartialEq)]
-enum MQTTPacketType {
-    Connect,
-    ConnAck,
-    Publish,
-    PubAck,
-    PubRec,
-    PubRel,
-    PubComp,
-    Subscribe,
-    SubAck,
-    Unsubscribe,
-    UnsubAck,
+#[derive(Debug)]
+enum MQTTPacket {
+    Connect(ConnectPacket),
+    ConnAck(ConnAckPacket),
+    Publish(PublishPacket),
+    PubAck(PubAckPacket),
+    PubRec(PubRecPacket),
+    PubRel(PubRelPacket),
+    PubComp(PubCompPacket),
+    Subscribe(SubscribePacket),
+    SubAck(SubAckPacket),
+    Unsubscribe(UnsubscribePacket),
+    UnsubAck(UnsubAckPacket),
     PingReq,
     PingResp,
-    Disconnect,
-    Auth,
+    Disconnect(DisconnectPacket),
+    Auth(AuthPacket),
 }
 
 #[derive(Debug)]
-struct MQTTPacket {
-    packet_type: MQTTPacketType,
-    flags: u8,
-    remaining_length: usize,
-    payload: Option<Vec<u8>>,
+struct Property {
+    identifier: u8,
+    value: Vec<u8>,
 }
 
-fn parse_mqtt_fixed_header(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
-    let (input, first_byte) = be_u8(input)?;
-    let packet_type_num = first_byte >> 4;
-    let flags = first_byte & 0x0F;
-
-    let packet_type = match packet_type_num {
-        1 => MQTTPacketType::Connect,
-        2 => MQTTPacketType::ConnAck,
-        3 => MQTTPacketType::Publish,
-        4 => MQTTPacketType::PubAck,
-        5 => MQTTPacketType::PubRec,
-        6 => MQTTPacketType::PubRel,
-        7 => MQTTPacketType::PubComp,
-        8 => MQTTPacketType::Subscribe,
-        9 => MQTTPacketType::SubAck,
-        10 => MQTTPacketType::Unsubscribe,
-        11 => MQTTPacketType::UnsubAck,
-        12 => MQTTPacketType::PingReq,
-        13 => MQTTPacketType::PingResp,
-        14 => MQTTPacketType::Disconnect,
-        15 => MQTTPacketType::Auth,
-        _ => return Err(Err::Error(ParseError::from_error_kind(input, ErrorKind::Alt))),
-    };
-
-    let (input, remaining_length) = parse_variable_length_integer(input)?;
-
-    Ok((input, MQTTPacket {
-        packet_type,
-        flags,
-        remaining_length,
-        payload: None,
-    }))
+#[derive(Debug)]
+struct ConnectPacket {
+    protocol_name: String,
+    protocol_version: u8,
+    connect_flags: u8,
+    keep_alive: u16,
+    properties: Vec<Property>,
+    client_id: String,
 }
 
-fn parse_variable_length_integer(input: &[u8]) -> IResult<&[u8], usize> {
+#[derive(Debug)]
+struct ConnAckPacket {
+    session_present: bool,
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct PublishPacket {
+    topic_name: String,
+    packet_id: Option<u16>,
+    qos: u8,
+    retain: bool,
+    duplicate: bool,
+    properties: Vec<Property>,
+    payload: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct PubAckPacket {
+    packet_id: u16,
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct PubRecPacket {
+    packet_id: u16,
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct PubRelPacket {
+    packet_id: u16,
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct PubCompPacket {
+    packet_id: u16,
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct SubscribePacket {
+    packet_id: u16,
+    properties: Vec<Property>,
+    topic_filters: Vec<(String, u8)>,
+}
+
+#[derive(Debug)]
+struct SubAckPacket {
+    packet_id: u16,
+    reason_codes: Vec<u8>,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct UnsubscribePacket {
+    packet_id: u16,
+    properties: Vec<Property>,
+    topic_filters: Vec<String>,
+}
+
+#[derive(Debug)]
+struct UnsubAckPacket {
+    packet_id: u16,
+    reason_codes: Vec<u8>,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct DisconnectPacket {
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+#[derive(Debug)]
+struct AuthPacket {
+    reason_code: u8,
+    properties: Vec<Property>,
+}
+
+fn parse_variable_length_integer(mut input: &[u8]) -> IResult<&[u8], u32> {
     let mut multiplier = 1;
     let mut value = 0;
     let mut bytes_read = 0;
 
-    for (index, &byte) in input.iter().enumerate() {
-        value += (byte & 0x7F) as usize * multiplier;
+    loop {
+        let (next_input, byte) = le_u8(input)?;
+        input = next_input;
+        value += ((byte & 0x7F) as u32) * multiplier;
         multiplier *= 128;
-
         bytes_read += 1;
 
-        if byte & 0x80 == 0 || index >= 3 {
+        if byte & 0x80 == 0 || bytes_read > 4 {
             break;
         }
     }
 
-    let (remaining_input, _) = take(bytes_read)(input)?;
-
-    Ok((remaining_input, value))
+    Ok((input, value))
 }
 
-fn parse_mqtt_payload(input: &[u8], packet: &MQTTPacket) -> IResult<&[u8], Vec<u8>> {
-    take(packet.remaining_length)(input)
-}
-
-fn parse_complete_mqtt_packet(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
-    let (input, mut packet) = parse_mqtt_fixed_header(input)?;
-    let (input, payload) = parse_mqtt_payload(input, &packet)?;
+fn parse_property(input: &[u8]) -> IResult<&[u8], Property> {
+    let (input, identifier) = le_u8(input)?;
+    let (input, value_length) = parse_variable_length_integer(input)?;
+    let (input, value) = take(value_length as usize)(input)?;
     
-    Ok((input, MQTTPacket {
-        payload: Some(payload.to_vec()),
-        ..packet
+    Ok((input, Property {
+        identifier,
+        value: value.to_vec(),
     }))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
+fn parse_mqtt_packet(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
+    let (input, first_byte) = le_u8(input)?;
+    let packet_type = first_byte >> 4;
+    let _flags = first_byte & 0x0F;
+
+    let (input, _remaining_length) = parse_variable_length_integer(input)?;
+
+    match packet_type {
+        1 => parse_connect_packet(input),
+        2 => parse_connack_packet(input),
+        3 => parse_publish_packet(input),
+        _ => Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))),
+    }
+}
+
+fn parse_connect_packet(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
+    let (input, protocol_bytes) = preceded(take(2_usize), take(4_usize))(input)?;
+    let protocol_name = if protocol_bytes == b"MQTT" {
+        String::from_utf8_lossy(protocol_bytes).into_owned()
+    } else {
+        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag)));
+    };
+
+    let (input, protocol_version) = le_u8(input)?;
+    let (input, connect_flags) = le_u8(input)?;
+    let (input, keep_alive) = le_u16(input)?;
+
+    let (input, properties_length) = parse_variable_length_integer(input)?;
+    let (input, properties) = count(parse_property, properties_length as usize)(input)?;
+
+    let (input, client_id_length) = le_u16(input)?;
+    let (input, client_id) = map(take(client_id_length as usize), |bytes| String::from_utf8_lossy(bytes).into_owned())(input)?;
+
+    Ok((input, MQTTPacket::Connect(ConnectPacket {
+        protocol_name,
+        protocol_version,
+        connect_flags,
+        keep_alive,
+        properties,
+        client_id,
+    })))
+}
+
+fn parse_connack_packet(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
+    let (input, session_present) = map(le_u8, |byte| byte & 0x01 == 1)(input)?;
+    let (input, reason_code) = le_u8(input)?;
+
+    let (input, properties_length) = parse_variable_length_integer(input)?;
+    let (input, properties) = count(parse_property, properties_length as usize)(input)?;
+
+    Ok((input, MQTTPacket::ConnAck(ConnAckPacket {
+        session_present,
+        reason_code,
+        properties,
+    })))
+}
+
+fn parse_publish_packet(input: &[u8]) -> IResult<&[u8], MQTTPacket> {
+    let (input, topic_name_length) = le_u16(input)?;
+    let (input, topic_name) = map(take(topic_name_length as usize), |bytes| String::from_utf8_lossy(bytes).into_owned())(input)?;
+
+    let (input, payload) = take(input.len())(input)?;
+
+    Ok((input, MQTTPacket::Publish(PublishPacket {
+        topic_name,
+        packet_id: None,
+        qos: 0,
+        retain: false,
+        duplicate: false,
+        properties: Vec::new(),
+        payload: payload.to_vec(),
+    })))
+}
+
+fn main() -> std::io::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <input_file>", args[0]);
+        eprintln!("Usage: {} <mqtt_file>", args[0]);
         std::process::exit(1);
     }
 
@@ -119,14 +246,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_complete_mqtt_packet(&buffer) {
+    match parse_mqtt_packet(&buffer) {
         Ok((_, packet)) => {
             println!("Parsed MQTT Packet: {:?}", packet);
-            Ok(())
-        },
+        }
         Err(e) => {
-            eprintln!("Failed to parse MQTT packet: {:?}", e);
+            eprintln!("Parsing error: {:?}", e);
             std::process::exit(1);
         }
     }
+
+    Ok(())
 }

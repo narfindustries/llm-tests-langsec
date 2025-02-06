@@ -1,110 +1,136 @@
 def Main = {
-  header;
-  blocks*;
-  $$ Commit
+    Header
+    LogicalScreenDescriptor
+    GlobalColorTableOpt
+    ExtensionsAndBlocks
+    Trailer
 }
 
-def header = {
-  magic_bytes;
-  screen_descriptor;
-  has_gct;
-  gct?;
-  blocks*
+def Header = {
+    signature: BYTE[3]
+    version: BYTE[3]
 }
 
-def magic_bytes = {
-  magic : !FD "GIF";
-  version : !FD ("87a" | "89a")
+def LogicalScreenDescriptor = {
+    width: UINT16
+    height: UINT16
+    packed: UINT8
+    bgColorIndex: UINT8
+    pixelAspectRatio: UINT8
 }
 
-def screen_descriptor = {
-  width : uint16LE;
-  height : uint16LE;
-  packed : uint8;
-  bg_color_index : uint8;
-  pixel_aspect_ratio : uint8
+def gctFlag = (packed & 0x80) >> 7
+def colorRes = (packed & 0x70) >> 4
+def sortFlag = (packed & 0x08) >> 3
+def gctSize = packed & 0x07
+
+def GlobalColorTableOpt = {
+    if (gctFlag == 1) {
+        colors: RGB[2 ** (gctSize + 1)]
+    }
 }
 
-def has_gct = packed >> 7 == 1
-
-def gct = {
-  size : uint32LE;
-  gct_data : uint8[size]
+def RGB = {
+    r: UINT8
+    g: UINT8
+    b: UINT8
 }
 
-def blocks = {
-  block_type : uint8;
-  match block_type {
-    0x2C => image_block
-    0x21 => extension_block
-    0x3B => trailer
-    _    => fail
-  }
+def ExtensionsAndBlocks = {
+    while (!Lookahead(Trailer)) {
+        GraphicBlock | Extension
+    }
 }
 
-def image_block = {
-  left : uint16LE;
-  top : uint16LE;
-  width : uint16LE;
-  height : uint16LE;
-  packed : uint8;
-  lct?;
-  image_data
+def GraphicBlock = {
+    ImageDescriptor
+    LocalColorTableOpt
+    ImageData
 }
 
-def lct = has_lct {
-  lct_data : uint8[lct_size]
+def ImageDescriptor = {
+    separator: 0x2C
+    left: UINT16
+    top: UINT16
+    width: UINT16
+    height: UINT16
+    imagePacked: UINT8
 }
 
-def has_lct = @packed >> 7 == 1
+def lctFlag = (imagePacked & 0x80) >> 7
+def interlaceFlag = (imagePacked & 0x40) >> 6
+def sortFlagLocal = (imagePacked & 0x20) >> 5
+def lctSize = imagePacked & 0x07
 
-def lct_size = 3 * (2 << (@packed & 0x7))
-
-def extension_block = {
-  label : uint8;
-  match label {
-    0xF9 => graphic_control_extension
-    0xFE => comment_extension
-    0x01 => plain_text_extension
-    0xFF => application_extension
-    _    => fail
-  }
+def LocalColorTableOpt = {
+    if (lctFlag == 1) {
+        colors: RGB[2 ** (lctSize + 1)]
+    }
 }
 
-def graphic_control_extension = {
-  size : uint8;
-  block_data : uint8[size];
-  terminator : uint8
+def ImageData = {
+    lzwMinCodeSize: UINT8
+    DataSubBlocks
 }
 
-def comment_extension = {
-  data_blocks*;
-  terminator : uint8
+def Extension = {
+    introducer: 0x21
+    label: UINT8
+    match label {
+        0xF9 => GraphicsControlExtension
+        0xFE => CommentExtension
+        0x01 => PlainTextExtension
+        0xFF => ApplicationExtension
+    }
 }
 
-def plain_text_extension = {
-  size : uint8;
-  text_data : uint8[size];
-  data_blocks*;
-  terminator : uint8
+def GraphicsControlExtension = {
+    blockSize: 4
+    gcePacked: UINT8
+    delayTime: UINT16
+    transparentColorIndex: UINT8
+    terminator: 0x00
 }
 
-def application_extension = {
-  block_size : uint8;
-  app_id : uint8[block_size];
-  data_blocks*;
-  terminator : uint8
+def CommentExtension = {
+    DataSubBlocks
+    terminator: 0x00
 }
 
-def data_blocks = {
-  size : uint8;
-  data : uint8[size]
+def PlainTextExtension = {
+    blockSize: 12
+    textGridLeft: UINT16
+    textGridTop: UINT16
+    textGridWidth: UINT16
+    textGridHeight: UINT16
+    cellWidth: UINT8
+    cellHeight: UINT8
+    fgColorIndex: UINT8
+    bgColorIndex: UINT8
+    DataSubBlocks
+    terminator: 0x00
 }
 
-def image_data = {
-  lzw_min_code_size : uint8;
-  data_blocks*;
-  terminator : uint8
+def ApplicationExtension = {
+    blockSize: 11
+    identifier: BYTE[8]
+    authCode: BYTE[3]
+    DataSubBlocks
+    terminator: 0x00
 }
 
-def trailer = uint8 == 0x3B
+def DataSubBlocks = {
+    while (!Lookahead(0x00)) {
+        DataSubBlock
+    }
+}
+
+def DataSubBlock = {
+    size: UINT8
+    Guard size > 0
+    data: BYTE[size]
+}
+
+def Trailer = {
+    trailer: 0x3B
+}

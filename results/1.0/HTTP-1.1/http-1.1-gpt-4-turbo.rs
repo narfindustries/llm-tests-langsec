@@ -1,18 +1,15 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_until, take_while},
-    character::complete::{char, digit1, line_ending, space1},
-    combinator::{map_res, opt},
-    multi::{many0, separated_list0},
-    sequence::{delimited, preceded, tuple},
+    bytes::complete::{tag, take_while},
+    character::complete::{char, digit1, space1},
+    combinator::{map, map_res, opt},
+    multi::many0,
+    sequence::{preceded, terminated, tuple},
     IResult,
 };
-use std::fs::File;
-use std::io::{self, Read};
-use std::env;
+use std::{env, fs};
 
 #[derive(Debug)]
-pub struct HttpRequest {
+struct HttpRequest {
     method: String,
     uri: String,
     version: String,
@@ -20,82 +17,76 @@ pub struct HttpRequest {
     body: Option<String>,
 }
 
-#[derive(Debug)]
-pub struct HttpResponse {
-    version: String,
-    status_code: u32,
-    reason_phrase: String,
-    headers: Vec<(String, String)>,
-    body: Option<String>,
+fn is_token_char(c: char) -> bool {
+    !c.is_control() && !c.is_whitespace() && ",;:".chars().all(|x| x != c)
 }
 
-fn http_version(input: &str) -> IResult<&str, &str> {
-    tag("HTTP/")(input)
+fn parse_method(input: &str) -> IResult<&str, String> {
+    map_res(take_while(is_token_char), str::parse)(input)
 }
 
-fn request_line(input: &str) -> IResult<&str, (&str, &str, &str)> {
-    tuple((
-        take_until(" "),
-        delimited(space1, take_until(" "), space1),
-        http_version,
-    ))(input)
+fn parse_uri(input: &str) -> IResult<&str, String> {
+    map_res(take_while(is_token_char), str::parse)(input)
 }
 
-fn header_line(input: &str) -> IResult<&str, (&str, &str)> {
-    tuple((
-        take_until(":"),
-        delimited(tag(": "), take_until("\r\n"), line_ending),
-    ))(input)
+fn parse_version(input: &str) -> IResult<&str, String> {
+    map_res(preceded(tag("HTTP/"), digit1), |s: &str| Ok::<_, nom::error::Error<_>>(format!("HTTP/{}", s)))(input)
+}
+
+fn parse_header_value(input: &str) -> IResult<&str, String> {
+    map_res(take_while(|c| c != '\r' && c != '\n'), str::parse)(input)
+}
+
+fn parse_header(input: &str) -> IResult<&str, (String, String)> {
+    terminated(
+        map(
+            tuple((
+                map_res(take_while(is_token_char), str::parse::<String>),
+                preceded(tag(":"), preceded(space1, parse_header_value)),
+            )),
+            |(k, v)| (k, v),
+        ),
+        opt(tuple((char('\r'), char('\n')))),
+    )(input)
 }
 
 fn parse_request(input: &str) -> IResult<&str, HttpRequest> {
-    let (input, (method, uri, version)) = request_line(input)?;
-    let (input, headers) = many0(header_line)(input)?;
-    let (_, body) = opt(preceded(line_ending, take_until("")))(input)?;
-    Ok((
-        "",
-        HttpRequest {
-            method: method.to_string(),
-            uri: uri.to_string(),
-            version: version.to_string(),
-            headers: headers.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
-            body: body.map(str::to_string),
+    map(
+        tuple((
+            terminated(parse_method, space1),
+            terminated(parse_uri, space1),
+            terminated(parse_version, tag("\r\n")),
+            many0(parse_header),
+            opt(preceded(tag("\r\n"), map_res(take_while(|c| c != '\0'), str::parse::<String>))),
+        )),
+        |(method, uri, version, headers, body)| HttpRequest {
+            method,
+            uri,
+            version,
+            headers,
+            body,
         },
-    ))
+    )(input)
 }
 
-fn parse_response(input: &str) -> IResult<&str, HttpResponse> {
-    let (input, version) = http_version(input)?;
-    let (input, (status, reason_phrase)) = tuple((preceded(space1, digit1), preceded(space1, take_until("\r\n"))))(input)?;
-    let (input, headers) = many0(header_line)(input)?;
-    let (_, body) = opt(preceded(line_ending, take_until("")))(input)?;
-    Ok((
-        "",
-        HttpResponse {
-            version: version.to_string(),
-            status_code: status.parse().unwrap(),
-            reason_phrase: reason_phrase.to_string(),
-            headers: headers.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
-            body: body.map(str::to_string),
-        },
-    ))
-}
-
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: {} <file>", args[0]);
-        return Ok(());
+        return Err("Usage: <program> <file_path>".into());
     }
-
-    let mut file = File::open(&args[1])?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    match parse_request(&contents) {
-        Ok(("", request)) => println!("{:?}", request),
-        Ok((remaining, _)) => println!("Incomplete parsing, remaining: {:?}", remaining),
-        Err(e) => println!("Error during parsing: {:?}", e),
+    
+    let filename = &args[1];
+    let data = fs::read_to_string(filename)?;
+    match parse_request(&data) {
+        Ok((remaining, request)) => {
+            if !remaining.is_empty() {
+                eprintln!("Warning: unconsumed input");
+            }
+            println!("{:?}", request);
+        }
+        Err(e) => {
+            eprintln!("Error parsing HTTP request: {:?}", e);
+        }
     }
 
     Ok(())

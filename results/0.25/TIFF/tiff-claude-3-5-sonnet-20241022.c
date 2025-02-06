@@ -1,40 +1,120 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static const uint8_t TIFF_LITTLE_ENDIAN[] = {0x49, 0x49, 0x2A, 0x00};
-static const uint8_t TIFF_BIG_ENDIAN[] = {0x4D, 0x4D, 0x00, 0x2A};
-
-HParser* init_tiff_parser(void) {
-    // IFD Entry parser
-    HParser* tag = h_uint16();
-    HParser* type = h_uint16();
-    HParser* count = h_uint32();
-    HParser* value_offset = h_uint32();
-    HParser* ifd_entry = h_sequence(tag, type, count, value_offset, NULL);
-    
-    // IFD parser
-    HParser* num_entries = h_uint16();
-    HParser* entries = h_repeat_n(ifd_entry, 1);
-    HParser* next_ifd_offset = h_uint32();
-    HParser* ifd = h_sequence(num_entries, entries, next_ifd_offset, NULL);
-    
-    // Header parser
-    HParser* endianness = h_choice(h_token(TIFF_LITTLE_ENDIAN, 4),
-                                 h_token(TIFF_BIG_ENDIAN, 4),
-                                 NULL);
-    HParser* first_ifd_offset = h_uint32();
-    
-    // Complete TIFF parser
-    return h_sequence(endianness, first_ifd_offset, ifd, NULL);
+// TIFF Parser Combinators
+HParser* tiff_byte_order() {
+    return h_choice(h_token((uint8_t*)"II", 2), h_token((uint8_t*)"MM", 2), NULL);
 }
 
-int main(int argc, char** argv) {
-    HParser* parser = init_tiff_parser();
-    
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+HParser* tiff_version() {
+    return h_int_range(h_uint16(), 42, 42);
+}
+
+HParser* tiff_ifd_offset() {
+    return h_uint32();
+}
+
+HParser* tiff_tag() {
+    return h_uint16();
+}
+
+HParser* tiff_type() {
+    return h_int_range(h_uint16(), 1, 12);
+}
+
+HParser* tiff_count() {
+    return h_uint32();
+}
+
+HParser* tiff_value_offset() {
+    return h_uint32();
+}
+
+HParser* tiff_ifd_entry() {
+    return h_sequence(tiff_tag(),
+                     tiff_type(),
+                     tiff_count(),
+                     tiff_value_offset(),
+                     NULL);
+}
+
+HParser* tiff_ifd() {
+    return h_sequence(h_uint16(),  // Number of directory entries
+                     h_many1(tiff_ifd_entry()),
+                     h_uint32(),   // Offset to next IFD
+                     NULL);
+}
+
+HParser* tiff_header() {
+    return h_sequence(tiff_byte_order(),
+                     tiff_version(),
+                     tiff_ifd_offset(),
+                     NULL);
+}
+
+HParser* tiff_parser() {
+    return h_sequence(tiff_header(),
+                     tiff_ifd(),
+                     NULL);
+}
+
+void print_parse_result(const HParsedToken* result) {
+    if (!result) {
+        printf("Parse failed\n");
+        return;
+    }
+
+    // Add result printing logic here based on the parsed structure
+    printf("TIFF file successfully parsed\n");
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <tiff_file>\n", argv[0]);
         return 1;
     }
-    
+
+    FILE* file = fopen(argv[1], "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read file into buffer
+    uint8_t* buffer = malloc(file_size);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return 1;
+    }
+
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fclose(file);
+
+    if (bytes_read != file_size) {
+        fprintf(stderr, "Failed to read entire file\n");
+        free(buffer);
+        return 1;
+    }
+
+    // Parse TIFF
+    const HParser* parser = tiff_parser();
+    HParseResult* result = h_parse(parser, buffer, file_size);
+
+    if (result) {
+        print_parse_result(result->ast);
+        h_parse_result_free(result);
+    } else {
+        printf("Failed to parse TIFF file\n");
+    }
+
+    free(buffer);
     return 0;
 }

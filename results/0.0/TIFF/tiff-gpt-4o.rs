@@ -1,67 +1,68 @@
-// Note: This is a simplified version of a TIFF parser using Rust and the Nom library.
-// A complete implementation would require handling all TIFF tags and types, which is extensive.
-
 use nom::{
-    bytes::complete::{tag, take},
-    combinator::map_res,
+    bytes::complete::take,
     number::complete::{le_u16, le_u32},
-    sequence::tuple,
     IResult,
 };
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
+use std::path::Path;
 
 #[derive(Debug)]
 struct TiffHeader {
-    byte_order: [u8; 2],
+    byte_order: u16,
     version: u16,
     ifd_offset: u32,
 }
 
 #[derive(Debug)]
-struct IfdEntry {
-    tag: u16,
-    field_type: u16,
+struct TiffTag {
+    tag_id: u16,
+    data_type: u16,
     count: u32,
     value_offset: u32,
 }
 
 fn parse_tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader> {
-    let (input, (byte_order, version, ifd_offset)) = tuple((take(2usize), le_u16, le_u32))(input)?;
+    let (input, byte_order) = le_u16(input)?;
+    let (input, version) = le_u16(input)?;
+    let (input, ifd_offset) = le_u32(input)?;
     Ok((
         input,
         TiffHeader {
-            byte_order: [byte_order[0], byte_order[1]],
+            byte_order,
             version,
             ifd_offset,
         },
     ))
 }
 
-fn parse_ifd_entry(input: &[u8]) -> IResult<&[u8], IfdEntry> {
-    let (input, (tag, field_type, count, value_offset)) =
-        tuple((le_u16, le_u16, le_u32, le_u32))(input)?;
+fn parse_tiff_tag(input: &[u8]) -> IResult<&[u8], TiffTag> {
+    let (input, tag_id) = le_u16(input)?;
+    let (input, data_type) = le_u16(input)?;
+    let (input, count) = le_u32(input)?;
+    let (input, value_offset) = le_u32(input)?;
     Ok((
         input,
-        IfdEntry {
-            tag,
-            field_type,
+        TiffTag {
+            tag_id,
+            data_type,
             count,
             value_offset,
         },
     ))
 }
 
-fn parse_ifd_entries(input: &[u8], count: u16) -> IResult<&[u8], Vec<IfdEntry>> {
-    let mut entries = Vec::new();
+fn parse_ifd(input: &[u8]) -> IResult<&[u8], Vec<TiffTag>> {
+    let (input, num_tags) = le_u16(input)?;
+    let mut tags = Vec::new();
     let mut input = input;
-    for _ in 0..count {
-        let (new_input, entry) = parse_ifd_entry(input)?;
-        entries.push(entry);
+    for _ in 0..num_tags {
+        let (new_input, tag) = parse_tiff_tag(input)?;
+        tags.push(tag);
         input = new_input;
     }
-    Ok((input, entries))
+    Ok((input, tags))
 }
 
 fn main() {
@@ -71,18 +72,32 @@ fn main() {
         return;
     }
 
-    let filename = &args[1];
-    let mut file = File::open(filename).expect("Failed to open file");
+    let path = Path::new(&args[1]);
+    let mut file = match File::open(&path) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Error opening file: {}", err);
+            return;
+        }
+    };
+
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).expect("Failed to read file");
+    if let Err(err) = file.read_to_end(&mut buffer) {
+        eprintln!("Error reading file: {}", err);
+        return;
+    }
 
-    let (_, header) = parse_tiff_header(&buffer).expect("Failed to parse TIFF header");
-    println!("TIFF Header: {:?}", header);
-
-    let ifd_offset = header.ifd_offset as usize;
-    let (_, ifd_count) = le_u16(&buffer[ifd_offset..]).expect("Failed to read IFD count");
-    let (_, ifd_entries) = parse_ifd_entries(&buffer[ifd_offset + 2..], ifd_count)
-        .expect("Failed to parse IFD entries");
-
-    println!("IFD Entries: {:?}", ifd_entries);
+    match parse_tiff_header(&buffer) {
+        Ok((remaining, header)) => {
+            println!("TIFF Header: {:?}", header);
+            if let Ok((_, tags)) = parse_ifd(&remaining[(header.ifd_offset as usize)..]) {
+                for tag in tags {
+                    println!("Tag: {:?}", tag);
+                }
+            } else {
+                eprintln!("Error parsing IFD");
+            }
+        }
+        Err(err) => eprintln!("Error parsing TIFF header: {:?}", err),
+    }
 }

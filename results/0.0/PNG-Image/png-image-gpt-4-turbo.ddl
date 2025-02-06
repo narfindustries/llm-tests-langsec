@@ -1,61 +1,124 @@
-module PNGImage where
+type RGB = struct {
+    red : uint8,
+    green : uint8,
+    blue : uint8
+};
 
-import DAEDALUS.Core
+type IHDR = struct {
+    width : uint32,
+    height : uint32,
+    bitDepth : uint8,
+    colorType : uint8,
+    compressionMethod : uint8,
+    filterMethod : uint8,
+    interlaceMethod : uint8
+};
 
--- Define the PNG file structure
-data PNGFile = PNGFile {
-  header      :: IHDRChunk,
-  chunks      :: [Chunk]
-}
+type PLTE = struct {
+    entries : [RGB]
+};
 
--- Define the IHDR chunk structure
-data IHDRChunk = IHDRChunk {
-  width       :: UInt32,
-  height      :: UInt32,
-  bitDepth    :: UInt8,
-  colorType   :: UInt8,
-  compression :: UInt8,
-  filter      :: UInt8,
-  interlace   :: UInt8
-}
+type IDAT = struct {
+    imageData : [uint8]
+};
 
--- Define the generic chunk structure
-data Chunk = Chunk {
-  chunkType   :: String,
-  chunkData   :: Bytes,
-  crc         :: UInt32
-}
+type IEND = struct {
+};
 
--- Parse the PNG header
-parseHeader :: Parser IHDRChunk
-parseHeader = do
-  string "IHDR"
-  width       <- uint32
-  height      <- uint32
-  bitDepth    <- uint8
-  colorType   <- uint8
-  compression <- uint8
-  filter      <- uint8
-  interlace   <- uint8
-  return IHDRChunk { width, height, bitDepth, colorType, compression, filter, interlace }
+type tEXt = struct {
+    keyword : cstring,
+    text : cstring
+};
 
--- Parse a generic chunk
-parseChunk :: Parser Chunk
-parseChunk = do
-  chunkType <- stringN 4
-  len       <- uint32
-  chunkData <- bytes len
-  crc       <- uint32
-  return Chunk { chunkType, chunkData, crc }
+type zTXt = struct {
+    keyword : cstring,
+    compressionMethod : uint8,
+    compressedText : [uint8]
+};
 
--- Parse the entire PNG file
-parsePNGFile :: Parser PNGFile
-parsePNGFile = do
-  string "\x89PNG\r\n\x1a\n"
-  header <- parseHeader
-  chunks <- many parseChunk
-  return PNGFile { header, chunks }
+type iTXt = struct {
+    keyword : cstring,
+    compressionFlag : uint8,
+    compressionMethod : uint8,
+    languageTag : cstring,
+    translatedKeyword : cstring,
+    text : cstring
+};
 
--- Entry point for parsing
-pngParser :: Parser PNGFile
-pngParser = parsePNGFile
+type bKGD = struct {
+    backgroundColor : [uint8]
+};
+
+type pHYs = struct {
+    pixelsPerUnitX : uint32,
+    pixelsPerUnitY : uint32,
+    unitSpecifier : uint8
+};
+
+type sBIT = struct {
+    significantBits : [uint8]
+};
+
+type sRGB = struct {
+    renderingIntent : uint8
+};
+
+type tIME = struct {
+    year : uint16,
+    month : uint8,
+    day : uint8,
+    hour : uint8,
+    minute : uint8,
+    second : uint8
+};
+
+type gAMA = struct {
+    gamma : uint32
+};
+
+type cHRM = struct {
+    whitePointX : uint32,
+    whitePointY : uint32,
+    redX : uint32,
+    redY : uint32,
+    greenX : uint32,
+    greenY : uint32,
+    blueX : uint32,
+    blueY : uint32
+};
+
+type hIST = struct {
+    frequencies : [uint16]
+};
+
+type sPLTEntry = struct {
+    red : uint16,
+    green : uint16,
+    blue : uint16,
+    alpha : uint16,
+    frequency : uint16
+};
+
+type sPLT = struct {
+    paletteName : cstring,
+    sampleDepth : uint8,
+    paletteEntries : [sPLTEntry]
+};
+
+type iCCP = struct {
+    profileName : cstring,
+    compressionMethod : uint8,
+    compressedProfile : [uint8]
+};
+
+type PNGChunk = struct {
+    length : uint32,
+    chunkType : string(4),
+    data : [uint8] @length,
+    crc : uint32
+};
+
+type PNGFile = struct {
+    signature : [uint8] @8,
+    chunks : [PNGChunk]
+};

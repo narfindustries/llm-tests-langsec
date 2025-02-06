@@ -1,6 +1,9 @@
 meta:
   id: gzip
+  title: GZIP compressed file
   file-extension: gz
+  xref:
+    rfc: 1952
   endian: le
 
 seq:
@@ -8,49 +11,88 @@ seq:
     contents: [0x1f, 0x8b]
   - id: compression_method
     type: u1
-    enum: compression_methods
+    enum: compression_method
   - id: flags
-    type: u1
-  - id: modification_time
+    type: flags
+  - id: mtime
     type: u4
   - id: extra_flags
     type: u1
+    enum: extra_flags
   - id: operating_system
     type: u1
-    enum: operating_systems
-  - id: extra_fields
+    enum: operating_system
+  - id: extra_field
     type: extra_field
-    if: flags & 0x04 != 0
+    if: flags.extra
   - id: name
     type: strz
-    encoding: utf-8
-    if: flags & 0x08 != 0
+    encoding: iso-8859-1
+    if: flags.name
   - id: comment
     type: strz
-    encoding: utf-8
-    if: flags & 0x10 != 0
+    encoding: iso-8859-1
+    if: flags.comment
   - id: header_crc16
     type: u2
-    if: flags & 0x02 != 0
+    if: flags.header_crc
   - id: compressed_data
-    size-eos: true
+    size: _io.size - 8 - _io.pos
     process: zlib
-    if: compression_method == compression_methods::deflate
+  - id: crc32
+    type: u4
+  - id: isize
+    type: u4
 
 types:
+  flags:
+    meta:
+      bit-endian: le
+    seq:
+      - id: reserved
+        type: b3
+      - id: comment
+        type: b1
+      - id: name
+        type: b1
+      - id: extra
+        type: b1
+      - id: header_crc
+        type: b1
+      - id: text
+        type: b1
+
   extra_field:
     seq:
-      - id: len_data
+      - id: xlen
         type: u2
       - id: extra_data
-        size: len_data
+        size: xlen
 
 enums:
-  compression_methods:
-    0: store
+  compression_method:
+    0: reserved_0
+    1: reserved_1
+    2: reserved_2
+    3: reserved_3
+    4: reserved_4
+    5: reserved_5
+    6: reserved_6
+    7: reserved_7
     8: deflate
+    9: reserved_9
+    10: reserved_10
+    11: reserved_11
+    12: reserved_12
+    13: reserved_13
+    14: reserved_14
+    15: reserved_15
 
-  operating_systems:
+  extra_flags:
+    2: maximum_compression
+    4: fastest_compression
+
+  operating_system:
     0: fat
     1: amiga
     2: vms

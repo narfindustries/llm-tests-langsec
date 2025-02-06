@@ -1,62 +1,97 @@
+#include <hammer/hammer.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <sqlite3.h>
 
-// Structure to represent a Gemini document
-typedef struct {
-    char *title;
-    char *content;
-} GeminiDoc;
-
-
-// Function to create a Gemini document from a SQLite row
-GeminiDoc* createGeminiDoc(sqlite3_stmt *stmt) {
-    GeminiDoc *doc = (GeminiDoc *)malloc(sizeof(GeminiDoc));
-    if (doc == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        return NULL;
-    }
-    doc->title = (char *)sqlite3_column_text(stmt, 0);
-    doc->content = (char *)sqlite3_column_text(stmt, 1);
-    return doc;
+// Helper function to read a fixed-size value from the file
+static uint64_t read_value(FILE *fp, size_t size) {
+    uint64_t value = 0;
+    fread(&value, size, 1, fp);
+    return value;
 }
 
+// Helper function to read a string from the file
+static char* read_string(FILE *fp, size_t size) {
+    char* str = (char*)malloc(size + 1);
+    fread(str, size, 1, fp);
+    str[size] = '\0';
+    return str;
+}
 
-int main() {
-    sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-    const char *sql;
-    sqlite3_stmt *stmt;
+// Parser for the SQLite header
+static HammerParser sqlite_header_parser() {
+    return seq(
+        string_parser("SQLite format 3\000"),
+        uint16_t_parser(),
+        uint16_t_parser(),
+        uint16_t_parser(),
+        uint8_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint64_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        uint32_t_parser(),
+        bytes_parser(20)
+    );
+}
 
-    rc = sqlite3_open("gemini.db", &db); // Replace gemini.db with your database file
+//Simplified page header parser (omitting complex cell and payload parsing)
+static HammerParser sqlite_page_header_parser() {
+    return seq(
+        uint32_t_parser(),
+        uint8_t_parser(),
+        uint8_t_parser(),
+        uint16_t_parser(),
+        uint16_t_parser(),
+        uint32_t_parser()
+    );
+}
 
-    if (rc) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <sqlite_db_file>\n", argv[0]);
         return 1;
     }
 
-    sql = "SELECT title, content FROM gemini_docs"; // Replace gemini_docs with your table name
-
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK ) {
-        fprintf(stderr, "SQL error: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
+    FILE *fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        GeminiDoc *doc = createGeminiDoc(stmt);
-        if (doc != NULL) {
-            printf("Title: %s\n", doc->title);
-            printf("Content: %s\n\n", doc->content);
-            free(doc); //Free allocated memory
-        }
+    // Parse the SQLite header
+    HammerResult header_result = hammer_parse(sqlite_header_parser(), fp);
+    if (header_result.status != HAMMER_SUCCESS) {
+        fprintf(stderr, "Error parsing header: %s\n", header_result.error);
+        fclose(fp);
+        return 1;
     }
 
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
+    // Access parsed header values (example)
+    uint16_t pageSize = *(uint16_t*)hammer_get_result_value(&header_result, 1);
+    printf("Page Size: %u\n", pageSize);
 
+    //Example of parsing a single page header.  Error handling omitted for brevity.
+    HammerResult pageHeaderResult = hammer_parse(sqlite_page_header_parser(), fp);
+    if (pageHeaderResult.status == HAMMER_SUCCESS) {
+        uint32_t pageNumber = *(uint32_t*)hammer_get_result_value(&pageHeaderResult, 0);
+        printf("Page Number: %u\n", pageNumber);
+    }
+
+    fclose(fp);
+    hammer_free_result(&header_result);
+    hammer_free_result(&pageHeaderResult);
     return 0;
 }
+

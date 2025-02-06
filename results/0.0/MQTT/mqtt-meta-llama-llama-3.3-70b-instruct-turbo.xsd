@@ -1,59 +1,146 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/MQTT"
-           xmlns:tns="http://example.com/MQTT"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="MQTT-DFDL.xsd"/>
-
-  <xs:element name="mqtt-message">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format ref="mqtt-message-format"/>
-      </xs:appinfo>
-    </xs:annotation>
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" type="tns:header-type"/>
-        <xs:element name="payload" type="tns:payload-type"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:complexType name="header-type">
-    <xs:sequence>
-      <xs:element name="message-type" type="xs:unsignedByte"/>
-      <xs:element name="dup" type="xs:unsignedByte"/>
-      <xs:element name="qos" type="xs:unsignedByte"/>
-      <xs:element name="retain" type="xs:unsignedByte"/>
-      <xs:element name="remaining-length" type="xs:unsignedInt"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="payload-type">
-    <xs:sequence>
-      <xs:element name="topic-name" type="xs:string"/>
-      <xs:element name="message-id" type="xs:unsignedShort" minOccurs="0" maxOccurs="1"/>
-      <xs:element name="payload-data" type="xs:hexBinary"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:format>
-        <dfdl:property name="encoding" value="UTF-8"/>
-        <dfdl:property name="byteOrder" value="bigEndian"/>
-      </dfdl:format>
-    </xs:appinfo>
-  </xs:annotation>
-
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:format ref="mqtt-message-format">
-        <dfdl:property name="separator" value=" "/>
-      </dfdl:format>
-    </xs:appinfo>
-  </xs:annotation>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:ex="http://example.com">
+  <dfdl:format ref="mqtt"/>
+  <dfdl:grammar>
+    <dfdl:element name="mqttMessage" type="element" occurs="1..*">
+      <dfdl:element name="fixedHeader" type="element" occurs="1">
+        <dfdl:element name="byte0" type="byte" occurs="1">
+          <dfdl:assert test="(dfdl:value() &amp; 0xF0) = 0" message="Reserved bits must be 0"/>
+        </dfdl:element>
+        <dfdl:element name="opcode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x03 or dfdl:value() = 0x04 or dfdl:value() = 0x05 or dfdl:value() = 0x06 or dfdl:value() = 0x07 or dfdl:value() = 0x08 or dfdl:value() = 0x09 or dfdl:value() = 0x0A or dfdl:value() = 0x0B or dfdl:value() = 0x0C or dfdl:value() = 0x0D" message="Invalid opcode"/>
+        </dfdl:element>
+        <dfdl:element name="flags" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() &amp; 0xF0 = 0" message="Reserved bits must be 0"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="connect" type="element" occurs="0..1">
+        <dfdl:element name="protocolName" type="string" occurs="1" length="4">
+          <dfdl:assert test="dfdl:value() = 'MQTT'" message="Invalid protocol name"/>
+        </dfdl:element>
+        <dfdl:element name="protocolLevel" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x05" message="Invalid protocol level"/>
+        </dfdl:element>
+        <dfdl:element name="connectFlags" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() &amp; 0xC0 = 0" message="Reserved bits must be 0"/>
+        </dfdl:element>
+        <dfdl:element name="keepAlive" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Keep alive must be non-negative"/>
+        </dfdl:element>
+        <dfdl:element name="username" type="string" occurs="0..1">
+          <dfdl:assert test="dfdl:parent()/connectFlags &amp; 0x01 = 1" message="Username flag must be set"/>
+        </dfdl:element>
+        <dfdl:element name="password" type="string" occurs="0..1">
+          <dfdl:assert test="dfdl:parent()/connectFlags &amp; 0x02 = 2" message="Password flag must be set"/>
+        </dfdl:element>
+        <dfdl:element name="willTopic" type="string" occurs="0..1">
+          <dfdl:assert test="dfdl:parent()/connectFlags &amp; 0x04 = 4" message="Will topic flag must be set"/>
+        </dfdl:element>
+        <dfdl:element name="willMessage" type="string" occurs="0..1">
+          <dfdl:assert test="dfdl:parent()/connectFlags &amp; 0x04 = 4" message="Will message flag must be set"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="connack" type="element" occurs="0..1">
+        <dfdl:element name="sessionPresent" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0 or dfdl:value() = 1" message="Invalid session present value"/>
+        </dfdl:element>
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x03 or dfdl:value() = 0x04 or dfdl:value() = 0x05 or dfdl:value() = 0x06 or (dfdl:value() >= 0x80 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="publish" type="element" occurs="0..1">
+        <dfdl:element name="qos" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0 or dfdl:value() = 1 or dfdl:value() = 2" message="Invalid QoS value"/>
+        </dfdl:element>
+        <dfdl:element name="dup" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0 or dfdl:value() = 1" message="Invalid dup value"/>
+        </dfdl:element>
+        <dfdl:element name="retain" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0 or dfdl:value() = 1" message="Invalid retain value"/>
+        </dfdl:element>
+        <dfdl:element name="topicName" type="string" occurs="1">
+          <dfdl:assert test="string-length(dfdl:value()) > 0" message="Topic name must not be empty"/>
+        </dfdl:element>
+        <dfdl:element name="packetIdentifier" type="integer" occurs="0..1" length="2">
+          <dfdl:assert test="dfdl:parent()/qos = 1 or dfdl:parent()/qos = 2" message="Packet identifier must be present for QoS 1 and 2"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="puback" type="element" occurs="0..1">
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x80 or (dfdl:value() >= 0x81 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="pubrec" type="element" occurs="0..1">
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x80 or (dfdl:value() >= 0x81 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="pubrel" type="element" occurs="0..1">
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x80 or (dfdl:value() >= 0x81 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="pubcomp" type="element" occurs="0..1">
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x80 or (dfdl:value() >= 0x81 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="subscribe" type="element" occurs="0..1">
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+        <dfdl:element name="subscription" type="element" occurs="1..*">
+          <dfdl:element name="topicFilter" type="string" occurs="1">
+            <dfdl:assert test="string-length(dfdl:value()) > 0" message="Topic filter must not be empty"/>
+          </dfdl:element>
+          <dfdl:element name="requestedQos" type="byte" occurs="1">
+            <dfdl:assert test="dfdl:value() = 0 or dfdl:value() = 1 or dfdl:value() = 2" message="Invalid requested QoS value"/>
+          </dfdl:element>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="suback" type="element" occurs="0..1">
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+        <dfdl:element name="reasonCode" type="byte" occurs="1..*">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x80" message="Invalid reason code"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="unsubscribe" type="element" occurs="0..1">
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+        <dfdl:element name="topicFilter" type="string" occurs="1..*">
+          <dfdl:assert test="string-length(dfdl:value()) > 0" message="Topic filter must not be empty"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="unsuback" type="element" occurs="0..1">
+        <dfdl:element name="packetIdentifier" type="integer" occurs="1" length="2">
+          <dfdl:assert test="dfdl:value() >= 0" message="Packet identifier must be non-negative"/>
+        </dfdl:element>
+        <dfdl:element name="reasonCode" type="byte" occurs="1..*">
+          <dfdl:assert test="dfdl:value() = 0x00 or (dfdl:value() >= 0x80 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+      </dfdl:element>
+      <dfdl:element name="pingreq" type="element" occurs="0..1"/>
+      <dfdl:element name="pingresp" type="element" occurs="0..1"/>
+      <dfdl:element name="disconnect" type="element" occurs="0..1">
+        <dfdl:element name="reasonCode" type="byte" occurs="1">
+          <dfdl:assert test="dfdl:value() = 0x00 or dfdl:value() = 0x01 or dfdl:value() = 0x02 or dfdl:value() = 0x03 or (dfdl:value() >= 0x80 and dfdl:value() = 0xFF)" message="Invalid reason code"/>
+        </dfdl:element>
+      </dfdl:element>
+    </dfdl:element>
+  </dfdl:grammar>
+</dfdl:definition>

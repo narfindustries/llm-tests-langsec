@@ -2,34 +2,154 @@ module ICMP;
 
 import spicy;
 
-public type ICMP = unit {
-    type_code: bitfield(8) {
-        type:  0..7;
-        code:  8..15;
-    };
-
-    header: record {
-        type:     uint8;
-        code:     uint8;
-        checksum: uint16;
-    } &byte-order=spicy::ByteOrder::Big;
-
-    payload: bytes &size=remaining();
+public type ICMPHeader = unit {
+    type: uint8;
+    code: uint8;
+    checksum: uint16;
+    
+    var payload: bytes;
 
     on %init {
-        self.type_code = self.header.type;
+        self.payload = b"";
     }
 
-    # Type-specific handling
-    var type_code: bitfield(8);
+    on %done {
+        self.payload = self.parse_payload();
+    }
 
-    # Common ICMP types
-    const ECHO_REQUEST: uint8 = 8;
-    const ECHO_REPLY:   uint8 = 0;
+    function parse_payload() : bytes {
+        switch ( self.type ) {
+            case 0:  return Echo.parse(self);
+            case 3:  return DestinationUnreachable.parse(self);
+            case 4:  return SourceQuench.parse(self);
+            case 5:  return Redirect.parse(self);
+            case 8:  return Echo.parse(self);
+            case 9:  return RouterAdvertisement.parse(self);
+            case 10: return RouterSolicitation.parse(self);
+            case 11: return TimeExceeded.parse(self);
+            case 12: return ParameterProblem.parse(self);
+            case 13: return Timestamp.parse(self);
+            case 14: return TimestampReply.parse(self);
+            case 15: return InformationRequest.parse(self);
+            case 16: return InformationReply.parse(self);
+            default: return self.payload;
+        }
+    }
 
-    # Optional additional type-specific parsing
-    on header if ( header.type == ECHO_REQUEST || header.type == ECHO_REPLY ) {
+    type Echo = unit {
         identifier: uint16;
-        sequence:   uint16;
-    }
-} &byteorder=spicy::ByteOrder::Big;
+        sequence_number: uint16;
+        data: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type DestinationUnreachable = unit {
+        unused: uint32;
+        original_datagram: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type SourceQuench = unit {
+        unused: uint32;
+        original_datagram: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type Redirect = unit {
+        gateway_address: addr;
+        original_datagram: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type RouterAdvertisement = unit {
+        num_addresses: uint8;
+        address_entry_size: uint8;
+        lifetime: uint16;
+        router_addresses: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type RouterSolicitation = unit {
+        reserved: uint32;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type TimeExceeded = unit {
+        unused: uint32;
+        original_datagram: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type ParameterProblem = unit {
+        pointer: uint8;
+        unused: uint24;
+        original_datagram: bytes;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type Timestamp = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        originate_timestamp: uint32;
+        receive_timestamp: uint32;
+        transmit_timestamp: uint32;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type TimestampReply = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        originate_timestamp: uint32;
+        receive_timestamp: uint32;
+        transmit_timestamp: uint32;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type InformationRequest = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+
+    type InformationReply = unit {
+        identifier: uint16;
+        sequence_number: uint16;
+        
+        static function parse(icmp: ICMPHeader) : bytes {
+            return b"";
+        }
+    };
+};

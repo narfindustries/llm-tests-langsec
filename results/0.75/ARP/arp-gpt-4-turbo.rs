@@ -1,14 +1,14 @@
 use nom::{
-    bytes::complete::take,
-    number::complete::{be_u16, be_u8},
     IResult,
+    bytes::complete::{take, take_while_m_n},
+    number::complete::{be_u16, be_u8}
 };
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
 
-#[derive(Debug)]
-struct ArpPacket {
+#[derive(Debug, PartialEq)]
+struct ARP {
     htype: u16,
     ptype: u16,
     hlen: u8,
@@ -20,7 +20,7 @@ struct ArpPacket {
     tpa: Vec<u8>,
 }
 
-fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
+fn parse_arp(input: &[u8]) -> IResult<&[u8], ARP> {
     let (input, htype) = be_u16(input)?;
     let (input, ptype) = be_u16(input)?;
     let (input, hlen) = be_u8(input)?;
@@ -31,36 +31,36 @@ fn parse_arp_packet(input: &[u8]) -> IResult<&[u8], ArpPacket> {
     let (input, tha) = take(hlen as usize)(input)?;
     let (input, tpa) = take(plen as usize)(input)?;
 
-    Ok((
-        input,
-        ArpPacket {
-            htype,
-            ptype,
-            hlen,
-            plen,
-            oper,
-            sha: sha.to_vec(),
-            spa: spa.to_vec(),
-            tha: tha.to_vec(),
-            tpa: tpa.to_vec(),
-        },
-    ))
+    Ok((input, ARP {
+        htype,
+        ptype,
+        hlen,
+        plen,
+        oper,
+        sha: sha.to_vec(),
+        spa: spa.to_vec(),
+        tha: tha.to_vec(),
+        tpa: tpa.to_vec(),
+    }))
 }
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <file>", args[0]);
-        std::process::exit(1);
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Usage: arp_parser <file>"));
     }
 
     let mut file = File::open(&args[1])?;
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)?;
 
-    match parse_arp_packet(&buffer) {
-        Ok((_, arp_packet)) => println!("{:#?}", arp_packet),
-        Err(error) => eprintln!("Failed to parse ARP packet: {:?}", error),
+    match parse_arp(&buffer) {
+        Ok((_, arp)) => {
+            println!("Parsed ARP packet: {:?}", arp);
+        },
+        Err(e) => {
+            println!("Failed to parse ARP packet: {:?}", e);
+        }
     }
 
     Ok(())

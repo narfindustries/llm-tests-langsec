@@ -1,35 +1,68 @@
 module ICMP;
 
-public type ICMPMessage = unit {
-    type: uint8;
-    code: uint8;
-    checksum: uint16;
+public type ICMPHeader = unit {
+    type:      uint8;
+    code:      uint8;
+    checksum:  uint16;
+    rest:      bytes &size=4;
 
-    switch (self.type) {
-        # Type 8: Echo Request
-        # Type 0: Echo Reply
-        on (8, 0) -> body: ICMPEcho;
-
-        # Default case for other types, we ignore for now
-        on * -> : void;
-    };
-
-    on %done {
-        print "ICMP Message Type:", self.type;
-        print "ICMP Message Code:", self.code;
-        print "ICMP Checksum:", self.checksum;
+    on %init {
+        switch (this.type) {
+            case 0: {  // Echo Reply
+                this.echo : ICMPEcho(reparse(ICMPEcho, this.rest));
+            }
+            case 8: {  // Echo Request
+                this.echo : ICMPEcho(reparse(ICMPEcho, this.rest));
+            }
+            case 3: {  // Destination Unreachable
+                this.unreachable : ICMPUnreachable(reparse(ICMPUnreachable, this.rest));
+            }
+            case 11: { // Time Exceeded
+                this.timeExceeded : ICMPTimeExceeded(reparse(ICMPTimeExceeded, this.rest));
+            }
+            case 12: { // Parameter Problem
+                this.paramProblem : ICMPParameterProblem(reparse(ICMPParameterProblem, this.rest));
+            }
+            case 5: {  // Redirect
+                this.redirect : ICMPRedirect(reparse(ICMPRedirect, this.rest));
+            }
+        }
     }
+
+    echo:           ICMPEcho &optional;
+    unreachable:    ICMPUnreachable &optional;
+    timeExceeded:   ICMPTimeExceeded &optional;
+    paramProblem:   ICMPParameterProblem &optional;
+    redirect:       ICMPRedirect &optional;
 };
 
 public type ICMPEcho = unit {
     identifier: uint16;
-    sequenceNumber: uint16;
+    sequence: uint16;
+    data: bytes &eod;
+};
 
-    data: bytes &size=($context.length - 4);
+public type ICMPUnreachable = unit {
+    unused: uint32;
+    originalPacketHeader: bytes &size=20; // original IP header
+    data: bytes &eod; // leading part of the original datagram's data
+};
 
-    on %done {
-        print "Echo Identifier:", self.identifier;
-        print "Echo Sequence Number:", self.sequenceNumber;
-        print "Echo Payload Size:", |self.data|;
-    }
+public type ICMPTimeExceeded = unit {
+    unused: uint32;
+    originalPacketHeader: bytes &size=20; // original IP header
+    data: bytes &eod;
+};
+
+public type ICMPParameterProblem = unit {
+    pointer: uint8;
+    unused: bytes &size=3;
+    originalPacketHeader: bytes &size=20; // original IP header
+    data: bytes &eod;
+};
+
+public type ICMPRedirect = unit {
+    gatewayInternetAddress: addr;
+    originalPacketHeader: bytes &size=20; // original IP header
+    data: bytes &eod;
 };

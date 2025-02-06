@@ -1,0 +1,1 @@
+(for<'a> fn(&'a [u8]) -> Result<(&'a [u8], DNSHeader), nom::Err<nom::error::Error<&'a [u8]>>> {parse_dns_header}, {closure@src/main.rs:192:13: 192:33}, {closure@src/main.rs:193:13: 193:33}, {closure@src/main.rs:194:13: 194:33}, {closure@src/main.rs:195:13: 195:33})

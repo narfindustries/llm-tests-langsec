@@ -1,69 +1,58 @@
-namespace DICOM {
-    type DICOMFile = struct {
-        preamble: Preamble;
-        prefix: Prefix;
-        elements: list<Element>;
-    };
+DICOMFile {
+    Preamble: bytes[128] = [0x00] * 128;
+    Prefix: "DICM";
+    Elements: Element[];
+}
 
-    type Preamble = struct {
-        data: bytes(128);
-    };
+Element {
+    Tag: uint16;
+    VR: string[2];
+    Length: uint32;
+    Value: bytes[Length];
+}
 
-    type Prefix = struct {
-        data: bytes(4);
-    };
+PatientModule {
+    PatientName: Element (Tag == 0x00100010);
+    PatientID: Element (Tag == 0x00100020);
+    PatientBirthDate: Element (Tag == 0x00100030);
+    PatientSex: Element (Tag == 0x00100040);
+}
 
-    type Element = struct {
-        tag: Tag;
-        vr: VR;
-        length: Length;
-        value: Value;
-    };
+StudyModule {
+    StudyInstanceUID: Element (Tag == 0x0020000D);
+    StudyDate: Element (Tag == 0x00080020);
+    StudyTime: Element (Tag == 0x00080030);
+    ReferringPhysicianName: Element (Tag == 0x00080090);
+}
 
-    type Tag = struct {
-        group: uint16;
-        element: uint16;
-    };
+SeriesModule {
+    SeriesInstanceUID: Element (Tag == 0x0020000E);
+    Modality: Element (Tag == 0x00080060);
+    SeriesNumber: Element (Tag == 0x00200011);
+}
 
-    type VR = enum : string {
-        "AE", "AS", "AT", "CS", "DA", "DS", "DT", "FL", "FD", "IS", "LO", "LT", "OB", "OD", "OF", "OL", "OW", "PN", "SH", "SL", "SQ", "SS", "ST", "TM", "UC", "UI", "UL", "UN", "UR", "US", "UT"
-    };
+ImageModule {
+    SOPInstanceUID: Element (Tag == 0x00080018);
+    ImagePositionPatient: Element (Tag == 0x00200032);
+    ImageOrientationPatient: Element (Tag == 0x00200037);
+    PixelSpacing: Element (Tag == 0x00280030);
+}
 
-    type Length = uint32;
+FileMetaInformation {
+    FileMetaInformationGroupLength: Element (Tag == 0x00020000);
+    FileMetaInformationVersion: Element (Tag == 0x00020001);
+    MediaStorageSOPClassUID: Element (Tag == 0x00020002);
+    MediaStorageSOPInstanceUID: Element (Tag == 0x00020003);
+    TransferSyntaxUID: Element (Tag == 0x00020010);
+    ImplementationClassUID: Element (Tag == 0x00020012);
+    ImplementationVersionName: Element (Tag == 0x00020013);
+}
 
-    type Value = union {
-        case vr == "AE" : string;
-        case vr == "AS" : string;
-        case vr == "AT" : list<uint16>;
-        case vr == "CS" : string;
-        case vr == "DA" : string;
-        case vr == "DS" : string;
-        case vr == "DT" : string;
-        case vr == "FL" : float32;
-        case vr == "FD" : float64;
-        case vr == "IS" : string;
-        case vr == "LO" : string;
-        case vr == "LT" : string;
-        case vr == "OB" : bytes(length);
-        case vr == "OD" : bytes(length);
-        case vr == "OF" : bytes(length);
-        case vr == "OL" : bytes(length);
-        case vr == "OW" : bytes(length);
-        case vr == "PN" : string;
-        case vr == "SH" : string;
-        case vr == "SL" : int32;
-        case vr == "SQ" : Sequence;
-        case vr == "SS" : int16;
-        case vr == "ST" : string;
-        case vr == "TM" : string;
-        case vr == "UC" : string;
-        case vr == "UI" : string;
-        case vr == "UL" : uint32;
-        case vr == "UN" : bytes(length);
-        case vr == "UR" : string;
-        case vr == "US" : uint16;
-        case vr == "UT" : string;
-    };
-
-    type Sequence = list<Element>;
+DICOMDataSet {
+    FileMetaInformation: FileMetaInformation;
+    PatientModule: PatientModule;
+    StudyModule: StudyModule;
+    SeriesModule: SeriesModule;
+    ImageModule: ImageModule;
+    OtherElements: Element[];
 }

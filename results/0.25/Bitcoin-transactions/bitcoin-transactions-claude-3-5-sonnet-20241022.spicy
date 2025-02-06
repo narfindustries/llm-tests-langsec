@@ -1,42 +1,50 @@
 module Bitcoin;
 
-import spicy;
-
 public type Transaction = unit {
     version: int32;
-    tx_in_count: uint8;
-    tx_in: TxInput[self.tx_in_count];
-    tx_out_count: uint8;
-    tx_out: TxOutput[self.tx_out_count];
+    tx_in_count: VarInt;
+    tx_in: TxIn[self.tx_in_count.int_value];
+    tx_out_count: VarInt;
+    tx_out: TxOut[self.tx_out_count.int_value];
     lock_time: uint32;
 };
 
-type TxInput = unit {
-    prev_output: OutputPoint;
-    script_length: uint8;
-    signature_script: bytes &size=self.script_length;
+type VarInt = unit {
+    prefix: uint8;
+    var int_value: uint64;
+
+    on prefix {
+        if (self.prefix < 0xfd)
+            self.int_value = self.prefix;
+        else if (self.prefix == 0xfd)
+            self.int_value = self.uint16_value;
+        else if (self.prefix == 0xfe)
+            self.int_value = self.uint32_value;
+        else
+            self.int_value = self.uint64_value;
+    }
+
+    switch(self.prefix) {
+        0xfd -> uint16_value: uint16;
+        0xfe -> uint32_value: uint32;
+        0xff -> uint64_value: uint64;
+    };
+};
+
+type TxIn = unit {
+    previous_output: OutPoint;
+    script_length: VarInt;
+    signature_script: bytes &size=self.script_length.int_value;
     sequence: uint32;
 };
 
-type TxOutput = unit {
-    value: uint64;
-    pk_script_length: uint8;
-    pk_script: bytes &size=self.pk_script_length;
-};
-
-type OutputPoint = unit {
+type OutPoint = unit {
     hash: bytes &size=32;
     index: uint32;
 };
 
-on Transaction::version -> event Bitcoin::transaction_version($version);
-on Transaction::tx_in_count -> event Bitcoin::transaction_input_count(self.tx_in_count);
-on Transaction::tx_out_count -> event Bitcoin::transaction_output_count(self.tx_out_count);
-on Transaction::lock_time -> event Bitcoin::transaction_lock_time(self.lock_time);
-
-on TxInput::prev_output -> event Bitcoin::transaction_input_prev_output(self.prev_output.hash, self.prev_output.index);
-on TxInput::signature_script -> event Bitcoin::transaction_input_signature(self.signature_script);
-on TxInput::sequence -> event Bitcoin::transaction_input_sequence(self.sequence);
-
-on TxOutput::value -> event Bitcoin::transaction_output_value(self.value);
-on TxOutput::pk_script -> event Bitcoin::transaction_output_script(self.pk_script);
+type TxOut = unit {
+    amount: uint64;
+    script_length: VarInt;
+    pk_script: bytes &size=self.script_length.int_value;
+};

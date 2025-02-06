@@ -1,58 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://www.example.org/NITF"
-           xmlns:nitf="http://www.example.org/NITF"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0"
+           targetNamespace="http://example.com/nitf"
+           xmlns:nitf="http://example.com/nitf"
            elementFormDefault="qualified">
 
   <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format representation="text"
-                  encoding="UTF-8"
-                  separator=""
-                  initiator=""
-                  terminator=""
-                  leadingSkip="0"
-                  trailingSkip="0"
-                  textTrimKind="none"
-                  initiatedContent="no"
-                  separator=""
-                  separatorPosition="prefix"
-                  separatorPolicy="suppressed"
-                  documentFinalTerminatorCanBeMissing="yes"
-                  byteOrder="bigEndian"
-                  bitOrder="mostSignificantBitFirst"
-                  fillByte="%#r20"
-                  escapeSchemeRef=""/>
+    <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0">
+      <dfdl:format separator="" initiator="" terminator=""
+                   encoding="UTF-8"
+                   alignmentUnits="bytes" 
+                   alignment="1" 
+                   lengthUnits="bytes" 
+                   encodingErrorPolicy="replace"
+                   outputNewLine="%CR;%LF;"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="nitf" dfdl:lengthKind="implicit">
+  <xs:element name="NITF" dfdl:lengthKind="implicit">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element name="header" dfdl:lengthKind="implicit">
+      <xs:sequence dfdl:separator="">
+        <xs:element name="FileHeader" dfdl:lengthKind="implicit">
           <xs:complexType>
-            <xs:sequence>
-              <xs:element name="fieldA" type="xs:string" 
-                          dfdl:lengthKind="delimited"
-                          dfdl:terminator="|"/>
-              <xs:element name="fieldB" type="xs:integer" 
-                          dfdl:lengthKind="delimited"
-                          dfdl:terminator="|"/>
+            <xs:sequence dfdl:separator="">
+              <xs:element name="FHDR" type="xs:string" 
+                          dfdl:length="9" 
+                          dfdl:pattern="NITF02\.10"/>
+              <xs:element name="CLEVEL" type="xs:integer"
+                          dfdl:length="2"
+                          dfdl:pattern="[0-9]{2}"/>
+              <xs:element name="STYPE" type="xs:string"
+                          dfdl:length="10"/>
+              <xs:element name="FDATE" type="xs:string"
+                          dfdl:length="14"
+                          dfdl:pattern="\d{14}"/>
+              <xs:element name="ONAME" type="xs:string"
+                          dfdl:length="24"/>
+              <xs:element name="OPHONE" type="xs:string"
+                          dfdl:length="18"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="body" dfdl:lengthKind="implicit">
+
+        <xs:element name="ImageSegments" dfdl:lengthKind="implicit" minOccurs="1" maxOccurs="unbounded">
           <xs:complexType>
-            <xs:sequence>
-              <xs:element name="content" type="xs:string" 
-                          dfdl:lengthKind="delimited"
-                          dfdl:terminator="%NL;"/>
+            <xs:sequence dfdl:separator="">
+              <xs:element name="ImageSegmentHeader" dfdl:lengthKind="implicit">
+                <xs:complexType>
+                  <xs:sequence dfdl:separator="">
+                    <xs:element name="ISORCE" type="xs:string" dfdl:lengthKind="delimited"/>
+                    <xs:element name="IDATIM" type="xs:string" dfdl:lengthKind="delimited"/>
+                    <xs:element name="TGTID" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+                    <xs:element name="ICLEVEL" type="xs:integer" dfdl:lengthKind="delimited"/>
+                    <xs:element name="ILOC" type="xs:string" dfdl:lengthKind="delimited"/>
+                    <xs:element name="COMRAT" type="xs:string" minOccurs="0" dfdl:lengthKind="delimited"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="ImageData" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="GraphicSegments" dfdl:lengthKind="implicit" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="">
+              <xs:element name="GraphicSegmentHeader" dfdl:lengthKind="implicit"/>
+              <xs:element name="GraphicData" type="xs:base64Binary" dfdl:lengthKind="delimited"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="TextSegments" dfdl:lengthKind="implicit" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence dfdl:separator="">
+              <xs:element name="TextSegmentHeader" dfdl:lengthKind="implicit"/>
+              <xs:element name="TextData" type="xs:string" dfdl:lengthKind="delimited"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-
 </xs:schema>

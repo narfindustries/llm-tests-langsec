@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:ex="http://example.com/icmp"
+           targetNamespace="http://example.com/icmp">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format byteOrder="bigEndian" lengthKind="explicit"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:complexType name="ICMPType">
+    <xs:sequence>
+      <xs:element name="Type" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="Code" type="xs:unsignedByte" dfdl:length="1"/>
+      <xs:element name="Checksum" type="xs:unsignedShort" dfdl:length="2"/>
+      <xs:choice dfdl:choiceDispatchKey="{../Type}">
+        <xs:sequence dfdl:choiceBranchKey="0">
+          <xs:element name="EchoReplyIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="EchoReplySequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="EchoReplyData" type="xs:hexBinary" dfdl:length="0"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="3">
+          <xs:element name="Unused" type="xs:unsignedInt" dfdl:length="4"/>
+          <xs:element name="DestinationUnreachableData" type="xs:hexBinary" dfdl:length="0"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="5">
+          <xs:element name="GatewayInternetAddress" type="xs:unsignedInt" dfdl:length="4"/>
+          <xs:element name="RedirectData" type="xs:hexBinary" dfdl:length="0"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="8">
+          <xs:element name="EchoRequestIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="EchoRequestSequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="EchoRequestData" type="xs:hexBinary" dfdl:length="0"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="11">
+          <xs:element name="TimeExceededUnused" type="xs:unsignedInt" dfdl:length="4"/>
+          <xs:element name="TimeExceededData" type="xs:hexBinary" dfdl:length="0"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="13">
+          <xs:element name="TimestampRequestIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="TimestampRequestSequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="OriginateTimestamp" type="xs:unsignedInt" dfdl:length="4"/>
+          <xs:element name="ReceiveTimestamp" type="xs:unsignedInt" dfdl:length="4"/>
+          <xs:element name="TransmitTimestamp" type="xs:unsignedInt" dfdl:length="4"/>
+        </xs:sequence>
+        <xs:sequence dfdl:choiceBranchKey="17">
+          <xs:element name="AddressMaskRequestIdentifier" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="AddressMaskRequestSequenceNumber" type="xs:unsignedShort" dfdl:length="2"/>
+          <xs:element name="AddressMask" type="xs:unsignedInt" dfdl:length="4"/>
+        </xs:sequence>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ICMP" type="ex:ICMPType"/>
+
+</xs:schema>

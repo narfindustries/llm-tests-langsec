@@ -1,37 +1,76 @@
 module HL7;
 
-public type MSH = unit {
-    field_sep: bytes &size=1;
-    encoding_chars: bytes &size=4;
-    sending_app: bytes &eod;
-    sending_fac: bytes &eod;
-    receiving_app: bytes &eod;
-    receiving_fac: bytes &eod;
-    date_time: bytes &eod;
-    security: bytes &eod;
-    message_type: bytes &eod;
-    message_control_id: bytes &eod;
-    processing_id: bytes &eod;
-    version_id: bytes &eod;
-    sequence_number: bytes &eod;
-    continuation_pointer: bytes &eod;
-    accept_ack_type: bytes &eod;
-    application_ack_type: bytes &eod;
-    country_code: bytes &eod;
-    charset: bytes &eod;
-    principal_language: bytes &eod;
-    alt_charset_handling_scheme: bytes &eod;
-    message_profile_id: bytes &eod;
+type MSH = unit {
+    fieldSeparator: bytes &size=1;
+    encodingCharacters: bytes &size=4;
+    sendingApplication: string &optional;
+    sendingFacility: string &optional;
+    receivingApplication: string &optional;
+    receivingFacility: string &optional;
+    dateTimeOfMessage: string &optional;
+    security: string &optional;
+    messageType: string;
+    messageControlID: string;
+    processingID: string;
+    versionID: string;
+    sequenceNumber: string &optional;
+    continuationPointer: string &optional;
+    acceptAcknowledgmentType: string &optional;
+    applicationAcknowledgmentType: string &optional;
+    countryCode: string &optional;
+    characterSet: string &optional;
+    principalLanguageOfMessage: string &optional;
+    alternateCharacterSetHandlingScheme: string &optional;
+    messageProfileIdentifier: string &optional;
 };
 
-public type HL7Message = unit {
+type PID = unit {
+    setID: string &optional;
+    patientID: string &optional;
+    patientIdentifierList: string &optional;
+    alternatePatientID: string &optional;
+    patientName: string &optional;
+    motherMaidenName: string &optional;
+    dateTimeOfBirth: string &optional;
+    sex: string &optional;
+    patientAlias: string &optional;
+    race: string &optional;
+    patientAddress: string &optional;
+    countyCode: string &optional;
+    phoneNumberHome: string &optional;
+    phoneNumberBusiness: string &optional;
+    primaryLanguage: string &optional;
+    maritalStatus: string &optional;
+    religion: string &optional;
+    patientAccountNumber: string &optional;
+    ssnNumber: string &optional;
+    driverLicenseNumber: string &optional;
+    motherIdentifier: string &optional;
+    ethnicGroup: string &optional;
+    birthPlace: string &optional;
+    multipleBirthIndicator: string &optional;
+    birthOrder: string &optional;
+    citizenship: string &optional;
+    veteransMilitaryStatus: string &optional;
+    nationality: string &optional;
+    patientDeathDateAndTime: string &optional;
+    patientDeathIndicator: string &optional;
+};
+
+type HL7Message = unit {
     msh: MSH;
-    data: bytes &eod;
-    on %done {
-        print self;
-    }
+    segments: Segment(self.msh.fieldSeparator)[] &eod;
 };
 
-public type HL7Stream = unit {
-    messages: HL7Message[] &eod;
+type Segment = unit(separator: bytes) {
+    segType: bytes &size=3;
+    content: switch {
+        self.segType == b"MSH": msh: MSH;
+        self.segType == b"PID": pid: PID;
+        default: data: bytes &restofdata;
+    };
+};
+
+public type File = unit {
+    messages: HL7Message[];
 };

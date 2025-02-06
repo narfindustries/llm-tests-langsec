@@ -1,150 +1,311 @@
-#include <stdio.h>
+#include <hammer/hammer.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-// MQTT protocol specification
-// https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html
+#define mqtt_packet_type_connect 1
+#define mqtt_packet_type_connack 2
+#define mqtt_packet_type_publish 3
+#define mqtt_packet_type_puback 4
+#define mqtt_packet_type_pubrec 5
+#define mqtt_packet_type_pubrel 6
+#define mqtt_packet_type_pubcomp 7
+#define mqtt_packet_type_subscribe 8
+#define mqtt_packet_type_suback 9
+#define mqtt_packet_type_unsubscribe 10
+#define mqtt_packet_type_unsuback 11
+#define mqtt_packet_type_pingreq 12
+#define mqtt_packet_type_pingresp 13
+#define mqtt_packet_type_disconnect 14
 
-// Header
+typedef enum {
+    QOS_AT_MOST_ONCE = 0,
+    QOS_AT_LEAST_ONCE = 1,
+    QOS_EXACTLY_ONCE = 2
+} QoS;
+
+typedef enum {
+    CONNECT_SUCCESS = 0,
+    CONNECT_UNACCEPTABLE_PROTOCOL_VERSION = 1,
+    CONNECT_IDENTIFIER_REJECTED = 2,
+    CONNECT_SERVER_UNAVAILABLE = 3,
+    CONNECT_UNKNOWN_RETURN_CODE = 4,
+    CONNECT_NOT_AUTHORIZED = 5
+} ConnectReturnCode;
+
+typedef enum {
+    PUBACK_SUCCESS = 0,
+    PUBACK_NO_MATCHING_SUBSCRIBERS = 16,
+    PUBACK_UNSPECIFIED_ERROR = 17,
+    PUBACK_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    PUBACK_NOT_AUTHORIZED = 131,
+    PUBACK_TOPIC_NAME_INVALID = 135,
+    PUBACK_PACKET_IDENTIFIER_IN_USE = 137,
+    PUBACK_QUOTA_EXCEEDED = 140,
+    PUBACK_PAYLOAD_FORMAT_INVALID = 144
+} PubAckReasonCode;
+
+typedef enum {
+    PUBREC_SUCCESS = 0,
+    PUBREC_NO_MATCHING_SUBSCRIBERS = 16,
+    PUBREC_UNSPECIFIED_ERROR = 17,
+    PUBREC_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    PUBREC_NOT_AUTHORIZED = 131,
+    PUBREC_TOPIC_NAME_INVALID = 135,
+    PUBREC_PACKET_IDENTIFIER_IN_USE = 137,
+    PUBREC_QUOTA_EXCEEDED = 140,
+    PUBREC_PAYLOAD_FORMAT_INVALID = 144
+} PubRecReasonCode;
+
+typedef enum {
+    PUBREL_SUCCESS = 0,
+    PUBREL_NO_MATCHING_SUBSCRIBERS = 16,
+    PUBREL_UNSPECIFIED_ERROR = 17,
+    PUBREL_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    PUBREL_NOT_AUTHORIZED = 131,
+    PUBREL_TOPIC_NAME_INVALID = 135,
+    PUBREL_PACKET_IDENTIFIER_IN_USE = 137,
+    PUBREL_QUOTA_EXCEEDED = 140,
+    PUBREL_PAYLOAD_FORMAT_INVALID = 144
+} PubRelReasonCode;
+
+typedef enum {
+    PUBCOMP_SUCCESS = 0,
+    PUBCOMP_NO_MATCHING_SUBSCRIBERS = 16,
+    PUBCOMP_UNSPECIFIED_ERROR = 17,
+    PUBCOMP_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    PUBCOMP_NOT_AUTHORIZED = 131,
+    PUBCOMP_TOPIC_NAME_INVALID = 135,
+    PUBCOMP_PACKET_IDENTIFIER_IN_USE = 137,
+    PUBCOMP_QUOTA_EXCEEDED = 140,
+    PUBCOMP_PAYLOAD_FORMAT_INVALID = 144
+} PubCompReasonCode;
+
+typedef enum {
+    SUBACK_SUCCESS = 0,
+    SUBACK_NO_SUBSCRIPTION_EXISTED = 17,
+    SUBACK_UNSPECIFIED_ERROR = 18,
+    SUBACK_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    SUBACK_NOT_AUTHORIZED = 131,
+    SUBACK_TOPIC_NAME_INVALID = 135,
+    SUBACK_PACKET_IDENTIFIER_IN_USE = 137,
+    SUBACK_QUOTA_EXCEEDED = 140
+} SubAckReturnCode;
+
+typedef enum {
+    UNSUBACK_SUCCESS = 0,
+    UNSUBACK_NO_SUBSCRIPTION_EXISTED = 17,
+    UNSUBACK_UNSPECIFIED_ERROR = 18,
+    UNSUBACK_IMPLEMENTATION_SPECIFIC_ERROR = 128,
+    UNSUBACK_NOT_AUTHORIZED = 131,
+    UNSUBACK_TOPIC_NAME_INVALID = 135,
+    UNSUBACK_PACKET_IDENTIFIER_IN_USE = 137,
+    UNSUBACK_QUOTA_EXCEEDED = 140
+} UnsubAckReturnCode;
+
+typedef enum {
+    DISCONNECT_NORMAL_DISCONNECTION = 0,
+    DISCONNECT_WITH_WILL_MESSAGE = 1,
+    DISCONNECT_UNSPECIFIED_ERROR = 2,
+    DISCONNECT_MALFORMED_PACKET = 3,
+    DISCONNECT_PROTOCOL_ERROR = 4,
+    DISCONNECT_IMPLEMENTATION_SPECIFIC_ERROR = 5,
+    DISCONNECT_NOT_AUTHORIZED = 128,
+    DISCONNECT_SERVER_BUSY = 129,
+    DISCONNECT_SERVER_SHUTTING_DOWN = 130,
+    DISCONNECT_KEEP_ALIVE_TIMEOUT = 131,
+    DISCONNECT_SESSION_TAKEN_OVER = 132,
+    DISCONNECT_TOPIC_FILTER_INVALID = 133,
+    DISCONNECT_TOPIC_NAME_INVALID = 134,
+    DISCONNECT_RECEIVE_MAXIMUM_EXCEEDED = 135,
+    DISCONNECT_TOPIC_ALIAS_INVALID = 136,
+    DISCONNECT_PACKET_TOO_LARGE = 137,
+    DISCONNECT_MESSAGE_RATE_TOO_HIGH = 138,
+    DISCONNECT_QUOTA_EXCEEDED = 139,
+    DISCONNECT_ADMINISTRATIVE_ACTION = 140,
+    DISCONNECT_PAYLOAD_FORMAT_INVALID = 141,
+    DISCONNECT_RETENTION_INVALID = 142,
+    DISCONNECT_CONNECTION_RATE_EXCEEDED = 143,
+    DISCONNECT_CONNECTION_LIMIT_EXCEEDED = 145
+} DisconnectReasonCode;
+
 typedef struct {
-    uint8_t header;
-    uint8_t remaining_length;
-} mqtt_header_t;
-
-// Connect packet
-typedef struct {
-    uint16_t protocol_name_length;
-    char protocol_name[4];
-    uint8_t protocol_version;
-    uint8_t connect_flags;
-    uint8_t keep_alive;
-} mqtt_connect_t;
-
-// Connect ack packet
-typedef struct {
-    uint8_t session_present;
-    uint8_t connect_return_code;
-} mqtt_connect_ack_t;
-
-// Publish packet
-typedef struct {
-    uint16_t topic_name_length;
-    char topic_name[256];
-    uint16_t packet_id;
-    char payload[1024];
-} mqtt_publish_t;
-
-// Puback packet
-typedef struct {
-    uint16_t packet_id;
-} mqtt_puback_t;
-
-// Message structure
-typedef struct {
-    mqtt_header_t header;
     uint8_t packet_type;
-    union {
-        mqtt_connect_t connect;
-        mqtt_connect_ack_t connect_ack;
-        mqtt_publish_t publish;
-        mqtt_puback_t puback;
-    } packet;
-} mqtt_message_t;
+    uint8_t flags;
+    uint16_t remaining_length;
+    uint8_t* payload;
+} MqttPacket;
 
-// Parser function
-int parse_mqtt_message(uint8_t* buffer, size_t length, mqtt_message_t* message) {
-    // Parse header
-    message->header.header = buffer[0];
-    message->header.remaining_length = buffer[1];
+typedef struct {
+    MqttPacket packet;
+    char* protocol_name;
+    uint8_t protocol_level;
+    uint8_t connect_flags;
+    uint16_t keep_alive;
+    uint32_t property_length;
+    void* properties;
+    char* client_id;
+    char* will_topic;
+    uint8_t* will_payload;
+    char* username;
+    uint8_t* password;
+} ConnectPacket;
 
-    // Determine packet type
-    message->packet_type = (message->header.header >> 4) & 0x0F;
+typedef struct {
+    MqttPacket packet;
+    uint8_t session_present;
+    uint8_t return_code;
+    uint32_t property_length;
+    void* properties;
+} ConnAckPacket;
 
-    // Parse packet based on type
-    switch (message->packet_type) {
-        case 0x01: // Connect
-            // Parse connect packet
-            message->packet.connect.protocol_name_length = (uint16_t)((buffer[2] << 8) | buffer[3]);
-            memcpy(message->packet.connect.protocol_name, &buffer[4], 4);
-            message->packet.connect.protocol_version = buffer[8];
-            message->packet.connect.connect_flags = buffer[9];
-            message->packet.connect.keep_alive = (uint8_t)((buffer[10] << 8) | buffer[11]);
-            break;
-        case 0x02: // Connect ack
-            // Parse connect ack packet
-            message->packet.connect_ack.session_present = buffer[2];
-            message->packet.connect_ack.connect_return_code = buffer[3];
-            break;
-        case 0x03: // Publish
-            // Parse publish packet
-            message->packet.publish.topic_name_length = (uint16_t)((buffer[2] << 8) | buffer[3]);
-            memcpy(message->packet.publish.topic_name, &buffer[4], 256);
-            message->packet.publish.packet_id = (uint16_t)((buffer[260] << 8) | buffer[261]);
-            memcpy(message->packet.publish.payload, &buffer[262], 1024);
-            break;
-        case 0x04: // Puback
-            // Parse puback packet
-            message->packet.puback.packet_id = (uint16_t)((buffer[2] << 8) | buffer[3]);
-            break;
-        default:
-            // Unknown packet type
-            return -1;
-    }
+typedef struct {
+    MqttPacket packet;
+    char* topic_name;
+    uint16_t packet_id;
+    uint32_t property_length;
+    void* properties;
+    uint8_t* payload;
+} PublishPacket;
 
-    return 0;
-}
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint8_t reason_code;
+    uint32_t property_length;
+    void* properties;
+} PubAckPacket;
 
-int main() {
-    uint8_t buffer[1024];
-    mqtt_message_t message;
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint8_t reason_code;
+    uint32_t property_length;
+    void* properties;
+} PubRecPacket;
 
-    // Generate sample MQTT message
-    buffer[0] = 0x10; // Header
-    buffer[1] = 0x0F; // Remaining length
-    buffer[2] = 0x00; // Protocol name length MSB
-    buffer[3] = 0x04; // Protocol name length LSB
-    memcpy(&buffer[4], "MQTT", 4); // Protocol name
-    buffer[8] = 0x04; // Protocol version
-    buffer[9] = 0x02; // Connect flags
-    buffer[10] = 0x00; // Keep alive MSB
-    buffer[11] = 0x0A; // Keep alive LSB
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint8_t reason_code;
+    uint32_t property_length;
+    void* properties;
+} PubRelPacket;
 
-    // Parse MQTT message
-    int result = parse_mqtt_message(buffer, 12, &message);
-    if (result != 0) {
-        printf("Error parsing MQTT message\n");
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint8_t reason_code;
+    uint32_t property_length;
+    void* properties;
+} PubCompPacket;
+
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint32_t property_length;
+    void* properties;
+} SubscribePacket;
+
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint32_t property_length;
+    void* properties;
+    uint8_t* return_codes;
+} SubAckPacket;
+
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint32_t property_length;
+    void* properties;
+} UnsubscribePacket;
+
+typedef struct {
+    MqttPacket packet;
+    uint16_t packet_id;
+    uint32_t property_length;
+    void* properties;
+    uint8_t* return_codes;
+} UnsubAckPacket;
+
+typedef struct {
+    MqttPacket packet;
+} PingReqPacket;
+
+typedef struct {
+    MqttPacket packet;
+} PingRespPacket;
+
+typedef struct {
+    MqttPacket packet;
+    uint8_t reason_code;
+    uint32_t property_length;
+    void* properties;
+} DisconnectPacket;
+
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <input_file>\n", argv[0]);
         return 1;
     }
 
-    // Print parsed message
-    printf("Header: 0x%02X\n", message.header.header);
-    printf("Remaining length: 0x%02X\n", message.header.remaining_length);
-    printf("Packet type: 0x%02X\n", message.packet_type);
-
-    switch (message.packet_type) {
-        case 0x01: // Connect
-            printf("Protocol name: %s\n", message.packet.connect.protocol_name);
-            printf("Protocol version: 0x%02X\n", message.packet.connect.protocol_version);
-            printf("Connect flags: 0x%02X\n", message.packet.connect.connect_flags);
-            printf("Keep alive: 0x%02X\n", message.packet.connect.keep_alive);
-            break;
-        case 0x02: // Connect ack
-            printf("Session present: 0x%02X\n", message.packet.connect_ack.session_present);
-            printf("Connect return code: 0x%02X\n", message.packet.connect_ack.connect_return_code);
-            break;
-        case 0x03: // Publish
-            printf("Topic name: %s\n", message.packet.publish.topic_name);
-            printf("Packet ID: 0x%04X\n", message.packet.publish.packet_id);
-            printf("Payload: %s\n", message.packet.publish.payload);
-            break;
-        case 0x04: // Puback
-            printf("Packet ID: 0x%04X\n", message.packet.puback.packet_id);
-            break;
-        default:
-            printf("Unknown packet type\n");
-            break;
+    FILE* input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        printf("Error: Could not open file '%s'\n", argv[1]);
+        return 1;
     }
+
+    uint8_t* buffer = malloc(1024);
+    size_t bytes_read = fread(buffer, 1, 1024, input_file);
+    fclose(input_file);
+
+    HParser* parser = h_token((const uint8_t*) "MQTT", 4);
+    HParser* parser2 = h_uint8();
+    HParser* parser3 = h_uint16();
+    HParser* parser4 = h_bytes(0, 1024);
+
+    HParser* connect_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* conn_ack_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* publish_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* pub_ack_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* pub_rec_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* pub_rel_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* pub_comp_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* subscribe_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* sub_ack_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* unsubscribe_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* unsub_ack_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* ping_req_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* ping_resp_packet = h_sequence(parser, parser2, parser3, parser4);
+    HParser* disconnect_packet = h_sequence(parser, parser2, parser3, parser4);
+
+    HParser* vtable = h_choice(
+        connect_packet,
+        conn_ack_packet,
+        publish_packet,
+        pub_ack_packet,
+        pub_rec_packet,
+        pub_rel_packet,
+        pub_comp_packet,
+        subscribe_packet,
+        sub_ack_packet,
+        unsubscribe_packet,
+        unsub_ack_packet,
+        ping_req_packet,
+        ping_resp_packet,
+        disconnect_packet
+    );
+
+    HParseResult* result = h_parse(vtable, buffer, bytes_read);
+
+    printf("%d\n", (int)result->status);
+
+    h_free_parse_result(result);
+
+    free(buffer);
 
     return 0;
 }

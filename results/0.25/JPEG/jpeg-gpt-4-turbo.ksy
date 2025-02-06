@@ -2,12 +2,12 @@ meta:
   id: jpeg
   file-extension: jpg
   endian: be
-  title: JPEG (Joint Photographic Experts Group) image
+  title: JPEG (ISO/IEC 10918)
   license: CC0-1.0
   ks-version: 0.9
 
 doc: |
-  JPEG is a commonly used method of lossy compression for digital images, particularly for those images produced by digital photography. JPEG's compression algorithm is at its best on photographs and paintings of realistic scenes with smooth variations of tone and color.
+  JPEG is a commonly used method of lossy compression for digital images, particularly for those images produced by digital photography. The degree of compression can be adjusted, allowing a selectable tradeoff between storage size and image quality. JPEG typically achieves 10:1 compression with little perceptible loss in image quality.
 
 seq:
   - id: segments
@@ -17,68 +17,150 @@ seq:
 types:
   segment:
     seq:
-      - id: magic
-        contents: [0xff]
       - id: marker
-        type: u1
-        enum: marker_enum
+        type: u2
+        enum: markers
       - id: length
         type: u2
-        if: marker != marker_enum::soi and marker != marker_enum::eoi
+        if: marker != markers::soi and marker != markers::eoi
+      - id: data
+        size: length - 2
+        type:
+          switch-on: marker
+          cases:
+            markers::dqt: quantization_table
+            markers::sof0: start_of_frame
+            markers::dht: huffman_table
+            markers::sos: start_of_scan
+            markers::app0: jfif_header
+            markers::app1: exif_header
+            _: generic_segment
+
+  markers:
+    enums:
+      soi: 0xffd8
+      eoi: 0xffd9
+      dqt: 0xffdb
+      sof0: 0xffc0
+      dht: 0xffc4
+      sos: 0xffda
+      app0: 0xffe0
+      app1: 0xffe1
+      com: 0xfffe
+
+  quantization_table:
+    seq:
+      - id: table
+        type: quantization_table_struct
+        repeat: expr
+        repeat-expr: (length - 2) / 65
+
+  quantization_table_struct:
+    seq:
+      - id: precision_and_table_id
+        type: u1
+      - id: qtable
+        type: u1
+        repeat: expr
+        repeat-expr: 64
+
+  start_of_frame:
+    seq:
+      - id: precision
+        type: u1
+      - id: image_height
+        type: u2
+      - id: image_width
+        type: u2
+      - id: num_components
+        type: u1
+      - id: components
+        type: component
+        repeat: expr
+        repeat-expr: num_components
+
+  component:
+    seq:
+      - id: component_id
+        type: u1
+      - id: sampling_factors
+        type: u1
+      - id: quantization_table_id
+        type: u1
+
+  huffman_table:
+    seq:
+      - id: table
+        type: huffman_table_struct
+        repeat: expr
+        repeat-expr: (length - 2) // 17
+
+  huffman_table_struct:
+    seq:
+      - id: table_class_and_id
+        type: u1
+      - id: num_codes
+        type: u1
+        repeat: expr
+        repeat-expr: 16
+      - id: symbols
+        type: u1
+        repeat: eos
+
+  start_of_scan:
+    seq:
+      - id: num_components
+        type: u1
+      - id: components
+        type: scan_component
+        repeat: expr
+        repeat-expr: num_components
+      - id: start_spectral_selection
+        type: u1
+      - id: end_spectral_selection
+        type: u1
+      - id: successive_approximation
+        type: u1
+
+  scan_component:
+    seq:
+      - id: component_selector
+        type: u1
+      - id: huffman_table_selector
+        type: u1
+
+  jfif_header:
+    seq:
+      - id: identifier
+        type: str
+        encoding: ASCII
+        size: 5
+      - id: version
+        type: u2
+      - id: units
+        type: u1
+      - id: x_density
+        type: u2
+      - id: y_density
+        type: u2
+      - id: x_thumbnail
+        type: u1
+      - id: y_thumbnail
+        type: u1
+      - id: thumbnail
+        size: x_thumbnail * y_thumbnail * 3
+
+  exif_header:
+    seq:
+      - id: identifier
+        type: str
+        encoding: ASCII
+        size: 6
+      - id: data
+        size: length - 8
+
+  generic_segment:
+    seq:
       - id: data
         size: length - 2
         if: length > 2
-
-enums:
-  marker_enum:
-    0xd8: soi  # Start Of Image
-    0xc0: sof0 # Start Of Frame (Baseline DCT)
-    0xc2: sof2 # Start Of Frame (Progressive DCT)
-    0xc4: dht  # Define Huffman Table
-    0xdb: dqt  # Define Quantization Table
-    0xdd: dri  # Define Restart Interval
-    0xda: sos  # Start Of Scan
-    0xfe: com  # Comment
-    0xd9: eoi  # End Of Image
-    0xe0: app0 # Application-specific (JFIF)
-    0xe1: app1 # Application-specific (Exif)
-    0xe2: app2 # Application-specific
-    0xe3: app3 # Application-specific
-    0xe4: app4 # Application-specific
-    0xe5: app5 # Application-specific
-    0xe6: app6 # Application-specific
-    0xe7: app7 # Application-specific
-    0xe8: app8 # Application-specific
-    0xe9: app9 # Application-specific
-    0xea: appa # Application-specific
-    0xeb: appb # Application-specific
-    0xec: appc # Application-specific
-    0xed: appd # Application-specific
-    0xee: appe # Application-specific
-    0xef: appf # Application-specific
-    0xf0: jpg0 # Reserved for JPEG extensions
-    0xf1: jpg1 # Reserved for JPEG extensions
-    0xf2: jpg2 # Reserved for JPEG extensions
-    0xf3: jpg3 # Reserved for JPEG extensions
-    0xf4: jpg4 # Reserved for JPEG extensions
-    0xf5: jpg5 # Reserved for JPEG extensions
-    0xf6: jpg6 # Reserved for JPEG extensions
-    0xf7: jpg7 # Reserved for JPEG extensions
-    0xf8: jpg8 # Reserved for JPEG extensions
-    0xf9: jpg9 # Reserved for JPEG extensions
-    0xfa: jpga # Reserved for JPEG extensions
-    0xfb: jpgb # Reserved for JPEG extensions
-    0xfc: jpgc # Reserved for JPEG extensions
-    0xfd: jpgd # Reserved for JPEG extensions
-    0x01: tem  # Temporary private use in arithmetic coding
-    0xc3: sof3 # Start Of Frame (Lossless, sequential)
-    0xc5: sof5 # Differential sequential DCT
-    0xc6: sof6 # Differential progressive DCT
-    0xc7: sof7 # Differential lossless (sequential)
-    0xc8: jpg  # Reserved for JPEG extensions
-    0xc9: sof9 # Extended sequential DCT
-    0xca: sof10 # Progressive DCT
-    0xcb: sof11 # Lossless (sequential)
-    0xcd: sof13 # Differential sequential DCT
-    0xce: sof14 # Differential progressive DCT
-    0xcf: sof15 # Differential lossless (sequential)

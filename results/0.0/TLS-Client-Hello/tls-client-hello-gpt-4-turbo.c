@@ -1,67 +1,91 @@
 #include <hammer/hammer.h>
-#include <hammer/glue.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define the basic building blocks of the TLS Client Hello message
-static HParser *uint8 = h_uint8();
-static HParser *uint16 = h_uint16be();
-static HParser *uint24 = h_bits(24, false);
-static HParser *uint32 = h_uint32be();
-static HParser *opaque = h_length_value(uint16, h_uint8());
-
-// Helper function to create a parser for a vector with a specific length encoding
-static HParser *vector(HParser *length_parser, HParser *value_parser) {
-    return h_length_value(length_parser, value_parser);
+// Define parsers for various components of the TLS Client Hello message
+HParser *parse_version() {
+    return h_uint16();
 }
 
-// Define the TLS ProtocolVersion
-static HParser *protocol_version = h_sequence(uint8, uint8, NULL);
+HParser *parse_random() {
+    return h_bits(32*8, false);
+}
 
-// Define the Random structure
-static HParser *random = h_sequence(uint32, h_bytes(28), NULL);
+HParser *parse_session_id() {
+    return h_length_value(h_uint8(), h_bits(32*8, false));
+}
 
-// Define the SessionID structure
-static HParser *session_id = vector(uint8, uint8);
+HParser *parse_cipher_suites() {
+    return h_length_value(h_uint16(), h_uint16());
+}
 
-// Define the CipherSuites structure
-static HParser *cipher_suites = vector(uint16, uint16);
+HParser *parse_compression_methods() {
+    return h_length_value(h_uint8(), h_uint8());
+}
 
-// Define the CompressionMethods structure
-static HParser *compression_methods = vector(uint8, uint8);
+HParser *parse_extension() {
+    return h_sequence(h_uint16(), h_length_value(h_uint16(), h_bits(0, false)), NULL);
+}
 
-// Define the Extension structure
-static HParser *extension = h_sequence(uint16, opaque, NULL);
+HParser *parse_extensions() {
+    return h_length_value(h_uint16(), h_many(parse_extension()));
+}
 
-// Define the Extensions structure
-static HParser *extensions = vector(uint16, extension);
+HParser *parse_client_hello() {
+    return h_sequence(
+        parse_version(),
+        parse_random(),
+        parse_session_id(),
+        parse_cipher_suites(),
+        parse_compression_methods(),
+        parse_extensions(),
+        NULL
+    );
+}
 
-// Define the ClientHello structure
-static HParser *client_hello = h_sequence(
-    protocol_version,  // Client version
-    random,            // Random
-    session_id,        // Session ID
-    cipher_suites,     // Cipher Suites
-    compression_methods, // Compression Methods
-    extensions,        // Extensions
-    NULL
-);
+void print_hex(const uint8_t *s, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        printf("%02x", s[i]);
+    }
+    printf("\n");
+}
 
-// Define the Handshake structure
-static HParser *handshake = h_sequence(
-    uint8,             // Handshake Type (1 for ClientHello)
-    uint24,            // Length
-    client_hello,      // ClientHello
-    NULL
-);
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary file path>\n", argv[0]);
+        return 1;
+    }
 
-// Define the TLSPlaintext structure
-static HParser *tls_plaintext = h_sequence(
-    uint8,             // Content Type (22 for Handshake)
-    protocol_version,  // Version
-    uint16,            // Length
-    handshake,         // Handshake
-    NULL
-);
+    FILE *fp = fopen(argv[1], "rb");
+    if (!fp) {
+        perror("Failed to open file");
+        return 1;
+    }
 
-int main(int argc, char **argv) {
-    HParser *parser = tls_plaintext;
-    HParseResult *result = h_parse(parser, (const uint8_t *)"\x16\x03\x01\x00\x51\x01\x00\x00\x4d\x03\x03\x53\x50\x43\x4b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t *data = malloc(fsize);
+    if (!data) {
+        perror("Failed to allocate memory");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(data, 1, fsize, fp);
+    fclose(fp);
+
+    HParser *client_hello_parser = parse_client_hello();
+    HParseResult *result = h_parse(client_hello_parser, data, fsize);
+    if (result) {
+        printf("Client Hello parsed successfully.\n");
+        // Additional processing can be done here
+    } else {
+        fprintf(stderr, "Failed to parse Client Hello.\n");
+    }
+
+    h_free_parser(client_hello_parser);
+    free(data);
+    return 0;
+}

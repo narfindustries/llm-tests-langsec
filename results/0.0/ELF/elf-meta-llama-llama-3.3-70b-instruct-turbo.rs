@@ -1,8 +1,8 @@
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, verify},
-    multi::take_while_m_n,
-    number::complete::{be_u16, be_u32, be_u64, be_u8},
+    combinator::{map},
+    multi::{count},
+    number::complete::{be_u16, be_u32, be_u8},
     IResult,
 };
 use std::{
@@ -11,243 +11,368 @@ use std::{
     io::{BufReader, Read},
 };
 
-#[derive(Debug)]
-enum ElfClass {
+#[derive(Debug, PartialEq)]
+enum EiClass {
     Elf32,
     Elf64,
 }
 
-#[derive(Debug)]
-enum ElfData {
+#[derive(Debug, PartialEq)]
+enum EiData {
     LittleEndian,
     BigEndian,
 }
 
-#[derive(Debug)]
-enum ElfOsAbi {
+#[derive(Debug, PartialEq)]
+enum EiOsabi {
     SystemV,
     HpUx,
-    NetBsd,
+    Netbsd,
     Linux,
     Solaris,
     Aix,
     Irix,
-    FreeBsd,
+    FreeBSD,
     Tru64,
     NovellModesto,
-    OpenBsd,
-    OpenVms,
-    Nsk,
-    Aros,
-    FenixOs,
-    CloudAbi,
-    StratusVos,
+    OpenBSD,
 }
 
-#[derive(Debug)]
-enum ElfType {
+#[derive(Debug, PartialEq)]
+enum EiAbiversion {
+    CurrentVersion,
+}
+
+#[derive(Debug, PartialEq)]
+enum Et {
     Rel,
     Exec,
     Dyn,
     Core,
 }
 
-#[derive(Debug)]
-enum ElfMachine {
-    NoMachine,
-    M32,
-    Sparc,
-    I386,
-    M68K,
-    M88K,
-    I860,
-    Mips,
-    S370,
-    MipsRs3Le,
-    Parisc,
-    Ncubble,
-    Vpp500,
-    Sparc32Plus,
-    I960,
-    PowerPc,
-    PowerPc64,
-    S390,
-    Spu,
-    V9,
-    Ia64,
+#[derive(Debug, PartialEq)]
+enum Em {
+    X86,
     X86_64,
-    L1Om,
-    K1Om,
-    K10Om,
-    MipsX,
-    AmdGpu,
-    Vdso,
+    Arm,
+    // Add more architectures as needed
 }
 
-#[derive(Debug)]
-struct ElfHeader {
-    magic: [u8; 4],
-    class: ElfClass,
-    data: ElfData,
-    os_abi: ElfOsAbi,
-    abi_version: u8,
-    pad: [u8; 7],
-    type_: ElfType,
-    machine: ElfMachine,
-    version: u32,
-    entry: u64,
-    phoff: u64,
-    shoff: u64,
-    flags: u32,
-    ehsize: u16,
-    phentsize: u16,
-    phnum: u16,
-    shentsize: u16,
-    shnum: u16,
-    shstrndx: u16,
+#[derive(Debug, PartialEq)]
+enum Pt {
+    Null,
+    Load,
+    Dynamic,
+    Interp,
+    Note,
+    Shlib,
+    Phdr,
 }
 
-fn parse_elf_class(input: &[u8]) -> IResult<&[u8], ElfClass> {
+#[derive(Debug, PartialEq)]
+enum Pf {
+    X,
+    W,
+    R,
+}
+
+#[derive(Debug, PartialEq)]
+enum Sht {
+    Null,
+    Progbits,
+    Symtab,
+    Strtab,
+    Rela,
+    Hash,
+    Dynamic,
+    Note,
+    Nobits,
+    Rel,
+    Shlib,
+    Dynsym,
+}
+
+#[derive(Debug, PartialEq)]
+enum Shf {
+    Write,
+    Alloc,
+    Execinstr,
+}
+
+#[derive(Debug, PartialEq)]
+enum Stb {
+    Local,
+    Global,
+    Weak,
+}
+
+#[derive(Debug, PartialEq)]
+enum Stv {
+    Default,
+    Internal,
+    Hidden,
+}
+
+#[derive(Debug, PartialEq)]
+enum Dt {
+    Null,
+    Needed,
+    Pltrelsz,
+    Pltgot,
+    // Add more dynamic tags as needed
+}
+
+fn parse_ei_class(input: &[u8]) -> IResult<&[u8], EiClass> {
     map(be_u8, |x| match x {
-        1 => ElfClass::Elf32,
-        2 => ElfClass::Elf64,
-        _ => panic!("Invalid ELF class"),
+        1 => EiClass::Elf32,
+        2 => EiClass::Elf64,
+        _ => panic!("Invalid EiClass"),
     })(input)
 }
 
-fn parse_elf_data(input: &[u8]) -> IResult<&[u8], ElfData> {
+fn parse_ei_data(input: &[u8]) -> IResult<&[u8], EiData> {
     map(be_u8, |x| match x {
-        1 => ElfData::LittleEndian,
-        2 => ElfData::BigEndian,
-        _ => panic!("Invalid ELF data encoding"),
+        1 => EiData::LittleEndian,
+        2 => EiData::BigEndian,
+        _ => panic!("Invalid EiData"),
     })(input)
 }
 
-fn parse_elf_os_abi(input: &[u8]) -> IResult<&[u8], ElfOsAbi> {
+fn parse_ei_osabi(input: &[u8]) -> IResult<&[u8], EiOsabi> {
     map(be_u8, |x| match x {
-        0 => ElfOsAbi::SystemV,
-        1 => ElfOsAbi::HpUx,
-        2 => ElfOsAbi::NetBsd,
-        3 => ElfOsAbi::Linux,
-        4 => ElfOsAbi::Solaris,
-        5 => ElfOsAbi::Aix,
-        6 => ElfOsAbi::Irix,
-        7 => ElfOsAbi::FreeBsd,
-        8 => ElfOsAbi::Tru64,
-        9 => ElfOsAbi::NovellModesto,
-        10 => ElfOsAbi::OpenBsd,
-        11 => ElfOsAbi::OpenVms,
-        12 => ElfOsAbi::Nsk,
-        13 => ElfOsAbi::Aros,
-        14 => ElfOsAbi::FenixOs,
-        15 => ElfOsAbi::CloudAbi,
-        16 => ElfOsAbi::StratusVos,
-        _ => panic!("Invalid ELF OS/ABI"),
+        0 => EiOsabi::SystemV,
+        1 => EiOsabi::HpUx,
+        2 => EiOsabi::Netbsd,
+        3 => EiOsabi::Linux,
+        6 => EiOsabi::Solaris,
+        7 => EiOsabi::Aix,
+        8 => EiOsabi::Irix,
+        9 => EiOsabi::FreeBSD,
+        10 => EiOsabi::Tru64,
+        11 => EiOsabi::NovellModesto,
+        12 => EiOsabi::OpenBSD,
+        _ => panic!("Invalid EiOsabi"),
     })(input)
 }
 
-fn parse_elf_type(input: &[u8]) -> IResult<&[u8], ElfType> {
+fn parse_ei_abiversion(input: &[u8]) -> IResult<&[u8], EiAbiversion> {
+    map(be_u8, |x| match x {
+        0 => EiAbiversion::CurrentVersion,
+        _ => panic!("Invalid EiAbiversion"),
+    })(input)
+}
+
+fn parse_et(input: &[u8]) -> IResult<&[u8], Et> {
     map(be_u16, |x| match x {
-        1 => ElfType::Rel,
-        2 => ElfType::Exec,
-        3 => ElfType::Dyn,
-        4 => ElfType::Core,
-        _ => panic!("Invalid ELF type"),
+        1 => Et::Rel,
+        2 => Et::Exec,
+        3 => Et::Dyn,
+        4 => Et::Core,
+        _ => panic!("Invalid Et"),
     })(input)
 }
 
-fn parse_elf_machine(input: &[u8]) -> IResult<&[u8], ElfMachine> {
+fn parse_em(input: &[u8]) -> IResult<&[u8], Em> {
     map(be_u16, |x| match x {
-        0 => ElfMachine::NoMachine,
-        1 => ElfMachine::M32,
-        2 => ElfMachine::Sparc,
-        3 => ElfMachine::I386,
-        4 => ElfMachine::M68K,
-        5 => ElfMachine::M88K,
-        6 => ElfMachine::I860,
-        7 => ElfMachine::Mips,
-        8 => ElfMachine::S370,
-        9 => ElfMachine::MipsRs3Le,
-        10 => ElfMachine::Parisc,
-        11 => ElfMachine::Ncubble,
-        12 => ElfMachine::Vpp500,
-        13 => ElfMachine::Sparc32Plus,
-        14 => ElfMachine::I960,
-        15 => ElfMachine::PowerPc,
-        16 => ElfMachine::PowerPc64,
-        17 => ElfMachine::S390,
-        18 => ElfMachine::Spu,
-        19 => ElfMachine::V9,
-        20 => ElfMachine::Ia64,
-        21 => ElfMachine::X86_64,
-        22 => ElfMachine::L1Om,
-        23 => ElfMachine::K1Om,
-        24 => ElfMachine::K10Om,
-        25 => ElfMachine::MipsX,
-        26 => ElfMachine::AmdGpu,
-        27 => ElfMachine::Vdso,
-        _ => panic!("Invalid ELF machine"),
+        3 => Em::X86,
+        40 => Em::Arm,
+        62 => Em::X86_64,
+        // Add more architectures as needed
+        _ => panic!("Invalid Em"),
     })(input)
 }
 
-fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ElfHeader> {
-    let (input, magic) = take(4u8)(input)?;
-    let (input, class) = parse_elf_class(input)?;
-    let (input, data) = parse_elf_data(input)?;
-    let (input, os_abi) = parse_elf_os_abi(input)?;
-    let (input, abi_version) = be_u8(input)?;
-    let (input, pad) = take(7u8)(input)?;
-    let (input, type_) = parse_elf_type(input)?;
-    let (input, machine) = parse_elf_machine(input)?;
-    let (input, version) = be_u32(input)?;
-    let (input, entry) = be_u64(input)?;
-    let (input, phoff) = be_u64(input)?;
-    let (input, shoff) = be_u64(input)?;
-    let (input, flags) = be_u32(input)?;
-    let (input, ehsize) = be_u16(input)?;
-    let (input, phentsize) = be_u16(input)?;
-    let (input, phnum) = be_u16(input)?;
-    let (input, shentsize) = be_u16(input)?;
-    let (input, shnum) = be_u16(input)?;
-    let (input, shstrndx) = be_u16(input)?;
-
-    Ok((
-        input,
-        ElfHeader {
-            magic,
-            class,
-            data,
-            os_abi,
-            abi_version,
-            pad,
-            type_,
-            machine,
-            version,
-            entry,
-            phoff,
-            shoff,
-            flags,
-            ehsize,
-            phentsize,
-            phnum,
-            shentsize,
-            shnum,
-            shstrndx,
-        },
-    ))
+fn parse_pt(input: &[u8]) -> IResult<&[u8], Pt> {
+    map(be_u32, |x| match x {
+        0 => Pt::Null,
+        1 => Pt::Load,
+        2 => Pt::Dynamic,
+        3 => Pt::Interp,
+        4 => Pt::Note,
+        5 => Pt::Shlib,
+        6 => Pt::Phdr,
+        _ => panic!("Invalid Pt"),
+    })(input)
 }
 
-fn main() {
+fn parse_pf(input: &[u8]) -> IResult<&[u8], Pf> {
+    map(be_u32, |x| match x {
+        1 => Pf::X,
+        2 => Pf::W,
+        4 => Pf::R,
+        _ => panic!("Invalid Pf"),
+    })(input)
+}
+
+fn parse_sht(input: &[u8]) -> IResult<&[u8], Sht> {
+    map(be_u32, |x| match x {
+        0 => Sht::Null,
+        1 => Sht::Progbits,
+        2 => Sht::Symtab,
+        3 => Sht::Strtab,
+        4 => Sht::Rela,
+        5 => Sht::Hash,
+        6 => Sht::Dynamic,
+        7 => Sht::Note,
+        8 => Sht::Nobits,
+        9 => Sht::Rel,
+        10 => Sht::Shlib,
+        11 => Sht::Dynsym,
+        _ => panic!("Invalid Sht"),
+    })(input)
+}
+
+fn parse_shf(input: &[u8]) -> IResult<&[u8], Shf> {
+    map(be_u32, |x| match x {
+        1 => Shf::Write,
+        2 => Shf::Alloc,
+        4 => Shf::Execinstr,
+        _ => panic!("Invalid Shf"),
+    })(input)
+}
+
+fn parse_stb(input: &[u8]) -> IResult<&[u8], Stb> {
+    map(be_u8, |x| match x {
+        0 => Stb::Local,
+        1 => Stb::Global,
+        2 => Stb::Weak,
+        _ => panic!("Invalid Stb"),
+    })(input)
+}
+
+fn parse_stv(input: &[u8]) -> IResult<&[u8], Stv> {
+    map(be_u8, |x| match x {
+        0 => Stv::Default,
+        1 => Stv::Internal,
+        2 => Stv::Hidden,
+        _ => panic!("Invalid Stv"),
+    })(input)
+}
+
+fn parse_dt(input: &[u8]) -> IResult<&[u8], Dt> {
+    map(be_u32, |x| match x {
+        0 => Dt::Null,
+        1 => Dt::Needed,
+        2 => Dt::Pltrelsz,
+        3 => Dt::Pltgot,
+        // Add more dynamic tags as needed
+        _ => panic!("Invalid Dt"),
+    })(input)
+}
+
+fn parse_elf_header(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = tag(&[0x7F, b'E', b'L', b'F'])(input)?;
+    let (input, _) = parse_ei_class(input)?;
+    let (input, _) = parse_ei_data(input)?;
+    let (input, _) = parse_ei_osabi(input)?;
+    let (input, _) = parse_ei_abiversion(input)?;
+    let (input, _) = take(7u8)(input)?;
+    let (input, _) = parse_et(input)?;
+    let (input, _) = parse_em(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u16(input)?;
+    let (input, _) = be_u16(input)?;
+    let (input, _) = be_u16(input)?;
+    let (input, _) = be_u16(input)?;
+    let (input, _) = be_u16(input)?;
+    Ok((input, ()))
+}
+
+fn parse_program_header(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = parse_pt(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = parse_pf(input)?;
+    let (input, _) = be_u32(input)?;
+    Ok((input, ()))
+}
+
+fn parse_section_header(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = be_u32(input)?;
+    let (input, _) = parse_sht(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    Ok((input, ()))
+}
+
+fn parse_symbol_table(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = parse_stb(input)?;
+    let (input, _) = parse_stv(input)?;
+    let (input, _) = be_u16(input)?;
+    Ok((input, ()))
+}
+
+fn parse_relocation_table(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    let (input, _) = be_u32(input)?;
+    Ok((input, ()))
+}
+
+fn parse_dynamic_section(input: &[u8]) -> IResult<&[u8], ()> {
+    let (input, _) = parse_dt(input)?;
+    let (input, _) = be_u32(input)?;
+    Ok((input, ()))
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         panic!("Usage: {} <file>", args[0]);
     }
-
-    let file = File::open(&args[1]).unwrap();
+    let file = File::open(&args[1])?;
     let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).unwrap();
-
-    let (_, header) = parse_elf_header(&buffer).unwrap();
-    println!("{:?}", header);
+    let mut input = Vec::new();
+    reader.read_to_end(&mut input)?;
+    let mut remaining = input.as_slice();
+    let _ = parse_elf_header(remaining);
+    remaining = match parse_elf_header(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    let _ = count(parse_program_header, 1)(remaining);
+    remaining = match count(parse_program_header, 1)(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    let _ = count(parse_section_header, 1)(remaining);
+    remaining = match count(parse_section_header, 1)(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    let _ = count(parse_symbol_table, 1)(remaining);
+    remaining = match count(parse_symbol_table, 1)(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    let _ = count(parse_relocation_table, 1)(remaining);
+    remaining = match count(parse_relocation_table, 1)(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    let _ = count(parse_dynamic_section, 1)(remaining);
+    remaining = match count(parse_dynamic_section, 1)(remaining) {
+        Ok((i, _)) => i,
+        Err(_) => panic!("Invalid ELF file"),
+    };
+    if !remaining.is_empty() {
+        panic!("Invalid ELF file");
+    }
+    Ok(())
 }

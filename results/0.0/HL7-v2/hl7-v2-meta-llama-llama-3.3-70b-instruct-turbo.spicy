@@ -1,199 +1,198 @@
-# Define the HL7 message structure
-type HL7_Message = record {
-  msg_type: bytestring(3);
-  trigger_event: bytestring(3);
-  message_control_id: bytestring(20);
-  processing_id: bytestring(3);
-  version_id: bytestring(12);
-  sequence_number: bytestring(15);
-  continuation_pointer: bytestring(180);
-  accepting_application: bytestring(20);
-  accepting_facility: bytestring(20);
-  date: bytestring(8);
-  time: bytestring(6);
-  security: bytestring(40);
-  message_profile_id: bytestring(80);
-  accepting_application_facility: bytestring(20);
-  responding_application: bytestring(20);
-  responding_facility: bytestring(20);
-  error_condition: bytestring(2);
-  segment_count: bytestring(4);
-  segments: bytestring;
-};
+module HL7_v2;
 
-# Define the segment structure
-type Segment = record {
-  segment_id: bytestring(3);
-  fields: bytestring;
-};
+type MSH = record {
+  field_separator = "|",
+  encoding_characters = "^~\\&",
+  sending_application: string,
+  sending_facility: string,
+  receiving_application: string,
+  receiving_facility: string,
+  date_time_of_message: string(14),
+  security: string,
+  message_type: string,
+  message_control_id: string,
+  processing_id: string(1) = "P" | "T",
+  version_id: string(4) = "2.x",
+  sequence_number: string,
+  continuation_pointer: string,
+  accept_acknowledgment_type: string(1) = "AL" | "AR" | "CE" | "CR",
+  application_acknowledgment_type: string(1) = "AL" | "AR" | "CE" | "CR",
+  country_code: string,
+  character_set: string,
+  principal_language_of_message: string,
+}
 
-# Define the field structure
-type Field = record {
-  field_id: bytestring(4);
-  component_id: bytestring(4);
-  sub_component_id: bytestring(4);
-  value: bytestring;
-};
+type PID = record {
+  set_id_patient_id: string,
+  patient_id: string,
+  patient_id_identifier: string,
+  alternate_patient_id: string,
+  patient_name: string,
+  mother_s_maiden_name: string,
+  date_of_birth: string(8),
+  sex: string(1) = "M" | "F" | "U",
+  patient_alias: string,
+  race: string,
+  patient_address: string,
+  county_code: string,
+  patient_phone_number_home: string,
+  patient_phone_number_business: string,
+  patient_account_number: string,
+  ssn_number_patient: string,
+  driver_s_license_number_patient: string,
+  mother_s_identifier: string,
+  ethnic_group: string,
+  birth_place: string,
+  multiple_birth_indicator: string(1) = "Y" | "N",
+  birth_order: string,
+  citizenship: string,
+  veteran_s_status: string,
+  nationality: string,
+  patient_death_date_and_time: string(14),
+  patient_death_indicator: string(1) = "Y" | "N",
+}
 
-# Define the HL7 message parser
-parser HL7_Parser = {
-  # Parse the HL7 message
-  msg: HL7_Message = parse_hl7_message(input);
-  
-  # Parse the segments
-  segments: vector(Segment) = parse_segments(msg.segments);
-  
-  # Parse the fields
-  fields: vector(Field) = parse_fields(segments);
-};
+type PV1 = record {
+  set_id_patient_visit: string,
+  visit_number: string,
+  patient_class: string(1) = "I" | "O" | "E",
+  visit_number: string,
+  financial_class: string,
+  pre_admit_number: string,
+  prior_patient_location: string,
+  admitting_doctor: string,
+  referring_doctor: string,
+  discharge_disposition: string,
+  visit_type: string,
+  admit_source: string,
+  ambulatory_status: string,
+  visit_priority: string,
+  previous_visit_number: string,
+  visit_number_other: string,
+  patient_status: string,
+  visit_outcome: string,
+  discharge_disposition_status: string,
+  discharge_to_location: string,
+  diet_type: string,
+  servicing_facility: string,
+  bed_status: string,
+  visit_number_other_organizations: string,
+  patient_type: string,
+  visit_number_hospital: string,
+  pre_admit_test_indicator: string(1) = "Y" | "N",
+  nursing_home_availability: string,
+  birth_weight: string,
+  birth_weight_units: string,
+  length_of_stay: string,
+  length_of_stay_units: string,
+  visit_description: string,
+  admission_level_of_care: string,
+  precaution_code: string,
+  patient_condition: string,
+  life_threatening_condition: string,
+  amount_class: string,
+  amount_type: string,
+  visit_security: string,
+}
 
-# Define the parse_hl7_message function
-function parse_hl7_message(input: bytestring): HL7_Message {
-  # Parse the message type
-  msg_type: bytestring(3) = input[0..2];
-  
-  # Parse the trigger event
-  trigger_event: bytestring(3) = input[3..5];
-  
-  # Parse the message control ID
-  message_control_id: bytestring(20) = input[6..25];
-  
-  # Parse the processing ID
-  processing_id: bytestring(3) = input[26..28];
-  
-  # Parse the version ID
-  version_id: bytestring(12) = input[29..40];
-  
-  # Parse the sequence number
-  sequence_number: bytestring(15) = input[41..55];
-  
-  # Parse the continuation pointer
-  continuation_pointer: bytestring(180) = input[56..235];
-  
-  # Parse the accepting application
-  accepting_application: bytestring(20) = input[236..255];
-  
-  # Parse the accepting facility
-  accepting_facility: bytestring(20) = input[256..275];
-  
-  # Parse the date
-  date: bytestring(8) = input[276..283];
-  
-  # Parse the time
-  time: bytestring(6) = input[284..289];
-  
-  # Parse the security
-  security: bytestring(40) = input[290..329];
-  
-  # Parse the message profile ID
-  message_profile_id: bytestring(80) = input[330..409];
-  
-  # Parse the accepting application facility
-  accepting_application_facility: bytestring(20) = input[410..429];
-  
-  # Parse the responding application
-  responding_application: bytestring(20) = input[430..449];
-  
-  # Parse the responding facility
-  responding_facility: bytestring(20) = input[450..469];
-  
-  # Parse the error condition
-  error_condition: bytestring(2) = input[470..471];
-  
-  # Parse the segment count
-  segment_count: bytestring(4) = input[472..475];
-  
-  # Parse the segments
-  segments: bytestring = input[476..];
-  
-  # Return the parsed HL7 message
-  return HL7_Message(
-    msg_type=msg_type,
-    trigger_event=trigger_event,
-    message_control_id=message_control_id,
-    processing_id=processing_id,
-    version_id=version_id,
-    sequence_number=sequence_number,
-    continuation_pointer=continuation_pointer,
-    accepting_application=accepting_application,
-    accepting_facility=accepting_facility,
-    date=date,
-    time=time,
-    security=security,
-    message_profile_id=message_profile_id,
-    accepting_application_facility=accepting_application_facility,
-    responding_application=responding_application,
-    responding_facility=responding_facility,
-    error_condition=error_condition,
-    segment_count=segment_count,
-    segments=segments
-  );
-};
+type ORC = record {
+  order_control: string(2) = "NW" | "OK" | "CA",
+  placer_order_number: string,
+  filler_order_number: string,
+  order_status: string(2) = "SC" | "IP" | "CM",
+  response_flag: string(1) = "Y" | "N",
+  quantity_timing: string,
+  parent_order: string,
+  date_time_of_transaction: string(14),
+  entered_by: string,
+  verified_by: string,
+  order_enterer_location: string,
+  call_back_phone_number: string,
+  order_effective_date_time: string(14),
+  order_control_code_reason: string,
+  entering_organization: string,
+  entering_device: string,
+  action_by: string,
+  advanced_beneficiary_notice_code: string,
+  ordering_facility_name: string,
+  ordering_facility_address: string,
+  ordering_facility_phone_number: string,
+  ordering_facility_id: string,
+  ordering_provider_id: string,
+  enterer_s_location: string,
+  call_back_phone_number_for_results: string,
+}
 
-# Define the parse_segments function
-function parse_segments(segments: bytestring): vector(Segment) {
-  # Initialize an empty vector to store the segments
-  segment_vector: vector(Segment) = vector();
-  
-  # Loop through the segments
-  while (|segments| > 0) {
-    # Parse the segment ID
-    segment_id: bytestring(3) = segments[0..2];
-    
-    # Parse the fields
-    fields: bytestring = segments[3..];
-    
-    # Add the segment to the vector
-    segment_vector += Segment(
-      segment_id=segment_id,
-      fields=fields
-    );
-    
-    # Remove the parsed segment from the input
-    segments = segments[|fields|+3..];
-  };
-  
-  # Return the vector of segments
-  return segment_vector;
-};
+type OBR = record {
+  set_id_observation_request: string,
+  placer_order_number: string,
+  filler_order_number: string,
+  universal_service_identifier: string,
+  priority: string(4) = "STAT" | "ASAP" | "RUSH",
+  requested_date_time: string(14),
+  observation_date_time: string(14),
+  observation_result_status: string(1) = "P" | "F" | "C",
+  who_subject_definition: string,
+  specimen_source: string,
+  specimen_shelf_life: string,
+  handlers_at_destination: string,
+  observation_result_status_qualifier: string,
+  effective_specimen_collection_volume: string,
+  collection_volume_unit: string,
+  action_code: string,
+  danger_code: string,
+  relevant_clinical_information: string,
+  specimen_received_date_time: string(14),
+  specimen_receiver_id: string,
+  specimen_description: string,
+  add_on_flag: string(1) = "Y" | "N",
+  charge_to_practice: string,
+  diagnostic_serv_sec_id: string,
+  result_status: string,
+  parent_result: string,
+  collection_volume: string,
+  collector_id: string,
+  specimen_availability: string,
+  specimen_integrity: string,
+  specimen_breakeven_point: string,
+  specimen_work_schedule: string,
+}
 
-# Define the parse_fields function
-function parse_fields(segments: vector(Segment)): vector(Field) {
-  # Initialize an empty vector to store the fields
-  field_vector: vector(Field) = vector();
-  
-  # Loop through the segments
-  for (segment in segments) {
-    # Parse the fields
-    fields: bytestring = segment.fields;
-    
-    # Loop through the fields
-    while (|fields| > 0) {
-      # Parse the field ID
-      field_id: bytestring(4) = fields[0..3];
-      
-      # Parse the component ID
-      component_id: bytestring(4) = fields[4..7];
-      
-      # Parse the sub-component ID
-      sub_component_id: bytestring(4) = fields[8..11];
-      
-      # Parse the value
-      value: bytestring = fields[12..];
-      
-      # Add the field to the vector
-      field_vector += Field(
-        field_id=field_id,
-        component_id=component_id,
-        sub_component_id=sub_component_id,
-        value=value
-      );
-      
-      # Remove the parsed field from the input
-      fields = fields[|value|+12..];
-    };
-  };
-  
-  # Return the vector of fields
-  return field_vector;
-};
+type OBX = record {
+  set_id_observation_result: string,
+  value_type: string(2) = "NM" | "TX" | "CE",
+  observation_identifier: string,
+  observation_sub_id: string,
+  observation_value: string,
+  units: string,
+  reference_range: string,
+  abnormal_flags: string(1) = "H" | "L" | "N",
+  probability: string,
+  nature_of_abnormal_test: string,
+  observation_result_status: string(1) = "P" | "F" | "C",
+  effective_date_of_reference_range: string(8),
+  user_defined_access_checks: string,
+  date_last_observation_normal_value: string(8),
+  user_supplied_instance_id: string,
+  observation_result_status_qualifier: string,
+  reference_range_qualifier: string,
+  alteration_indicator: string(1) = "Y" | "N",
+  result_status_qualifier: string,
+  channel_identifier: string,
+  reference_range_display_scale: string,
+  date_of_reference_range: string(8),
+  number_of_pathologic_exams: string,
+  gynecologic_cytology_code: string,
+  patient_location_address: string,
+  patient_location_address_state: string,
+  patient_location_address_zip: string,
+}
+
+type HL7 = record {
+  msh: MSH,
+  pid: PID,
+  pv1: PV1,
+  orc: ORC,
+  obr: OBR,
+  obx: OBX,
+}

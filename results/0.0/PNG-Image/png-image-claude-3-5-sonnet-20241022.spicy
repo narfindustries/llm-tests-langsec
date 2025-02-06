@@ -1,38 +1,101 @@
-module PNG-Image;
-
-import spicy;
+module PNG;
 
 public type PNG = unit {
-    signature: bytes &size=8 &requires=($$ == b"\x89PNG\x0d\x0a\x1a\x0a");
+    magic: bytes &size=8 &requires=($$ == b"\x89PNG\r\n\x1a\n");
     chunks: Chunk[];
+};
+
+type ChunkData = unit {
+    var chunk_type: bytes;
+    var chunk_length: uint32;
+    
+    switch ( chunk_type ) {
+        b"IHDR" -> ihdr: IHDR &size=chunk_length;
+        b"PLTE" -> plte: bytes &size=chunk_length;
+        b"IDAT" -> idat: bytes &size=chunk_length;
+        b"IEND" -> : void;
+        b"tRNS" -> trns: bytes &size=chunk_length;
+        b"cHRM" -> chrm: CHRM &size=chunk_length;
+        b"gAMA" -> gama: uint32 &byte-order=BigEndian;
+        b"iCCP" -> iccp: ICCP &size=chunk_length;
+        b"sBIT" -> sbit: bytes &size=chunk_length;
+        b"sRGB" -> srgb: uint8;
+        b"tEXt" -> text: TEXT &size=chunk_length;
+        b"zTXt" -> ztxt: ZTXT &size=chunk_length;
+        b"iTXt" -> itxt: ITXT &size=chunk_length;
+        b"bKGD" -> bkgd: bytes &size=chunk_length;
+        b"pHYs" -> phys: PHYS &size=chunk_length;
+        b"tIME" -> time_data: TimeChunk &size=chunk_length;
+        *      -> unknown: bytes &size=chunk_length;
+    };
 };
 
 type Chunk = unit {
     length: uint32 &byte-order=BigEndian;
     type: bytes &size=4;
-    data: bytes &size=self.length;
+    data: ChunkData;
+    on data = { self.data.chunk_type = self.type; self.data.chunk_length = self.length; }
     crc: bytes &size=4;
-
-    on %done {
-        if ( self.type == b"IHDR" ) {
-            local width = bytes_to_uint32(self.data[0:4]);
-            local height = bytes_to_uint32(self.data[4:8]);
-            local bit_depth = self.data[8];
-            local color_type = self.data[9];
-            local compression = self.data[10];
-            local filter = self.data[11];
-            local interlace = self.data[12];
-        }
-    }
 };
 
-function bytes_to_uint32(b: bytes): uint64 {
-    return (((b[0] as uint64) << 24) |
-            ((b[1] as uint64) << 16) |
-            ((b[2] as uint64) << 8) |
-             (b[3] as uint64));
-}
+type IHDR = unit {
+    width: uint32 &byte-order=BigEndian;
+    height: uint32 &byte-order=BigEndian;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression: uint8;
+    filter: uint8;
+    interlace: uint8;
+};
 
-on PNG::%done {
-    print "PNG file parsed";
-}
+type CHRM = unit {
+    white_point_x: uint32 &byte-order=BigEndian;
+    white_point_y: uint32 &byte-order=BigEndian;
+    red_x: uint32 &byte-order=BigEndian;
+    red_y: uint32 &byte-order=BigEndian;
+    green_x: uint32 &byte-order=BigEndian;
+    green_y: uint32 &byte-order=BigEndian;
+    blue_x: uint32 &byte-order=BigEndian;
+    blue_y: uint32 &byte-order=BigEndian;
+};
+
+type ICCP = unit {
+    profile_name: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_profile: bytes &eod;
+};
+
+type TEXT = unit {
+    keyword: bytes &until=b"\x00";
+    text: bytes &eod;
+};
+
+type ZTXT = unit {
+    keyword: bytes &until=b"\x00";
+    compression_method: uint8;
+    compressed_text: bytes &eod;
+};
+
+type ITXT = unit {
+    keyword: bytes &until=b"\x00";
+    compression_flag: uint8;
+    compression_method: uint8;
+    language_tag: bytes &until=b"\x00";
+    translated_keyword: bytes &until=b"\x00";
+    text: bytes &eod;
+};
+
+type PHYS = unit {
+    pixels_per_unit_x: uint32 &byte-order=BigEndian;
+    pixels_per_unit_y: uint32 &byte-order=BigEndian;
+    unit_specifier: uint8;
+};
+
+type TimeChunk = unit {
+    year: uint16 &byte-order=BigEndian;
+    month: uint8;
+    day: uint8;
+    hour: uint8;
+    minute: uint8;
+    second: uint8;
+};

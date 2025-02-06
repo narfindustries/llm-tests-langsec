@@ -1,0 +1,39 @@
+module Bitcoin;
+
+import spicy;
+
+type Version = uint32;
+type TXID = bytes;
+type Script = bytes;
+type Sequence = uint32;
+type Value = uint64;
+type LockTime = uint32;
+
+type TransactionInput = unit {
+    previous_txid: TXID &size=32;
+    previous_tx_output_index: uint32;
+    script_sig: Script &size=spicy::VarInt;
+    sequence: Sequence;
+};
+
+type TransactionOutput = unit {
+    value: Value;
+    script_pub_key: Script &size=spicy::VarInt;
+};
+
+type WitnessElement = bytes;
+type Witness = unit {
+    witness_elements: WitnessElement[] &count=spicy::VarInt;
+};
+
+type Transaction = unit {
+    version: Version;
+    marker: optional uint8;
+    flag: optional uint8;
+    input_count: bytes &size=spicy::VarInt;
+    inputs: TransactionInput[] &count=spicy::VarInt;
+    output_count: bytes &size=spicy::VarInt;
+    outputs: TransactionOutput[] &count=spicy::VarInt;
+    witness_data: optional Witness[] &count=spicy::VarInt;
+    lock_time: LockTime;
+};

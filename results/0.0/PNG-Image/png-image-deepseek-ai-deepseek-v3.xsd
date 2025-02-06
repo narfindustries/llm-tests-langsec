@@ -1,0 +1,212 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:png="http://www.example.com/png" targetNamespace="http://www.example.com/png" elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="GeneralFormat">
+        <dfdl:format representation="binary" byteOrder="bigEndian"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="PNGFile">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Signature" type="png:SignatureType"/>
+        <xs:element name="Chunks" type="png:ChunksType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="SignatureType">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:hexBinary" dfdl:length="8"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunksType">
+    <xs:sequence>
+      <xs:element name="Chunk" type="png:ChunkType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ChunkType">
+    <xs:sequence>
+      <xs:element name="Length" type="xs:unsignedInt"/>
+      <xs:element name="Type" type="xs:string" dfdl:length="4"/>
+      <xs:element name="Data" type="xs:hexBinary" dfdl:length="{../Length}"/>
+      <xs:element name="CRC" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IHDRType">
+    <xs:sequence>
+      <xs:element name="Width" type="xs:unsignedInt"/>
+      <xs:element name="Height" type="xs:unsignedInt"/>
+      <xs:element name="BitDepth" type="xs:unsignedByte"/>
+      <xs:element name="ColorType" type="xs:unsignedByte"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="FilterMethod" type="xs:unsignedByte"/>
+      <xs:element name="InterlaceMethod" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="PLTEType">
+    <xs:sequence>
+      <xs:element name="Entries" type="xs:hexBinary" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IDATType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="IENDType">
+    <xs:sequence/>
+  </xs:complexType>
+
+  <xs:complexType name="tRNSType">
+    <xs:sequence>
+      <xs:element name="Data" type极xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="gAMAType">
+    <xs:sequence>
+      <xs:element name="Gamma" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="cHRMType">
+    <xs:sequence>
+      <xs:element name="WhitePointX" type="xs:unsignedInt"/>
+      <xs:element name="WhitePointY" type="xs:unsignedInt"/>
+     极xs:element name="RedX" type="xs:unsignedInt"/>
+      <xs:element name="RedY" type="xs:unsignedInt"/>
+      <xs:element name="GreenX" type="xs:unsignedInt"/>
+      <xs:element name="GreenY" type="xs:unsignedInt"/>
+      <xs:element name="BlueX" type="xs:unsignedInt"/>
+      <xs:element name="BlueY" type="xs:unsignedInt"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sRGBType">
+    <xs:sequence>
+      <xs:element name="RenderingIntent" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="iCCPType">
+    <xs:sequence>
+      <xs:element name="ProfileName" type="xs:string"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="CompressedProfile" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tEXtType">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="Text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="zTXtType">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="CompressedText" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="iTXtType">
+    <xs:sequence>
+      <xs:element name="Keyword" type="xs:string"/>
+      <xs:element name="CompressionFlag" type="xs:unsignedByte"/>
+      <xs:element name="CompressionMethod" type="xs:unsignedByte"/>
+      <xs:element name="LanguageTag" type="xs:string"/>
+      <xs:element name="TranslatedKeyword" type="xs:string"/>
+      <xs:element name="Text" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="bKGDType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="pHYsType">
+    <xs:sequence>
+      <xs:element name极PixelsPerUnitX" type="xs:unsignedInt"/>
+      <xs:element name="PixelsPerUnitY" type="xs:unsignedInt"/>
+      <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sBITType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="hISTType">
+    <xs:sequence>
+      <xs:element name="Frequencies" type="xs:unsignedShort" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="tIMEType">
+    <xs:sequence>
+      <xs:element name="Year" type="xs:unsignedShort"/>
+      <xs:element name="Month" type="xs:unsignedByte"/>
+      <xs:element name="Day" type="xs:unsignedByte"/>
+      <xs:element name="Hour" type="xs:unsignedByte"/>
+      <xs:element name="Minute" type="xs:unsignedByte"/>
+      <xs:element name="Second" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="oFFsType">
+    <xs:sequence>
+      <xs:element name="XPosition" type="xs:int"/>
+      <xs:element name="YPosition" type="xs:int"/>
+      <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="pCALType">
+    <xs:sequence>
+      <xs:element name="CalibrationName" type="xs:string"/>
+      <xs:element name="X0" type="xs:int"/>
+      <xs:element name="X1" type="xs:int"/>
+      <xs:element name="EquationType" type="xs:unsignedByte"/>
+      <xs:element name="NumberOfParameters" type="xs:unsignedByte"/>
+      <xs:element name="Parameters" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sCALType">
+    <xs:sequence>
+      <xs:element name="UnitSpecifier" type="xs:unsignedByte"/>
+      <xs:element name="XScale" type="xs:string"/>
+      <xs:element name="YScale" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="sPLTType">
+    <xs:sequence>
+      <xs:element name="PaletteName" type="xs:string"/>
+      <xs:element name="SampleDepth" type="xs:unsignedByte"/>
+      <xs:element name="Entries" type="xs:hexBinary" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="eXIfType">
+    <xs:sequence>
+      <xs:element name="Data" type="xs:hexBinary"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

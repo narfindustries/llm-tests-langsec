@@ -1,59 +1,68 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+#include <hammer/hammer.h>
 
-#define MAX_BUFFER_SIZE 1024
+hm_parser_t* parse_header_field(void) {
+    return hm_regex("[a-zA-Z0-9-]+");
+}
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <host> <port>\n", argv[0]);
+hm_parser_t* parse_header_value(void) {
+    return hm_regex("[^\\r\\n]+");
+}
+
+hm_parser_t* parse_http_header(void) {
+    return hm_seq(parse_header_field(), hm_string(": "), parse_header_value(), hm_string("\r\n"));
+}
+
+hm_parser_t* parse_http_headers(void) {
+    return hm_many(parse_http_header());
+}
+
+hm_parser_t* parse_http_start_line(void) {
+    return hm_seq(hm_regex("[A-Z]+"), hm_string(" "), hm_regex(".+"), hm_string(" HTTP/1.1\r\n"));
+}
+
+hm_parser_t* parse_http_message(void) {
+    return hm_seq(parse_http_start_line(), parse_http_headers(), hm_string("\r\n")); 
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
         return 1;
     }
 
-    char *host = argv[1];
-    int port = atoi(argv[2]);
-
-    struct sockaddr_in server_addr;
-    struct hostent *server;
-
-    server = gethostbyname(host);
-    if (server == NULL) {
-        fprintf(stderr, "ERROR, no such host\n");
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
         return 1;
     }
 
-    bzero((char *) &server_addr, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, (char *)&server_addr.sin_addr.s_addr, server->h_length);
-    server_addr.sin_port = htons(port);
+    fseek(fp, 0, SEEK_END);
+    long fsize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("ERROR opening socket");
+    char* buffer = (char*)malloc(fsize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
         return 1;
     }
+    fread(buffer, 1, fsize, fp);
+    fclose(fp);
 
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("ERROR connecting");
-        return 1;
+    hm_parser_t* parser = parse_http_message();
+    hm_result_t result = hm_parse(parser, buffer, fsize);
+
+    if (result.success) {
+        printf("HTTP message parsed successfully!\n");
+    } else {
+        fprintf(stderr, "HTTP message parsing failed at position %zu: %s\n", result.position, result.error);
     }
 
-    char buffer[MAX_BUFFER_SIZE];
-    bzero(buffer, MAX_BUFFER_SIZE);
-    
-    //Simulate Hammer functionality - send a large number of requests.  Error handling omitted for brevity.
-    for(int i = 0; i < 1000; i++){
-        strcpy(buffer, "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n");
-        send(sockfd, buffer, strlen(buffer), 0);
-    }
-
-
-    close(sockfd);
+    hm_free(parser);
+    free(buffer);
     return 0;
 }
+

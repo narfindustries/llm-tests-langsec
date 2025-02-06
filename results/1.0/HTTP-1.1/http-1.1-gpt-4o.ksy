@@ -1,89 +1,71 @@
 meta:
-  id: http_1_1
-  title: HTTP 1.1
-  endian: be
+  id: http_message
+  title: HTTP 1.1 Message
   file-extension: http
+  endian: be
 
 seq:
-  - id: request
-    type: request
-
-  - id: response
-    type: response
+  - id: start_line
+    type: start_line
+  - id: headers
+    type: header_entries
+  - id: body
+    size: headers.content_length
+    if: headers.is_content_length_defined
 
 types:
-  request:
+  start_line:
     seq:
       - id: method
         type: strz
         encoding: ascii
-
-      - id: url
+        if: _parent.is_request
+      - id: request_uri
         type: strz
         encoding: ascii
-
-      - id: version
-        type: http_version
-
-      - id: headers
-        type: headers
-
-      - id: body
-        type: bytes
-        size-eos: true
-
-  response:
-    seq:
-      - id: version
-        type: http_version
-
+        if: _parent.is_request
+      - id: http_version
+        type: strz
+        encoding: ascii
       - id: status_code
-        type: u2
-    
+        type: strz
+        encoding: ascii
+        if: _parent.is_response
       - id: reason_phrase
         type: strz
         encoding: ascii
+        if: _parent.is_response
 
-      - id: headers
-        type: headers
-
-      - id: body
-        type: bytes
-        size-eos: true
-
-  http_version:
+  header_entries:
     seq:
-      - id: http_marker
-        contents: "HTTP/"
-
-      - id: major
-        type: u1
-    
-      - id: dot
-        contents: "."
-
-      - id: minor
-        type: u1
-
-  headers:
-    seq:
-      - id: header_items
-        type: header
+      - id: entries
+        type: header_entry
         repeat: until
-        repeat-until: _io.eos || (hdr_terminator_exists and header_items[-1].is_terminator)
+        repeat-until: entries[_index].is_end_of_headers
 
-  header:
+    instances:
+      content_length:
+        value: entries.filter { it.name.to_lower() == "content-length" }[0].value.to_i
+      is_content_length_defined:
+        value: entries.any { it.name.to_lower() == "content-length" }
+
+  header_entry:
     seq:
       - id: name
         type: strz
         encoding: ascii
-        terminator: 0x3A # colon ':'
-
+        terminator: 0x3A # ':' character
       - id: value
         type: strz
         encoding: ascii
-        terminator: 0x0D0A # CRLF
+        terminator: 0x0A0D # CR LF
 
     instances:
-      is_terminator:
-        value: name == "" && value == "\r\n"
+      is_end_of_headers:
+        value: name == "" and value == ""
+
+instances:
+  is_request:
+    value: start_line.method != null
+  is_response:
+    value: start_line.status_code != null

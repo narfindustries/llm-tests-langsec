@@ -1,54 +1,102 @@
-use std::env;
-use std::fs::File;
-use std::io::Read;
 use nom::{
     bytes::complete::{tag, take},
-    combinator::{map, map_res, opt, recognize},
+    combinator::{map, map_res, opt, verify},
     number::complete::{be_u16, be_u32},
-    sequence::{preceded, tuple},
+    sequence::tuple,
     IResult,
 };
+use std::fs::File;
+use std::io::Read;
+use std::env;
 
 #[derive(Debug)]
-struct TiffHeader {
-    byte_order: [u8; 2],
-    version: [u8; 2],
+enum TiffDataType {
+    Byte,
+    Ascii,
+    Short,
+    Long,
+    Rational,
+    SByte,
+    Undefined,
+    SShort,
+    SLong,
+    SRational,
+    Float,
+    Double,
 }
 
+impl TiffDataType {
+    fn from_u16(value: u16) -> Option<Self> {
+        match value {
+            1 => Some(TiffDataType::Byte),
+            2 => Some(TiffDataType::Ascii),
+            3 => Some(TiffDataType::Short),
+            4 => Some(TiffDataType::Long),
+            5 => Some(TiffDataType::Rational),
+            6 => Some(TiffDataType::SByte),
+            7 => Some(TiffDataType::Undefined),
+            8 => Some(TiffDataType::SShort),
+            9 => Some(TiffDataType::SLong),
+            10 => Some(TiffDataType::SRational),
+            11 => Some(TiffDataType::Float),
+            12 => Some(TiffDataType::Double),
+            _ => None,
+        }
+    }
+}
+
+
 #[derive(Debug)]
-struct IfdEntry {
+struct TiffField {
     tag: u16,
-    field_type: u16,
+    data_type: TiffDataType,
     count: u32,
-    value_offset: u32,
+    value: Vec<u8>,
 }
 
-#[derive(Debug)]
-struct ImageFileDirectory {
-    entries: Vec<IfdEntry>,
-    next_ifd_offset: u32,
+fn tiff_header(input: &[u8]) -> IResult<&[u8], (u16, u32)> {
+    tuple((be_u16, be_u32))(input)
 }
 
-
-fn tiff_header(input: &[u8]) -> IResult<&[u8], TiffHeader> {
-    let (input, byte_order) = take(2usize)(input)?;
-    let (input, version) = take(2usize)(input)?;
-    Ok((input, TiffHeader { byte_order: byte_order.try_into().unwrap(), version: version.try_into().unwrap() }))
-}
-
-fn ifd_entry(input: &[u8]) -> IResult<&[u8], IfdEntry> {
-    let (input, tag) = be_u16(input)?;
-    let (input, field_type) = be_u16(input)?;
-    let (input, count) = be_u32(input)?;
-    let (input, value_offset) = be_u32(input)?;
-    Ok((input, IfdEntry { tag, field_type, count, value_offset }))
-}
-
-fn image_file_directory(input: &[u8]) -> IResult<&[u8], ImageFileDirectory> {
+fn tiff_ifd(input: &[u8]) -> IResult<&[u8], Vec<TiffField>> {
     let (input, num_entries) = be_u16(input)?;
-    let (input, entries) =  nom::multi::count(ifd_entry, num_entries as usize)(input)?;
-    let (input, next_ifd_offset) = be_u32(input)?;
-    Ok((input, ImageFileDirectory { entries, next_ifd_offset }))
+    let mut fields = Vec::new();
+    let mut remaining_input = input;
+    for _ in 0..num_entries {
+        let (new_input, field) = tiff_field(remaining_input)?;
+        fields.push(field);
+        remaining_input = new_input;
+    }
+    Ok((remaining_input, fields))
+}
+
+fn tiff_field(input: &[u8]) -> IResult<&[u8], TiffField> {
+    let (input, (tag, data_type, count, value_offset)) = tuple((
+        be_u16,
+        map(be_u16, |dt| TiffDataType::from_u16(dt).unwrap()),
+        be_u32,
+        be_u32,
+    ))(input)?;
+
+    let value = if value_offset == 0 {
+        // Value is inline
+        let data_size = match data_type {
+            TiffDataType::Byte | TiffDataType::SByte | TiffDataType::Ascii | TiffDataType::Undefined => count,
+            TiffDataType::Short | TiffDataType::SShort => count * 2,
+            TiffDataType::Long | TiffDataType::SLong => count * 4,
+            TiffDataType::Rational | TiffDataType::SRational => count * 8,
+            TiffDataType::Float => count * 4,
+            TiffDataType::Double => count * 8,
+        };
+        let (input, value) = take(data_size as usize)(input)?;
+        value.to_vec()
+    } else {
+        // Value is at offset
+        // This is a simplification, needs actual file reading
+        vec![]
+    };
+
+    Ok((input, TiffField { tag, data_type, count, value }))
 }
 
 
@@ -60,34 +108,18 @@ fn main() {
     }
 
     let filename = &args[1];
-    let mut file = match File::open(filename) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Error opening file: {}", err);
-            return;
-        }
-    };
-
+    let mut file = File::open(filename).expect("Failed to open file");
     let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => (),
-        Err(err) => {
-            println!("Error reading file: {}", err);
-            return;
-        }
-    };
+    file.read_to_end(&mut buffer).expect("Failed to read file");
 
     match tiff_header(&buffer) {
-        Ok((remaining, header)) => {
-            println!("TIFF Header: {:?}", header);
-            match image_file_directory(remaining) {
-                Ok((_, ifd)) => {
-                    println!("IFD: {:?}", ifd);
-                }
-                Err(e) => println!("Error parsing IFD: {:?}", e),
-            }
-
+        Ok((remaining, (byte_order, offset))) => {
+            println!("Byte Order: {:?}", byte_order);
+            println!("Offset: {:?}", offset);
+            // Process IFD here using offset
         }
-        Err(e) => println!("Error parsing TIFF header: {:?}", e),
+        Err(e) => {
+            println!("Error parsing TIFF header: {:?}", e);
+        }
     }
 }

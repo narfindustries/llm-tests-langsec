@@ -1,33 +1,244 @@
 module PNG;
 
-import spicy;
-
-type IHDR = unit {
-    width: uint32;
-    height: uint32;
-    bit_depth: uint8;
-    color_type: uint8;
-    compression_method: uint8;
-    filter_method: uint8;
-    interlace_method: uint8;
+public type PNG = unit {
+    signature: bytes &size=8 &check=($$ == "\x89PNG\r\n\x1a\n"),
+    chunks: vector of Chunk,
 };
 
 type Chunk = unit {
-    length: uint32;
-    type: bytes &size=4;
-    data: bytes &size=length;
-    crc: uint32;
+    length: uint32,
+    type: bytes &size=4,
+    data: bytes &size=length,
+    crc: uint32,
+
+    on %done {
+        if ( type == "IHDR" ) {
+            parse_IHDR(data);
+        }
+        else if ( type == "PLTE" ) {
+            parse_PLTE(data);
+        }
+        else if ( type == "IDAT" ) {
+            # No specific structure, just image data
+        }
+        else if ( type == "IEND" ) {
+            # No data, marks end of PNG
+        }
+        else if ( type == "tRNS" ) {
+            parse_tRNS(data);
+        }
+        else if ( type == "cHRM" ) {
+            parse_cHRM(data);
+        }
+        else if ( type == "gAMA" ) {
+            parse_gAMA(data);
+        }
+        else if ( type == "iCCP" ) {
+            parse_iCCP(data);
+        }
+        else if ( type == "sBIT" ) {
+            parse_sBIT(data);
+        }
+        else if ( type == "sRGB" ) {
+            parse_sRGB(data);
+        }
+        else if ( type == "tEXt" ) {
+            parse_tEXt(data);
+        }
+        else if ( type == "zTXt" ) {
+            parse_zTXt(data);
+        }
+        else if ( type == "iTXt" ) {
+            parse_iTXt(data);
+        }
+        else if ( type == "bKGD" ) {
+            parse_bKGD(data);
+        }
+        else if ( type == "pHYs" ) {
+            parse_pHYs(data);
+        }
+        else if ( type == "sPLT" ) {
+            parse_sPLT(data);
+        }
+        else if ( type == "hIST" ) {
+            parse_hIST(data);
+        }
+        else if ( type == "tIME" ) {
+            parse_tIME(data);
+        }
+    }
 };
 
-type PNG = unit {
-    magic: bytes &size=8 &check=(magic == b"\x89PNG\r\n\x1a\n");
-    chunks: Chunk[] &until=(chunks[$].type == b"IEND");
-};
-
-public type PNGAnalyzer = unit {
-    png: PNG;
-} &analyzer;
-
-public hook zeek_init() {
-    Analyzer::register_for_ports(Analyzer::ANALYZER_PNG, { 80/tcp, 443/tcp });
+function parse_IHDR(data: bytes) {
+    local ihdr = IHDR(data);
 }
+
+type IHDR = unit {
+    width: uint32,
+    height: uint32,
+    bit_depth: uint8,
+    color_type: uint8,
+    compression_method: uint8 &check=($$ == 0),
+    filter_method: uint8 &check=($$ == 0),
+    interlace_method: uint8 &check=($$ == 0 || $$ == 1),
+};
+
+function parse_PLTE(data: bytes) {
+    local plte = PLTE(data);
+}
+
+type PLTE = unit {
+    entries: vector of RGB &size=(|$input| / 3),
+};
+
+type RGB = unit {
+    red: uint8,
+    green: uint8,
+    blue: uint8,
+};
+
+function parse_tRNS(data: bytes) {
+    local trns = tRNS(data);
+}
+
+type tRNS = unit {
+    data: bytes &size=(|$input|),
+};
+
+function parse_cHRM(data: bytes) {
+    local chrm = cHRM(data);
+}
+
+type cHRM = unit {
+    white_point_x: uint32,
+    white_point_y: uint32,
+    red_x: uint32,
+    red_y: uint32,
+    green_x: uint32,
+    green_y: uint32,
+    blue_x: uint32,
+    blue_y: uint32,
+};
+
+function parse_gAMA(data: bytes) {
+    local gama = gAMA(data);
+}
+
+type gAMA = unit {
+    gamma: uint32,
+};
+
+function parse_iCCP(data: bytes) {
+    local iccp = iCCP(data);
+}
+
+type iCCP = unit {
+    profile_name: string &zterminated,
+    compression_method: uint8 &check=($$ == 0),
+    compressed_profile: bytes &size=(|$input| - |profile_name| - 1),
+};
+
+function parse_sBIT(data: bytes) {
+    local sbit = sBIT(data);
+}
+
+type sBIT = unit {
+    data: bytes &size=(|$input|),
+};
+
+function parse_sRGB(data: bytes) {
+    local srgb = sRGB(data);
+}
+
+type sRGB = unit {
+    rendering_intent: uint8,
+};
+
+function parse_tEXt(data: bytes) {
+    local text = tEXt(data);
+}
+
+type tEXt = unit {
+    keyword: string &zterminated,
+    text: string &size=(|$input| - |keyword| - 1),
+};
+
+function parse_zTXt(data: bytes) {
+    local ztxt = zTXt(data);
+}
+
+type zTXt = unit {
+    keyword: string &zterminated,
+    compression_method: uint8 &check=($$ == 0),
+    compressed_text: bytes &size=(|$input| - |keyword| - 2),
+};
+
+function parse_iTXt(data: bytes) {
+    local itxt = iTXt(data);
+}
+
+type iTXt = unit {
+    keyword: string &zterminated,
+    compression_flag: uint8,
+    compression_method: uint8,
+    language_tag: string &zterminated,
+    translated_keyword: string &zterminated,
+    text: string &size=(|$input| - |keyword| - |language_tag| - |translated_keyword| - 3),
+};
+
+function parse_bKGD(data: bytes) {
+    local bkgd = bKGD(data);
+}
+
+type bKGD = unit {
+    data: bytes &size=(|$input|),
+};
+
+function parse_pHYs(data: bytes) {
+    local phys = pHYs(data);
+}
+
+type pHYs = unit {
+    pixels_per_unit_x: uint32,
+    pixels_per_unit_y: uint32,
+    unit_specifier: uint8,
+};
+
+function parse_sPLT(data: bytes) {
+    local splt = sPLT(data);
+}
+
+type sPLT = unit {
+    palette_name: string &zterminated,
+    sample_depth: uint8,
+    entries: vector of sPLTEntry &size=((|$input| - |palette_name| - 1) / 10),
+};
+
+type sPLTEntry = unit {
+    red: uint16,
+    green: uint16,
+    blue: uint16,
+    alpha: uint16,
+    frequency: uint16,
+};
+
+function parse_hIST(data: bytes) {
+    local hist = hIST(data);
+}
+
+type hIST = unit {
+    frequencies: vector of uint16 &size=(|$input| / 2),
+};
+
+function parse_tIME(data: bytes) {
+    local time = tIME(data);
+}
+
+type tIME = unit {
+    year: uint16,
+    month: uint8,
+    day: uint8,
+    hour: uint8,
+    minute: uint8,
+    second: uint8,
+};

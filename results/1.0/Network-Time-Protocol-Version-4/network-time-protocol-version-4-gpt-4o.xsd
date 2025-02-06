@@ -1,81 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://www.w3.org/2001/XMLSchema"
-        xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-        targetNamespace="http://example.com/ntp"
-        xmlns:ntp="http://example.com/ntp"
-        elementFormDefault="qualified"
-        attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/ntp"
+           xmlns:ntp="http://example.com/ntp"
+           elementFormDefault="qualified">
 
-    <annotation>
-        <appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="dfdl:defaultFormat"
-                         encoding="ascii"
-                         lengthKind="explicit"
-                         length="8"
-                         byteOrder="bigEndian"/>
-        </appinfo>
-    </annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/dfdl-1.0/">
+            <dfdl:format byteOrder="bigEndian" encoding="ascii"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-    <element name="NetworkTimeProtocol" type="ntp:NetworkTimeProtocolType"/>
+    <xs:element name="NTPMessage">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="LI" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>2</dfdl:length>
+                            <dfdl:lengthUnit>bits</dfdl:lengthUnit>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="VN" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>3</dfdl:length>
+                            <dfdl:lengthUnit>bits</dfdl:lengthUnit>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Mode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>3</dfdl:length>
+                            <dfdl:lengthUnit>bits</dfdl:lengthUnit>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Stratum" type="xs:unsignedByte"/>
+                <xs:element name="Poll" type="xs:byte"/>
+                <xs:element name="Precision" type="xs:byte"/>
+                <xs:element name="RootDelay" type="xs:int">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>32</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="RootDispersion" type="xs:unsignedInt">
+                    <xs:annotation>
+                        <xs:appinfo>
+                            <dfdl:lengthKind>explicit</dfdl:lengthKind>
+                            <dfdl:length>32</dfdl:length>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ReferenceID" type="xs:unsignedInt"/>
+                <xs:element name="ReferenceTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="OriginTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="ReceiveTimestamp" type="xs:unsignedLong"/>
+                <xs:element name="TransmitTimestamp" type="xs:unsignedLong"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
-    <complexType name="NetworkTimeProtocolType">
-        <sequence>
-            <element name="LeapIndicator" type="ntp:LeapIndicatorType" dfdl:length="2" dfdl:lengthKind="explicit"/>
-            <element name="VersionNumber" type="ntp:VersionNumberType" dfdl:length="3" dfdl:lengthKind="explicit"/>
-            <element name="Mode" type="ntp:ModeType" dfdl:length="3" dfdl:lengthKind="explicit"/>
-            <element name="Stratum" type="ntp:IntegerType" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <element name="Poll" type="ntp:IntegerType" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <element name="Precision" type="ntp:IntegerType" dfdl:length="1" dfdl:lengthKind="explicit"/>
-            <element name="RootDelay" type="ntp:SignedFixedPointType" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <element name="RootDispersion" type="ntp:SignedFixedPointType" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <element name="ReferenceIdentifier" type="ntp:ReferenceIdentifierType" dfdl:length="4" dfdl:lengthKind="explicit"/>
-            <element name="ReferenceTimestamp" type="ntp:TimestampType" dfdl:length="8" dfdl:lengthKind="explicit"/>
-            <element name="OriginateTimestamp" type="ntp:TimestampType" dfdl:length="8" dfdl:lengthKind="explicit"/>
-            <element name="ReceiveTimestamp" type="ntp:TimestampType" dfdl:length="8" dfdl:lengthKind="explicit"/>
-            <element name="TransmitTimestamp" type="ntp:TimestampType" dfdl:length="8" dfdl:lengthKind="explicit"/>
-            <element name="KeyIdentifier" type="ntp:IntegerType" dfdl:length="4" dfdl:lengthKind="explicit" minOccurs="0"/>
-            <element name="MessageDigest" type="ntp:OctetStringType" dfdl:length="16" dfdl:lengthKind="explicit" minOccurs="0"/>
-        </sequence>
-    </complexType>
-
-    <simpleType name="LeapIndicatorType">
-        <restriction base="byte">
-            <pattern value="[0-3]"/>
-        </restriction>
-    </simpleType>
-
-    <simpleType name="VersionNumberType">
-        <restriction base="byte">
-            <pattern value="[0-7]"/>
-        </restriction>
-    </simpleType>
-
-    <simpleType name="ModeType">
-        <restriction base="byte">
-            <pattern value="[0-7]"/>
-        </restriction>
-    </simpleType>
-
-    <simpleType name="IntegerType">
-        <restriction base="byte"/>
-    </simpleType>
-
-    <simpleType name="SignedFixedPointType">
-        <restriction base="int"/>
-    </simpleType>
-
-    <simpleType name="ReferenceIdentifierType">
-        <restriction base="byte">
-            <dfdl:assert test="length(fn:tokenize(., '\u0000')) = 4" message="Reference Identifier must be 4 bytes"/>
-        </restriction>
-    </simpleType>
-
-    <simpleType name="TimestampType">
-        <restriction base="long"/>
-    </simpleType>
-
-    <simpleType name="OctetStringType">
-        <restriction base="hexBinary"/>
-    </simpleType>
-
-</schema>
+</xs:schema>

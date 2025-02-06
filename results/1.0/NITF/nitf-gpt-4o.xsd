@@ -1,31 +1,101 @@
-<dfdl:format
-    xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-    dfdl:defineFormats="formattedText"
-    dfdl:separatorPolicy="suppressed">
-    
-    <!-- Define any needed properties or namespaces -->
-    
-    <xsd:include schemaLocation="externalSchema.xsd"/>
-    
-    <dfdl:defineFormat name="formattedText">
-        <dfdl:initiator>initText</dfdl:initiator>
-        <dfdl:terminator>termText</dfdl:terminator>
-    </dfdl:defineFormat>
-    
-    <xsd:element name="RootElement">
-        <xsd:complexType>
-            <xsd:sequence>
-                <!-- Example element definition -->
-                <xsd:element name="exampleField" type="xsd:string">
-                    <dfdl:lengthKind value="explicit"/>
-                    <dfdl:length value="10"/>
-                </xsd:element>
-                <!-- Additional elements go here -->
-            </xsd:sequence>
-        </xsd:complexType>
-    </xsd:element>
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           targetNamespace="http://example.com/nitf"
+           xmlns:tns="http://example.com/nitf"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
 
-    <!-- Define additional complex types, elements, and formats as needed -->
+  <xs:annotation>
+    <xs:documentation>NITF 2.1 DFDL schema based on MIL-STD-2500C</xs:documentation>
+  </xs:annotation>
 
-</dfdl:format>
+  <!-- Define DFDL format annotations -->
+  <xs:simpleType name="CustomFormat" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+
+  <xs:element name="NITF_File" type="tns:NITF_FileType"/>
+
+  <xs:complexType name="NITF_FileType">
+    <xs:sequence>
+      <xs:element name="FileHeader" type="tns:FileHeaderType"/>
+      <xs:element name="ImageSegments" type="tns:ImageSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="SymbolSegments" type="tns:SymbolSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="LabelSegments" type="tns:LabelSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="TextSegments" type="tns:TextSegmentType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="DataExtensions" type="tns:DataExtensionType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="FileHeaderType">
+    <xs:sequence>
+      <xs:element name="FHDR" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="9"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="CLEVEL" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="2"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="STYPE" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="4"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="OSTAID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="10"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="FTITLE" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="80"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional mandatory and optional fields go here -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ImageSegmentType">
+    <xs:sequence>
+      <xs:element name="IID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="10"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="IDATIM" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="14"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <xs:element name="TGTID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="17"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional image segment fields -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SymbolSegmentType">
+    <xs:sequence>
+      <xs:element name="SYMID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="10"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional symbol segment fields -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LabelSegmentType">
+    <xs:sequence>
+      <xs:element name="LBID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="10"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional label segment fields -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TextSegmentType">
+    <xs:sequence>
+      <xs:element name="TEXTID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="10"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional text segment fields -->
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataExtensionType">
+    <xs:sequence>
+      <xs:element name="DEID" type="xs:string">
+        <xs:annotation><xs:appinfo><dfdl:property lengthKind="explicit" length="25"/></xs:appinfo></xs:annotation>
+      </xs:element>
+      <!-- Additional data extension fields -->
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

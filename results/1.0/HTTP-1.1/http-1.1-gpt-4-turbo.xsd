@@ -1,59 +1,48 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/HTTP-1.1"
-           xmlns:tns="http://example.com/HTTP-1.1">
-
-    <!-- Define a simple HTTP 1.1 request parser -->
-    <xs:annotation>
-        <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:format ref="tns:HTTP-1.1-base-format"/>
-        </xs:appinfo>
-    </xs:annotation>
-
-    <xs:complexType name="HttpRequest">
-        <xs:sequence>
-            <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:textStringJustification="left">
-                <dfdl:property name="representation" value="text"/>
-                <dfdl:property name="textStringJustification" value="left"/>
-                <dfdl:property name="terminator" value=" "/>
-                <dfdl:property name="initiator" value=""/>
-            </xs:element>
-            <xs:element name="URI" type="xs:string" dfdl:lengthKind="delimited">
-                <dfdl:property name="terminator" value=" "/>
-            </xs:element>
-            <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited">
-                <dfdl:property name="terminator" value="\r\n"/>
-            </xs:element>
-            <xs:element name="Headers" type="tns:HttpHeaders" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
-
-    <xs:complexType name="HttpHeaders">
-        <xs:sequence>
-            <xs:element name="HeaderName" type="xs:string" dfdl:lengthKind="delimited">
-                <dfdl:property name="terminator" value=":"/>
-                <dfdl:property name="initiator" value=""/>
-            </xs:element>
-            <xs:element name="HeaderValue" type="xs:string" dfdl:lengthKind="delimited">
-                <dfdl:property name="terminator" value="\r\n"/>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
-
-    <!-- Root element -->
-    <xs:element name="HTTP-Request" type="tns:HttpRequest"/>
+           targetNamespace="http://example.com/dfdl/http1.1"
+           xmlns:ex="http://example.com/dfdl/http1.1">
 
     <xs:annotation>
         <xs:appinfo source="http://www.ogf.org/dfdl/">
-            <dfdl:defineFormat name="HTTP-1.1-base-format">
-                <dfdl:format byteOrder="bigEndian"
-                             encoding="ASCII"
-                             bitOrder="mostSignificantBitFirst"
-                             alignmentUnits="bytes"
-                             alignment="1"/>
-            </dfdl:defineFormat>
+            <dfdl:format representation="text" encoding="US-ASCII"/>
         </xs:appinfo>
     </xs:annotation>
+
+    <xs:complexType name="HTTPRequest">
+        <xs:sequence>
+            <xs:element name="Method" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+            <xs:element name="RequestURI" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+            <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+            <xs:element name="Headers" type="ex:HTTPHeaders"/>
+            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:initiator="\r\n"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="HTTPResponse">
+        <xs:sequence>
+            <xs:element name="HTTPVersion" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=" "/>
+            <xs:element name="StatusCode" type="xs:string" dfdl:length="3" dfdl:terminator=" "/>
+            <xs:element name="ReasonPhrase" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator="\r\n"/>
+            <xs:element name="Headers" type="ex:HTTPHeaders"/>
+            <xs:element name="Body" type="xs:string" dfdl:lengthKind="delimited" dfdl:initiator="\r\n"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="HTTPHeaders">
+        <xs:sequence>
+            <xs:element name="Header" type="ex:HTTPHeader" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="HTTPHeader">
+        <xs:sequence>
+            <xs:element name="FieldName" type="xs:string" dfdl:lengthKind="delimited" dfdl:terminator=":"/>
+            <xs:element name="FieldValue" type="xs:string" dfdl:lengthKind="delimited" dfdl:initiator=" " dfdl:terminator="\r\n"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="HTTPRequest" type="ex:HTTPRequest"/>
+    <xs:element name="HTTPResponse" type="ex:HTTPResponse"/>
 
 </xs:schema>

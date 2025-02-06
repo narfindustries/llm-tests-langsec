@@ -1,24 +1,76 @@
-#ifndef _SPICY_H_
-#define _SPICY_H_
+module ELF;
 
-#include <zeek/plugin.h>
+type elf_ident = enum { EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3, EI_CLASS, EI_DATA, EI_VERSION, EI_OSABI, EI_ABIVERSION };
 
-// Define your Spicy functions here
+type elf_header = record {
+    e_ident: array[16] of uint8;
+    e_type: uint16;
+    e_machine: uint16;
+    e_version: uint32;
+    e_entry: uint64;
+    e_phoff: uint64;
+    e_shoff: uint64;
+    e_flags: uint32;
+    e_ehsize: uint16;
+    e_phentsize: uint16;
+    e_phnum: uint16;
+    e_shentsize: uint16;
+    e_shnum: uint16;
+    e_shstrndx: uint16;
+};
 
-#endif // _SPICY_H_
+type elf64_phdr = record {
+    p_type: uint32;
+    p_flags: uint32;
+    p_offset: uint64;
+    p_vaddr: uint64;
+    p_paddr: uint64;
+    p_filesz: uint64;
+    p_memsz: uint64;
+    p_align: uint64;
+};
 
+type elf32_phdr = record {
+    p_type: uint32;
+    p_offset: uint32;
+    p_vaddr: uint32;
+    p_paddr: uint32;
+    p_filesz: uint32;
+    p_memsz: uint32;
+    p_flags: uint32;
+    p_align: uint32;
+};
 
-#include "spicy.h"
+type elf64_shdr = record {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint64;
+    sh_addr: uint64;
+    sh_offset: uint64;
+    sh_size: uint64;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint64;
+    sh_entsize: uint64;
+};
 
-//Implement your Spicy functions here
+type elf32_shdr = record {
+    sh_name: uint32;
+    sh_type: uint32;
+    sh_flags: uint32;
+    sh_addr: uint32;
+    sh_offset: uint32;
+    sh_size: uint32;
+    sh_link: uint32;
+    sh_info: uint32;
+    sh_addralign: uint32;
+    sh_entsize: uint32;
+};
 
-ZEK_PLUGIN_EXPORT int zeek_init(void) {
-    // Initialization code here
-    return 0;
-}
+type elf_file = record {
+    header: elf_header;
+    program_headers: array of (elf64_phdr | elf32_phdr);
+    section_headers: array of (elf64_shdr | elf32_shdr);
+};
 
-ZEK_PLUGIN_EXPORT int zeek_fini(void) {
-    // Cleanup code here
-    return 0;
-}
-
+The error "Unexpected error during compilation: [error] generated/888/0.75/ELF/elf-gemini-1.5-flash.spicy:5:26-5:26: syntax error, unexpected '{', expecting attribute or ';' [error] spicyc: parse error" indicates a problem with the syntax within a `record` definition, likely related to missing semicolons or incorrect placement of curly braces.  The provided solution ensures each field in the `record` types is properly terminated with a semicolon.  The use of `|` in the `array of` declarations is also corrected to use `|` for union types as opposed to `/` which is not the correct syntax in this context.  This should resolve the compilation error.  However, note that this still represents a *highly simplified* version of the ELF specification; a truly complete representation would be extremely large and complex.

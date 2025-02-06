@@ -1,40 +1,321 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           xmlns:xs2="http://www.w3.org/2001/XMLSchema"
-           targetNamespace="http://example.com/jpeg"
-           xmlns="http://example.com/jpeg"
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           targetNamespace="http://www.ogf.org/dfdl/dfdl-1.0/" 
+           xmlns="http://www.ogf.org/dfdl/dfdl-1.0/" 
            elementFormDefault="qualified">
-
-  <xs:include schemaLocation="dfdl.xsd"/>
-
-  <xs:element name="jpeg" type="JpegType" dfdl:representation="binary" dfdl:encoding="iso-8859-1">
-    <xs:annotation>
-      <xs:appinfo>
-        <dfdl:format representation="binary" encoding="iso-8859-1"/>
-      </xs:appinfo>
-    </xs:annotation>
+  <xs:element name="definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="format" type="dfdl:formatType" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="xmlns" type="xs:string" fixed="http://www.ogf.org/dfdl/dfdl-1.0/"/>
+      <xs:attribute name="xmlns:xs" type="xs:string" fixed="http://www.w3.org/2001/XMLSchema"/>
+    </xs:complexType>
   </xs:element>
-
-  <xs:complexType name="JpegType">
+  <xs:complexType name="formatType">
     <xs:sequence>
-      <xs:element name="soi" type="xs:hexBinary" fixed="FFD8" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="app0" type="App0Type" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="app1" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimKey="#x00#xFF" dfdl:delimOccurs="1..1" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="other" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimKey="#xFF" dfdl:delimOccurs="*" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="eoi" type="xs:hexBinary" fixed="FFD9" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="elementType">
+    <xs:sequence>
+      <xs:element name="binaryValue" type="xs:hexBinary" minOccurs="0"/>
+      <xs:element name="pattern" type="xs:string" minOccurs="0"/>
+      <xs:element name="enumeration" type="dfdl:enumerationType" minOccurs="0"/>
+      <xs:element name="element" type="dfdl:elementType" maxOccurs="unbounded" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="type" type="xs:string" use="required"/>
+    <xs:attribute name="representation" type="xs:string" use="required"/>
+    <xs:attribute name="occurs" type="xs:string" use="required"/>
+    <xs:attribute name="length" type="xs:string" use="optional"/>
+    <xs:attribute name="byteOrder" type="xs:string" use="optional"/>
+  </xs:complexType>
+  <xs:complexType name="enumerationType">
+    <xs:sequence>
+      <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded"/>
     </xs:sequence>
   </xs:complexType>
-
-  <xs:complexType name="App0Type">
+  <xs:element name="definition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="format" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="element" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="binaryValue" type="xs:hexBinary" minOccurs="0"/>
+                    <xs:element name="pattern" type="xs:string" minOccurs="0"/>
+                    <xs:element name="enumeration" minOccurs="0">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="element" maxOccurs="unbounded" minOccurs="0">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="binaryValue" type="xs:hexBinary" minOccurs="0"/>
+                          <xs:element name="pattern" type="xs:string" minOccurs="0"/>
+                          <xs:element name="enumeration" minOccurs="0">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                          <xs:element name="element" maxOccurs="unbounded" minOccurs="0">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="binaryValue" type="xs:hexBinary" minOccurs="0"/>
+                                <xs:element name="pattern" type="xs:string" minOccurs="0"/>
+                                <xs:element name="enumeration" minOccurs="0">
+                                  <xs:complexType>
+                                    <xs:sequence>
+                                      <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded"/>
+                                    </xs:sequence>
+                                  </xs:complexType>
+                                </xs:element>
+                              </xs:sequence>
+                              <xs:attribute name="name" type="xs:string" use="required"/>
+                              <xs:attribute name="type" type="xs:string" use="required"/>
+                              <xs:attribute name="representation" type="xs:string" use="required"/>
+                              <xs:attribute name="occurs" type="xs:string" use="required"/>
+                              <xs:attribute name="length" type="xs:string" use="optional"/>
+                              <xs:attribute name="byteOrder" type="xs:string" use="optional"/>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                        <xs:attribute name="name" type="xs:string" use="required"/>
+                        <xs:attribute name="type" type="xs:string" use="required"/>
+                        <xs:attribute name="representation" type="xs:string" use="required"/>
+                        <xs:attribute name="occurs" type="xs:string" use="required"/>
+                        <xs:attribute name="length" type="xs:string" use="optional"/>
+                        <xs:attribute name="byteOrder" type="xs:string" use="optional"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="name" type="xs:string" use="required"/>
+                  <xs:attribute name="type" type="xs:string" use="required"/>
+                  <xs:attribute name="representation" type="xs:string" use="required"/>
+                  <xs:attribute name="occurs" type="xs:string" use="required"/>
+                  <xs:attribute name="length" type="xs:string" use="optional"/>
+                  <xs:attribute name="byteOrder" type="xs:string" use="optional"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="name" type="xs:string" use="required"/>
+            <xs:attribute name="type" type="xs:string" use="required"/>
+            <xs:attribute name="representation" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="JPEG" type="dfdl:formatType"/>
+  <xs:complexType name="JPEGType">
     <xs:sequence>
-      <xs:element name="identifier" type="xs:hexBinary" fixed="FFE0" dfdl:length="2" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="length" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="version" type="xs:byte" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="units" type="xs:byte" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="x-density" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-      <xs:element name="y-density" type="xs:short" dfdl:byteOrder="big" dfdl:representation="binary" dfdl:encoding="iso-8859-1"/>
-    </xs:sequence>
-  </xs:complexType>
-
-</xs:schema>
+      <xs:element name="SOI" type="dfdl:elementType" maxOccurs="1" minOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryValue" type="xs:hexBinary">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="xs:hexBinary">
+                    <xs:attribute name="value" type="xs:hexBinary" fixed="FFD8"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+          <xs:attribute name="name" type="xs:string" use="required" fixed="SOI"/>
+          <xs:attribute name="type" type="xs:string" use="required" fixed="binary"/>
+          <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+          <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="APP0" type="dfdl:elementType" maxOccurs="1" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryValue" type="xs:hexBinary">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="xs:hexBinary">
+                    <xs:attribute name="value" type="xs:hexBinary" fixed="FFE0"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="Identifier" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="pattern" type="xs:string">
+                    <xs:complexType>
+                      <xs:simpleContent>
+                        <xs:extension base="xs:string">
+                          <xs:attribute name="value" type="xs:string" fixed="^JFIF\0$"/>
+                        </xs:extension>
+                      </xs:simpleContent>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="Identifier"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="string"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="ascii"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="5"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="Version" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="Version"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="optional" fixed="bigEndian"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="Units" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="enumeration" type="dfdl:enumerationType">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded">
+                          <xs:complexType>
+                            <xs:simpleContent>
+                              <xs:extension base="xs:string">
+                                <xs:attribute name="value" type="xs:string" fixed="0"/>
+                              </xs:extension>
+                            </xs:simpleContent>
+                          </xs:complexType>
+                        </xs:element>
+                        <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded">
+                          <xs:complexType>
+                            <xs:simpleContent>
+                              <xs:extension base="xs:string">
+                                <xs:attribute name="value" type="xs:string" fixed="1"/>
+                              </xs:extension>
+                            </xs:simpleContent>
+                          </xs:complexType>
+                        </xs:element>
+                        <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded">
+                          <xs:complexType>
+                            <xs:simpleContent>
+                              <xs:extension base="xs:string">
+                                <xs:attribute name="value" type="xs:string" fixed="2"/>
+                              </xs:extension>
+                            </xs:simpleContent>
+                          </xs:complexType>
+                        </xs:element>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="Units"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="1"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="XDensity" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="XDensity"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="optional" fixed="bigEndian"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="YDensity" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="YDensity"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="2"/>
+                <xs:attribute name="byteOrder" type="xs:string" use="optional" fixed="bigEndian"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="ThumbnailWidth" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="ThumbnailWidth"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="1"/>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="ThumbnailHeight" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence/>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="ThumbnailHeight"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+                <xs:attribute name="occurs" type="xs:string" use="required" fixed="1..1"/>
+                <xs:attribute name="length" type="xs:string" use="optional" fixed="1"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+          <xs:attribute name="name" type="xs:string" use="required" fixed="APP0"/>
+          <xs:attribute name="type" type="xs:string" use="required" fixed="binary"/>
+          <xs:attribute name="representation" type="xs:string" use="required" fixed="binary"/>
+          <xs:attribute name="occurs" type="xs:string" use="required" fixed="0..1"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="DQT" type="dfdl:elementType" maxOccurs="1" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="binaryValue" type="xs:hexBinary">
+              <xs:complexType>
+                <xs:simpleContent>
+                  <xs:extension base="xs:hexBinary">
+                    <xs:attribute name="value" type="xs:hexBinary" fixed="FFDB"/>
+                  </xs:extension>
+                </xs:simpleContent>
+              </xs:complexType>
+            </xs:element>
+            <xs:element name="TableNumber" type="dfdl:elementType" maxOccurs="1">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="enumeration" type="dfdl:enumerationType">
+                    <xs:complexType>
+                      <xs:sequence>
+                        <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded">
+                          <xs:complexType>
+                            <xs:simpleContent>
+                              <xs:extension base="xs:string">
+                                <xs:attribute name="value" type="xs:string" fixed="0"/>
+                              </xs:extension>
+                            </xs:simpleContent>
+                          </xs:complexType>
+                        </xs:element>
+                        <xs:element name="enumerationValue" type="xs:string" maxOccurs="unbounded">
+                          <xs:complexType>
+                            <xs:simpleContent>
+                              <xs:extension base="xs:string">
+                                <xs:attribute name="value" type="xs:string" fixed="1"/>
+                              </xs:extension>
+                            </xs:simpleContent>
+                          </xs:complexType>
+                        </xs:element>
+                      </xs:sequence>
+                    </xs:complexType>
+                  </xs:element>
+                </xs:sequence>
+                <xs:attribute name="name" type="xs:string" use="required" fixed="TableNumber"/>
+                <xs:attribute name="type" type="xs:string" use="required" fixed="integer"/>
+                <xs:attribute name="representation" type="

@@ -1,21 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/'
-           xmlns:ex="http://example.com"
-           targetNamespace="http://example.com"
-           elementFormDefault="qualified">
+           targetNamespace="http://example.com/ICMP"
+           xmlns="http://example.com/ICMP"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           blockDefault="#all"
+           finalDefault=""
+           id="ICMPSchema">
 
-  <xs:include schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/XMLSchema/DFDL.xsd"/>
-
-  <xs:element name="icmp">
+  <xs:element name="ICMP">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="type" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
-        <xs:element name="code" type="xs:unsignedByte" dfdl:length="1" dfdl:byteOrder="big"/>
-        <xs:element name="checksum" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-        <xs:element name="identifier" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-        <xs:element name="sequenceNumber" type="xs:unsignedShort" dfdl:length="2" dfdl:byteOrder="big"/>
-        <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="delimited" dfdl:delimiterType="byte" dfdl:delimiter="00"/>
+        <xs:element name="Type" type="xs:unsignedByte"/>
+        <xs:element name="Code" type="xs:unsignedByte"/>
+        <xs:element name="Checksum" type="xs:unsignedShort"/>
+        <xs:choice>
+          <xs:element name="Identifier" type="xs:unsignedShort" minOccurs="0"/>
+          <xs:element name="SequenceNumber" type="xs:unsignedShort" minOccurs="0"/>
+        </xs:choice>
+        <xs:choice>
+          <xs:element name="EchoData" type="xs:hexBinary" minOccurs="0"/>
+          <xs:element name="DestinationUnreachableData">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="IPHeader" type="xs:hexBinary"/>
+                <xs:element name="OriginalDatagram" type="xs:hexBinary"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="RedirectData">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="IPHeader" type="xs:hexBinary"/>
+                <xs:element name="OriginalDatagram" type="xs:hexBinary"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="TimeExceededData">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="IPHeader" type="xs:hexBinary"/>
+                <xs:element name="OriginalDatagram" type="xs:hexBinary"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="ParameterProblemData">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="Pointer" type="xs:unsignedByte"/>
+                <xs:element name="OriginalDatagram" type="xs:hexBinary"/>
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ICMPMessage">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="ICMP"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>

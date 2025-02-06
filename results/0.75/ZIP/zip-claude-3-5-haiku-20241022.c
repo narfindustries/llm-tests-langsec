@@ -1,58 +1,88 @@
-#include <hammer/hammer.h>
-#include <hammer/glue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Define the ZIP file structure parser
-static HParser* zip_file_parser() {
-    // Local file header signature (4 bytes)
-    HParser* local_header_sig = h_token("\x50\x4B\x03\x04");
+typedef enum {
+    NO_COMPRESSION = 0,
+    SHRINK = 1,
+    REDUCE_1 = 2,
+    REDUCE_2 = 3,
+    REDUCE_3 = 4,
+    REDUCE_4 = 5,
+    IMPLODE = 6,
+    DEFLATE = 8,
+    DEFLATE64 = 9,
+    BZIP2 = 12,
+    LZMA = 14,
+    IBM_TERSE = 18,
+    LZ77 = 19,
+    PPMD = 98
+} CompressionMethod;
 
-    // Version needed to extract (2 bytes)
+typedef struct {
+    uint32_t signature;
+    uint16_t version_needed;
+    uint16_t general_purpose_flag;
+    CompressionMethod compression_method;
+    uint16_t last_mod_time;
+    uint16_t last_mod_date;
+    uint32_t crc32;
+    uint32_t compressed_size;
+    uint32_t uncompressed_size;
+    uint16_t filename_length;
+    uint16_t extra_field_length;
+    char* filename;
+    uint8_t* extra_field;
+} LocalFileHeader;
+
+HParsedToken* parse_local_file_header(const HParseResult* result, void* user_data) {
+    LocalFileHeader* header = malloc(sizeof(LocalFileHeader));
+    const HParsedToken* seq = result->ast;
+
+    header->signature = *(uint32_t*)seq->seq[0]->data;
+    header->version_needed = *(uint16_t*)seq->seq[1]->data;
+    header->general_purpose_flag = *(uint16_t*)seq->seq[2]->data;
+    header->compression_method = *(uint16_t*)seq->seq[3]->data;
+    header->last_mod_time = *(uint16_t*)seq->seq[4]->data;
+    header->last_mod_date = *(uint16_t*)seq->seq[5]->data;
+    header->crc32 = *(uint32_t*)seq->seq[6]->data;
+    header->compressed_size = *(uint32_t*)seq->seq[7]->data;
+    header->uncompressed_size = *(uint32_t*)seq->seq[8]->data;
+    header->filename_length = *(uint16_t*)seq->seq[9]->data;
+    header->extra_field_length = *(uint16_t*)seq->seq[10]->data;
+    
+    header->filename = malloc(header->filename_length + 1);
+    memcpy(header->filename, seq->seq[11]->data, header->filename_length);
+    header->filename[header->filename_length] = '\0';
+
+    header->extra_field = malloc(header->extra_field_length);
+    memcpy(header->extra_field, seq->seq[12]->data, header->extra_field_length);
+
+    return h_make_seq(header);
+}
+
+HParser* create_zip_parser() {
+    HParser* signature = h_uint32();
     HParser* version_needed = h_uint16();
-
-    // General purpose bit flag (2 bytes)
-    HParser* bit_flag = h_uint16();
-
-    // Compression method (2 bytes)
+    HParser* general_purpose_flag = h_uint16();
     HParser* compression_method = h_uint16();
-
-    // Last mod file time (2 bytes)
     HParser* last_mod_time = h_uint16();
-
-    // Last mod file date (2 bytes)
     HParser* last_mod_date = h_uint16();
-
-    // CRC-32 (4 bytes)
     HParser* crc32 = h_uint32();
-
-    // Compressed size (4 bytes)
     HParser* compressed_size = h_uint32();
-
-    // Uncompressed size (4 bytes)
     HParser* uncompressed_size = h_uint32();
-
-    // File name length (2 bytes)
     HParser* filename_length = h_uint16();
-
-    // Extra field length (2 bytes)
     HParser* extra_field_length = h_uint16();
+    
+    HParser* filename = h_length_value(filename_length, h_many1(h_ch_range(0, 255)));
+    HParser* extra_field = h_length_value(extra_field_length, h_many1(h_ch_range(0, 255)));
 
-    // File name (variable length)
-    HParser* filename = h_length_value(filename_length, h_ch());
-
-    // Extra field (variable length)
-    HParser* extra_field = h_length_value(extra_field_length, h_ch());
-
-    // File data (variable length based on compressed size)
-    HParser* file_data = h_length_value(compressed_size, h_ch());
-
-    // Combine all parsers for local file header
     HParser* local_file_header = h_sequence(
-        local_header_sig,
+        h_literal_uint32(0x04034B50),
         version_needed,
-        bit_flag,
+        general_purpose_flag,
         compression_method,
         last_mod_time,
         last_mod_date,
@@ -63,69 +93,47 @@ static HParser* zip_file_parser() {
         extra_field_length,
         filename,
         extra_field,
-        file_data,
         NULL
     );
 
-    return local_file_header;
+    return h_action(local_file_header, parse_local_file_header, NULL);
 }
 
-int main(int argc, char** argv) {
-    // Create the ZIP file parser
-    HParser* zip_parser = zip_file_parser();
-
-    // Check if a file was provided
+int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <zip_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <zipfile>\n", argv[0]);
         return 1;
     }
 
-    // Read the file
     FILE* file = fopen(argv[1], "rb");
     if (!file) {
         perror("Error opening file");
         return 1;
     }
 
-    // Get file size
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     rewind(file);
 
-    // Allocate buffer
     uint8_t* buffer = malloc(file_size);
-    if (!buffer) {
-        perror("Memory allocation error");
-        fclose(file);
-        return 1;
-    }
-
-    // Read file contents
-    size_t bytes_read = fread(buffer, 1, file_size, file);
+    fread(buffer, 1, file_size, file);
     fclose(file);
 
-    if (bytes_read != file_size) {
-        perror("File read error");
-        free(buffer);
-        return 1;
-    }
-
-    // Parse the ZIP file
+    HParser* zip_parser = create_zip_parser();
     HParseResult* result = h_parse(zip_parser, buffer, file_size);
 
-    // Check parsing result
     if (result && result->ast) {
-        printf("ZIP file parsed successfully!\n");
+        LocalFileHeader* header = (LocalFileHeader*)result->ast->seq[0];
+        printf("ZIP File Header Parsed Successfully\n");
+        printf("Compression Method: %d\n", header->compression_method);
+        printf("Filename: %s\n", header->filename);
     } else {
-        fprintf(stderr, "Parsing failed\n");
-        free(buffer);
-        return 1;
+        printf("Parsing failed\n");
     }
 
-    // Cleanup
     free(buffer);
     h_parse_result_free(result);
-    h_parser_free(zip_parser);
+    h_destroy_parser(zip_parser);
 
     return 0;
 }

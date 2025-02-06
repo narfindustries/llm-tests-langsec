@@ -1,82 +1,120 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <hammer/hammer.h>
 
-// Structure to represent a Bitcoin transaction
 typedef struct {
-    char txid[65]; // Transaction ID (64 hex characters + null terminator)
-    double amount;
-    char address[35]; // Bitcoin address (max length 34 + null terminator)
-} Transaction;
+    uint32_t version;
+} TxVersion;
 
+typedef struct {
+    uint64_t value;
+    struct hm_bytes scriptPubKey;
+} TxOut;
 
-// Function to read transactions from a file
-Transaction* readTransactions(const char* filename, int* numTransactions) {
-    FILE* file = fopen(filename, "r");
-    if (file == NULL) {
-        perror("Error opening transactions file");
-        return NULL;
-    }
+typedef struct {
+    struct hm_bytes prevOutHash;
+    uint32_t prevOutIndex;
+    struct hm_bytes scriptSig;
+    uint32_t sequence;
+} TxIn;
 
-    char line[1024];
-    *numTransactions = 0;
-    Transaction* transactions = NULL;
+typedef struct {
+    TxVersion version;
+    uint64_t txinCount;
+    TxIn* txins;
+    uint64_t txoutCount;
+    TxOut* txouts;
+    uint32_t lockTime;
+} BitcoinTransaction;
 
-    while (fgets(line, sizeof(line), file) != NULL) {
-        // Simple parsing assuming comma-separated values
-        char* txid = strtok(line, ",");
-        char* amountStr = strtok(NULL, ",");
-        char* address = strtok(NULL, ",");
-
-        if (txid == NULL || amountStr == NULL || address == NULL) {
-            fprintf(stderr, "Error parsing transaction line: %s", line);
-            continue; // Skip malformed lines
-        }
-
-        //Reallocate memory for transactions array.  Error handling included.
-        Transaction* tempTransactions = realloc(transactions, (*numTransactions + 1) * sizeof(Transaction));
-        if (tempTransactions == NULL) {
-            perror("Memory allocation failed");
-            fclose(file);
-            free(transactions);
-            return NULL;
-        }
-        transactions = tempTransactions;
-
-
-        strncpy(transactions[*numTransactions].txid, txid, sizeof(transactions[*numTransactions].txid) -1);
-        transactions[*numTransactions].txid[sizeof(transactions[*numTransactions].txid) -1] = '\0'; //Ensure null termination
-
-        transactions[*numTransactions].amount = atof(amountStr);
-        strncpy(transactions[*numTransactions].address, address, sizeof(transactions[*numTransactions].address) -1);
-        transactions[*numTransactions].address[sizeof(transactions[*numTransactions].address) -1] = '\0'; //Ensure null termination
-
-        (*numTransactions)++;
-    }
-
-    fclose(file);
-    return transactions;
+static hm_parser_t* parse_uint32(hm_arena_t* arena) {
+    return hm_uint32(arena);
 }
 
+static hm_parser_t* parse_uint64(hm_arena_t* arena) {
+    return hm_uint64(arena);
+}
 
-int main() {
-    int numTransactions;
-    Transaction* transactions = readTransactions("transactions.txt", &numTransactions);
+static hm_parser_t* parse_varint(hm_arena_t* arena) {
+    return hm_varint(arena);
+}
 
-    if (transactions == NULL) {
-        return 1; // Indicate an error
+static hm_parser_t* parse_bytes(hm_arena_t* arena, size_t len) {
+    return hm_bytes(arena, len);
+}
+
+static hm_parser_t* parse_txin(hm_arena_t* arena) {
+    return hm_seq(arena,
+                  hm_field(arena, "prevOutHash", hm_bytes(arena, 32)),
+                  hm_field(arena, "prevOutIndex", parse_uint32(arena)),
+                  hm_field(arena, "scriptSig", hm_varbytes(arena)),
+                  hm_field(arena, "sequence", parse_uint32(arena)),
+                  NULL);
+}
+
+static hm_parser_t* parse_txout(hm_arena_t* arena) {
+    return hm_seq(arena,
+                  hm_field(arena, "value", parse_uint64(arena)),
+                  hm_field(arena, "scriptPubKey", hm_varbytes(arena)),
+                  NULL);
+}
+
+static hm_parser_t* parse_bitcoin_transaction(hm_arena_t* arena) {
+    return hm_seq(arena,
+                  hm_field(arena, "version", parse_uint32(arena)),
+                  hm_field(arena, "txinCount", parse_varint(arena)),
+                  hm_array(arena, "txins", parse_txin(arena), hm_get_uint64(arena, "txinCount")),
+                  hm_field(arena, "txoutCount", parse_varint(arena)),
+                  hm_array(arena, "txouts", parse_txout(arena), hm_get_uint64(arena, "txoutCount")),
+                  hm_field(arena, "lockTime", parse_uint32(arena)),
+                  NULL);
+}
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <binary_file>\n", argv[0]);
+        return 1;
     }
 
-    // Process transactions (example: print them)
-    for (int i = 0; i < numTransactions; i++) {
-        printf("Transaction ID: %s, Amount: %.2f, Address: %s\n",
-               transactions[i].txid, transactions[i].amount, transactions[i].address);
+    FILE* fp = fopen(argv[1], "rb");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return 1;
     }
 
-    free(transactions); // Free dynamically allocated memory
+    fseek(fp, 0, SEEK_END);
+    long fileSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    uint8_t* buffer = (uint8_t*)malloc(fileSize);
+    if (buffer == NULL) {
+        perror("Memory allocation failed");
+        fclose(fp);
+        return 1;
+    }
+
+    fread(buffer, 1, fileSize, fp);
+    fclose(fp);
+
+    hm_arena_t* arena = hm_arena_new(1024);
+    hm_parser_t* parser = parse_bitcoin_transaction(arena);
+    hm_result_t* result = hm_parse(parser, buffer, fileSize);
+
+    if (result->status == HM_SUCCESS) {
+        BitcoinTransaction* tx = (BitcoinTransaction*)result->value;
+        printf("Transaction Version: %u\n", tx->version.version);
+        // Access other fields similarly...  Remember to handle dynamic arrays (txins, txouts) correctly
+
+    } else {
+        fprintf(stderr, "Parsing failed: %s\n", result->error);
+    }
+
+    hm_result_free(result);
+    hm_parser_free(parser);
+    hm_arena_free(arena);
+    free(buffer);
+
     return 0;
 }
-
-transactions.txt
-e2e798a6987f966a61e77d68622a9a951f32036871877569121846e42625126b,1.234,bc1q9d8z7wun49av0v47g78z6w306428c697569
-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2,5.678,bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq

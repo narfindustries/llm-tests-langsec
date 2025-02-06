@@ -1,78 +1,247 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/tiff"
-           xmlns:tns="http://example.com/tiff"
-           elementFormDefault="qualified">
-
-  <xs:include schemaLocation="=dfdl.xsd"/>
-
-  <xs:element name="tiff">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:header"/>
-        <xs:element ref="tns:ifd" maxOccurs="unbounded"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="header">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="byteOrder" type="xs:string" dfdl:length="2"/>
-        <xs:element name="magic" type="xs:integer" dfdl:length="2"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="ifd">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="tag" type="xs:string" dfdl:length="2"/>
-        <xs:element name="type" type="xs:string" dfdl:length="2"/>
-        <xs:element name="count" type="xs:integer" dfdl:length="4"/>
-        <xs:element name="value" type="xs:string" dfdl:length="4"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="tiff-metadata">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="tns:imageWidth" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:imageLength" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:bitsPerSample" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:compression" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:photometricInterpretation" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:orientation" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:samplesPerPixel" dfdl:occurs="1..1"/>
-        <xs:element ref="tns:planarConfiguration" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:ycbCrSubSampling" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:ycbCrPositioning" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:xResolution" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:yResolution" dfdl:occurs="0..1"/>
-        <xs:element ref="tns:resolutionUnit" dfdl:occurs="0..1"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-
-  <xs:element name="imageWidth" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="imageLength" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="bitsPerSample" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="compression" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="photometricInterpretation" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="orientation" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="samplesPerPixel" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="planarConfiguration" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="ycbCrSubSampling" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="ycbCrPositioning" type="xs:integer" dfdl:length="2"/>
-  <xs:element name="xResolution" type="xs:integer" dfdl:length="4"/>
-  <xs:element name="yResolution" type="xs:integer" dfdl:length="4"/>
-  <xs:element name="resolutionUnit" type="xs:integer" dfdl:length="2"/>
-
-  <dfdl:formatием>
-    <dfdl:property name="byteOrder" value="littleEndian"/>
-    <dfdl:property name="encoding" value="UTF-8"/>
-  </dfdl:formatием>
-
-</xs:schema>
+<dfdl:definition xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dfdl:format>
+    <dfdl:binaryFormat byteOrder="bigEndian" encoding="binary"/>
+  </dfdl:format>
+  <dfdl:element name="TIFF" type="TIFFType"/>
+  <dfdl:element name="TIFFType" type="sequence">
+    <dfdl:element name="ByteOrder" type="byteOrderType"/>
+    <dfdl:element name="MagicNumber" type="magicNumberType"/>
+    <dfdl:element name="OffsetToFirstIFD" type="offsetToFirstIFDType"/>
+    <dfdl:element name="IFD" type="ifdType" occurs="1..*"/>
+  </dfdl:element>
+  <dfdl:element name="byteOrderType" type="string" length="2" pattern="[II|MM]"/>
+  <dfdl:element name="magicNumberType" type="integer" length="2" value="42"/>
+  <dfdl:element name="offsetToFirstIFDType" type="integer" length="4"/>
+  <dfdl:element name="ifdType" type="sequence">
+    <dfdl:element name="Tag" type="tagType"/>
+    <dfdl:element name="Type" type="typeType"/>
+    <dfdl:element name="Count" type="countType"/>
+    <dfdl:element name="Value" type="valueType" occurs="0..*"/>
+  </dfdl:element>
+  <dfdl:element name="tagType" type="integer" length="2"/>
+  <dfdl:element name="typeType" type="integer" length="2">
+    <dfdl:assert test=". = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 7 or . = 9 or . = 10"/>
+  </dfdl:element>
+  <dfdl:element name="countType" type="integer" length="4"/>
+  <dfdl:element name="valueType" type="sequence">
+    <dfdl:element name="Value" type="valueDataType" occurs="1..*"/>
+  </dfdl:element>
+  <dfdl:element name="valueDataType" type="string" length="1..*">
+    <dfdl:assert test="parent::Type = 1 and length(.//text()) = 1"/>
+    <dfdl:assert test="parent::Type = 2 and length(.//text()) = 1"/>
+    <dfdl:assert test="parent::Type = 3 and length(.//text()) = 2"/>
+    <dfdl:assert test="parent::Type = 4 and length(.//text()) = 4"/>
+    <dfdl:assert test="parent::Type = 5 and length(.//text()) = 8"/>
+    <dfdl:assert test="parent::Type = 7 and length(.//text()) = 1..*"/>
+    <dfdl:assert test="parent::Type = 9 and length(.//text()) = 4"/>
+    <dfdl:assert test="parent::Type = 10 and length(.//text()) = 8"/>
+  </dfdl:element>
+  <dfdl:element name="ImageWidth" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 256"/>
+  </dfdl:element>
+  <dfdl:element name="ImageLength" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 257"/>
+  </dfdl:element>
+  <dfdl:element name="BitsPerSample" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 258 and (. = 1 or . = 2 or . = 4 or . = 8 or . = 12 or . = 16 or . = 32)"/>
+  </dfdl:element>
+  <dfdl:element name="Compression" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 259 and (. = 1 or . = 2 or . = 3 or . = 4 or . = 5)"/>
+  </dfdl:element>
+  <dfdl:element name="PhotometricInterpretation" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 262 and (. = 0 or . = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 6)"/>
+  </dfdl:element>
+  <dfdl:element name="Orientation" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 274 and (. = 1 or . = 2 or . = 3 or . = 4 or . = 5 or . = 6 or . = 7 or . = 8)"/>
+  </dfdl:element>
+  <dfdl:element name="SamplesPerPixel" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 277 and (. = 1 or . = 2 or . = 3 or . = 4)"/>
+  </dfdl:element>
+  <dfdl:element name="RowsPerStrip" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 278"/>
+  </dfdl:element>
+  <dfdl:element name="StripOffsets" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 279"/>
+  </dfdl:element>
+  <dfdl:element name="StripByteCounts" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 280"/>
+  </dfdl:element>
+  <dfdl:element name="XResolution" type="rational" length="8">
+    <dfdl:assert test="parent::Tag = 282"/>
+  </dfdl:element>
+  <dfdl:element name="YResolution" type="rational" length="8">
+    <dfdl:assert test="parent::Tag = 283"/>
+  </dfdl:element>
+  <dfdl:element name="PlanarConfiguration" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 284 and (. = 1 or . = 2)"/>
+  </dfdl:element>
+  <dfdl:element name="PageName" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 285"/>
+  </dfdl:element>
+  <dfdl:element name="XPosition" type="rational" length="8">
+    <dfdl:assert test="parent::Tag = 286"/>
+  </dfdl:element>
+  <dfdl:element name="YPosition" type="rational" length="8">
+    <dfdl:assert test="parent::Tag = 287"/>
+  </dfdl:element>
+  <dfdl:element name="FreeOffsets" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 288"/>
+  </dfdl:element>
+  <dfdl:element name="FreeByteCounts" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 289"/>
+  </dfdl:element>
+  <dfdl:element name="GrayResponseUnit" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 290 and (. = 1 or . = 2 or . = 3 or . = 4)"/>
+  </dfdl:element>
+  <dfdl:element name="GrayResponseCurve" type="integer" length="2" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 291"/>
+  </dfdl:element>
+  <dfdl:element name="T4Options" type="integer" length="4">
+    <dfdl:assert test="parent::Tag = 292"/>
+  </dfdl:element>
+  <dfdl:element name="T6Options" type="integer" length="4">
+    <dfdl:assert test="parent::Tag = 293"/>
+  </dfdl:element>
+  <dfdl:element name="ResolutionUnit" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 296 and (. = 1 or . = 2 or . = 3)"/>
+  </dfdl:element>
+  <dfdl:element name="PageNumber" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 297"/>
+  </dfdl:element>
+  <dfdl:element name="TransferFunction" type="integer" length="2" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 301"/>
+  </dfdl:element>
+  <dfdl:element name="Software" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 305"/>
+  </dfdl:element>
+  <dfdl:element name="DateTime" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 306"/>
+  </dfdl:element>
+  <dfdl:element name="Artist" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 315"/>
+  </dfdl:element>
+  <dfdl:element name="HostComputer" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 316"/>
+  </dfdl:element>
+  <dfdl:element name="Predictor" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 317 and (. = 1 or . = 2 or . = 3)"/>
+  </dfdl:element>
+  <dfdl:element name="WhitePoint" type="rational" length="8">
+    <dfdl:assert test="parent::Tag = 318"/>
+  </dfdl:element>
+  <dfdl:element name="PrimaryChromaticities" type="rational" length="8" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 319"/>
+  </dfdl:element>
+  <dfdl:element name="ColorMap" type="integer" length="2" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 320"/>
+  </dfdl:element>
+  <dfdl:element name="HalftoneHints" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 321"/>
+  </dfdl:element>
+  <dfdl:element name="TileWidth" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 322"/>
+  </dfdl:element>
+  <dfdl:element name="TileLength" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 323"/>
+  </dfdl:element>
+  <dfdl:element name="TileOffsets" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 324"/>
+  </dfdl:element>
+  <dfdl:element name="TileByteCounts" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 325"/>
+  </dfdl:element>
+  <dfdl:element name="InkSet" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 332 and (. = 1 or . = 2)"/>
+  </dfdl:element>
+  <dfdl:element name="InkNames" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 333"/>
+  </dfdl:element>
+  <dfdl:element name="NumberOfInks" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 334"/>
+  </dfdl:element>
+  <dfdl:element name="DotRange" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 336"/>
+  </dfdl:element>
+  <dfdl:element name="TargetPrinter" type="string" length="1..*">
+    <dfdl:assert test="parent::Tag = 337"/>
+  </dfdl:element>
+  <dfdl:element name="ExtraSamples" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 338"/>
+  </dfdl:element>
+  <dfdl:element name="SampleFormat" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 339 and (. = 1 or . = 2 or . = 3)"/>
+  </dfdl:element>
+  <dfdl:element name="SMinSampleValue" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 340"/>
+  </dfdl:element>
+  <dfdl:element name="SMaxSampleValue" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 341"/>
+  </dfdl:element>
+  <dfdl:element name="TransferRange" type="integer" length="2" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 342"/>
+  </dfdl:element>
+  <dfdl:element name="ClipPath" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 343"/>
+  </dfdl:element>
+  <dfdl:element name="XClipPathUnits" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 344"/>
+  </dfdl:element>
+  <dfdl:element name="YClipPathUnits" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 345"/>
+  </dfdl:element>
+  <dfdl:element name="Indexed" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 346 and (. = 0 or . = 1)"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGTables" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 347"/>
+  </dfdl:element>
+  <dfdl:element name="OPIProxy" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 351 and (. = 0 or . = 1)"/>
+  </dfdl:element>
+  <dfdl:element name="GlobalParametersIFD" type="ifdType">
+    <dfdl:assert test="parent::Tag = 400"/>
+  </dfdl:element>
+  <dfdl:element name="ProfileType" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 401"/>
+  </dfdl:element>
+  <dfdl:element name="FaxProfile" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 402"/>
+  </dfdl:element>
+  <dfdl:element name="CodingMethods" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 403"/>
+  </dfdl:element>
+  <dfdl:element name="VersionYear" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 404"/>
+  </dfdl:element>
+  <dfdl:element name="ModeNumber" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 405"/>
+  </dfdl:element>
+  <dfdl:element name="Decode" type="integer" length="2..4">
+    <dfdl:assert test="parent::Tag = 433"/>
+  </dfdl:element>
+  <dfdl:element name="DefaultImageColor" type="byte" length="1" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 434"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGProc" type="integer" length="4">
+    <dfdl:assert test="parent::Tag = 512"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGInterchangeFormat" type="integer" length="4">
+    <dfdl:assert test="parent::Tag = 513"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGInterchangeFormatLength" type="integer" length="4">
+    <dfdl:assert test="parent::Tag = 514"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGRestartInterval" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 515"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGLosslessPredictors" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 517"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGPointTransforms" type="integer" length="2">
+    <dfdl:assert test="parent::Tag = 518"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGQTables" type="integer" length="4" occurs="1..*">
+    <dfdl:assert test="parent::Tag = 519"/>
+  </dfdl:element>
+  <dfdl:element name="JPEGDCTables" type

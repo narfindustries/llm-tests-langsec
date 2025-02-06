@@ -1,55 +1,173 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
-           targetNamespace="http://example.com/icmp"
-           xmlns:icmp="http://example.com/icmp">
+           xmlns:icmp="urn:icmp:v1"
+           targetNamespace="urn:icmp:v1">
 
   <xs:annotation>
     <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format
-        alignmentUnits="bytes"
-        alignment="1"
-        leadingSkip="0"
-        trailingSkip="0"
-        initiator=""
-        terminator=""
-        separator=""
-        separatorPolicy="suppressed"
-        separatorPosition="infix"
-        documentFinalTerminatorCanBeMissing="yes"
-        byteOrder="bigEndian"
-        encoding="UTF-8"
-        representation="binary"
-        occursCountKind="parsed"
-        textNumberRep="standard"
-        textNumberPattern=""
-        textZonedSignStyle="asciiStandard"/>
+      <dfdl:format alignment="1" alignmentUnits="bits"
+                   byteOrder="bigEndian" 
+                   encoding="ascii"
+                   lengthKind="explicit"
+                   lengthUnits="bits"
+                   initiatedContent="no"
+                   sequenceKind="ordered"
+                   leadingSkip="0"
+                   trailingSkip="0"
+                   floating="no"
+                   textBidi="no"
+                   encodingErrorPolicy="replace"
+                   initiator=""
+                   terminator=""
+                   separator=""
+                   separatorPosition="infix"
+                   separatorSuppressionPolicy="never"/>
     </xs:appinfo>
   </xs:annotation>
 
-  <xs:element name="ICMPPacket">
-    <xs:complexType>
-      <xs:sequence dfdl:separator="">
-        <xs:element name="Type" type="xs:unsignedByte" 
-          dfdl:length="1" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="Code" type="xs:unsignedByte" 
-          dfdl:length="1" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="Checksum" type="xs:unsignedShort" 
-          dfdl:length="2" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="RestOfHeader" type="xs:hexBinary" 
-          dfdl:length="4" 
-          dfdl:lengthKind="explicit"/>
-        
-        <xs:element name="Payload" type="xs:hexBinary" 
-          dfdl:lengthKind="implicit"/>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
+  <xs:element name="ICMPPacket" type="icmp:ICMPPacketType" 
+               dfdl:lengthKind="implicit"
+               dfdl:representation="binary"
+               dfdl:trailingSkip="0"
+               dfdl:initiator=""
+               dfdl:terminator=""/>
 
+  <xs:complexType name="ICMPPacketType">
+    <xs:sequence dfdl:sequenceKind="ordered" 
+                 dfdl:trailingSkip="0">
+      <xs:element name="Type" type="icmp:ICMPTypeType" 
+                   dfdl:length="8" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="Code" type="icmp:ICMPCodeType" 
+                   dfdl:length="8" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="Checksum" type="xs:hexBinary" 
+                   dfdl:length="16" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="Payload" type="icmp:ICMPPayloadType" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="ICMPTypeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="9"/>
+      <xs:enumeration value="10"/>
+      <xs:enumeration value="11"/>
+      <xs:enumeration value="12"/>
+      <xs:enumeration value="13"/>
+      <xs:enumeration value="14"/>
+      <xs:enumeration value="15"/>
+      <xs:enumeration value="16"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ICMPCodeType">
+    <xs:restriction base="xs:unsignedByte">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+      <xs:enumeration value="6"/>
+      <xs:enumeration value="7"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ICMPPayloadType">
+    <xs:choice dfdl:initiatedContent="no"
+               dfdl:trailingSkip="0">
+      <xs:element name="EchoPayload" type="icmp:EchoMessageType" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="UnreachablePayload" type="icmp:UnreachableMessageType" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="RedirectPayload" type="icmp:RedirectMessageType" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="TimeExceededPayload" type="icmp:TimeExceededMessageType" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:trailingSkip="0"/>
+    </xs:choice>
+  </xs:complexType>
+
+  <xs:complexType name="EchoMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered"
+                 dfdl:trailingSkip="0">
+      <xs:element name="Identifier" type="xs:unsignedShort" 
+                   dfdl:length="16" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="SequenceNumber" type="xs:unsignedShort" 
+                   dfdl:length="16" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="Data" type="xs:hexBinary" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UnreachableMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered"
+                 dfdl:trailingSkip="0">
+      <xs:element name="Unused" type="xs:unsignedInt" 
+                   dfdl:length="32" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="OriginalDatagramHeader" type="xs:hexBinary" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="RedirectMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered"
+                 dfdl:trailingSkip="0">
+      <xs:element name="GatewayAddress" type="xs:hexBinary" 
+                   dfdl:length="32" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="OriginalDatagramHeader" type="xs:hexBinary" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TimeExceededMessageType">
+    <xs:sequence dfdl:sequenceKind="ordered"
+                 dfdl:trailingSkip="0">
+      <xs:element name="Unused" type="xs:unsignedInt" 
+                   dfdl:length="32" 
+                   dfdl:lengthUnits="bits"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+      <xs:element name="OriginalDatagramHeader" type="xs:hexBinary" 
+                   dfdl:lengthKind="implicit"
+                   dfdl:encodingErrorPolicy="replace"
+                   dfdl:trailingSkip="0"/>
+    </xs:sequence>
+  </xs:complexType>
 </xs:schema>

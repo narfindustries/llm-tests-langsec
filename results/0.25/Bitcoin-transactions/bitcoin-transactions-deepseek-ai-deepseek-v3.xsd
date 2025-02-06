@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.com/bitcoin" xmlns:tns="http://example.com/bitcoin">
+
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:defineFormat name="BitcoinTransactionFormat">
+        <dfdl:format byteOrder="littleEndian" encoding="UTF-8"/>
+      </dfdl:defineFormat>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="BitcoinTransaction">
+    <xs:complexType>
+      <xs:sequence dfdl:separator="" dfdl:lengthKind="explicit">
+        <xs:element name="Version" type="xs:int" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="InputCount" type="tns:VarInt"/>
+        <xs:element name="Inputs" type="tns:InputList" dfdl:occursCount="{../InputCount}"/>
+        <xs:element name="OutputCount" type="tns:VarInt"/>
+        <xs:element name="Outputs" type="tns:OutputList" dfdl:occursCount="{../OutputCount}"/>
+        <xs:element name="Locktime" type="xs:int" dfdl:byteOrder="littleEndian"/>
+        <xs:element name="WitnessCount" type="tns:VarInt" minOccurs="0"/>
+        <xs:element name="WitnessData" type="tns:WitnessList" dfdl:occursCount="{../WitnessCount}" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="InputList">
+    <xs:sequence>
+      <xs:element name="PreviousTransactionHash" type="xs:hexBinary" dfdl:length="32"/>
+      <xs:element name="PreviousOutputIndex" type="xs:int" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ScriptLength" type="tns:VarInt"/>
+      <xs:element name="ScriptSig" type="xs:hexBinary" dfdl:length="{../ScriptLength}"/>
+      <xs:element name="Sequence" type="xs:int" dfdl:byteOrder="littleEndian"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="OutputList">
+    <xs:sequence>
+      <xs:element name="Value" type="xs:long" dfdl:byteOrder="littleEndian"/>
+      <xs:element name="ScriptLength" type="tns:VarInt"/>
+      <xs:element name="ScriptPubKey" type="xs:hexBinary" dfdl:length="{../ScriptLength}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="WitnessList">
+    <xs:sequence>
+      <xs:element name="WitnessLength" type="tns:VarInt"/>
+      <xs:element name="WitnessData" type="xs:hexBinary" dfdl:length="{../WitnessLength}"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="VarInt">
+    <xs:restriction base="xs:long">
+      <xs:pattern value="[0-9]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

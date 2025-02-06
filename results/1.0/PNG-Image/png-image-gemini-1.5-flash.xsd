@@ -1,22 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" targetNamespace="http://example.org/pngImage" elementFormDefault="qualified" attributeFormDefault="unqualified">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:tns="http://example.org/png"
+           targetNamespace="http://example.org/png"
+           elementFormDefault="qualified"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.ogf.org/dfdl/dfdl-1.0/ http://www.ogf.org/dfdl/dfdl-1.0/dfdl.xsd">
 
-  <xs:element name="pngImage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="signature" type="xs:hexBinary" dfdl:length="8"/>
-        <xs:element name="width" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
-        <xs:element name="height" type="xs:unsignedInt" dfdl:lengthKind="implicit"/>
-        <xs:element name="image_data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:length="{width * height * 3}"/>
-      </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" dfdl:occursCountKind="fixed" dfdl:occursCount="1"/>
-    </xs:complexType>
-    <xs:annotation>
-      <xs:appinfo source="http://www.ogf.org/dfdl/">
-        <dfdl:format ref="http://www.ogf.org/dfdl/1.0/grammars/binary"/>
-        <dfdl:textStandard>UTF-8</dfdl:textStandard>
-      </xs:appinfo>
-    </xs:annotation>
-  </xs:element>
+  <xs:element name="pngImage" type="tns:pngImageType"/>
+
+  <xs:complexType name="pngImageType">
+    <xs:sequence>
+      <xs:element name="signature" type="tns:signatureType"/>
+      <xs:element name="chunks" type="tns:chunksType"/>
+      <xs:element name="iendChunk" type="tns:iendChunkType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="signatureType">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="8"/>
+      <xs:pattern value="89504E470D0A1A0A"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="chunksType">
+    <xs:sequence>
+      <xs:element name="chunk" type="tns:chunkType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="chunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="data" type="xs:hexBinary" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+      <xs:element name="crc" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="iendChunkType">
+    <xs:sequence>
+      <xs:element name="length" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+      <xs:element name="chunkType" type="xs:string" dfdl:length="4"/>
+      <xs:element name="crc" type="xs:unsignedInt" dfdl:lengthKind="explicit" dfdl:lengthUnits="bytes"/>
+    </xs:sequence>
+  </xs:complexType>
 
 </xs:schema>

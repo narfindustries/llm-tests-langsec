@@ -1,71 +1,137 @@
 #include <hammer/hammer.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-static HParser* init_bitcoin_transaction_parser(void) {
-    // Basic primitives
-    HParser* hex_digit = h_in_range(h_ch('0'), h_ch('9'));
-    HParser* hex_letter = h_in_range(h_ch('a'), h_ch('f'));
-    HParser* hex_char = h_choice(hex_digit, hex_letter, NULL);
-    HParser* hex_byte = h_repeat_n(hex_char, 2);
-    
-    // Transaction hash (32 bytes)
-    HParser* txid = h_repeat_n(hex_byte, 32);
-    
-    // Version (4 bytes)
-    HParser* version = h_repeat_n(hex_byte, 4);
-    
-    // Input/Output count (variable length)
-    HParser* count = h_repeat_n(hex_byte, 1);
-    
-    // Script length (variable)
-    HParser* script_length = h_repeat_n(hex_byte, 1);
-    
-    // Script (variable based on length)
-    HParser* script = h_many(hex_byte);
-    
-    // Sequence (4 bytes)
-    HParser* sequence = h_repeat_n(hex_byte, 4);
-    
-    // Value (8 bytes)
-    HParser* value = h_repeat_n(hex_byte, 8);
-    
-    // Input structure
-    HParser* input = h_sequence(txid, count, script_length, script, sequence, NULL);
-    
-    // Output structure
-    HParser* output = h_sequence(value, script_length, script, NULL);
-    
-    // Locktime (4 bytes)
-    HParser* locktime = h_repeat_n(hex_byte, 4);
-    
-    // Complete transaction
-    return h_sequence(version,
-                     count,  // input count
-                     h_many(input),
-                     count,  // output count 
-                     h_many(output),
-                     locktime,
-                     NULL);
+// Forward declarations
+HParser* init_bitcoin_transaction_parser(void);
+HParser* init_var_int_parser(void);
+HParser* init_transaction_input_parser(void);
+HParser* init_transaction_output_parser(void);
+HParser* init_witness_data_parser(void);
+
+// Helper parser for variable integers
+HParser* init_var_int_parser(void) {
+    return h_choice(h_sequence(h_uint8(), h_nothing_p(), NULL),
+                   h_sequence(h_ch(0xFD), h_uint16(), NULL),
+                   h_sequence(h_ch(0xFE), h_uint32(), NULL),
+                   h_sequence(h_ch(0xFF), h_uint64(), NULL),
+                   NULL);
 }
 
-int main(int argc, char* argv[]) {
-    HParser* parser = init_bitcoin_transaction_parser();
-    
-    if (!parser) {
-        fprintf(stderr, "Failed to initialize parser\n");
+// Parser for transaction inputs
+HParser* init_transaction_input_parser(void) {
+    return h_sequence(
+        h_repeat_n(h_uint8(), 32),   // Previous Transaction Hash
+        h_uint32(),                   // Previous Transaction Index
+        init_var_int_parser(),        // ScriptSig Length
+        h_length_value(
+            h_left(init_var_int_parser(), h_nothing_p()),
+            h_repeat_n(h_uint8(), 1)  // ScriptSig
+        ),
+        h_uint32(),                   // Sequence Number
+        NULL
+    );
+}
+
+// Parser for transaction outputs
+HParser* init_transaction_output_parser(void) {
+    return h_sequence(
+        h_uint64(),                   // Value in satoshis
+        init_var_int_parser(),        // ScriptPubKey Length
+        h_length_value(
+            h_left(init_var_int_parser(), h_nothing_p()),
+            h_repeat_n(h_uint8(), 1)  // ScriptPubKey
+        ),
+        NULL
+    );
+}
+
+// Parser for witness data
+HParser* init_witness_data_parser(void) {
+    return h_sequence(
+        init_var_int_parser(),        // Witness Stack Items Count
+        h_many(h_sequence(
+            init_var_int_parser(),    // Item Size
+            h_length_value(
+                h_left(init_var_int_parser(), h_nothing_p()),
+                h_repeat_n(h_uint8(), 1) // Item Data
+            ),
+            NULL
+        )),
+        NULL
+    );
+}
+
+// Main transaction parser
+HParser* init_bitcoin_transaction_parser(void) {
+    return h_sequence(
+        h_uint32(),                   // Version
+        h_optional(h_sequence(        // SegWit marker and flag (optional)
+            h_ch(0x00),
+            h_ch(0x01),
+            NULL
+        )),
+        init_var_int_parser(),        // Input Counter
+        h_many(init_transaction_input_parser()),  // Inputs
+        init_var_int_parser(),        // Output Counter
+        h_many(init_transaction_output_parser()), // Outputs
+        h_optional(h_many(init_witness_data_parser())), // Witness Data (optional)
+        h_uint32(),                   // Locktime
+        NULL
+    );
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <bitcoin_transaction_file>\n", argv[0]);
         return 1;
     }
+
+    // Read input file
+    FILE *f = fopen(argv[1], "rb");
+    if (!f) {
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    uint8_t *input = malloc(size);
+    if (!input) {
+        perror("Failed to allocate memory");
+        fclose(f);
+        return 1;
+    }
+
+    if (fread(input, 1, size, f) != size) {
+        perror("Failed to read file");
+        free(input);
+        fclose(f);
+        return 1;
+    }
+    fclose(f);
+
+    // Initialize parser
+    HParser *bitcoin_transaction_parser = init_bitcoin_transaction_parser();
     
-    const uint8_t* input = (const uint8_t*)"0100000001a6b97044d03da79c005b20ea9c0e1a6d9dc12d9f7b91a5911c9030a439eed8f5000000004948304502206e21798a42fae0e854281abd38bacd1aeed3ee3738d9e1446618c4571d1090db022100e2ac980643b0b82c0e88ffdfec6b64e3e6ba35e7ba5fdd7d5d6cc8d25c6b241501ffffffff0100f2052a010000001976a914404371705fa9bd789a2fcd52d2c580b65d35549d88ac00000000";
-    size_t input_len = strlen((char*)input);
-    
-    HParseResult* result = h_parse(parser, input, input_len);
+    // Parse input
+    HParseResult *result = h_parse(bitcoin_transaction_parser, input, size);
     
     if (!result) {
-        fprintf(stderr, "Parse failed\n");
+        fprintf(stderr, "Failed to parse Bitcoin transaction\n");
+        free(input);
         return 1;
     }
-    
+
+    // Here you would typically process the parse tree in result->ast
+    // For now, just indicate success
+    printf("Successfully parsed Bitcoin transaction\n");
+
+    // Cleanup
     h_parse_result_free(result);
+    free(input);
     return 0;
 }

@@ -1,0 +1,39 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/" xmlns:tns="http://example.com/dfdl/arp">
+  <xs:annotation>
+    <xs:appinfo source="http://www.ogf.org/dfdl/">
+      <dfdl:format representation="binary" byteOrder="bigEndian" lengthKind="explicit" encoding="UTF-8" sequenceKind="ordered" initiatedContent="no" leadingSkip="0" lengthUnits="bytes"/>
+    </xs:appinfo>
+  </xs:annotation>
+
+  <xs:element name="ARP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HardwareType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="UTF-8" dfdl:leadingSkip="0"/>
+        <xs:element name="ProtocolType" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="UTF-8" dfdl:leadingSkip="0"/>
+        <xs:element name="HardwareAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="UTF-8" dfdl:leadingSkip="0"/>
+        <xs:element name="ProtocolAddressLength" type="xs:unsignedByte" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="UTF-8" dfdl:leadingSkip="0"/>
+        <xs:element name="Operation" type="xs:unsignedShort" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:encoding="UTF-8" dfdl:leadingSkip="0"/>
+        <xs:element name="SenderHardwareAddress" dfdl:length="{../HardwareAddressLength}" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:encoding="UTF-8" dfdl:leadingSkip="0">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary"/>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="SenderProtocolAddress" dfdl:length="{../ProtocolAddressLength}" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:encoding="UTF-8" dfdl:leadingSkip="0">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary"/>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="TargetHardwareAddress" dfdl:length="{../HardwareAddressLength}" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:encoding="UTF-8" dfdl:leadingSkip="0">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary"/>
+          </xs:simpleType>
+        </xs:element>
+        <xs:element name="TargetProtocolAddress" dfdl:length="{../ProtocolAddressLength}" dfdl:representation="binary" dfdl:byteOrder="bigEndian" dfdl:lengthKind="explicit" dfdl:encoding="UTF-8" dfdl:leadingSkip="0">
+          <xs:simpleType>
+            <xs:restriction base="xs:hexBinary"/>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

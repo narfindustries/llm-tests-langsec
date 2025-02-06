@@ -1,55 +1,107 @@
-module TIFF.GPT4Turbo {
-  import TIFF.Common;
+grammar Tiff;
 
-  type IFD = struct {
-    numEntries : uint16;
-    entries    : Entry[numEntries];
-    nextIFD    : uint32;
-  }
+import std::int;
+import std::array;
+import std::vector;
 
-  type Entry = struct {
-    tag        : uint16;
-    type       : uint16;
-    count      : uint32;
-    value      : value(type, count);
-  }
-
-  type value = fn (type: uint16, count: uint32) -> dynamic {
-    switch type {
-      case 1  => uint8[count];   // BYTE
-      case 2  => uint8[count];   // ASCII
-      case 3  => uint16[count];  // SHORT
-      case 4  => uint32[count];  // LONG
-      case 5  => Rational[count]; // RATIONAL
-      case 6  => int8[count];    // SBYTE
-      case 7  => uint8[count];   // UNDEFINED
-      case 8  => int16[count];   // SSHORT
-      case 9  => int32[count];   // SLONG
-      case 10 => SRational[count]; // SRATIONAL
-      case 11 => float32[count]; // FLOAT
-      case 12 => float64[count]; // DOUBLE
-      default => uint8[count];   // Unknown type, default to array of bytes
-    }
-  }
-
-  type Rational = struct {
-    numerator   : uint32;
+type Rational = struct {
+    numerator : uint32;
     denominator : uint32;
-  }
+};
 
-  type SRational = struct {
-    numerator   : int32;
-    denominator : int32;
-  }
+type IFDEntry = struct {
+    tag : uint16;
+    fieldType : uint16;
+    count : uint32;
+    valueOffset : uint32;
+};
 
-  type TIFFFile = struct {
-    endian      : uint16;
-    magic       : uint16;
-    ifdOffset   : uint32;
-    ifds        : IFD[1] @offset(ifdOffset);
-  }
+type IFD = struct {
+    numEntries : uint16;
+    entries : vector<IFDEntry>(numEntries);
+    nextIFDOffset : uint32;
+};
 
-  type Main = struct {
-    header : TIFFFile;
-  }
+type TIFFHeader = struct {
+    endian : array[uint8, 2];
+    magicNumber : uint16;
+    ifdOffset : uint32;
+};
+
+type TIFFFile = struct {
+    header : TIFFHeader;
+    ifds : vector<IFD>;
+};
+
+type ImageData = struct {
+    strips : vector<array[uint8]>;
+};
+
+type TIFF = struct {
+    file : TIFFFile;
+    imageData : ImageData;
+};
+
+// Helper functions to determine endianess
+func readUInt16(data : array[uint8, 2], bigEndian : bool) -> uint16 {
+    if bigEndian {
+        return (uint16(data[0]) << 8) | uint16(data[1]);
+    } else {
+        return (uint16(data[1]) << 8) | uint16(data[0]);
+    }
+}
+
+func readUInt32(data : array[uint8, 4], bigEndian : bool) -> uint32 {
+    if bigEndian {
+        return (uint32(data[0]) << 24) | (uint32(data[1]) << 16) | (uint32(data[2]) << 8) | uint32(data[3]);
+    } else {
+        return (uint32(data[3]) << 24) | (uint32(data[2]) << 16) | (uint32(data[1]) << 8) | uint32(data[0]);
+    }
+}
+
+// Main parsing logic
+func parseTIFF(data : array[uint8]) -> TIFF {
+    let bigEndian = (data[0] == 0x4D && data[1] == 0x4D);
+    let header = TIFFHeader {
+        endian : data[0..2],
+        magicNumber : readUInt16(data[2..4], bigEndian),
+        ifdOffset : readUInt32(data[4..8], bigEndian)
+    };
+
+    var ifds : vector<IFD>;
+    var offset = header.ifdOffset;
+    while (offset != 0) {
+        let numEntries = readUInt16(data[offset..offset+2], bigEndian);
+        var entries : vector<IFDEntry>;
+        offset += 2;
+        for i in 0..numEntries {
+            entries.push(IFDEntry {
+                tag : readUInt16(data[offset..offset+2], bigEndian),
+                fieldType : readUInt16(data[offset+2..offset+4], bigEndian),
+                count : readUInt32(data[offset+4..offset+8], bigEndian),
+                valueOffset : readUInt32(data[offset+8..offset+12], bigEndian)
+            });
+            offset += 12;
+        }
+        let nextIFDOffset = readUInt32(data[offset..offset+4], bigEndian);
+        ifds.push(IFD {
+            numEntries : numEntries,
+            entries : entries,
+            nextIFDOffset : nextIFDOffset
+        });
+        offset = nextIFDOffset;
+    }
+
+    // Assuming imageData parsing is handled elsewhere based on IFD entries
+    let imageData = ImageData {
+        strips : vector<array[uint8]> // Placeholder
+    };
+
+    return TIFF {
+        file : TIFFFile {
+            header : header,
+            ifds : ifds
+        },
+        imageData : imageData
+    };
 }

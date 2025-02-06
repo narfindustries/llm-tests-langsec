@@ -1,38 +1,98 @@
-def Main = {
-  BitOrder BE;
-  ByteOrder BE;
-  nitf_file
-}
+let NITF = {
+  file_header: "NITF",
+  file_version: "02.10",
+  complexity_level: u8 where $ >= 3 and $ <= 7,
+  standard_type: "BF",
+  originating_station_id: bytes(10),
+  file_date_time: bytes(14),
+  file_title: bytes(80),
+  file_security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+  file_copy_number: bytes(2),
+  file_number_of_copies: bytes(2),
+  encryption: Byte,
+  message_digest: Byte,
+  file_background_color: bytes(3),
+  originator_name: bytes(24),
+  originator_phone: bytes(18),
+  file_length: u64,
+  header_length: u64,
+  num_image_segments: u16,
+  num_graphic_segments: u16,
+  num_text_segments: u16,
+  num_data_extension_segments: u16,
+  num_reserved_extension_segments: u16,
+  
+  image_segments: {
+    im: "IM",
+    image_id: bytes(10),
+    creation_date_time: bytes(14),
+    title: bytes(80),
+    security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+    encryption: Byte,
+    image_source: bytes(42),
+    num_significant_rows: u32,
+    num_significant_cols: u32,
+    pixel_value_type: bytes(3),
+    image_representation: bytes(8),
+    image_category: bytes(8),
+    actual_bits_per_pixel: u8,
+    pixel_justification: Byte,
+    image_coordinate_system: Byte,
+    image_geodetic_coords: bytes(60),
+    image_comments: [bytes(80); 3],
+    image_compression: bytes(2),
+    compression_rate_code: bytes(4),
+    num_bands: u8,
+    image_sync_code: Byte
+  }[num_image_segments],
 
-def nitf_file = {
-  file_header;
-  @fill_bytes[8]
-}
+  graphic_segments: {
+    sy: "SY",
+    graphic_id: bytes(10),
+    graphic_name: bytes(20),
+    security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+    encryption: Byte,
+    graphic_type: Byte,
+    reserved1: bytes(13),
+    graphic_display_level: u32,
+    graphic_attachment_level: u32,
+    graphic_location: [u32; 4],
+    bound_location: [u32; 4],
+    color: bytes(3),
+    reserved2: bytes(2)
+  }[num_graphic_segments],
 
-def file_header = {
-  FH {
-    magic = "NITF0";
-    version = "2.1";
-    complexity = uint8;
-    standard_type = Choose {
-      BCS_N {
-        value = /[0-9A-Z]{4}/
-      };
-      BCS_A {
-        value = /[A-Z]{4}/
-      }
-    };
-    @padding[2];
-    security_level = uint8;
-    class_level = /[0-9A-F]{2}/;
-    group_id = $(/[A-Z0-9]{6}/)
-  }
-}
+  text_segments: {
+    te: "TE",
+    text_id: bytes(10),
+    text_date_time: bytes(14),
+    text_title: bytes(80),
+    text_security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+    encryption: Byte,
+    text_format: bytes(3),
+    text_extended_subheader_data_length: u32,
+    text_data_length: u32,
+    text_data: bytes(text_data_length)
+  }[num_text_segments],
 
-def padding = {
-  pad : uint8
-}
+  data_extension_segments: {
+    de: "DE",
+    des_id: bytes(25),
+    des_version: u8,
+    security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+    overflowed_header_type: bytes(6),
+    data_item_overflowed: u8,
+    des_length: u32,
+    des_data: bytes(des_length)
+  }[num_data_extension_segments],
 
-def fill_bytes = {
-  fill : uint8[]
+  reserved_extension_segments: {
+    re: "RE",
+    res_id: bytes(25),
+    res_version: u8,
+    security_classification: Byte where $ in ['T', 'S', 'C', 'R', 'U'],
+    res_user_defined_subheader_length: u32,
+    res_data_length: u32,
+    res_data: bytes(res_data_length)
+  }[num_reserved_extension_segments]
 }

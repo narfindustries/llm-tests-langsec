@@ -1,43 +1,50 @@
 module DICOM;
 
-public type FileHeader = unit {
+public type FileMetaInfo = unit {
+    groupLength: uint32;
+    version: uint16;
+    mediaStorageSOPClassUID: bytes &size=16;
+    mediaStorageSOPInstanceUID: bytes &size=16;
+    transferSyntaxUID: bytes &size=16;
+    implementationClassUID: bytes &size=16;
+    implementationVersionName: bytes &size=16;
+    sourceApplicationEntityTitle: bytes &size=16;
+    sendingApplicationEntityTitle: bytes &size=16;
+    receivingApplicationEntityTitle: bytes &size=16;
+    privateInformationCreatorUID: bytes &size=16;
+    privateInformation: bytes &size=16;
+};
+
+public type DataSet = unit {
+    patientName: bytes &size=64;
+    patientID: bytes &size=64;
+    patientBirthDate: bytes &size=8;
+    patientSex: bytes &size=1;
+    studyInstanceUID: bytes &size=64;
+    studyDate: bytes &size=8;
+    studyTime: bytes &size=6;
+    referringPhysicianName: bytes &size=64;
+    studyID: bytes &size=16;
+    seriesInstanceUID: bytes &size=64;
+    seriesNumber: bytes &size=12;
+    modality: bytes &size=4;
+    manufacturer: bytes &size=64;
+    institutionName: bytes &size=64;
+    imageType: bytes &size=64;
+    acquisitionDate: bytes &size=8;
+    acquisitionTime: bytes &size=6;
+    imagesInAcquisition: uint16;
+    sliceThickness: real;
+    pixelSpacing: bytes &size=16;
+    photometricInterpretation: bytes &size=16;
+    rows: uint16;
+    columns: uint16;
+    pixelData: bytes &size=(self.rows * self.columns);
+};
+
+public type DICOMFile = unit {
     preamble: bytes &size=128;
     prefix: bytes &size=4;
-    entries: Entry[];
-
-    on prefix {
-        if (self.prefix != b"DICM") {
-            throw Error("Not a valid DICOM file: missing 'DICM' prefix.");
-        }
-    }
+    fileMetaInfo: FileMetaInfo;
+    dataSet: DataSet;
 };
-
-public type Entry = unit {
-    tagGroup: uint16;
-    tagElement: uint16;
-    vr: bytes &size=2;
-    length: uint16;
-    value: switch (self.vr) {
-        case b"AE", b"AS", b"CS", b"DA", b"DS", b"DT", b"IS", b"TM", b"UI": String(self.length);
-        case b"US": uint16;
-        case b"UL": uint32;
-        case b"SS": int16;
-        case b"SL": int32;
-        case b"FL": real32;
-        case b"FD": real64;
-        case b"OB", b"OW", b"SQ", b"UN", b"UT": bytes &size=self.length;
-        default: bytes &size=self.length;
-    };
-
-    public type String = unit(len: uint16) {
-        str: bytes &size=len;
-        on str {
-            print "String value: ", self.str;
-        }
-    };
-};
-
-event zeek_init() &priority=5
-{
-    print "DICOM parser initialized.";
-}

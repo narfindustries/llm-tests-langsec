@@ -1,0 +1,113 @@
+module NITF;
+
+public type FileHeader = unit {
+    FHDR: bytes &size=4;
+    FVER: bytes &size=5;
+    CLEVEL: bytes &size=2;
+    STYPE: bytes &size=4;
+    OSTAID: bytes &size=10;
+    FDT: bytes &size=14;
+    FTITLE: bytes &size=80;
+    FSCLAS: bytes &size=1;
+    FSCODE: bytes &size=40;
+    FSCTLH: bytes &size=40;
+    FSREL: bytes &size=20;
+    FSDCTP: bytes &size=2;
+    FSDCDT: bytes &size=8;
+    FSDCXM: bytes &size=4;
+    FSDG: bytes &size=1;
+    FSDGDT: bytes &size=8;
+    FSCLTX: bytes &size=43;
+    FSCATP: bytes &size=1;
+    FSCRSN: bytes &size=1;
+    FSSRDT: bytes &size=8;
+    FSCTLN: bytes &size=15;
+};
+
+public type ImageSegmentHeader = unit {
+    IM: bytes &size=2;
+    IID: bytes &size=10;
+    IDATIM: bytes &size=14;
+    TGTID: bytes &size=17;
+    ISCLAS: bytes &size=1;
+    ISCODE: bytes &size=40;
+    ISCTLH: bytes &size=40;
+    ISREL: bytes &size=20;
+    ISDCTP: bytes &size=2;
+    ISDCDT: bytes &size=8;
+    ISDCXM: bytes &size=4;
+    ISDG: bytes &size=1;
+    ISDGDT: bytes &size=8;
+    ISCLTX: bytes &size=43;
+    ISCATP: bytes &size=1;
+    ISCRSN: bytes &size=1;
+    ISSRDT: bytes &size=8;
+    ISCTLN: bytes &size=15;
+};
+
+public type GraphicSegmentHeader = unit {
+    SH: bytes &size=2;
+    SID: bytes &size=10;
+    SNAME: bytes &size=20;
+    SCLAS: bytes &size=1;
+    SCODE: bytes &size=40;
+    SCTLH: bytes &size=40;
+    SREL: bytes &size=20;
+    SDCTP: bytes &size=2;
+    SDCDT: bytes &size=8;
+    SDCXM: bytes &size=4;
+    SDG: bytes &size=1;
+    SDGDT: bytes &size=8;
+    SCLTX: bytes &size=43;
+    SCATP: bytes &size=1;
+    SCRSN: bytes &size=1;
+    SSRDT: bytes &size=8;
+    SCTLN: bytes &size=15;
+};
+
+public type TextSegmentHeader = unit {
+    TE: bytes &size=2;
+    TEXTID: bytes &size=10;
+    TXTALVL: bytes &size=3;
+    TXTDT: bytes &size=14;
+    TXTITL: bytes &size=80;
+    TSCLAS: bytes &size=1;
+    TSCODE: bytes &size=40;
+    TSCTLH: bytes &size=40;
+    TSREL: bytes &size=20;
+    TSDCTP: bytes &size=2;
+    TSDCDT: bytes &size=8;
+    TSDCXM: bytes &size=4;
+    TSDG: bytes &size=1;
+    TSDGDT: bytes &size=8;
+    TSCLTX: bytes &size=43;
+    TSCATP: bytes &size=1;
+    TSCRSN: bytes &size=1;
+    TSSRDT: bytes &size=8;
+    TSCTLN: bytes &size=15;
+};
+
+public type DataExtensionSegmentHeader = unit {
+    DE: bytes &size=2;
+    DESID: bytes &size=25;
+    DESVER: bytes &size=2;
+    DESOFL: bytes &size=6;
+    DESITEM: bytes &size=3;
+};
+
+public type ReservedExtensionSegmentHeader = unit {
+    RE: bytes &size=2;
+    RESID: bytes &size=25;
+    RESVER: bytes &size=2;
+    RESOFL: bytes &size=6;
+    RESITEM: bytes &size=3;
+};
+
+public type NITF = unit {
+    file_header: FileHeader;
+    image_segment_headers: ImageSegmentHeader[] &until=$input.end();
+    graphic_segment_headers: GraphicSegmentHeader[] &until=$input.end();
+    text_segment_headers: TextSegmentHeader[] &until=$input.end();
+    data_extension_segment_headers: DataExtensionSegmentHeader[] &until=$input.end();
+    reserved_extension_segment_headers: ReservedExtensionSegmentHeader[] &until=$input.end();
+};

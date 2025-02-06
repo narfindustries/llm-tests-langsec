@@ -1,81 +1,123 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:dfdl="http://www.ogf.org/dfdl/dfdl-1.0/"
+           xmlns:dfdl="http://www.ogf.org/dfdl/"
            targetNamespace="http://example.com/modbus"
            xmlns:tns="http://example.com/modbus"
-           elementFormDefault="qualified"
-           attributeFormDefault="unqualified">
+           elementFormDefault="qualified">
 
-  <xs:annotation>
-    <xs:appinfo source="http://www.ogf.org/dfdl/">
-      <dfdl:format
-        ref="tns:GeneralFormat"
-        encoding="utf-8"
-        lengthKind="explicit"
-        lengthUnits="bytes"
-        byteOrder="bigEndian"/>
-    </xs:appinfo>
-  </xs:annotation>
+    <xs:annotation>
+        <xs:appinfo source="http://www.ogf.org/dfdl/">
+            <dfdl:format byteOrder="bigEndian" lengthKind="explicit" encoding="ascii"/>
+        </xs:appinfo>
+    </xs:annotation>
 
-  <xs:element name="ModbusMessage">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element name="TransactionID" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property length="2"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="ProtocolID" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property length="2"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Length" type="xs:unsignedShort">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property length="2"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="UnitID" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property length="1"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="FunctionCode" type="xs:unsignedByte">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property length="1"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-        <xs:element name="Data" type="xs:hexBinary" minOccurs="0">
-          <xs:annotation>
-            <xs:appinfo>
-              <dfdl:property lengthKind="implicit"/>
-            </xs:appinfo>
-          </xs:annotation>
-        </xs:element>
-      </xs:sequence>
+    <!-- Modbus RTU Frame -->
+    <xs:element name="ModbusRTUFrame">
+        <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+                <xs:element name="Address" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="FunctionCode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Data" type="tns:DataField"/>
+                <xs:element name="CRC" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Modbus TCP Frame -->
+    <xs:element name="ModbusTCPFrame">
+        <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+                <xs:element name="TransactionIdentifier" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ProtocolIdentifier" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Length" type="xs:unsignedShort">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="2" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="UnitIdentifier" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="FunctionCode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="Data" type="tns:DataField"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Data Field -->
+    <xs:complexType name="DataField">
+        <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+            <xs:element name="Content" type="xs:hexBinary">
+                <xs:annotation>
+                    <xs:appinfo source="http://www.ogf.org/dfdl/">
+                        <dfdl:element lengthKind="implicit"/>
+                    </xs:appinfo>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
     </xs:complexType>
-  </xs:element>
 
-  <xs:annotation>
-    <xs:appinfo>
-      <dfdl:defineFormat name="GeneralFormat">
-        <dfdl:format
-          byteOrder="bigEndian"
-          encoding="utf-8"
-          lengthKind="explicit"
-          lengthUnits="bytes"/>
-      </dfdl:defineFormat>
-    </xs:appinfo>
-  </xs:annotation>
+    <!-- Exception Response -->
+    <xs:element name="ExceptionResponse">
+        <xs:complexType>
+            <xs:sequence dfdl:sequenceKind="ordered" dfdl:initiatedContent="no" dfdl:leadingSkip="0">
+                <xs:element name="FunctionCode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+                <xs:element name="ExceptionCode" type="xs:unsignedByte">
+                    <xs:annotation>
+                        <xs:appinfo source="http://www.ogf.org/dfdl/">
+                            <dfdl:element length="1" lengthUnits="bytes"/>
+                        </xs:appinfo>
+                    </xs:annotation>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
 
 </xs:schema>

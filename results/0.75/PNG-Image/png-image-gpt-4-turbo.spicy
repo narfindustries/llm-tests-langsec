@@ -2,38 +2,81 @@ module PNG;
 
 import spicy;
 
-type IHDR = unit {
-    width: uint32;
-    height: uint32;
-    bitDepth: uint8;
-    colorType: uint8;
-    compressionMethod: uint8;
-    filterMethod: uint8;
-    interlaceMethod: uint8;
+type ChunkType = unit {
+    value: bytes &size=4;
 };
 
 type Chunk = unit {
     length: uint32;
-    type: bytes &size=4;
-    data: bytes &size=self.length;
+    type: ChunkType;
+    data: bytes &size=this.length;
     crc: uint32;
+};
+
+type IHDR = unit {
+    width: uint32;
+    height: uint32;
+    bit_depth: uint8;
+    color_type: uint8;
+    compression_method: uint8;
+    filter_method: uint8;
+    interlace_method: uint8;
+};
+
+type PLTEEntry = unit {
+    red: uint8;
+    green: uint8;
+    blue: uint8;
+};
+
+type PLTE = unit {
+    entries: vector<PLTEEntry>;
+};
+
+type IDAT = unit {
+    data: bytes &eod;
+};
+
+type IEND = unit {};
+
+type Ancillary = unit {
+    data: bytes &eod;
 };
 
 type PNGFile = unit {
     signature: bytes &size=8;
-    chunks: Chunk[] &eod;
-    
-    on %init {
-        if (self.signature != b"\x89PNG\r\n\x1a\n") {
-            throw Error("Invalid PNG signature.");
-        }
-    }
-};
+    chunks: vector<Chunk>;
 
-public type File = unit {
-    file: PNGFile;
-    
-    on %done {
-        print self.file;
+    on %init {
+        if (self.signature != b"\x89PNG\r\n\x1a\n")
+            throw Error("Invalid PNG signature");
+    }
+
+    on chunks {
+        for (chunk in self.chunks) {
+            switch (chunk.type.value) {
+                case b"IHDR": {
+                    local ihdr = spicy::parse<IHDR>(chunk.data);
+                    print ihdr;
+                }
+                case b"PLTE": {
+                    local plte = spicy::parse<PLTE>(chunk.data);
+                    print plte;
+                }
+                case b"IDAT": {
+                    local idat = spicy::parse<IDAT>(chunk.data);
+                    print idat;
+                }
+                case b"IEND": {
+                    local iend = spicy::parse<IEND>(chunk.data);
+                    print iend;
+                    break; // No more chunks after IEND
+                }
+                default: {
+                    local ancillary = spicy::parse<Ancillary>(chunk.data);
+                    print ancillary;
+                }
+            }
+        }
     }
 };

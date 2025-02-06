@@ -1,38 +1,221 @@
-def Main = {
-    BitStream;
-    Sonnet
+def NITF = {
+    fhdr : bytes(4),
+    fver : bytes(5),
+    clevel : u16,
+    stype : bytes(2),
+    ostaid : bytes(10),
+    fdt : bytes(14),
+    ftitle : bytes(80),
+    fsclas : bytes(1),
+    fsclsy : bytes(2),
+    fscode : bytes(11),
+    fsctlh : bytes(2),
+    fsrel : bytes(20),
+    fsdctp : bytes(2),
+    fsdcdt : bytes(8),
+    fsdcxm : bytes(4),
+    fsdg : bytes(1),
+    fsdgdt : bytes(8),
+    fscltx : bytes(43),
+    fscatp : bytes(1),
+    fscaut : bytes(40),
+    fscrsn : bytes(1),
+    fssrdt : bytes(8),
+    fsctln : bytes(15),
+    fscop : bytes(5),
+    fscpys : bytes(5),
+    encryp : u8,
+    fbkgc : bytes(3),
+    oname : bytes(24),
+    ophone : bytes(18),
+    fl : bytes(12),
+    hl : bytes(6),
+    numi : bytes(3),
+    image_segments : [NITF_ImageSegment]{let count = Int(numi); count},
+    nums : bytes(3),
+    graphic_segments : [NITF_GraphicSegment]{let count = Int(nums); count},
+    numt : bytes(3),
+    text_segments : [NITF_TextSegment]{let count = Int(numt); count},
+    numdes : bytes(3),
+    des_segments : [NITF_DataExtensionSegment]{let count = Int(numdes); count},
+    numres : bytes(3),
+    res_segments : [NITF_ReservedExtensionSegment]{let count = Int(numres); count},
+    udhdl : bytes(5),
+    udhd : bytes(Int(udhdl)),
+    xhdl : bytes(5),
+    xhd : bytes(Int(xhdl))
 }
 
-def Sonnet = {
-    Title;
-    Author;
-    Lines;
-    DateWritten
+def NITF_ImageSegment = {
+    im : bytes(2),
+    iid1 : bytes(10),
+    idatim : bytes(14),
+    tgtid : bytes(17),
+    iid2 : bytes(80),
+    isclas : bytes(1),
+    isclsy : bytes(2),
+    iscode : bytes(11),
+    isctlh : bytes(2),
+    isrel : bytes(20),
+    isdctp : bytes(2),
+    isdcdt : bytes(8),
+    isdcxm : bytes(4),
+    isdg : bytes(1),
+    isdgdt : bytes(8),
+    iscltx : bytes(43),
+    iscatp : bytes(1),
+    iscaut : bytes(40),
+    iscrsn : bytes(1),
+    issrdt : bytes(8),
+    isctln : bytes(15),
+    encryp : u8,
+    isorce : bytes(42),
+    nrows : bytes(8),
+    ncols : bytes(8),
+    pvtype : bytes(3),
+    irep : bytes(8),
+    icat : bytes(8),
+    abpp : bytes(2),
+    pjust : bytes(1),
+    icords : bytes(1),
+    igeolo : bytes(60),
+    nicom : bytes(1),
+    icom : [bytes(80)]{let count = Int(nicom); count},
+    ic : bytes(2),
+    comrat : bytes(4),
+    nbands : bytes(1),
+    xbands : bytes(5),
+    bands : [NITF_ImageBand]{let count = Int(if Int(nbands) == 0 then xbands else nbands); count},
+    isync : bytes(1),
+    imode : bytes(1),
+    nbpr : bytes(4),
+    nbpc : bytes(4),
+    nppbh : bytes(4),
+    nppbv : bytes(4),
+    nbpp : bytes(2),
+    idlvl : bytes(3),
+    ialvl : bytes(3),
+    iloc : bytes(10),
+    imag : bytes(4)
 }
 
-def Title = {
-    $"Title: ";
-    @text until $"\n"
+def NITF_ImageBand = {
+    irepband : bytes(2),
+    isubcat : bytes(6),
+    ifc : bytes(1),
+    imflt : bytes(3),
+    nluts : bytes(1),
+    lutd : [bytes(256)]{let count = Int(nluts); count}
 }
 
-def Author = {
-    $"Author: ";
-    @text until $"\n"
+def NITF_GraphicSegment = {
+    sy : bytes(2),
+    sid : bytes(10),
+    sname : bytes(20),
+    ssclas : bytes(1),
+    ssclsy : bytes(2),
+    sscode : bytes(11),
+    ssctlh : bytes(2),
+    ssrel : bytes(20),
+    ssdctp : bytes(2),
+    ssdcdt : bytes(8),
+    ssdcxm : bytes(4),
+    ssdg : bytes(1),
+    ssdgdt : bytes(8),
+    sscltx : bytes(43),
+    sscatp : bytes(1),
+    sscaut : bytes(40),
+    sscrsn : bytes(1),
+    ssctln : bytes(15),
+    encryp : u8,
+    sfmt : bytes(1),
+    sstruct : bytes(13),
+    sdlvl : bytes(3),
+    salvl : bytes(3),
+    sloc : bytes(10),
+    sbnd1 : bytes(10),
+    scolor : bytes(1),
+    sbnd2 : bytes(10),
+    sres2 : bytes(20),
+    sxshdl : bytes(3),
+    sxshd : bytes(Int(sxshdl))
 }
 
-def Lines = {
-    14 * Line
+def NITF_TextSegment = {
+    te : bytes(2),
+    textid : bytes(7),
+    txtalvl : bytes(3),
+    txtdt : bytes(14),
+    txtitl : bytes(80),
+    tsclas : bytes(1),
+    tsclsy : bytes(2),
+    tscode : bytes(11),
+    tsctlh : bytes(2),
+    tsrel : bytes(20),
+    tsdctp : bytes(2),
+    tsdcdt : bytes(8),
+    tsdcxm : bytes(4),
+    tsdg : bytes(1),
+    tsdgdt : bytes(8),
+    tscltx : bytes(43),
+    tscatp : bytes(1),
+    tscaut : bytes(40),
+    tscrsn : bytes(1),
+    tsctln : bytes(15),
+    encryp : u8,
+    txtfmt : bytes(3),
+    txshdl : bytes(5),
+    txshd : bytes(Int(txshdl))
 }
 
-def Line = {
-    @text until $"\n"
+def NITF_DataExtensionSegment = {
+    de : bytes(2),
+    desid : bytes(25),
+    desver : bytes(2),
+    desclas : bytes(1),
+    desclsy : bytes(2),
+    descode : bytes(11),
+    desctlh : bytes(2),
+    desrel : bytes(20),
+    desdctp : bytes(2),
+    desdcdt : bytes(8),
+    desdcxm : bytes(4),
+    desdg : bytes(1),
+    desdgdt : bytes(8),
+    descltx : bytes(43),
+    descatp : bytes(1),
+    descaut : bytes(40),
+    descrsn : bytes(1),
+    dessrdt : bytes(8),
+    desctln : bytes(15),
+    desoflw : bytes(6),
+    desitem : bytes(3),
+    desshl : bytes(4),
+    desshf : bytes(Int(desshl))
 }
 
-def DateWritten = {
-    $"Date: ";
-    @text until $"\n"
-}
-
-def BitStream = {
-    @bytes *
+def NITF_ReservedExtensionSegment = {
+    re : bytes(2),
+    resid : bytes(25),
+    resver : bytes(2),
+    resclas : bytes(1),
+    resclsy : bytes(2),
+    rescode : bytes(11),
+    resctlh : bytes(2),
+    resrel : bytes(20),
+    resdctp : bytes(2),
+    resdcdt : bytes(8),
+    resdcxm : bytes(4),
+    resdg : bytes(1),
+    resdgdt : bytes(8),
+    rescltx : bytes(43),
+    rescatp : bytes(1),
+    rescaut : bytes(40),
+    rescrsn : bytes(1),
+    ressrdt : bytes(8),
+    resctln : bytes(15),
+    resoflw : bytes(6),
+    resitem : bytes(3),
+    resshl : bytes(4),
+    resshf : bytes(Int(resshl))
 }
