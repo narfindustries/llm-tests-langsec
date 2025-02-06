@@ -87,7 +87,7 @@ class DSLGenerator:
             print("Compiler not found")
         return (current_dir, cmd, full_input_path)
 
-    def send_messages(self, function, model, messages, query, format, ddl):
+    def send_messages(self, function, model, messages, query, format, ddl, filename):
         if len(messages) == 0:
             if "claude" not in model:
                 messages = [
@@ -111,7 +111,7 @@ class DSLGenerator:
                 "error": response,
             }
             db.insert_data_errors(self.table_name, error)
-
+            self.delete_file_if_exists(filename)
             import sys
 
             sys.exit(1)
@@ -144,6 +144,12 @@ class DSLGenerator:
                 This third response is stored in a file in the correct DSL syntax.
         Step 6: Step 5 is run again (max three times) until the compilation is successful.
         """
+        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-').replace('/', '-')}.{extension}"  # Step 1
+        # Check if file already exists before proceeding
+        if os.path.exists(f"{dir_path}/{filename}"):
+            logging.info(f"File {filename} already exists, skipping generation")
+            return
+ 
         if (
             ddl in ["Kaitai Struct", "Rust Nom", "Hammer"]
             and model == "gemini-1.5-flash"
@@ -153,7 +159,7 @@ class DSLGenerator:
         # Specify the two queries needed
         messages = []
         query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
-        messages = self.send_messages(function, model, messages, query_1, format, ddl)
+        messages = self.send_messages(function, model, messages, query_1, format, ddl, filename)
         print(messages)
         query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
 
@@ -163,10 +169,9 @@ class DSLGenerator:
             if ddl == "Hammer":
                 query_2 += "Make sure that the includes statement is <hammer/hammer.h>."
 
-        messages = self.send_messages(function, model, messages, query_2, format, ddl)
+        messages = self.send_messages(function, model, messages, query_2, format, ddl, filename)
         response = messages[-1]["content"]
 
-        filename = f"{format.lower().replace(' ', '-')}-{model.lower().replace(' ', '-').replace('/', '-')}.{extension}"  # Step 1
         self.create_response_file(response, format, dir_path, filename)
         current_response = response
 
@@ -192,7 +197,7 @@ class DSLGenerator:
             query_3 = f'The previous response gave me an error. Can you use this error message: "{message}" to improve the specification and give me an improved, complete, and fixed {ddl} specification in {output} format. Give me only the complete generated code and no text with it. Ensure that the previous requirements are still met.'
 
             messages = self.send_messages(
-                function, model, messages, query_3, format, ddl
+                function, model, messages, query_3, format, ddl, filename
             )
             response3 = messages[-1]["content"]
 
@@ -306,6 +311,10 @@ class DSLGenerator:
         file_desc.close()
         # Write the output into the corresponding files
 
+    def delete_file_if_exists(self, filepath: str):
+        """Delete a file if it exists at the given path"""
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
 def main():
 
