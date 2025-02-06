@@ -14,13 +14,12 @@ class Analyzer:
         self.dbname = dbname
         self.db = Database(dbname)
 
-    def extract_rq1_overall_table(self, formats, ddls, llms) -> None:
+    def extract_rq1_overall_table(self, formats, ddls, llms, cur_time) -> None:
         """
         This will extract the entire table for one temperature setting.
         We need to post process this data to extract True or False per format, ddl, and model.
         """
         print(llms)
-        cur_time = "999999"
         temperatures = ["0_0", "0_25", "0_5", "0_75", "1_0"]
         colors = [
             sns.light_palette("seagreen"),
@@ -244,7 +243,7 @@ llms = list(LLMFormatGeneration(0).llms.keys())
 analyzer = Analyzer(dbname)
 ddls = list(options["DDLs"].keys())
 
-# analyzer.extract_rq1_overall_table(options["file-formats"] | options["network-protocols"], ddls, llms)
+analyzer.extract_rq1_overall_table(options["file-formats"] | options["network-protocols"], ddls, llms, "888")
 # analyzer.generate_line_graph(llms, "Kaitai Struct", "ARP")
 # analyzer.generate_line_graph(llms, "Rust Nom", "ARP")
 # analyzer.generate_bar_chart_for_temperatures(llms)
