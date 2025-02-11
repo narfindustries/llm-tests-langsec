@@ -1,0 +1,762 @@
+{
+  "Hammer": {
+    "JPEG": {
+      "0.0": {
+        "jpeg-deepseek-ai-deepseek-v3": 0,
+        "jpeg-gpt-4o": -1,
+        "jpeg-meta-llama-llama-3": 229,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": 85,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.25": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 229,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": -1,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.5": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": -1,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": 229,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.75": {
+        "jpeg-deepseek-ai-deepseek-v3": 0,
+        "jpeg-gpt-4o": 0,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": -1,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "1.0": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": -1,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": -1,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      }
+    },
+    "GIF": {
+      "0.0": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 83,
+        "gif-meta-llama-llama-3": 0,
+        "gif-gpt-4o": -1,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.25": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 83,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": -1,
+        "gif-deepseek-ai-deepseek-v3": 83
+      },
+      "0.5": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": 0,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 83,
+        "gif-meta-llama-llama-3": 244,
+        "gif-gpt-4o": -1,
+        "gif-deepseek-ai-deepseek-v3": 83
+      },
+      "0.75": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": 0,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 1,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": 84
+      },
+      "1.0": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 83,
+        "gif-meta-llama-llama-3": 0,
+        "gif-gpt-4o": -1,
+        "gif-deepseek-ai-deepseek-v3": 2
+      }
+    },
+    "PNG": {
+      "0.0": {
+        "png-image-meta-llama-llama-3": 86,
+        "png-image-claude-3-5-sonnet-20241022": 0,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": -1
+      },
+      "0.25": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 0,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 86,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 86
+      },
+      "0.5": {
+        "png-image-meta-llama-llama-3": 86,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": -1
+      },
+      "0.75": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": -1
+      },
+      "1.0": {
+        "png-image-meta-llama-llama-3": 0,
+        "png-image-claude-3-5-sonnet-20241022": 0,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": -1
+      }
+    },
+    "Modbus": {
+      "0.0": {
+        "modbus-claude-3-5-haiku-20241022": -1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 150,
+        "modbus-gpt-4-turbo": -1,
+        "modbus-deepseek-ai-deepseek-v3": 200
+      },
+      "0.25": {
+        "modbus-claude-3-5-haiku-20241022": 200,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 200,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 200,
+        "modbus-gpt-4-turbo": -1,
+        "modbus-deepseek-ai-deepseek-v3": 200
+      },
+      "0.5": {
+        "modbus-claude-3-5-haiku-20241022": -1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": -1,
+        "modbus-meta-llama-llama-3": 300,
+        "modbus-claude-3-5-sonnet-20241022": 200,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      },
+      "0.75": {
+        "modbus-claude-3-5-haiku-20241022": -1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": -1,
+        "modbus-meta-llama-llama-3": 300,
+        "modbus-claude-3-5-sonnet-20241022": 100,
+        "modbus-gpt-4-turbo": 200,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      },
+      "1.0": {
+        "modbus-claude-3-5-haiku-20241022": 0,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 200,
+        "modbus-meta-llama-llama-3": 300,
+        "modbus-claude-3-5-sonnet-20241022": 150,
+        "modbus-gpt-4-turbo": -1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      }
+    },
+    "ARP": {
+      "0.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 44,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.25": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.5": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 0
+      },
+      "0.75": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": -1,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": -1
+      },
+      "1.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 44,
+        "arp-claude-3-5-haiku-20241022": 0,
+        "arp-deepseek-ai-deepseek-v3": 300
+      }
+    }
+  },
+  "Kaitai Struct": {
+    "JPEG": {
+      "0.0": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": -1,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": 0,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.25": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 0,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": 0,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.5": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 0,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": 0,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "0.75": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 0,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": 0,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      },
+      "1.0": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 0,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": 0,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 0
+      }
+    },
+    "GIF": {
+      "0.0": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.25": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.5": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.75": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": 26
+      },
+      "1.0": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 0,
+        "gif-deepseek-ai-deepseek-v3": 26
+      }
+    },
+    "PNG": {
+      "0.0": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": -1,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 10
+      },
+      "0.25": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 0,
+        "png-image-gpt-4-turbo": 86,
+        "png-image-claude-3-5-haiku-20241022": 10
+      },
+      "0.5": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 0,
+        "png-image-gpt-4-turbo": 86,
+        "png-image-claude-3-5-haiku-20241022": 10
+      },
+      "0.75": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 0,
+        "png-image-gpt-4-turbo": 86,
+        "png-image-claude-3-5-haiku-20241022": 10
+      },
+      "1.0": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 0,
+        "png-image-gpt-4-turbo": 86,
+        "png-image-claude-3-5-haiku-20241022": 10
+      }
+    },
+    "Modbus": {
+      "0.0": {
+        "modbus-claude-3-5-haiku-20241022": 1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 1,
+        "modbus-gpt-4-turbo": 1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      },
+      "0.25": {
+        "modbus-claude-3-5-haiku-20241022": 1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 1,
+        "modbus-gpt-4-turbo": 1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      },
+      "0.5": {
+        "modbus-claude-3-5-haiku-20241022": 1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 1,
+        "modbus-gpt-4-turbo": 1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      },
+      "0.75": {
+        "modbus-claude-3-5-haiku-20241022": 1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 1,
+        "modbus-gpt-4-turbo": 1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      },
+      "1.0": {
+        "modbus-claude-3-5-haiku-20241022": 1,
+        "modbus-gemini-1": -1,
+        "modbus-gpt-4o": 0,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 1,
+        "modbus-gpt-4-turbo": 1,
+        "modbus-deepseek-ai-deepseek-v3": 0
+      }
+    },
+    "ARP": {
+      "0.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.25": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.5": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.75": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "1.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      }
+    }
+  },
+  "Rust Nom": {
+    "JPEG": {
+      "0.0": {
+        "jpeg-deepseek-ai-deepseek-v3": 229,
+        "jpeg-gpt-4o": 216,
+        "jpeg-meta-llama-llama-3": 0,
+        "jpeg-claude-3-5-haiku-20241022": -1,
+        "jpeg-gpt-4-turbo": 228,
+        "jpeg-gemini-1": 229,
+        "jpeg-claude-3-5-sonnet-20241022": 229
+      },
+      "0.25": {
+        "jpeg-deepseek-ai-deepseek-v3": -1,
+        "jpeg-gpt-4o": 216,
+        "jpeg-meta-llama-llama-3": 229,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": -1,
+        "jpeg-gemini-1": 229,
+        "jpeg-claude-3-5-sonnet-20241022": 170
+      },
+      "0.5": {
+        "jpeg-deepseek-ai-deepseek-v3": 229,
+        "jpeg-gpt-4o": 216,
+        "jpeg-meta-llama-llama-3": 0,
+        "jpeg-claude-3-5-haiku-20241022": 229,
+        "jpeg-gpt-4-turbo": 217,
+        "jpeg-gemini-1": -1,
+        "jpeg-claude-3-5-sonnet-20241022": 229
+      },
+      "0.75": {
+        "jpeg-deepseek-ai-deepseek-v3": 229,
+        "jpeg-gpt-4o": 216,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 229,
+        "jpeg-gpt-4-turbo": -1,
+        "jpeg-gemini-1": 229,
+        "jpeg-claude-3-5-sonnet-20241022": 229
+      },
+      "1.0": {
+        "jpeg-deepseek-ai-deepseek-v3": 229,
+        "jpeg-gpt-4o": 229,
+        "jpeg-meta-llama-llama-3": -1,
+        "jpeg-claude-3-5-haiku-20241022": 0,
+        "jpeg-gpt-4-turbo": 229,
+        "jpeg-gemini-1": 229,
+        "jpeg-claude-3-5-sonnet-20241022": 229
+      }
+    },
+    "GIF": {
+      "0.0": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": 0,
+        "gif-gemini-1": 244,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": 244,
+        "gif-gpt-4o": 244,
+        "gif-deepseek-ai-deepseek-v3": 244
+      },
+      "0.25": {
+        "gif-gpt-4-turbo": -1,
+        "gif-claude-3-5-haiku-20241022": 244,
+        "gif-gemini-1": 244,
+        "gif-claude-3-5-sonnet-20241022": 241,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 244,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.5": {
+        "gif-gpt-4-turbo": 243,
+        "gif-claude-3-5-haiku-20241022": 0,
+        "gif-gemini-1": 236,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 244,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "0.75": {
+        "gif-gpt-4-turbo": 244,
+        "gif-claude-3-5-haiku-20241022": -1,
+        "gif-gemini-1": -1,
+        "gif-claude-3-5-sonnet-20241022": 244,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 244,
+        "gif-deepseek-ai-deepseek-v3": -1
+      },
+      "1.0": {
+        "gif-gpt-4-turbo": 244,
+        "gif-claude-3-5-haiku-20241022": 1,
+        "gif-gemini-1": 241,
+        "gif-claude-3-5-sonnet-20241022": 170,
+        "gif-meta-llama-llama-3": -1,
+        "gif-gpt-4o": 244,
+        "gif-deepseek-ai-deepseek-v3": -1
+      }
+    },
+    "PNG": {
+      "0.0": {
+        "png-image-meta-llama-llama-3": 86,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": 83,
+        "png-image-deepseek-ai-deepseek-v3": 86,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 0
+      },
+      "0.25": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": 0,
+        "png-image-deepseek-ai-deepseek-v3": 86,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 0
+      },
+      "0.5": {
+        "png-image-meta-llama-llama-3": 86,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": 86,
+        "png-image-deepseek-ai-deepseek-v3": 86,
+        "png-image-gpt-4-turbo": 86,
+        "png-image-claude-3-5-haiku-20241022": 86
+      },
+      "0.75": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": 86,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 86
+      },
+      "1.0": {
+        "png-image-meta-llama-llama-3": -1,
+        "png-image-claude-3-5-sonnet-20241022": 86,
+        "png-image-gpt-4o": 86,
+        "png-image-gemini-1": -1,
+        "png-image-deepseek-ai-deepseek-v3": -1,
+        "png-image-gpt-4-turbo": -1,
+        "png-image-claude-3-5-haiku-20241022": 5
+      }
+    },
+    "Modbus": {
+      "0.0": {
+        "modbus-claude-3-5-haiku-20241022": 0,
+        "modbus-gemini-1": 300,
+        "modbus-gpt-4o": 300,
+        "modbus-meta-llama-llama-3": 130,
+        "modbus-claude-3-5-sonnet-20241022": 100,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      },
+      "0.25": {
+        "modbus-claude-3-5-haiku-20241022": 0,
+        "modbus-gemini-1": 300,
+        "modbus-gpt-4o": 300,
+        "modbus-meta-llama-llama-3": -1,
+        "modbus-claude-3-5-sonnet-20241022": 300,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      },
+      "0.5": {
+        "modbus-claude-3-5-haiku-20241022": 0,
+        "modbus-gemini-1": 300,
+        "modbus-gpt-4o": 200,
+        "modbus-meta-llama-llama-3": 122,
+        "modbus-claude-3-5-sonnet-20241022": 300,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      },
+      "0.75": {
+        "modbus-claude-3-5-haiku-20241022": 200,
+        "modbus-gemini-1": 300,
+        "modbus-gpt-4o": 300,
+        "modbus-meta-llama-llama-3": 300,
+        "modbus-claude-3-5-sonnet-20241022": 300,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      },
+      "1.0": {
+        "modbus-claude-3-5-haiku-20241022": 120,
+        "modbus-gemini-1": 300,
+        "modbus-gpt-4o": 300,
+        "modbus-meta-llama-llama-3": 142,
+        "modbus-claude-3-5-sonnet-20241022": -1,
+        "modbus-gpt-4-turbo": 300,
+        "modbus-deepseek-ai-deepseek-v3": 300
+      }
+    },
+    "ARP": {
+      "0.0": {
+        "arp-gpt-4-turbo": 300,
+        "arp-gemini-1": 300,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.25": {
+        "arp-gpt-4-turbo": 300,
+        "arp-gemini-1": 300,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.5": {
+        "arp-gpt-4-turbo": 300,
+        "arp-gemini-1": 300,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.75": {
+        "arp-gpt-4-turbo": 300,
+        "arp-gemini-1": 300,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "1.0": {
+        "arp-gpt-4-turbo": 300,
+        "arp-gemini-1": 300,
+        "arp-meta-llama-llama-3": 300,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": 300,
+        "arp-deepseek-ai-deepseek-v3": 300
+      }
+    }
+  },
+  "Zeek Spicy": {
+    "ARP": {
+      "0.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.25": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.5": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "0.75": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": 300,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      },
+      "1.0": {
+        "arp-gpt-4-turbo": -1,
+        "arp-gemini-1": -1,
+        "arp-meta-llama-llama-3": -1,
+        "arp-gpt-4o": -1,
+        "arp-claude-3-5-sonnet-20241022": 300,
+        "arp-claude-3-5-haiku-20241022": -1,
+        "arp-deepseek-ai-deepseek-v3": 300
+      }
+    }
+  }
+}

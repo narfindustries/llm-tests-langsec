@@ -1,5 +1,7 @@
 # How Effective are LLMs at Generating Accurate Data Descriptions?
 
+We tasks 7 LLMs with producing specifications for 20 data formats. `results/` contains the generated files---without any annotations on whether these files compile.
+
 - Install necessary dependencies (pip packages for the LLM libraries)
 - Install the runtime libraries for the DSLs
 
@@ -16,25 +18,37 @@ export GOOGLE_API_KEY=""
 export ANTHROPIC_API_KEY=""
 export OPENAI_API_KEY=""
 export XAI_API_KEY=""
-export FIREWORKS_AI_KEY=""
+export TOGETHER_API_KEY=""
 ```
+
+## Components
+
+- `Dockerfile` is builds a docker image with all of these compilers or executables installed.
+
+- `options.json` contains the paths of the various DDL executables and the list of formats and their specification versions.
+
+- `test.db` contains the final database with two entire runs, where the run labeled "888" was the most recent run.
 
 - Run the script to generate the DSLs using LLM queries
 `python3 create_dsls.py`
 
-- Test the generated library code by running a corpus of files through them
-`python3 corpora-test.py`
+- To generate the set of figures and tables used in the paper
+`python3 analyzer.py`
+
+- Test the generated library code by running a corpus of files through them. This command needs a folder containing files per format.
+`python3 compare-parsers.py`
 
 ## DSLs supported:
 - [Kaitai Struct](https://kaitai.io/)
 - [DaeDaLus](https://github.com/GaloisInc/daedalus)
-- [DFDL]()
-- [Zeek Spicy]()
-- [Hammer]()
-- [Rust Nom]()
-## Planned support
-- Parsley
-- EverParse
+- [DFDL](https://daffodil.apache.org/)
+- [Zeek Spicy](https://docs.zeek.org/projects/spicy/en/latest/)
+- [Hammer](https://github.com/UpstandingHackers/hammer)
+- [Rust Nom](https://github.com/rust-bakery/nom)
 
-# TODO
-[ ] Prepare a `requirements.txt` file
+# Acknowledgments
+
+This work was supported in part by DOE NETL (DE-CR0000017) and 
+the ARPA-H DIGIHEALS (Contract No. SP4701-23-C-0089). The views, opinions, and/or findings
+expressed are those of the author(s) and should not be interpreted 
+as representing the official views or policies of DOE, ARPA-H, or the U.S. Government.
