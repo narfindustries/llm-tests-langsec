@@ -32,21 +32,20 @@ def compile_file(command: List[str], current_dir: str):
             "message": "Compilation successful",
             "output_files": os.listdir(current_dir),
         }
-    else:
 
-        # Catch any other unexpected errors
-        return {
-            "success": False,
-            "message": f"Unexpected error during compilation: {result.stderr}",
-        }
+    # Catch any other unexpected errors
+    return {
+        "success": False,
+        "message": f"Unexpected error during compilation: {result.stderr}",
+    }
 
 
 def get_current_dir(directory, input_file, output_folder_name):
-
+    """Create a directory for the LLM output response"""
     # Ensure the directory exists
     if not os.path.isdir(directory):
         print(f"Error: {directory} is not a valid directory.")
-        return
+        return None
 
     # Create a directory for compiled C++ files
     cpp_output_dir = os.path.join(directory, output_folder_name)

@@ -23,13 +23,14 @@ parsed_options = json.loads(open("options.json").read())
 
 
 class DSLGenerator:
-
+    """This class allows you to create threads to generate DDLs from LLM queries"""
     def __init__(self, cur_time: int, dbname: str, table_name: str):
         self.cur_time = cur_time
         self.dbname = dbname
         self.table_name = table_name
 
     def set_current_dir_and_command(self, ddl, dir_path, filename):
+        """Based on the DDL set the command and path where the command should run"""
         full_input_path = os.path.join(dir_path, filename)
         # Set the command variable to call the compiler
         current_dir = None
@@ -88,6 +89,7 @@ class DSLGenerator:
         return (current_dir, cmd, full_input_path)
 
     def send_messages(self, function, model, messages, query, format, ddl, filename):
+        """This function handles all the LLM logic to send requests and maintain state"""
         if len(messages) == 0:
             if "claude" not in model:
                 messages = [
@@ -112,7 +114,6 @@ class DSLGenerator:
             }
             db.insert_data_errors(self.table_name, error)
             self.delete_file_if_exists(filename)
-            import sys
 
             sys.exit(1)
         elif isinstance(response, TextBlock):
@@ -149,7 +150,7 @@ class DSLGenerator:
         if os.path.exists(f"{dir_path}/{filename}"):
             logging.info(f"File {filename} already exists, skipping generation")
             return
- 
+
         if (
             ddl in ["Kaitai Struct", "Rust Nom", "Hammer"]
             and model == "gemini-1.5-flash"
@@ -159,7 +160,9 @@ class DSLGenerator:
         # Specify the two queries needed
         messages = []
         query_1 = f"You are a software developer who has read the {specification} for the {format}. Can you list all the fields in the specification along with all the values each field can take?"
-        messages = self.send_messages(function, model, messages, query_1, format, ddl, filename)
+        messages = self.send_messages(
+            function, model, messages, query_1, format, ddl, filename
+        )
         print(messages)
         query_2 = f"Can you use this knowledge to generate a {ddl} specification for the {format} in {output} format? Make sure to cover the entire specification including any optional fields. Do not provide any text response other than the {format} specification. Show only the complete response. Do not wrap the response in any markdown."
 
@@ -169,7 +172,9 @@ class DSLGenerator:
             if ddl == "Hammer":
                 query_2 += "Make sure that the includes statement is <hammer/hammer.h>."
 
-        messages = self.send_messages(function, model, messages, query_2, format, ddl, filename)
+        messages = self.send_messages(
+            function, model, messages, query_2, format, ddl, filename
+        )
         response = messages[-1]["content"]
 
         self.create_response_file(response, format, dir_path, filename)
@@ -290,7 +295,7 @@ class DSLGenerator:
         )
 
     def create_response_file(
-        self, response: str, format: str, dir_path: str, filename: str
+        self, response: str, form: str, dir_path: str, filename: str
     ):
         """
         Create a file with the response from the LLM
@@ -316,8 +321,9 @@ class DSLGenerator:
         if os.path.exists(filepath):
             os.remove(filepath)
 
-def main():
 
+def main():
+    """Main Function"""
     # Initialize the argument parser
     parser = argparse.ArgumentParser(
         description="A CLI tool with --format and --time options."
