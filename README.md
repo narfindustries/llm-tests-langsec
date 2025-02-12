@@ -12,21 +12,32 @@ We tasks 7 LLMs with producing specifications for 20 data formats. `results/` co
     - Download [Apache Daffodil binaries](https://www.apache.org/dyn/closer.lua/download/daffodil/3.9.0/bin/apache-daffodil-3.9.0-bin.zip)
     - Build the Spicy tools from Source: [Spicy Documentation](https://docs.zeek.org/projects/spicy/en/latest/installation.html#id15)
     - Build Galois' DaeDaLus tooling from source: [DaeDaLus](https://github.com/GaloisInc/daedalus)
+    - Clone the repository and build [Hammer](https://github.com/UpstandingHackers/hammer)
+    ```bash
+    git clone https://github.com/UpstandingHackers/hammer.git
+    cd hammer
+    scons
+    sudo scons install
+    ```
 
-- Add API keys as environment variables
+- Add API keys as environment variables.
+    - [Together API](https://api.together.ai/) to invoke the Llama and Deepseek LLMs.
+    - [OpenAI](https://platform.openai.com/docs/overview)
+    - [Claude](https://console.anthropic.com/)
+    - [Gemini](https://ai.google.dev/gemini-api/docs)
 
 ```
-export DEEPSEEK_API_KEY=""
 export GOOGLE_API_KEY=""
 export ANTHROPIC_API_KEY=""
 export OPENAI_API_KEY=""
-export XAI_API_KEY=""
 export TOGETHER_API_KEY=""
 ```
 
 ## Components
 
-- `Dockerfile` is builds a docker image with all of these compilers or executables installed.
+Together AI and Gemini are compatible with OpenAI's Python library.
+
+- `Dockerfile` builds a docker image with all of these compilers or executables installed.
 
 - `options.json` contains the paths of the various DDL executables and the list of formats and their specification versions.
 
