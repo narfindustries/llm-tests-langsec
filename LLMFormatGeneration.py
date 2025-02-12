@@ -1,10 +1,10 @@
-import anthropic
 import os
+import anthropic
 from openai import OpenAI
-from db import Database
 
 
 class LLMFormatGeneration:
+    """Invoke LLMs from this class"""
     def __init__(self, temperature: float):
         self.system_prompt = "You are a software developer who has read standards for several network protocols and file formats and knows the syntax of Data Description Languages like Kaitai Struct, DaeDalus, DFDL, and Zeek Spicy."
         self.temperature = temperature
@@ -31,7 +31,7 @@ class LLMFormatGeneration:
             "gpt-4o": self.call_gpt_api,
             "claude-3-5-sonnet-20241022": self.call_claude_api,
             "claude-3-5-haiku-20241022": self.call_claude_api,
-            "deepseek-chat": self.call_gpt_api,
+            "deepseek-ai/DeepSeek-V3": self.call_gpt_api,
             "meta-llama/Llama-3.3-70B-Instruct-Turbo": self.call_gpt_api,
         }
 
@@ -40,8 +40,7 @@ class LLMFormatGeneration:
             "gemini-1.5-flash": self.gemini_client,
             "gpt-4-turbo": self.openai_client,
             "gpt-4o": self.openai_client,
-            "deepseek-chat": self.deepseek_client,
-            "deepseek-reasoner": self.deepseek_client,
+            "deepseek-ai/DeepSeek-V3": self.together_client,
             "meta-llama/Llama-3.3-70B-Instruct-Turbo": self.together_client,
         }
 
@@ -51,13 +50,12 @@ class LLMFormatGeneration:
         try:
             response = api_client.chat.completions.create(
                 model=model,
-                max_tokens=4096,
+                max_tokens=2048,
                 messages=messages,
                 temperature=self.temperature,
             )
             return response.choices[0].message
         except Exception as e:
-            import sys
 
             print(f"{model} Error: {str(e)}")
             return f"{model} Error: {str(e)}"
@@ -67,7 +65,7 @@ class LLMFormatGeneration:
         try:
             response = self.anthropic_client.messages.create(
                 model=model,
-                max_tokens=4096,
+                max_tokens=2048,
                 system=self.system_prompt,
                 messages=messages,
                 temperature=self.temperature,

@@ -1,3 +1,6 @@
+> **Disclaimer:** This is a research prototype. The code and data in this repository are provided as-is, without any warranty or guarantee of correctness. Use at your own risk.
+
+
 # How Effective are LLMs at Generating Accurate Data Descriptions?
 
 We tasks 7 LLMs with producing specifications for 20 data formats. `results/` contains the generated files---without any annotations on whether these files compile.

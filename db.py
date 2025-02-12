@@ -2,7 +2,7 @@ import sqlite3
 
 
 class Database:
-
+    """All functions needed to access the SQLite database"""
     def __init__(self, dbname: str):
         self.conn = sqlite3.connect(dbname)
 
@@ -82,7 +82,7 @@ class Database:
 
     def delete_tables(self):
         cursor = self.conn.cursor()
-        cursor.execute(f"select name from sqlite_master where type='table'")
+        cursor.execute("select name from sqlite_master where type='table'")
         return cursor.fetchall()
 
     def delete_table_with_name(self, table_name):
@@ -96,7 +96,7 @@ class Database:
         for llm in llms:
             return_values = []
             for temp in temperatures:
-                table_name = f"t_{str(temp).replace('.', '_')}_999999"
+                table_name = f"t_{str(temp).replace('.', '_')}_888"
                 cursor = self.conn.cursor()
                 cursor.execute(
                     f"SELECT output_response FROM {table_name} WHERE compiled = 'True' AND llm = ? AND ddl = ? AND format = ? ORDER BY timestamp DESC LIMIT 1",
@@ -110,11 +110,11 @@ class Database:
             return_dict[llm] = return_values
         return return_dict
 
-    def measure_num_tries(self, ddl, llm):
+    def measure_num_tries(self, ddl, llm, cur_time):
         temperatures = ["0_0", "0_25", "0_5", "0_75", "1_0"]
         return_dict = {"total": [], 0: [], 1: [], 2: [], 3: []}
         for temp in temperatures:
-            table_name = f"t_{temp}_999999"
+            table_name = f"t_{temp}_{cur_time}"
             cursor = self.conn.cursor()
             cursor.execute(
                 f"SELECT format, llm FROM {table_name} WHERE compiled = 'True' AND llm = ? AND ddl = ?",
@@ -135,6 +135,6 @@ class Database:
     def compute_diff(self):
         cursor = self.conn.cursor()
         cursor.execute(
-            f"select output_response from t_0_0_999999 where ddl='Hammer' AND llm='meta-llama/Llama-3.3-70B-Instruct-Turbo' AND format='ARP'"
+            "select output_response from t_0_0_999999 where ddl='Hammer' AND llm='meta-llama/Llama-3.3-70B-Instruct-Turbo' AND format='ARP'"
         )
         return cursor.fetchall()
