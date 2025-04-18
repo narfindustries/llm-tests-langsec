@@ -323,6 +323,7 @@ class Analyzer:
         with open("figs/rq2.json", "r") as file:
             rq3_data = json.load(file)
         temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
+        ddls = ["Kaitai Struct", "Hammer", "Rust Nom"]
         formats = ["JPEG", "GIF", "Modbus", "ARP"]
         totals = [
             len(os.listdir("sample_files/jpg")),
@@ -338,13 +339,14 @@ class Analyzer:
                     print(f"{format} & \\textbf{{{temperature}}}", end="")
                 else:
                     print(f" & \\textbf{{{temperature}}}", end="")
-                for ddl, value in rq3_data.items():
+                for ddl in ddls:
+                    value = rq3_data[ddl]
                     if ddl != "Zeek Spicy":
                         rates = value[format][temperature]
                         for llm in llms:
                             key = f"{format.lower()}-{llm.replace('/','-').lower().split('.')[0]}"
                             if rates[key] != -1:
-                                print(f" & {(rates[key]/totals[iter])*100:.0f}", end="")
+                                print(f" & {(rates[key]/totals[iter])*100:.2f}", end="")
                             else:
                                 print(" & - ", end="")
                     else:
@@ -361,6 +363,7 @@ class Analyzer:
             rq3_data = json.load(file)
         temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
         formats = ["JPEG", "GIF", "Modbus", "ARP"]
+        ddls = ["Kaitai Struct", "Hammer", "Rust Nom"]
         totals = [318, 241, 107, 599]
         temperatures = ["0.0", "0.25", "0.5", "0.75", "1.0"]
         for iter, format in enumerate(formats):
@@ -370,7 +373,8 @@ class Analyzer:
                     print(f"{format} & \\textbf{{{temperature}}}", end="")
                 else:
                     print(f" & \\textbf{{{temperature}}}", end="")
-                for ddl, value in rq3_data.items():
+                for ddl in ddls:
+                    value = rq3_data[ddl]
                     if ddl != "Zeek Spicy":
                         rates = value[format][temperature]
                         for llm in llms:
@@ -383,6 +387,69 @@ class Analyzer:
                         continue
                 print("\\\\")
             print("\\hline")
+    
+    def get_data_for_precision_recall(self):
+        accepted_data = None
+        rejected_data = None
+        with open("figs/rq2.json", "r") as file:
+            accepted_data = json.load(file)
+        with open("figs/rq3.json", "r") as file:
+            rejected_data = json.load(file)
+        temperatures = [0.0, 0.25, 0.5, 0.75, 1.0]
+        formats = ["JPEG", "GIF", "Modbus", "ARP"]
+        ddls = ["Kaitai Struct", "Hammer", "Rust Nom"]
+        # totals_negatives = [318, 241, 107, 599] # Not used for recall or precision
+        totals_positives = [
+            len(os.listdir("sample_files/jpg")),
+            len(os.listdir("sample_files/gif")),
+            len(os.listdir("sample_files/modbus")),
+            len(os.listdir("sample_files/arp")),
+        ]
+        temperatures = ["0.0", "0.25", "0.5", "0.75", "1.0"]
+        precision_string = ""
+        recall_string = ""
+        for iter, format in enumerate(formats):
+            for temperature in temperatures:
+                # for temperature, rates in value[format].items():
+                if temperature == "0.5":
+                    precision_string += f"{format} & \\textbf{{{temperature}}}"
+                    recall_string += f"{format} & \\textbf{{{temperature}}}"
+                else:
+                    precision_string += f" & \\textbf{{{temperature}}}"
+                    recall_string += f" & \\textbf{{{temperature}}}"
+                for ddl in ddls:
+                    if ddl != "Zeek Spicy":
+                        accepted_rates = accepted_data[ddl][format][temperature]
+                        rejected_rates = rejected_data[ddl][format][temperature]
+                        for llm in llms:
+                            key = f"{format.lower()}-{llm.replace('/','-').lower().split('.')[0]}"
+                            if accepted_rates[key] != -1: # Denotes a successful compile
+                                # Precision Calculation
+                                # TP / (TP + FP)
+                                # Denominator can be 0, so check for an exception
+                                try:
+                                    precision_string += f" & {(accepted_rates[key]/(accepted_rates[key] + rejected_rates[key])):.2f}"
+                                except:
+                                    precision_string += " & N/A"
+                                # Recall Calculation
+                                # TP / (TP + FN)
+                                # False negatives = (Total wellformed files - Files among them rejected)
+                                # Total number of positive samples is always going be > 0
+                                recall_string += f" & {accepted_rates[key]/(totals_positives[iter]):.2f}"
+                            else:
+                                precision_string += " & -"
+                                recall_string += " & -"
+                    else:
+                        continue
+                precision_string += "\\\\\n"
+                recall_string += "\\\\\n"
+            precision_string += "\\hline\n"
+            recall_string += "\\hline\n"
+        print(precision_string)
+        print("#"*50)
+        print(recall_string)
+    def calculate_precision_recall(self):
+        self.get_data_for_precision_recall()
 
     def generate_smaller_heatmap(self, data, ddl: str, color):
         """Generate heatmaps for the smaller comparison in RQ4"""
@@ -444,3 +511,4 @@ analyzer.generate_diff()
 analyzer.generate_bar_chart_for_rq2()
 analyzer.generate_latex_table_for_rq2()
 analyzer.generate_latex_table_for_rq3()
+analyzer.calculate_precision_recall()
